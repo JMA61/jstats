@@ -22,6 +22,10 @@ jdesc <- function(data, ...) {
   descriptives_list <- lapply(variables, function(var) {
     var_name <- rlang::quo_name(var)
     var_data <- rlang::eval_tidy(var, data)
+    if (inherits(var_data, "haven_labelled")) {
+      var_data <- as.numeric(vctrs::vec_data(var_data))
+    }
+
 
     total_cases <- length(var_data)
     non_missing_cases <- sum(!is.na(var_data))

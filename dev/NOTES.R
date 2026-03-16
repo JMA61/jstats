@@ -43,6 +43,7 @@
   usethis::use_package("purrr")
   usethis::use_package("dplyr")
   usethis::use_package("knitr")
+  usethis::use_package("vctrs")
 
 ### STEP 4 ###
 # Create License file by running this in the console
@@ -147,6 +148,8 @@ update.packages(ask = FALSE, checkBuilt = TRUE)
 # 2) Use ChatGPT to tweak that function to provide proper ROxygen information at that top
 # 3) ChatGPT can also tweak the external library calls to calling explicit namespaces (libraries)
 # 4) run code (in the console) like this to update the package's knowledge of any new external libraries
+
+# This step is outdated.
 usethis::use_package("haven")
 usethis::use_package("labelled")
 
@@ -159,6 +162,9 @@ usethis::use_package("labelled")
 # library(devtools)
 
 
+##########NEW UPDATE INSTRUCTIONS START HERE #################
+
+
 # 5) Run this code to rebuild the docs and run a check
 # paste it into ChatGPT and ask it to check things over for anything that needs altered
 devtools::document()
@@ -169,13 +175,13 @@ devtools::check()
 
 # To Commit the new version:
 git add -A
-git commit -m "Update dependencies and bump version to 0.2.1"
+git commit -m "Update dependencies and bump version to 0.2.2"
 
 # To Push/Upload to GitHub
 git push
 
 # To create the version tag
-git tag -a v0.2.1 -m "Version 0.2.1"
+git tag -a v0.2.1 -m "Version 0.2.2"
 git push --tags
 
 # Verity that the tag exists:
