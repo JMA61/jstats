@@ -495,3 +495,101 @@ jlm <- function(formula, data) {
     n = n_obs
   ))
 }
+
+#' Bivariate correlation matrix with p values and pairwise N
+#'
+#' Computes pairwise Pearson correlations and prints a formatted lower-triangle
+#' correlation matrix showing r, p values, and pairwise N for each pair.
+#' Handles haven-labelled and factor variables with numeric levels.
+#'
+#' @param data A data frame.
+#' @param ... Unquoted variable names within `data`.
+#'
+#' @return Invisibly returns a list containing the correlation matrix,
+#' p-value matrix, and pairwise N matrix.
+#'
+#' @examples
+#' jcorr(mtcars, mpg, hp, wt)
+#'
+#' @importFrom stats cor.test complete.cases
+#' @export
+jcorr <- function(data, ...) {
+  variables <- rlang::enquos(...)
+  variable_names <- purrr::map_chr(variables, rlang::quo_name)
+
+  # Extract and prepare data
+  cor_data <- data[, variable_names, drop = FALSE]
+
+  # Handle haven-labelled and factor variables
+  for (v in variable_names) {
+    if (haven::is.labelled(cor_data[[v]])) {
+      cor_data[[v]] <- as.numeric(cor_data[[v]])
+    } else if (is.factor(cor_data[[v]])) {
+      numeric_check <- suppressWarnings(as.numeric(as.character(cor_data[[v]])))
+      if (all(is.na(numeric_check[!is.na(cor_data[[v]])]))) {
+        stop(paste0("'", v,
+                    "' is a factor with text categories and cannot be used ",
+                    "in a correlation. Use a numeric variable instead."), call. = FALSE)
+      }
+      cor_data[[v]] <- numeric_check
+    }
+  }
+
+  n_vars <- length(variable_names)
+
+  # Initialize matrices
+  r_matrix <- matrix(NA, n_vars, n_vars,
+                     dimnames = list(variable_names, variable_names))
+  p_matrix <- matrix(NA, n_vars, n_vars,
+                     dimnames = list(variable_names, variable_names))
+  n_matrix <- matrix(NA, n_vars, n_vars,
+                     dimnames = list(variable_names, variable_names))
+
+  # Compute pairwise correlations
+  for (i in seq_len(n_vars)) {
+    for (j in seq_len(n_vars)) {
+      complete <- stats::complete.cases(cor_data[[i]], cor_data[[j]])
+      n_matrix[i, j] <- sum(complete)
+      if (i == j) {
+        r_matrix[i, j] <- 1
+      } else if (n_matrix[i, j] > 2) {
+        test <- stats::cor.test(cor_data[[i]], cor_data[[j]])
+        r_matrix[i, j] <- test$estimate
+        p_matrix[i, j] <- test$p.value
+      }
+    }
+  }
+
+  # Build display table (lower triangle only)
+  display <- matrix("", n_vars, n_vars,
+                    dimnames = list(variable_names, variable_names))
+
+  for (i in seq_len(n_vars)) {
+    for (j in seq_len(n_vars)) {
+      if (i == j) {
+        display[i, j] <- "1"
+      } else if (j < i) {
+        r_fmt <- sprintf("%.3f", r_matrix[i, j])
+        p_fmt <- if (!is.na(p_matrix[i, j]) && p_matrix[i, j] < 0.001) {
+          "<.001"
+        } else {
+          sprintf("%.3f", p_matrix[i, j])
+        }
+        display[i, j] <- paste0(r_fmt, " (p=", p_fmt, ") N=", n_matrix[i, j])
+      }
+    }
+  }
+
+  display_df <- as.data.frame(display, stringsAsFactors = FALSE)
+
+  print(knitr::kable(display_df, caption = "Bivariate Correlations"))
+
+  invisible(list(
+    r = r_matrix,
+    p = p_matrix,
+    n = n_matrix
+  ))
+}
+
+
+
