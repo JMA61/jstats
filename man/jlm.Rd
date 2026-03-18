@@ -25,6 +25,9 @@ blank for the intercept and for dummy-coded factor terms.
 The function also prints key model summary information (R-squared, residual
 standard error, F-test, sums of squares, and N). If any coefficients are
 dropped due to perfect collinearity, a warning message is printed.
+
+Handles haven-labelled variables by converting them appropriately before
+fitting the model.
 }
 \examples{
 jlm(mpg ~ hp + wt, data = mtcars)

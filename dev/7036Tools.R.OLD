@@ -1,15 +1,13 @@
+
+
 #' Computes basic descriptive statistics (N, non-missing, min, max, mean, SD)
 #' for one or more variables in a data frame. Prints a formatted table and
 #' invisibly returns the underlying results as a data frame.
 #'
-#' Handles haven-labelled, factor, and plain numeric variables. If a factor
-#' with text categories is passed, a warning is issued directing the user
-#' to jfreq() instead.
-#'
 #' @param data A data frame.
 #' @param ... Unquoted variable names within `data`.
 #'
-#' @return Invisibly returns a data frame of descriptive statistics. Also prints a table.
+#' @return Invisibly returns a data frame of SPSS-like descriptive statistics. Also prints a table.
 #'
 #' @examples
 #' jdesc(mtcars, mpg)
@@ -23,13 +21,11 @@ jdesc <- function(data, ...) {
   descriptives_list <- lapply(variables, function(var) {
     var_name <- rlang::quo_name(var)
     var_data <- rlang::eval_tidy(var, data)
-
-    # Handle haven-labelled variables
-    if (haven::is.labelled(var_data)) {
-      var_data <- as.numeric(var_data)
+    if (inherits(var_data, "haven_labelled") || inherits(var_data, "labelled") || !is.null(attr(var_data, "labels"))) {
+      var_data <- as.numeric(vctrs::vec_data(var_data))
     }
 
-    # Handle factor variables
+
     if (is.factor(var_data)) {
       numeric_check <- suppressWarnings(as.numeric(as.character(var_data)))
       if (all(is.na(numeric_check[!is.na(var_data)]))) {
@@ -41,7 +37,6 @@ jdesc <- function(data, ...) {
       }
       var_data <- numeric_check
     }
-
     total_cases <- length(var_data)
     non_missing_cases <- sum(!is.na(var_data))
     min_val <- round(min(var_data, na.rm = TRUE), 3)
@@ -115,7 +110,7 @@ jfreq <- function(data, ...) {
   for (variable in variables) {
     variable_name <- rlang::quo_name(variable)
 
-    # Pull column as a vector
+    # Pull column as a vector (teaching-friendly)
     temp_var <- dplyr::pull(data, !!variable)
     var_class <- class(temp_var)
 
@@ -130,7 +125,7 @@ jfreq <- function(data, ...) {
       var_label <- labelled::var_label(data[[variable_name]])
     }
 
-    # Convert numeric variables to factors
+    # Convert numeric variables to factors (common teaching expectation)
     if (is.numeric(temp_var)) {
       temp_var <- factor(temp_var)
     }
@@ -192,159 +187,6 @@ jfreq <- function(data, ...) {
 }
 
 
-#' Independent samples t-test (Student's classical method)
-#'
-#' Runs a traditional Student's t-test (equal variances assumed) and prints
-#' formatted group descriptives and test results. Handles haven-labelled,
-#' numeric, and factor grouping variables.
-#'
-#' @param formula A formula of the form \code{DV ~ Group}.
-#' @param data A data frame containing variables referenced in \code{formula}.
-#'
-#' @return Invisibly returns the \code{t.test} result object.
-#'
-#' @examples
-#' mtcars$am_f <- factor(mtcars$am, labels = c("Auto", "Manual"))
-#' jt(mpg ~ am_f, data = mtcars)
-#'
-#' @export
-#' @importFrom stats t.test sd
-jt <- function(formula, data) {
-  # Extract variable names from the formula
-  terms <- all.vars(formula)
-  dv_name <- terms[1]
-  group_name <- terms[2]
-
-  # Get the grouping variable
-  group_var <- data[[group_name]]
-
-  # Convert to factor if needed
-  if (haven::is.labelled(group_var)) {
-    data[[group_name]] <- haven::as_factor(group_var)
-  } else if (!is.factor(group_var)) {
-    data[[group_name]] <- factor(group_var)
-  }
-
-  # Check that grouping variable has exactly 2 levels
-  n_levels <- nlevels(data[[group_name]])
-  if (n_levels != 2) {
-    stop(paste0("'", group_name, "' has ", n_levels,
-                " categories. A t-test requires exactly 2. ",
-                "Use jaov() for more than 2 categories."), call. = FALSE)
-  }
-
-  # Handle haven-labelled DV
-  if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- as.numeric(data[[dv_name]])
-  }
-
-  # Get level names
-  levels <- levels(data[[group_name]])
-
-  # Run traditional Student's t-test
-  result <- t.test(formula, data = data, var.equal = TRUE)
-
-  # Get descriptives for each group
-  group1_data <- data[[dv_name]][data[[group_name]] == levels[1]]
-  group2_data <- data[[dv_name]][data[[group_name]] == levels[2]]
-
-  desc_table <- data.frame(
-    Group = levels,
-    N = c(sum(!is.na(group1_data)), sum(!is.na(group2_data))),
-    Mean = round(c(mean(group1_data, na.rm = TRUE), mean(group2_data, na.rm = TRUE)), 3),
-    SD = round(c(sd(group1_data, na.rm = TRUE), sd(group2_data, na.rm = TRUE)), 3),
-    stringsAsFactors = FALSE
-  )
-
-  test_table <- data.frame(
-    t = round(result$statistic, 3),
-    df = round(result$parameter, 1),
-    p = round(result$p.value, 6),
-    Mean_Difference = round(diff(rev(result$estimate)), 3),
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-  cat("\n")
-  print(knitr::kable(desc_table,
-                     caption = paste("Group Descriptives:", dv_name, "by", group_name),
-                     row.names = FALSE))
-  cat("\n")
-  print(knitr::kable(test_table,
-                     caption = "Independent Samples T-Test (equal variances assumed)",
-                     col.names = c("t", "df", "p", "Mean Difference"),
-                     row.names = FALSE))
-
-  invisible(result)
-}
-
-
-#' One-way ANOVA (traditional method)
-#'
-#' Runs a traditional one-way ANOVA and prints a formatted ANOVA table
-#' including sum of squares, mean squares, F, and p value. Handles
-#' haven-labelled, numeric, and factor grouping variables.
-#'
-#' @param formula A formula of the form \code{DV ~ Group}.
-#' @param data A data frame containing variables referenced in \code{formula}.
-#'
-#' @return Invisibly returns the \code{aov} model object.
-#'
-#' @examples
-#' mtcars$cyl_f <- factor(mtcars$cyl)
-#' jaov(mpg ~ cyl_f, data = mtcars)
-#'
-#' @export
-#' @importFrom stats aov
-jaov <- function(formula, data) {
-  # Extract variable names from the formula
-  terms <- all.vars(formula)
-  dv_name <- terms[1]
-  group_name <- terms[2]
-
-  # Get the grouping variable
-  group_var <- data[[group_name]]
-
-  # Convert to factor if needed
-  if (haven::is.labelled(group_var)) {
-    data[[group_name]] <- haven::as_factor(group_var)
-  } else if (!is.factor(group_var)) {
-    data[[group_name]] <- factor(group_var)
-  }
-
-  # Handle haven-labelled DV
-  if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- as.numeric(data[[dv_name]])
-  }
-
-  # Run aov
-  model <- aov(formula, data = data)
-  result <- summary(model)[[1]]
-
-  # Calculate totals
-  total_df <- sum(result$Df)
-  total_ss <- sum(result$`Sum Sq`)
-
-  # Build clean output table
-  anova_table <- data.frame(
-    Source = c(group_name, "Residual", "Total"),
-    df = c(result$Df, total_df),
-    Sum_of_Squares = round(c(result$`Sum Sq`, total_ss), 3),
-    Mean_Square = c(round(result$`Mean Sq`, 3), NA),
-    F_value = c(round(result$`F value`[1], 3), NA, NA),
-    p_value = c(round(result$`Pr(>F)`[1], 6), NA, NA),
-    stringsAsFactors = FALSE
-  )
-
-  print(knitr::kable(anova_table,
-                     caption = paste("ANOVA:", dv_name, "by", group_name),
-                     col.names = c("Source", "df", "Sum of Squares", "Mean Square", "F", "p"),
-                     row.names = FALSE))
-
-  invisible(model)
-}
-
-
 #' SPSS-like linear regression output with standardised coefficients
 #'
 #' Fits a linear model using \code{stats::lm()} and prints SPSS-style output,
@@ -355,9 +197,6 @@ jaov <- function(formula, data) {
 #' The function also prints key model summary information (R-squared, residual
 #' standard error, F-test, sums of squares, and N). If any coefficients are
 #' dropped due to perfect collinearity, a warning message is printed.
-#'
-#' Handles haven-labelled variables by converting them appropriately before
-#' fitting the model.
 #'
 #' @param formula A model formula, e.g. \code{y ~ x1 + x2}.
 #' @param data A data frame containing variables referenced in \code{formula}.
@@ -374,21 +213,7 @@ jaov <- function(formula, data) {
 #'
 #' @export
 jlm <- function(formula, data) {
-  # Convert haven-labelled variables before fitting
-  model_vars <- all.vars(formula)
-  for (v in model_vars) {
-    if (haven::is.labelled(data[[v]])) {
-      if (v == all.vars(formula)[1]) {
-        # DV: convert to numeric
-        data[[v]] <- as.numeric(data[[v]])
-      } else {
-        # IV: convert to factor (preserves labels for grouping)
-        data[[v]] <- haven::as_factor(data[[v]])
-      }
-    }
-  }
-
-  # Build complete-case model frame (SPSS-like listwise deletion)
+  # Build complete-case model frame first (SPSS-like listwise deletion)
   mf <- stats::model.frame(formula, data = data, na.action = stats::na.omit)
 
   model <- stats::lm(formula, data = mf)
@@ -468,7 +293,7 @@ jlm <- function(formula, data) {
     cat("\nWARNING: One or more variables have been removed from the model due to collinearity.\n")
   }
 
-  # Print output
+  # Print output (SPSS-ish)
   cat("\nCoefficients:\n")
   print(out_coefs, quote = FALSE)
 
@@ -495,3 +320,15 @@ jlm <- function(formula, data) {
     n = n_obs
   ))
 }
+
+
+
+
+
+
+
+
+
+
+
+

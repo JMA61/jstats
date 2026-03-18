@@ -14,12 +14,12 @@ jdesc(data, ...)
 \item{...}{Unquoted variable names within \code{data}.}
 }
 \value{
-Invisibly returns a data frame of SPSS-like descriptive statistics. Also prints a table.
+Invisibly returns a data frame of descriptive statistics. Also prints a table.
 }
 \description{
-Computes basic descriptive statistics (N, non-missing, min, max, mean, SD)
-for one or more variables in a data frame. Prints a formatted table and
-invisibly returns the underlying results as a data frame.
+Handles haven-labelled, factor, and plain numeric variables. If a factor
+with text categories is passed, a warning is issued directing the user
+to jfreq() instead.
 }
 \examples{
 jdesc(mtcars, mpg)

@@ -1,12 +1,13 @@
 Package: JeffsStatTools
 Title: SPSS-Style Descriptive, Frequency, and Regression Tools for Teaching
-Version: 0.2.3
+Version: 0.3.0
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
 Description: Provides SPSS-like descriptive statistics, frequency tables,
-    and linear regression output. Functions accept unquoted
-    variable names for ease of use and return results invisibly while
-    printing user-friendly tables.
+    t-tests, ANOVA, and linear regression output. Functions accept unquoted
+    variable names and formula syntax for ease of use, handle haven-labelled
+    variables automatically, and return results invisibly while printing
+    user-friendly tables.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends:
@@ -20,5 +21,4 @@ Imports:
     knitr,
     labelled,
     purrr,
-    rlang,
-    vctrs
+    rlang
