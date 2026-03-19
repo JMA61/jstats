@@ -13,13 +13,13 @@ devtools::check()     # this is an optional more thorough check. there will be s
 
 # To Commit the new version:
 git add -A
-git commit -m "Add jt(), jaov(), jcorr() functions, standardise haven handling across all functions, bump version to 0.3.1"
+git commit -m "Round p values in jt() and jaov(), bump version to 0.3.2"
 
 # To Push/Upload to GitHub
 git push
 
 # To create the version tag
-git tag -a v0.3.1 -m "Version 0.3.1"
+git tag -a v0.3.2 -m "Version 0.3.2"
 git push --tags
 
 # Verity that the tag exists:

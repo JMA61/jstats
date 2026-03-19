@@ -256,13 +256,10 @@ jt <- function(formula, data) {
     stringsAsFactors = FALSE
   )
 
-  p_val <- result$p.value
-  p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
-
   test_table <- data.frame(
     t = round(result$statistic, 3),
     df = round(result$parameter, 1),
-    p = p_fmt,
+    p = round(result$p.value, 6),
     Mean_Difference = round(diff(rev(result$estimate)), 3),
     stringsAsFactors = FALSE,
     row.names = NULL
@@ -329,17 +326,13 @@ jaov <- function(formula, data) {
   total_ss <- sum(result$`Sum Sq`)
 
   # Build clean output table
-
-  p_val <- result$`Pr(>F)`[1]
-  p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
-
   anova_table <- data.frame(
     Source = c(group_name, "Residual", "Total"),
     df = c(result$Df, total_df),
     Sum_of_Squares = round(c(result$`Sum Sq`, total_ss), 3),
     Mean_Square = c(round(result$`Mean Sq`, 3), NA),
     F_value = c(round(result$`F value`[1], 3), NA, NA),
-    p_value = c(p_fmt, NA, NA),
+    p_value = c(round(result$`Pr(>F)`[1], 6), NA, NA),
     stringsAsFactors = FALSE
   )
 
