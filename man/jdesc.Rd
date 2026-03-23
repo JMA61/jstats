@@ -6,12 +6,18 @@
 for one or more variables in a data frame. Prints a formatted table and
 invisibly returns the underlying results as a data frame.}
 \usage{
-jdesc(data, ...)
+jdesc(data, ..., by = NULL, labels = TRUE)
 }
 \arguments{
-\item{data}{A data frame.}
+\item{data}{A data frame, or a numeric vector.}
 
-\item{...}{Unquoted variable names within \code{data}.}
+\item{...}{Unquoted variable names within \code{data} (ignored if data is a vector).}
+
+\item{by}{An optional unquoted grouping variable name. When provided,
+descriptives are computed separately for each group.}
+
+\item{labels}{Logical. If TRUE (default), prints variable labels
+when available.}
 }
 \value{
 Invisibly returns a data frame of descriptive statistics. Also prints a table.
@@ -19,10 +25,13 @@ Invisibly returns a data frame of descriptive statistics. Also prints a table.
 \description{
 Handles haven-labelled, factor, and plain numeric variables. If a factor
 with text categories is passed, a warning is issued directing the user
-to jfreq() instead.
+to jfreq() instead. Also accepts a simple numeric vector. Supports
+grouped descriptives via the \code{by} parameter.
 }
 \examples{
 jdesc(mtcars, mpg)
 jdesc(mtcars, mpg, hp, wt)
+jdesc(c(10, 20, 30, 40, 50))
+jdesc(mtcars, mpg, by = am)
 
 }

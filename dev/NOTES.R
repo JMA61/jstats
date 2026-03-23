@@ -34,4 +34,98 @@ remotes::install_github("JMA61/JeffsStatTools")
 #   devtools::install()
 # right after  devtools::check()
 
+### To load the functions into the current session use
+devtools::load_all()
+
+### Necessary testing code ###
+SampleData <- readRDS("../7036_2026/Data/7036CCJSampleData.rds")
+library(JeffsStatTools)
+
+jdesc(SampleData, Gender)
+jdesc(SampleData, RlshpStatus)
+
+jdesc(SampleData, Environment1)
+jdesc(SampleData, Environment1, labels = FALSE)
+
+
+x <- c(10, 20, 30, 40, 50)
+jdesc(x)
+
+jfreq(x)
+
+
+GenderF <- SampleData$Gender
+
+
+
+jfreq(SampleData, Gender)
+jfreq(GenderF)
+
+
+jt(JuvenileDelinquency ~ Gender, data=SampleData)
+jt(JuvenileDelinquency ~ Gender, data=SampleData,welch = TRUE)
+jt(JuvenileDelinquency ~ Gender, data=SampleData, full = TRUE)
+
+jaov(JuvenileDelinquency ~ RlshpStatus, data=SampleData)
+jaov(JuvenileDelinquency ~ RlshpStatus, data=SampleData,welch = TRUE)
+jaov(JuvenileDelinquency ~ RlshpStatus, data=SampleData,welch = TRUE, ci=TRUE)
+jaov(JuvenileDelinquency ~ RlshpStatus, data=SampleData, full = TRUE)
+
+labelled::var_label(SampleData$RlshpStatus)
+
+
+SampleData$Conservative3Recode <- case_when(
+  SampleData$Conservative3 == 1 ~ 5,
+  SampleData$Conservative3 == 2 ~ 4,
+  SampleData$Conservative3 == 3 ~ 3,
+  SampleData$Conservative3 == 4 ~ 2,
+  SampleData$Conservative3 == 5 ~ 1
+)
+
+selected_vars <- SampleData[, c("Conservative1", "Conservative2", "Conservative3Recode", "Conservative4", "Conservative5")]
+
+library(psych)
+
+# Calculate Cronbach's alpha
+alpha_result <- alpha(selected_vars)
+print(alpha_result)
+
+jalpha(SampleData, Conservative1, Conservative2, Conservative3Recode,
+       Conservative4, Conservative5)
+
+jalpha(SampleData, Conservative1, Conservative2, Conservative3Recode,
+       Conservative4, Conservative5, Conservative6)
+
+jalpha(SampleData, Conservative1, Conservative2, Conservative3,
+       Conservative4, Conservative5, Conservative6)
+
+jalpha(SampleData, Conservative1, Conservative2, Conservative3Recode,
+       Conservative4, Conservative5)
+
+
+jscreen(SampleData)
+
+jchisq(RlshpStatus ~ Gender, data = SampleData)
+jchisq(RlshpStatus ~ Gender, data = SampleData, expected = TRUE, col.pct = TRUE)
+
+?jdesc
+?jt
+?jcorr
+?jaov
+?jscreen
+?jlm
+?jalpha
+
+
+jaov(mpg ~ cyl, data = mtcars)
+
+mtcars$cyl_f <- factor(mtcars$cyl)
+
+jaov(mpg ~ cyl_f, data = mtcars)
+
+jaov(mpg ~ cyl, data = mtcars)
+
+jt(mpg ~ am, data = mtcars)
+jt(mpg ~ am, data = mtcars, welch = TRUE)
+jt(mpg ~ am, data = mtcars, full = TRUE)
 

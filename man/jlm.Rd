@@ -4,12 +4,15 @@
 \alias{jlm}
 \title{SPSS-like linear regression output with standardised coefficients}
 \usage{
-jlm(formula, data)
+jlm(formula, data, labels = TRUE)
 }
 \arguments{
 \item{formula}{A model formula, e.g. \code{y ~ x1 + x2}.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
+
+\item{labels}{Logical. If TRUE (default), prints variable labels
+when available.}
 }
 \value{
 Invisibly returns a list containing the fitted model, a coefficient
@@ -31,9 +34,5 @@ fitting the model.
 }
 \examples{
 jlm(mpg ~ hp + wt, data = mtcars)
-
-# Factor example
-mtcars$cyl_f <- factor(mtcars$cyl)
-jlm(mpg ~ cyl_f + wt, data = mtcars)
 
 }

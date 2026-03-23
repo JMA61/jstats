@@ -4,12 +4,15 @@
 \alias{jfreq}
 \title{SPSS-like frequencies for categorical variables}
 \usage{
-jfreq(data, ...)
+jfreq(data, ..., labels = TRUE)
 }
 \arguments{
-\item{data}{A data frame.}
+\item{data}{A data frame, or a vector.}
 
-\item{...}{Unquoted variable name(s) within \code{data}.}
+\item{...}{Unquoted variable name(s) within \code{data} (ignored if data is a vector).}
+
+\item{labels}{Logical. If TRUE (default), prints variable labels
+when available.}
 }
 \value{
 Invisibly returns a named list of data frames (one per variable)
@@ -19,19 +22,10 @@ containing the frequency table.
 Prints SPSS-style frequency tables (Freq, Total \%, Valid \%, Cum. \%) for one or
 more variables in a data frame. Designed for use with unquoted
 variable names. If a variable is a haven labelled vector, value labels and
-the variable label (if present) are shown.
+the variable label (if present) are shown. Also accepts a simple vector.
 }
 \examples{
-# Basic example (categorical)
 jfreq(mtcars, cyl, gear)
-
-# Labelled example (uses haven + labelled)
-x <- haven::labelled(
-  c(1, 2, 1, 9, NA),
-  labels = c(Yes = 1, No = 2, "Don't know" = 9)
-)
-df <- data.frame(x = x)
-labelled::var_label(df$x) <- "Example labelled variable"
-jfreq(df, x)
+jfreq(c("Male", "Female", "Male", "Female", "Male"))
 
 }

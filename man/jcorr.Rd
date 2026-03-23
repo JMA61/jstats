@@ -4,23 +4,31 @@
 \alias{jcorr}
 \title{Bivariate correlation matrix with p values and pairwise N}
 \usage{
-jcorr(data, ...)
+jcorr(data, ..., method = "pearson", labels = TRUE)
 }
 \arguments{
 \item{data}{A data frame.}
 
 \item{...}{Unquoted variable names within \code{data}.}
+
+\item{method}{Character. Correlation method: "pearson" (default),
+"spearman", or "kendall".}
+
+\item{labels}{Logical. If TRUE (default), prints variable labels
+when available.}
 }
 \value{
 Invisibly returns a list containing the correlation matrix,
 p-value matrix, and pairwise N matrix.
 }
 \description{
-Computes pairwise Pearson correlations and prints a formatted lower-triangle
+Computes pairwise correlations and prints a formatted lower-triangle
 correlation matrix showing r, p values, and pairwise N for each pair.
+Supports Pearson (default), Spearman, and Kendall methods.
 Handles haven-labelled and factor variables with numeric levels.
 }
 \examples{
 jcorr(mtcars, mpg, hp, wt)
+jcorr(mtcars, mpg, hp, wt, method = "spearman")
 
 }

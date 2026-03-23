@@ -2,25 +2,61 @@
 % Please edit documentation in R/7036Tools.R
 \name{jaov}
 \alias{jaov}
-\title{One-way ANOVA (traditional method)}
+\title{One-way ANOVA (traditional or Welch method)}
 \usage{
-jaov(formula, data)
+jaov(
+  formula,
+  data,
+  welch = FALSE,
+  posthoc = FALSE,
+  effect.size = FALSE,
+  levene = FALSE,
+  ci = FALSE,
+  labels = TRUE,
+  full = FALSE
+)
 }
 \arguments{
 \item{formula}{A formula of the form \code{DV ~ Group}.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
+
+\item{welch}{Logical. If FALSE (default), runs traditional ANOVA.
+If TRUE, runs Welch's ANOVA (does not assume equal variances).}
+
+\item{posthoc}{Logical. If TRUE, prints Tukey HSD pairwise comparisons.
+Not available when welch = TRUE.}
+
+\item{effect.size}{Logical. If TRUE, prints eta-squared.}
+
+\item{levene}{Logical. If TRUE, prints Levene's test for homogeneity
+of variance.}
+
+\item{ci}{Logical. If TRUE, adds 95\\% confidence intervals to the
+group descriptives table.}
+
+\item{labels}{Logical. If TRUE (default), prints variable labels
+when available.}
+
+\item{full}{Logical. If TRUE, turns on posthoc, effect.size, levene,
+and ci all at once.}
 }
 \value{
-Invisibly returns the \code{aov} model object.
+Invisibly returns the model object (aov or oneway.test).
 }
 \description{
-Runs a traditional one-way ANOVA and prints a formatted ANOVA table
-including sum of squares, mean squares, F, and p value. Handles
-haven-labelled, numeric, and factor grouping variables.
+Runs a one-way ANOVA and prints a formatted group descriptives table
+followed by an ANOVA table. By default, runs the traditional ANOVA
+assuming equal variances. Optional parameters provide post-hoc tests,
+effect size, Levene's test, and confidence intervals. Set welch = TRUE
+for the Welch correction when equal variances cannot be assumed.
+Handles haven-labelled, numeric, and factor grouping variables.
+For haven-labelled variables, numeric codes are displayed alongside
+labels in the group descriptives table.
 }
 \examples{
-mtcars$cyl_f <- factor(mtcars$cyl)
-jaov(mpg ~ cyl_f, data = mtcars)
+jaov(mpg ~ cyl, data = mtcars)
+jaov(mpg ~ cyl, data = mtcars, welch = TRUE)
+jaov(mpg ~ cyl, data = mtcars, full = TRUE)
 
 }

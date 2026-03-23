@@ -2,25 +2,61 @@
 % Please edit documentation in R/7036Tools.R
 \name{jt}
 \alias{jt}
-\title{Independent samples t-test (Student's classical method)}
+\title{Independent samples or paired samples t-test}
 \usage{
-jt(formula, data)
+jt(
+  formula,
+  data,
+  paired = FALSE,
+  welch = FALSE,
+  effect.size = FALSE,
+  levene = FALSE,
+  ci = FALSE,
+  labels = TRUE,
+  full = FALSE
+)
 }
 \arguments{
 \item{formula}{A formula of the form \code{DV ~ Group}.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
+
+\item{paired}{Logical. If TRUE, runs a paired samples t-test. The two
+groups must have equal sample sizes. Default is FALSE.}
+
+\item{welch}{Logical. If FALSE (default), runs Student's t-test
+(equal variances assumed). If TRUE, runs Welch's t-test. Ignored
+when paired = TRUE.}
+
+\item{effect.size}{Logical. If TRUE, prints Cohen's d.}
+
+\item{levene}{Logical. If TRUE, prints Levene's test for homogeneity
+of variance. Ignored when paired = TRUE.}
+
+\item{ci}{Logical. If TRUE, adds 95\\% confidence interval for the
+mean difference.}
+
+\item{labels}{Logical. If TRUE (default), prints variable labels
+when available.}
+
+\item{full}{Logical. If TRUE, turns on effect.size, levene, and ci
+all at once.}
 }
 \value{
 Invisibly returns the \code{t.test} result object.
 }
 \description{
-Runs a traditional Student's t-test (equal variances assumed) and prints
-formatted group descriptives and test results. Handles haven-labelled,
-numeric, and factor grouping variables.
+Runs a t-test and prints formatted group descriptives and test results.
+By default, runs the traditional Student's independent samples t-test
+assuming equal variances. Optional parameters provide Welch's correction,
+paired samples, effect size (Cohen's d), Levene's test, and confidence
+interval for the mean difference. Handles haven-labelled, numeric, and
+factor grouping variables. For haven-labelled variables, numeric codes
+are displayed alongside labels in the group descriptives table.
 }
 \examples{
-mtcars$am_f <- factor(mtcars$am, labels = c("Auto", "Manual"))
-jt(mpg ~ am_f, data = mtcars)
+jt(mpg ~ am, data = mtcars)
+jt(mpg ~ am, data = mtcars, welch = TRUE)
+jt(mpg ~ am, data = mtcars, full = TRUE)
 
 }
