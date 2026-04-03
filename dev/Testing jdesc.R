@@ -9,3 +9,4 @@ jdesc(SampleData,TotalCrime) # run descriptives on the new variable.
 
 
 jdesc(SampleData,TotalCrime, by = Gender)
+jt(TotalCrime ~ Gender, data = SampleData)

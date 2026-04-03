@@ -8,18 +8,20 @@ Remember to change version number below, and in Description file
 devtools::document()  # this updates the documentation - including creating help files for ?jt for example.
 devtools::check()     # this is an optional more thorough check. there will be some ERROR that has to quarto - ignore.
 
+devtools::check(remote = TRUE) ## an even more thorough check to mimic closer to what CRAN will look for
+
 
 # 2) Run this code IN THE TERMINAL - note the change to the version number:
 
 # To Commit the new version:
 git add -A
-git commit -m "v0.4.2: Improved jdesc() and jfreq(0) output and Red titles for all functions"
+git commit -m "v0.5.0: Improves all functions, adds juse() and additional functionality"
 
 # To Push/Upload to GitHub
 git push
 
 # To create the version tag
-git tag -a v0.4.2 -m "Version 0.4.2"
+git tag -a v0.5.0 -m "Version 0.5.0"
 git push --tags
 
 # Verity that the tag exists:

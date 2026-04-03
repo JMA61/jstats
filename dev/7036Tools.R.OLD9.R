@@ -76,95 +76,48 @@
   cat("\n")
 }
 
-#' Internal helper: check that variable names exist in a data frame
-#'
-#' Produces a clear error message listing any variables not found,
-#' so students see helpful feedback instead of cryptic internal error traces.
-#'
-#' @keywords internal
-.jst_check_vars <- function(data, var_names, data_name = NULL) {
-  missing_vars <- var_names[!var_names %in% names(data)]
-  if (length(missing_vars) > 0) {
-    df_label <- if (!is.null(data_name)) {
-      paste0("'", data_name, "'")
-    } else {
-      "the data frame"
-    }
-    stop(paste0(
-      "Variable(s) not found in ", df_label, ": ",
-      paste(missing_vars, collapse = ", "), ".\n",
-      "Check spelling and make sure the variable exists."
-    ), call. = FALSE)
-  }
-}
-
-# -----------------------------------------------------------------------------
-# .jst_resolve_data()
-# Looks up the default data frame set by juse(). Called by all student-facing
-# functions when the data argument is not specified. Returns a list with
-# $data (the data frame) and $name (the stored name as a string).
-# Stops with a clear message if no default is set or the data frame is missing.
-# Uses the calling environment (passed in via envir) to look up the data frame.
-# -----------------------------------------------------------------------------
-
-.jst_resolve_data <- function(envir = parent.frame()) {
-  data_name <- getOption(".jst_default_data", default = NULL)
-  if (is.null(data_name)) {
-    stop("No data frame specified and no default set. Use juse() to set a default.",
-         call. = FALSE)
-  }
-  if (!exists(data_name, envir = envir)) {
-    stop(paste0("Default data frame '", data_name,
-                "' not found. It may have been removed or renamed."),
-         call. = FALSE)
-  }
-  data <- get(data_name, envir = envir)
-  if (!is.data.frame(data)) {
-    stop(paste0("'", data_name, "' is not a data frame."), call. = FALSE)
-  }
-  list(data = data, name = data_name)
-}
-
 # -----------------------------------------------------------------------------
 # .jst_detect_suspicious_values()
-# Detects values that look like coded missing values (e.g. -99, -9, 999).
-# Two detection rules:
-#   1. Any negative value when all other values are positive (catches -9,
-#      -99, etc. in categorical variables coded with positive integers)
-#   2. Any value whose absolute magnitude is 5+ times the maximum of the
-#      other values (catches 99 in a 1-5 variable, 999 in a 1-10 variable)
-#
-# Returns a numeric vector of suspicious values found (empty if none).
-# Does NOT print messages — the calling function handles messaging.
+# Checks for values that look like coded missing (e.g. -99, 999) by comparing
+# them against the main cluster of values in the variable. Only flags a value
+# if it sits far outside the main cluster - specifically, if the gap between
+# the suspicious value and the nearest edge of the cluster is more than 10
+# times the cluster's own range. This avoids false alarms when negative values
+# are legitimate (e.g. -99, -98, -97 in a genuine negative scale).
 # -----------------------------------------------------------------------------
 
 .jst_detect_suspicious_values <- function(x, var_name) {
 
   vals <- unique(as.numeric(x[!is.na(x)]))
-  if (length(vals) < 2) return(numeric(0))
+  if (length(vals) < 2) return(invisible(NULL))
 
-  suspicious <- numeric(0)
+  suspicious_candidates <- c(-99, -98, -97, -96, -9, -8, -7,
+                             88, 98, 99, 999, 9999)
 
-  # Rule 1: negative values when all others are positive
-  neg_vals <- vals[vals < 0]
-  pos_vals <- vals[vals >= 0]
+  found <- vals[vals %in% suspicious_candidates]
+  if (length(found) == 0) return(invisible(NULL))
 
-  if (length(neg_vals) > 0 && length(pos_vals) >= 2) {
-    suspicious <- c(suspicious, neg_vals)
-  }
+  main_cluster <- vals[!vals %in% suspicious_candidates]
+  if (length(main_cluster) < 2) return(invisible(NULL))
 
-  # Rule 2: absolute magnitude >= 5x the max of remaining values
-  for (v in vals) {
-    if (v %in% suspicious) next
-    others <- vals[vals != v]
-    if (length(others) == 0) next
-    other_max <- max(abs(others))
-    if (other_max > 0 && abs(v) >= 5 * other_max) {
-      suspicious <- c(suspicious, v)
+  cluster_min   <- min(main_cluster)
+  cluster_max   <- max(main_cluster)
+  cluster_range <- max(cluster_max - cluster_min, 1)   # avoid /0
+
+  for (sv in found) {
+    gap <- min(abs(sv - cluster_min), abs(sv - cluster_max))
+    if (gap > 10 * cluster_range) {
+      message(
+        "Note: the value ", sv, " appears in '", var_name, "' but is far outside ",
+        "the range of other values (", cluster_min, " to ", cluster_max, "). ",
+        "This may represent a coded missing value from SPSS or another package. ",
+        "If so, convert it to NA before recoding with:\n",
+        "  data$", var_name, "[data$", var_name, " == ", sv, "] <- NA\n",
+        "If ", sv, " is a legitimate value, add an explicit rule for it in your ",
+        "map argument to suppress this message."
+      )
     }
   }
-
-  return(sort(unique(suspicious)))
 }
 
 
@@ -172,10 +125,9 @@
 # .jst_parse_map()
 # Parses a map string like "1=1; 2,3=2; 4,5=3; else=copy" into a structured
 # list of mapping rules and an else action. Returns:
-#   $mappings      - list of lists, each with $old_vals (numeric vector) and
-#                    $new_val (single numeric)
-#   $else_action   - "na" or "copy"
-#   $else_explicit - TRUE if the user wrote an else clause, FALSE if defaulted
+#   $mappings  - list of lists, each with $old_vals (numeric vector) and
+#                $new_val (single numeric)
+#   $else_action - "na" or "copy"
 # Stops with a clear message if the string is malformed.
 # -----------------------------------------------------------------------------
 
@@ -185,10 +137,10 @@
   rules <- rules[nchar(rules) > 0]
 
   if (length(rules) == 0) {
-    stop("The map argument is empty. Provide at least one rule, e.g. map = \"1=1; 2=0\".", call. = FALSE)
+    stop("The map argument is empty. Provide at least one rule, e.g. map = \"1=1; 2=0\".")
   }
 
-  result <- list(mappings = list(), else_action = "na", else_explicit = FALSE)
+  result <- list(mappings = list(), else_action = "na")
 
   for (rule in rules) {
 
@@ -196,7 +148,7 @@
       stop(paste0(
         "Invalid rule '", rule, "' in map argument: each rule must contain '=', ",
         "e.g. '1=0' or '2,3=1'."
-      ), call. = FALSE)
+      ))
     }
 
     eq_pos <- regexpr("=", rule)[1]
@@ -209,10 +161,9 @@
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. ",
           "Use 'else=NA' or 'else=copy'."
-        ), call. = FALSE)
+        ))
       }
-      result$else_action   <- tolower(rhs)
-      result$else_explicit <- TRUE
+      result$else_action <- tolower(rhs)
       next
     }
 
@@ -224,7 +175,7 @@
       stop(paste0(
         "Invalid old value(s) '", lhs, "' in map rule '", rule, "'. ",
         "Old values must be numeric."
-      ), call. = FALSE)
+      ))
     }
 
     # new value
@@ -233,7 +184,7 @@
       stop(paste0(
         "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
         "New values must be numeric."
-      ), call. = FALSE)
+      ))
     }
 
     result$mappings[[length(result$mappings) + 1]] <- list(
@@ -243,10 +194,10 @@
   }
 
   if (length(result$mappings) == 0) {
-    stop("The map argument contains no valid recode rules (only an else clause was found).", call. = FALSE)
+    stop("The map argument contains no valid recode rules (only an else clause was found).")
   }
 
-  return(invisible(result))
+  return(result)
 }
 
 
@@ -263,7 +214,7 @@
   rules <- rules[nchar(rules) > 0]
 
   if (length(rules) == 0) {
-    stop("The labels argument is empty. Provide at least one label, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
+    stop("The labels argument is empty. Provide at least one label, e.g. labels = \"1=Male; 0=Female\".")
   }
 
   result <- c()
@@ -274,7 +225,7 @@
       stop(paste0(
         "Invalid label rule '", rule, "': each rule must contain '=', ",
         "e.g. '1=Male'."
-      ), call. = FALSE)
+      ))
     }
 
     eq_pos    <- regexpr("=", rule)[1]
@@ -286,14 +237,14 @@
       stop(paste0(
         "Invalid value '", val_str, "' in label rule '", rule, "'. ",
         "The left side of each label rule must be numeric."
-      ), call. = FALSE)
+      ))
     }
 
     if (nchar(label_str) == 0) {
       stop(paste0(
         "Empty label text in rule '", rule, "'. ",
         "Provide a label name after the equals sign."
-      ), call. = FALSE)
+      ))
     }
 
     entry        <- val
@@ -301,73 +252,7 @@
     result <- c(result, entry)
   }
 
-  return(invisible(result))
-}
-
-
-# -- juse ---------------------------------------------------------------------
-
-#' Set or display the default data frame for JeffsStatTools functions
-#'
-#' @description
-#' \code{juse()} sets a default data frame that will be used automatically
-#' by all JeffsStatTools functions when the \code{data} argument is omitted.
-#' This reduces typing and makes interactive use more convenient.
-#'
-#' The function stores the \emph{name} of the data frame, not a copy of
-#' the data. This means any changes you make to the data frame (adding
-#' columns, recoding variables, etc.) are automatically reflected in
-#' subsequent function calls.
-#'
-#' @param data A data frame (unquoted). If omitted, prints the current
-#'   default. Use \code{juse(NULL)} to clear the default.
-#'
-#' @return Invisibly returns \code{NULL}. Called for its side effect of
-#'   setting, displaying, or clearing the default data frame.
-#'
-#' @examples
-#' \donttest{
-#' juse(mtcars)           # Set mtcars as the default
-#' juse()                 # Display current default
-#' jdesc(, mpg, hp)       # Uses mtcars automatically
-#' juse(NULL)             # Clear the default
-#' }
-#'
-#' @export
-juse <- function(data) {
-
-  if (missing(data)) {
-    # juse() with no arguments — print current default
-    current <- getOption(".jst_default_data", default = NULL)
-    if (is.null(current)) {
-      message("No default data frame set. Use juse(DataFrameName) to set one.")
-    } else {
-      message("Current default data frame: ", current)
-    }
-    return(invisible(NULL))
-  }
-
-  # juse(NULL) — clear the default
-  if (is.null(data)) {
-    options(.jst_default_data = NULL)
-    message("Default data frame cleared.")
-    return(invisible(NULL))
-  }
-
-  data_name <- deparse(substitute(data))
-
-  # Check it exists and is a data frame
-  calling_env <- parent.frame()
-  if (!exists(data_name, envir = calling_env)) {
-    stop(paste0("'", data_name, "' not found."), call. = FALSE)
-  }
-  if (!is.data.frame(get(data_name, envir = calling_env))) {
-    stop(paste0("'", data_name, "' is not a data frame."), call. = FALSE)
-  }
-
-  options(.jst_default_data = data_name)
-  message("Default data frame set to: ", data_name)
-  invisible(NULL)
+  return(result)
 }
 
 
@@ -413,18 +298,6 @@ juse <- function(data) {
 #' @export
 jdesc <- function(data, ..., by = NULL, labels = TRUE) {
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   # Handle vector input
   if (is.atomic(data) && !is.data.frame(data)) {
     var_name <- deparse(substitute(data))
@@ -434,15 +307,8 @@ jdesc <- function(data, ..., by = NULL, labels = TRUE) {
   }
 
   variables      <- rlang::enquos(...)
-  variable_names <- vapply(variables, rlang::quo_name, character(1))
+  variable_names <- purrr::map_chr(variables, rlang::quo_name)
   by_quo         <- rlang::enquo(by)
-
-  # Check all variables exist before any processing
-  check_names <- variable_names
-  if (!rlang::quo_is_null(by_quo)) {
-    check_names <- c(check_names, rlang::quo_name(by_quo))
-  }
-  .jst_check_vars(data, check_names, .jst_data_name)
 
   # -- Grouped descriptives ---------------------------------------------------
   if (!rlang::quo_is_null(by_quo)) {
@@ -472,7 +338,6 @@ jdesc <- function(data, ..., by = NULL, labels = TRUE) {
 
     for (v in variable_names) {
       .cat_red(paste0("Descriptive Statistics: ", v, " by ", by_name, "\n"))
-      if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
       if (labels) {
         cat(v, "\n", sep = "")
@@ -524,7 +389,6 @@ jdesc <- function(data, ..., by = NULL, labels = TRUE) {
       .print_kable(group_table, row.names = FALSE)
       cat("\n")
     }
-    cat("\n")
     return(invisible(NULL))
   }
 
@@ -575,7 +439,7 @@ jdesc <- function(data, ..., by = NULL, labels = TRUE) {
   descriptives      <- do.call(rbind, descriptives_list)
 
   listwise_cases <- sum(
-    stats::complete.cases(data[, variable_names, drop = FALSE])
+    stats::complete.cases(dplyr::select(data, dplyr::all_of(variable_names)))
   )
   listwise_row <- data.frame(
     Variable    = "Listwise_N",
@@ -589,9 +453,8 @@ jdesc <- function(data, ..., by = NULL, labels = TRUE) {
   )
   descriptives <- rbind(descriptives, listwise_row)
 
-  # -- Print: title -> default note -> type/label block -> table ---------------
+  # -- Print: title -> type/label block -> single blank line -> table ---------
   .cat_red("Descriptive Statistics\n")
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   if (labels) {
     for (v in variable_names) {
@@ -603,7 +466,6 @@ jdesc <- function(data, ..., by = NULL, labels = TRUE) {
 
   cat("\n")
   .print_kable(descriptives)
-  cat("\n")
   invisible(descriptives)
 }
 
@@ -641,19 +503,8 @@ jdesc <- function(data, ..., by = NULL, labels = TRUE) {
 #' jfreq(c("Male", "Female", "Male", "Female", "Male"))
 #'
 #' @export
+#' @importFrom rlang .data
 jfreq <- function(data, ..., labels = TRUE) {
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else if (is.data.frame(data)) {
-    .jst_data_name <- deparse(substitute(data))
-  }
 
   # Handle vector input
   if (is.atomic(data) && !is.data.frame(data)) {
@@ -666,15 +517,11 @@ jfreq <- function(data, ..., labels = TRUE) {
   variables <- rlang::enquos(...)
   results   <- list()
 
-  # Check all variables exist before any processing
-  var_names_check <- vapply(variables, rlang::quo_name, character(1))
-  .jst_check_vars(data, var_names_check, .jst_data_name)
-
   for (variable in variables) {
     variable_name <- rlang::quo_name(variable)
 
     # Capture class and label BEFORE any conversion
-    temp_var      <- data[[variable_name]]
+    temp_var      <- dplyr::pull(data, !!variable)
     var_class     <- class(temp_var)
     var_label_val <- .get_var_label_str(data[[variable_name]])
 
@@ -692,41 +539,28 @@ jfreq <- function(data, ..., labels = TRUE) {
       temp_var <- factor(temp_var)
     }
 
-    # Frequency table (base R)
-    tbl         <- table(temp_var, useNA = "ifany")
+    # Frequency table
+    freq_table <- data.frame(temp_var = temp_var, stringsAsFactors = FALSE) |>
+      dplyr::count(temp_var, name = "Freq")
+
     total_count <- length(temp_var)
     valid_count <- sum(!is.na(temp_var))
 
-    freq_table <- data.frame(
-      temp_var = factor(names(tbl), levels = names(tbl)),
-      Freq     = as.integer(tbl),
-      stringsAsFactors = FALSE
-    )
-
-    # Handle NA row — table() with useNA="ifany" uses NA as a name
-    na_count <- sum(is.na(temp_var))
-    if (na_count > 0) {
-      na_row <- data.frame(temp_var = NA, Freq = na_count,
-                           stringsAsFactors = FALSE)
-      # Remove the NA row table() may have created with a literal "NA" name
-      freq_table <- freq_table[!is.na(freq_table$temp_var) &
-                                 freq_table$temp_var != "NA", , drop = FALSE]
-      freq_table <- rbind(freq_table, na_row)
-    }
-
-    freq_table$`Total %` <- (freq_table$Freq / total_count) * 100
-    freq_table$`Valid %` <- ifelse(
-      is.na(freq_table$temp_var),
-      NA_real_,
-      (freq_table$Freq / valid_count) * 100
-    )
-    valid_pcts <- ifelse(is.na(freq_table$temp_var), 0,
-                         (freq_table$Freq / valid_count) * 100)
-    freq_table$`Cum. %` <- ifelse(
-      is.na(freq_table$temp_var),
-      NA_real_,
-      cumsum(valid_pcts)
-    )
+    freq_table <- freq_table |>
+      dplyr::mutate(
+        `Total %` = (.data$Freq / total_count) * 100,
+        `Valid %` = ifelse(
+          is.na(.data$temp_var),
+          NA_real_,
+          (.data$Freq / valid_count) * 100
+        ),
+        `Cum. %` = ifelse(
+          is.na(.data$temp_var),
+          NA_real_,
+          cumsum(ifelse(is.na(.data$temp_var), 0,
+                        (.data$Freq / valid_count) * 100))
+        )
+      )
 
     results[[variable_name]] <- freq_table
 
@@ -737,7 +571,6 @@ jfreq <- function(data, ..., labels = TRUE) {
     first_col_width <- max(max_length, nchar("Category"), na.rm = TRUE)
 
     .cat_red(paste0("Frequencies for ", variable_name, "\n"))
-    if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
     if (labels) {
       cat("Type of variable: ", .format_var_type(var_class), "\n", sep = "")
@@ -775,7 +608,6 @@ jfreq <- function(data, ..., labels = TRUE) {
     cat("\n")
   }
 
-  cat("\n")
   invisible(results)
 }
 
@@ -825,18 +657,6 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                effect.size = FALSE, levene = FALSE, ci = FALSE,
                labels = TRUE, full = FALSE) {
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   if (full) {
     effect.size <- TRUE
     levene      <- TRUE
@@ -851,13 +671,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   } else {
     .cat_red("Independent Samples T-Test\n")
   }
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   terms      <- all.vars(formula)
   dv_name    <- terms[1]
   group_name <- terms[2]
-
-  .jst_check_vars(data, terms, .jst_data_name)
 
   group_var   <- data[[group_name]]
   is_labelled <- haven::is.labelled(group_var)
@@ -1011,7 +828,6 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     }
   }
 
-  cat("\n")
   invisible(result)
 }
 
@@ -1061,18 +877,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = FALSE,
                  effect.size = FALSE, levene = FALSE, ci = FALSE,
                  labels = TRUE, full = FALSE) {
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   if (full) {
     posthoc     <- TRUE
     effect.size <- TRUE
@@ -1086,13 +890,10 @@ jaov <- function(formula, data, welch = FALSE, posthoc = FALSE,
   } else {
     .cat_red("One-Way ANOVA\n")
   }
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   terms      <- all.vars(formula)
   dv_name    <- terms[1]
   group_name <- terms[2]
-
-  .jst_check_vars(data, terms, .jst_data_name)
 
   group_var   <- data[[group_name]]
   is_labelled <- haven::is.labelled(group_var)
@@ -1285,7 +1086,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = FALSE,
     }
   }
 
-  cat("\n")
   invisible(model)
 }
 
@@ -1320,23 +1120,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = FALSE,
 #' @importFrom stats cor.test complete.cases
 #' @export
 jcorr <- function(data, ..., method = "pearson", labels = TRUE) {
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   variables      <- rlang::enquos(...)
-  variable_names <- vapply(variables, rlang::quo_name, character(1))
-
-  .jst_check_vars(data, variable_names, .jst_data_name)
+  variable_names <- purrr::map_chr(variables, rlang::quo_name)
 
   if (length(variable_names) < 2) {
     stop("jcorr() requires at least 2 variables. Only 1 was provided.", call. = FALSE)
@@ -1354,7 +1139,6 @@ jcorr <- function(data, ..., method = "pearson", labels = TRUE) {
 
   # Red title
   .cat_red(paste0(method_label, " Bivariate Correlations\n"))
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   cor_data <- data[, variable_names, drop = FALSE]
 
@@ -1392,7 +1176,6 @@ jcorr <- function(data, ..., method = "pearson", labels = TRUE) {
   r_matrix <- matrix(NA, n_vars, n_vars, dimnames = list(variable_names, variable_names))
   p_matrix <- matrix(NA, n_vars, n_vars, dimnames = list(variable_names, variable_names))
   n_matrix <- matrix(NA, n_vars, n_vars, dimnames = list(variable_names, variable_names))
-  has_ties <- FALSE
 
   for (i in seq_len(n_vars)) {
     for (j in seq_len(n_vars)) {
@@ -1401,12 +1184,9 @@ jcorr <- function(data, ..., method = "pearson", labels = TRUE) {
       if (i == j) {
         r_matrix[i, j] <- 1
       } else if (n_matrix[i, j] > 2) {
-        test            <- suppressWarnings(
-          stats::cor.test(cor_data[[i]], cor_data[[j]], method = method)
-        )
+        test            <- stats::cor.test(cor_data[[i]], cor_data[[j]], method = method)
         r_matrix[i, j] <- test$estimate
         p_matrix[i, j] <- test$p.value
-        if (method == "spearman") has_ties <- TRUE
       }
     }
   }
@@ -1438,11 +1218,6 @@ jcorr <- function(data, ..., method = "pearson", labels = TRUE) {
   .print_kable(display_df,
                caption = paste0("Bivariate Correlations (", method_label, ")"))
 
-  if (has_ties) {
-    cat("\nNote: Spearman p-values are approximate due to tied values in the data.\n")
-  }
-
-  cat("\n")
   invisible(list(r = r_matrix, p = p_matrix, n = n_matrix, method = method))
 }
 
@@ -1480,25 +1255,10 @@ jcorr <- function(data, ..., method = "pearson", labels = TRUE) {
 #' @export
 jlm <- function(formula, data, labels = TRUE) {
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   # Red title
   .cat_red("Linear Regression\n")
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   model_vars <- all.vars(formula)
-
-  .jst_check_vars(data, model_vars, .jst_data_name)
 
   for (v in model_vars) {
     if (haven::is.labelled(data[[v]])) {
@@ -1592,7 +1352,7 @@ jlm <- function(formula, data, labels = TRUE) {
   cat("  Total:      ", sprintf("%.3f", ss_total),      "\n", sep = "")
   cat("\nNumber of observations: ", n_obs, "\n", sep = "")
 
-  ret <- list(
+  invisible(list(
     model           = model,
     coefficients    = out_coefs,
     r_squared       = r_squared,
@@ -1602,9 +1362,7 @@ jlm <- function(formula, data, labels = TRUE) {
                         residual   = ss_residual,
                         total      = ss_total),
     n = n_obs
-  )
-  cat("\n")
-  invisible(ret)
+  ))
 }
 
 
@@ -1643,27 +1401,12 @@ jlm <- function(formula, data, labels = TRUE) {
 jchisq <- function(formula, data, expected = FALSE, row.pct = TRUE,
                    col.pct = FALSE, labels = TRUE) {
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   terms    <- all.vars(formula)
   row_name <- terms[1]
   col_name <- terms[2]
 
-  .jst_check_vars(data, terms, .jst_data_name)
-
   # Red title
   .cat_red("Chi-Square Analysis\n")
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   row_var <- data[[row_name]]
   col_var <- data[[col_name]]
@@ -1780,7 +1523,6 @@ jchisq <- function(formula, data, expected = FALSE, row.pct = TRUE,
                "Chi-square results may not be reliable.\n"))
   }
 
-  cat("\n")
   invisible(list(
     observed   = obs_table,
     expected   = exp_table,
@@ -1819,25 +1561,12 @@ jchisq <- function(formula, data, expected = FALSE, row.pct = TRUE,
 #' @export
 jscreen <- function(data, outlier.sd = 3, labels = TRUE) {
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   n_cases   <- nrow(data)
   n_vars    <- ncol(data)
   var_names <- names(data)
 
   # Red title
   .cat_red("Data Screening\n")
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
   cat("  Cases:", n_cases, "\n")
   cat("  Variables:", n_vars, "\n")
   cat("  Complete cases (no missing on any variable):",
@@ -1927,7 +1656,6 @@ jscreen <- function(data, outlier.sd = 3, labels = TRUE) {
   }
 
   cat("\n")
-  cat("\n")
   invisible(screen_table)
 }
 
@@ -1960,27 +1688,11 @@ jscreen <- function(data, outlier.sd = 3, labels = TRUE) {
 #'
 #' @export
 jalpha <- function(data, ..., labels = TRUE) {
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
   variables      <- rlang::enquos(...)
-  variable_names <- vapply(variables, rlang::quo_name, character(1))
-
-  .jst_check_vars(data, variable_names, .jst_data_name)
+  variable_names <- purrr::map_chr(variables, rlang::quo_name)
 
   # Red title
   .cat_red("Reliability Analysis\n")
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   items <- data[, variable_names, drop = FALSE]
 
@@ -2114,7 +1826,6 @@ jalpha <- function(data, ..., labels = TRUE) {
                              "Alpha if Item Deleted"),
                row.names = FALSE)
 
-  cat("\n")
   invisible(list(
     alpha                 = alpha_overall,
     n_items               = k,
@@ -2130,142 +1841,189 @@ jalpha <- function(data, ..., labels = TRUE) {
 # jrelabel()
 # =============================================================================
 
-#' Apply variable and value labels to a variable
+#' Transfer variable and value labels after a simple recode
 #'
 #' @description
-#' \code{jrelabel()} attaches a variable label and/or value labels to any
-#' variable in a data frame. It is designed as a simple label applicator ---
-#' it does not recode values or compare variables. Use it to add labels after
-#' a recode, to fix missing labels, or to label any variable that needs them.
+#' After recoding a variable in base R (using \code{ifelse} or arithmetic),
+#' \code{jrelabel()} compares the original and recoded variable row by row,
+#' automatically detects the value mapping, and transfers both the variable
+#' label and value labels to the new variable.
 #'
-#' The function accepts haven-labelled, plain numeric, factor, and character
-#' variables. The output is always a \code{haven_labelled} vector, which is
-#' compatible with all JeffsStatTools functions.
+#' This function is intended for clean one-to-one recodes where each original
+#' value maps to exactly one new value - for example, recoding 1/2 to 1/0, or
+#' simple value shifts. It will not transfer value labels automatically if it
+#' detects a reverse coding pattern or category collapsing, and will instead
+#' issue an informative message explaining what to do next.
 #'
-#' Both the \code{labels} and \code{var_label} arguments are optional. If
-#' neither is supplied, the function returns the variable unchanged as a
-#' \code{haven_labelled} vector.
+#' @param data A data frame containing both variables.
+#' @param orig_var The original variable (unquoted, e.g. \code{Gender}).
+#' @param new_var  The recoded variable (unquoted, e.g. \code{GenderR}).
+#'   This variable must already exist in the data frame - run your recode line
+#'   before calling \code{jrelabel()}.
 #'
-#' If the variable already has labels, they are silently overwritten when
-#' new labels are provided.
+#' @return The data frame with labels applied to the recoded variable.
 #'
-#' @param data A data frame containing the variable.
-#' @param var The variable to label (unquoted, e.g. \code{OneParentR}).
-#' @param labels Optional. A quoted string specifying value labels using the
-#'   format \code{"code=Label Text"} with rules separated by semicolons.
+#' @details
+#' The function handles \code{haven_labelled}, factor, and plain numeric
+#' variables. For plain numeric variables with no labels, only the variable
+#' label (derived from the original variable name) is applied.
 #'
-#'   Examples:
-#'   \itemize{
-#'     \item \code{"1=Yes; 0=No"}
-#'     \item \code{"1=Employed; 2=Unemployed; 3=Student; 4=Retired"}
-#'   }
+#' \strong{Reverse coding:} If the function detects that values have been
+#' reversed (e.g. 1->5, 2->4, 3->3, 4->2, 5->1), it will \emph{not} transfer
+#' value labels, as the original labels would be misleading in reverse order.
+#' A message will guide you to assign labels manually.
 #'
-#' @param var_label Optional. A quoted string to use as the variable label
-#'   (the description shown by \code{jdesc()}, \code{jfreq()}, etc.).
-#'   If omitted, any existing variable label is preserved. If the variable
-#'   has no existing label, no variable label is set.
+#' \strong{Collapsing:} If multiple original values map to the same new value,
+#' labels cannot be transferred automatically. Use \code{\link{jrecode}} with
+#' the \code{labels} argument instead.
 #'
-#' @return A \code{haven_labelled} vector with the requested labels applied.
-#'   Assign this back to a column in your data frame:
-#'   \code{SampleData$VarName <- jrelabel(SampleData, VarName, ...)}
+#' \strong{Existing labels:} If the new variable already has labels assigned,
+#' the function will ask whether you want to overwrite them before proceeding.
+#'
+#' NA values are always copied across without modification.
 #'
 #' @examples
-#' # Add value labels after a recode
 #' df <- data.frame(Status = c(1, 2, 1, 2, 1, 2))
-#' df$StatusR <- ifelse(df$Status == 1, 1, 0)
-#' df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No",
-#'                        var_label = "Status (recoded)")
+#' df$StatusR <- ifelse(df$Status == 2, 0, 1)
+#' df <- jrelabel(df, Status, StatusR)
 #'
-#' # Add just a variable label
-#' df$StatusR <- jrelabel(df, StatusR, var_label = "Employment Status")
+#' # Reverse coding - labels will not transfer (by design)
+#' df$ScaleItem <- c(1, 2, 3, 4, 5, 3)
+#' df$ScaleItemR <- 6 - df$ScaleItem
+#' df <- jrelabel(df, ScaleItem, ScaleItemR)
 #'
-#' # Add just value labels
-#' df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No")
-#'
-#' # Fix or update existing labels (silently overwrites)
-#' df$StatusR <- jrelabel(df, StatusR, labels = "1=Active; 0=Inactive")
-#'
-#' @seealso \code{\link{jrecode}} for recoding values with optional labels
-#'   in a single step.
+#' @seealso \code{\link{jrecode}} for recoding with collapsing or explicit
+#'   value mapping; \code{labelled::val_labels} and \code{labelled::var_label}
+#'   for manual label assignment.
 #'
 #' @export
-jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
+jrelabel <- function(data, orig_var, new_var) {
 
-  # Resolve default data frame if not specified
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-  }
-
-  var_name <- deparse(substitute(var))
+  orig_name <- deparse(substitute(orig_var))
+  new_name  <- deparse(substitute(new_var))
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
-    stop("The first argument must be a data frame.", call. = FALSE)
+    stop("The first argument must be a data frame.")
   }
-  if (!var_name %in% names(data)) {
-    stop(paste0("Variable '", var_name, "' not found in the data frame."), call. = FALSE)
+  if (!orig_name %in% names(data)) {
+    stop(paste0("Variable '", orig_name, "' not found in the data frame."))
   }
-
-  x <- data[[var_name]]
-
-  # --- Preserve any existing variable label before conversion ---
-  existing_var_label <- NULL
-  if (haven::is.labelled(x)) {
-    existing_var_label <- labelled::var_label(x)
+  if (!new_name %in% names(data)) {
+    stop(paste0(
+      "Variable '", new_name, "' not found in the data frame. ",
+      "Run your recode line first, then call jrelabel()."
+    ))
   }
 
-  # --- Convert to numeric vector for haven_labelled construction ---
-  if (haven::is.labelled(x)) {
-    num_vals <- as.numeric(x)
-  } else if (is.factor(x)) {
-    num_vals <- suppressWarnings(as.numeric(as.character(x)))
-    if (all(is.na(num_vals[!is.na(x)]))) {
-      stop(paste0(
-        "'", var_name, "' is a factor with non-numeric levels. ",
-        "Convert it to numeric values before using jrelabel()."
-      ), call. = FALSE)
-    }
-  } else if (is.character(x)) {
-    num_vals <- suppressWarnings(as.numeric(x))
-    if (all(is.na(num_vals[!is.na(x)]))) {
-      stop(paste0(
-        "'", var_name, "' contains non-numeric text values. ",
-        "Convert it to numeric values before using jrelabel()."
-      ), call. = FALSE)
-    }
+  orig <- data[[orig_name]]
+  new  <- data[[new_name]]
+
+  # --- Determine type and extract existing labels ---
+  is_haven  <- inherits(orig, "haven_labelled")
+  is_factor <- is.factor(orig)
+
+  if (is_haven) {
+    orig_var_label  <- labelled::var_label(orig)
+    orig_val_labels <- labelled::val_labels(orig)
+  } else if (is_factor) {
+    orig_var_label  <- NULL
+    codes           <- seq_along(levels(orig))
+    orig_val_labels        <- as.numeric(codes)
+    names(orig_val_labels) <- levels(orig)
   } else {
-    num_vals <- as.numeric(x)
+    orig_var_label  <- NULL
+    orig_val_labels <- NULL
   }
 
-  # --- Build haven_labelled vector ---
-  result <- labelled::labelled(num_vals)
+  # --- Build value mapping table (non-NA rows only) ---
+  non_na      <- !is.na(orig) & !is.na(new)
+  orig_num    <- as.numeric(orig)[non_na]
+  new_num     <- as.numeric(new)[non_na]
+  mapping     <- unique(data.frame(orig_val = orig_num, new_val = new_num,
+                                   stringsAsFactors = FALSE))
+  mapping     <- mapping[order(mapping$orig_val), ]
 
-  # --- Apply variable label ---
-  if (!is.null(var_label)) {
-    if (!is.character(var_label) || length(var_label) != 1) {
-      stop("The var_label argument must be a single quoted string.", call. = FALSE)
-    }
-    labelled::var_label(result) <- var_label
-  } else if (!is.null(existing_var_label) &&
-             nchar(trimws(existing_var_label)) > 0) {
-    labelled::var_label(result) <- existing_var_label
+  # --- Detect mapping type ---
+  is_collapsing <- any(table(mapping$new_val) > 1)
+
+  is_reversed <- FALSE
+  if (nrow(mapping) > 1 && !is_collapsing) {
+    sorted_new  <- mapping[order(mapping$orig_val), "new_val"]
+    is_reversed <- all(diff(sorted_new) < 0)
   }
 
-  # --- Apply value labels ---
-  if (!is.null(labels)) {
-    if (!is.character(labels) || length(labels) != 1) {
-      stop("The labels argument must be a single quoted string, e.g. \"1=Yes; 0=No\".", call. = FALSE)
+  # --- Check for existing labels on new variable ---
+  has_existing <- FALSE
+  if (inherits(new, "haven_labelled")) {
+    ev  <- labelled::var_label(new)
+    el  <- labelled::val_labels(new)
+    has_existing <- (!is.null(ev) && nchar(trimws(ev)) > 0) ||
+      (!is.null(el) && length(el) > 0)
+  }
+
+  if (has_existing) {
+    response <- readline(prompt = paste0(
+      "Variable '", new_name, "' already has labels assigned. ",
+      "Overwrite them? (yes/no): "
+    ))
+    if (!tolower(trimws(response)) %in% c("yes", "y")) {
+      message("Labels for '", new_name, "' were not changed.")
+      return(data)
     }
-    parsed_labels <- tryCatch(
-      .jst_parse_labels(labels),
-      error = function(e) stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e)), call. = FALSE)
+  }
+
+  # --- Set variable label ---
+  new_var_label <- if (!is.null(orig_var_label) && nchar(trimws(orig_var_label)) > 0) {
+    paste0(orig_var_label, " (recoded)")
+  } else {
+    paste0(orig_name, " (recoded)")
+  }
+
+  # Ensure new variable is haven_labelled so we can attach labels
+  if (!inherits(data[[new_name]], "haven_labelled")) {
+    data[[new_name]] <- labelled::labelled(as.numeric(data[[new_name]]))
+  }
+
+  labelled::var_label(data[[new_name]]) <- new_var_label
+
+  # --- Handle value labels based on detected mapping type ---
+
+  if (is_collapsing) {
+    message(
+      "Category collapsing detected in '", new_name, "': multiple original values ",
+      "map to the same new value. Value labels have not been transferred automatically.\n",
+      "To assign value labels, use jrecode() with the labels argument, or assign ",
+      "them manually with val_labels()."
     )
-    labelled::val_labels(result) <- parsed_labels
+    return(data)
   }
 
-  return(invisible(result))
+  if (is_reversed) {
+    message(
+      "A reverse coding pattern was detected in '", new_name, "'. Value labels have ",
+      "not been automatically transferred, as the original labels would be misleading ",
+      "in reverse order (e.g., 'Strongly Disagree' would end up at the high end).\n",
+      "Please assign new value labels manually using val_labels(), or use jrecode() ",
+      "with the labels argument."
+    )
+    return(data)
+  }
+
+  # --- Transfer value labels for clean one-to-one mapping ---
+  if (!is.null(orig_val_labels) && length(orig_val_labels) > 0) {
+    new_val_labels <- orig_val_labels
+    for (i in seq_along(orig_val_labels)) {
+      old_code  <- unname(orig_val_labels[i])
+      match_row <- mapping[mapping$orig_val == old_code, , drop = FALSE]
+      if (nrow(match_row) == 1) {
+        new_val_labels[i] <- match_row$new_val
+      }
+    }
+    labelled::val_labels(data[[new_name]]) <- new_val_labels
+  }
+
+  return(data)
 }
 
 
@@ -2278,24 +2036,21 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #' @description
 #' \code{jrecode()} recodes a variable using a simple map string that specifies
 #' how old values should be converted to new values. It is designed for
-#' situations where you need to collapse categories, change numeric codes,
-#' or recode dichotomies. Variable and value labels are handled automatically.
+#' situations where you need to collapse categories, or where you want full
+#' explicit control over the mapping. Variable and value labels are handled
+#' automatically.
+#'
+#' For simple one-to-one recodes (e.g. \code{ifelse} or arithmetic), consider
+#' using base R for the recode followed by \code{\link{jrelabel}} to restore
+#' labels.
 #'
 #' @param data     A data frame containing the original variable.
 #' @param orig_var The variable to recode (unquoted, e.g. \code{AgeGroup}).
 #' @param map      A quoted string specifying the recode rules, using the
 #'   format \code{"old=new"} with rules separated by semicolons. Multiple old
 #'   values mapping to the same new value are separated by commas on the left
-#'   side.
-#'
-#'   An optional \code{else} clause controls what happens to values not
-#'   covered by the map:
-#'   \itemize{
-#'     \item No else clause: the function stops with a message if any
-#'       values are left unmapped, so you can fix the map before proceeding.
-#'     \item \code{else=NA}: unmapped values are deliberately set to missing.
-#'     \item \code{else=copy}: unmapped values are carried across unchanged.
-#'   }
+#'   side. Use \code{else=NA} (default) to set unspecified values to missing,
+#'   or \code{else=copy} to carry them across unchanged.
 #'
 #'   Examples:
 #'   \itemize{
@@ -2306,115 +2061,74 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #'
 #' @param labels   Optional. A quoted string specifying value labels for the
 #'   new variable, using the format \code{"code=Label Text"} with rules
-#'   separated by semicolons. If supplied, these labels are used as-is.
-#'
-#'   If omitted, the function attempts to transfer value labels automatically
-#'   from the original variable. This works when the original variable has
-#'   value labels and the mapping is one-to-one (no categories are collapsed).
-#'   When categories are collapsed, labels cannot be transferred automatically
-#'   and a note is printed.
+#'   separated by semicolons. If omitted, no value labels are assigned and
+#'   a reminder message is printed.
 #'
 #'   Example: \code{"1=Male; 0=Female"}
 #'
 #' @return A \code{haven_labelled} vector with the recoded values, variable
-#'   label, and (if supplied or auto-transferred) value labels applied. Assign
-#'   this to a new column in your data frame:
+#'   label, and (if supplied) value labels applied. Assign this to a new
+#'   column in your data frame:
 #'   \code{SampleData$AgeGroupR <- jrecode(SampleData, AgeGroup, map = "...")}
 #'
 #' @details
-#' The function accepts haven-labelled, plain numeric, and factor variables.
-#'
 #' The variable label from the original variable is carried across automatically
 #' with "(recoded)" appended. If the original variable has no variable label,
 #' the variable name is used instead.
 #'
-#' Value labels are handled in three ways, in order of priority:
-#' \enumerate{
-#'   \item If \code{labels} is supplied, those labels are used as-is.
-#'   \item If \code{labels} is omitted and the original variable has value
-#'     labels, they are automatically transferred to the new codes --- provided
-#'     the mapping is one-to-one (no collapsing). For example, recoding 1/2 to
-#'     1/0 will carry "Yes" and "No" across to the new codes automatically.
-#'   \item If categories are collapsed (multiple old values map to one new
-#'     value), automatic transfer is not possible and a note is printed
-#'     directing you to supply labels manually.
-#' }
-#'
 #' NA values in the original variable are always set to NA in the new variable,
 #' regardless of the \code{else} setting.
-#'
-#' Values that appear to be coded missing values (e.g. -99, -9, 999) from SPSS
-#' or another package are automatically detected and set to NA, even when
-#' \code{else=copy} is used. A note is printed when this occurs.
-#'
-#' If the map does not include an \code{else} clause and there are unmapped
-#' values in the variable, the function stops with a message listing the
-#' unmapped values so you can fix the map before proceeding.
 #'
 #' If the map specifies values that do not exist in the original variable, a
 #' warning is issued (but the function continues). This helps catch typos in
 #' the map string.
 #'
+#' If suspicious coded-missing values are detected (e.g. -99 sitting far
+#' outside the main range of values), an informative note is printed suggesting
+#' you convert them to NA before recoding.
+#'
 #' @examples
-#' # Recode with explicit labels
 #' df <- data.frame(gear = mtcars$gear)
 #' df$gearR <- jrecode(df, gear,
-#'                     map    = "3=1; 4=2; 5=3",
-#'                     labels = "1=Three; 2=Four; 3=Five")
+#'                     map    = "3=1; 4,5=2; else=NA",
+#'                     labels = "1=Three gears; 2=Four or five gears")
 #'
-#' # Collapse categories (must supply labels)
-#' df$gearR2 <- jrecode(df, gear,
-#'                      map    = "3=1; 4,5=2",
-#'                      labels = "1=Three gears; 2=Four or five gears")
+#' # Recode without labels (reminder message will be printed)
+#' df$gearR2 <- jrecode(df, gear, map = "3=1; 4,5=2")
 #'
 #' # Use else=copy to carry unspecified values across unchanged
 #' df$gearR3 <- jrecode(df, gear,
 #'                      map    = "3=1; else=copy",
 #'                      labels = "1=Three gears")
 #'
-#' # Use else=NA to deliberately drop unspecified values
-#' df$gearR4 <- jrecode(df, gear,
-#'                      map    = "3=1; 4=2; else=NA",
-#'                      labels = "1=Three gears; 2=Four gears")
-#'
-#' @seealso \code{\link{jrelabel}} for applying labels to an existing variable
-#'   after a recode.
+#' @seealso \code{\link{jrelabel}} for automatically relabelling after a simple
+#'   one-to-one recode.
 #'
 #' @export
 jrecode <- function(data, orig_var, map, labels = NULL) {
-
-  # Resolve default data frame if not specified
-  .jst_data_name <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_data_name <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
 
   orig_name <- deparse(substitute(orig_var))
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
-    stop("The first argument must be a data frame.", call. = FALSE)
+    stop("The first argument must be a data frame.")
   }
   if (!orig_name %in% names(data)) {
-    stop(paste0("Variable '", orig_name, "' not found in '", .jst_data_name, "'."), call. = FALSE)
+    stop(paste0("Variable '", orig_name, "' not found in the data frame."))
   }
   if (missing(map) || !is.character(map) || length(map) != 1) {
-    stop("The map argument must be a single quoted string, e.g. map = \"1=1; 2=0\".", call. = FALSE)
+    stop("The map argument must be a single quoted string, e.g. map = \"1=1; 2=0\".")
   }
 
   orig <- data[[orig_name]]
 
-  # --- Detect suspicious coded missing values ---
-  suspicious_vals <- .jst_detect_suspicious_values(orig, orig_name)
+  # --- Check for suspicious coded missing values ---
+  .jst_detect_suspicious_values(orig, orig_name)
 
   # --- Parse map string ---
   parsed_map <- tryCatch(
     .jst_parse_map(map),
-    error = function(e) stop(paste0("Error in map argument: ", conditionMessage(e)), call. = FALSE)
+    error = function(e) stop(paste0("Error in map argument: ", conditionMessage(e)))
   )
 
   # --- Apply recode ---
@@ -2442,46 +2156,23 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
     new_num[!is.na(orig_num) & orig_num %in% old_vals] <- new_val
   }
 
-  # --- Handle unspecified non-NA values ---
+  # Handle unspecified non-NA values
   unspecified_mask <- !is.na(orig_num) & is.na(new_num)
-  unspecified_vals <- sort(unique(orig_num[unspecified_mask]))
 
-  # Separate suspicious from legitimate unspecified values
-  suspicious_unspecified <- unspecified_vals[unspecified_vals %in% suspicious_vals]
-  legitimate_unspecified <- unspecified_vals[!unspecified_vals %in% suspicious_vals]
-
-  # Force suspicious values to NA regardless of else setting
-  if (length(suspicious_unspecified) > 0) {
-    suspicious_mask <- !is.na(orig_num) & orig_num %in% suspicious_unspecified
-    new_num[suspicious_mask] <- NA_real_
-  }
-
-  # Handle legitimate unspecified values based on else setting
-  if (length(legitimate_unspecified) > 0) {
-    if (parsed_map$else_explicit && parsed_map$else_action == "copy") {
-      # else=copy: carry legitimate values through
-      legit_mask <- !is.na(orig_num) & orig_num %in% legitimate_unspecified
-      new_num[legit_mask] <- orig_num[legit_mask]
-    } else if (parsed_map$else_explicit && parsed_map$else_action == "na") {
-      # Explicit else=NA: set to NA silently (student is being deliberate)
-      # Values are already NA, nothing to do
-    } else {
-      # No else clause: stop so student can fix the map
-      stop(paste0(
-        "Value(s) ", paste(legitimate_unspecified, collapse = ", "),
-        " in '", orig_name, "' were not in the map. ",
-        "Map these values and re-run."
-      ), call. = FALSE)
+  if (parsed_map$else_action == "copy") {
+    new_num[unspecified_mask] <- orig_num[unspecified_mask]
+  } else {
+    # else = NA (default): leave as NA but inform the user
+    unspecified_vals <- sort(unique(orig_num[unspecified_mask]))
+    if (length(unspecified_vals) > 0) {
+      message(
+        "The following value(s) in '", orig_name, "' were not specified in the ",
+        "map argument and have been set to NA in the new variable: ",
+        paste(unspecified_vals, collapse = ", "), ".\n",
+        "If this is not what you intended, add rules for these values in your ",
+        "map argument, or use else=copy to carry unspecified values across unchanged."
+      )
     }
-  }
-
-  # Print note about suspicious values that were forced to NA
-  if (length(suspicious_unspecified) > 0) {
-    message(paste0(
-      "Note: ", paste(suspicious_unspecified, collapse = ", "),
-      " in '", orig_name,
-      "' looks like a coded missing value and was set to NA."
-    ))
   }
 
   # NAs in original are always NA in output
@@ -2491,8 +2182,7 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
   is_haven       <- inherits(orig, "haven_labelled")
   orig_var_label <- if (is_haven) labelled::var_label(orig) else NULL
 
-  new_var_label <- if (!is.null(orig_var_label) &&
-                       nchar(trimws(orig_var_label)) > 0) {
+  new_var_label <- if (!is.null(orig_var_label) && nchar(trimws(orig_var_label)) > 0) {
     paste0(orig_var_label, " (recoded)")
   } else {
     paste0(orig_name, " (recoded)")
@@ -2504,78 +2194,22 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
 
   # --- Value labels ---
   if (!is.null(labels)) {
-    # User-supplied labels always take precedence
     if (!is.character(labels) || length(labels) != 1) {
-      stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
+      stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
-      error = function(e) stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e)), call. = FALSE)
+      error = function(e) stop(paste0("Error in labels argument: ", conditionMessage(e)))
     )
     labelled::val_labels(result) <- parsed_labels
   } else {
-    # No labels supplied — try to auto-transfer from original variable
-    orig_val_labels <- if (is_haven) labelled::val_labels(orig) else NULL
-
-    if (!is.null(orig_val_labels) && length(orig_val_labels) > 0) {
-      # Detect collapsing: multiple old values mapping to the same new value
-      is_collapsing <- any(vapply(parsed_map$mappings,
-                                  function(r) length(r$old_vals) > 1,
-                                  logical(1)))
-      if (!is_collapsing) {
-        new_vals <- vapply(parsed_map$mappings,
-                           function(r) r$new_val, numeric(1))
-        is_collapsing <- anyDuplicated(new_vals) > 0
-      }
-
-      if (is_collapsing) {
-        message("Note: Categories were collapsed. Use labels argument or jrelabel() ",
-                "to assign new value labels.")
-      } else {
-        # One-to-one mapping — transfer labels to new codes
-        old_to_new <- list()
-        for (rule in parsed_map$mappings) {
-          old_to_new[[as.character(rule$old_vals)]] <- rule$new_val
-        }
-
-        new_val_labels <- c()
-        for (i in seq_along(orig_val_labels)) {
-          old_code   <- unname(orig_val_labels[i])
-          label_name <- names(orig_val_labels)[i]
-
-          if (as.character(old_code) %in% names(old_to_new)) {
-            # Explicitly mapped — use the new code
-            entry        <- old_to_new[[as.character(old_code)]]
-            names(entry) <- label_name
-            new_val_labels <- c(new_val_labels, entry)
-          } else if (parsed_map$else_action == "copy") {
-            # Unmapped but carried across unchanged
-            entry        <- old_code
-            names(entry) <- label_name
-            new_val_labels <- c(new_val_labels, entry)
-          }
-          # else: value became NA, label is dropped
-        }
-
-        if (length(new_val_labels) > 0) {
-          labelled::val_labels(result) <- new_val_labels
-        }
-      }
-    } else {
-      message("Note: No value labels assigned. To add labels, use jrelabel().")
-    }
+    message(
+      "No value labels have been assigned to the new variable. ",
+      "To add value labels, use the labels argument - ",
+      "e.g., labels = \"1=Category One; 2=Category Two\". ",
+      "Run jfreq() to check your result."
+    )
   }
 
-  return(invisible(result))
-}
-
-
-# -- .onUnload ----------------------------------------------------------------
-
-#' Clean up session options when the package is unloaded
-#'
-#' @keywords internal
-.onUnload <- function(libpath) {
-  options(.jst_default_data = NULL)
+  return(result)
 }
