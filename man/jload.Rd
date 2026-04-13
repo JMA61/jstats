@@ -4,7 +4,14 @@
 \alias{jload}
 \title{Load a data file into R}
 \usage{
-jload(file, name = NULL, use = FALSE, overwrite = FALSE, check.missing = TRUE)
+jload(
+  file,
+  name = NULL,
+  use = FALSE,
+  overwrite = FALSE,
+  check.missing = TRUE,
+  sheet = NULL
+)
 }
 \arguments{
 \item{file}{Character string. The filename (e.g. \code{"mydata.sav"}) or
@@ -27,6 +34,11 @@ sessions, overwrites with a warning message.}
 \item{check.missing}{Logical. If \code{TRUE} (default), scans numeric
 variables for values that look like coded missing values (e.g. -99, 999)
 and reports them. Set to \code{FALSE} to skip this check.}
+
+\item{sheet}{For Excel files only. The sheet to read --- either a sheet
+name (character) or sheet number (integer). Defaults to the first sheet.
+If the file has multiple sheets and \code{sheet} is not specified,
+a message lists the available sheets.}
 }
 \value{
 Invisibly returns the loaded data frame. The primary effect is
@@ -35,8 +47,9 @@ assigning the data frame in the calling environment.
 \description{
 \code{jload()} reads a data file and assigns it as a data frame in your
 environment. Supports SPSS (\code{.sav}), Stata (\code{.dta}), SAS
-(\code{.sas7bdat}, \code{.xpt}), CSV (\code{.csv}), and R's native
-\code{.rds} format. File format is detected from the extension.
+(\code{.sas7bdat}, \code{.xpt}), Excel (\code{.xlsx}, \code{.xls}),
+CSV (\code{.csv}), and R's native \code{.rds} format. File format is
+detected from the extension.
 
 By default, \code{jload()} looks for the file in a \code{Data/} (or
 \code{data/}) subfolder of the working directory first, then the
@@ -66,6 +79,12 @@ The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
 allow as a variable name), you must supply the \code{name} argument.
 
+\strong{Excel files:}
+Excel files (\code{.xlsx}, \code{.xls}) do not contain variable or
+value labels. The data will be loaded as plain numeric, character, or
+logical columns. Use \code{jrelabel()} to add labels after loading
+if needed.
+
 \strong{Coded missing values:}
 When \code{check.missing = TRUE}, the function scans numeric variables
 for values that appear to be coded missing values. Only whole-number
@@ -86,6 +105,9 @@ jload("mydata.sav")
 jload("mydata.sav", use = TRUE)
 jload("mydata.sav", name = "MySurvey")
 jload("C:/Projects/Data/mydata.dta")
+jload("mydata.xlsx")
+jload("mydata.xlsx", sheet = "Wave2")
+jload("mydata.xlsx", sheet = 2)
 }
 
 }

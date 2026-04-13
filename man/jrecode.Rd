@@ -48,7 +48,7 @@ Example: \code{"1=Male; 0=Female"}}
 A \code{haven_labelled} vector with the recoded values, variable
 label, and (if supplied or auto-transferred) value labels applied. Assign
 this to a new column in your data frame:
-\code{SampleData$AgeGroupR <- jrecode(SampleData, AgeGroup, map = "...")}
+\code{MyData$AgeGroupR <- jrecode(MyData, AgeGroup, map = "...")}
 }
 \description{
 \code{jrecode()} recodes a variable using a simple map string that specifies

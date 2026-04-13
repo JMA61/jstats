@@ -759,10 +759,10 @@ juse <- function(data) {
 #' datasets preserves each dataset's filter independently.
 #'
 #' When a data frame is specified explicitly in a function call (e.g.
-#' \code{jfreq(MyData, Computer)}), the filter is not applied
+#' \code{jfreq(PopulationData, Computer)}), the filter is not applied
 #' for that call.
 #'
-#' @param expr A logical expression (e.g. \code{Group == 1}), or one
+#' @param expr A logical expression (e.g. \code{Gender == 1}), or one
 #'   of the following special values:
 #'   \describe{
 #'     \item{\code{off}}{Deactivate the filter but remember the expression.}
@@ -1411,7 +1411,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 #'   descriptives are computed separately for each group, with a separate
 #'   titled table per dependent variable.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If \code{TRUE} (default), prints the variable type
 #'   and label (or "None") for each variable before the table.
@@ -1702,7 +1702,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 #' @param ... Unquoted variable name(s) within \code{data} (ignored if
 #'   \code{data} is a vector).
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If \code{TRUE} (default), prints the variable type
 #'   and label (or "None") beneath the title.
@@ -1898,7 +1898,7 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
 #' @param ci Logical. If TRUE, adds 95\% confidence interval for the
 #'   mean difference.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
@@ -2178,7 +2178,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' @param ci Logical. If TRUE, adds 95\% confidence intervals to the
 #'   group descriptives table.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
@@ -2493,7 +2493,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = FALSE,
 #' @param method Character. Correlation method: "pearson" (default),
 #'   "spearman", or "kendall".
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
@@ -2695,7 +2695,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #' @param formula A model formula, e.g. \code{y ~ x1 + x2}.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
@@ -2737,13 +2737,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #'
 #' \dontrun{
 #' # Force a variable with value labels to be treated as numeric
-#' jlm(Outcome ~ Age + Employment, numeric = "Age")
+#' jlm(TotalCrime ~ Age + Employment, numeric = "Age")
 #'
 #' # Force a plain numeric variable to be treated as categorical
-#' jlm(Outcome ~ Program + ReadingScore, categorical = "Program")
+#' jlm(TotalCrime ~ Program + ReadingScore, categorical = "Program")
 #'
 #' # Multiple overrides
-#' jlm(Outcome ~ Age + Education + Program,
+#' jlm(TotalCrime ~ Age + Education + Program,
 #'     numeric = c("Age", "Education"), categorical = "Program")
 #' }
 #'
@@ -3092,7 +3092,7 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
 #' @param row.pct Logical. If TRUE (default), shows row percentages.
 #' @param col.pct Logical. If TRUE, shows column percentages. Default is FALSE.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
@@ -3341,7 +3341,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @param outlier.sd Numeric. Number of standard deviations from the mean
 #'   to flag as potential outliers. Default is 3.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
@@ -3530,7 +3530,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
 #' @param data A data frame.
 #' @param ... Unquoted variable names (scale items) within \code{data}.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   \code{Gender == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
@@ -3733,466 +3733,6 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 }
 
 
-# -- jsum / javg internal helper -----------------------------------------------
-
-#' Internal helper: resolve variable names from enquos, expanding colon ranges
-#'
-#' Handles both explicit variable names (var1, var2, var3) and colon notation
-#' (var1:var3) which expands to all columns between the two endpoints in
-#' column order. Named arguments (e.g. min.valid, var_label) are excluded.
-#'
-#' @param quos_list A list of quosures from rlang::enquos(...).
-#' @param data The data frame to resolve column names against.
-#' @param fn_name Character. The calling function name for error messages.
-#'
-#' @return A list with two components:
-#'   \describe{
-#'     \item{var_names}{Character vector of all resolved variable names.}
-#'     \item{label_parts}{Character vector of label-friendly descriptions,
-#'       using "X to Y" for colon ranges and plain names for explicit
-#'       variables.}
-#'   }
-#'
-#' @keywords internal
-.jst_resolve_varrange <- function(quos_list, data, fn_name) {
-
-  all_cols    <- names(data)
-  var_names   <- character(0)
-  label_parts <- character(0)
-
-  for (q in quos_list) {
-    expr <- rlang::quo_get_expr(q)
-
-    if (is.call(expr) && identical(expr[[1]], as.name(":"))) {
-      # Colon notation: var1:var6
-      start_name <- as.character(expr[[2]])
-      end_name   <- as.character(expr[[3]])
-
-      start_idx <- match(start_name, all_cols)
-      end_idx   <- match(end_name, all_cols)
-
-      if (is.na(start_idx)) {
-        stop(
-          "Variable '", start_name, "' not found in the data frame.\n",
-          "Check spelling and capitalisation.",
-          call. = FALSE
-        )
-      }
-      if (is.na(end_idx)) {
-        stop(
-          "Variable '", end_name, "' not found in the data frame.\n",
-          "Check spelling and capitalisation.",
-          call. = FALSE
-        )
-      }
-
-      if (start_idx > end_idx) {
-        stop(
-          "In ", start_name, ":", end_name, ", '", start_name,
-          "' comes after '", end_name, "' in the data frame column order.\n",
-          "Reverse the order: ", end_name, ":", start_name,
-          call. = FALSE
-        )
-      }
-
-      expanded <- all_cols[start_idx:end_idx]
-      var_names   <- c(var_names, expanded)
-      label_parts <- c(label_parts, paste0(start_name, " to ", end_name))
-
-    } else {
-      # Simple variable name
-      vname <- rlang::quo_name(q)
-      var_names   <- c(var_names, vname)
-      label_parts <- c(label_parts, vname)
-    }
-  }
-
-  list(var_names = var_names, label_parts = label_parts)
-}
-
-
-# -- jsum ----------------------------------------------------------------------
-
-#' Compute a row-wise sum across multiple variables
-#'
-#' @description
-#' \code{jsum()} computes the sum of values across multiple variables for each
-#' case (row) in the data frame. This is typically used to create composite
-#' scores from a set of related items (e.g. summing 6 survey items into a
-#' total scale score).
-#'
-#' By default, cases with any missing values receive \code{NA}. Use the
-#' \code{min.valid} argument to allow partial sums --- for example,
-#' \code{min.valid = 1} returns the sum of available values as long as at
-#' least one item is non-missing.
-#'
-#' Variables can be listed individually or using colon notation to select a
-#' range of consecutive columns (e.g. \code{Attitude1:Attitude6}).
-#'
-#' @param data A data frame, or omit to use the \code{juse()} default.
-#' @param ... Unquoted variable names. Use colon notation (e.g.
-#'   \code{Attitude1:Attitude6}) to select a range of consecutive columns.
-#' @param min.valid Integer (optional). The minimum number of non-missing
-#'   values required to compute a sum. If a case has fewer non-missing
-#'   values, the result is \code{NA}. If omitted, all values must be
-#'   non-missing (equivalent to setting min.valid to the number of variables).
-#' @param var_label Character string (optional). A variable label to attach
-#'   to the result. If omitted, an auto-generated label is used.
-#'
-#' @return A numeric vector the same length as \code{nrow(data)}, suitable for
-#'   assigning to a new column:
-#'   \code{MyData$Total <- jsum(, Var1, Var2, Var3)}.
-#'
-#' @examples
-#' \dontrun{
-#' # Set the default data frame (so you can omit it in function calls)
-#' juse(MyData)
-#'
-#' # Sum three variables (all must be non-missing)
-#' MyData$Total <- jsum(, Score1, Score2, Score3)
-#'
-#' # Sum with partial data allowed (at least 1 non-missing)
-#' MyData$Total <- jsum(, Score1, Score2, Score3, min.valid = 1)
-#'
-#' # Sum using colon range for consecutive columns
-#' MyData$ScaleTotal <- jsum(, Attitude1:Attitude6)
-#'
-#' # Mix colon ranges and explicit names (e.g. after reverse-coding an item)
-#' MyData$ScaleTotal <- jsum(, Attitude1:Attitude3, Attitude4R, Attitude5:Attitude6)
-#'
-#' # With a custom variable label
-#' MyData$Total <- jsum(, Score1, Score2, Score3,
-#'                      var_label = "Total Score")
-#'
-#' # With an explicit data frame (instead of using juse default)
-#' MyData$Total <- jsum(MyData, Score1, Score2, Score3)
-#' }
-#'
-#' @seealso \code{\link{javg}} for computing row-wise means.
-#'
-#' @export
-jsum <- function(data, ..., min.valid = NULL, var_label = NULL) {
-
-  # Capture the data name before any evaluation
-  .jst_data_name <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
-  # Catch missing-comma error: jsum(VarName, ...) instead of jsum(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jsum", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_data_name <- resolved$name
-  }
-
-  # Resolve variable names (handles colon ranges)
-  quos_list <- rlang::enquos(...)
-  resolved  <- .jst_resolve_varrange(quos_list, data, "jsum")
-  var_names   <- resolved$var_names
-  label_parts <- resolved$label_parts
-
-  if (length(var_names) < 2) {
-    stop("jsum() requires at least 2 variables.", call. = FALSE)
-  }
-
-  .jst_check_vars(data, var_names, .jst_data_name)
-
-  # Extract columns and convert haven-labelled to numeric
-  items <- data[, var_names, drop = FALSE]
-  for (v in var_names) {
-    if (haven::is.labelled(items[[v]])) {
-      items[[v]] <- as.numeric(items[[v]])
-    } else {
-      items[[v]] <- as.numeric(items[[v]])
-    }
-  }
-
-  n_vars  <- length(var_names)
-  n_cases <- nrow(items)
-
-  # Determine minimum valid threshold
-  if (is.null(min.valid)) {
-    threshold <- n_vars   # Default: all must be non-missing
-  } else {
-    threshold <- as.integer(min.valid)
-    if (is.na(threshold) || threshold < 1) {
-      stop("min.valid must be a positive integer.", call. = FALSE)
-    }
-    if (threshold > n_vars) {
-      stop(
-        "min.valid (", threshold, ") cannot exceed the number of variables (",
-        n_vars, ").",
-        call. = FALSE
-      )
-    }
-  }
-
-  # Compute row-wise sums
-  mat        <- as.matrix(items)
-  non_na     <- rowSums(!is.na(mat))
-  row_sums   <- rowSums(mat, na.rm = TRUE)
-  result     <- ifelse(non_na >= threshold, row_sums, NA_real_)
-
-  # Count cases set to NA due to missingness
-  n_na_result <- sum(is.na(result) & non_na > 0)
-  n_all_na    <- sum(non_na == 0)
-  n_valid     <- sum(!is.na(result))
-  n_partial   <- if (!is.null(min.valid)) sum(!is.na(result) & non_na < n_vars) else 0L
-
-  # Summary message
-  msg_parts <- paste0(
-    "Sum of ", n_vars, " variables computed for ", n_cases, " cases"
-  )
-
-  detail_parts <- character(0)
-  if (!is.null(min.valid)) {
-    if (n_partial > 0) {
-      detail_parts <- c(detail_parts,
-        paste0(n_partial, " case", if (n_partial != 1) "s" else "",
-               " used partial data"))
-    }
-  }
-  if (n_na_result > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_na_result, " set to NA due to missing values"))
-  }
-  if (n_all_na > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_all_na, " set to NA (all values missing)"))
-  }
-
-  if (length(detail_parts) > 0) {
-    if (!is.null(min.valid)) {
-      msg_parts <- paste0(msg_parts, " (min.valid = ", threshold, ": ",
-                          paste(detail_parts, collapse = ", "), ").")
-    } else {
-      msg_parts <- paste0(msg_parts, " (", paste(detail_parts, collapse = ", "), ").")
-    }
-  } else {
-    msg_parts <- paste0(msg_parts, ".")
-  }
-  message(msg_parts)
-
-  # Attach variable label
-  if (!is.null(var_label)) {
-    labelled::var_label(result) <- var_label
-  } else {
-    auto_label <- paste0("Sum of ", paste(label_parts, collapse = ", "))
-    labelled::var_label(result) <- auto_label
-  }
-
-  return(invisible(result))
-}
-
-
-# -- javg ----------------------------------------------------------------------
-
-#' Compute a row-wise mean across multiple variables
-#'
-#' @description
-#' \code{javg()} computes the mean of values across multiple variables for each
-#' case (row) in the data frame. This is typically used to create scale means
-#' from a set of related items.
-#'
-#' By default, cases with any missing values receive \code{NA}. Use the
-#' \code{min.valid} argument to allow partial means --- for example,
-#' \code{min.valid = 1} computes the mean of available values as long as
-#' at least one item is non-missing.
-#'
-#' By default, the denominator is the number of non-missing values for each
-#' case. Use \code{fixed = TRUE} to always divide by the total number of
-#' variables regardless of missing values.
-#'
-#' Variables can be listed individually or using colon notation to select a
-#' range of consecutive columns (e.g. \code{Attitude1:Attitude6}).
-#'
-#' @param data A data frame, or omit to use the \code{juse()} default.
-#' @param ... Unquoted variable names. Use colon notation (e.g.
-#'   \code{Attitude1:Attitude6}) to select a range of consecutive columns.
-#' @param min.valid Integer (optional). The minimum number of non-missing
-#'   values required to compute a mean. If a case has fewer non-missing
-#'   values, the result is \code{NA}. If omitted, all values must be
-#'   non-missing (equivalent to setting min.valid to the number of variables).
-#' @param fixed Logical. If \code{FALSE} (default), the denominator for each
-#'   case is the number of non-missing values (i.e. the mean adjusts for
-#'   missing data). If \code{TRUE}, the denominator is always the total
-#'   number of variables (i.e. missing values effectively count as zero).
-#' @param var_label Character string (optional). A variable label to attach
-#'   to the result. If omitted, an auto-generated label is used.
-#'
-#' @return A numeric vector the same length as \code{nrow(data)}, suitable for
-#'   assigning to a new column:
-#'   \code{MyData$ScaleMean <- javg(, Var1, Var2, Var3)}.
-#'
-#' @examples
-#' \dontrun{
-#' # Set the default data frame (so you can omit it in function calls)
-#' juse(MyData)
-#'
-#' # Mean of three variables (all must be non-missing)
-#' MyData$Avg <- javg(, Score1, Score2, Score3)
-#'
-#' # Mean with partial data allowed (at least 1 non-missing)
-#' MyData$Avg <- javg(, Score1, Score2, Score3, min.valid = 1)
-#'
-#' # Mean using colon range for consecutive columns
-#' MyData$ScaleMean <- javg(, Attitude1:Attitude6)
-#'
-#' # Mix colon ranges and explicit names (e.g. after reverse-coding an item)
-#' MyData$ScaleMean <- javg(, Attitude1:Attitude3, Attitude4R, Attitude5:Attitude6)
-#'
-#' # Fixed denominator (always divide by total number of variables)
-#' MyData$Avg <- javg(, Score1, Score2, Score3, min.valid = 1, fixed = TRUE)
-#'
-#' # With a custom variable label
-#' MyData$ScaleMean <- javg(, Attitude1:Attitude6,
-#'                          var_label = "Scale Mean Score")
-#'
-#' # With an explicit data frame (instead of using juse default)
-#' MyData$Avg <- javg(MyData, Score1, Score2, Score3)
-#' }
-#'
-#' @seealso \code{\link{jsum}} for computing row-wise sums.
-#'
-#' @export
-javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
-
-  # Capture the data name before any evaluation
-  .jst_data_name <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
-  # Catch missing-comma error: javg(VarName, ...) instead of javg(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "javg", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_data_name <- resolved$name
-  }
-
-  # Resolve variable names (handles colon ranges)
-  quos_list <- rlang::enquos(...)
-  resolved  <- .jst_resolve_varrange(quos_list, data, "javg")
-  var_names   <- resolved$var_names
-  label_parts <- resolved$label_parts
-
-  if (length(var_names) < 2) {
-    stop("javg() requires at least 2 variables.", call. = FALSE)
-  }
-
-  .jst_check_vars(data, var_names, .jst_data_name)
-
-  # Extract columns and convert haven-labelled to numeric
-  items <- data[, var_names, drop = FALSE]
-  for (v in var_names) {
-    if (haven::is.labelled(items[[v]])) {
-      items[[v]] <- as.numeric(items[[v]])
-    } else {
-      items[[v]] <- as.numeric(items[[v]])
-    }
-  }
-
-  n_vars  <- length(var_names)
-  n_cases <- nrow(items)
-
-  # Determine minimum valid threshold
-  if (is.null(min.valid)) {
-    threshold <- n_vars   # Default: all must be non-missing
-  } else {
-    threshold <- as.integer(min.valid)
-    if (is.na(threshold) || threshold < 1) {
-      stop("min.valid must be a positive integer.", call. = FALSE)
-    }
-    if (threshold > n_vars) {
-      stop(
-        "min.valid (", threshold, ") cannot exceed the number of variables (",
-        n_vars, ").",
-        call. = FALSE
-      )
-    }
-  }
-
-  # Compute row-wise means
-  mat      <- as.matrix(items)
-  non_na   <- rowSums(!is.na(mat))
-  row_sums <- rowSums(mat, na.rm = TRUE)
-
-  if (fixed) {
-    row_means <- row_sums / n_vars
-  } else {
-    row_means <- ifelse(non_na > 0, row_sums / non_na, NA_real_)
-  }
-
-  result <- ifelse(non_na >= threshold, row_means, NA_real_)
-
-  # Count cases set to NA due to missingness
-  n_na_result <- sum(is.na(result) & non_na > 0)
-  n_all_na    <- sum(non_na == 0)
-  n_valid     <- sum(!is.na(result))
-  n_partial   <- if (!is.null(min.valid)) sum(!is.na(result) & non_na < n_vars) else 0L
-
-  # Summary message
-  denom_note <- if (fixed) " (fixed denominator)" else ""
-  msg_parts <- paste0(
-    "Mean of ", n_vars, " variables computed for ", n_cases, " cases", denom_note
-  )
-
-  detail_parts <- character(0)
-  if (!is.null(min.valid)) {
-    if (n_partial > 0) {
-      detail_parts <- c(detail_parts,
-        paste0(n_partial, " case", if (n_partial != 1) "s" else "",
-               " used partial data"))
-    }
-  }
-  if (n_na_result > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_na_result, " set to NA due to missing values"))
-  }
-  if (n_all_na > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_all_na, " set to NA (all values missing)"))
-  }
-
-  if (length(detail_parts) > 0) {
-    if (!is.null(min.valid)) {
-      msg_parts <- paste0(msg_parts, " (min.valid = ", threshold, ": ",
-                          paste(detail_parts, collapse = ", "), ").")
-    } else {
-      msg_parts <- paste0(msg_parts, " (", paste(detail_parts, collapse = ", "), ").")
-    }
-  } else {
-    msg_parts <- paste0(msg_parts, ".")
-  }
-  message(msg_parts)
-
-  # Attach variable label
-  if (!is.null(var_label)) {
-    labelled::var_label(result) <- var_label
-  } else {
-    auto_label <- paste0("Mean of ", paste(label_parts, collapse = ", "))
-    labelled::var_label(result) <- auto_label
-  }
-
-  return(invisible(result))
-}
-
-
 # =============================================================================
 # jrelabel()
 # =============================================================================
@@ -4217,7 +3757,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
 #' new labels are provided.
 #'
 #' @param data A data frame containing the variable.
-#' @param var The variable to label (unquoted, e.g. \code{StatusR}).
+#' @param var The variable to label (unquoted, e.g. \code{OneParentR}).
 #' @param labels Optional. A quoted string specifying value labels using the
 #'   format \code{"code=Label Text"} with rules separated by semicolons.
 #'
@@ -4234,7 +3774,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
 #'
 #' @return A \code{haven_labelled} vector with the requested labels applied.
 #'   Assign this back to a column in your data frame:
-#'   \code{MyData$VarName <- jrelabel(MyData, VarName, ...)}
+#'   \code{SampleData$VarName <- jrelabel(SampleData, VarName, ...)}
 #'
 #' @examples
 #' # Add value labels after a recode
@@ -4395,7 +3935,7 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #' @return A \code{haven_labelled} vector with the recoded values, variable
 #'   label, and (if supplied or auto-transferred) value labels applied. Assign
 #'   this to a new column in your data frame:
-#'   \code{MyData$AgeGroupR <- jrecode(MyData, AgeGroup, map = "...")}
+#'   \code{SampleData$AgeGroupR <- jrecode(SampleData, AgeGroup, map = "...")}
 #'
 #' @details
 #' The function accepts haven-labelled, plain numeric, and factor variables.
@@ -5187,11 +4727,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'
 #' @examples
 #' \dontrun{
-#' jsave(MyData, "mydata.sav")
-#' jsave(MyData, "mydata.csv")
-#' jsave(MyData, "mydata.xlsx")
+#' jsave(SampleData, "mydata.sav")
+#' jsave(SampleData, "mydata.csv")
+#' jsave(SampleData, "mydata.xlsx")
 #' jsave(, "mydata.dta")               # Uses juse() default
-#' jsave(MyData, "C:/Output/mydata.sav")
+#' jsave(SampleData, "C:/Output/mydata.sav")
 #' }
 #'
 #' @export

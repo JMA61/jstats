@@ -7,7 +7,7 @@
 jfilter(expr)
 }
 \arguments{
-\item{expr}{A logical expression (e.g. \code{Gender == 1}), or one
+\item{expr}{A logical expression (e.g. \code{Group == 1}), or one
 of the following special values:
 \describe{
 \item{\code{off}}{Deactivate the filter but remember the expression.}
@@ -29,7 +29,7 @@ The filter is stored per dataset, so switching \code{juse()} between
 datasets preserves each dataset's filter independently.
 
 When a data frame is specified explicitly in a function call (e.g.
-\code{jfreq(PopulationData, Computer)}), the filter is not applied
+\code{jfreq(MyData, Computer)}), the filter is not applied
 for that call.
 }
 \examples{

@@ -9,7 +9,7 @@ jrelabel(data, var, labels = NULL, var_label = NULL)
 \arguments{
 \item{data}{A data frame containing the variable.}
 
-\item{var}{The variable to label (unquoted, e.g. \code{OneParentR}).}
+\item{var}{The variable to label (unquoted, e.g. \code{StatusR}).}
 
 \item{labels}{Optional. A quoted string specifying value labels using the
 format \code{"code=Label Text"} with rules separated by semicolons.
@@ -28,7 +28,7 @@ has no existing label, no variable label is set.}
 \value{
 A \code{haven_labelled} vector with the requested labels applied.
 Assign this back to a column in your data frame:
-\code{SampleData$VarName <- jrelabel(SampleData, VarName, ...)}
+\code{MyData$VarName <- jrelabel(MyData, VarName, ...)}
 }
 \description{
 \code{jrelabel()} attaches a variable label and/or value labels to any

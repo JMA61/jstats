@@ -16,7 +16,7 @@ descriptives are computed separately for each group, with a separate
 titled table per dependent variable.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
-\code{Gender == 1}) to filter cases for this call only. Applied after
+\code{Group == 1}) to filter cases for this call only. Applied after
 jcomplete and jfilter. Does not affect other function calls.}
 
 \item{labels}{Logical. If \code{TRUE} (default), prints the variable type

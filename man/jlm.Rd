@@ -4,7 +4,14 @@
 \alias{jlm}
 \title{SPSS-like linear regression output with standardised coefficients}
 \usage{
-jlm(formula, data, subset = NULL, labels = TRUE)
+jlm(
+  formula,
+  data,
+  subset = NULL,
+  labels = TRUE,
+  numeric = NULL,
+  categorical = NULL
+)
 }
 \arguments{
 \item{formula}{A model formula, e.g. \code{y ~ x1 + x2}.}
@@ -12,32 +19,76 @@ jlm(formula, data, subset = NULL, labels = TRUE)
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
-\code{Gender == 1}) to filter cases for this call only. Applied after
+\code{Group == 1}) to filter cases for this call only. Applied after
 jcomplete and jfilter. Does not affect other function calls.}
 
 \item{labels}{Logical. If TRUE (default), prints variable labels
 when available.}
+
+\item{numeric}{Optional character vector of variable names that should be
+treated as continuous (numeric) even if they have value labels. For
+example, \code{numeric = "Age"} or \code{numeric = c("Age", "Education")}.}
+
+\item{categorical}{Optional character vector of variable names that should
+be treated as categorical even if they lack value labels. For example,
+\code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
+The first sorted unique value becomes the reference category. Use
+\code{jdummy()} for control over the reference category.}
 }
 \value{
-Invisibly returns a list containing the fitted model, a coefficient
-table (data frame), and model fit statistics.
+Invisibly returns a list containing:
+\describe{
+\item{model}{The fitted \code{lm} object.}
+\item{model_type}{Character string \code{"linear"}.}
+\item{model_frame}{The model frame used to fit the model.}
+\item{formula_used}{The formula after dummy expansion.}
+\item{coefficients}{Formatted coefficient table (data frame).}
+\item{r_squared}{R-squared value.}
+\item{adj_r_squared}{Adjusted R-squared value.}
+\item{residual_se}{Residual standard error.}
+\item{f_statistic}{Named numeric vector with F value, df1, df2, and p.}
+\item{sums_of_squares}{Named numeric vector (regression, residual, total).}
+\item{n}{Number of observations used in the model.}
+\item{dummy_coef_names}{Names of dummy variable columns created by
+\code{jdummy()} registrations.}
+\item{ref_cats}{Reference category descriptions for all categorical
+variables in the model.}
+}
 }
 \description{
 Fits a linear model using \code{stats::lm()} and prints SPSS-style output,
 including unstandardised coefficients, standard errors, t values, p values,
 and standardised coefficients ("Std B"). Standardised coefficients are left
-blank for the intercept and for dummy-coded factor terms.
+blank for the intercept and for dummy-coded categorical terms.
 }
 \details{
-Also prints key model summary information (R-squared, residual standard
-error, F-test, sums of squares, and N). If any coefficients are dropped
-due to perfect collinearity, a warning message is printed.
+Also prints key model summary information (R-squared, adjusted R-squared,
+residual standard error, F-test, sums of squares, and N). If any
+coefficients are dropped due to perfect collinearity, a warning message
+is printed.
 
 A red "Linear Regression" title is printed first, followed by variable
 labels (if present), then the coefficient table and model fit statistics.
 
-Handles haven-labelled variables by converting them appropriately before
-fitting the model.
+\strong{Handling of variables:}
+\itemize{
+\item Variables registered with \code{jdummy()} are expanded into dummy
+variables using the registered reference category.
+\item Unregistered haven-labelled variables with value labels are
+automatically treated as categorical (converted to factors). The
+first category is used as the reference, and an informational
+message suggests using \code{jdummy()} for control over the
+reference category.
+\item Haven-labelled variables without value labels are treated as
+continuous (converted to numeric).
+\item The \code{numeric} argument overrides auto-detection for variables
+that have value labels but should be treated as continuous (e.g. Age
+with labels like "18 years", "19 years").
+\item The \code{categorical} argument forces variables without value
+labels (or plain numeric variables) to be treated as categorical
+(e.g. a numeric Program variable coded 1--4 from a CSV file).
+\item The dependent variable is always treated as numeric.
+}
 }
 \examples{
 # With explicit data frame
@@ -46,5 +97,17 @@ jlm(mpg ~ hp + wt, data = mtcars)
 # Using juse() default
 juse(mtcars)
 jlm(mpg ~ hp + wt)
+
+\dontrun{
+# Force a variable with value labels to be treated as numeric
+jlm(Outcome ~ Age + Employment, numeric = "Age")
+
+# Force a plain numeric variable to be treated as categorical
+jlm(Outcome ~ Program + ReadingScore, categorical = "Program")
+
+# Multiple overrides
+jlm(Outcome ~ Age + Education + Program,
+    numeric = c("Age", "Education"), categorical = "Program")
+}
 
 }

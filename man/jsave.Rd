@@ -25,8 +25,9 @@ writing a file to disk.
 }
 \description{
 \code{jsave()} writes a data frame to a file. Supports SPSS (\code{.sav}),
-Stata (\code{.dta}), SAS transport (\code{.xpt}), CSV (\code{.csv}), and
-R's native \code{.rds} format. File format is detected from the extension.
+Stata (\code{.dta}), SAS transport (\code{.xpt}), Excel (\code{.xlsx}),
+CSV (\code{.csv}), and R's native \code{.rds} format. File format is
+detected from the extension.
 
 By default, \code{jsave()} writes to a \code{Data/} subfolder if one
 exists, otherwise to the working directory. If the \code{Data/} folder
@@ -53,18 +54,22 @@ to that exact location.
 \itemize{
 \item SPSS (\code{.sav}) and Stata (\code{.dta}) preserve variable
 labels and value labels.
-\item CSV (\code{.csv}) does not preserve variable or value labels.
+\item Excel (\code{.xlsx}) and CSV (\code{.csv}) do not preserve
+variable or value labels.
 \item R native (\code{.rds}) preserves the data frame exactly as it
 exists in R, including all attributes.
 \item Stata files are written as version 14 format.
+\item Legacy Excel format (\code{.xls}) is not supported for saving.
+Use \code{.xlsx} instead.
 }
 }
 \examples{
 \dontrun{
-jsave(SampleData, "mydata.sav")
-jsave(SampleData, "mydata.csv")
+jsave(MyData, "mydata.sav")
+jsave(MyData, "mydata.csv")
+jsave(MyData, "mydata.xlsx")
 jsave(, "mydata.dta")               # Uses juse() default
-jsave(SampleData, "C:/Output/mydata.sav")
+jsave(MyData, "C:/Output/mydata.sav")
 }
 
 }

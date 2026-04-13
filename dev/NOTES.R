@@ -15,13 +15,13 @@ devtools::check(remote = TRUE) ## an even more thorough check to mimic closer to
 
 # To Commit the new version:
 git add -A
-git commit -m "v0.6.1: Adds minor error clarification and improves update messages"
+git commit -m "v0.6.2: Adds Excel support to jsave and jload, better handling of dummy variables in jlm, javg and jsum functions"
 
 # To Push/Upload to GitHub
 git push
 
 # To create the version tag
-git tag -a v0.6.1 -m "Version 0.6.1"
+git tag -a v0.6.2 -m "Version 0.6.2"
 git push --tags
 
 # Verity that the tag exists:
