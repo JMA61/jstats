@@ -10,7 +10,9 @@ jlm(
   subset = NULL,
   labels = TRUE,
   numeric = NULL,
-  categorical = NULL
+  categorical = NULL,
+  diagnostics = NULL,
+  full = FALSE
 )
 }
 \arguments{
@@ -34,6 +36,15 @@ be treated as categorical even if they lack value labels. For example,
 \code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
 The first sorted unique value becomes the reference category. Use
 \code{jdummy()} for control over the reference category.}
+
+\item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints VIF
+table and diagnostic plots. If a character vector, specifies which
+diagnostics to show: \code{"vif"}, \code{"residuals"}, \code{"qq"},
+\code{"scale"}, \code{"cooks"}, \code{"leverage"}. If NULL (default),
+defers to \code{joutput()} session setting.}
+
+\item{full}{Logical. If TRUE, turns on diagnostics. Does not override
+explicit FALSE values.}
 }
 \value{
 Invisibly returns a list of class \code{"jst_lm"} containing:
@@ -53,6 +64,7 @@ Invisibly returns a list of class \code{"jst_lm"} containing:
 \code{jdummy()} registrations.}
 \item{ref_cats}{Reference category descriptions for all categorical
 variables in the model.}
+\item{vif}{Named numeric vector of VIF values, or NULL for bivariate.}
 \item{sample_info}{Pipeline and missing data counts.}
 }
 }

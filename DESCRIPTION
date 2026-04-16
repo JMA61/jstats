@@ -1,6 +1,6 @@
 Package: JeffsStatTools
 Title: SPSS-Style Descriptive, Frequency, and Regression Tools for Teaching
-Version: 0.6.4
+Version: 0.7.0
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
 Description: Provides SPSS-like output for common statistical analyses
@@ -20,9 +20,10 @@ Depends:
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
+    ggplot2,
     haven,
     labelled,
     rlang,
     readxl,
     writexl
-Date: 2026-04-14
+Date: 2026-04-16

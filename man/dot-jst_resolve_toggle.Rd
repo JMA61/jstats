@@ -18,6 +18,6 @@ Logical. TRUE or FALSE.
 \description{
 Implements three-tier precedence: (1) explicit per-call argument wins,
 (2) individual joutput() toggle override, (3) joutput() level default.
-Per-call arguments use NULL to mean "I didn't specify — defer to joutput()".
+Per-call arguments use NULL to mean "I didn't specify -- defer to joutput()".
 }
 \keyword{internal}

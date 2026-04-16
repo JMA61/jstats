@@ -23,6 +23,7 @@ Invisibly returns a list of class \code{"jst_alpha"} containing:
 \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
 \code{n_excluded}, \code{item_statistics}, \code{item_total_statistics},
 and \code{sample_info} (pipeline and missing data counts).
+item statistics data frame, and item-total statistics data frame.
 }
 \description{
 Computes Cronbach's alpha and prints SPSS-style reliability output

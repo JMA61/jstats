@@ -10,7 +10,8 @@ joutput(
   ci = NULL,
   levene = NULL,
   posthoc = NULL,
-  missing = NULL
+  missing = NULL,
+  diagnostics = NULL
 )
 }
 \arguments{
@@ -21,7 +22,7 @@ If \code{NULL}, resets to defaults (minimal with no toggle overrides).
 \item{minimal}{Current default behaviour. Core results only.}
 \item{standard}{Adds effect sizes and confidence intervals.}
 \item{full}{Adds assumption checks (Levene's test), post-hoc tests,
-and per-variable missing data detail.}
+diagnostics, and per-variable missing data detail.}
 }}
 
 \item{effect.size}{Logical or NULL. Override the level's default for
@@ -38,6 +39,9 @@ post-hoc test display (jaov only).}
 
 \item{missing}{Logical or NULL. Override the level's default for
 per-variable missing data detail.}
+
+\item{diagnostics}{Logical or NULL. Override the level's default for
+regression diagnostic output (jlm only).}
 }
 \value{
 Invisibly returns NULL. Called for its side effect of setting

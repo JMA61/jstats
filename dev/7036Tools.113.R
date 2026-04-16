@@ -3105,17 +3105,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
   invisible(ret)
 }
 
-
-# -- jlm diagnostic helpers ----------------------------------------------------
-
 #' Internal helper: clean up factor coefficient names for output
 #'
 #' By default, R concatenates factor variable names with level names when
-#' producing regression coefficient labels (e.g. "GenderRFemale"). This
-#' helper inserts a separator between the variable name and level name for
-#' readability (e.g. "GenderR-Female"). Only applies to factor IVs; numeric
-#' dummy columns created by jdummy() are left unchanged since they are
-#' already named clearly.
+#' producing regression coefficient labels (e.g. "GenderRFemale"). This helper
+#' inserts a separator between the variable name and level name for readability
+#' (e.g. "GenderR-Female"). Only applies to factor IVs; numeric dummy columns
+#' created by jdummy() are left unchanged since they are already named clearly.
 #'
 #' @param coef_names Character vector of coefficient names from a fitted model.
 #' @param data Data frame used to fit the model (post-conversion).
@@ -3141,6 +3137,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
   }
   cleaned
 }
+
+
+# -- jlm diagnostic helpers ----------------------------------------------------
 
 #' Internal helper: compute VIF for a fitted linear model
 #'
@@ -3317,6 +3316,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 
   invisible(NULL)
 }
+
+
+
 
 
 # -- jlm ----------------------------------------------------------------------
@@ -3698,10 +3700,6 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
 
   fmt3 <- function(x) sprintf("%.3f", as.numeric(x))
 
-  # Clean up factor coefficient names for readability
-  rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
-                                            all.vars(formula)[-1])
-
   out_coefs <- data.frame(
     b       = fmt3(coefs$b),
     StdErr  = fmt3(coefs$StdErr),
@@ -3795,16 +3793,10 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
       plot_labels <- c(residuals = "Residuals vs Fitted", qq = "Normal Q-Q",
                        scale = "Scale-Location", cooks = "Cook's Distance",
                        leverage = "Residuals vs Leverage")
-      if (length(plot_which) == 1) {
-        cat("\n(Diagnostic plot produced: ",
-            plot_labels[plot_which[1]], ")\n", sep = "")
-      } else {
-        cat("\n(", length(plot_which), " diagnostic plots produced",
-            " \u2014 use the back arrow in the Plots pane to view all)\n",
-            sep = "")
-        for (i in seq_along(plot_which)) {
-          cat("  ", i, ": ", plot_labels[plot_which[i]], "\n", sep = "")
-        }
+      cat("\n(", length(plot_which), " diagnostic plot(s) produced",
+          " \u2014 use the back arrow in the Plots pane to view all)\n", sep = "")
+      for (i in seq_along(plot_which)) {
+        cat("  ", i, ": ", plot_labels[plot_which[i]], "\n", sep = "")
       }
       .jst_plot_lm_diagnostics(model, which = plot_which)
     }
@@ -4131,29 +4123,28 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
     }
   }
 
-  # Capture DV label for "1" category (before model fitting, more reliable)
-  dv_label_1 <- NULL
-  orig_dv    <- pipeline$data[[dv_name]]
-  if (haven::is.labelled(orig_dv)) {
-    all_labels <- labelled::val_labels(orig_dv)
-    if (!is.null(all_labels) && length(all_labels) > 0) {
-      match_idx <- which(as.numeric(all_labels) == 1)
-      if (length(match_idx) >= 1) {
-        candidate <- names(all_labels)[match_idx[1]]
-        if (!is.null(candidate) && nchar(candidate) > 0) {
-          dv_label_1 <- candidate
-        }
-      }
-    }
-  }
-
   model <- stats::glm(formula, data = data, family = stats::binomial,
                        na.action = stats::na.omit)
   model_summary <- summary(model)
   n_obs         <- stats::nobs(model)
 
   # -- What does the model predict? ------------------------------------------
-  predicts_str <- if (!is.null(dv_label_1)) dv_label_1 else "1"
+  orig_dv   <- pipeline$data[[dv_name]]
+  dv_labels <- NULL
+  if (haven::is.labelled(orig_dv)) {
+    dv_labels <- labelled::val_labels(orig_dv)
+  }
+
+  if (!is.null(dv_labels) && 1 %in% dv_labels) {
+    predicts_label <- names(dv_labels[dv_labels == 1])
+    if (length(predicts_label) == 1 && nchar(predicts_label) > 0) {
+      predicts_str <- predicts_label
+    } else {
+      predicts_str <- "1"
+    }
+  } else {
+    predicts_str <- "1"
+  }
   cat("Model predicts: ", predicts_str, "\n\n", sep = "")
 
   # -- Omnibus test (model vs null) ------------------------------------------
@@ -4222,10 +4213,6 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
   exp_b <- exp(coefs$B)
 
   fmt3 <- function(x) sprintf("%.3f", as.numeric(x))
-
-  # Clean up factor coefficient names for readability
-  rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
-                                            all.vars(formula)[-1])
 
   out_coefs <- data.frame(
     B      = fmt3(coefs$B),

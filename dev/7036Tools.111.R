@@ -480,18 +480,18 @@
 # Output level preset defaults (used by .jst_resolve_toggle and joutput)
 .jst_output_defaults <- list(
   minimal  = list(effect.size = FALSE, ci = FALSE, levene = FALSE,
-                  posthoc = FALSE, missing = FALSE, diagnostics = FALSE),
+                  posthoc = FALSE, missing = FALSE),
   standard = list(effect.size = TRUE,  ci = TRUE,  levene = FALSE,
-                  posthoc = FALSE, missing = FALSE, diagnostics = FALSE),
+                  posthoc = FALSE, missing = FALSE),
   full     = list(effect.size = TRUE,  ci = TRUE,  levene = TRUE,
-                  posthoc = TRUE,  missing = TRUE,  diagnostics = TRUE)
+                  posthoc = TRUE,  missing = TRUE)
 )
 
 #' Internal helper: resolve a display toggle value
 #'
 #' Implements three-tier precedence: (1) explicit per-call argument wins,
 #' (2) individual joutput() toggle override, (3) joutput() level default.
-#' Per-call arguments use NULL to mean "I didn't specify -- defer to joutput()".
+#' Per-call arguments use NULL to mean "I didn't specify — defer to joutput()".
 #'
 #' @param name Character. Toggle name (e.g. "effect.size", "ci", "levene").
 #' @param per_call_value The value passed by the user in the function call,
@@ -714,23 +714,19 @@
     }
 
     # new value
-    if (toupper(trimws(rhs)) == "NA") {
-      new_val <- NA_real_
-    } else {
-      new_val <- suppressWarnings(as.numeric(rhs))
-      if (is.na(new_val)) {
-        # Detect commas used instead of semicolons between rules
-        if (grepl(",", rhs) && grepl("=", rhs)) {
-          stop(paste0(
-            "It looks like commas were used to separate rules in the map string. ",
-            "Use semicolons instead, e.g. map = \"1=5; 2=4; 3=3\"."
-          ), call. = FALSE)
-        }
+    new_val <- suppressWarnings(as.numeric(rhs))
+    if (is.na(new_val)) {
+      # Detect commas used instead of semicolons between rules
+      if (grepl(",", rhs) && grepl("=", rhs)) {
         stop(paste0(
-          "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-          "New values must be numeric (or NA)."
+          "It looks like commas were used to separate rules in the map string. ",
+          "Use semicolons instead, e.g. map = \"1=5; 2=4; 3=3\"."
         ), call. = FALSE)
       }
+      stop(paste0(
+        "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
+        "New values must be numeric."
+      ), call. = FALSE)
     }
 
     result$mappings[[length(result$mappings) + 1]] <- list(
@@ -1529,7 +1525,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 #'     \item{minimal}{Current default behaviour. Core results only.}
 #'     \item{standard}{Adds effect sizes and confidence intervals.}
 #'     \item{full}{Adds assumption checks (Levene's test), post-hoc tests,
-#'       diagnostics, and per-variable missing data detail.}
+#'       and per-variable missing data detail.}
 #'   }
 #' @param effect.size Logical or NULL. Override the level's default for
 #'   effect size display.
@@ -1541,8 +1537,6 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 #'   post-hoc test display (jaov only).
 #' @param missing Logical or NULL. Override the level's default for
 #'   per-variable missing data detail.
-#' @param diagnostics Logical or NULL. Override the level's default for
-#'   regression diagnostic output (jlm only).
 #'
 #' @return Invisibly returns NULL. Called for its side effect of setting
 #'   session options.
@@ -1556,11 +1550,11 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 #'
 #' @export
 joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
-                    posthoc = NULL, missing = NULL, diagnostics = NULL) {
+                    posthoc = NULL, missing = NULL) {
 
   valid_levels <- c("minimal", "standard", "full")
 
-  # joutput(NULL) -- reset to defaults
+  # joutput(NULL) — reset to defaults
   if (!missing(level) && is.null(level)) {
     options(.jst_output_level = NULL)
     options(.jst_output_toggles = NULL)
@@ -1571,14 +1565,13 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 
   # Collect any explicit toggle overrides
   toggle_args <- list()
-  if (!is.null(effect.size))  toggle_args$effect.size  <- effect.size
-  if (!is.null(ci))           toggle_args$ci           <- ci
-  if (!is.null(levene))       toggle_args$levene       <- levene
-  if (!is.null(posthoc))      toggle_args$posthoc      <- posthoc
-  if (!is.null(missing))      toggle_args$missing      <- missing
-  if (!is.null(diagnostics))  toggle_args$diagnostics  <- diagnostics
+  if (!is.null(effect.size)) toggle_args$effect.size <- effect.size
+  if (!is.null(ci))          toggle_args$ci          <- ci
+  if (!is.null(levene))      toggle_args$levene      <- levene
+  if (!is.null(posthoc))     toggle_args$posthoc     <- posthoc
+  if (!is.null(missing))     toggle_args$missing     <- missing
 
-  # joutput() with no level argument -- show status or apply toggles only
+  # joutput() with no level argument — show status or apply toggles only
   if (missing(level)) {
     if (length(toggle_args) > 0) {
       # Apply toggle overrides to current settings
@@ -1620,7 +1613,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
   cat("Level: ", level, "\n", sep = "")
 
   # Show effective value for each toggle
-  toggle_names <- c("effect.size", "ci", "levene", "posthoc", "missing", "diagnostics")
+  toggle_names <- c("effect.size", "ci", "levene", "posthoc", "missing")
   defaults     <- .jst_output_defaults[[level]]
 
   for (nm in toggle_names) {
@@ -2368,24 +2361,6 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE)
-
-    # Interpretive note (only when significant and not already using Welch)
-    if (!is.na(levene_p) && levene_p < 0.05 && !welch) {
-      group_ns       <- tapply(dv_vals, group_factor, function(x) sum(!is.na(x)))
-      size_ratio     <- max(group_ns) / min(group_ns)
-      balanced       <- size_ratio <= 1.5
-      levene_p_note  <- if (levene_p < 0.001) "<.001" else sprintf("%.3f", levene_p)
-      if (balanced) {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), but group sizes are approximately equal\n",
-            "so the standard test remains appropriate.\n", sep = "")
-      } else {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), suggesting unequal variances.\n",
-            "With unequal group sizes this may affect results \u2014 consider welch = TRUE.\n",
-            sep = "")
-      }
-    }
     cat("\n")
   } else if (levene && paired) {
     cat("Note: Levene's test is not applicable for paired samples.\n\n")
@@ -2456,7 +2431,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      row.names = FALSE)
   }
 
-  # Effect size (Cohen's d) -- always computed, displayed only when requested
+  # Effect size (Cohen's d) — always computed, displayed only when requested
   n1 <- length(group1_data)
   n2 <- length(group2_data)
   m1 <- mean(group1_data)
@@ -2699,24 +2674,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE)
-
-    # Interpretive note (only when significant and not already using Welch)
-    if (!is.na(levene_p) && levene_p < 0.05 && !welch) {
-      group_ns       <- tapply(dv_vals, group_factor, function(x) sum(!is.na(x)))
-      size_ratio     <- max(group_ns) / min(group_ns)
-      balanced       <- size_ratio <= 1.5
-      levene_p_note  <- if (levene_p < 0.001) "<.001" else sprintf("%.3f", levene_p)
-      if (balanced) {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), but group sizes are approximately equal\n",
-            "so the standard test remains appropriate.\n", sep = "")
-      } else {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), suggesting unequal variances.\n",
-            "With unequal group sizes this may affect results \u2014 consider welch = TRUE.\n",
-            sep = "")
-      }
-    }
     cat("\n")
   }
 
@@ -3106,219 +3063,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 }
 
 
-# -- jlm diagnostic helpers ----------------------------------------------------
-
-#' Internal helper: clean up factor coefficient names for output
-#'
-#' By default, R concatenates factor variable names with level names when
-#' producing regression coefficient labels (e.g. "GenderRFemale"). This
-#' helper inserts a separator between the variable name and level name for
-#' readability (e.g. "GenderR-Female"). Only applies to factor IVs; numeric
-#' dummy columns created by jdummy() are left unchanged since they are
-#' already named clearly.
-#'
-#' @param coef_names Character vector of coefficient names from a fitted model.
-#' @param data Data frame used to fit the model (post-conversion).
-#' @param iv_names Character vector of IV names from the model formula.
-#' @param sep Character. Separator to insert. Default is "-".
-#'
-#' @return Character vector of the same length as coef_names, with factor
-#'   coefficient names separated.
-#'
-#' @keywords internal
-.jst_clean_coef_names <- function(coef_names, data, iv_names, sep = "-") {
-  cleaned <- coef_names
-  for (v in iv_names) {
-    if (!v %in% names(data)) next
-    if (!is.factor(data[[v]])) next
-    lvls <- levels(data[[v]])
-    if (length(lvls) < 2) next
-    for (lvl in lvls[-1]) {
-      old_name <- paste0(v, lvl)
-      new_name <- paste0(v, sep, lvl)
-      cleaned[cleaned == old_name] <- new_name
-    }
-  }
-  cleaned
-}
-
-#' Internal helper: compute VIF for a fitted linear model
-#'
-#' Computes Variance Inflation Factors from the model matrix correlation
-#' structure. Returns a named numeric vector of VIF values for each
-#' predictor (excluding the intercept). Returns NULL for bivariate models
-#' (only one predictor) since VIF is not meaningful.
-#'
-#' @param model A fitted \code{lm} object.
-#'
-#' @return Named numeric vector of VIF values, or NULL for bivariate models.
-#'
-#' @keywords internal
-.jst_compute_vif <- function(model) {
-  X <- stats::model.matrix(model)[, -1, drop = FALSE]
-  if (ncol(X) < 2) return(NULL)
-
-  tryCatch({
-    R <- stats::cor(X)
-    vif_values <- diag(solve(R))
-    names(vif_values) <- colnames(X)
-    vif_values
-  }, error = function(e) {
-    warning("VIF could not be computed (possible perfect collinearity).",
-            call. = FALSE)
-    NULL
-  })
-}
-
-#' Internal helper: produce diagnostic plots for a fitted linear model
-#'
-#' Generates five diagnostic plots using ggplot2. Each plot is printed
-#' sequentially and appears in the RStudio Plots pane.
-#'
-#' @param model A fitted \code{lm} object.
-#' @param which Character vector of plot types to produce. Options:
-#'   "residuals" (residuals vs fitted), "qq" (normal Q-Q),
-#'   "scale" (scale-location), "cooks" (Cook's distance),
-#'   "leverage" (residuals vs leverage).
-#' @param n_label Integer. Number of extreme points to label on each plot.
-#'
-#' @importFrom rlang .data
-#' @keywords internal
-.jst_plot_lm_diagnostics <- function(model, which, n_label = 3) {
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
-    return(invisible(NULL))
-  }
-
-  fitted_vals   <- stats::fitted(model)
-  residuals_raw <- stats::residuals(model)
-  std_resid     <- stats::rstandard(model)
-  leverage      <- stats::hatvalues(model)
-  cooks_d       <- stats::cooks.distance(model)
-  obs_labels    <- names(fitted_vals)
-  if (is.null(obs_labels)) obs_labels <- as.character(seq_along(fitted_vals))
-
-  df <- data.frame(
-    obs      = obs_labels,
-    fitted   = fitted_vals,
-    resid    = residuals_raw,
-    std_resid = std_resid,
-    leverage = leverage,
-    cooks    = cooks_d,
-    sqrt_std_resid = sqrt(abs(std_resid)),
-    stringsAsFactors = FALSE
-  )
-
-  # Helper to get indices of top n extreme values
-  top_n <- function(x, n) {
-    if (length(x) <= n) return(seq_along(x))
-    order(abs(x), decreasing = TRUE)[seq_len(n)]
-  }
-
-  # -- 1. Residuals vs Fitted -----------------------------------------------
-  if ("residuals" %in% which) {
-    idx <- top_n(df$resid, n_label)
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$fitted, y = .data$resid)) +
-      ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-      ggplot2::geom_smooth(method = "loess", se = FALSE, color = "steelblue",
-                           formula = y ~ x) +
-      ggplot2::geom_text(data = df[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
-      ggplot2::labs(title = "Residuals vs Fitted",
-                    x = "Fitted Values", y = "Residuals") +
-      ggplot2::theme_minimal()
-    print(p)
-  }
-
-  # -- 2. Normal Q-Q --------------------------------------------------------
-  if ("qq" %in% which) {
-    qq_data <- stats::qqnorm(df$std_resid, plot.it = FALSE)
-    df_qq <- data.frame(
-      theoretical = qq_data$x,
-      sample      = qq_data$y,
-      obs         = df$obs,
-      stringsAsFactors = FALSE
-    )
-    idx <- top_n(df_qq$sample, n_label)
-    p <- ggplot2::ggplot(df_qq, ggplot2::aes(x = .data$theoretical,
-                                              y = .data$sample)) +
-      ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                           color = "red") +
-      ggplot2::geom_text(data = df_qq[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
-      ggplot2::labs(title = "Normal Q-Q",
-                    x = "Theoretical Quantiles",
-                    y = "Standardized Residuals") +
-      ggplot2::theme_minimal()
-    print(p)
-  }
-
-  # -- 3. Scale-Location ----------------------------------------------------
-  if ("scale" %in% which) {
-    idx <- top_n(df$sqrt_std_resid, n_label)
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$fitted,
-                                           y = .data$sqrt_std_resid)) +
-      ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_smooth(method = "loess", se = FALSE, color = "steelblue",
-                           formula = y ~ x) +
-      ggplot2::geom_text(data = df[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
-      ggplot2::labs(title = "Scale-Location",
-                    x = "Fitted Values",
-                    y = expression(sqrt("|Standardized Residuals|"))) +
-      ggplot2::theme_minimal()
-    print(p)
-  }
-
-  # -- 4. Cook's Distance ---------------------------------------------------
-  if ("cooks" %in% which) {
-    idx <- top_n(df$cooks, n_label)
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = seq_along(.data$cooks),
-                                           y = .data$cooks)) +
-      ggplot2::geom_col(alpha = 0.5, fill = "steelblue") +
-      ggplot2::geom_hline(yintercept = 4 / nrow(df), linetype = "dashed",
-                          color = "red") +
-      ggplot2::geom_text(data = df[idx, ],
-                         ggplot2::aes(x = idx, label = .data$obs),
-                         vjust = -0.5, size = 3, color = "red") +
-      ggplot2::labs(title = "Cook's Distance",
-                    x = "Observation", y = "Cook's Distance") +
-      ggplot2::theme_minimal()
-    print(p)
-  }
-
-  # -- 5. Residuals vs Leverage ---------------------------------------------
-  if ("leverage" %in% which) {
-    idx <- top_n(df$cooks, n_label)
-    p_val <- length(stats::coef(model))
-    n_obs <- nrow(df)
-    cooks_levels <- c(0.5, 1)
-
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$leverage,
-                                           y = .data$std_resid)) +
-      ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-      ggplot2::geom_smooth(method = "loess", se = FALSE, color = "steelblue",
-                           formula = y ~ x) +
-      ggplot2::geom_text(data = df[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
-      ggplot2::labs(title = "Residuals vs Leverage",
-                    x = "Leverage", y = "Standardized Residuals") +
-      ggplot2::theme_minimal()
-    print(p)
-  }
-
-  invisible(NULL)
-}
-
-
 # -- jlm ----------------------------------------------------------------------
 
 #' SPSS-like linear regression output with standardised coefficients
@@ -3371,13 +3115,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #'   \code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
 #'   The first sorted unique value becomes the reference category. Use
 #'   \code{jdummy()} for control over the reference category.
-#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints VIF
-#'   table and diagnostic plots. If a character vector, specifies which
-#'   diagnostics to show: \code{"vif"}, \code{"residuals"}, \code{"qq"},
-#'   \code{"scale"}, \code{"cooks"}, \code{"leverage"}. If NULL (default),
-#'   defers to \code{joutput()} session setting.
-#' @param full Logical. If TRUE, turns on diagnostics. Does not override
-#'   explicit FALSE values.
 #'
 #' @return Invisibly returns a list of class \code{"jst_lm"} containing:
 #'   \describe{
@@ -3396,7 +3133,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #'       \code{jdummy()} registrations.}
 #'     \item{ref_cats}{Reference category descriptions for all categorical
 #'       variables in the model.}
-#'     \item{vif}{Named numeric vector of VIF values, or NULL for bivariate.}
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
 #'
@@ -3422,8 +3158,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #'
 #' @export
 jlm <- function(formula, data, subset = NULL, labels = TRUE,
-                numeric = NULL, categorical = NULL,
-                diagnostics = NULL, full = FALSE) {
+                numeric = NULL, categorical = NULL) {
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -3450,22 +3185,6 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
 
   # Resolve missing detail toggle
   show_missing <- .jst_resolve_toggle("missing", NULL)
-
-  # Resolve diagnostics toggle
-  if (full) {
-    if (is.null(diagnostics)) diagnostics <- TRUE
-  }
-  if (is.character(diagnostics)) {
-    show_diag  <- TRUE
-    diag_which <- diagnostics
-  } else {
-    show_diag  <- .jst_resolve_toggle("diagnostics", diagnostics)
-    diag_which <- if (show_diag) {
-      c("vif", "residuals", "qq", "scale", "cooks", "leverage")
-    } else {
-      character(0)
-    }
-  }
 
   model_vars <- all.vars(formula)
 
@@ -3698,10 +3417,6 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
 
   fmt3 <- function(x) sprintf("%.3f", as.numeric(x))
 
-  # Clean up factor coefficient names for readability
-  rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
-                                            all.vars(formula)[-1])
-
   out_coefs <- data.frame(
     b       = fmt3(coefs$b),
     StdErr  = fmt3(coefs$StdErr),
@@ -3750,66 +3465,6 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
   cat("  Total:      ", sprintf("%.3f", ss_total),      "\n", sep = "")
   cat("\nNumber of observations: ", n_obs, "\n", sep = "")
 
-  # -- Diagnostics (VIF + plots) --------------------------------------------
-  vif_values <- NULL
-  if (show_diag) {
-
-    # VIF — only for multivariate models (2+ predictors)
-    if ("vif" %in% diag_which) {
-      vif_values <- .jst_compute_vif(model)
-      if (!is.null(vif_values)) {
-        cat("\n")
-        vif_df <- data.frame(
-          Variable = names(vif_values),
-          VIF      = round(vif_values, 3),
-          stringsAsFactors = FALSE,
-          row.names = NULL
-        )
-        .jst_print_table(vif_df,
-                         caption = "VIF (Variance Inflation Factors)",
-                         row.names = FALSE)
-
-        # Targeted notes for VIF > 10
-        high_vif <- vif_values[vif_values > 10]
-        if (length(high_vif) > 0) {
-          cat("\n")
-          for (nm in names(high_vif)) {
-            inflation <- round(sqrt(high_vif[nm]), 1)
-            cat(nm, " (VIF = ", round(high_vif[nm], 1),
-                "): standard error inflated by a factor of ", inflation, ".\n",
-                "  If you need to interpret this coefficient specifically, consider\n",
-                "  whether the collinearity is a concern for your research question.\n",
-                sep = "")
-          }
-        }
-      }
-    } else {
-      # Compute VIF silently for return object even if not displayed
-      vif_values <- .jst_compute_vif(model)
-    }
-
-    # Diagnostic plots
-    plot_which <- intersect(diag_which,
-                            c("residuals", "qq", "scale", "cooks", "leverage"))
-    if (length(plot_which) > 0) {
-      plot_labels <- c(residuals = "Residuals vs Fitted", qq = "Normal Q-Q",
-                       scale = "Scale-Location", cooks = "Cook's Distance",
-                       leverage = "Residuals vs Leverage")
-      if (length(plot_which) == 1) {
-        cat("\n(Diagnostic plot produced: ",
-            plot_labels[plot_which[1]], ")\n", sep = "")
-      } else {
-        cat("\n(", length(plot_which), " diagnostic plots produced",
-            " \u2014 use the back arrow in the Plots pane to view all)\n",
-            sep = "")
-        for (i in seq_along(plot_which)) {
-          cat("  ", i, ": ", plot_labels[plot_which[i]], "\n", sep = "")
-        }
-      }
-      .jst_plot_lm_diagnostics(model, which = plot_which)
-    }
-  }
-
   # Build sample_info
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
@@ -3834,543 +3489,10 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
     n               = n_obs,
     dummy_coef_names = dummy_coef_names,
     ref_cats        = c(ref_cats, auto_ref_cats),
-    vif             = vif_values,
     sample_info     = sample_info
   )
   class(ret) <- "jst_lm"
   cat("\n")
-  invisible(ret)
-}
-
-
-# -- jlogistic -----------------------------------------------------------------
-
-#' Logistic regression with SPSS-style output
-#'
-#' Fits a binary logistic regression using \code{stats::glm()} with
-#' \code{family = binomial} and prints formatted output including an omnibus
-#' model test, model summary statistics, and a coefficients table with
-#' odds ratios (Exp(B)).
-#'
-#' The dependent variable must be coded 0/1. If it is not, the function
-#' stops with a clear error message and suggests the appropriate
-#' \code{jrecode()} command.
-#'
-#' Handles haven-labelled variables, registered dummy variables via
-#' \code{jdummy()}, and the \code{numeric}/\code{categorical} overrides
-#' in the same way as \code{jlm()}.
-#'
-#' @param formula A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
-#'   must be a binary variable coded 0/1.
-#' @param data A data frame containing variables referenced in \code{formula}.
-#' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
-#' @param numeric Optional character vector of variable names to treat
-#'   as continuous even if they have value labels.
-#' @param categorical Optional character vector of variable names to treat
-#'   as categorical even if they lack value labels.
-#' @param ci Logical or NULL. If TRUE, adds 95\% confidence intervals for
-#'   Exp(B). If NULL (default), defers to \code{joutput()}.
-#' @param classification Logical. If TRUE, prints a classification table
-#'   showing predicted vs observed outcomes. Default is FALSE.
-#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints
-#'   VIF table. If a character vector, \code{"vif"} is currently the only
-#'   supported option. If NULL (default), defers to \code{joutput()}.
-#' @param full Logical. If TRUE, turns on ci, classification, and
-#'   diagnostics. Does not override explicit FALSE values.
-#'
-#' @return Invisibly returns a list of class \code{"jst_logistic"} containing:
-#'   \describe{
-#'     \item{model}{The fitted \code{glm} object.}
-#'     \item{model_type}{Character string \code{"logistic"}.}
-#'     \item{model_frame}{The model frame used to fit the model.}
-#'     \item{formula_used}{The formula after dummy expansion.}
-#'     \item{coefficients}{Formatted coefficient table (data frame).}
-#'     \item{nagelkerke_r2}{Nagelkerke pseudo R-squared.}
-#'     \item{cox_snell_r2}{Cox & Snell pseudo R-squared.}
-#'     \item{neg2ll}{-2 Log Likelihood.}
-#'     \item{aic}{Akaike Information Criterion.}
-#'     \item{omnibus}{Named vector: chi_square, df, p.}
-#'     \item{n}{Number of observations.}
-#'     \item{predicts}{Character string describing what the model predicts.}
-#'     \item{dummy_coef_names}{Names of dummy variable columns.}
-#'     \item{ref_cats}{Reference category descriptions.}
-#'     \item{vif}{Named numeric vector of VIF values, or NULL.}
-#'     \item{sample_info}{Pipeline and missing data counts.}
-#'   }
-#'
-#' @examples
-#' # With explicit data frame
-#' df <- mtcars
-#' df$vs01 <- df$vs  # vs is already 0/1
-#' jlogistic(vs01 ~ hp + wt, data = df)
-#'
-#' # Using juse() default
-#' juse(df)
-#' jlogistic(vs01 ~ hp + wt)
-#'
-#' @export
-#' @importFrom stats glm binomial pchisq logLik as.formula
-jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
-                      numeric = NULL, categorical = NULL,
-                      ci = NULL, classification = FALSE,
-                      diagnostics = NULL, full = FALSE) {
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
-  if (full) {
-    if (is.null(ci))          ci          <- TRUE
-    if (is.null(diagnostics)) diagnostics <- TRUE
-    classification <- TRUE
-  }
-
-  # Resolve display toggles
-  ci           <- .jst_resolve_toggle("ci", ci)
-  show_missing <- .jst_resolve_toggle("missing", NULL)
-
-  # Resolve diagnostics toggle
-  if (is.character(diagnostics)) {
-    show_diag  <- TRUE
-    diag_which <- diagnostics
-  } else {
-    show_diag  <- .jst_resolve_toggle("diagnostics", diagnostics)
-    diag_which <- if (show_diag) c("vif") else character(0)
-  }
-
-  # Red title
-  .cat_red("Logistic Regression\n")
-  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
-
-  # Apply data pipeline (jcomplete, jfilter, subset)
-  subset_expr <- substitute(subset)
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
-  data     <- pipeline$data
-  .jst_print_msgs(pipeline$msgs)
-
-  model_vars <- all.vars(formula)
-  dv_name    <- model_vars[1]
-
-  .jst_check_vars(data, model_vars, .jst_data_name)
-
-  # -- Expand registered dummy variables ------------------------------------
-  expanded         <- .jst_expand_dummies(data, formula, .jst_data_name)
-  data             <- expanded$data
-  formula          <- expanded$formula
-  ref_cats         <- expanded$ref_cats
-  dummy_coef_names <- expanded$dummy_coef_names
-  model_vars       <- all.vars(formula)
-
-  # -- Variable type conversion (same logic as jlm) --------------------------
-  dv_name  <- all.vars(formula)[1]
-  iv_names <- setdiff(model_vars, c(dv_name, dummy_coef_names))
-
-  auto_detected  <- character(0)
-  auto_ref_cats  <- character(0)
-  all_ref_cats   <- ref_cats
-
-  for (v in iv_names) {
-    if (v %in% names(data) && haven::is.labelled(data[[v]])) {
-      val_labels <- labelled::val_labels(data[[v]])
-
-      if (!is.null(numeric) && v %in% numeric) {
-        data[[v]] <- as.numeric(data[[v]])
-      } else if (!is.null(categorical) && v %in% categorical) {
-        data[[v]] <- haven::as_factor(data[[v]])
-        ref_val   <- levels(data[[v]])[1]
-        auto_ref_cats <- c(auto_ref_cats,
-                           paste0(v, " = ", ref_val, " (first category)"))
-      } else if (length(val_labels) > 0) {
-        data[[v]] <- haven::as_factor(data[[v]])
-        auto_detected <- c(auto_detected, v)
-        ref_val       <- levels(data[[v]])[1]
-        auto_ref_cats <- c(auto_ref_cats,
-                           paste0(v, " = ", ref_val, " (first category)"))
-      } else {
-        data[[v]] <- as.numeric(data[[v]])
-      }
-    } else if (!is.null(categorical) && v %in% categorical) {
-      if (!is.factor(data[[v]])) {
-        data[[v]] <- factor(data[[v]])
-        ref_val   <- levels(data[[v]])[1]
-        auto_ref_cats <- c(auto_ref_cats,
-                           paste0(v, " = ", ref_val, " (first category)"))
-      }
-    }
-  }
-
-  all_ref_cats <- c(ref_cats, auto_ref_cats)
-
-  if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- as.numeric(data[[dv_name]])
-  }
-
-  # -- Validate DV is coded 0/1 ---------------------------------------------
-  dv_vals     <- data[[dv_name]][!is.na(data[[dv_name]])]
-  unique_vals <- sort(unique(dv_vals))
-
-  if (!identical(unique_vals, c(0, 1))) {
-    # Determine what kind of problem it is
-    n_unique <- length(unique_vals)
-
-    # Check for suspected coded missings among unique values
-    if (n_unique >= 2) {
-      non_binary <- setdiff(unique_vals, c(0, 1))
-      suspicious <- .jst_detect_suspicious_values(dv_vals, dv_name)
-      coded_miss <- intersect(non_binary, suspicious)
-    } else {
-      non_binary <- unique_vals
-      coded_miss <- numeric(0)
-    }
-
-    # Get value labels for display if available
-    orig_dv   <- pipeline$data[[dv_name]]
-    dv_labels <- NULL
-    if (haven::is.labelled(orig_dv)) {
-      dv_labels <- labelled::val_labels(orig_dv)
-    }
-
-    if (n_unique == 2 && all(unique_vals %in% c(1, 2))) {
-      # Common 1/2 coding — suggest recode to 0/1
-      if (!is.null(dv_labels) && length(dv_labels) >= 2) {
-        label_1 <- names(dv_labels[dv_labels == 1])
-        label_2 <- names(dv_labels[dv_labels == 2])
-        if (length(label_1) == 0) label_1 <- "1"
-        if (length(label_2) == 0) label_2 <- "2"
-        recode_labels <- paste0(", labels = \"0=", label_1, "; 1=", label_2, "\"")
-      } else {
-        label_1 <- "1"
-        label_2 <- "2"
-        recode_labels <- ""
-      }
-      stop(paste0(
-        "'", dv_name, "' is coded 1/2. Logistic regression requires 0/1 coding.\n",
-        "Recode before running jlogistic():\n",
-        "  ", .jst_data_name, "$", dv_name, "R <- jrecode(, ", dv_name,
-        ", map = \"1=0; 2=1\"", recode_labels, ")\n",
-        "Then use ", dv_name, "R as your dependent variable."
-      ), call. = FALSE)
-
-    } else if (length(coded_miss) > 0) {
-      # Has suspected coded missings
-      miss_str <- paste(coded_miss, collapse = ", ")
-      stop(paste0(
-        "'", dv_name, "' has ", n_unique, " unique values (",
-        paste(unique_vals, collapse = ", "),
-        "). The dependent variable must have exactly 2 categories coded 0/1.\n",
-        "The value(s) ", miss_str, " may be coded missing value(s).\n",
-        "Convert to NA before running jlogistic():\n",
-        "  ", .jst_data_name, "$", dv_name, "R <- jrecode(, ", dv_name,
-        ", map = \"", paste0(coded_miss, "=NA", collapse = "; "),
-        "; else=copy\")"
-      ), call. = FALSE)
-
-    } else {
-      # Generic — wrong number of categories or wrong codes
-      stop(paste0(
-        "'", dv_name, "' has values: ",
-        paste(unique_vals, collapse = ", "),
-        ". Logistic regression requires a binary variable coded 0/1.\n",
-        "Use jrecode() to create a 0/1 coded version before running jlogistic()."
-      ), call. = FALSE)
-    }
-  }
-
-  # -- Reference category and variable label reporting -----------------------
-  if (length(all_ref_cats) > 0) {
-    cat("\n  Reference categories:\n")
-    for (rc in all_ref_cats) cat("    ", rc, "\n", sep = "")
-  }
-
-  if (length(auto_detected) > 0) {
-    cat("  (", paste(auto_detected, collapse = ", "),
-        " auto-detected as categorical. To choose a different\n",
-        "   reference category, use jdummy() before running jlogistic().\n",
-        "   If a variable should be numeric, use: numeric = \"",
-        auto_detected[1], "\")\n", sep = "")
-  }
-
-  if (!is.null(categorical) && length(categorical) > 0) {
-    cat_in_model <- intersect(categorical, sub(" = .*", "", auto_ref_cats))
-    if (length(cat_in_model) > 0) {
-      cat("  (", paste(cat_in_model, collapse = ", "),
-          " treated as categorical via categorical argument.\n",
-          "   To choose a different reference, use jdummy() before running jlogistic().)\n",
-          sep = "")
-    }
-  }
-  if (length(all_ref_cats) > 0) cat("\n")
-
-  if (labels) {
-    .print_var_labels(data, all.vars(formula))
-  }
-
-  # -- Fit model -------------------------------------------------------------
-  mf            <- stats::model.frame(formula, data = data,
-                                      na.action = stats::na.omit)
-  n_excluded_na <- nrow(data) - nrow(mf)
-  if (n_excluded_na > 0) {
-    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
-    if (show_missing) {
-      mbv <- vapply(model_vars, function(v) {
-        if (v %in% names(data)) sum(is.na(data[[v]])) else 0L
-      }, integer(1))
-      .jst_print_missing_detail(mbv)
-    }
-  }
-
-  # Capture DV label for "1" category (before model fitting, more reliable)
-  dv_label_1 <- NULL
-  orig_dv    <- pipeline$data[[dv_name]]
-  if (haven::is.labelled(orig_dv)) {
-    all_labels <- labelled::val_labels(orig_dv)
-    if (!is.null(all_labels) && length(all_labels) > 0) {
-      match_idx <- which(as.numeric(all_labels) == 1)
-      if (length(match_idx) >= 1) {
-        candidate <- names(all_labels)[match_idx[1]]
-        if (!is.null(candidate) && nchar(candidate) > 0) {
-          dv_label_1 <- candidate
-        }
-      }
-    }
-  }
-
-  model <- stats::glm(formula, data = data, family = stats::binomial,
-                       na.action = stats::na.omit)
-  model_summary <- summary(model)
-  n_obs         <- stats::nobs(model)
-
-  # -- What does the model predict? ------------------------------------------
-  predicts_str <- if (!is.null(dv_label_1)) dv_label_1 else "1"
-  cat("Model predicts: ", predicts_str, "\n\n", sep = "")
-
-  # -- Omnibus test (model vs null) ------------------------------------------
-  null_model  <- stats::glm(as.formula(paste(dv_name, "~ 1")),
-                             data = data, family = stats::binomial,
-                             na.action = stats::na.omit)
-  ll_null     <- as.numeric(stats::logLik(null_model))
-  ll_model    <- as.numeric(stats::logLik(model))
-  chi_sq      <- -2 * (ll_null - ll_model)
-  omnibus_df  <- model$df.null - model$df.residual
-  omnibus_p   <- stats::pchisq(chi_sq, df = omnibus_df, lower.tail = FALSE)
-  omnibus_fmt <- if (!is.na(omnibus_p) && omnibus_p < 0.001) {
-    "<.001"
-  } else {
-    sprintf("%.3f", omnibus_p)
-  }
-
-  omnibus_table <- data.frame(
-    Chi_Square = round(chi_sq, 3),
-    df         = omnibus_df,
-    p          = omnibus_fmt,
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-  .jst_print_table(omnibus_table,
-                   caption = "Omnibus Test of Model Coefficients",
-                   col.names = c("Chi-Square", "df", "p"),
-                   row.names = FALSE)
-  cat("\n")
-
-  # -- Model summary --------------------------------------------------------
-  neg2ll       <- -2 * ll_model
-  aic          <- stats::AIC(model)
-  cox_snell_r2 <- 1 - exp((2 / n_obs) * (ll_null - ll_model))
-  max_r2       <- 1 - exp((2 / n_obs) * ll_null)
-  nagelkerke_r2 <- cox_snell_r2 / max_r2
-
-  summary_table <- data.frame(
-    neg2LL     = round(neg2ll, 3),
-    CoxSnellR2 = round(cox_snell_r2, 3),
-    NagelkerkeR2 = round(nagelkerke_r2, 3),
-    AIC        = round(aic, 3),
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-  .jst_print_table(summary_table,
-                   caption = "Model Summary",
-                   col.names = c("-2 Log Likelihood", "Cox & Snell R\u00b2",
-                                 "Nagelkerke R\u00b2", "AIC"),
-                   row.names = FALSE)
-  cat("\n")
-
-  # -- Coefficients table ----------------------------------------------------
-  coefs    <- as.data.frame(model_summary$coefficients, stringsAsFactors = FALSE)
-  colnames(coefs) <- c("B", "SE", "z", "P")
-
-  # Wald chi-square = z^2
-  wald <- coefs$z^2
-
-  p_num <- suppressWarnings(as.numeric(coefs$P))
-  p_fmt <- ifelse(!is.na(p_num) & p_num < 0.001, "<.001",
-                  ifelse(is.na(p_num), "<.001", sprintf("%.3f", p_num)))
-
-  exp_b <- exp(coefs$B)
-
-  fmt3 <- function(x) sprintf("%.3f", as.numeric(x))
-
-  # Clean up factor coefficient names for readability
-  rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
-                                            all.vars(formula)[-1])
-
-  out_coefs <- data.frame(
-    B      = fmt3(coefs$B),
-    SE     = fmt3(coefs$SE),
-    Wald   = fmt3(wald),
-    df     = rep("1", nrow(coefs)),
-    p      = p_fmt,
-    Exp_B  = fmt3(exp_b),
-    stringsAsFactors = FALSE,
-    row.names = rownames(coefs)
-  )
-
-  col_names <- c("B", "SE", "Wald", "df", "p", "Exp(B)")
-
-  if (ci) {
-    ci_vals <- suppressMessages(stats::confint(model))
-    exp_ci_lower <- exp(ci_vals[, 1])
-    exp_ci_upper <- exp(ci_vals[, 2])
-    out_coefs$CI_Lower <- fmt3(exp_ci_lower)
-    out_coefs$CI_Upper <- fmt3(exp_ci_upper)
-    col_names <- c(col_names, "95% CI Lower", "95% CI Upper")
-  }
-
-  cat("Coefficients:\n")
-  .jst_print_table(out_coefs, col.names = col_names, row.names = TRUE)
-
-  cat("\nNumber of observations: ", n_obs, "\n", sep = "")
-
-  # -- Classification table (optional) ---------------------------------------
-  if (classification) {
-    predicted_probs  <- stats::fitted(model)
-    predicted_class  <- ifelse(predicted_probs >= 0.5, 1, 0)
-    observed         <- stats::model.response(mf)
-
-    tp <- sum(predicted_class == 1 & observed == 1)
-    tn <- sum(predicted_class == 0 & observed == 0)
-    fp <- sum(predicted_class == 1 & observed == 0)
-    fn <- sum(predicted_class == 0 & observed == 1)
-
-    class_table <- data.frame(
-      Observed   = c("0", "1", "Overall"),
-      Pred_0     = c(tn, fn, NA),
-      Pred_1     = c(fp, tp, NA),
-      Pct_Correct = c(
-        round(tn / (tn + fp) * 100, 1),
-        round(tp / (tp + fn) * 100, 1),
-        round((tp + tn) / n_obs * 100, 1)
-      ),
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-
-    cat("\n")
-    .jst_print_table(class_table,
-                     caption = "Classification Table (cutoff = 0.50)",
-                     col.names = c("Observed", "Predicted 0", "Predicted 1",
-                                   "% Correct"),
-                     row.names = FALSE)
-  }
-
-  # -- Diagnostics (VIF) -----------------------------------------------------
-  vif_values <- NULL
-  if (show_diag && "vif" %in% diag_which) {
-    # Compute VIF from the linear predictor model matrix
-    X <- stats::model.matrix(model)[, -1, drop = FALSE]
-    if (ncol(X) >= 2) {
-      vif_values <- tryCatch({
-        R <- stats::cor(X)
-        vif_vals <- diag(solve(R))
-        names(vif_vals) <- colnames(X)
-        vif_vals
-      }, error = function(e) {
-        warning("VIF could not be computed (possible perfect collinearity).",
-                call. = FALSE)
-        NULL
-      })
-
-      if (!is.null(vif_values)) {
-        cat("\n")
-        vif_df <- data.frame(
-          Variable = names(vif_values),
-          VIF      = round(vif_values, 3),
-          stringsAsFactors = FALSE,
-          row.names = NULL
-        )
-        .jst_print_table(vif_df,
-                         caption = "VIF (Variance Inflation Factors)",
-                         row.names = FALSE)
-
-        # Targeted notes for VIF > 10
-        high_vif <- vif_values[vif_values > 10]
-        if (length(high_vif) > 0) {
-          cat("\n")
-          for (nm in names(high_vif)) {
-            inflation <- round(sqrt(high_vif[nm]), 1)
-            cat(nm, " (VIF = ", round(high_vif[nm], 1),
-                "): standard error inflated by a factor of ", inflation, ".\n",
-                "  If you need to interpret this coefficient specifically, consider\n",
-                "  whether the collinearity is a concern for your research question.\n",
-                sep = "")
-          }
-        }
-      }
-    }
-  } else if (show_diag) {
-    # Compute VIF silently for return object
-    X <- stats::model.matrix(model)[, -1, drop = FALSE]
-    if (ncol(X) >= 2) {
-      vif_values <- tryCatch({
-        R <- stats::cor(X)
-        vif_vals <- diag(solve(R))
-        names(vif_vals) <- colnames(X)
-        vif_vals
-      }, error = function(e) NULL)
-    }
-  }
-
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = all.vars(formula),
-    n_analysis      = n_obs
-  )
-
-  cat("\n")
-  ret <- list(
-    model           = model,
-    model_type      = "logistic",
-    model_frame     = mf,
-    formula_used    = formula,
-    coefficients    = out_coefs,
-    nagelkerke_r2   = nagelkerke_r2,
-    cox_snell_r2    = cox_snell_r2,
-    neg2ll          = neg2ll,
-    aic             = aic,
-    omnibus         = c(chi_square = chi_sq, df = omnibus_df, p = omnibus_p),
-    n               = n_obs,
-    predicts        = predicts_str,
-    dummy_coef_names = dummy_coef_names,
-    ref_cats        = all_ref_cats,
-    vif             = vif_values,
-    sample_info     = sample_info
-  )
-  class(ret) <- "jst_logistic"
   invisible(ret)
 }
 
@@ -4866,7 +3988,6 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
 #'   \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
 #'   \code{n_excluded}, \code{item_statistics}, \code{item_total_statistics},
 #'   and \code{sample_info} (pipeline and missing data counts).
-#'   item statistics data frame, and item-total statistics data frame.
 #'
 #' @examples
 #' # With explicit data frame
@@ -5715,15 +4836,11 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #'     \item \code{else=copy}: unmapped values are carried across unchanged.
 #'   }
 #'
-#'   Individual values can also be mapped to NA to convert coded missing
-#'   values: \code{"-5=NA"} or \code{"-99=NA; -5=NA"}.
-#'
 #'   Examples:
 #'   \itemize{
 #'     \item \code{"1=1; 2=0"}
 #'     \item \code{"1=1; 2,3=2; 4,5=3; else=NA"}
 #'     \item \code{"1=1; 2=0; else=copy"}
-#'     \item \code{"-5=NA; else=copy"}
 #'   }
 #'
 #' @param labels   Optional. A quoted string specifying value labels for the
@@ -5799,12 +4916,9 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #'                      map    = "3=1; 4=2; else=NA",
 #'                      labels = "1=Three gears; 2=Four gears")
 #'
-#' # Convert a specific coded missing value to NA
-#' df$gearR5 <- jrecode(df, gear, map = "99=NA; else=copy")
-#'
 #' # Using juse() default
 #' juse(df)
-#' df$gearR6 <- jrecode(, gear, map = "3=1; 4=2; 5=3",
+#' df$gearR5 <- jrecode(, gear, map = "3=1; 4=2; 5=3",
 #'                       labels = "1=Three; 2=Four; 3=Five")
 #'
 #' @seealso \code{\link{jrelabel}} for applying labels to an existing variable
@@ -5881,9 +4995,7 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
   }
 
   # --- Handle unspecified non-NA values ---
-  # Exclude values that were explicitly mapped (including mapped to NA)
-  unspecified_mask <- !is.na(orig_num) & is.na(new_num) &
-                      !(orig_num %in% all_specified_old)
+  unspecified_mask <- !is.na(orig_num) & is.na(new_num)
   unspecified_vals <- sort(unique(orig_num[unspecified_mask]))
 
   # Separate suspicious from legitimate unspecified values

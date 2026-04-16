@@ -25,11 +25,15 @@ values are left unmapped, so you can fix the map before proceeding.
 \item \code{else=copy}: unmapped values are carried across unchanged.
 }
 
+Individual values can also be mapped to NA to convert coded missing
+values: \code{"-5=NA"} or \code{"-99=NA; -5=NA"}.
+
 Examples:
 \itemize{
 \item \code{"1=1; 2=0"}
 \item \code{"1=1; 2,3=2; 4,5=3; else=NA"}
 \item \code{"1=1; 2=0; else=copy"}
+\item \code{"-5=NA; else=copy"}
 }}
 
 \item{labels}{Optional. A quoted string specifying value labels for the
@@ -112,9 +116,12 @@ df$gearR4 <- jrecode(df, gear,
                      map    = "3=1; 4=2; else=NA",
                      labels = "1=Three gears; 2=Four gears")
 
+# Convert a specific coded missing value to NA
+df$gearR5 <- jrecode(df, gear, map = "99=NA; else=copy")
+
 # Using juse() default
 juse(df)
-df$gearR5 <- jrecode(, gear, map = "3=1; 4=2; 5=3",
+df$gearR6 <- jrecode(, gear, map = "3=1; 4=2; 5=3",
                       labels = "1=Three; 2=Four; 3=Five")
 
 }
