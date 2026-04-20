@@ -12,7 +12,8 @@ jlm(
   numeric = NULL,
   categorical = NULL,
   diagnostics = NULL,
-  full = FALSE
+  full = FALSE,
+  ...
 )
 }
 \arguments{
@@ -45,6 +46,10 @@ defers to \code{joutput()} session setting.}
 
 \item{full}{Logical. If TRUE, turns on diagnostics. Does not override
 explicit FALSE values.}
+
+\item{...}{Reserved for argument-name checking. Passing \code{which},
+\code{plots}, or \code{show} will produce a helpful error suggesting
+\code{diagnostics} instead.}
 }
 \value{
 Invisibly returns a list of class \code{"jst_lm"} containing:

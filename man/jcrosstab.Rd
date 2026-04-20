@@ -40,7 +40,8 @@ when available.}
 \value{
 Invisibly returns a list of class \code{"jst_chisq"} containing:
 \code{observed} (observed frequency table), \code{expected} (expected
-frequency table), \code{n} (total N), \code{sample_info} (pipeline and
+frequency table), \code{n} (total N), \code{model_frame} (the analysis
+data frame used for plotting), \code{sample_info} (pipeline and
 missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
 \code{df}, and \code{p}.
 }

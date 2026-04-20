@@ -27,8 +27,12 @@ analyses need to match the N of a final regression model.
 The setting is stored per dataset, so switching \code{juse()} between
 datasets preserves each dataset's setting independently.
 
-When a data frame is specified explicitly in a function call, the
-jcomplete filter is not applied for that call.
+The jcomplete filter applies whenever the matching dataset is used,
+regardless of whether it was supplied via \code{juse()} or specified
+explicitly in a function call. To bypass temporarily without losing
+the setting, use \code{jcomplete(off)} before the analysis and
+\code{jcomplete(on)} afterward. This matches the SPSS USE ALL /
+FILTER convention.
 }
 \examples{
 \donttest{

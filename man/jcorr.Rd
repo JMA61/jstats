@@ -24,7 +24,8 @@ when available.}
 \value{
 Invisibly returns a list of class \code{"jst_corr"} containing:
 \code{r} (correlation matrix), \code{p} (p-value matrix),
-\code{n} (pairwise N matrix), \code{method}, and \code{sample_info}
+\code{n} (pairwise N matrix), \code{method}, \code{model_frame} (the
+analysis data frame used for plotting), and \code{sample_info}
 (pipeline and missing data counts).
 }
 \description{

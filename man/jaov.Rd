@@ -50,10 +50,11 @@ and ci all at once. Does not override explicit FALSE values.}
 }
 \value{
 Invisibly returns a list of class \code{"jst_anova"} containing:
-\code{model} (the \code{aov} or \code{oneway.test} object), \code{test_type},
-\code{formula}, \code{descriptives}, \code{f}, \code{df1}, \code{df2},
-\code{p}, \code{eta_squared}, \code{n}, and \code{sample_info}
-(pipeline and missing data counts).
+\code{model} (the \code{aov} or \code{oneway.test} object),
+\code{model_frame} (the analysis data frame used for plotting),
+\code{test_type}, \code{formula}, \code{descriptives}, \code{f},
+\code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n}, and
+\code{sample_info} (pipeline and missing data counts).
 }
 \description{
 Runs a one-way ANOVA and prints a formatted group descriptives table

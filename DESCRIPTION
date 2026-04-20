@@ -1,29 +1,34 @@
 Package: JeffsStatTools
-Title: SPSS-Style Descriptive, Frequency, and Regression Tools for Teaching
-Version: 0.7.0
+Title: Simplified Statistics Tools for Social Science Research and Teaching
+Version: 0.8.0
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
-Description: Provides SPSS-like output for common statistical analyses
-    including descriptive statistics, frequency tables, t-tests, ANOVA,
-    correlations, chi-square tests, cross-tabulations, linear regression,
-    and Cronbach's alpha. Includes tools for data management (recoding,
-    labelling, filtering, dummy coding, scale creation) and unified data
-    import and export for SPSS, Stata, SAS, Excel, CSV, and R formats.
-    Functions accept unquoted variable names and formula syntax for ease
-    of use, handle haven-labelled variables automatically, and return
-    results invisibly while printing user-friendly tables.
+Description: Provides simplified tools for common statistical analyses
+    used in social science research and teaching, with output formatted
+    in the style of SPSS. Analysis functions include descriptive
+    statistics, frequency tables, t-tests, ANOVA, correlations,
+    chi-square tests, cross-tabulations, linear regression, logistic
+    regression, and Cronbach's alpha, with built-in model diagnostics
+    and publication-oriented plotting. Supporting tools handle data
+    management (recoding, labelling, filtering, dummy coding, scale
+    construction), automatic detection and handling of coded missing
+    values, and unified data import and export for SPSS, Stata, SAS,
+    Excel, CSV, and R formats. Functions accept unquoted variable
+    names and formula syntax for ease of use, handle haven-labelled
+    variables automatically, and return results invisibly while
+    printing user-friendly tables.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends:
     R (>= 4.2.0),
-    magrittr,
+    magrittr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     ggplot2,
-    haven,
+    haven (>= 2.3.0),
     labelled,
     rlang,
     readxl,
     writexl
-Date: 2026-04-16
+Date: 2026-04-20

@@ -201,21 +201,30 @@
 
 #' @keywords internal
 .jst_get_filter <- function(data_name) {
-  if (is.null(data_name)) return(NULL)
+  if (is.null(data_name) || !is.character(data_name) ||
+      length(data_name) != 1 || !nzchar(data_name)) {
+    return(NULL)
+  }
   all_filters <- getOption(".jst_filter", default = list())
   all_filters[[data_name]]
 }
 
 #' @keywords internal
 .jst_get_complete <- function(data_name) {
-  if (is.null(data_name)) return(NULL)
+  if (is.null(data_name) || !is.character(data_name) ||
+      length(data_name) != 1 || !nzchar(data_name)) {
+    return(NULL)
+  }
   all_complete <- getOption(".jst_complete", default = list())
   all_complete[[data_name]]
 }
 
 #' @keywords internal
 .jst_set_filter <- function(data_name, settings) {
-  if (is.null(data_name)) return(invisible(NULL))
+  if (is.null(data_name) || !is.character(data_name) ||
+      length(data_name) != 1 || !nzchar(data_name)) {
+    return(invisible(NULL))
+  }
   all_filters <- getOption(".jst_filter", default = list())
   all_filters[[data_name]] <- settings
   options(.jst_filter = all_filters)
@@ -223,7 +232,10 @@
 
 #' @keywords internal
 .jst_set_complete <- function(data_name, settings) {
-  if (is.null(data_name)) return(invisible(NULL))
+  if (is.null(data_name) || !is.character(data_name) ||
+      length(data_name) != 1 || !nzchar(data_name)) {
+    return(invisible(NULL))
+  }
   all_complete <- getOption(".jst_complete", default = list())
   all_complete[[data_name]] <- settings
   options(.jst_complete = all_complete)
@@ -376,28 +388,6 @@
   filter_active    <- FALSE
   filter_expr_str  <- NULL
 
-  # -- Step 0: NA preprocessing ---------------------------------------------
-  # Auto-convert values labelled "Missing" (case-insensitive, whitespace
-  # trimmed) to NA. This runs before jcomplete/jfilter/subset so those
-  # steps see a consistent view of what is missing. The haven_labelled
-  # class and value labels are preserved so metadata still round-trips
-  # through .sav/.dta exports.
-  na_result <- .jst_preprocess_na(data)
-  data      <- na_result$data
-  if (length(na_result$converted) > 0) {
-    conv_parts <- vapply(
-      names(na_result$converted),
-      function(v) {
-        codes <- na_result$converted[[v]]
-        paste0(v, " (", paste(codes, collapse = ", "), ")")
-      },
-      character(1)
-    )
-    msgs <- c(msgs, paste0(
-      "[YELLOW](Auto-converted to NA: values labelled \"Missing\" on ",
-      paste(conv_parts, collapse = "; "), ")"))
-  }
-
   # -- Step 1: jcomplete -----------------------------------------------------
   # Applied whenever a jcomplete is set on the current dataset (by name),
   # regardless of whether that dataset was supplied via juse() default or
@@ -421,12 +411,12 @@
                   "or", valid_vars[length(valid_vars)])
           }
           msgs <- c(msgs, paste0(
-            "[YELLOW](Listwise filter: ", n_excluded,
+            "[YELLOW](", n_excluded,
             " cases excluded due to missing values on ", vars_str,
-            " \u2014 ", n_after, " of ", n_before, " cases)"))
+            ": ", n_after, " of ", n_before, " cases)"))
         } else {
           msgs <- c(msgs, paste0(
-            "[YELLOW](Listwise filter: no missing values on the registered variables \u2014 ",
+            "[YELLOW](No missing values on the jcomplete variables: ",
             n_after, " of ", n_before, " cases)"))
         }
       } else {
@@ -742,98 +732,6 @@
   }
 
   return(sort(unique(suspicious)))
-}
-
-
-# -----------------------------------------------------------------------------
-# .jst_detect_missing_labels()
-# Detects values in a haven_labelled variable whose value label matches
-# "Missing" case-insensitively with whitespace trimmed. Used by NA
-# preprocessing to auto-convert these values to NA before analysis.
-#
-# Matches: "Missing", "missing", "MISSING", " Missing " (and any other
-# case/whitespace variation).
-# Does NOT match: "DK", "Refused", "Not applicable", "Missing information
-# recorded" (must be an exact match on the trimmed, lower-cased text, not a
-# substring).
-#
-# Returns a numeric vector of the codes whose labels match, or numeric(0)
-# if no matches or x is not haven-labelled.
-# -----------------------------------------------------------------------------
-
-#' Internal helper: detect values labelled "Missing" in a haven_labelled variable
-#'
-#' @keywords internal
-.jst_detect_missing_labels <- function(x) {
-  if (!haven::is.labelled(x)) return(numeric(0))
-  val_labs <- labelled::val_labels(x)
-  if (is.null(val_labs) || length(val_labs) == 0) return(numeric(0))
-
-  label_names <- names(val_labs)
-  if (is.null(label_names)) return(numeric(0))
-
-  match_idx <- vapply(
-    label_names,
-    function(lbl) {
-      if (is.na(lbl)) return(FALSE)
-      trimws(tolower(lbl)) == "missing"
-    },
-    logical(1)
-  )
-
-  if (!any(match_idx)) return(numeric(0))
-
-  # Labels are attached to numeric codes for numeric labelled vectors,
-  # and to character values for character labelled vectors. Return as
-  # numeric when possible; callers working with character labelled data
-  # will not reach this path in practice.
-  codes <- unname(val_labs[match_idx])
-  suppressWarnings(as.numeric(codes))
-}
-
-
-# -----------------------------------------------------------------------------
-# .jst_preprocess_na()
-# Applies auto-NA detection to all variables in a data frame (or a specified
-# subset of variables). For each haven_labelled variable, values labelled
-# "Missing" are converted to NA. The haven_labelled class and value labels
-# are preserved so the metadata still round-trips through .sav/.dta exports.
-#
-# Returns a list with:
-#   data      - the preprocessed data frame
-#   converted - a named list mapping variable names to the codes that were
-#               converted to NA (used by callers to emit a yellow note)
-# -----------------------------------------------------------------------------
-
-#' Internal helper: auto-convert values labelled "Missing" to NA
-#'
-#' @keywords internal
-.jst_preprocess_na <- function(data, var_names = NULL) {
-  if (is.null(var_names)) var_names <- names(data)
-  converted <- list()
-
-  for (v in var_names) {
-    if (!v %in% names(data)) next
-    x <- data[[v]]
-    codes <- .jst_detect_missing_labels(x)
-    if (length(codes) == 0) next
-    codes <- codes[!is.na(codes)]
-    if (length(codes) == 0) next
-
-    # Compare underlying numeric values to the missing codes. Using
-    # as.numeric() here strips the class for comparison only; we write
-    # back to data[[v]] using positional indexing, which preserves the
-    # original class and value labels.
-    x_num <- suppressWarnings(as.numeric(x))
-    mask  <- !is.na(x_num) & x_num %in% codes
-
-    if (any(mask)) {
-      data[[v]][mask] <- NA
-      converted[[v]] <- sort(unique(codes[codes %in% x_num[mask]]))
-    }
-  }
-
-  list(data = data, converted = converted)
 }
 
 
@@ -1471,7 +1369,7 @@ jcomplete <- function(data, ...) {
     data <- resolved$data
     .jst_data_name <- resolved$name
   } else {
-    .jst_data_name <- paste(deparse(raw_data), collapse = "")
+    .jst_data_name <- deparse(substitute(data))
   }
 
   variables      <- rlang::enquos(...)
@@ -3290,11 +3188,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @export
 jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
   # Catch missing-comma error: jcorr(VarName, ...) instead of jcorr(, VarName, ...)
   if (!missing(data)) {
     mc <- match.call()
@@ -3312,7 +3205,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
     .jst_default_used <- TRUE
     .jst_data_name    <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   variables      <- rlang::enquos(...)
@@ -3966,24 +3859,20 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
       next
     }
 
-    # --- Auto-detection (unified classifier) ---
-    if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      # Classified categorical — convert to factor
-      if (haven::is.labelled(data[[v]])) {
+    # --- Auto-detection ---
+    if (haven::is.labelled(data[[v]])) {
+      val_labs <- labelled::val_labels(data[[v]])
+      if (length(val_labs) > 0) {
+        # Has value labels — treat as categorical
         data[[v]] <- haven::as_factor(data[[v]])
-      } else if (!is.factor(data[[v]])) {
-        unique_vals <- sort(unique(data[[v]][!is.na(data[[v]])]))
-        data[[v]] <- factor(data[[v]], levels = unique_vals)
-      }
-      ref_level <- levels(data[[v]])[1]
-      auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", ref_level))
-    } else {
-      # Classified continuous — strip haven class if present
-      if (haven::is.labelled(data[[v]])) {
+        ref_level <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", ref_level))
+      } else {
+        # No value labels — treat as continuous
         data[[v]] <- as.numeric(data[[v]])
       }
-      # Plain numeric stays as-is
     }
+    # Plain numeric without override or labels — stays numeric (untouched)
   }
 
   if (labels) {
@@ -4355,12 +4244,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
   dummy_coef_names <- expanded$dummy_coef_names
   model_vars       <- all.vars(formula)
 
-  # -- Variable type conversion (unified classifier) ------------------------
-  # Priority order:
-  #   1. jdummy() registrations (already expanded above)
-  #   2. numeric/categorical overrides from this call
-  #   3. Auto-detection via .jst_is_categorical()
-  # DV is always numeric; handled after this loop.
+  # -- Variable type conversion (same logic as jlm) --------------------------
   dv_name  <- all.vars(formula)[1]
   iv_names <- setdiff(model_vars, c(dv_name, dummy_coef_names))
 
@@ -4368,56 +4252,32 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
   auto_ref_cats  <- character(0)
   all_ref_cats   <- ref_cats
 
-  # Exclude original variable names that were expanded by jdummy()
-  expanded_originals <- character(0)
-  dummy_regs <- .jst_get_dummy(.jst_data_name)
-  if (!is.null(dummy_regs)) {
-    expanded_originals <- vapply(dummy_regs, function(r) r$var_name,
-                                 character(1))
-  }
-
   for (v in iv_names) {
-    if (v %in% dummy_coef_names)   next
-    if (v %in% expanded_originals) next
-    if (!(v %in% names(data)))     next
+    if (v %in% names(data) && haven::is.labelled(data[[v]])) {
+      val_labels <- labelled::val_labels(data[[v]])
 
-    # --- Override: numeric = "Var" forces continuous ---
-    if (!is.null(numeric) && v %in% numeric) {
-      if (haven::is.labelled(data[[v]])) {
+      if (!is.null(numeric) && v %in% numeric) {
+        data[[v]] <- as.numeric(data[[v]])
+      } else if (!is.null(categorical) && v %in% categorical) {
+        data[[v]] <- haven::as_factor(data[[v]])
+        ref_val   <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats,
+                           paste0(v, " = ", ref_val, " (first category)"))
+      } else if (length(val_labels) > 0) {
+        data[[v]] <- haven::as_factor(data[[v]])
+        auto_detected <- c(auto_detected, v)
+        ref_val       <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats,
+                           paste0(v, " = ", ref_val, " (first category)"))
+      } else {
         data[[v]] <- as.numeric(data[[v]])
       }
-      next
-    }
-
-    # --- Override: categorical = "Var" forces categorical ---
-    if (!is.null(categorical) && v %in% categorical) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else if (!is.factor(data[[v]])) {
-        unique_vals <- sort(unique(data[[v]][!is.na(data[[v]])]))
-        data[[v]] <- factor(data[[v]], levels = unique_vals)
-      }
-      ref_val <- levels(data[[v]])[1]
-      auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", ref_val, " (first category)"))
-      next
-    }
-
-    # --- Auto-detection via unified classifier ---
-    if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else if (!is.factor(data[[v]])) {
-        unique_vals <- sort(unique(data[[v]][!is.na(data[[v]])]))
-        data[[v]] <- factor(data[[v]], levels = unique_vals)
-      }
-      auto_detected <- c(auto_detected, v)
-      ref_val       <- levels(data[[v]])[1]
-      auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", ref_val, " (first category)"))
-    } else {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- as.numeric(data[[v]])
+    } else if (!is.null(categorical) && v %in% categorical) {
+      if (!is.factor(data[[v]])) {
+        data[[v]] <- factor(data[[v]])
+        ref_val   <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats,
+                           paste0(v, " = ", ref_val, " (first category)"))
       }
     }
   }
@@ -5106,11 +4966,6 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @export
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
   # Catch missing-comma error
   if (!missing(data)) {
     mc <- match.call()
@@ -5128,7 +4983,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
     .jst_default_used <- TRUE
     .jst_data_name    <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   # Capture subset expression before evaluation
@@ -5301,11 +5156,6 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
 #' @export
 jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
   # Catch missing-comma error: jalpha(VarName, ...) instead of jalpha(, VarName, ...)
   if (!missing(data)) {
     mc <- match.call()
@@ -5323,7 +5173,7 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
     .jst_default_used <- TRUE
     .jst_data_name    <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   variables      <- rlang::enquos(...)
@@ -6240,11 +6090,6 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #' @export
 jrecode <- function(data, orig_var, map, labels = NULL) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
   # Catch missing-comma error: jrecode(VarName, ...) instead of jrecode(, VarName, ...)
   if (!missing(data)) {
     mc <- match.call()
@@ -6260,7 +6105,7 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
     data <- resolved$data
     .jst_data_name <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   orig_name <- deparse(substitute(orig_var))
@@ -7394,29 +7239,20 @@ jsave <- function(data, file, overwrite = FALSE) {
 
 #' Visualise jst_* result objects or plot variables directly from a data frame
 #'
-#' Unified plotting function. Can be called in three ways:
+#' Unified plotting function. Can be called in two ways:
 #'
 #' \strong{Result-object form:} Pass a result object returned by one of the
 #' package's analysis functions. Produces appropriate plots for each class of
 #' result (see valid plot names below).
 #'
-#' \strong{Formula form} (for plots that distinguish DV from IV): Pass a
-#' formula as the first argument, followed optionally by a data frame. Used
-#' for scatterplots and boxplots, consistent with the formula syntax of
-#' \code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
-#' \code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only
-#' single-IV formulas are supported here; for multi-IV models, fit with
-#' \code{jlm()} and pass the result to \code{jplot()}.
-#'
-#' \strong{Variable-list form} (for distributions and counts): Pass a data
-#' frame followed by one or two unquoted variable names. Used for histograms
-#' (1 numeric), bar charts (1 categorical), and grouped bar charts (2
-#' categorical). Calls that would otherwise auto-detect to a scatter or
-#' boxplot produce a helpful error directing you to the formula form.
-#'
-#' Supports pipeline integration (\code{jfilter}, \code{jcomplete}, per-call
-#' \code{subset}), grouping via \code{by = }, and regression lines with
-#' equation/R-squared/band annotations.
+#' \strong{Data-first form:} Pass a data frame followed by one or two unquoted
+#' variable names. Produces a plot with sensible auto-detection based on
+#' variable types (histogram for one numeric variable, bar chart for one
+#' categorical, scatter for two numeric, boxplot for one numeric and one
+#' categorical, grouped bar for two categorical). Override the auto-detection
+#' with \code{type = "..."}. Supports pipeline integration (\code{jfilter},
+#' \code{jcomplete}, per-call \code{subset}), grouping via \code{by = }, and
+#' regression lines with equation/R-squared/band annotations.
 #'
 #' Valid plot names by class (for the result-object form):
 #' \itemize{
@@ -7498,17 +7334,13 @@ jsave <- function(data, file, overwrite = FALSE) {
 #'   jplot(m, which = "coef")            # coefficient forest plot
 #'   jplot(m, which = "fit", focal = Age, at = "mean")
 #'
-#'   # Formula form (scatter and box)
-#'   jplot(Tattoos ~ Age, SampleData)                       # scatter
-#'   jplot(Tattoos ~ Age, SampleData, line = "lm")          # scatter + regression
-#'   jplot(Tattoos ~ Age, SampleData, line = "lm", band = "see")
-#'   jplot(Tattoos ~ Age, SampleData, by = Gender, line = "lm")
-#'   jplot(Age ~ Gender, SampleData)                        # boxplot
-#'
-#'   # Variable-list form (distributions and counts)
-#'   jplot(SampleData, Age)                     # histogram
-#'   jplot(SampleData, Gender)                  # bar chart
-#'   jplot(SampleData, Program, Employment)     # grouped bar chart
+#'   # Data-first form
+#'   jplot(SampleData, Age)                           # histogram
+#'   jplot(SampleData, Age, Tattoos)                  # scatter
+#'   jplot(SampleData, Age, Tattoos, line = "lm")     # scatter + regression
+#'   jplot(SampleData, Age, Tattoos, line = "lm", band = "see")
+#'   jplot(SampleData, Age, Tattoos, by = Gender, line = "lm")
+#'   jplot(SampleData, Age, Gender)                   # boxplot (auto)
 #' }
 #'
 #' @export
@@ -7528,21 +7360,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # Capture the call for later argument-inspection (used by the ignored-arg
   # note that fires when, e.g., the user passes line = "lm" to a histogram).
   jplot_call <- match.call()
-
-  # ---------------------------------------------------------------------------
-  # Formula-first path: jplot(DV ~ IV, data) for scatter/box where a DV/IV
-  # distinction is meaningful.  Detected BEFORE the data-frame branch because
-  # `x` in this case is a formula, not a data frame.
-  # ---------------------------------------------------------------------------
-  if (!missing(x) && inherits(x, "formula")) {
-    by_sub <- substitute(by)
-    return(.jst_jplot_formula(x, jplot_call, ...,
-                              by_expr = by_sub, type = type, line = line,
-                              equation = equation, r2 = r2, band = band,
-                              subset_expr = substitute(subset),
-                              labels = labels,
-                              parent_env = parent.frame()))
-  }
 
   # Capture original expression before any evaluation (for data-name reporting)
   .data_expr <- if (!missing(x)) {
@@ -7634,8 +7451,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   # Classify variables
   var_types <- vapply(variable_names,
-                      function(v) if (.jst_is_categorical(data[[v]], v,
-                                                           .jst_data_name))
+                      function(v) if (.jst_is_categorical(data[[v]]))
                                     "categorical" else "numeric",
                       character(1))
 
@@ -7650,35 +7466,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     stop("Invalid `type` value: \"", resolved_type, "\".\n",
          "Valid types: ", paste(sprintf("\"%s\"", valid_types),
                                  collapse = ", "), ".",
-         call. = FALSE)
-  }
-
-  # -- Require formula syntax for scatter and box (relationship plots) ------
-  # These plots distinguish DV from IV. Requiring formula syntax prevents
-  # confusion about which variable goes on which axis and mirrors jlm/jaov.
-  if (resolved_type == "scatter") {
-    stop("For two-numeric scatterplots, use formula syntax to make the DV ",
-         "and IV explicit (consistent with jlm):\n",
-         "  jplot(", variable_names[2], " ~ ", variable_names[1],
-         ", ", if (!is.null(.jst_data_name)) .jst_data_name else "SampleData",
-         if (!identical(line, FALSE)) paste0(", line = \"",
-                                             if (isTRUE(line)) "lm" else line,
-                                             "\"") else "",
-         ")\n",
-         "(The DV on the left of ~ goes on the y-axis; the IV on the right ",
-         "goes on the x-axis.)",
-         call. = FALSE)
-  }
-  if (resolved_type == "box") {
-    # Numeric goes on y, categorical on x — i.e. numeric ~ categorical
-    num_var <- variable_names[var_types == "numeric"][1]
-    cat_var <- variable_names[var_types == "categorical"][1]
-    stop("For boxplots, use formula syntax to make the outcome and grouping ",
-         "variable explicit (consistent with jaov):\n",
-         "  jplot(", num_var, " ~ ", cat_var, ", ",
-         if (!is.null(.jst_data_name)) .jst_data_name else "SampleData", ")\n",
-         "(The numeric outcome on the left of ~ goes on the y-axis; the ",
-         "categorical grouping variable on the right goes on the x-axis.)",
          call. = FALSE)
   }
 
@@ -7779,231 +7566,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 }
 
 
-#' Internal helper: handle the formula-first form of jplot
-#'
-#' Called by \code{jplot.default} when the first argument is a formula.
-#' Parses the formula into DV (y-axis) and IV (x-axis), resolves the data
-#' frame from the second positional argument or juse default, and dispatches
-#' to the scatter or box builder depending on the IV's type.
-#'
-#' Only single-IV formulas are supported (\code{DV ~ IV}). Multi-IV formulas
-#' produce a helpful error pointing to the jlm() + jplot(m) workflow.
-#'
-#' @keywords internal
-.jst_jplot_formula <- function(formula, jplot_call, ..., by_expr, type, line,
-                               equation, r2, band, subset_expr, labels,
-                               parent_env) {
-
-  # -- Parse formula ---------------------------------------------------------
-  formula_vars <- all.vars(formula)
-  if (length(formula) < 3) {
-    stop("jplot() requires a two-sided formula: DV ~ IV.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)", call. = FALSE)
-  }
-
-  y_name <- all.vars(formula[[2]])
-  x_vars <- all.vars(formula[[3]])
-
-  if (length(y_name) != 1) {
-    stop("jplot() supports only one variable on the left side of ~.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)", call. = FALSE)
-  }
-  if (length(x_vars) > 1) {
-    stop("jplot() supports only one independent variable in its formula.\n",
-         "For multi-variable regression, fit with jlm() and plot the result:\n",
-         "  m <- jlm(", deparse(formula), ", <data>)\n",
-         "  jplot(m)",
-         call. = FALSE)
-  }
-  x_name <- x_vars[1]
-
-  # -- Resolve data frame ----------------------------------------------------
-  # Second positional argument in ..., or juse default.
-  dots <- list(...)
-  dot_names <- names(dots)
-  if (is.null(dot_names)) dot_names <- rep("", length(dots))
-  positional_dots <- dots[!nzchar(dot_names)]
-
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (length(positional_dots) >= 1) {
-    data <- positional_dots[[1]]
-    # Try to extract the original symbol for reporting
-    mc_no_name <- jplot_call[-1L]
-    mc_positional <- mc_no_name[!nzchar(names(mc_no_name)) |
-                                is.null(names(mc_no_name))]
-    if (length(mc_positional) >= 2) {
-      .jst_data_name <- paste(deparse(mc_positional[[2]]), collapse = "")
-    }
-    if (length(positional_dots) > 1) {
-      stop("jplot(formula, data): only one data argument is expected after ",
-           "the formula. Extra positional arguments were supplied.",
-           call. = FALSE)
-    }
-  } else {
-    resolved <- .jst_resolve_data(envir = parent_env)
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  }
-
-  if (!is.data.frame(data)) {
-    stop("jplot(): the data argument after the formula must be a data frame.",
-         call. = FALSE)
-  }
-
-  # -- Handle by argument ----------------------------------------------------
-  # by_expr is the result of substitute(by) from the caller — either NULL
-  # (default), a symbol like `Gender`, or a complex expression.
-  by_name <- NULL
-  has_by  <- !is.null(by_expr) && !identical(by_expr, as.name("NULL"))
-  if (has_by) {
-    by_name <- paste(deparse(by_expr), collapse = "")
-  }
-
-  # -- Validate variables exist ---------------------------------------------
-  check_names <- c(y_name, x_name)
-  if (has_by) check_names <- c(check_names, by_name)
-  .jst_check_vars(data, check_names, .jst_data_name)
-
-  # -- Validate line / band arguments ----------------------------------------
-  valid_bands <- c("ci", "pi", "see", "none")
-  if (!is.character(band) || length(band) != 1 || !band %in% valid_bands) {
-    stop("`band` must be one of: ", paste(sprintf("\"%s\"", valid_bands),
-                                          collapse = ", "), ".",
-         call. = FALSE)
-  }
-  if (isTRUE(line)) line <- "lm"
-  if (!identical(line, FALSE) && !(is.character(line) && length(line) == 1 &&
-                                   line %in% c("lm", "loess", "connect"))) {
-    stop("`line` must be FALSE, TRUE, or one of: ",
-         "\"lm\", \"loess\", \"connect\".", call. = FALSE)
-  }
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  # -- Apply pipeline --------------------------------------------------------
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr,
-                                  envir = parent_env)
-  data <- pipeline$data
-
-  # -- Decide plot type from IV's class -------------------------------------
-  # Numeric IV -> scatter; categorical IV -> box (numeric DV is required).
-  y_is_num <- !.jst_is_categorical(data[[y_name]], y_name, .jst_data_name)
-  x_is_cat <-  .jst_is_categorical(data[[x_name]], x_name, .jst_data_name)
-
-  if (!is.null(type)) {
-    resolved_type <- type
-  } else {
-    if (!y_is_num) {
-      stop("jplot(): the DV (left of ~) must be numeric. \"", y_name,
-           "\" is categorical.", call. = FALSE)
-    }
-    resolved_type <- if (x_is_cat) "box" else "scatter"
-  }
-
-  # Classify both vars for downstream builders
-  var_types <- c(
-    if (.jst_is_categorical(data[[x_name]], x_name, .jst_data_name))
-      "categorical" else "numeric",
-    if (.jst_is_categorical(data[[y_name]], y_name, .jst_data_name))
-      "categorical" else "numeric"
-  )
-  # Note: for builders, variable_names is ordered (x, y) for scatter,
-  # (x, y) for box (builder detects numeric side via var_types).
-  variable_names <- c(x_name, y_name)
-
-  # -- Capture axis labels BEFORE factor conversion -------------------------
-  axis_labels <- stats::setNames(
-    vapply(variable_names,
-           function(v) .jst_short_label(data[[v]], v),
-           character(1)),
-    variable_names
-  )
-  by_label <- if (has_by) .jst_short_label(data[[by_name]], by_name) else NULL
-
-  # -- Red title -------------------------------------------------------------
-  plot_title <- .jst_plot_title(resolved_type, c(y_name, x_name), by_name)
-  # For formula form, write the title as "Scatterplot: Tattoos and Age" where
-  # DV comes first for readability even though x-axis is Age.
-  # .jst_plot_title already puts the two names with " and " between them.
-  .cat_red(paste0(plot_title, "\n"))
-
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
-  .jst_print_msgs(pipeline$msgs)
-
-  # -- Convert haven-labelled categoricals to factors -----------------------
-  for (v in variable_names) {
-    if (haven::is.labelled(data[[v]])) {
-      val_labs <- labelled::val_labels(data[[v]])
-      if (!is.null(val_labs) && length(val_labs) > 0) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else {
-        data[[v]] <- as.numeric(data[[v]])
-      }
-    }
-  }
-  if (has_by && haven::is.labelled(data[[by_name]])) {
-    val_labs <- labelled::val_labels(data[[by_name]])
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      data[[by_name]] <- haven::as_factor(data[[by_name]])
-    } else {
-      data[[by_name]] <- factor(data[[by_name]])
-    }
-  } else if (has_by && !is.factor(data[[by_name]])) {
-    data[[by_name]] <- factor(data[[by_name]])
-  }
-
-  if (labels) {
-    .print_var_labels(data, check_names)
-  }
-
-  # -- Ignored-argument note (e.g. band = ... without line = "lm") ----------
-  called_args   <- names(jplot_call)
-  explicit_args <- called_args[nzchar(called_args)]
-  is_scatter_lm <- resolved_type == "scatter" &&
-                   (identical(line, "lm") || identical(line, TRUE))
-  ignored <- character(0)
-  if ("line" %in% explicit_args && resolved_type != "scatter") {
-    ignored <- c(ignored, "line")
-  }
-  if ("band" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "band")
-  }
-  if ("equation" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "equation")
-  }
-  if ("r2" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "r2")
-  }
-  if (length(ignored) > 0) {
-    .cat_yellow(paste0(
-      "(Note: ", paste(ignored, collapse = ", "),
-      " not applicable to ", resolved_type,
-      if (resolved_type == "scatter") " without line = \"lm\"" else "",
-      " \u2014 ignored)\n"
-    ))
-  }
-
-  # -- Dispatch to builder --------------------------------------------------
-  p <- switch(
-    resolved_type,
-    scatter = .jst_build_scatter(data, variable_names, by_name,
-                                 line, equation, r2, band,
-                                 axis_labels, by_label),
-    box     = .jst_build_box(data, variable_names, var_types, by_name,
-                             axis_labels, by_label)
-  )
-
-  print(p)
-  invisible(p)
-}
-
-
 # -- Data-first plot helpers ---------------------------------------------------
 
 #' Internal helper: choose an axis label for a variable
@@ -8071,92 +7633,21 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
 #' Internal helper: classify a variable as categorical or numeric
 #'
-#' Unified classifier used across the package (jplot, jlm, jlogistic, jdesc,
-#' jscreen, jcorr, and any other function that needs to distinguish
-#' categorical from continuous variables). The rule is specified in the
-#' "Categorical classification rules" section of the package changelog.
-#'
-#' Per-call overrides (\code{numeric = "Var"} / \code{categorical = "Var"})
-#' are handled by the calling function before reaching this helper. This
-#' function implements rules 3-7 only:
-#'
-#' \enumerate{
-#'   \item jdummy() registration for \code{var_name} on \code{data_name}
-#'         -> categorical.
-#'   \item Class factor, logical, or character -> categorical.
-#'   \item haven_labelled (including haven_labelled_spss) with value labels
-#'         attached to at least one non-missing value present in the data
-#'         -> categorical.
-#'   \item Plain numeric (or haven_labelled numeric that fell through 3)
-#'         with all whole-number values, min >= 0, max < 6, and at least 2
-#'         unique non-NA values -> categorical.
-#'   \item Otherwise -> continuous.
-#' }
-#'
-#' NA preprocessing (auto-conversion of values labelled "Missing" to NA) is
-#' expected to have run already via \code{.jst_apply_pipeline()} before this
-#' helper is called on analysis data.
+#' Uses the same rule as jlm() auto-detection: factor/logical/character, or
+#' haven-labelled with value labels attached, or 0/1-coded numeric, counts as
+#' categorical. Everything else is numeric.
 #'
 #' @param x A variable (vector).
-#' @param var_name Optional character string. The variable's column name.
-#'   Required for the jdummy() registration check.
-#' @param data_name Optional character string. The data frame's name.
-#'   Required for the jdummy() registration check.
-#' @return TRUE if categorical, FALSE if continuous.
+#' @return TRUE if categorical, FALSE if numeric.
 #' @keywords internal
-.jst_is_categorical <- function(x, var_name = NULL, data_name = NULL) {
-
-  # -- Rule 3: jdummy() registration ----------------------------------------
-  if (!is.null(var_name) && !is.null(data_name)) {
-    dummy_regs <- .jst_get_dummy(data_name)
-    if (!is.null(dummy_regs) && length(dummy_regs) > 0) {
-      is_registered <- any(vapply(dummy_regs,
-                                  function(r) identical(r$var_name, var_name),
-                                  logical(1)))
-      if (is_registered) return(TRUE)
-    }
-  }
-
-  # -- Rule 4: factor, logical, character -----------------------------------
+.jst_is_categorical <- function(x) {
   if (is.factor(x) || is.logical(x) || is.character(x)) return(TRUE)
-
-  # -- Rule 5: haven_labelled with non-missing value labels -----------------
   if (haven::is.labelled(x)) {
     val_labs <- labelled::val_labels(x)
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      if (typeof(x) == "character") {
-        # Character-labelled: any labels present make it categorical.
-        return(TRUE)
-      }
-      # Numeric-labelled: require at least one labelled code to be present
-      # in the (post-NA-preprocessing) data. This prevents a continuous
-      # variable with only a "Missing" label from misclassifying as
-      # categorical once the missing values have been NA'd out.
-      x_num        <- suppressWarnings(as.numeric(x))
-      non_na_vals  <- x_num[!is.na(x_num)]
-      if (length(non_na_vals) > 0 && any(val_labs %in% non_na_vals)) {
-        return(TRUE)
-      }
-      # Fall through to Rule 6 if no labelled codes remain in the data.
-    }
+    return(!is.null(val_labs) && length(val_labs) > 0)
   }
-
-  # -- Rule 6: whole-number non-negative range fallback ---------------------
-  if (is.numeric(x) || haven::is.labelled(x)) {
-    x_num   <- suppressWarnings(as.numeric(x))
-    x_clean <- x_num[!is.na(x_num)]
-    if (length(x_clean) >= 2) {
-      unique_vals <- unique(x_clean)
-      if (length(unique_vals) >= 2 &&
-          all(x_clean == floor(x_clean)) &&
-          min(x_clean) >= 0 &&
-          max(x_clean) <  6) {
-        return(TRUE)
-      }
-    }
-  }
-
-  # -- Rule 7: otherwise continuous -----------------------------------------
+  ux <- unique(x[!is.na(x)])
+  if (length(ux) == 2 && all(ux %in% c(0, 1))) return(TRUE)
   FALSE
 }
 
@@ -8569,11 +8060,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   classify <- function(v) {
     if (v %in% dummy_coef_names) return("categorical")
     x <- model_frame[[v]]
-    # Use the unified classifier. data_name is not available at this point
-    # (the model_frame doesn't retain the source data frame's name), so
-    # jdummy registration is checked via the dummy_coef_names list above
-    # rather than by passing var_name/data_name to the classifier.
-    if (.jst_is_categorical(x)) "categorical" else "interval"
+    if (is.factor(x) || is.logical(x) || is.character(x)) return("categorical")
+    ux <- unique(stats::na.omit(x))
+    if (length(ux) <= 2 && all(ux %in% c(0, 1))) return("categorical")
+    "interval"
   }
 
   hold_at <- function(v, mode) {
@@ -9355,4 +8845,16 @@ jplot.jst_freq <- function(x, which = "core", ...) {
 }
 
 
+# -- .onUnload ----------------------------------------------------------------
 
+#' Clean up session options when the package is unloaded
+#'
+#' @keywords internal
+.onUnload <- function(libpath) {
+  options(.jst_default_data = NULL)
+  options(.jst_filter = NULL)
+  options(.jst_complete = NULL)
+  options(.jst_dummy = NULL)
+  options(.jst_output_level = NULL)
+  options(.jst_output_toggles = NULL)
+}

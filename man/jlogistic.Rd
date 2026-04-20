@@ -14,7 +14,8 @@ jlogistic(
   ci = NULL,
   classification = FALSE,
   diagnostics = NULL,
-  full = FALSE
+  full = FALSE,
+  ...
 )
 }
 \arguments{
@@ -47,6 +48,10 @@ supported option. If NULL (default), defers to \code{joutput()}.}
 
 \item{full}{Logical. If TRUE, turns on ci, classification, and
 diagnostics. Does not override explicit FALSE values.}
+
+\item{...}{Reserved for argument-name checking. Passing \code{which},
+\code{plots}, or \code{show} will produce a helpful error suggesting
+\code{diagnostics} instead.}
 }
 \value{
 Invisibly returns a list of class \code{"jst_logistic"} containing:

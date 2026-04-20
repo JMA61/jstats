@@ -2,46 +2,62 @@
 % Please edit documentation in R/7036Tools.R
 \name{jfilter}
 \alias{jfilter}
-\title{Set, activate, deactivate, or clear a global data filter}
+\title{Set, activate, deactivate, or clear a per-dataset filter}
 \usage{
-jfilter(expr)
+jfilter(data, expr)
 }
 \arguments{
-\item{expr}{A logical expression (e.g. \code{Group == 1}), or one
-of the following special values:
+\item{data}{Optional data frame. If supplied, the filter is stored on
+that dataset specifically. If omitted, the dataset set by
+\code{juse()} is used. For consistency with other package functions,
+you can also use a leading comma to skip this argument
+(e.g. \code{jfilter(, Age < 40)}).}
+
+\item{expr}{A logical expression (e.g. \code{Age < 40 & Gender == 1}),
+or one of the following special values:
 \describe{
 \item{\code{off}}{Deactivate the filter but remember the expression.}
 \item{\code{on}}{Reactivate a previously deactivated filter.}
 \item{\code{NULL}}{Clear the filter entirely (forget the expression).}
 }
-If omitted, prints the current filter status.}
+If \code{expr} and \code{data} are both omitted, prints the current
+filter status.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect.
 }
 \description{
 \code{jfilter()} sets a persistent filter expression that is applied
-automatically by all JeffsStatTools analysis functions when the default
+automatically by JeffsStatTools analysis functions when the default
 data frame (set by \code{juse()}) is in use. This is analogous to
 the SPSS FILTER command.
 
 The filter is stored per dataset, so switching \code{juse()} between
 datasets preserves each dataset's filter independently.
 
-When a data frame is specified explicitly in a function call (e.g.
-\code{jfreq(MyData, Computer)}), the filter is not applied
-for that call.
+The filter applies whenever the matching dataset is used, regardless of
+whether it was supplied via \code{juse()} or specified explicitly in a
+function call. To bypass a filter temporarily without losing it, use
+\code{jfilter(off)} before the analysis and \code{jfilter(on)} afterward.
+This matches the SPSS FILTER / USE ALL convention.
+
+Filter expressions use standard R logical operators: \code{==}, \code{!=},
+\code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
+\code{!} (NOT), \code{xor()} (XOR), and \code{\%in\%}. Using \code{=} for
+equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
+produce a helpful error suggesting the correct R syntax.
 }
 \examples{
 \donttest{
 juse(mtcars)
-jfilter(cyl == 4)       # Set and activate
-jdesc(, mpg)            # Uses only 4-cylinder cars
-jfilter(off)            # Deactivate
-jdesc(, mpg)            # Uses all cars
-jfilter(on)             # Reactivate
-jfilter()               # Check status
-jfilter(NULL)           # Clear entirely
+jfilter(cyl == 4)             # Set using juse default
+jfilter(, cyl == 4)           # Same as above (leading comma)
+jfilter(mtcars, cyl == 4)     # Explicit dataset
+jfilter(cyl == 4 & mpg > 20)  # Compound condition
+jfilter(off)                  # Deactivate
+jfilter(on)                   # Reactivate
+jfilter()                     # Check status
+jfilter(NULL)                 # Clear entirely
 }
 
 }

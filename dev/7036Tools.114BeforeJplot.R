@@ -25,32 +25,6 @@
   cat(paste0("\033[31m", x, "\033[0m"))
 }
 
-#' Internal helper: print text in yellow ANSI colour
-#'
-#' Used for informational/status notes where the text should be visually
-#' distinct from regular output but not alarming (matches the "warning/note"
-#' colour convention).
-#'
-#' @keywords internal
-.cat_yellow <- function(x) {
-  cat(paste0("\033[33m", x, "\033[0m"))
-}
-
-#' Internal helper: print the "(Using default data frame: X)" note in yellow
-#'
-#' Used by every analysis function immediately after its red title line.
-#' Groups the default-data-frame note with other session-state notes (filter,
-#' jcomplete) under a consistent yellow colouring.
-#'
-#' @param data_name Character string name of the default data frame.
-#' @param extra_newline Logical. If TRUE, adds a trailing blank line after
-#'   the note (used when no pipeline messages will follow).
-#' @keywords internal
-.jst_default_note <- function(data_name, extra_newline = FALSE) {
-  .cat_yellow(paste0("(Using default data frame: ", data_name, ")\n"))
-  if (extra_newline) cat("\n")
-}
-
 #' Internal helper: retrieve a variable label as a string
 #'
 #' Returns the label if present, otherwise the string "None".
@@ -201,21 +175,18 @@
 
 #' @keywords internal
 .jst_get_filter <- function(data_name) {
-  if (is.null(data_name)) return(NULL)
   all_filters <- getOption(".jst_filter", default = list())
   all_filters[[data_name]]
 }
 
 #' @keywords internal
 .jst_get_complete <- function(data_name) {
-  if (is.null(data_name)) return(NULL)
   all_complete <- getOption(".jst_complete", default = list())
   all_complete[[data_name]]
 }
 
 #' @keywords internal
 .jst_set_filter <- function(data_name, settings) {
-  if (is.null(data_name)) return(invisible(NULL))
   all_filters <- getOption(".jst_filter", default = list())
   all_filters[[data_name]] <- settings
   options(.jst_filter = all_filters)
@@ -223,32 +194,9 @@
 
 #' @keywords internal
 .jst_set_complete <- function(data_name, settings) {
-  if (is.null(data_name)) return(invisible(NULL))
   all_complete <- getOption(".jst_complete", default = list())
   all_complete[[data_name]] <- settings
   options(.jst_complete = all_complete)
-}
-
-#' @keywords internal
-.jst_any_filter_active <- function() {
-  all_filters <- getOption(".jst_filter", default = list())
-  if (length(all_filters) == 0) return(FALSE)
-  for (nm in names(all_filters)) {
-    fs <- all_filters[[nm]]
-    if (!is.null(fs) && isTRUE(fs$active)) return(TRUE)
-  }
-  FALSE
-}
-
-#' @keywords internal
-.jst_any_complete_active <- function() {
-  all_complete <- getOption(".jst_complete", default = list())
-  if (length(all_complete) == 0) return(FALSE)
-  for (nm in names(all_complete)) {
-    cs <- all_complete[[nm]]
-    if (!is.null(cs) && isTRUE(cs$active)) return(TRUE)
-  }
-  FALSE
 }
 
 #' @keywords internal
@@ -307,10 +255,8 @@
           dummy_coef_names <- c(dummy_coef_names, dname)
         }
 
-        # Replace variable in formula string with dummy names.
-        # Wrapping in parentheses ensures correct behaviour when the variable
-        # appears inside an interaction term (e.g. y ~ x * Religion).
-        dummy_plus <- paste0("(", paste(reg$dummy_names, collapse = " + "), ")")
+        # Replace variable in formula string with dummy names
+        dummy_plus <- paste(reg$dummy_names, collapse = " + ")
         formula_str <- gsub(paste0("\\b", reg$var_name, "\\b"),
                             dummy_plus, formula_str)
 
@@ -334,16 +280,8 @@
 #'   \item subset (one-off per-call filter)
 #' }
 #'
-#' jcomplete and jfilter are keyed per-dataset. They apply whenever the
-#' matching dataset is used, regardless of whether that dataset was supplied
-#' via the juse() default or specified explicitly in the function call.
-#' This matches the SPSS FILTER model: persistent state remains in effect
-#' until explicitly turned off via jfilter(off) / jcomplete(off).
-#'
-#' When the current dataset has no jfilter / jcomplete set but at least one
-#' other dataset does have an active setting, a yellow-coloured note is
-#' included in the pipeline messages to remind the user that filtering is
-#' not active for this particular dataset.
+#' When the dataset was specified explicitly (not via juse default), jcomplete
+#' and jfilter are skipped and a note is printed if settings exist.
 #'
 #' @param data The data frame.
 #' @param data_name Character string name of the data frame.
@@ -376,101 +314,84 @@
   filter_active    <- FALSE
   filter_expr_str  <- NULL
 
-  # -- Step 0: NA preprocessing ---------------------------------------------
-  # Auto-convert values labelled "Missing" (case-insensitive, whitespace
-  # trimmed) to NA. This runs before jcomplete/jfilter/subset so those
-  # steps see a consistent view of what is missing. The haven_labelled
-  # class and value labels are preserved so metadata still round-trips
-  # through .sav/.dta exports.
-  na_result <- .jst_preprocess_na(data)
-  data      <- na_result$data
-  if (length(na_result$converted) > 0) {
-    conv_parts <- vapply(
-      names(na_result$converted),
-      function(v) {
-        codes <- na_result$converted[[v]]
-        paste0(v, " (", paste(codes, collapse = ", "), ")")
-      },
-      character(1)
-    )
-    msgs <- c(msgs, paste0(
-      "[YELLOW](Auto-converted to NA: values labelled \"Missing\" on ",
-      paste(conv_parts, collapse = "; "), ")"))
-  }
+  if (is_default) {
 
-  # -- Step 1: jcomplete -----------------------------------------------------
-  # Applied whenever a jcomplete is set on the current dataset (by name),
-  # regardless of whether that dataset was supplied via juse() default or
-  # explicitly in the call. This matches the SPSS FILTER convention: state
-  # persists until explicitly turned off, not bypassed by dataset mention.
-  cs <- .jst_get_complete(data_name)
-  if (!is.null(cs)) {
-    if (cs$active) {
-      complete_active <- TRUE
-      valid_vars <- cs$vars[cs$vars %in% names(data)]
-      if (length(valid_vars) > 0) {
-        n_before      <- nrow(data)
-        complete_mask <- stats::complete.cases(data[, valid_vars, drop = FALSE])
-        data          <- data[complete_mask, , drop = FALSE]
-        n_after       <- nrow(data)
-        n_after_complete <- n_after
-        n_excluded    <- n_before - n_after
-        if (n_excluded > 0) {
-          vars_str <- if (length(valid_vars) == 1) valid_vars else {
-            paste(paste(valid_vars[-length(valid_vars)], collapse = ", "),
-                  "or", valid_vars[length(valid_vars)])
+    # -- Step 1: jcomplete ---------------------------------------------------
+    cs <- .jst_get_complete(data_name)
+    if (!is.null(cs)) {
+      if (cs$active) {
+        complete_active <- TRUE
+        valid_vars <- cs$vars[cs$vars %in% names(data)]
+        if (length(valid_vars) > 0) {
+          n_before      <- nrow(data)
+          complete_mask <- stats::complete.cases(data[, valid_vars, drop = FALSE])
+          data          <- data[complete_mask, , drop = FALSE]
+          n_after       <- nrow(data)
+          n_after_complete <- n_after
+          n_excluded    <- n_before - n_after
+          if (n_excluded > 0) {
+            msgs <- c(msgs, paste0(
+              "(jcomplete active: ", n_after, " of ", n_before,
+              " cases \u2014 ", n_excluded, " excluded due to missing values)"))
+          } else {
+            msgs <- c(msgs, paste0(
+              "(jcomplete active: ", n_after, " of ", n_before,
+              " cases \u2014 no missing values)"))
           }
-          msgs <- c(msgs, paste0(
-            "[YELLOW](Listwise filter: ", n_excluded,
-            " cases excluded due to missing values on ", vars_str,
-            " \u2014 ", n_after, " of ", n_before, " cases)"))
         } else {
-          msgs <- c(msgs, paste0(
-            "[YELLOW](Listwise filter: no missing values on the registered variables \u2014 ",
-            n_after, " of ", n_before, " cases)"))
+          n_after_complete <- nrow(data)
         }
       } else {
-        n_after_complete <- nrow(data)
+        msgs <- c(msgs, "(jcomplete set but inactive)")
       }
-    } else {
-      msgs <- c(msgs, "[YELLOW](jcomplete set but inactive)")
     }
-  } else {
-    # No jcomplete set for this dataset — but one is set elsewhere?
-    if (.jst_any_complete_active()) {
-      msgs <- c(msgs, "[YELLOW](jcomplete not active for this dataset)")
-    }
-  }
 
-  # -- Step 2: jfilter -------------------------------------------------------
-  fs <- .jst_get_filter(data_name)
-  if (!is.null(fs)) {
-    if (fs$active) {
-      filter_active   <- TRUE
-      filter_expr_str <- fs$expr_str
-      n_before <- nrow(data)
-      mask <- tryCatch(
-        eval(fs$expr, data, envir),
-        error = function(e) {
-          warning("Filter expression could not be evaluated: ",
-                  conditionMessage(e), call. = FALSE)
-          rep(TRUE, nrow(data))
-        }
-      )
-      mask[is.na(mask)] <- FALSE
-      data    <- data[mask, , drop = FALSE]
-      n_after <- nrow(data)
-      n_after_filter <- n_after
-      msgs <- c(msgs, paste0(
-        "[YELLOW](Filtered by ", fs$expr_str, ": ",
-        n_after, " of ", n_before, " cases selected)"))
-    } else {
-      msgs <- c(msgs, "[YELLOW](Filter set but inactive)")
+    # -- Step 2: jfilter -----------------------------------------------------
+    fs <- .jst_get_filter(data_name)
+    if (!is.null(fs)) {
+      if (fs$active) {
+        filter_active   <- TRUE
+        filter_expr_str <- fs$expr_str
+        n_before <- nrow(data)
+        mask <- tryCatch(
+          eval(fs$expr, data, envir),
+          error = function(e) {
+            warning("Filter expression could not be evaluated: ",
+                    conditionMessage(e), call. = FALSE)
+            rep(TRUE, nrow(data))
+          }
+        )
+        mask[is.na(mask)] <- FALSE
+        data    <- data[mask, , drop = FALSE]
+        n_after <- nrow(data)
+        n_after_filter <- n_after
+        msgs <- c(msgs, paste0(
+          "(Filter active: ", fs$expr_str, " \u2014 ",
+          n_after, " of ", n_before, " cases selected)"))
+      } else {
+        msgs <- c(msgs, "(Filter set but inactive)")
+      }
     }
+
   } else {
-    # No filter set for this dataset — but one is set elsewhere?
-    if (.jst_any_filter_active()) {
-      msgs <- c(msgs, "[YELLOW](Filter not active for this dataset)")
+    # Explicit dataset — note if any defaults exist for the juse dataset
+    default_name <- getOption(".jst_default_data", default = NULL)
+    if (!is.null(default_name)) {
+      has_complete <- !is.null(.jst_get_complete(default_name))
+      has_filter   <- !is.null(.jst_get_filter(default_name))
+      if (has_complete && has_filter) {
+        msgs <- c(msgs, paste0(
+          "(Note: jcomplete and jfilter not applied",
+          " \u2014 data frame specified explicitly)"))
+      } else if (has_complete) {
+        msgs <- c(msgs, paste0(
+          "(Note: jcomplete not applied",
+          " \u2014 data frame specified explicitly)"))
+      } else if (has_filter) {
+        msgs <- c(msgs, paste0(
+          "(Note: jfilter not applied",
+          " \u2014 data frame specified explicitly)"))
+      }
     }
   }
 
@@ -510,14 +431,7 @@
 #'
 #' @keywords internal
 .jst_print_msgs <- function(msgs) {
-  for (m in msgs) {
-    if (startsWith(m, "[YELLOW]")) {
-      .cat_yellow(sub("^\\[YELLOW\\]", "", m))
-      cat("\n")
-    } else {
-      cat(m, "\n")
-    }
-  }
+  for (m in msgs) cat(m, "\n")
 }
 
 #' Internal helper: build standardised sample_info block
@@ -639,36 +553,6 @@
 }
 
 # -----------------------------------------------------------------------------
-# .jst_check_args()
-# Catches mis-named argument aliases passed via ... and errors with a helpful
-# "did you mean" suggestion. Also catches any other named argument in ... and
-# errors with a plain unused-argument message. Used by functions that accept
-# ... purely as a safety net (not for substantive variable-passing).
-#
-# aliases: named character vector where names are the wrong names users might
-#   type and values are the correct argument name to suggest.
-# -----------------------------------------------------------------------------
-
-.jst_check_args <- function(dots, aliases, fn_name) {
-  if (length(dots) == 0) return(invisible(NULL))
-  dot_names <- names(dots)
-  if (is.null(dot_names)) dot_names <- rep("", length(dots))
-
-  for (nm in dot_names) {
-    if (nzchar(nm) && nm %in% names(aliases)) {
-      stop(sprintf("Argument '%s' is not valid in %s(). Did you mean `%s`?",
-                   nm, fn_name, aliases[[nm]]), call. = FALSE)
-    }
-  }
-  bad <- dot_names[nzchar(dot_names)]
-  if (length(bad) > 0) {
-    stop(sprintf("Unused argument(s) in %s(): %s",
-                 fn_name, paste(bad, collapse = ", ")), call. = FALSE)
-  }
-  invisible(NULL)
-}
-
-# -----------------------------------------------------------------------------
 # .jst_resolve_data()
 # Looks up the default data frame set by juse(). Called by all student-facing
 # functions when the data argument is not specified. Returns a list with
@@ -742,98 +626,6 @@
   }
 
   return(sort(unique(suspicious)))
-}
-
-
-# -----------------------------------------------------------------------------
-# .jst_detect_missing_labels()
-# Detects values in a haven_labelled variable whose value label matches
-# "Missing" case-insensitively with whitespace trimmed. Used by NA
-# preprocessing to auto-convert these values to NA before analysis.
-#
-# Matches: "Missing", "missing", "MISSING", " Missing " (and any other
-# case/whitespace variation).
-# Does NOT match: "DK", "Refused", "Not applicable", "Missing information
-# recorded" (must be an exact match on the trimmed, lower-cased text, not a
-# substring).
-#
-# Returns a numeric vector of the codes whose labels match, or numeric(0)
-# if no matches or x is not haven-labelled.
-# -----------------------------------------------------------------------------
-
-#' Internal helper: detect values labelled "Missing" in a haven_labelled variable
-#'
-#' @keywords internal
-.jst_detect_missing_labels <- function(x) {
-  if (!haven::is.labelled(x)) return(numeric(0))
-  val_labs <- labelled::val_labels(x)
-  if (is.null(val_labs) || length(val_labs) == 0) return(numeric(0))
-
-  label_names <- names(val_labs)
-  if (is.null(label_names)) return(numeric(0))
-
-  match_idx <- vapply(
-    label_names,
-    function(lbl) {
-      if (is.na(lbl)) return(FALSE)
-      trimws(tolower(lbl)) == "missing"
-    },
-    logical(1)
-  )
-
-  if (!any(match_idx)) return(numeric(0))
-
-  # Labels are attached to numeric codes for numeric labelled vectors,
-  # and to character values for character labelled vectors. Return as
-  # numeric when possible; callers working with character labelled data
-  # will not reach this path in practice.
-  codes <- unname(val_labs[match_idx])
-  suppressWarnings(as.numeric(codes))
-}
-
-
-# -----------------------------------------------------------------------------
-# .jst_preprocess_na()
-# Applies auto-NA detection to all variables in a data frame (or a specified
-# subset of variables). For each haven_labelled variable, values labelled
-# "Missing" are converted to NA. The haven_labelled class and value labels
-# are preserved so the metadata still round-trips through .sav/.dta exports.
-#
-# Returns a list with:
-#   data      - the preprocessed data frame
-#   converted - a named list mapping variable names to the codes that were
-#               converted to NA (used by callers to emit a yellow note)
-# -----------------------------------------------------------------------------
-
-#' Internal helper: auto-convert values labelled "Missing" to NA
-#'
-#' @keywords internal
-.jst_preprocess_na <- function(data, var_names = NULL) {
-  if (is.null(var_names)) var_names <- names(data)
-  converted <- list()
-
-  for (v in var_names) {
-    if (!v %in% names(data)) next
-    x <- data[[v]]
-    codes <- .jst_detect_missing_labels(x)
-    if (length(codes) == 0) next
-    codes <- codes[!is.na(codes)]
-    if (length(codes) == 0) next
-
-    # Compare underlying numeric values to the missing codes. Using
-    # as.numeric() here strips the class for comparison only; we write
-    # back to data[[v]] using positional indexing, which preserves the
-    # original class and value labels.
-    x_num <- suppressWarnings(as.numeric(x))
-    mask  <- !is.na(x_num) & x_num %in% codes
-
-    if (any(mask)) {
-      data[[v]][mask] <- NA
-      converted[[v]] <- sort(unique(codes[codes %in% x_num[mask]]))
-    }
-  }
-
-  list(data = data, converted = converted)
 }
 
 
@@ -1085,65 +877,52 @@ juse <- function(data) {
 
 # -- jfilter ------------------------------------------------------------------
 
-#' Set, activate, deactivate, or clear a per-dataset filter
+#' Set, activate, deactivate, or clear a global data filter
 #'
 #' @description
 #' \code{jfilter()} sets a persistent filter expression that is applied
-#' automatically by JeffsStatTools analysis functions when the default
+#' automatically by all JeffsStatTools analysis functions when the default
 #' data frame (set by \code{juse()}) is in use. This is analogous to
 #' the SPSS FILTER command.
 #'
 #' The filter is stored per dataset, so switching \code{juse()} between
 #' datasets preserves each dataset's filter independently.
 #'
-#' The filter applies whenever the matching dataset is used, regardless of
-#' whether it was supplied via \code{juse()} or specified explicitly in a
-#' function call. To bypass a filter temporarily without losing it, use
-#' \code{jfilter(off)} before the analysis and \code{jfilter(on)} afterward.
-#' This matches the SPSS FILTER / USE ALL convention.
+#' When a data frame is specified explicitly in a function call (e.g.
+#' \code{jfreq(MyData, Computer)}), the filter is not applied
+#' for that call.
 #'
-#' Filter expressions use standard R logical operators: \code{==}, \code{!=},
-#' \code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
-#' \code{!} (NOT), \code{xor()} (XOR), and \code{\%in\%}. Using \code{=} for
-#' equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
-#' produce a helpful error suggesting the correct R syntax.
-#'
-#' @param data Optional data frame. If supplied, the filter is stored on
-#'   that dataset specifically. If omitted, the dataset set by
-#'   \code{juse()} is used. For consistency with other package functions,
-#'   you can also use a leading comma to skip this argument
-#'   (e.g. \code{jfilter(, Age < 40)}).
-#' @param expr A logical expression (e.g. \code{Age < 40 & Gender == 1}),
-#'   or one of the following special values:
+#' @param expr A logical expression (e.g. \code{Group == 1}), or one
+#'   of the following special values:
 #'   \describe{
 #'     \item{\code{off}}{Deactivate the filter but remember the expression.}
 #'     \item{\code{on}}{Reactivate a previously deactivated filter.}
 #'     \item{\code{NULL}}{Clear the filter entirely (forget the expression).}
 #'   }
-#'   If \code{expr} and \code{data} are both omitted, prints the current
-#'   filter status.
+#'   If omitted, prints the current filter status.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
 #' @examples
 #' \donttest{
 #' juse(mtcars)
-#' jfilter(cyl == 4)             # Set using juse default
-#' jfilter(, cyl == 4)           # Same as above (leading comma)
-#' jfilter(mtcars, cyl == 4)     # Explicit dataset
-#' jfilter(cyl == 4 & mpg > 20)  # Compound condition
-#' jfilter(off)                  # Deactivate
-#' jfilter(on)                   # Reactivate
-#' jfilter()                     # Check status
-#' jfilter(NULL)                 # Clear entirely
+#' jfilter(cyl == 4)       # Set and activate
+#' jdesc(, mpg)            # Uses only 4-cylinder cars
+#' jfilter(off)            # Deactivate
+#' jdesc(, mpg)            # Uses all cars
+#' jfilter(on)             # Reactivate
+#' jfilter()               # Check status
+#' jfilter(NULL)           # Clear entirely
 #' }
 #'
 #' @export
-jfilter <- function(data, expr) {
+jfilter <- function(expr) {
 
-  # -- No arguments: print status -------------------------------------------
-  if (missing(data) && missing(expr)) {
-    default_name <- getOption(".jst_default_data", default = NULL)
+  # Get the current default dataset name
+  default_name <- getOption(".jst_default_data", default = NULL)
+
+  if (missing(expr)) {
+    # jfilter() — print status
     if (is.null(default_name)) {
       message("No default data frame set. Use juse() first.")
       return(invisible(NULL))
@@ -1159,171 +938,67 @@ jfilter <- function(data, expr) {
     return(invisible(NULL))
   }
 
-  # -- Capture both argument expressions BEFORE any evaluation --------------
-  raw_data <- if (!missing(data)) substitute(data) else NULL
-  raw_expr <- if (!missing(expr)) substitute(expr) else NULL
+  # Capture unevaluated expression BEFORE any evaluation
+  raw_expr <- substitute(expr)
+  expr_str <- deparse(raw_expr, width.cutoff = 500)
 
-  # -- Figure out which form was used ---------------------------------------
-  # Three valid patterns:
-  #   (a) jfilter(<expression>)         -> raw_data is the expression
-  #   (b) jfilter(, <expression>)       -> raw_data is NULL, raw_expr set
-  #   (c) jfilter(DataFrame, <expr>)    -> raw_data is a data.frame
-  # Plus special single-arg forms: jfilter(NULL/off/on) via raw_data.
-
-  # Decide if raw_data looks like a dataset reference or an expression.
-  first_is_df <- FALSE
-  if (!is.null(raw_data)) {
-    first_is_df <- tryCatch(is.data.frame(data), error = function(e) FALSE)
-  }
-
-  target_name <- NULL
-  filter_raw  <- NULL
-
-  if (first_is_df) {
-    # Pattern (c): explicit dataset + expression (which may be NULL to clear)
-    target_name <- deparse(raw_data)
-    if (missing(expr)) {
-      stop("jfilter(", target_name, ", ...) requires a filter expression. ",
-           "Example: jfilter(", target_name, ", Age < 40)", call. = FALSE)
-    }
-    filter_raw <- raw_expr
-  } else if (!missing(expr)) {
-    # Pattern (b): leading comma, use juse default
-    target_name <- getOption(".jst_default_data", default = NULL)
-    filter_raw  <- raw_expr
-  } else {
-    # Pattern (a) or single-arg special form: raw_data holds the expression
-    target_name <- getOption(".jst_default_data", default = NULL)
-    filter_raw  <- raw_data
-  }
-
-  # -- jfilter(NULL) — clear ------------------------------------------------
-  if (is.null(filter_raw)) {
-    if (!is.null(target_name)) {
-      .jst_set_filter(target_name, NULL)
-      message("Filter cleared for ", target_name, ".")
+  # jfilter(NULL) — clear (substitute(NULL) returns NULL)
+  if (is.null(raw_expr)) {
+    if (!is.null(default_name)) {
+      .jst_set_filter(default_name, NULL)
+      message("Filter cleared for ", default_name, ".")
     } else {
       message("No default data frame set. Nothing to clear.")
     }
     return(invisible(NULL))
   }
 
-  # -- jfilter(off) / jfilter(on) -------------------------------------------
-  if (is.symbol(filter_raw)) {
-    sym_name <- tolower(as.character(filter_raw))
-    if (sym_name == "off") {
-      if (is.null(target_name)) {
+  # jfilter(off) / jfilter(on)
+  if (is.symbol(raw_expr)) {
+    sym_name <- as.character(raw_expr)
+    if (tolower(sym_name) == "off") {
+      if (is.null(default_name)) {
         message("No default data frame set.")
         return(invisible(NULL))
       }
-      fs <- .jst_get_filter(target_name)
+      fs <- .jst_get_filter(default_name)
       if (is.null(fs)) {
-        message("No filter set for ", target_name, ". Nothing to deactivate.")
+        message("No filter set for ", default_name, ". Nothing to deactivate.")
       } else {
         fs$active <- FALSE
-        .jst_set_filter(target_name, fs)
-        message("Filter deactivated for ", target_name, ".")
+        .jst_set_filter(default_name, fs)
+        message("Filter deactivated for ", default_name, ".")
       }
       return(invisible(NULL))
     }
-    if (sym_name == "on") {
-      if (is.null(target_name)) {
+    if (tolower(sym_name) == "on") {
+      if (is.null(default_name)) {
         message("No default data frame set.")
         return(invisible(NULL))
       }
-      fs <- .jst_get_filter(target_name)
+      fs <- .jst_get_filter(default_name)
       if (is.null(fs)) {
-        message("No filter set for ", target_name,
-                ". Use jfilter(expression) to set one.")
+        message("No filter set for ", default_name, ". Use jfilter(expression) to set one.")
       } else {
         fs$active <- TRUE
-        .jst_set_filter(target_name, fs)
-        message("Filter reactivated for ", target_name, ": ", fs$expr_str)
+        .jst_set_filter(default_name, fs)
+        message("Filter reactivated for ", default_name, ": ", fs$expr_str)
       }
       return(invisible(NULL))
     }
   }
 
-  # -- Detect common syntax mistakes before trying to evaluate --------------
-  expr_str_for_check <- deparse(filter_raw, width.cutoff = 500)
-  .jst_check_filter_syntax(filter_raw, expr_str_for_check)
-
-  # -- Set and activate the filter -----------------------------------------
-  if (is.null(target_name)) {
-    stop("No default data frame set. Either call juse() first, or pass a ",
-         "data frame explicitly: jfilter(MyData, <expression>).",
-         call. = FALSE)
+  # jfilter(expression) — set and activate
+  if (is.null(default_name)) {
+    stop("No default data frame set. Use juse() first.", call. = FALSE)
   }
 
-  expr_str <- deparse(filter_raw, width.cutoff = 500)
-  .jst_set_filter(target_name, list(
-    expr     = filter_raw,
+  .jst_set_filter(default_name, list(
+    expr     = raw_expr,
     expr_str = expr_str,
     active   = TRUE
   ))
-  message("Filter set and activated for ", target_name, ": ", expr_str)
-  invisible(NULL)
-}
-
-
-# -- .jst_check_filter_syntax -------------------------------------------------
-
-#' Internal helper: detect common SPSS-style syntax mistakes in jfilter
-#' expressions and provide guidance toward standard R operators.
-#'
-#' Catches:
-#' - \code{=} used where \code{==} was meant (for equality comparison)
-#' - \code{AND} / \code{OR} / \code{NOT} / \code{XOR} used as identifiers
-#'   where \code{&} / \code{|} / \code{!} / \code{xor()} were meant
-#'
-#' @param raw_expr The unevaluated filter expression (a language object).
-#' @param expr_str The deparsed expression string (for display in errors).
-#' @keywords internal
-.jst_check_filter_syntax <- function(raw_expr, expr_str) {
-
-  # Collect all symbols referenced in the expression
-  all_names <- all.names(raw_expr, unique = FALSE)
-
-  # Check for SPSS-style logical keywords used as identifiers
-  spss_kw <- c("AND", "OR", "NOT", "XOR")
-  hit <- intersect(toupper(all_names), spss_kw)
-  if (length(hit) > 0) {
-    kw <- hit[1]
-    replacement <- switch(kw,
-                          AND = "`&` (single ampersand)",
-                          OR  = "`|` (pipe symbol)",
-                          NOT = "`!` (exclamation mark)",
-                          XOR = "`xor()` (a function call)")
-    stop(
-      "It looks like you used `", kw, "` in your filter expression, ",
-      "which R treats as a variable name, not a logical operator.\n",
-      "  In R, use ", replacement, " instead.\n",
-      "  Examples:\n",
-      "    jfilter(Age < 40 & Gender == 1)     # AND\n",
-      "    jfilter(Age < 40 | Age > 60)        # OR\n",
-      "    jfilter(!is.na(Age))                # NOT\n",
-      "  You wrote: ", expr_str,
-      call. = FALSE
-    )
-  }
-
-  # Check for assignment (`=`) used where equality (`==`) was meant.
-  # R parses `Gender = 1` inside a function call as a named argument, but
-  # when deparsed it produces a `Gender = 1` string. Use the unevaluated
-  # expression's deparsed form for a text check — look for ` = ` that is
-  # not ` == ` and not a call argument like `method =`.
-  # Most robust: check if the deparsed expression contains a lone `=` sign
-  # that isn't part of `==`, `<=`, `>=`, or `!=`.
-  if (grepl("(?<![=<>!])=(?!=)", expr_str, perl = TRUE)) {
-    stop(
-      "It looks like you used `=` in your filter expression. In R, `=` is ",
-      "assignment; equality comparison uses `==` (double equals).\n",
-      "  Example: jfilter(Gender == 1)\n",
-      "  You wrote: ", expr_str,
-      call. = FALSE
-    )
-  }
-
+  message("Filter set and activated for ", default_name, ": ", expr_str)
   invisible(NULL)
 }
 
@@ -1342,12 +1017,8 @@ jfilter <- function(data, expr) {
 #' The setting is stored per dataset, so switching \code{juse()} between
 #' datasets preserves each dataset's setting independently.
 #'
-#' The jcomplete filter applies whenever the matching dataset is used,
-#' regardless of whether it was supplied via \code{juse()} or specified
-#' explicitly in a function call. To bypass temporarily without losing
-#' the setting, use \code{jcomplete(off)} before the analysis and
-#' \code{jcomplete(on)} afterward. This matches the SPSS USE ALL /
-#' FILTER convention.
+#' When a data frame is specified explicitly in a function call, the
+#' jcomplete filter is not applied for that call.
 #'
 #' @param data A data frame. If omitted, uses the default set by
 #'   \code{juse()}. Pass \code{NULL} to clear the filter entirely.
@@ -1471,7 +1142,7 @@ jcomplete <- function(data, ...) {
     data <- resolved$data
     .jst_data_name <- resolved$name
   } else {
-    .jst_data_name <- paste(deparse(raw_data), collapse = "")
+    .jst_data_name <- deparse(substitute(data))
   }
 
   variables      <- rlang::enquos(...)
@@ -1505,7 +1176,7 @@ jcomplete <- function(data, ...) {
 
   # Print summary
   .cat_red("Listwise Case Filter\n")
-  .jst_default_note(.jst_data_name, extra_newline = TRUE)
+  cat("(Using default data frame:", .jst_data_name, ")\n\n")
 
   .jst_print_table(missing_info,
                    col.names = c("Variable", "N", "Missing", "% Missing"),
@@ -1580,7 +1251,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
       message("No dummy variables registered for ", default_name, ".")
     } else {
       .cat_red("Dummy Variable Registrations\n")
-      .jst_default_note(default_name, extra_newline = TRUE)
+      cat("(Using default data frame:", default_name, ")\n\n")
       for (reg in ds) {
         cat("  Variable: ", reg$var_name,
             " (", reg$var_type, ")\n", sep = "")
@@ -1781,7 +1452,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 
   # Print registration summary
   .cat_red("Dummy Variable Registration\n")
-  .jst_default_note(.jst_data_name, extra_newline = TRUE)
+  cat("(Using default data frame:", .jst_data_name, ")\n\n")
   cat("  Variable: ", var_name, " (", var_type, ")\n", sep = "")
   cat("  Reference category: ", ref_code, ": ", ref_label, "\n", sep = "")
   cat("  Dummy variables: ", paste(dummy_names, collapse = ", "), "\n", sep = "")
@@ -2100,7 +1771,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 
     for (v in variable_names) {
       .cat_red(paste0("Descriptive Statistics: ", v, " by ", by_name, "\n"))
-      if (.jst_default_used) .jst_default_note(.jst_data_name)
+      if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
       .jst_print_msgs(pipeline$msgs)
 
       if (labels) {
@@ -2192,7 +1863,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 
   # -- Print title and apply pipeline before computation -----------------------
   .cat_red("Descriptive Statistics\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -2449,7 +2120,7 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
 
     # -- Print: title -> type -> label -> single blank line -> table ----------
     .cat_red(paste0("Frequencies for ", variable_name, "\n"))
-    if (.jst_default_used) .jst_default_note(.jst_data_name)
+    if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
     .jst_print_msgs(pipeline$msgs)
 
     if (labels) {
@@ -2534,8 +2205,7 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
 #'   all at once. Does not override explicit FALSE values.
 #'
 #' @return Invisibly returns a list of class \code{"jst_ttest"} containing:
-#'   \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
-#'   data frame used for plotting), \code{test_type}, \code{formula},
+#'   \code{model} (the \code{t.test} result), \code{test_type}, \code{formula},
 #'   \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
 #'   \code{ci} (95\% CI), \code{cohens_d}, \code{d_label}, \code{n}, and
 #'   \code{sample_info} (pipeline and missing data counts).
@@ -2589,7 +2259,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   } else {
     .cat_red("Independent Samples T-Test\n")
   }
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -2817,14 +2487,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     n_analysis      = n_analysis
   )
 
-  # Build analysis-level data frame for jplot()
-  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
-             terms, drop = FALSE]
-
   cat("\n")
   ret <- list(
     model           = result,
-    model_frame     = mf,
     test_type       = if (paired) "paired" else if (welch) "welch" else "student",
     formula         = formula,
     descriptives    = desc_table,
@@ -2881,11 +2546,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   and ci all at once. Does not override explicit FALSE values.
 #'
 #' @return Invisibly returns a list of class \code{"jst_anova"} containing:
-#'   \code{model} (the \code{aov} or \code{oneway.test} object),
-#'   \code{model_frame} (the analysis data frame used for plotting),
-#'   \code{test_type}, \code{formula}, \code{descriptives}, \code{f},
-#'   \code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n}, and
-#'   \code{sample_info} (pipeline and missing data counts).
+#'   \code{model} (the \code{aov} or \code{oneway.test} object), \code{test_type},
+#'   \code{formula}, \code{descriptives}, \code{f}, \code{df1}, \code{df2},
+#'   \code{p}, \code{eta_squared}, \code{n}, and \code{sample_info}
+#'   (pipeline and missing data counts).
 #'
 #' @examples
 #' # With explicit data frame
@@ -2936,7 +2600,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   } else {
     .cat_red("One-Way ANOVA\n")
   }
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -3224,14 +2888,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     n_analysis      = n_analysis
   )
 
-  # Build analysis-level data frame for jplot()
-  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
-             terms, drop = FALSE]
-
   cat("\n")
   ret <- list(
     model        = model,
-    model_frame  = mf,
     test_type    = if (welch) "welch" else "traditional",
     formula      = formula,
     descriptives = desc_table,
@@ -3273,8 +2932,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'
 #' @return Invisibly returns a list of class \code{"jst_corr"} containing:
 #'   \code{r} (correlation matrix), \code{p} (p-value matrix),
-#'   \code{n} (pairwise N matrix), \code{method}, \code{model_frame} (the
-#'   analysis data frame used for plotting), and \code{sample_info}
+#'   \code{n} (pairwise N matrix), \code{method}, and \code{sample_info}
 #'   (pipeline and missing data counts).
 #'
 #' @examples
@@ -3289,11 +2947,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @importFrom stats cor.test complete.cases
 #' @export
 jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
-
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
 
   # Catch missing-comma error: jcorr(VarName, ...) instead of jcorr(, VarName, ...)
   if (!missing(data)) {
@@ -3312,7 +2965,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
     .jst_default_used <- TRUE
     .jst_data_name    <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   variables      <- rlang::enquos(...)
@@ -3336,7 +2989,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 
   # Red title
   .cat_red(paste0(method_label, " Bivariate Correlations\n"))
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -3441,15 +3094,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
     n_analysis      = nrow(data)
   )
 
-  # Build analysis-level data frame for jplot() (2-variable scatter option)
-  mf <- data[, variable_names, drop = FALSE]
-
   ret <- list(
     r           = r_matrix,
     p           = p_matrix,
     n           = n_matrix,
     method      = method,
-    model_frame = mf,
     sample_info = sample_info
   )
   class(ret) <- "jst_corr"
@@ -3542,8 +3191,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
     return(invisible(NULL))
   }
 
-  plots <- list()
-
   fitted_vals   <- stats::fitted(model)
   residuals_raw <- stats::residuals(model)
   std_resid     <- stats::rstandard(model)
@@ -3584,7 +3231,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
                     x = "Fitted Values", y = "Residuals") +
       ggplot2::theme_minimal()
     print(p)
-    plots$residuals <- p
   }
 
   # -- 2. Normal Q-Q --------------------------------------------------------
@@ -3610,7 +3256,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
                     y = "Standardized Residuals") +
       ggplot2::theme_minimal()
     print(p)
-    plots$qq <- p
   }
 
   # -- 3. Scale-Location ----------------------------------------------------
@@ -3629,7 +3274,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
                     y = expression(sqrt("|Standardized Residuals|"))) +
       ggplot2::theme_minimal()
     print(p)
-    plots$scale <- p
   }
 
   # -- 4. Cook's Distance ---------------------------------------------------
@@ -3647,7 +3291,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
                     x = "Observation", y = "Cook's Distance") +
       ggplot2::theme_minimal()
     print(p)
-    plots$cooks <- p
   }
 
   # -- 5. Residuals vs Leverage ---------------------------------------------
@@ -3670,10 +3313,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
                     x = "Leverage", y = "Standardized Residuals") +
       ggplot2::theme_minimal()
     print(p)
-    plots$leverage <- p
   }
 
-  invisible(plots)
+  invisible(NULL)
 }
 
 
@@ -3736,9 +3378,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #'   defers to \code{joutput()} session setting.
 #' @param full Logical. If TRUE, turns on diagnostics. Does not override
 #'   explicit FALSE values.
-#' @param ... Reserved for argument-name checking. Passing \code{which},
-#'   \code{plots}, or \code{show} will produce a helpful error suggesting
-#'   \code{diagnostics} instead.
 #'
 #' @return Invisibly returns a list of class \code{"jst_lm"} containing:
 #'   \describe{
@@ -3784,14 +3423,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #' @export
 jlm <- function(formula, data, subset = NULL, labels = TRUE,
                 numeric = NULL, categorical = NULL,
-                diagnostics = NULL, full = FALSE, ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(which = "diagnostics", plots = "diagnostics",
-                show = "diagnostics"),
-    fn_name = "jlm"
-  )
+                diagnostics = NULL, full = FALSE) {
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -3807,7 +3439,7 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
 
   # Red title
   .cat_red("Linear Regression\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -3966,24 +3598,20 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
       next
     }
 
-    # --- Auto-detection (unified classifier) ---
-    if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      # Classified categorical — convert to factor
-      if (haven::is.labelled(data[[v]])) {
+    # --- Auto-detection ---
+    if (haven::is.labelled(data[[v]])) {
+      val_labs <- labelled::val_labels(data[[v]])
+      if (length(val_labs) > 0) {
+        # Has value labels — treat as categorical
         data[[v]] <- haven::as_factor(data[[v]])
-      } else if (!is.factor(data[[v]])) {
-        unique_vals <- sort(unique(data[[v]][!is.na(data[[v]])]))
-        data[[v]] <- factor(data[[v]], levels = unique_vals)
-      }
-      ref_level <- levels(data[[v]])[1]
-      auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", ref_level))
-    } else {
-      # Classified continuous — strip haven class if present
-      if (haven::is.labelled(data[[v]])) {
+        ref_level <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", ref_level))
+      } else {
+        # No value labels — treat as continuous
         data[[v]] <- as.numeric(data[[v]])
       }
-      # Plain numeric stays as-is
     }
+    # Plain numeric without override or labels — stays numeric (untouched)
   }
 
   if (labels) {
@@ -4252,9 +3880,6 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
 #'   supported option. If NULL (default), defers to \code{joutput()}.
 #' @param full Logical. If TRUE, turns on ci, classification, and
 #'   diagnostics. Does not override explicit FALSE values.
-#' @param ... Reserved for argument-name checking. Passing \code{which},
-#'   \code{plots}, or \code{show} will produce a helpful error suggesting
-#'   \code{diagnostics} instead.
 #'
 #' @return Invisibly returns a list of class \code{"jst_logistic"} containing:
 #'   \describe{
@@ -4291,14 +3916,7 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
 jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
                       numeric = NULL, categorical = NULL,
                       ci = NULL, classification = FALSE,
-                      diagnostics = NULL, full = FALSE, ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(which = "diagnostics", plots = "diagnostics",
-                show = "diagnostics"),
-    fn_name = "jlogistic"
-  )
+                      diagnostics = NULL, full = FALSE) {
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -4333,7 +3951,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
 
   # Red title
   .cat_red("Logistic Regression\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -4355,12 +3973,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
   dummy_coef_names <- expanded$dummy_coef_names
   model_vars       <- all.vars(formula)
 
-  # -- Variable type conversion (unified classifier) ------------------------
-  # Priority order:
-  #   1. jdummy() registrations (already expanded above)
-  #   2. numeric/categorical overrides from this call
-  #   3. Auto-detection via .jst_is_categorical()
-  # DV is always numeric; handled after this loop.
+  # -- Variable type conversion (same logic as jlm) --------------------------
   dv_name  <- all.vars(formula)[1]
   iv_names <- setdiff(model_vars, c(dv_name, dummy_coef_names))
 
@@ -4368,56 +3981,32 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
   auto_ref_cats  <- character(0)
   all_ref_cats   <- ref_cats
 
-  # Exclude original variable names that were expanded by jdummy()
-  expanded_originals <- character(0)
-  dummy_regs <- .jst_get_dummy(.jst_data_name)
-  if (!is.null(dummy_regs)) {
-    expanded_originals <- vapply(dummy_regs, function(r) r$var_name,
-                                 character(1))
-  }
-
   for (v in iv_names) {
-    if (v %in% dummy_coef_names)   next
-    if (v %in% expanded_originals) next
-    if (!(v %in% names(data)))     next
+    if (v %in% names(data) && haven::is.labelled(data[[v]])) {
+      val_labels <- labelled::val_labels(data[[v]])
 
-    # --- Override: numeric = "Var" forces continuous ---
-    if (!is.null(numeric) && v %in% numeric) {
-      if (haven::is.labelled(data[[v]])) {
+      if (!is.null(numeric) && v %in% numeric) {
+        data[[v]] <- as.numeric(data[[v]])
+      } else if (!is.null(categorical) && v %in% categorical) {
+        data[[v]] <- haven::as_factor(data[[v]])
+        ref_val   <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats,
+                           paste0(v, " = ", ref_val, " (first category)"))
+      } else if (length(val_labels) > 0) {
+        data[[v]] <- haven::as_factor(data[[v]])
+        auto_detected <- c(auto_detected, v)
+        ref_val       <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats,
+                           paste0(v, " = ", ref_val, " (first category)"))
+      } else {
         data[[v]] <- as.numeric(data[[v]])
       }
-      next
-    }
-
-    # --- Override: categorical = "Var" forces categorical ---
-    if (!is.null(categorical) && v %in% categorical) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else if (!is.factor(data[[v]])) {
-        unique_vals <- sort(unique(data[[v]][!is.na(data[[v]])]))
-        data[[v]] <- factor(data[[v]], levels = unique_vals)
-      }
-      ref_val <- levels(data[[v]])[1]
-      auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", ref_val, " (first category)"))
-      next
-    }
-
-    # --- Auto-detection via unified classifier ---
-    if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else if (!is.factor(data[[v]])) {
-        unique_vals <- sort(unique(data[[v]][!is.na(data[[v]])]))
-        data[[v]] <- factor(data[[v]], levels = unique_vals)
-      }
-      auto_detected <- c(auto_detected, v)
-      ref_val       <- levels(data[[v]])[1]
-      auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", ref_val, " (first category)"))
-    } else {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- as.numeric(data[[v]])
+    } else if (!is.null(categorical) && v %in% categorical) {
+      if (!is.factor(data[[v]])) {
+        data[[v]] <- factor(data[[v]])
+        ref_val   <- levels(data[[v]])[1]
+        auto_ref_cats <- c(auto_ref_cats,
+                           paste0(v, " = ", ref_val, " (first category)"))
       }
     }
   }
@@ -4816,8 +4405,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
 #'
 #' @return Invisibly returns a list of class \code{"jst_chisq"} containing:
 #'   \code{observed} (observed frequency table), \code{expected} (expected
-#'   frequency table), \code{n} (total N), \code{model_frame} (the analysis
-#'   data frame used for plotting), \code{sample_info} (pipeline and
+#'   frequency table), \code{n} (total N), \code{sample_info} (pipeline and
 #'   missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
 #'   \code{df}, and \code{p}.
 #'
@@ -4862,7 +4450,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   # Red title
   .cat_red("Cross-Tabulation\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -5041,15 +4629,10 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     n_analysis      = grand_total
   )
 
-  # Build analysis-level data frame for jplot()
-  mf <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]),
-             c(row_name, col_name), drop = FALSE]
-
   ret <- list(
     observed    = obs_table,
     expected    = exp_table,
     n           = grand_total,
-    model_frame = mf,
     sample_info = sample_info
   )
   if (chisq) {
@@ -5106,11 +4689,6 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @export
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
   # Catch missing-comma error
   if (!missing(data)) {
     mc <- match.call()
@@ -5128,7 +4706,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
     .jst_default_used <- TRUE
     .jst_data_name    <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   # Capture subset expression before evaluation
@@ -5155,7 +4733,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
 
   # Red title
   .cat_red("Data Screening\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
@@ -5301,11 +4879,6 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
 #' @export
 jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
   # Catch missing-comma error: jalpha(VarName, ...) instead of jalpha(, VarName, ...)
   if (!missing(data)) {
     mc <- match.call()
@@ -5323,7 +4896,7 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
     .jst_default_used <- TRUE
     .jst_data_name    <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   variables      <- rlang::enquos(...)
@@ -5337,7 +4910,7 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 
   # Red title
   .cat_red("Reliability Analysis\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) cat("(Using default data frame:", .jst_data_name, ")\n")
 
   # Apply data pipeline (jcomplete, jfilter, subset)
   subset_expr <- substitute(subset)
@@ -6240,11 +5813,6 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #' @export
 jrecode <- function(data, orig_var, map, labels = NULL) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
   # Catch missing-comma error: jrecode(VarName, ...) instead of jrecode(, VarName, ...)
   if (!missing(data)) {
     mc <- match.call()
@@ -6260,7 +5828,7 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
     data <- resolved$data
     .jst_data_name <- resolved$name
   } else {
-    .jst_data_name <- .data_expr
+    .jst_data_name <- deparse(substitute(data))
   }
 
   orig_name <- deparse(substitute(orig_var))
@@ -7164,2195 +6732,16 @@ jsave <- function(data, file, overwrite = FALSE) {
   invisible(NULL)
 }
 
+# -- .onUnload ----------------------------------------------------------------
 
-# -- .jst_plot_logistic_diagnostics --------------------------------------------
-
-#' Produce diagnostic plots for a binary logistic regression
-#'
-#' Internal helper called by \code{jplot.jst_logistic()} to generate
-#' diagnostic plots appropriate for binary outcomes. Unlike standard
-#' linear-regression residual plots, these are designed for the structure
-#' of a logistic model.
-#'
-#' Produces any subset of five plots: binned residuals, ROC curve,
-#' calibration plot, Cook's distance, and residuals vs leverage.
-#'
-#' Each plot is printed to the current device. Returns the plots invisibly
-#' as a named list so callers can capture or modify them.
-#'
-#' @param model A fitted \code{glm} object with \code{family = binomial}.
-#' @param which Character vector of diagnostic names. Any subset of
-#'   \code{"binned"}, \code{"roc"}, \code{"calibration"}, \code{"cooks"},
-#'   \code{"leverage"}.
-#' @param n_label Integer. Number of extreme observations to label on
-#'   relevant plots. Default 3.
-#'
-#' @return Invisibly, a named list of \code{ggplot} objects corresponding to
-#'   the requested plots. Returns \code{NULL} invisibly if ggplot2 is not
-#'   available.
+#' Clean up session options when the package is unloaded
 #'
 #' @keywords internal
-#' @importFrom rlang .data
-.jst_plot_logistic_diagnostics <- function(model, which, n_label = 3) {
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
-    return(invisible(NULL))
-  }
-
-  observed  <- stats::model.frame(model)[, 1]
-  if (is.factor(observed)) observed <- as.numeric(observed) - 1
-  predicted <- stats::fitted(model)
-  resid_raw <- observed - predicted
-  leverage  <- stats::hatvalues(model)
-  cooks_d   <- stats::cooks.distance(model)
-  obs_lab   <- names(predicted)
-  if (is.null(obs_lab)) obs_lab <- as.character(seq_along(predicted))
-
-  top_n <- function(x, n) {
-    if (length(x) <= n) return(seq_along(x))
-    order(abs(x), decreasing = TRUE)[seq_len(n)]
-  }
-
-  plots <- list()
-
-  # -- 1. Binned residuals --------------------------------------------------
-  if ("binned" %in% which) {
-    n_bins <- max(10, floor(sqrt(length(predicted))))
-    ord    <- order(predicted)
-    bins   <- cut(seq_along(ord), breaks = n_bins, labels = FALSE)
-    bin_df <- data.frame(
-      bin_mean_pred  = tapply(predicted[ord], bins, mean),
-      bin_mean_resid = tapply(resid_raw[ord], bins, mean),
-      bin_n          = as.numeric(table(bins)),
-      stringsAsFactors = FALSE
-    )
-    bin_df$upper <- 2 * sqrt(bin_df$bin_mean_pred *
-                             (1 - bin_df$bin_mean_pred) / bin_df$bin_n)
-    bin_df$lower <- -bin_df$upper
-
-    p <- ggplot2::ggplot(bin_df,
-                         ggplot2::aes(x = .data$bin_mean_pred,
-                                      y = .data$bin_mean_resid)) +
-      ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
-                          color = "red") +
-      ggplot2::geom_line(ggplot2::aes(y = .data$upper),
-                         color = "grey60", linetype = "dotted") +
-      ggplot2::geom_line(ggplot2::aes(y = .data$lower),
-                         color = "grey60", linetype = "dotted") +
-      ggplot2::geom_point(alpha = 0.7, color = "steelblue") +
-      ggplot2::labs(title = "Binned Residuals",
-                    x = "Mean Predicted Probability (bin)",
-                    y = "Mean Residual (bin)",
-                    subtitle = "Dotted lines: approximate 95% bounds under a well-fit model") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$binned <- p
-  }
-
-  # -- 2. ROC curve ---------------------------------------------------------
-  if ("roc" %in% which) {
-    thresholds <- sort(unique(c(0, predicted, 1)), decreasing = TRUE)
-    roc_df <- data.frame(
-      tpr = vapply(thresholds, function(t) {
-        sum(predicted >= t & observed == 1) / max(1, sum(observed == 1))
-      }, numeric(1)),
-      fpr = vapply(thresholds, function(t) {
-        sum(predicted >= t & observed == 0) / max(1, sum(observed == 0))
-      }, numeric(1))
-    )
-    ord_fpr <- order(roc_df$fpr)
-    roc_df  <- roc_df[ord_fpr, ]
-    auc <- sum(diff(roc_df$fpr) *
-               (roc_df$tpr[-1] + roc_df$tpr[-nrow(roc_df)]) / 2)
-
-    auc_text <- paste0("AUC = ", sprintf("%.3f", auc))
-
-    p <- ggplot2::ggplot(roc_df, ggplot2::aes(x = .data$fpr, y = .data$tpr)) +
-      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                           color = "grey60") +
-      ggplot2::geom_line(color = "steelblue", linewidth = 0.8) +
-      ggplot2::annotate("text", x = 0.7, y = 0.1, label = auc_text,
-                        hjust = 0, size = 4.2, color = "#333333") +
-      ggplot2::coord_equal() +
-      ggplot2::labs(title = "ROC Curve",
-                    x = "False Positive Rate (1 \u2013 Specificity)",
-                    y = "True Positive Rate (Sensitivity)") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$roc <- p
-  }
-
-  # -- 3. Calibration plot --------------------------------------------------
-  if ("calibration" %in% which) {
-    n_bins <- 10
-    ord    <- order(predicted)
-    bins   <- cut(seq_along(ord), breaks = n_bins, labels = FALSE)
-    cal_df <- data.frame(
-      pred_mean = tapply(predicted[ord], bins, mean),
-      obs_rate  = tapply(observed[ord], bins, mean),
-      bin_n     = as.numeric(table(bins)),
-      stringsAsFactors = FALSE
-    )
-
-    p <- ggplot2::ggplot(cal_df,
-                         ggplot2::aes(x = .data$pred_mean,
-                                      y = .data$obs_rate)) +
-      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                           color = "grey60") +
-      ggplot2::geom_point(ggplot2::aes(size = .data$bin_n),
-                          color = "steelblue", alpha = 0.8) +
-      ggplot2::geom_line(color = "steelblue", alpha = 0.5) +
-      ggplot2::scale_size_continuous(range = c(2, 6), guide = "none") +
-      ggplot2::coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
-      ggplot2::labs(title = "Calibration Plot",
-                    x = "Mean Predicted Probability",
-                    y = "Observed Proportion",
-                    subtitle = "Points on the diagonal = well-calibrated") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$calibration <- p
-  }
-
-  # -- 4. Cook's Distance ---------------------------------------------------
-  if ("cooks" %in% which) {
-    df_cooks <- data.frame(
-      idx   = seq_along(cooks_d),
-      cooks = cooks_d,
-      obs   = obs_lab,
-      stringsAsFactors = FALSE
-    )
-    idx <- top_n(df_cooks$cooks, n_label)
-    p <- ggplot2::ggplot(df_cooks, ggplot2::aes(x = .data$idx,
-                                                 y = .data$cooks)) +
-      ggplot2::geom_col(alpha = 0.5, fill = "steelblue") +
-      ggplot2::geom_hline(yintercept = 4 / nrow(df_cooks), linetype = "dashed",
-                          color = "red") +
-      ggplot2::geom_text(data = df_cooks[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         vjust = -0.5, size = 3, color = "red") +
-      ggplot2::labs(title = "Cook's Distance",
-                    x = "Observation Index",
-                    y = "Cook's Distance") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$cooks <- p
-  }
-
-  # -- 5. Residuals vs Leverage ---------------------------------------------
-  if ("leverage" %in% which) {
-    pearson_res <- stats::residuals(model, type = "pearson")
-    df_lev <- data.frame(
-      leverage    = leverage,
-      pearson_res = pearson_res,
-      obs         = obs_lab,
-      stringsAsFactors = FALSE
-    )
-    idx <- top_n(df_lev$pearson_res, n_label)
-    p <- ggplot2::ggplot(df_lev, ggplot2::aes(x = .data$leverage,
-                                               y = .data$pearson_res)) +
-      ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
-                          color = "red") +
-      ggplot2::geom_text(data = df_lev[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
-      ggplot2::labs(title = "Residuals vs Leverage",
-                    x = "Leverage",
-                    y = "Pearson Residuals") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$leverage <- p
-  }
-
-  # Console summary (match the lm helper pattern)
-  plot_names_pretty <- c(
-    binned      = "Binned Residuals",
-    roc         = "ROC Curve",
-    calibration = "Calibration Plot",
-    cooks       = "Cook's Distance",
-    leverage    = "Residuals vs Leverage"
-  )
-  produced <- plot_names_pretty[which]
-  produced <- produced[!is.na(produced)]
-  if (length(produced) == 1) {
-    cat("(Diagnostic plot produced: ", produced, ")\n", sep = "")
-  } else if (length(produced) > 1) {
-    cat("\n", length(produced), " diagnostic plots produced ",
-        "(use the arrow buttons in RStudio's Plots pane to navigate):\n",
-        sep = "")
-    for (i in seq_along(produced)) {
-      cat("  ", i, ". ", produced[i], "\n", sep = "")
-    }
-  }
-
-  invisible(plots)
+.onUnload <- function(libpath) {
+  options(.jst_default_data = NULL)
+  options(.jst_filter = NULL)
+  options(.jst_complete = NULL)
+  options(.jst_dummy = NULL)
+  options(.jst_output_level = NULL)
+  options(.jst_output_toggles = NULL)
 }
-
-
-# -- jplot ---------------------------------------------------------------------
-
-#' Visualise jst_* result objects or plot variables directly from a data frame
-#'
-#' Unified plotting function. Can be called in three ways:
-#'
-#' \strong{Result-object form:} Pass a result object returned by one of the
-#' package's analysis functions. Produces appropriate plots for each class of
-#' result (see valid plot names below).
-#'
-#' \strong{Formula form} (for plots that distinguish DV from IV): Pass a
-#' formula as the first argument, followed optionally by a data frame. Used
-#' for scatterplots and boxplots, consistent with the formula syntax of
-#' \code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
-#' \code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only
-#' single-IV formulas are supported here; for multi-IV models, fit with
-#' \code{jlm()} and pass the result to \code{jplot()}.
-#'
-#' \strong{Variable-list form} (for distributions and counts): Pass a data
-#' frame followed by one or two unquoted variable names. Used for histograms
-#' (1 numeric), bar charts (1 categorical), and grouped bar charts (2
-#' categorical). Calls that would otherwise auto-detect to a scatter or
-#' boxplot produce a helpful error directing you to the formula form.
-#'
-#' Supports pipeline integration (\code{jfilter}, \code{jcomplete}, per-call
-#' \code{subset}), grouping via \code{by = }, and regression lines with
-#' equation/R-squared/band annotations.
-#'
-#' Valid plot names by class (for the result-object form):
-#' \itemize{
-#'   \item \code{jst_lm}: \code{"fit"}, \code{"predicted"}, \code{"effects"},
-#'     \code{"coef"}, \code{"vif"}, \code{"residuals"}, \code{"qq"},
-#'     \code{"scale"}, \code{"cooks"}, \code{"leverage"}
-#'   \item \code{jst_logistic}: \code{"probability"}, \code{"roc"},
-#'     \code{"calibration"}, \code{"binned"}, \code{"cooks"}, \code{"leverage"},
-#'     \code{"coef"}, \code{"vif"}
-#'   \item \code{jst_ttest}, \code{jst_anova}: \code{"box"}
-#'   \item \code{jst_corr}: \code{"heatmap"}, \code{"scatter"} (scatter requires
-#'     exactly 2 variables in the correlation)
-#'   \item \code{jst_chisq}: \code{"bar"}
-#' }
-#'
-#' The shortcut keyword \code{"core"} (default) produces a curated default
-#' set for the class; \code{"all"} produces every plot the class supports.
-#'
-#' Valid plot types for the data-first form: \code{"histogram"}, \code{"bar"},
-#' \code{"scatter"}, \code{"box"}, \code{"grouped_bar"}.
-#'
-#' Valid \code{line} values: \code{FALSE} (default), \code{TRUE} (alias for
-#' \code{"lm"}), \code{"lm"}, \code{"loess"}, \code{"connect"}.
-#'
-#' Valid \code{band} values: \code{"ci"} (default confidence band around the
-#' regression line, flares at the ends), \code{"pi"} (prediction interval for
-#' individual observations, wider), \code{"see"} (constant-width +/- t*SEE
-#' band illustrating the homoskedasticity assumption), \code{"none"} (no band).
-#'
-#' @param x A result object from one of the package's analysis functions
-#'   (result-object form), or a data frame (data-first form).
-#' @param which Character vector. \code{"core"} (default), \code{"all"}, or
-#'   one or more specific plot names valid for the object's class.
-#'   (Result-object form only.)
-#' @param ... Additional arguments: for the result-object form these are
-#'   passed to class-specific methods; for the data-first form these are
-#'   unquoted variable names (1 or 2).
-#' @param focal Unquoted name of the independent variable to place on the
-#'   x-axis for \code{jst_lm} / \code{jst_logistic} \code{"fit"} and
-#'   \code{"probability"} plots. Defaults to the first IV in the model.
-#' @param at Character string or named list specifying where non-focal
-#'   independent variables are held when drawing the fitted line in
-#'   \code{jst_lm} / \code{jst_logistic} methods. One of \code{"zero"}
-#'   (default), \code{"mean"}, \code{"mixed"} (categorical at 0, interval
-#'   at mean), or a named list \code{list(Var1 = value, ...)}.
-#' @param equation Logical. If TRUE (default), displays the equation in the
-#'   subtitle for \code{line = "lm"} scatter plots (data-first form) or
-#'   \code{jst_lm} \code{"fit"} plots (result-object form).
-#' @param r2 Logical. If TRUE (default), displays R-squared in the subtitle
-#'   alongside the equation.
-#' @param by Unquoted variable name for group-colouring (data-first form).
-#' @param type Character. Plot type override for the data-first form. One
-#'   of \code{"histogram"}, \code{"bar"}, \code{"scatter"}, \code{"box"},
-#'   \code{"grouped_bar"}. If NULL (default), auto-detected from variable
-#'   types.
-#' @param line Controls a line overlay on data-first scatter plots. One of
-#'   \code{FALSE} (default; no line), \code{TRUE} (alias for \code{"lm"}),
-#'   \code{"lm"}, \code{"loess"}, \code{"connect"}.
-#' @param band Character. Uncertainty band type for \code{line = "lm"}
-#'   scatter plots. One of \code{"ci"} (default; 95\% confidence band for
-#'   the mean, flares at the ends), \code{"pi"} (95\% prediction interval
-#'   for individual observations), \code{"see"} (constant-width band at
-#'   +/- t*SEE; useful for teaching homoskedasticity), \code{"none"}.
-#' @param subset Optional unquoted logical expression to filter cases for
-#'   this call only (data-first form).
-#' @param labels Logical. If TRUE (default), prints variable labels when
-#'   available (data-first form).
-#'
-#' @return Invisibly, a single \code{ggplot} object if one plot is produced,
-#'   or a named list of \code{ggplot} objects if multiple are produced
-#'   (result-object form). Invisibly returns the \code{ggplot} object for
-#'   the data-first form.
-#'
-#' @examples
-#' \dontrun{
-#'   # Result-object form
-#'   m <- jlm(TotalCrime ~ Age + Tattoos, SampleData)
-#'   jplot(m)                            # core diagnostics + fit plot
-#'   jplot(m, which = "coef")            # coefficient forest plot
-#'   jplot(m, which = "fit", focal = Age, at = "mean")
-#'
-#'   # Formula form (scatter and box)
-#'   jplot(Tattoos ~ Age, SampleData)                       # scatter
-#'   jplot(Tattoos ~ Age, SampleData, line = "lm")          # scatter + regression
-#'   jplot(Tattoos ~ Age, SampleData, line = "lm", band = "see")
-#'   jplot(Tattoos ~ Age, SampleData, by = Gender, line = "lm")
-#'   jplot(Age ~ Gender, SampleData)                        # boxplot
-#'
-#'   # Variable-list form (distributions and counts)
-#'   jplot(SampleData, Age)                     # histogram
-#'   jplot(SampleData, Gender)                  # bar chart
-#'   jplot(SampleData, Program, Employment)     # grouped bar chart
-#' }
-#'
-#' @export
-#' @importFrom stats setNames
-#' @importFrom utils tail
-jplot <- function(x, which = "core", ...) {
-  UseMethod("jplot")
-}
-
-#' @rdname jplot
-#' @export
-#' @importFrom rlang .data
-jplot.default <- function(x, ..., by = NULL, type = NULL,
-                          line = FALSE, equation = TRUE, r2 = TRUE,
-                          band = "ci", subset = NULL, labels = TRUE) {
-
-  # Capture the call for later argument-inspection (used by the ignored-arg
-  # note that fires when, e.g., the user passes line = "lm" to a histogram).
-  jplot_call <- match.call()
-
-  # ---------------------------------------------------------------------------
-  # Formula-first path: jplot(DV ~ IV, data) for scatter/box where a DV/IV
-  # distinction is meaningful.  Detected BEFORE the data-frame branch because
-  # `x` in this case is a formula, not a data frame.
-  # ---------------------------------------------------------------------------
-  if (!missing(x) && inherits(x, "formula")) {
-    by_sub <- substitute(by)
-    return(.jst_jplot_formula(x, jplot_call, ...,
-                              by_expr = by_sub, type = type, line = line,
-                              equation = equation, r2 = r2, band = band,
-                              subset_expr = substitute(subset),
-                              labels = labels,
-                              parent_env = parent.frame()))
-  }
-
-  # Capture original expression before any evaluation (for data-name reporting)
-  .data_expr <- if (!missing(x)) {
-    paste(deparse(substitute(x)), collapse = "")
-  } else NULL
-
-  # Catch missing-comma error: jplot(VarName) instead of jplot(, VarName).
-  # Only force evaluation if x was provided.
-  if (!missing(x)) {
-    x <- tryCatch(force(x), error = function(e) {
-      .jst_missing_comma_error(deparse(jplot_call$x), "jplot", e)
-    })
-  }
-
-  # Alias to `data` internally for clarity; the generic uses `x` for S3 consistency
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(x)) {
-    # Resolve default data frame set by juse()
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    data <- x
-    .jst_data_name <- .data_expr
-  }
-
-  if (!is.data.frame(data)) {
-    stop("jplot(): the first argument must be a data frame. ",
-         "To plot a result object (e.g. from jlm()), pass it as the first ",
-         "argument: jplot(my_result).",
-         call. = FALSE)
-  }
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  # Capture variable names
-  variables      <- rlang::enquos(...)
-  variable_names <- vapply(variables, rlang::quo_name, character(1))
-  by_quo         <- rlang::enquo(by)
-  has_by         <- !rlang::quo_is_null(by_quo)
-  by_name        <- if (has_by) rlang::quo_name(by_quo) else NULL
-
-  n_vars <- length(variable_names)
-  if (n_vars == 0) {
-    stop("jplot(): no variables specified. Provide one or more variable ",
-         "names, e.g. jplot(SampleData, Age, Tattoos).", call. = FALSE)
-  }
-  if (n_vars > 2) {
-    stop("jplot(): only 1 or 2 variables can be plotted at once. ",
-         "For more variables, use `by =` to add a grouping variable ",
-         "(e.g. jplot(data, x, y, by = Gender)) or call jplot() ",
-         "multiple times.", call. = FALSE)
-  }
-
-  # Check all variables exist
-  check_names <- variable_names
-  if (has_by) check_names <- c(check_names, by_name)
-  .jst_check_vars(data, check_names, .jst_data_name)
-
-  # Validate band argument
-  valid_bands <- c("ci", "pi", "see", "none")
-  if (!is.character(band) || length(band) != 1 || !band %in% valid_bands) {
-    stop("`band` must be one of: ", paste(sprintf("\"%s\"", valid_bands),
-                                          collapse = ", "), ".",
-         call. = FALSE)
-  }
-
-  # Validate line argument
-  if (isTRUE(line)) line <- "lm"
-  valid_lines <- c(FALSE, "lm", "loess", "connect")
-  if (!identical(line, FALSE) && !(is.character(line) && length(line) == 1 &&
-                                   line %in% c("lm", "loess", "connect"))) {
-    stop("`line` must be FALSE, TRUE, or one of: ",
-         "\"lm\", \"loess\", \"connect\".", call. = FALSE)
-  }
-
-  # Apply data pipeline (jcomplete, jfilter, subset)
-  subset_expr <- substitute(subset)
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr,
-                                  envir = parent.frame())
-  data <- pipeline$data
-  # Pipeline messages are printed below, after the red title
-
-  # Classify variables
-  var_types <- vapply(variable_names,
-                      function(v) if (.jst_is_categorical(data[[v]], v,
-                                                           .jst_data_name))
-                                    "categorical" else "numeric",
-                      character(1))
-
-  # Auto-detect plot type if not specified
-  resolved_type <- type
-  if (is.null(resolved_type)) {
-    resolved_type <- .jst_auto_plot_type(var_types, n_vars)
-  }
-
-  valid_types <- c("histogram", "bar", "scatter", "box", "grouped_bar")
-  if (!resolved_type %in% valid_types) {
-    stop("Invalid `type` value: \"", resolved_type, "\".\n",
-         "Valid types: ", paste(sprintf("\"%s\"", valid_types),
-                                 collapse = ", "), ".",
-         call. = FALSE)
-  }
-
-  # -- Require formula syntax for scatter and box (relationship plots) ------
-  # These plots distinguish DV from IV. Requiring formula syntax prevents
-  # confusion about which variable goes on which axis and mirrors jlm/jaov.
-  if (resolved_type == "scatter") {
-    stop("For two-numeric scatterplots, use formula syntax to make the DV ",
-         "and IV explicit (consistent with jlm):\n",
-         "  jplot(", variable_names[2], " ~ ", variable_names[1],
-         ", ", if (!is.null(.jst_data_name)) .jst_data_name else "SampleData",
-         if (!identical(line, FALSE)) paste0(", line = \"",
-                                             if (isTRUE(line)) "lm" else line,
-                                             "\"") else "",
-         ")\n",
-         "(The DV on the left of ~ goes on the y-axis; the IV on the right ",
-         "goes on the x-axis.)",
-         call. = FALSE)
-  }
-  if (resolved_type == "box") {
-    # Numeric goes on y, categorical on x — i.e. numeric ~ categorical
-    num_var <- variable_names[var_types == "numeric"][1]
-    cat_var <- variable_names[var_types == "categorical"][1]
-    stop("For boxplots, use formula syntax to make the outcome and grouping ",
-         "variable explicit (consistent with jaov):\n",
-         "  jplot(", num_var, " ~ ", cat_var, ", ",
-         if (!is.null(.jst_data_name)) .jst_data_name else "SampleData", ")\n",
-         "(The numeric outcome on the left of ~ goes on the y-axis; the ",
-         "categorical grouping variable on the right goes on the x-axis.)",
-         call. = FALSE)
-  }
-
-  # -- Note about arguments ignored for this plot type ----------------------
-  # line/band/equation/r2 apply only to scatter plots with line = "lm".
-  # If the user explicitly passed any of these but the resolved plot type
-  # doesn't use them, emit a single consolidated yellow note.
-  called_args   <- names(jplot_call)
-  explicit_args <- called_args[nzchar(called_args)]
-
-  is_scatter_lm <- resolved_type == "scatter" &&
-                   (identical(line, "lm") || identical(line, TRUE))
-
-  ignored <- character(0)
-  if ("line" %in% explicit_args && resolved_type != "scatter") {
-    ignored <- c(ignored, "line")
-  }
-  if ("band" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "band")
-  }
-  if ("equation" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "equation")
-  }
-  if ("r2" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "r2")
-  }
-  if (length(ignored) > 0) {
-    .cat_yellow(paste0(
-      "(Note: ", paste(ignored, collapse = ", "),
-      " not applicable to ", resolved_type,
-      if (resolved_type == "scatter") " without line = \"lm\"" else "",
-      " \u2014 ignored)\n"
-    ))
-  }
-
-  # -- Capture axis labels BEFORE factor conversion strips them ------------
-  axis_labels <- stats::setNames(
-    vapply(variable_names,
-           function(v) .jst_short_label(data[[v]], v),
-           character(1)),
-    variable_names
-  )
-  by_label <- if (has_by) .jst_short_label(data[[by_name]], by_name) else NULL
-
-  # -- Red title --------------------------------------------------------------
-  plot_title <- .jst_plot_title(resolved_type, variable_names, by_name)
-  .cat_red(paste0(plot_title, "\n"))
-
-  # Print pipeline messages (default data frame note, filter/complete status)
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
-  .jst_print_msgs(pipeline$msgs)
-
-  # Convert haven-labelled categoricals to factors for plotting
-  for (v in variable_names) {
-    if (haven::is.labelled(data[[v]])) {
-      val_labs <- labelled::val_labels(data[[v]])
-      if (!is.null(val_labs) && length(val_labs) > 0) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else {
-        data[[v]] <- as.numeric(data[[v]])
-      }
-    }
-  }
-  if (has_by && haven::is.labelled(data[[by_name]])) {
-    val_labs <- labelled::val_labels(data[[by_name]])
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      data[[by_name]] <- haven::as_factor(data[[by_name]])
-    } else {
-      data[[by_name]] <- factor(data[[by_name]])
-    }
-  } else if (has_by && !is.factor(data[[by_name]])) {
-    data[[by_name]] <- factor(data[[by_name]])
-  }
-
-  # Print variable labels if requested
-  if (labels) {
-    .print_var_labels(data, check_names)
-  }
-
-  # Dispatch to plot builder
-  p <- switch(
-    resolved_type,
-    histogram   = .jst_build_histogram(data, variable_names[1], by_name,
-                                       axis_labels, by_label),
-    bar         = .jst_build_bar(data, variable_names[1], by_name,
-                                 axis_labels, by_label),
-    scatter     = .jst_build_scatter(data, variable_names, by_name,
-                                     line, equation, r2, band,
-                                     axis_labels, by_label),
-    box         = .jst_build_box(data, variable_names, var_types, by_name,
-                                 axis_labels, by_label),
-    grouped_bar = .jst_build_grouped_bar(data, variable_names,
-                                         axis_labels)
-  )
-
-  print(p)
-  invisible(p)
-}
-
-
-#' Internal helper: handle the formula-first form of jplot
-#'
-#' Called by \code{jplot.default} when the first argument is a formula.
-#' Parses the formula into DV (y-axis) and IV (x-axis), resolves the data
-#' frame from the second positional argument or juse default, and dispatches
-#' to the scatter or box builder depending on the IV's type.
-#'
-#' Only single-IV formulas are supported (\code{DV ~ IV}). Multi-IV formulas
-#' produce a helpful error pointing to the jlm() + jplot(m) workflow.
-#'
-#' @keywords internal
-.jst_jplot_formula <- function(formula, jplot_call, ..., by_expr, type, line,
-                               equation, r2, band, subset_expr, labels,
-                               parent_env) {
-
-  # -- Parse formula ---------------------------------------------------------
-  formula_vars <- all.vars(formula)
-  if (length(formula) < 3) {
-    stop("jplot() requires a two-sided formula: DV ~ IV.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)", call. = FALSE)
-  }
-
-  y_name <- all.vars(formula[[2]])
-  x_vars <- all.vars(formula[[3]])
-
-  if (length(y_name) != 1) {
-    stop("jplot() supports only one variable on the left side of ~.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)", call. = FALSE)
-  }
-  if (length(x_vars) > 1) {
-    stop("jplot() supports only one independent variable in its formula.\n",
-         "For multi-variable regression, fit with jlm() and plot the result:\n",
-         "  m <- jlm(", deparse(formula), ", <data>)\n",
-         "  jplot(m)",
-         call. = FALSE)
-  }
-  x_name <- x_vars[1]
-
-  # -- Resolve data frame ----------------------------------------------------
-  # Second positional argument in ..., or juse default.
-  dots <- list(...)
-  dot_names <- names(dots)
-  if (is.null(dot_names)) dot_names <- rep("", length(dots))
-  positional_dots <- dots[!nzchar(dot_names)]
-
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (length(positional_dots) >= 1) {
-    data <- positional_dots[[1]]
-    # Try to extract the original symbol for reporting
-    mc_no_name <- jplot_call[-1L]
-    mc_positional <- mc_no_name[!nzchar(names(mc_no_name)) |
-                                is.null(names(mc_no_name))]
-    if (length(mc_positional) >= 2) {
-      .jst_data_name <- paste(deparse(mc_positional[[2]]), collapse = "")
-    }
-    if (length(positional_dots) > 1) {
-      stop("jplot(formula, data): only one data argument is expected after ",
-           "the formula. Extra positional arguments were supplied.",
-           call. = FALSE)
-    }
-  } else {
-    resolved <- .jst_resolve_data(envir = parent_env)
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  }
-
-  if (!is.data.frame(data)) {
-    stop("jplot(): the data argument after the formula must be a data frame.",
-         call. = FALSE)
-  }
-
-  # -- Handle by argument ----------------------------------------------------
-  # by_expr is the result of substitute(by) from the caller — either NULL
-  # (default), a symbol like `Gender`, or a complex expression.
-  by_name <- NULL
-  has_by  <- !is.null(by_expr) && !identical(by_expr, as.name("NULL"))
-  if (has_by) {
-    by_name <- paste(deparse(by_expr), collapse = "")
-  }
-
-  # -- Validate variables exist ---------------------------------------------
-  check_names <- c(y_name, x_name)
-  if (has_by) check_names <- c(check_names, by_name)
-  .jst_check_vars(data, check_names, .jst_data_name)
-
-  # -- Validate line / band arguments ----------------------------------------
-  valid_bands <- c("ci", "pi", "see", "none")
-  if (!is.character(band) || length(band) != 1 || !band %in% valid_bands) {
-    stop("`band` must be one of: ", paste(sprintf("\"%s\"", valid_bands),
-                                          collapse = ", "), ".",
-         call. = FALSE)
-  }
-  if (isTRUE(line)) line <- "lm"
-  if (!identical(line, FALSE) && !(is.character(line) && length(line) == 1 &&
-                                   line %in% c("lm", "loess", "connect"))) {
-    stop("`line` must be FALSE, TRUE, or one of: ",
-         "\"lm\", \"loess\", \"connect\".", call. = FALSE)
-  }
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  # -- Apply pipeline --------------------------------------------------------
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr,
-                                  envir = parent_env)
-  data <- pipeline$data
-
-  # -- Decide plot type from IV's class -------------------------------------
-  # Numeric IV -> scatter; categorical IV -> box (numeric DV is required).
-  y_is_num <- !.jst_is_categorical(data[[y_name]], y_name, .jst_data_name)
-  x_is_cat <-  .jst_is_categorical(data[[x_name]], x_name, .jst_data_name)
-
-  if (!is.null(type)) {
-    resolved_type <- type
-  } else {
-    if (!y_is_num) {
-      stop("jplot(): the DV (left of ~) must be numeric. \"", y_name,
-           "\" is categorical.", call. = FALSE)
-    }
-    resolved_type <- if (x_is_cat) "box" else "scatter"
-  }
-
-  # Classify both vars for downstream builders
-  var_types <- c(
-    if (.jst_is_categorical(data[[x_name]], x_name, .jst_data_name))
-      "categorical" else "numeric",
-    if (.jst_is_categorical(data[[y_name]], y_name, .jst_data_name))
-      "categorical" else "numeric"
-  )
-  # Note: for builders, variable_names is ordered (x, y) for scatter,
-  # (x, y) for box (builder detects numeric side via var_types).
-  variable_names <- c(x_name, y_name)
-
-  # -- Capture axis labels BEFORE factor conversion -------------------------
-  axis_labels <- stats::setNames(
-    vapply(variable_names,
-           function(v) .jst_short_label(data[[v]], v),
-           character(1)),
-    variable_names
-  )
-  by_label <- if (has_by) .jst_short_label(data[[by_name]], by_name) else NULL
-
-  # -- Red title -------------------------------------------------------------
-  plot_title <- .jst_plot_title(resolved_type, c(y_name, x_name), by_name)
-  # For formula form, write the title as "Scatterplot: Tattoos and Age" where
-  # DV comes first for readability even though x-axis is Age.
-  # .jst_plot_title already puts the two names with " and " between them.
-  .cat_red(paste0(plot_title, "\n"))
-
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
-  .jst_print_msgs(pipeline$msgs)
-
-  # -- Convert haven-labelled categoricals to factors -----------------------
-  for (v in variable_names) {
-    if (haven::is.labelled(data[[v]])) {
-      val_labs <- labelled::val_labels(data[[v]])
-      if (!is.null(val_labs) && length(val_labs) > 0) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else {
-        data[[v]] <- as.numeric(data[[v]])
-      }
-    }
-  }
-  if (has_by && haven::is.labelled(data[[by_name]])) {
-    val_labs <- labelled::val_labels(data[[by_name]])
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      data[[by_name]] <- haven::as_factor(data[[by_name]])
-    } else {
-      data[[by_name]] <- factor(data[[by_name]])
-    }
-  } else if (has_by && !is.factor(data[[by_name]])) {
-    data[[by_name]] <- factor(data[[by_name]])
-  }
-
-  if (labels) {
-    .print_var_labels(data, check_names)
-  }
-
-  # -- Ignored-argument note (e.g. band = ... without line = "lm") ----------
-  called_args   <- names(jplot_call)
-  explicit_args <- called_args[nzchar(called_args)]
-  is_scatter_lm <- resolved_type == "scatter" &&
-                   (identical(line, "lm") || identical(line, TRUE))
-  ignored <- character(0)
-  if ("line" %in% explicit_args && resolved_type != "scatter") {
-    ignored <- c(ignored, "line")
-  }
-  if ("band" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "band")
-  }
-  if ("equation" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "equation")
-  }
-  if ("r2" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "r2")
-  }
-  if (length(ignored) > 0) {
-    .cat_yellow(paste0(
-      "(Note: ", paste(ignored, collapse = ", "),
-      " not applicable to ", resolved_type,
-      if (resolved_type == "scatter") " without line = \"lm\"" else "",
-      " \u2014 ignored)\n"
-    ))
-  }
-
-  # -- Dispatch to builder --------------------------------------------------
-  p <- switch(
-    resolved_type,
-    scatter = .jst_build_scatter(data, variable_names, by_name,
-                                 line, equation, r2, band,
-                                 axis_labels, by_label),
-    box     = .jst_build_box(data, variable_names, var_types, by_name,
-                             axis_labels, by_label)
-  )
-
-  print(p)
-  invisible(p)
-}
-
-
-# -- Data-first plot helpers ---------------------------------------------------
-
-#' Internal helper: choose an axis label for a variable
-#'
-#' Returns the variable's label (from labelled::var_label) if one is set and
-#' fits within \code{max_len} characters. Truncates with three trailing periods
-#' if the label exceeds \code{max_len}. Falls back to the variable name when
-#' no label is present.
-#'
-#' @param x A variable (vector), possibly haven-labelled.
-#' @param name Character. The variable name to fall back to if no label.
-#' @param max_len Integer. Maximum label length before truncation. Default 35.
-#' @return A character string suitable for use as an axis label.
-#' @keywords internal
-.jst_short_label <- function(x, name, max_len = 35) {
-  lbl <- labelled::var_label(x)
-  if (is.null(lbl) || length(lbl) == 0 || is.na(lbl[1]) || !nzchar(lbl[1])) {
-    return(name)
-  }
-  lbl <- as.character(lbl[1])
-  if (nchar(lbl) > max_len) {
-    return(paste0(substr(lbl, 1, max_len - 3), "..."))
-  }
-  lbl
-}
-
-#' Internal helper: build a red-title string for jplot.default output
-#'
-#' Produces titles like:
-#' \itemize{
-#'   \item Histogram: Age
-#'   \item Bar Chart: Gender
-#'   \item Scatterplot: Age and Tattoos
-#'   \item Boxplot: Age by Gender
-#'   \item Grouped Bar Chart: Program and Employment
-#' }
-#' Appends " by <by_name>" when a by-variable is supplied.
-#' Uses variable names (not labels), matching the user's typed call.
-#'
-#' @param plot_type Character, one of the valid resolved types.
-#' @param variable_names Character vector of 1 or 2 variable names.
-#' @param by_name Optional character string for the by-variable.
-#' @keywords internal
-.jst_plot_title <- function(plot_type, variable_names, by_name = NULL) {
-  prefix <- switch(
-    plot_type,
-    histogram   = "Histogram",
-    bar         = "Bar Chart",
-    scatter     = "Scatterplot",
-    box         = "Boxplot",
-    grouped_bar = "Grouped Bar Chart",
-    "Plot"
-  )
-  body <- if (length(variable_names) == 1) {
-    variable_names[1]
-  } else {
-    paste(variable_names[1], "and", variable_names[2])
-  }
-  if (!is.null(by_name)) {
-    paste0(prefix, ": ", body, " by ", by_name)
-  } else {
-    paste0(prefix, ": ", body)
-  }
-}
-
-#' Internal helper: classify a variable as categorical or numeric
-#'
-#' Unified classifier used across the package (jplot, jlm, jlogistic, jdesc,
-#' jscreen, jcorr, and any other function that needs to distinguish
-#' categorical from continuous variables). The rule is specified in the
-#' "Categorical classification rules" section of the package changelog.
-#'
-#' Per-call overrides (\code{numeric = "Var"} / \code{categorical = "Var"})
-#' are handled by the calling function before reaching this helper. This
-#' function implements rules 3-7 only:
-#'
-#' \enumerate{
-#'   \item jdummy() registration for \code{var_name} on \code{data_name}
-#'         -> categorical.
-#'   \item Class factor, logical, or character -> categorical.
-#'   \item haven_labelled (including haven_labelled_spss) with value labels
-#'         attached to at least one non-missing value present in the data
-#'         -> categorical.
-#'   \item Plain numeric (or haven_labelled numeric that fell through 3)
-#'         with all whole-number values, min >= 0, max < 6, and at least 2
-#'         unique non-NA values -> categorical.
-#'   \item Otherwise -> continuous.
-#' }
-#'
-#' NA preprocessing (auto-conversion of values labelled "Missing" to NA) is
-#' expected to have run already via \code{.jst_apply_pipeline()} before this
-#' helper is called on analysis data.
-#'
-#' @param x A variable (vector).
-#' @param var_name Optional character string. The variable's column name.
-#'   Required for the jdummy() registration check.
-#' @param data_name Optional character string. The data frame's name.
-#'   Required for the jdummy() registration check.
-#' @return TRUE if categorical, FALSE if continuous.
-#' @keywords internal
-.jst_is_categorical <- function(x, var_name = NULL, data_name = NULL) {
-
-  # -- Rule 3: jdummy() registration ----------------------------------------
-  if (!is.null(var_name) && !is.null(data_name)) {
-    dummy_regs <- .jst_get_dummy(data_name)
-    if (!is.null(dummy_regs) && length(dummy_regs) > 0) {
-      is_registered <- any(vapply(dummy_regs,
-                                  function(r) identical(r$var_name, var_name),
-                                  logical(1)))
-      if (is_registered) return(TRUE)
-    }
-  }
-
-  # -- Rule 4: factor, logical, character -----------------------------------
-  if (is.factor(x) || is.logical(x) || is.character(x)) return(TRUE)
-
-  # -- Rule 5: haven_labelled with non-missing value labels -----------------
-  if (haven::is.labelled(x)) {
-    val_labs <- labelled::val_labels(x)
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      if (typeof(x) == "character") {
-        # Character-labelled: any labels present make it categorical.
-        return(TRUE)
-      }
-      # Numeric-labelled: require at least one labelled code to be present
-      # in the (post-NA-preprocessing) data. This prevents a continuous
-      # variable with only a "Missing" label from misclassifying as
-      # categorical once the missing values have been NA'd out.
-      x_num        <- suppressWarnings(as.numeric(x))
-      non_na_vals  <- x_num[!is.na(x_num)]
-      if (length(non_na_vals) > 0 && any(val_labs %in% non_na_vals)) {
-        return(TRUE)
-      }
-      # Fall through to Rule 6 if no labelled codes remain in the data.
-    }
-  }
-
-  # -- Rule 6: whole-number non-negative range fallback ---------------------
-  if (is.numeric(x) || haven::is.labelled(x)) {
-    x_num   <- suppressWarnings(as.numeric(x))
-    x_clean <- x_num[!is.na(x_num)]
-    if (length(x_clean) >= 2) {
-      unique_vals <- unique(x_clean)
-      if (length(unique_vals) >= 2 &&
-          all(x_clean == floor(x_clean)) &&
-          min(x_clean) >= 0 &&
-          max(x_clean) <  6) {
-        return(TRUE)
-      }
-    }
-  }
-
-  # -- Rule 7: otherwise continuous -----------------------------------------
-  FALSE
-}
-
-
-#' Internal helper: auto-detect plot type from variable types
-#'
-#' @keywords internal
-.jst_auto_plot_type <- function(var_types, n_vars) {
-  if (n_vars == 1) {
-    if (var_types[1] == "numeric") return("histogram")
-    return("bar")
-  }
-  # n_vars == 2
-  if (all(var_types == "numeric"))      return("scatter")
-  if (all(var_types == "categorical"))  return("grouped_bar")
-  return("box")
-}
-
-
-#' Internal helper: format the equation subtitle for a bivariate regression
-#'
-#' Uses variable names rather than y/x for pedagogical clarity.
-#'
-#' @keywords internal
-.jst_format_bivar_equation <- function(model, y_name, x_name,
-                                       include_r2 = TRUE) {
-  coefs     <- stats::coef(model)
-  intercept <- coefs[1]
-  slope     <- coefs[2]
-  sign_char <- if (slope >= 0) "+" else "\u2212"
-  eq <- sprintf("%s = %.2f %s %.2f\u00b7%s",
-                y_name, intercept, sign_char, abs(slope), x_name)
-  if (include_r2) {
-    r2 <- summary(model)$r.squared
-    eq <- paste0(eq, "    R\u00b2 = ", sprintf("%.3f", r2))
-  }
-  eq
-}
-
-
-#' Internal helper: build histogram (1 numeric variable)
-#'
-#' @keywords internal
-#' @importFrom rlang .data
-.jst_build_histogram <- function(data, x_name, by_name = NULL,
-                                 axis_labels = NULL, by_label = NULL) {
-  plot_df <- data.frame(x = data[[x_name]])
-  if (!is.null(by_name)) plot_df$by <- data[[by_name]]
-
-  plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
-
-  x_lab  <- if (!is.null(axis_labels)) axis_labels[[x_name]] else x_name
-  by_lab <- if (!is.null(by_label)) by_label else by_name
-
-  if (is.null(by_name)) {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x)) +
-      ggplot2::geom_histogram(bins = 30, fill = "#3366FF", color = "white",
-                              alpha = 0.85) +
-      ggplot2::labs(x = x_lab, y = "Count") +
-      ggplot2::theme_minimal()
-  } else {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x,
-                                                fill = .data$by)) +
-      ggplot2::geom_histogram(bins = 30, color = "white", alpha = 0.55,
-                              position = "identity") +
-      ggplot2::labs(x = x_lab, y = "Count", fill = by_lab) +
-      ggplot2::theme_minimal()
-  }
-  p
-}
-
-
-#' Internal helper: build bar chart (1 categorical variable)
-#'
-#' @keywords internal
-#' @importFrom rlang .data
-.jst_build_bar <- function(data, x_name, by_name = NULL,
-                           axis_labels = NULL, by_label = NULL) {
-  plot_df <- data.frame(x = data[[x_name]])
-  if (!is.null(plot_df$x) && !is.factor(plot_df$x)) {
-    plot_df$x <- factor(plot_df$x)
-  }
-  if (!is.null(by_name)) plot_df$by <- data[[by_name]]
-
-  plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
-
-  x_lab  <- if (!is.null(axis_labels)) axis_labels[[x_name]] else x_name
-  by_lab <- if (!is.null(by_label)) by_label else by_name
-
-  if (is.null(by_name)) {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x)) +
-      ggplot2::geom_bar(fill = "#3366FF", alpha = 0.85) +
-      ggplot2::labs(x = x_lab, y = "Count") +
-      ggplot2::theme_minimal()
-  } else {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = .data$by)) +
-      ggplot2::geom_bar(position = ggplot2::position_dodge(width = 0.8),
-                        width = 0.7) +
-      ggplot2::labs(x = x_lab, y = "Count", fill = by_lab) +
-      ggplot2::theme_minimal()
-  }
-  p
-}
-
-
-#' Internal helper: build scatterplot (2 numeric variables)
-#'
-#' @keywords internal
-#' @importFrom rlang .data
-.jst_build_scatter <- function(data, variable_names, by_name,
-                               line, equation, r2, band,
-                               axis_labels = NULL, by_label = NULL) {
-
-  x_name <- variable_names[1]
-  y_name <- variable_names[2]
-
-  x_lab  <- if (!is.null(axis_labels)) axis_labels[[x_name]] else x_name
-  y_lab  <- if (!is.null(axis_labels)) axis_labels[[y_name]] else y_name
-  by_lab <- if (!is.null(by_label)) by_label else by_name
-
-  plot_df <- data.frame(x = data[[x_name]], y = data[[y_name]])
-  if (!is.null(by_name)) plot_df$by <- data[[by_name]]
-  plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
-
-  # Base scatter
-  if (is.null(by_name)) {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y)) +
-      ggplot2::geom_point(alpha = 0.55, color = "#222222")
-  } else {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y,
-                                                color = .data$by)) +
-      ggplot2::geom_point(alpha = 0.65)
-  }
-
-  # Add line and band
-  subtitle_text <- NULL
-  if (!identical(line, FALSE)) {
-
-    if (line == "connect") {
-      # Simple line connecting points — no band, no equation
-      if (is.null(by_name)) {
-        p <- p + ggplot2::geom_line(color = "#3366FF", alpha = 0.7)
-      } else {
-        p <- p + ggplot2::geom_line(alpha = 0.7)
-      }
-
-    } else if (line == "loess") {
-      # Loess smoother — no equation, band options apply
-      show_se <- !identical(band, "none") && band == "ci"
-      if (is.null(by_name)) {
-        p <- p + ggplot2::geom_smooth(method = "loess", se = show_se,
-                                      color = "#3366FF",
-                                      fill = "#3366FF",
-                                      formula = y ~ x)
-      } else {
-        p <- p + ggplot2::geom_smooth(method = "loess", se = show_se,
-                                      formula = y ~ x)
-      }
-
-    } else if (line == "lm") {
-      # Linear regression — full treatment
-      p <- .jst_add_lm_line(p, plot_df, x_name, y_name, by_name, band)
-
-      # Build equation subtitle
-      if (equation || r2) {
-        if (is.null(by_name)) {
-          m <- stats::lm(y ~ x, data = plot_df)
-          eq <- .jst_format_bivar_equation(m, y_name, x_name,
-                                           include_r2 = r2)
-          if (!equation) {
-            # Only R² requested
-            subtitle_text <- sprintf("R\u00b2 = %.3f",
-                                     summary(m)$r.squared)
-          } else {
-            subtitle_text <- eq
-          }
-        } else {
-          # Per-group equations
-          groups <- levels(droplevels(plot_df$by))
-          eq_lines <- character(0)
-          for (g in groups) {
-            sub <- plot_df[plot_df$by == g, , drop = FALSE]
-            if (nrow(sub) >= 2 &&
-                length(unique(sub$x)) >= 2) {
-              m <- stats::lm(y ~ x, data = sub)
-              if (equation) {
-                eq <- .jst_format_bivar_equation(
-                  m, y_name, x_name, include_r2 = r2
-                )
-                eq_lines <- c(eq_lines, paste0(g, ": ", eq))
-              } else if (r2) {
-                eq_lines <- c(eq_lines,
-                              sprintf("%s: R\u00b2 = %.3f",
-                                      g, summary(m)$r.squared))
-              }
-            }
-          }
-          if (length(eq_lines) > 0) {
-            subtitle_text <- paste(eq_lines, collapse = "\n")
-          }
-        }
-      }
-    }
-  }
-
-  p <- p + ggplot2::labs(x = x_lab, y = y_lab,
-                         color = by_lab, fill = by_lab,
-                         subtitle = subtitle_text) +
-           ggplot2::theme_minimal()
-  p
-}
-
-
-#' Internal helper: add an lm regression line and optional band to a scatter
-#'
-#' Handles the four band options: ci (ggplot default), pi (prediction
-#' interval, computed manually), see (constant +/- t*SEE rectangle), none.
-#'
-#' @keywords internal
-#' @importFrom rlang .data
-.jst_add_lm_line <- function(p, plot_df, x_name, y_name, by_name, band) {
-
-  if (is.null(by_name)) {
-    # Single-group line
-    show_ci <- identical(band, "ci")
-    p <- p + ggplot2::geom_smooth(method = "lm", se = show_ci,
-                                  color = "#3366FF",
-                                  fill = "#3366FF",
-                                  formula = y ~ x)
-
-    if (band %in% c("pi", "see")) {
-      band_df <- .jst_compute_band(plot_df, band)
-      p <- p + ggplot2::geom_ribbon(
-        data = band_df,
-        ggplot2::aes(x = .data$x, ymin = .data$lwr, ymax = .data$upr),
-        fill = "#3366FF", alpha = 0.15,
-        inherit.aes = FALSE
-      )
-    }
-
-  } else {
-    # Per-group lines
-    show_ci <- identical(band, "ci")
-    p <- p + ggplot2::geom_smooth(method = "lm", se = show_ci,
-                                  formula = y ~ x)
-
-    if (band %in% c("pi", "see")) {
-      groups <- levels(droplevels(plot_df$by))
-      band_dfs <- lapply(groups, function(g) {
-        sub <- plot_df[plot_df$by == g, , drop = FALSE]
-        if (nrow(sub) >= 3 && length(unique(sub$x)) >= 2) {
-          band_df <- .jst_compute_band(sub, band)
-          band_df$by <- g
-          band_df
-        } else NULL
-      })
-      band_df <- do.call(rbind, band_dfs)
-      if (!is.null(band_df) && nrow(band_df) > 0) {
-        band_df$by <- factor(band_df$by, levels = groups)
-        p <- p + ggplot2::geom_ribbon(
-          data = band_df,
-          ggplot2::aes(x = .data$x, ymin = .data$lwr, ymax = .data$upr,
-                       fill = .data$by),
-          alpha = 0.12, inherit.aes = FALSE
-        )
-      }
-    }
-  }
-  p
-}
-
-
-#' Internal helper: compute prediction interval or +/- t*SEE band for a bivariate
-#' regression
-#'
-#' @param plot_df Data frame with columns x and y.
-#' @param band Either "pi" or "see".
-#' @return Data frame with columns x, fit, lwr, upr.
-#' @keywords internal
-.jst_compute_band <- function(plot_df, band) {
-  m <- stats::lm(y ~ x, data = plot_df)
-  x_grid <- seq(min(plot_df$x, na.rm = TRUE),
-                max(plot_df$x, na.rm = TRUE), length.out = 120)
-  new_df <- data.frame(x = x_grid)
-
-  if (band == "pi") {
-    pred <- stats::predict(m, newdata = new_df, interval = "prediction",
-                           level = 0.95)
-    return(data.frame(x = x_grid,
-                      fit = pred[, "fit"],
-                      lwr = pred[, "lwr"],
-                      upr = pred[, "upr"]))
-  }
-  if (band == "see") {
-    fit_vals <- stats::predict(m, newdata = new_df)
-    see <- summary(m)$sigma
-    t_crit <- stats::qt(0.975, df = stats::df.residual(m))
-    return(data.frame(x = x_grid,
-                      fit = fit_vals,
-                      lwr = fit_vals - t_crit * see,
-                      upr = fit_vals + t_crit * see))
-  }
-  NULL
-}
-
-
-#' Internal helper: build boxplot (1 numeric + 1 categorical)
-#'
-#' @keywords internal
-#' @importFrom rlang .data
-.jst_build_box <- function(data, variable_names, var_types, by_name = NULL,
-                           axis_labels = NULL, by_label = NULL) {
-
-  # Numeric on y, categorical on x
-  if (var_types[1] == "numeric") {
-    y_name <- variable_names[1]
-    x_name <- variable_names[2]
-  } else {
-    x_name <- variable_names[1]
-    y_name <- variable_names[2]
-  }
-
-  x_lab  <- if (!is.null(axis_labels)) axis_labels[[x_name]] else x_name
-  y_lab  <- if (!is.null(axis_labels)) axis_labels[[y_name]] else y_name
-  by_lab <- if (!is.null(by_label)) by_label else by_name
-
-  plot_df <- data.frame(x = data[[x_name]], y = data[[y_name]])
-  if (!is.factor(plot_df$x)) plot_df$x <- factor(plot_df$x)
-  if (!is.null(by_name)) plot_df$by <- data[[by_name]]
-  plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
-
-  if (is.null(by_name)) {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y)) +
-      ggplot2::geom_boxplot(fill = "#E6EEF9", color = "#333333",
-                            outlier.alpha = 0.6) +
-      ggplot2::stat_summary(fun = mean, geom = "point",
-                            shape = 18, size = 3, color = "#3366FF") +
-      ggplot2::labs(x = x_lab, y = y_lab,
-                    subtitle = "Diamond marks the group mean") +
-      ggplot2::theme_minimal()
-  } else {
-    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, y = .data$y,
-                                                fill = .data$by)) +
-      ggplot2::geom_boxplot(outlier.alpha = 0.6) +
-      ggplot2::labs(x = x_lab, y = y_lab, fill = by_lab) +
-      ggplot2::theme_minimal()
-  }
-  p
-}
-
-
-#' Internal helper: build grouped bar chart (2 categorical variables)
-#'
-#' @keywords internal
-#' @importFrom rlang .data
-.jst_build_grouped_bar <- function(data, variable_names, axis_labels = NULL) {
-  x_name    <- variable_names[1]
-  fill_name <- variable_names[2]
-
-  x_lab    <- if (!is.null(axis_labels)) axis_labels[[x_name]] else x_name
-  fill_lab <- if (!is.null(axis_labels)) axis_labels[[fill_name]] else fill_name
-
-  plot_df <- data.frame(x = data[[x_name]], fill = data[[fill_name]])
-  if (!is.factor(plot_df$x))    plot_df$x    <- factor(plot_df$x)
-  if (!is.factor(plot_df$fill)) plot_df$fill <- factor(plot_df$fill)
-  plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
-
-  p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = .data$fill)) +
-    ggplot2::geom_bar(position = ggplot2::position_dodge(width = 0.8),
-                      width = 0.7) +
-    ggplot2::scale_fill_brewer(palette = "Blues") +
-    ggplot2::labs(x = x_lab, y = "Count", fill = fill_lab) +
-    ggplot2::theme_minimal()
-  p
-}
-
-
-# -- Internal helpers for jplot ------------------------------------------------
-
-.jst_resolve_which <- function(which, core, all_plots, class_name) {
-  if (length(which) == 1 && which %in% c("core", "all")) {
-    return(if (which == "core") core else all_plots)
-  }
-  bad <- setdiff(which, all_plots)
-  if (length(bad) > 0) {
-    stop(sprintf(
-      "Invalid plot name(s) for class '%s': %s.\nValid names: %s, or use \"core\" / \"all\".",
-      class_name,
-      paste(sprintf("'%s'", bad), collapse = ", "),
-      paste(sprintf("'%s'", all_plots), collapse = ", ")
-    ), call. = FALSE)
-  }
-  which
-}
-
-.jst_return_plots <- function(plots) {
-  plots <- plots[!vapply(plots, is.null, logical(1))]
-  if (length(plots) == 0) return(invisible(NULL))
-  if (length(plots) == 1) return(invisible(plots[[1]]))
-  invisible(plots)
-}
-
-.jst_resolve_at <- function(at, model_frame, dv_name, focal_name,
-                            dummy_coef_names) {
-
-  non_focal <- setdiff(colnames(model_frame), c(dv_name, focal_name))
-
-  if (length(non_focal) == 0) return(list())
-
-  classify <- function(v) {
-    if (v %in% dummy_coef_names) return("categorical")
-    x <- model_frame[[v]]
-    # Use the unified classifier. data_name is not available at this point
-    # (the model_frame doesn't retain the source data frame's name), so
-    # jdummy registration is checked via the dummy_coef_names list above
-    # rather than by passing var_name/data_name to the classifier.
-    if (.jst_is_categorical(x)) "categorical" else "interval"
-  }
-
-  hold_at <- function(v, mode) {
-    x <- model_frame[[v]]
-    x_num <- as.numeric(x)
-    if (mode == "zero") return(0)
-    if (mode == "mean") return(mean(x_num, na.rm = TRUE))
-    if (mode == "mixed") {
-      if (classify(v) == "categorical") return(0)
-      return(mean(x_num, na.rm = TRUE))
-    }
-    stop("Unknown 'at' mode: ", mode, call. = FALSE)
-  }
-
-  if (is.list(at)) {
-    result <- setNames(as.list(rep(0, length(non_focal))), non_focal)
-    for (nm in names(at)) {
-      if (nm %in% non_focal) result[[nm]] <- at[[nm]]
-    }
-    return(result)
-  }
-
-  if (!is.character(at) || length(at) != 1 ||
-      !at %in% c("zero", "mean", "mixed")) {
-    stop("`at` must be one of \"zero\", \"mean\", \"mixed\", or a named list.",
-         call. = FALSE)
-  }
-
-  setNames(lapply(non_focal, hold_at, mode = at), non_focal)
-}
-
-.jst_format_equation <- function(coefs_vec, dv_name, max_terms = 3) {
-
-  intercept <- coefs_vec[1]
-  slopes    <- coefs_vec[-1]
-  iv_count  <- length(slopes)
-
-  if (iv_count > max_terms) {
-    return(NULL)
-  }
-
-  eq <- sprintf("%s = %.2f", dv_name, intercept)
-  for (i in seq_along(slopes)) {
-    b <- slopes[i]
-    sign_char <- if (b >= 0) "+" else "\u2212"
-    eq <- paste0(eq, " ", sign_char, " ", sprintf("%.2f", abs(b)),
-                 "\u00b7", names(slopes)[i])
-  }
-  eq
-}
-
-
-# -- jplot.jst_lm --------------------------------------------------------------
-
-#' @rdname jplot
-#' @export
-#' @importFrom rlang .data
-jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
-                         equation = TRUE, r2 = TRUE, ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(diagnostics = "which", plots = "which",
-                show = "which", type = "which"),
-    fn_name = "jplot.jst_lm"
-  )
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  all_plots <- c("fit", "predicted", "effects", "coef", "vif",
-                 "residuals", "qq", "scale", "cooks", "leverage")
-  core      <- c("fit", "qq", "residuals", "cooks")
-  plot_set  <- .jst_resolve_which(which, core, all_plots, "jst_lm")
-
-  focal_name <- tryCatch(deparse(substitute(focal)), error = function(e) "NULL")
-  if (identical(focal_name, "NULL") || !nzchar(focal_name) ||
-      focal_name == "NULL") focal_name <- NULL
-
-  model   <- x$model
-  mf      <- x$model_frame
-  dv_name <- all.vars(x$formula_used)[1]
-  iv_names <- setdiff(colnames(mf), dv_name)
-
-  if (is.null(focal_name)) focal_name <- iv_names[1]
-  if (!focal_name %in% iv_names) {
-    stop("`focal` must be one of the independent variables in the model: ",
-         paste(iv_names, collapse = ", "), call. = FALSE)
-  }
-
-  plots <- list()
-  coefs <- stats::coef(model)
-
-  # ---- fit plot ------------------------------------------------------------
-  if ("fit" %in% plot_set) {
-    at_vals <- .jst_resolve_at(at, mf, dv_name, focal_name,
-                               x$dummy_coef_names)
-
-    focal_range <- range(mf[[focal_name]], na.rm = TRUE)
-    grid_x <- seq(focal_range[1], focal_range[2], length.out = 120)
-    newdata <- data.frame(grid_x)
-    names(newdata) <- focal_name
-    for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
-
-    pred <- stats::predict(model, newdata = newdata, interval = "confidence",
-                           level = 0.95)
-    line_df <- data.frame(
-      x   = grid_x,
-      fit = pred[, "fit"],
-      lwr = pred[, "lwr"],
-      upr = pred[, "upr"]
-    )
-    point_df <- data.frame(
-      x = mf[[focal_name]],
-      y = mf[[dv_name]]
-    )
-
-    eq_text <- if (equation) .jst_format_equation(coefs, dv_name,
-                                                  max_terms = 3) else NULL
-    r2_text <- if (r2) sprintf("R\u00b2 = %.3f", x$r_squared) else NULL
-
-    subtitle_parts <- character(0)
-    if (!is.null(eq_text) && !is.null(r2_text)) {
-      subtitle_parts <- paste0(eq_text, "    ", r2_text)
-    } else if (!is.null(eq_text)) {
-      subtitle_parts <- eq_text
-    } else if (!is.null(r2_text)) {
-      subtitle_parts <- r2_text
-    }
-
-    if (length(at_vals) > 0) {
-      at_parts <- vapply(names(at_vals), function(v) {
-        val <- at_vals[[v]]
-        paste0(v, " = ", if (abs(val - round(val)) < 1e-8) {
-          as.character(round(val))
-        } else {
-          sprintf("%.2f", val)
-        })
-      }, character(1))
-      held_note <- paste0("(line shown at ",
-                          paste(at_parts, collapse = ", "), ")")
-      if (length(subtitle_parts) > 0) {
-        subtitle_parts <- paste0(subtitle_parts, "\n", held_note)
-      } else {
-        subtitle_parts <- held_note
-      }
-    }
-
-    if (equation && is.null(eq_text)) {
-      note <- paste0("(equation omitted: model has ",
-                     length(iv_names),
-                     " predictors; see jlm() output for coefficients)")
-      subtitle_parts <- if (length(subtitle_parts) > 0) {
-        paste0(subtitle_parts, "\n", note)
-      } else {
-        note
-      }
-    }
-
-    p <- ggplot2::ggplot() +
-      ggplot2::geom_ribbon(data = line_df,
-                           ggplot2::aes(x = .data$x,
-                                        ymin = .data$lwr,
-                                        ymax = .data$upr),
-                           fill = "#3366FF", alpha = 0.18) +
-      ggplot2::geom_point(data = point_df,
-                          ggplot2::aes(x = .data$x, y = .data$y),
-                          alpha = 0.55, color = "#222222") +
-      ggplot2::geom_line(data = line_df,
-                         ggplot2::aes(x = .data$x, y = .data$fit),
-                         color = "#3366FF", linewidth = 0.9) +
-      ggplot2::labs(
-        x        = focal_name,
-        y        = dv_name,
-        subtitle = if (length(subtitle_parts) > 0) subtitle_parts else NULL
-      ) +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$fit <- p
-  }
-
-  # ---- predicted plot (observed vs predicted) ------------------------------
-  if ("predicted" %in% plot_set) {
-    pred_df <- data.frame(
-      observed  = mf[[dv_name]],
-      predicted = stats::fitted(model)
-    )
-    lim <- range(c(pred_df$observed, pred_df$predicted), na.rm = TRUE)
-
-    p <- ggplot2::ggplot(pred_df,
-                         ggplot2::aes(x = .data$predicted,
-                                      y = .data$observed)) +
-      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                           color = "grey60") +
-      ggplot2::geom_point(alpha = 0.55, color = "#222222") +
-      ggplot2::coord_equal(xlim = lim, ylim = lim) +
-      ggplot2::labs(title = "Observed vs Predicted",
-                    x = "Predicted", y = "Observed") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$predicted <- p
-  }
-
-  # ---- effects plot (one per IV) -------------------------------------------
-  if ("effects" %in% plot_set) {
-    n_effects <- 0
-    for (iv in iv_names) {
-      at_vals <- .jst_resolve_at(at, mf, dv_name, iv, x$dummy_coef_names)
-      iv_range <- range(mf[[iv]], na.rm = TRUE)
-      grid_x   <- seq(iv_range[1], iv_range[2], length.out = 80)
-      newdata  <- data.frame(grid_x)
-      names(newdata) <- iv
-      for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
-
-      pred <- stats::predict(model, newdata = newdata,
-                             interval = "confidence", level = 0.95)
-      line_df <- data.frame(x = grid_x,
-                            fit = pred[, "fit"],
-                            lwr = pred[, "lwr"],
-                            upr = pred[, "upr"])
-
-      p <- ggplot2::ggplot(line_df,
-                           ggplot2::aes(x = .data$x, y = .data$fit)) +
-        ggplot2::geom_ribbon(ggplot2::aes(ymin = .data$lwr,
-                                          ymax = .data$upr),
-                             fill = "#3366FF", alpha = 0.18) +
-        ggplot2::geom_line(color = "#3366FF", linewidth = 0.9) +
-        ggplot2::labs(title = paste0("Effect: ", iv),
-                      x = iv, y = dv_name) +
-        ggplot2::theme_minimal()
-      print(p)
-      plots[[paste0("effect_", iv)]] <- p
-      n_effects <- n_effects + 1
-    }
-    cat("\n(", n_effects,
-        " effect plots produced, one per predictor)\n", sep = "")
-  }
-
-  # ---- coef forest plot ----------------------------------------------------
-  if ("coef" %in% plot_set) {
-    summ <- summary(model)$coefficients
-    est  <- summ[-1, "Estimate"]
-    se   <- summ[-1, "Std. Error"]
-    nm   <- rownames(summ)[-1]
-
-    t_crit <- stats::qt(0.975, df = stats::df.residual(model))
-    coef_df <- data.frame(
-      term  = factor(nm, levels = nm[order(abs(est))]),
-      est   = est,
-      lower = est - t_crit * se,
-      upper = est + t_crit * se,
-      stringsAsFactors = FALSE
-    )
-
-    p <- ggplot2::ggplot(coef_df,
-                         ggplot2::aes(x = .data$est, y = .data$term)) +
-      ggplot2::geom_vline(xintercept = 0, linetype = "dashed",
-                          color = "grey60") +
-      ggplot2::geom_errorbarh(ggplot2::aes(xmin = .data$lower,
-                                           xmax = .data$upper),
-                              height = 0.2, color = "steelblue") +
-      ggplot2::geom_point(size = 2.5, color = "steelblue") +
-      ggplot2::labs(title = "Coefficients (95% CI)",
-                    x = "Estimate", y = NULL) +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$coef <- p
-  }
-
-  # ---- vif bar plot --------------------------------------------------------
-  if ("vif" %in% plot_set) {
-    vifs <- x$vif
-    if (is.null(vifs)) {
-      message("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
-    } else {
-      vif_df <- data.frame(
-        term = factor(names(vifs), levels = names(vifs)[order(vifs)]),
-        vif  = as.numeric(vifs),
-        stringsAsFactors = FALSE
-      )
-      p <- ggplot2::ggplot(vif_df,
-                           ggplot2::aes(x = .data$vif, y = .data$term)) +
-        ggplot2::geom_vline(xintercept = c(5, 10), linetype = "dashed",
-                            color = "red", alpha = 0.6) +
-        ggplot2::geom_col(fill = "steelblue", alpha = 0.8) +
-        ggplot2::labs(title = "Variance Inflation Factors",
-                      subtitle = "Reference lines at VIF = 5 and 10",
-                      x = "VIF", y = NULL) +
-        ggplot2::theme_minimal()
-      print(p)
-      plots$vif <- p
-    }
-  }
-
-  # ---- diagnostic plots (residuals / qq / scale / cooks / leverage) --------
-  diag_plots <- intersect(plot_set, c("residuals", "qq", "scale", "cooks",
-                                      "leverage"))
-  if (length(diag_plots) > 0) {
-    diag_result <- .jst_plot_lm_diagnostics(model, which = diag_plots)
-    if (is.list(diag_result)) {
-      for (nm in names(diag_result)) plots[[nm]] <- diag_result[[nm]]
-    }
-  }
-
-  .jst_return_plots(plots)
-}
-
-
-# -- jplot.jst_logistic --------------------------------------------------------
-
-#' @rdname jplot
-#' @export
-#' @importFrom rlang .data
-jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
-                               ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(diagnostics = "which", plots = "which",
-                show = "which", type = "which"),
-    fn_name = "jplot.jst_logistic"
-  )
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  all_plots <- c("probability", "roc", "calibration", "binned",
-                 "cooks", "leverage", "coef", "vif")
-  core      <- c("probability", "roc", "calibration", "cooks")
-  plot_set  <- .jst_resolve_which(which, core, all_plots, "jst_logistic")
-
-  focal_name <- tryCatch(deparse(substitute(focal)), error = function(e) "NULL")
-  if (identical(focal_name, "NULL") || !nzchar(focal_name) ||
-      focal_name == "NULL") focal_name <- NULL
-
-  model   <- x$model
-  mf      <- x$model_frame
-  dv_name <- names(mf)[1]
-  iv_names <- setdiff(colnames(mf), dv_name)
-
-  if (is.null(focal_name)) focal_name <- iv_names[1]
-  if (!focal_name %in% iv_names) {
-    stop("`focal` must be one of the independent variables in the model: ",
-         paste(iv_names, collapse = ", "), call. = FALSE)
-  }
-
-  plots <- list()
-
-  # ---- probability plot (S-curve) ------------------------------------------
-  if ("probability" %in% plot_set) {
-    at_vals <- .jst_resolve_at(at, mf, dv_name, focal_name,
-                               x$dummy_coef_names)
-
-    focal_range <- range(mf[[focal_name]], na.rm = TRUE)
-    grid_x <- seq(focal_range[1], focal_range[2], length.out = 120)
-    newdata <- data.frame(grid_x)
-    names(newdata) <- focal_name
-    for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
-
-    pred_link <- stats::predict(model, newdata = newdata, type = "link",
-                                se.fit = TRUE)
-    t_crit <- 1.96
-    line_df <- data.frame(
-      x   = grid_x,
-      fit = stats::plogis(pred_link$fit),
-      lwr = stats::plogis(pred_link$fit - t_crit * pred_link$se.fit),
-      upr = stats::plogis(pred_link$fit + t_crit * pred_link$se.fit)
-    )
-    point_df <- data.frame(
-      x = mf[[focal_name]],
-      y = as.numeric(mf[[dv_name]])
-    )
-
-    predicts_label <- if (!is.null(x$predicts)) x$predicts else "1"
-
-    held_note <- NULL
-    if (length(at_vals) > 0) {
-      at_parts <- vapply(names(at_vals), function(v) {
-        val <- at_vals[[v]]
-        paste0(v, " = ", if (abs(val - round(val)) < 1e-8) {
-          as.character(round(val))
-        } else {
-          sprintf("%.2f", val)
-        })
-      }, character(1))
-      held_note <- paste0("(line shown at ",
-                          paste(at_parts, collapse = ", "), ")")
-    }
-
-    p <- ggplot2::ggplot() +
-      ggplot2::geom_ribbon(data = line_df,
-                           ggplot2::aes(x = .data$x,
-                                        ymin = .data$lwr,
-                                        ymax = .data$upr),
-                           fill = "#3366FF", alpha = 0.18) +
-      ggplot2::geom_point(data = point_df,
-                          ggplot2::aes(x = .data$x, y = .data$y),
-                          alpha = 0.35, color = "#222222") +
-      ggplot2::geom_line(data = line_df,
-                         ggplot2::aes(x = .data$x, y = .data$fit),
-                         color = "#3366FF", linewidth = 0.9) +
-      ggplot2::labs(
-        title    = paste0("Predicted Probability: ", dv_name,
-                          " = ", predicts_label),
-        x        = focal_name,
-        y        = paste0("P(", dv_name, " = ", predicts_label, ")"),
-        subtitle = held_note
-      ) +
-      ggplot2::ylim(0, 1) +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$probability <- p
-  }
-
-  # ---- coef forest plot (OR scale) -----------------------------------------
-  if ("coef" %in% plot_set) {
-    summ <- summary(model)$coefficients
-    est  <- summ[-1, "Estimate"]
-    se   <- summ[-1, "Std. Error"]
-    nm   <- rownames(summ)[-1]
-
-    t_crit <- 1.96
-    coef_df <- data.frame(
-      term  = factor(nm, levels = nm[order(abs(est))]),
-      or    = exp(est),
-      lower = exp(est - t_crit * se),
-      upper = exp(est + t_crit * se),
-      stringsAsFactors = FALSE
-    )
-
-    p <- ggplot2::ggplot(coef_df,
-                         ggplot2::aes(x = .data$or, y = .data$term)) +
-      ggplot2::geom_vline(xintercept = 1, linetype = "dashed",
-                          color = "grey60") +
-      ggplot2::geom_errorbarh(ggplot2::aes(xmin = .data$lower,
-                                           xmax = .data$upper),
-                              height = 0.2, color = "steelblue") +
-      ggplot2::geom_point(size = 2.5, color = "steelblue") +
-      ggplot2::scale_x_log10() +
-      ggplot2::labs(title = "Odds Ratios (95% CI)",
-                    subtitle = "Log scale; OR = 1 means no effect",
-                    x = "Exp(B)", y = NULL) +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$coef <- p
-  }
-
-  # ---- vif bar plot --------------------------------------------------------
-  if ("vif" %in% plot_set) {
-    vifs <- x$vif
-    if (is.null(vifs)) {
-      message("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
-    } else {
-      vif_df <- data.frame(
-        term = factor(names(vifs), levels = names(vifs)[order(vifs)]),
-        vif  = as.numeric(vifs),
-        stringsAsFactors = FALSE
-      )
-      p <- ggplot2::ggplot(vif_df,
-                           ggplot2::aes(x = .data$vif, y = .data$term)) +
-        ggplot2::geom_vline(xintercept = c(5, 10), linetype = "dashed",
-                            color = "red", alpha = 0.6) +
-        ggplot2::geom_col(fill = "steelblue", alpha = 0.8) +
-        ggplot2::labs(title = "Variance Inflation Factors",
-                      subtitle = "Reference lines at VIF = 5 and 10",
-                      x = "VIF", y = NULL) +
-        ggplot2::theme_minimal()
-      print(p)
-      plots$vif <- p
-    }
-  }
-
-  # ---- diagnostic plots (binned / roc / calibration / cooks / leverage) ----
-  diag_plots <- intersect(plot_set, c("binned", "roc", "calibration",
-                                      "cooks", "leverage"))
-  if (length(diag_plots) > 0) {
-    diag_result <- .jst_plot_logistic_diagnostics(model, which = diag_plots)
-    if (is.list(diag_result)) {
-      for (nm in names(diag_result)) plots[[nm]] <- diag_result[[nm]]
-    }
-  }
-
-  .jst_return_plots(plots)
-}
-
-
-# -- jplot.jst_ttest -----------------------------------------------------------
-
-#' @rdname jplot
-#' @export
-#' @importFrom rlang .data
-jplot.jst_ttest <- function(x, which = "core", ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(diagnostics = "which", plots = "which",
-                show = "which", type = "which"),
-    fn_name = "jplot.jst_ttest"
-  )
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  plot_set <- .jst_resolve_which(which, core = "box", all_plots = "box",
-                                 class_name = "jst_ttest")
-
-  mf <- x$model_frame
-  if (is.null(mf)) {
-    stop("jplot() requires model_frame on the jst_ttest object. ",
-         "Re-run jt() with the current version of the package.",
-         call. = FALSE)
-  }
-  terms <- all.vars(x$formula)
-  dv_name    <- terms[1]
-  group_name <- terms[2]
-
-  plots <- list()
-
-  if ("box" %in% plot_set) {
-    plot_df <- data.frame(
-      dv    = mf[[dv_name]],
-      group = mf[[group_name]]
-    )
-    if (!is.factor(plot_df$group)) plot_df$group <- factor(plot_df$group)
-
-    p <- ggplot2::ggplot(plot_df,
-                         ggplot2::aes(x = .data$group, y = .data$dv)) +
-      ggplot2::geom_boxplot(fill = "#E6EEF9", color = "#333333",
-                            outlier.alpha = 0.6) +
-      ggplot2::stat_summary(fun = mean, geom = "point",
-                            shape = 18, size = 3, color = "#3366FF") +
-      ggplot2::labs(x = group_name, y = dv_name,
-                    subtitle = "Diamond marks the group mean") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$box <- p
-  }
-
-  .jst_return_plots(plots)
-}
-
-
-# -- jplot.jst_anova -----------------------------------------------------------
-
-#' @rdname jplot
-#' @export
-#' @importFrom rlang .data
-jplot.jst_anova <- function(x, which = "core", ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(diagnostics = "which", plots = "which",
-                show = "which", type = "which"),
-    fn_name = "jplot.jst_anova"
-  )
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  plot_set <- .jst_resolve_which(which, core = "box", all_plots = "box",
-                                 class_name = "jst_anova")
-
-  mf <- x$model_frame
-  if (is.null(mf)) {
-    stop("jplot() requires model_frame on the jst_anova object. ",
-         "Re-run jaov() with the current version of the package.",
-         call. = FALSE)
-  }
-  terms <- all.vars(x$formula)
-  dv_name    <- terms[1]
-  group_name <- terms[2]
-
-  plots <- list()
-
-  if ("box" %in% plot_set) {
-    plot_df <- data.frame(
-      dv    = mf[[dv_name]],
-      group = mf[[group_name]]
-    )
-    if (!is.factor(plot_df$group)) plot_df$group <- factor(plot_df$group)
-
-    p <- ggplot2::ggplot(plot_df,
-                         ggplot2::aes(x = .data$group, y = .data$dv)) +
-      ggplot2::geom_boxplot(fill = "#E6EEF9", color = "#333333",
-                            outlier.alpha = 0.6) +
-      ggplot2::stat_summary(fun = mean, geom = "point",
-                            shape = 18, size = 3, color = "#3366FF") +
-      ggplot2::labs(x = group_name, y = dv_name,
-                    subtitle = "Diamond marks the group mean") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$box <- p
-  }
-
-  .jst_return_plots(plots)
-}
-
-
-# -- jplot.jst_corr ------------------------------------------------------------
-
-#' @rdname jplot
-#' @export
-#' @importFrom rlang .data
-jplot.jst_corr <- function(x, which = "core", ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(diagnostics = "which", plots = "which",
-                show = "which", type = "which"),
-    fn_name = "jplot.jst_corr"
-  )
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  r_matrix <- x$r
-  n_vars   <- nrow(r_matrix)
-
-  default_core <- if (n_vars >= 3) "heatmap" else "scatter"
-  all_plots <- if (n_vars >= 3) "heatmap" else c("scatter", "heatmap")
-
-  plot_set <- .jst_resolve_which(which, core = default_core,
-                                 all_plots = all_plots,
-                                 class_name = "jst_corr")
-
-  plots <- list()
-
-  if ("heatmap" %in% plot_set) {
-    var_names <- rownames(r_matrix)
-    heat_df <- expand.grid(
-      row = factor(var_names, levels = var_names),
-      col = factor(var_names, levels = rev(var_names)),
-      stringsAsFactors = FALSE
-    )
-    heat_df$r <- as.vector(r_matrix[cbind(match(heat_df$row, var_names),
-                                           match(heat_df$col, var_names))])
-    heat_df$label <- ifelse(is.na(heat_df$r), "",
-                            sprintf("%.2f", heat_df$r))
-
-    p <- ggplot2::ggplot(heat_df,
-                         ggplot2::aes(x = .data$row, y = .data$col,
-                                      fill = .data$r)) +
-      ggplot2::geom_tile(color = "white", linewidth = 0.5) +
-      ggplot2::geom_text(ggplot2::aes(label = .data$label),
-                         size = 3.5, color = "#222222") +
-      ggplot2::scale_fill_gradient2(low = "#CC3333", mid = "white",
-                                    high = "#3366FF", midpoint = 0,
-                                    limits = c(-1, 1), na.value = "grey90") +
-      ggplot2::labs(title = "Correlation Matrix",
-                    x = NULL, y = NULL, fill = "r") +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45,
-                                                         hjust = 1))
-    print(p)
-    plots$heatmap <- p
-  }
-
-  if ("scatter" %in% plot_set) {
-    mf <- x$model_frame
-    if (is.null(mf)) {
-      stop("Scatter plot requires model_frame on the jst_corr object. ",
-           "Re-run jcorr() with the current version of the package.",
-           call. = FALSE)
-    }
-    if (ncol(mf) != 2) {
-      stop("Scatter plot is only available when jcorr() was called with ",
-           "exactly 2 variables.", call. = FALSE)
-    }
-    var_names <- colnames(mf)
-    r_val <- r_matrix[1, 2]
-    n_val <- x$n[1, 2]
-
-    p <- ggplot2::ggplot(mf,
-                         ggplot2::aes(x = .data[[var_names[1]]],
-                                      y = .data[[var_names[2]]])) +
-      ggplot2::geom_point(alpha = 0.55, color = "#222222") +
-      ggplot2::labs(subtitle = sprintf("r = %.3f, N = %d", r_val, n_val),
-                    x = var_names[1], y = var_names[2]) +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$scatter <- p
-  }
-
-  .jst_return_plots(plots)
-}
-
-
-# -- jplot.jst_chisq -----------------------------------------------------------
-
-#' @rdname jplot
-#' @export
-#' @importFrom rlang .data
-jplot.jst_chisq <- function(x, which = "core", ...) {
-
-  .jst_check_args(
-    list(...),
-    aliases = c(diagnostics = "which", plots = "which",
-                show = "which", type = "which"),
-    fn_name = "jplot.jst_chisq"
-  )
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
-  }
-
-  plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
-                                 class_name = "jst_chisq")
-
-  plots <- list()
-
-  if ("bar" %in% plot_set) {
-    obs <- x$observed
-    row_labels <- rownames(obs)
-    col_labels <- colnames(obs)
-    if (tail(row_labels, 1) == "Total") {
-      obs <- obs[-nrow(obs), , drop = FALSE]
-      row_labels <- row_labels[-length(row_labels)]
-    }
-    if (tail(col_labels, 1) == "Total") {
-      obs <- obs[, -ncol(obs), drop = FALSE]
-      col_labels <- col_labels[-length(col_labels)]
-    }
-
-    bar_df <- expand.grid(
-      row = factor(row_labels, levels = row_labels),
-      col = factor(col_labels, levels = col_labels),
-      stringsAsFactors = FALSE
-    )
-    bar_df$count <- as.vector(as.matrix(obs))
-
-    p <- ggplot2::ggplot(bar_df,
-                         ggplot2::aes(x = .data$row, y = .data$count,
-                                      fill = .data$col)) +
-      ggplot2::geom_col(position = ggplot2::position_dodge(width = 0.8),
-                        width = 0.7) +
-      ggplot2::scale_fill_brewer(palette = "Blues") +
-      ggplot2::labs(x = NULL, y = "Count", fill = NULL) +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$bar <- p
-  }
-
-  .jst_return_plots(plots)
-}
-
-
-# -- jplot.jst_desc / jplot.jst_freq (deferred to v2) --------------------------
-
-#' @rdname jplot
-#' @export
-jplot.jst_desc <- function(x, which = "core", ...) {
-  stop("Plotting jst_desc result objects is not supported. ",
-       "Instead, call jplot() with the data frame directly, e.g.:\n",
-       "  jplot(SampleData, Age)        # histogram\n",
-       "  jplot(SampleData, Gender)     # bar chart\n",
-       "  jplot(SampleData, Age, Gender) # boxplot",
-       call. = FALSE)
-}
-
-#' @rdname jplot
-#' @export
-jplot.jst_freq <- function(x, which = "core", ...) {
-  stop("Plotting jst_freq result objects is not supported. ",
-       "Instead, call jplot() with the data frame directly, e.g.:\n",
-       "  jplot(SampleData, Gender)              # bar chart\n",
-       "  jplot(SampleData, Gender, Employment)  # grouped bar chart",
-       call. = FALSE)
-}
-
-
-

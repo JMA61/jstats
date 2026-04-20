@@ -43,7 +43,15 @@ Order of operations:
 }
 }
 \details{
-When the dataset was specified explicitly (not via juse default), jcomplete
-and jfilter are skipped and a note is printed if settings exist.
+jcomplete and jfilter are keyed per-dataset. They apply whenever the
+matching dataset is used, regardless of whether that dataset was supplied
+via the juse() default or specified explicitly in the function call.
+This matches the SPSS FILTER model: persistent state remains in effect
+until explicitly turned off via jfilter(off) / jcomplete(off).
+
+When the current dataset has no jfilter / jcomplete set but at least one
+other dataset does have an active setting, a yellow-coloured note is
+included in the pipeline messages to remind the user that filtering is
+not active for this particular dataset.
 }
 \keyword{internal}
