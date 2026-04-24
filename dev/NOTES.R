@@ -6,7 +6,7 @@
 
 # 1) Run this code IN THE CONSOLE or from here to rebuild the docs and run a check
 devtools::document()  # this updates the documentation - including creating help files for ?jt for example.
-devtools::check()     # this is an optional more thorough check. there will be some ERROR that has to quarto - ignore.
+devtools::check()     # this is a check for problems. there will be some ERROR that has to quarto - ignore.
 
 devtools::check(remote = TRUE) ## an even more thorough check to mimic closer to what CRAN will look for
 
