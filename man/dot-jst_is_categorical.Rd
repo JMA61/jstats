@@ -2,7 +2,7 @@
 % Please edit documentation in R/7036Tools.R
 \name{.jst_is_categorical}
 \alias{.jst_is_categorical}
-\title{Internal helper: classify a variable as categorical or numeric}
+\title{Internal helper: intent-based categorical classifier}
 \usage{
 .jst_is_categorical(x, var_name = NULL, data_name = NULL)
 }
@@ -16,34 +16,33 @@ Required for the jdummy() registration check.}
 Required for the jdummy() registration check.}
 }
 \value{
-TRUE if categorical, FALSE if continuous.
+TRUE if the user has declared the variable categorical,
+FALSE otherwise.
 }
 \description{
-Unified classifier used across the package (jplot, jlm, jlogistic, jdesc,
-jscreen, jcorr, and any other function that needs to distinguish
-categorical from continuous variables). The rule is specified in the
-"Categorical classification rules" section of the package changelog.
+Returns TRUE only when the user has explicitly signalled that a variable
+should be treated as categorical. This helper answers the question
+"should this variable be behaviourally treated as categorical?" — for
+decisions like factoring in regression, expanding to dummies, or
+excluding from a correlation matrix.
 }
 \details{
-Per-call overrides (\code{numeric = "Var"} / \code{categorical = "Var"})
-are handled by the calling function before reaching this helper. This
-function implements rules 3-7 only:
+Paired with \code{.jst_is_discrete_integer()} (the structural helper).
+Callers needing behavioural decisions use this helper; callers needing
+a warning trigger typically check this helper first, and fall back to
+the structural helper only if this one returns FALSE.
+
+Rules (first match wins):
 
 \enumerate{
 \item jdummy() registration for \code{var_name} on \code{data_name}
 -> categorical.
 \item Class factor, logical, or character -> categorical.
-\item haven_labelled (including haven_labelled_spss) with value labels
-attached to at least one non-missing value present in the data
--> categorical.
-\item Plain numeric (or haven_labelled numeric that fell through 3)
-with all whole-number values, min >= 0, max < 6, and at least 2
-unique non-NA values -> categorical.
-\item Otherwise -> continuous.
+\item Otherwise -> FALSE.
 }
 
-NA preprocessing (auto-conversion of values labelled "Missing" to NA) is
-expected to have run already via \code{.jst_apply_pipeline()} before this
-helper is called on analysis data.
+NA preprocessing is expected to have run already via
+\code{.jst_apply_pipeline()} before this helper is called on analysis
+data, though neither rule depends on NA state.
 }
 \keyword{internal}
