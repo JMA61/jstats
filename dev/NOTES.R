@@ -5,13 +5,20 @@
 ## ...can also update what was changed in this version in the git commit -m code below
 
 # 1) Run this code IN THE CONSOLE or from here to rebuild the docs and run a check
-devtools::document()  # this updates the documentation - including creating help files for ?jt for example.
-devtools::check()     # this is a check for problems. there will be some ERROR that has to quarto - ignore.
 
-devtools::check(remote = TRUE) ## an even more thorough check to mimic closer to what CRAN will look for
 
-### To load the functions into the current session use
-devtools::load_all()
+devtools::load_all() ### To test the loading of the functions for parse errors - called again by document()
+devtools::document()  # regenerates the .Rd help files and NAMESPACE from roxygen2 comments
+# full CRAN-style check; you may see Quarto-related noise in the verbose output (Windows tooling quirk) —
+# it does not show up in the final 0/0/0 tally and is not a real error
+devtools::check()
+
+## adds CRAN-incoming checks that require internet
+## — URL validation in DESCRIPTION/roxygen, version-number feasibility against current CRAN,
+##  and a few other release-readiness checks.
+## Run before any release-candidate or CRAN submission; routine edits don't need this.
+devtools::check(remote = TRUE)
+
 
 # 2) Run this code IN THE TERMINAL - note the change to the version number:
 
