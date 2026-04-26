@@ -1,5 +1,9 @@
 
-# -- Internal helpers ----------------------------------------------------------
+# =============================================================================
+#  INTERNAL HELPERS
+# =============================================================================
+
+# -- Output formatting helpers ------------------------------------------------
 
 #' Internal helper: format a class vector for readable display
 #'
@@ -189,8 +193,6 @@
     cat(prefix, paste(row_cells, collapse = gap), "\n", sep = "")
   }
 }
-
-
 
 
 # -----------------------------------------------------------------------------
@@ -877,6 +879,336 @@
 }
 
 
+# -- Variable classifier helpers ----------------------------------------------
+#
+# Four helpers that answer "what kind of variable is this?" Each does one
+# thing well — they are deliberately not merged because callers have
+# different needs:
+#
+#   .jst_is_categorical()      — intent helper. TRUE only when the user has
+#                                declared categorical (jdummy registration,
+#                                or class factor/logical/character). Drives
+#                                behavioural decisions in jlm and jlogistic.
+#   .jst_is_discrete_integer() — structural helper. TRUE for variables that
+#                                *look* categorical (haven-labelled with
+#                                labels in data and <= 6 distinct values, or
+#                                whole-number 0-6 numeric). Drives warnings.
+#   .jst_is_dichotomy()        — single source of truth for "is this a two-
+#                                value variable, and what coding does it
+#                                use?" Used by jlm and jlogistic DV/IV
+#                                checks; future jcorr point-biserial.
+#   .jst_is_count()            — TRUE for plain non-negative whole-number
+#                                numeric, max <= 6, not haven-labelled.
+#                                Warning trigger for jlm DV.
+# -----------------------------------------------------------------------------
+
+#' Internal helper: intent-based categorical classifier
+#'
+#' Returns TRUE only when the user has explicitly signalled that a variable
+#' should be treated as categorical. This helper answers the question
+#' "should this variable be behaviourally treated as categorical?" — for
+#' decisions like factoring in regression, expanding to dummies, or
+#' excluding from a correlation matrix.
+#'
+#' Paired with \code{.jst_is_discrete_integer()} (the structural helper).
+#' Callers needing behavioural decisions use this helper; callers needing
+#' a warning trigger typically check this helper first, and fall back to
+#' the structural helper only if this one returns FALSE.
+#'
+#' Rules (first match wins):
+#'
+#' \enumerate{
+#'   \item jdummy() registration for \code{var_name} on \code{data_name}
+#'         -> categorical.
+#'   \item Class factor, logical, or character -> categorical.
+#'   \item Otherwise -> FALSE.
+#' }
+#'
+#' NA preprocessing is expected to have run already via
+#' \code{.jst_apply_pipeline()} before this helper is called on analysis
+#' data, though neither rule depends on NA state.
+#'
+#' @param x A variable (vector).
+#' @param var_name Optional character string. The variable's column name.
+#'   Required for the jdummy() registration check.
+#' @param data_name Optional character string. The data frame's name.
+#'   Required for the jdummy() registration check.
+#' @return TRUE if the user has declared the variable categorical,
+#'   FALSE otherwise.
+#' @keywords internal
+.jst_is_categorical <- function(x, var_name = NULL, data_name = NULL) {
+
+  # -- Rule A: jdummy() registration ---------------------------------------
+  if (!is.null(var_name) && !is.null(data_name)) {
+    dummy_regs <- .jst_get_dummy(data_name)
+    if (!is.null(dummy_regs) && length(dummy_regs) > 0) {
+      is_registered <- any(vapply(dummy_regs,
+                                  function(r) identical(r$var_name, var_name),
+                                  logical(1)))
+      if (is_registered) return(TRUE)
+    }
+  }
+
+  # -- Rule B: factor, logical, character ----------------------------------
+  if (is.factor(x) || is.logical(x) || is.character(x)) return(TRUE)
+
+  FALSE
+}
+
+
+#' Internal helper: structural categorical-looking classifier
+#'
+#' Returns TRUE when a variable's shape suggests it *could* be categorical
+#' but has not been explicitly declared as such via jdummy() or a per-call
+#' override. This helper answers a different question from
+#' \code{.jst_is_categorical()}: it describes the structure of the values,
+#' not the user's intent.
+#'
+#' Used primarily as a *warning trigger*: callers that want to alert users
+#' to "this looks like it should probably have been jdummy-registered or
+#' passed via categorical=" check this helper. It does NOT license
+#' behavioural changes — analysis functions should only factor variables
+#' based on the intent helper, not this one.
+#'
+#' Two structural rules, checked in order. First match wins.
+#'
+#' \enumerate{
+#'   \item haven_labelled (including haven_labelled_spss) with value labels
+#'         attached to at least one non-missing value present in the data,
+#'         AND <= 6 unique non-NA values overall -> TRUE. Character-type
+#'         labelled vectors return TRUE immediately. Numeric labelled
+#'         vectors require BOTH that at least one labelled code actually
+#'         appears in the (post-NA-preprocessing) data AND that there are
+#'         no more than 6 distinct values present (variables with 7+
+#'         distinct values have enough categories that linear-model
+#'         assumptions hold reasonably well).
+#'   \item Plain numeric (or haven_labelled numeric that fell through 1)
+#'         with all whole-number values, min >= 0, max <= 6, and at least
+#'         2 unique non-NA values -> TRUE.
+#' }
+#'
+#' Bounds on both rules (0 to 6 inclusive) support the common view that
+#' an interval-like variable with 6+ categories is adequately continuous
+#' for linear-model use. 7-category Likert coded as 0-6 or 1-6 still
+#' triggers the warning; coded as 1-7 does not. A 10-category labelled
+#' Income variable falls through both rules and is treated as continuous.
+#'
+#' NA preprocessing (auto-conversion of values labelled "Missing" to NA)
+#' is expected to have run already via \code{.jst_apply_pipeline()} before
+#' this helper is called on analysis data. Rule 1's "labelled codes
+#' present in data" check depends on this ordering.
+#'
+#' @param x A variable (vector).
+#' @param var_name Optional character string. The variable's column name.
+#'   Accepted for call-site symmetry with \code{.jst_is_categorical()};
+#'   not currently used in this helper's logic.
+#' @param data_name Optional character string. The data frame's name.
+#'   Accepted for call-site symmetry with \code{.jst_is_categorical()};
+#'   not currently used in this helper's logic.
+#' @return TRUE if the variable has categorical-like structure,
+#'   FALSE otherwise.
+#' @keywords internal
+.jst_is_discrete_integer <- function(x, var_name = NULL, data_name = NULL) {
+
+  # -- Rule 1: haven_labelled with non-missing value labels ----------------
+  # Require at most 6 unique non-NA values present in the data. Variables
+  # with 7+ distinct values have enough categories that linear-regression
+  # assumptions hold reasonably well (the 6-7 minimum convention for
+  # interval-like DVs), so we do not flag them as categorical-like even
+  # if they came in with value labels attached.
+  if (haven::is.labelled(x)) {
+    val_labs <- labelled::val_labels(x)
+    if (!is.null(val_labs) && length(val_labs) > 0) {
+      if (typeof(x) == "character") {
+        # Character-labelled: any labels present make it categorical.
+        return(TRUE)
+      }
+      # Numeric-labelled: require at least one labelled code to be present
+      # in the (post-NA-preprocessing) data, AND require <= 6 unique
+      # non-NA values overall. The first check prevents a continuous
+      # variable with only a "Missing" label from misclassifying as
+      # categorical once the missing values have been NA'd out. The
+      # second check prevents large-N labelled variables (e.g., Income
+      # with 10 broad categories) from being flagged.
+      x_num       <- suppressWarnings(as.numeric(x))
+      non_na_vals <- x_num[!is.na(x_num)]
+      if (length(non_na_vals) > 0 &&
+          any(val_labs %in% non_na_vals) &&
+          length(unique(non_na_vals)) <= 6) {
+        return(TRUE)
+      }
+      # Fall through to Rule 2 if no labelled codes remain in the data,
+      # or if the variable has too many unique values to be flagged.
+    }
+  }
+
+  # -- Rule 2: whole-number 0-6 range --------------------------------------
+  if (is.numeric(x) || haven::is.labelled(x)) {
+    x_num   <- suppressWarnings(as.numeric(x))
+    x_clean <- x_num[!is.na(x_num)]
+    if (length(x_clean) >= 2) {
+      unique_vals <- unique(x_clean)
+      if (length(unique_vals) >= 2 &&
+          all(x_clean == floor(x_clean)) &&
+          min(x_clean) >= 0 &&
+          max(x_clean) <= 6) {
+        return(TRUE)
+      }
+    }
+  }
+
+  FALSE
+}
+
+
+#' Internal helper: dichotomy classifier
+#'
+#' Returns information about whether a variable is a two-value (dichotomous)
+#' variable, and if so, what coding it uses. Designed to be the single
+#' source of truth across the package for "is this a dichotomy?" questions
+#' — used by jlm DV checks, by jlogistic DV validation, and (in the
+#' future) by jcorr inclusion decisions for point-biserial correlations.
+#'
+#' Detects dichotomies in any of these forms:
+#' \itemize{
+#'   \item Numeric (or haven_labelled numeric) with exactly two unique
+#'         non-NA values: classified by coding pattern as "0/1", "1/2",
+#'         or "other" (e.g. 5/10, -1/1).
+#'   \item Factor with exactly two levels: classified as "factor".
+#'   \item Character with exactly two unique non-NA values: classified
+#'         as "character".
+#'   \item Logical with both TRUE and FALSE present: classified as
+#'         "logical".
+#' }
+#'
+#' Returns a list with two named elements so callers can both detect
+#' dichotomies and react to specific codings without redoing the work:
+#' \itemize{
+#'   \item \code{is_dichotomy}: TRUE if the variable has exactly two
+#'         non-NA distinct values, FALSE otherwise.
+#'   \item \code{coding}: One of "0/1", "1/2", "other", "factor",
+#'         "character", "logical" when \code{is_dichotomy} is TRUE;
+#'         \code{NA_character_} otherwise.
+#' }
+#'
+#' Why a list rather than two helpers: most callers want both pieces of
+#' information at the same time (e.g. jlogistic asks both "is this a
+#' dichotomy?" and "what coding?" to decide on its error message). One
+#' helper that returns both avoids duplicating detection work and
+#' eliminates the risk of two helpers giving inconsistent answers if
+#' they're modified independently later.
+#'
+#' This helper makes no judgement about whether dichotomous treatment
+#' is appropriate — that's up to the caller. jlogistic uses it to
+#' validate the DV (and stops if not coded 0/1); the new jlm DV check
+#' uses it to warn that a different model might have been intended;
+#' future jcorr could use it to decide which correlation method to use.
+#'
+#' @param x A variable (vector).
+#' @return A list with elements \code{is_dichotomy} (logical) and
+#'   \code{coding} (character or NA).
+#' @keywords internal
+.jst_is_dichotomy <- function(x) {
+
+  na_result <- list(is_dichotomy = FALSE, coding = NA_character_)
+
+  # -- Logical: TRUE/FALSE -------------------------------------------------
+  if (is.logical(x)) {
+    vals <- unique(x[!is.na(x)])
+    if (length(vals) == 2) return(list(is_dichotomy = TRUE, coding = "logical"))
+    return(na_result)
+  }
+
+  # -- Factor: two levels --------------------------------------------------
+  if (is.factor(x)) {
+    if (nlevels(x) == 2) return(list(is_dichotomy = TRUE, coding = "factor"))
+    return(na_result)
+  }
+
+  # -- Character: two unique non-NA values ---------------------------------
+  if (is.character(x)) {
+    vals <- unique(x[!is.na(x)])
+    if (length(vals) == 2) return(list(is_dichotomy = TRUE, coding = "character"))
+    return(na_result)
+  }
+
+  # -- Numeric or haven_labelled numeric: classify by coding pattern -------
+  if (is.numeric(x) || haven::is.labelled(x)) {
+    vals <- suppressWarnings(as.numeric(x))
+    vals <- vals[!is.na(vals)]
+    unique_vals <- sort(unique(vals))
+    if (length(unique_vals) != 2) return(na_result)
+    coding <- if (identical(unique_vals, c(0, 1))) {
+                "0/1"
+              } else if (identical(unique_vals, c(1, 2))) {
+                "1/2"
+              } else {
+                "other"
+              }
+    return(list(is_dichotomy = TRUE, coding = coding))
+  }
+
+  na_result
+}
+
+
+#' Internal helper: count-variable classifier
+#'
+#' Returns TRUE when a variable's values fit the structural pattern of a
+#' small-range count: non-negative whole numbers in the 0-6 range, with
+#' no value labels attached, and not a dichotomy (which has its own
+#' helper).
+#'
+#' Used as a *warning trigger* for analyses that assume a continuous DV
+#' with at least 6-7 distinct values for reliable inference. The jlm DV
+#' check uses it to warn that linear regression's assumptions (normally
+#' distributed residuals, constant variance) are usually violated by
+#' small-range counts. A future jpoisson()/jnegbin() workflow would be
+#' the appropriate response when count regression is implemented; for
+#' now the warning explains the limitation.
+#'
+#' This helper deliberately uses the same range rules as
+#' .jst_is_discrete_integer() (min >= 0, max <= 6, all whole numbers).
+#' The only structural difference is the "not haven-labelled" rule:
+#' counts in this package are typically plain integers, while labelled
+#' small-range integers are usually Likert items or category codes
+#' rather than counts. Both helpers can return TRUE for the same
+#' variable (e.g., an unlabelled small-range count fires both); the
+#' calling function decides how to handle that overlap. For example,
+#' the jlm DV check examines counts before discrete-integers so that
+#' an unlabelled count gets the count-specific warning rather than the
+#' more general categorical-like one.
+#'
+#' Detection criteria, all required:
+#' \itemize{
+#'   \item is.numeric and not haven_labelled
+#'   \item not a dichotomy (.jst_is_dichotomy() handles the binary case)
+#'   \item all values are whole numbers (integer-valued)
+#'   \item minimum value >= 0
+#'   \item maximum value <= 6
+#'   \item at least 2 non-NA values
+#' }
+#'
+#' @param x A variable (vector).
+#' @return TRUE if the variable looks like a small-range count, FALSE
+#'   otherwise.
+#' @keywords internal
+.jst_is_count <- function(x) {
+
+  if (haven::is.labelled(x))   return(FALSE)
+  if (!is.numeric(x))          return(FALSE)
+  if (.jst_is_dichotomy(x)$is_dichotomy) return(FALSE)
+
+  vals <- x[!is.na(x)]
+  if (length(vals) < 2)        return(FALSE)
+  if (!all(vals == floor(vals))) return(FALSE)
+  if (min(vals) < 0)           return(FALSE)
+  if (max(vals) > 6)           return(FALSE)
+
+  TRUE
+}
+
+
 # -----------------------------------------------------------------------------
 # .jst_missing_comma_error()
 # Called when a data-first function's data argument fails to evaluate. This
@@ -1049,6 +1381,10 @@
   return(invisible(result))
 }
 
+
+# =============================================================================
+#  USER-FACING SETUP
+# =============================================================================
 
 # -- juse ---------------------------------------------------------------------
 
@@ -2003,6 +2339,10 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 }
 
 
+# =============================================================================
+#  DESCRIPTIVES
+# =============================================================================
+
 # -- jdesc --------------------------------------------------------------------
 
 #' Descriptive statistics for one or more variables
@@ -2535,6 +2875,10 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
   invisible(ret)
 }
 
+
+# =============================================================================
+#  INFERENCE / GROUP COMPARISON
+# =============================================================================
 
 # -- jt -----------------------------------------------------------------------
 
@@ -3497,7 +3841,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 }
 
 
-# -- jlm diagnostic helpers ----------------------------------------------------
+# =============================================================================
+#  REGRESSION
+# =============================================================================
+
+# -- Regression model helpers (jlm and jlogistic) -----------------------------
 
 #' Internal helper: clean up factor coefficient names for output
 #'
@@ -3711,6 +4059,229 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
       ggplot2::theme_minimal()
     print(p)
     plots$leverage <- p
+  }
+
+  invisible(plots)
+}
+
+
+#' Produce diagnostic plots for a binary logistic regression
+#'
+#' Internal helper called by \code{jplot.jst_logistic()} to generate
+#' diagnostic plots appropriate for binary outcomes. Unlike standard
+#' linear-regression residual plots, these are designed for the structure
+#' of a logistic model.
+#'
+#' Produces any subset of five plots: binned residuals, ROC curve,
+#' calibration plot, Cook's distance, and residuals vs leverage.
+#'
+#' Each plot is printed to the current device. Returns the plots invisibly
+#' as a named list so callers can capture or modify them.
+#'
+#' @param model A fitted \code{glm} object with \code{family = binomial}.
+#' @param which Character vector of diagnostic names. Any subset of
+#'   \code{"binned"}, \code{"roc"}, \code{"calibration"}, \code{"cooks"},
+#'   \code{"leverage"}.
+#' @param n_label Integer. Number of extreme observations to label on
+#'   relevant plots. Default 3.
+#'
+#' @return Invisibly, a named list of \code{ggplot} objects corresponding to
+#'   the requested plots. Returns \code{NULL} invisibly if ggplot2 is not
+#'   available.
+#'
+#' @keywords internal
+#' @importFrom rlang .data
+.jst_plot_logistic_diagnostics <- function(model, which, n_label = 3) {
+
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
+    return(invisible(NULL))
+  }
+
+  observed  <- stats::model.frame(model)[, 1]
+  if (is.factor(observed)) observed <- as.numeric(observed) - 1
+  predicted <- stats::fitted(model)
+  resid_raw <- observed - predicted
+  leverage  <- stats::hatvalues(model)
+  cooks_d   <- stats::cooks.distance(model)
+  obs_lab   <- names(predicted)
+  if (is.null(obs_lab)) obs_lab <- as.character(seq_along(predicted))
+
+  top_n <- function(x, n) {
+    if (length(x) <= n) return(seq_along(x))
+    order(abs(x), decreasing = TRUE)[seq_len(n)]
+  }
+
+  plots <- list()
+
+  # -- 1. Binned residuals --------------------------------------------------
+  if ("binned" %in% which) {
+    n_bins <- max(10, floor(sqrt(length(predicted))))
+    ord    <- order(predicted)
+    bins   <- cut(seq_along(ord), breaks = n_bins, labels = FALSE)
+    bin_df <- data.frame(
+      bin_mean_pred  = tapply(predicted[ord], bins, mean),
+      bin_mean_resid = tapply(resid_raw[ord], bins, mean),
+      bin_n          = as.numeric(table(bins)),
+      stringsAsFactors = FALSE
+    )
+    bin_df$upper <- 2 * sqrt(bin_df$bin_mean_pred *
+                             (1 - bin_df$bin_mean_pred) / bin_df$bin_n)
+    bin_df$lower <- -bin_df$upper
+
+    p <- ggplot2::ggplot(bin_df,
+                         ggplot2::aes(x = .data$bin_mean_pred,
+                                      y = .data$bin_mean_resid)) +
+      ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
+                          color = "red") +
+      ggplot2::geom_line(ggplot2::aes(y = .data$upper),
+                         color = "grey60", linetype = "dotted") +
+      ggplot2::geom_line(ggplot2::aes(y = .data$lower),
+                         color = "grey60", linetype = "dotted") +
+      ggplot2::geom_point(alpha = 0.7, color = "steelblue") +
+      ggplot2::labs(title = "Binned Residuals",
+                    x = "Mean Predicted Probability (bin)",
+                    y = "Mean Residual (bin)",
+                    subtitle = "Dotted lines: approximate 95% bounds under a well-fit model") +
+      ggplot2::theme_minimal()
+    print(p)
+    plots$binned <- p
+  }
+
+  # -- 2. ROC curve ---------------------------------------------------------
+  if ("roc" %in% which) {
+    thresholds <- sort(unique(c(0, predicted, 1)), decreasing = TRUE)
+    roc_df <- data.frame(
+      tpr = vapply(thresholds, function(t) {
+        sum(predicted >= t & observed == 1) / max(1, sum(observed == 1))
+      }, numeric(1)),
+      fpr = vapply(thresholds, function(t) {
+        sum(predicted >= t & observed == 0) / max(1, sum(observed == 0))
+      }, numeric(1))
+    )
+    ord_fpr <- order(roc_df$fpr)
+    roc_df  <- roc_df[ord_fpr, ]
+    auc <- sum(diff(roc_df$fpr) *
+               (roc_df$tpr[-1] + roc_df$tpr[-nrow(roc_df)]) / 2)
+
+    auc_text <- paste0("AUC = ", sprintf("%.3f", auc))
+
+    p <- ggplot2::ggplot(roc_df, ggplot2::aes(x = .data$fpr, y = .data$tpr)) +
+      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
+                           color = "grey60") +
+      ggplot2::geom_line(color = "steelblue", linewidth = 0.8) +
+      ggplot2::annotate("text", x = 0.7, y = 0.1, label = auc_text,
+                        hjust = 0, size = 4.2, color = "#333333") +
+      ggplot2::coord_equal() +
+      ggplot2::labs(title = "ROC Curve",
+                    x = "False Positive Rate (1 \u2013 Specificity)",
+                    y = "True Positive Rate (Sensitivity)") +
+      ggplot2::theme_minimal()
+    print(p)
+    plots$roc <- p
+  }
+
+  # -- 3. Calibration plot --------------------------------------------------
+  if ("calibration" %in% which) {
+    n_bins <- 10
+    ord    <- order(predicted)
+    bins   <- cut(seq_along(ord), breaks = n_bins, labels = FALSE)
+    cal_df <- data.frame(
+      pred_mean = tapply(predicted[ord], bins, mean),
+      obs_rate  = tapply(observed[ord], bins, mean),
+      bin_n     = as.numeric(table(bins)),
+      stringsAsFactors = FALSE
+    )
+
+    p <- ggplot2::ggplot(cal_df,
+                         ggplot2::aes(x = .data$pred_mean,
+                                      y = .data$obs_rate)) +
+      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
+                           color = "grey60") +
+      ggplot2::geom_point(ggplot2::aes(size = .data$bin_n),
+                          color = "steelblue", alpha = 0.8) +
+      ggplot2::geom_line(color = "steelblue", alpha = 0.5) +
+      ggplot2::scale_size_continuous(range = c(2, 6), guide = "none") +
+      ggplot2::coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+      ggplot2::labs(title = "Calibration Plot",
+                    x = "Mean Predicted Probability",
+                    y = "Observed Proportion",
+                    subtitle = "Points on the diagonal = well-calibrated") +
+      ggplot2::theme_minimal()
+    print(p)
+    plots$calibration <- p
+  }
+
+  # -- 4. Cook's Distance ---------------------------------------------------
+  if ("cooks" %in% which) {
+    df_cooks <- data.frame(
+      idx   = seq_along(cooks_d),
+      cooks = cooks_d,
+      obs   = obs_lab,
+      stringsAsFactors = FALSE
+    )
+    idx <- top_n(df_cooks$cooks, n_label)
+    p <- ggplot2::ggplot(df_cooks, ggplot2::aes(x = .data$idx,
+                                                 y = .data$cooks)) +
+      ggplot2::geom_col(alpha = 0.5, fill = "steelblue") +
+      ggplot2::geom_hline(yintercept = 4 / nrow(df_cooks), linetype = "dashed",
+                          color = "red") +
+      ggplot2::geom_text(data = df_cooks[idx, ],
+                         ggplot2::aes(label = .data$obs),
+                         vjust = -0.5, size = 3, color = "red") +
+      ggplot2::labs(title = "Cook's Distance",
+                    x = "Observation Index",
+                    y = "Cook's Distance") +
+      ggplot2::theme_minimal()
+    print(p)
+    plots$cooks <- p
+  }
+
+  # -- 5. Residuals vs Leverage ---------------------------------------------
+  if ("leverage" %in% which) {
+    pearson_res <- stats::residuals(model, type = "pearson")
+    df_lev <- data.frame(
+      leverage    = leverage,
+      pearson_res = pearson_res,
+      obs         = obs_lab,
+      stringsAsFactors = FALSE
+    )
+    idx <- top_n(df_lev$pearson_res, n_label)
+    p <- ggplot2::ggplot(df_lev, ggplot2::aes(x = .data$leverage,
+                                               y = .data$pearson_res)) +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
+                          color = "red") +
+      ggplot2::geom_text(data = df_lev[idx, ],
+                         ggplot2::aes(label = .data$obs),
+                         hjust = -0.2, size = 3, color = "red") +
+      ggplot2::labs(title = "Residuals vs Leverage",
+                    x = "Leverage",
+                    y = "Pearson Residuals") +
+      ggplot2::theme_minimal()
+    print(p)
+    plots$leverage <- p
+  }
+
+  # Console summary (match the lm helper pattern)
+  plot_names_pretty <- c(
+    binned      = "Binned Residuals",
+    roc         = "ROC Curve",
+    calibration = "Calibration Plot",
+    cooks       = "Cook's Distance",
+    leverage    = "Residuals vs Leverage"
+  )
+  produced <- plot_names_pretty[which]
+  produced <- produced[!is.na(produced)]
+  if (length(produced) == 1) {
+    cat("(Diagnostic plot produced: ", produced, ")\n", sep = "")
+  } else if (length(produced) > 1) {
+    cat("\n", length(produced), " diagnostic plots produced ",
+        "(use the arrow buttons in RStudio's Plots pane to navigate):\n",
+        sep = "")
+    for (i in seq_along(produced)) {
+      cat("  ", i, ". ", produced[i], "\n", sep = "")
+    }
   }
 
   invisible(plots)
@@ -5725,6 +6296,10 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 }
 
 
+# =============================================================================
+#  SCALE CONSTRUCTION
+# =============================================================================
+
 # -- jsum / javg internal helper -----------------------------------------------
 
 #' Internal helper: resolve variable names from enquos, expanding colon ranges
@@ -6186,8 +6761,10 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
 
 
 # =============================================================================
-# jrelabel()
+#  DATA MANAGEMENT — RECODING & LABELING
 # =============================================================================
+
+# -- jrelabel ----------------------------------------------------------------
 
 #' Apply variable and value labels to a variable
 #'
@@ -6337,9 +6914,7 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 }
 
 
-# =============================================================================
-# jrecode()
-# =============================================================================
+# -- jrecode -----------------------------------------------------------------
 
 #' Recode a variable with explicit value mapping and optional labels
 #'
@@ -6664,6 +7239,10 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
 
   return(invisible(result))
 }
+# =============================================================================
+#  DATA I/O
+# =============================================================================
+
 # -- jload --------------------------------------------------------------------
 
 #' Load a data file into R
@@ -7388,230 +7967,9 @@ jsave <- function(data, file, overwrite = FALSE) {
 }
 
 
-# -- .jst_plot_logistic_diagnostics --------------------------------------------
-
-#' Produce diagnostic plots for a binary logistic regression
-#'
-#' Internal helper called by \code{jplot.jst_logistic()} to generate
-#' diagnostic plots appropriate for binary outcomes. Unlike standard
-#' linear-regression residual plots, these are designed for the structure
-#' of a logistic model.
-#'
-#' Produces any subset of five plots: binned residuals, ROC curve,
-#' calibration plot, Cook's distance, and residuals vs leverage.
-#'
-#' Each plot is printed to the current device. Returns the plots invisibly
-#' as a named list so callers can capture or modify them.
-#'
-#' @param model A fitted \code{glm} object with \code{family = binomial}.
-#' @param which Character vector of diagnostic names. Any subset of
-#'   \code{"binned"}, \code{"roc"}, \code{"calibration"}, \code{"cooks"},
-#'   \code{"leverage"}.
-#' @param n_label Integer. Number of extreme observations to label on
-#'   relevant plots. Default 3.
-#'
-#' @return Invisibly, a named list of \code{ggplot} objects corresponding to
-#'   the requested plots. Returns \code{NULL} invisibly if ggplot2 is not
-#'   available.
-#'
-#' @keywords internal
-#' @importFrom rlang .data
-.jst_plot_logistic_diagnostics <- function(model, which, n_label = 3) {
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
-    return(invisible(NULL))
-  }
-
-  observed  <- stats::model.frame(model)[, 1]
-  if (is.factor(observed)) observed <- as.numeric(observed) - 1
-  predicted <- stats::fitted(model)
-  resid_raw <- observed - predicted
-  leverage  <- stats::hatvalues(model)
-  cooks_d   <- stats::cooks.distance(model)
-  obs_lab   <- names(predicted)
-  if (is.null(obs_lab)) obs_lab <- as.character(seq_along(predicted))
-
-  top_n <- function(x, n) {
-    if (length(x) <= n) return(seq_along(x))
-    order(abs(x), decreasing = TRUE)[seq_len(n)]
-  }
-
-  plots <- list()
-
-  # -- 1. Binned residuals --------------------------------------------------
-  if ("binned" %in% which) {
-    n_bins <- max(10, floor(sqrt(length(predicted))))
-    ord    <- order(predicted)
-    bins   <- cut(seq_along(ord), breaks = n_bins, labels = FALSE)
-    bin_df <- data.frame(
-      bin_mean_pred  = tapply(predicted[ord], bins, mean),
-      bin_mean_resid = tapply(resid_raw[ord], bins, mean),
-      bin_n          = as.numeric(table(bins)),
-      stringsAsFactors = FALSE
-    )
-    bin_df$upper <- 2 * sqrt(bin_df$bin_mean_pred *
-                             (1 - bin_df$bin_mean_pred) / bin_df$bin_n)
-    bin_df$lower <- -bin_df$upper
-
-    p <- ggplot2::ggplot(bin_df,
-                         ggplot2::aes(x = .data$bin_mean_pred,
-                                      y = .data$bin_mean_resid)) +
-      ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
-                          color = "red") +
-      ggplot2::geom_line(ggplot2::aes(y = .data$upper),
-                         color = "grey60", linetype = "dotted") +
-      ggplot2::geom_line(ggplot2::aes(y = .data$lower),
-                         color = "grey60", linetype = "dotted") +
-      ggplot2::geom_point(alpha = 0.7, color = "steelblue") +
-      ggplot2::labs(title = "Binned Residuals",
-                    x = "Mean Predicted Probability (bin)",
-                    y = "Mean Residual (bin)",
-                    subtitle = "Dotted lines: approximate 95% bounds under a well-fit model") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$binned <- p
-  }
-
-  # -- 2. ROC curve ---------------------------------------------------------
-  if ("roc" %in% which) {
-    thresholds <- sort(unique(c(0, predicted, 1)), decreasing = TRUE)
-    roc_df <- data.frame(
-      tpr = vapply(thresholds, function(t) {
-        sum(predicted >= t & observed == 1) / max(1, sum(observed == 1))
-      }, numeric(1)),
-      fpr = vapply(thresholds, function(t) {
-        sum(predicted >= t & observed == 0) / max(1, sum(observed == 0))
-      }, numeric(1))
-    )
-    ord_fpr <- order(roc_df$fpr)
-    roc_df  <- roc_df[ord_fpr, ]
-    auc <- sum(diff(roc_df$fpr) *
-               (roc_df$tpr[-1] + roc_df$tpr[-nrow(roc_df)]) / 2)
-
-    auc_text <- paste0("AUC = ", sprintf("%.3f", auc))
-
-    p <- ggplot2::ggplot(roc_df, ggplot2::aes(x = .data$fpr, y = .data$tpr)) +
-      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                           color = "grey60") +
-      ggplot2::geom_line(color = "steelblue", linewidth = 0.8) +
-      ggplot2::annotate("text", x = 0.7, y = 0.1, label = auc_text,
-                        hjust = 0, size = 4.2, color = "#333333") +
-      ggplot2::coord_equal() +
-      ggplot2::labs(title = "ROC Curve",
-                    x = "False Positive Rate (1 \u2013 Specificity)",
-                    y = "True Positive Rate (Sensitivity)") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$roc <- p
-  }
-
-  # -- 3. Calibration plot --------------------------------------------------
-  if ("calibration" %in% which) {
-    n_bins <- 10
-    ord    <- order(predicted)
-    bins   <- cut(seq_along(ord), breaks = n_bins, labels = FALSE)
-    cal_df <- data.frame(
-      pred_mean = tapply(predicted[ord], bins, mean),
-      obs_rate  = tapply(observed[ord], bins, mean),
-      bin_n     = as.numeric(table(bins)),
-      stringsAsFactors = FALSE
-    )
-
-    p <- ggplot2::ggplot(cal_df,
-                         ggplot2::aes(x = .data$pred_mean,
-                                      y = .data$obs_rate)) +
-      ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                           color = "grey60") +
-      ggplot2::geom_point(ggplot2::aes(size = .data$bin_n),
-                          color = "steelblue", alpha = 0.8) +
-      ggplot2::geom_line(color = "steelblue", alpha = 0.5) +
-      ggplot2::scale_size_continuous(range = c(2, 6), guide = "none") +
-      ggplot2::coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
-      ggplot2::labs(title = "Calibration Plot",
-                    x = "Mean Predicted Probability",
-                    y = "Observed Proportion",
-                    subtitle = "Points on the diagonal = well-calibrated") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$calibration <- p
-  }
-
-  # -- 4. Cook's Distance ---------------------------------------------------
-  if ("cooks" %in% which) {
-    df_cooks <- data.frame(
-      idx   = seq_along(cooks_d),
-      cooks = cooks_d,
-      obs   = obs_lab,
-      stringsAsFactors = FALSE
-    )
-    idx <- top_n(df_cooks$cooks, n_label)
-    p <- ggplot2::ggplot(df_cooks, ggplot2::aes(x = .data$idx,
-                                                 y = .data$cooks)) +
-      ggplot2::geom_col(alpha = 0.5, fill = "steelblue") +
-      ggplot2::geom_hline(yintercept = 4 / nrow(df_cooks), linetype = "dashed",
-                          color = "red") +
-      ggplot2::geom_text(data = df_cooks[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         vjust = -0.5, size = 3, color = "red") +
-      ggplot2::labs(title = "Cook's Distance",
-                    x = "Observation Index",
-                    y = "Cook's Distance") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$cooks <- p
-  }
-
-  # -- 5. Residuals vs Leverage ---------------------------------------------
-  if ("leverage" %in% which) {
-    pearson_res <- stats::residuals(model, type = "pearson")
-    df_lev <- data.frame(
-      leverage    = leverage,
-      pearson_res = pearson_res,
-      obs         = obs_lab,
-      stringsAsFactors = FALSE
-    )
-    idx <- top_n(df_lev$pearson_res, n_label)
-    p <- ggplot2::ggplot(df_lev, ggplot2::aes(x = .data$leverage,
-                                               y = .data$pearson_res)) +
-      ggplot2::geom_point(alpha = 0.5) +
-      ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
-                          color = "red") +
-      ggplot2::geom_text(data = df_lev[idx, ],
-                         ggplot2::aes(label = .data$obs),
-                         hjust = -0.2, size = 3, color = "red") +
-      ggplot2::labs(title = "Residuals vs Leverage",
-                    x = "Leverage",
-                    y = "Pearson Residuals") +
-      ggplot2::theme_minimal()
-    print(p)
-    plots$leverage <- p
-  }
-
-  # Console summary (match the lm helper pattern)
-  plot_names_pretty <- c(
-    binned      = "Binned Residuals",
-    roc         = "ROC Curve",
-    calibration = "Calibration Plot",
-    cooks       = "Cook's Distance",
-    leverage    = "Residuals vs Leverage"
-  )
-  produced <- plot_names_pretty[which]
-  produced <- produced[!is.na(produced)]
-  if (length(produced) == 1) {
-    cat("(Diagnostic plot produced: ", produced, ")\n", sep = "")
-  } else if (length(produced) > 1) {
-    cat("\n", length(produced), " diagnostic plots produced ",
-        "(use the arrow buttons in RStudio's Plots pane to navigate):\n",
-        sep = "")
-    for (i in seq_along(produced)) {
-      cat("  ", i, ". ", produced[i], "\n", sep = "")
-    }
-  }
-
-  invisible(plots)
-}
-
+# =============================================================================
+#  PLOTTING
+# =============================================================================
 
 # -- jplot ---------------------------------------------------------------------
 
@@ -8290,312 +8648,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   } else {
     paste0(prefix, ": ", body)
   }
-}
-
-#' Internal helper: intent-based categorical classifier
-#'
-#' Returns TRUE only when the user has explicitly signalled that a variable
-#' should be treated as categorical. This helper answers the question
-#' "should this variable be behaviourally treated as categorical?" — for
-#' decisions like factoring in regression, expanding to dummies, or
-#' excluding from a correlation matrix.
-#'
-#' Paired with \code{.jst_is_discrete_integer()} (the structural helper).
-#' Callers needing behavioural decisions use this helper; callers needing
-#' a warning trigger typically check this helper first, and fall back to
-#' the structural helper only if this one returns FALSE.
-#'
-#' Rules (first match wins):
-#'
-#' \enumerate{
-#'   \item jdummy() registration for \code{var_name} on \code{data_name}
-#'         -> categorical.
-#'   \item Class factor, logical, or character -> categorical.
-#'   \item Otherwise -> FALSE.
-#' }
-#'
-#' NA preprocessing is expected to have run already via
-#' \code{.jst_apply_pipeline()} before this helper is called on analysis
-#' data, though neither rule depends on NA state.
-#'
-#' @param x A variable (vector).
-#' @param var_name Optional character string. The variable's column name.
-#'   Required for the jdummy() registration check.
-#' @param data_name Optional character string. The data frame's name.
-#'   Required for the jdummy() registration check.
-#' @return TRUE if the user has declared the variable categorical,
-#'   FALSE otherwise.
-#' @keywords internal
-.jst_is_categorical <- function(x, var_name = NULL, data_name = NULL) {
-
-  # -- Rule A: jdummy() registration ---------------------------------------
-  if (!is.null(var_name) && !is.null(data_name)) {
-    dummy_regs <- .jst_get_dummy(data_name)
-    if (!is.null(dummy_regs) && length(dummy_regs) > 0) {
-      is_registered <- any(vapply(dummy_regs,
-                                  function(r) identical(r$var_name, var_name),
-                                  logical(1)))
-      if (is_registered) return(TRUE)
-    }
-  }
-
-  # -- Rule B: factor, logical, character ----------------------------------
-  if (is.factor(x) || is.logical(x) || is.character(x)) return(TRUE)
-
-  FALSE
-}
-
-
-#' Internal helper: structural categorical-looking classifier
-#'
-#' Returns TRUE when a variable's shape suggests it *could* be categorical
-#' but has not been explicitly declared as such via jdummy() or a per-call
-#' override. This helper answers a different question from
-#' \code{.jst_is_categorical()}: it describes the structure of the values,
-#' not the user's intent.
-#'
-#' Used primarily as a *warning trigger*: callers that want to alert users
-#' to "this looks like it should probably have been jdummy-registered or
-#' passed via categorical=" check this helper. It does NOT license
-#' behavioural changes — analysis functions should only factor variables
-#' based on the intent helper, not this one.
-#'
-#' Two structural rules, checked in order. First match wins.
-#'
-#' \enumerate{
-#'   \item haven_labelled (including haven_labelled_spss) with value labels
-#'         attached to at least one non-missing value present in the data,
-#'         AND <= 6 unique non-NA values overall -> TRUE. Character-type
-#'         labelled vectors return TRUE immediately. Numeric labelled
-#'         vectors require BOTH that at least one labelled code actually
-#'         appears in the (post-NA-preprocessing) data AND that there are
-#'         no more than 6 distinct values present (variables with 7+
-#'         distinct values have enough categories that linear-model
-#'         assumptions hold reasonably well).
-#'   \item Plain numeric (or haven_labelled numeric that fell through 1)
-#'         with all whole-number values, min >= 0, max <= 6, and at least
-#'         2 unique non-NA values -> TRUE.
-#' }
-#'
-#' Bounds on both rules (0 to 6 inclusive) support the common view that
-#' an interval-like variable with 6+ categories is adequately continuous
-#' for linear-model use. 7-category Likert coded as 0-6 or 1-6 still
-#' triggers the warning; coded as 1-7 does not. A 10-category labelled
-#' Income variable falls through both rules and is treated as continuous.
-#'
-#' NA preprocessing (auto-conversion of values labelled "Missing" to NA)
-#' is expected to have run already via \code{.jst_apply_pipeline()} before
-#' this helper is called on analysis data. Rule 1's "labelled codes
-#' present in data" check depends on this ordering.
-#'
-#' @param x A variable (vector).
-#' @param var_name Optional character string. The variable's column name.
-#'   Accepted for call-site symmetry with \code{.jst_is_categorical()};
-#'   not currently used in this helper's logic.
-#' @param data_name Optional character string. The data frame's name.
-#'   Accepted for call-site symmetry with \code{.jst_is_categorical()};
-#'   not currently used in this helper's logic.
-#' @return TRUE if the variable has categorical-like structure,
-#'   FALSE otherwise.
-#' @keywords internal
-.jst_is_discrete_integer <- function(x, var_name = NULL, data_name = NULL) {
-
-  # -- Rule 1: haven_labelled with non-missing value labels ----------------
-  # Require at most 6 unique non-NA values present in the data. Variables
-  # with 7+ distinct values have enough categories that linear-regression
-  # assumptions hold reasonably well (the 6-7 minimum convention for
-  # interval-like DVs), so we do not flag them as categorical-like even
-  # if they came in with value labels attached.
-  if (haven::is.labelled(x)) {
-    val_labs <- labelled::val_labels(x)
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      if (typeof(x) == "character") {
-        # Character-labelled: any labels present make it categorical.
-        return(TRUE)
-      }
-      # Numeric-labelled: require at least one labelled code to be present
-      # in the (post-NA-preprocessing) data, AND require <= 6 unique
-      # non-NA values overall. The first check prevents a continuous
-      # variable with only a "Missing" label from misclassifying as
-      # categorical once the missing values have been NA'd out. The
-      # second check prevents large-N labelled variables (e.g., Income
-      # with 10 broad categories) from being flagged.
-      x_num       <- suppressWarnings(as.numeric(x))
-      non_na_vals <- x_num[!is.na(x_num)]
-      if (length(non_na_vals) > 0 &&
-          any(val_labs %in% non_na_vals) &&
-          length(unique(non_na_vals)) <= 6) {
-        return(TRUE)
-      }
-      # Fall through to Rule 2 if no labelled codes remain in the data,
-      # or if the variable has too many unique values to be flagged.
-    }
-  }
-
-  # -- Rule 2: whole-number 0-6 range --------------------------------------
-  if (is.numeric(x) || haven::is.labelled(x)) {
-    x_num   <- suppressWarnings(as.numeric(x))
-    x_clean <- x_num[!is.na(x_num)]
-    if (length(x_clean) >= 2) {
-      unique_vals <- unique(x_clean)
-      if (length(unique_vals) >= 2 &&
-          all(x_clean == floor(x_clean)) &&
-          min(x_clean) >= 0 &&
-          max(x_clean) <= 6) {
-        return(TRUE)
-      }
-    }
-  }
-
-  FALSE
-}
-
-
-#' Internal helper: dichotomy classifier
-#'
-#' Returns information about whether a variable is a two-value (dichotomous)
-#' variable, and if so, what coding it uses. Designed to be the single
-#' source of truth across the package for "is this a dichotomy?" questions
-#' — used by jlm DV checks, by jlogistic DV validation, and (in the
-#' future) by jcorr inclusion decisions for point-biserial correlations.
-#'
-#' Detects dichotomies in any of these forms:
-#' \itemize{
-#'   \item Numeric (or haven_labelled numeric) with exactly two unique
-#'         non-NA values: classified by coding pattern as "0/1", "1/2",
-#'         or "other" (e.g. 5/10, -1/1).
-#'   \item Factor with exactly two levels: classified as "factor".
-#'   \item Character with exactly two unique non-NA values: classified
-#'         as "character".
-#'   \item Logical with both TRUE and FALSE present: classified as
-#'         "logical".
-#' }
-#'
-#' Returns a list with two named elements so callers can both detect
-#' dichotomies and react to specific codings without redoing the work:
-#' \itemize{
-#'   \item \code{is_dichotomy}: TRUE if the variable has exactly two
-#'         non-NA distinct values, FALSE otherwise.
-#'   \item \code{coding}: One of "0/1", "1/2", "other", "factor",
-#'         "character", "logical" when \code{is_dichotomy} is TRUE;
-#'         \code{NA_character_} otherwise.
-#' }
-#'
-#' Why a list rather than two helpers: most callers want both pieces of
-#' information at the same time (e.g. jlogistic asks both "is this a
-#' dichotomy?" and "what coding?" to decide on its error message). One
-#' helper that returns both avoids duplicating detection work and
-#' eliminates the risk of two helpers giving inconsistent answers if
-#' they're modified independently later.
-#'
-#' This helper makes no judgement about whether dichotomous treatment
-#' is appropriate — that's up to the caller. jlogistic uses it to
-#' validate the DV (and stops if not coded 0/1); the new jlm DV check
-#' uses it to warn that a different model might have been intended;
-#' future jcorr could use it to decide which correlation method to use.
-#'
-#' @param x A variable (vector).
-#' @return A list with elements \code{is_dichotomy} (logical) and
-#'   \code{coding} (character or NA).
-#' @keywords internal
-.jst_is_dichotomy <- function(x) {
-
-  na_result <- list(is_dichotomy = FALSE, coding = NA_character_)
-
-  # -- Logical: TRUE/FALSE -------------------------------------------------
-  if (is.logical(x)) {
-    vals <- unique(x[!is.na(x)])
-    if (length(vals) == 2) return(list(is_dichotomy = TRUE, coding = "logical"))
-    return(na_result)
-  }
-
-  # -- Factor: two levels --------------------------------------------------
-  if (is.factor(x)) {
-    if (nlevels(x) == 2) return(list(is_dichotomy = TRUE, coding = "factor"))
-    return(na_result)
-  }
-
-  # -- Character: two unique non-NA values ---------------------------------
-  if (is.character(x)) {
-    vals <- unique(x[!is.na(x)])
-    if (length(vals) == 2) return(list(is_dichotomy = TRUE, coding = "character"))
-    return(na_result)
-  }
-
-  # -- Numeric or haven_labelled numeric: classify by coding pattern -------
-  if (is.numeric(x) || haven::is.labelled(x)) {
-    vals <- suppressWarnings(as.numeric(x))
-    vals <- vals[!is.na(vals)]
-    unique_vals <- sort(unique(vals))
-    if (length(unique_vals) != 2) return(na_result)
-    coding <- if (identical(unique_vals, c(0, 1))) {
-                "0/1"
-              } else if (identical(unique_vals, c(1, 2))) {
-                "1/2"
-              } else {
-                "other"
-              }
-    return(list(is_dichotomy = TRUE, coding = coding))
-  }
-
-  na_result
-}
-
-
-#' Internal helper: count-variable classifier
-#'
-#' Returns TRUE when a variable's values fit the structural pattern of a
-#' small-range count: non-negative whole numbers in the 0-6 range, with
-#' no value labels attached, and not a dichotomy (which has its own
-#' helper).
-#'
-#' Used as a *warning trigger* for analyses that assume a continuous DV
-#' with at least 6-7 distinct values for reliable inference. The jlm DV
-#' check uses it to warn that linear regression's assumptions (normally
-#' distributed residuals, constant variance) are usually violated by
-#' small-range counts. A future jpoisson()/jnegbin() workflow would be
-#' the appropriate response when count regression is implemented; for
-#' now the warning explains the limitation.
-#'
-#' This helper deliberately uses the same range rules as
-#' .jst_is_discrete_integer() (min >= 0, max <= 6, all whole numbers).
-#' The only structural difference is the "not haven-labelled" rule:
-#' counts in this package are typically plain integers, while labelled
-#' small-range integers are usually Likert items or category codes
-#' rather than counts. Both helpers can return TRUE for the same
-#' variable (e.g., an unlabelled small-range count fires both); the
-#' calling function decides how to handle that overlap. For example,
-#' the jlm DV check examines counts before discrete-integers so that
-#' an unlabelled count gets the count-specific warning rather than the
-#' more general categorical-like one.
-#'
-#' Detection criteria, all required:
-#' \itemize{
-#'   \item is.numeric and not haven_labelled
-#'   \item not a dichotomy (.jst_is_dichotomy() handles the binary case)
-#'   \item all values are whole numbers (integer-valued)
-#'   \item minimum value >= 0
-#'   \item maximum value <= 6
-#'   \item at least 2 non-NA values
-#' }
-#'
-#' @param x A variable (vector).
-#' @return TRUE if the variable looks like a small-range count, FALSE
-#'   otherwise.
-#' @keywords internal
-.jst_is_count <- function(x) {
-
-  if (haven::is.labelled(x))   return(FALSE)
-  if (!is.numeric(x))          return(FALSE)
-  if (.jst_is_dichotomy(x)$is_dichotomy) return(FALSE)
-
-  vals <- x[!is.na(x)]
-  if (length(vals) < 2)        return(FALSE)
-  if (!all(vals == floor(vals))) return(FALSE)
-  if (min(vals) < 0)           return(FALSE)
-  if (max(vals) > 6)           return(FALSE)
-
-  TRUE
 }
 
 
@@ -9791,6 +9843,5 @@ jplot.jst_freq <- function(x, which = "core", ...) {
        "  jplot(SampleData, Gender, Employment)  # grouped bar chart",
        call. = FALSE)
 }
-
 
 
