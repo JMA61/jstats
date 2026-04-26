@@ -201,6 +201,17 @@
 # apply them in the correct order, and generate info-line messages.
 # -----------------------------------------------------------------------------
 
+#' Internal helper: get filter settings for a named data frame
+#'
+#' Looks up the \code{jfilter()} settings stored under the
+#' \code{.jst_filter} option for a specific data frame name. Returns
+#' \code{NULL} if no filter is set for that data frame.
+#'
+#' @param data_name Character string giving the data frame name to look
+#'   up. If \code{NULL}, returns \code{NULL}.
+#'
+#' @return The stored filter settings list, or \code{NULL} if none.
+#'
 #' @keywords internal
 .jst_get_filter <- function(data_name) {
   if (is.null(data_name)) return(NULL)
@@ -208,6 +219,19 @@
   all_filters[[data_name]]
 }
 
+#' Internal helper: get complete-case settings for a named data frame
+#'
+#' Looks up the \code{jcomplete()} settings stored under the
+#' \code{.jst_complete} option for a specific data frame name. Returns
+#' \code{NULL} if no complete-case settings are stored for that data
+#' frame.
+#'
+#' @param data_name Character string giving the data frame name to look
+#'   up. If \code{NULL}, returns \code{NULL}.
+#'
+#' @return The stored complete-case settings list, or \code{NULL} if
+#'   none.
+#'
 #' @keywords internal
 .jst_get_complete <- function(data_name) {
   if (is.null(data_name)) return(NULL)
@@ -215,6 +239,18 @@
   all_complete[[data_name]]
 }
 
+#' Internal helper: set filter settings for a named data frame
+#'
+#' Stores filter settings under the \code{.jst_filter} option, keyed by
+#' data frame name. Used internally by \code{jfilter()}.
+#'
+#' @param data_name Character string giving the data frame name. If
+#'   \code{NULL}, the call is a silent no-op.
+#' @param settings A list of filter settings to store.
+#'
+#' @return \code{invisible(NULL)}. Called for its side effect on the
+#'   \code{.jst_filter} option.
+#'
 #' @keywords internal
 .jst_set_filter <- function(data_name, settings) {
   if (is.null(data_name)) return(invisible(NULL))
@@ -223,6 +259,18 @@
   options(.jst_filter = all_filters)
 }
 
+#' Internal helper: set complete-case settings for a named data frame
+#'
+#' Stores complete-case settings under the \code{.jst_complete} option,
+#' keyed by data frame name. Used internally by \code{jcomplete()}.
+#'
+#' @param data_name Character string giving the data frame name. If
+#'   \code{NULL}, the call is a silent no-op.
+#' @param settings A list of complete-case settings to store.
+#'
+#' @return \code{invisible(NULL)}. Called for its side effect on the
+#'   \code{.jst_complete} option.
+#'
 #' @keywords internal
 .jst_set_complete <- function(data_name, settings) {
   if (is.null(data_name)) return(invisible(NULL))
@@ -231,6 +279,16 @@
   options(.jst_complete = all_complete)
 }
 
+#' Internal helper: report whether any data frame has an active filter
+#'
+#' Scans the \code{.jst_filter} option to see whether any data frame
+#' has filter settings currently turned on. Used to drive informational
+#' notes about filtering being active for some other dataset than the
+#' one currently in use.
+#'
+#' @return Logical. \code{TRUE} if at least one data frame has an active
+#'   filter setting; \code{FALSE} otherwise.
+#'
 #' @keywords internal
 .jst_any_filter_active <- function() {
   all_filters <- getOption(".jst_filter", default = list())
@@ -242,6 +300,16 @@
   FALSE
 }
 
+#' Internal helper: report whether any data frame has active complete-case settings
+#'
+#' Scans the \code{.jst_complete} option to see whether any data frame
+#' has complete-case settings currently turned on. Used to drive
+#' informational notes about complete-case handling being active for
+#' some other dataset than the one currently in use.
+#'
+#' @return Logical. \code{TRUE} if at least one data frame has active
+#'   complete-case settings; \code{FALSE} otherwise.
+#'
 #' @keywords internal
 .jst_any_complete_active <- function() {
   all_complete <- getOption(".jst_complete", default = list())
@@ -253,12 +321,35 @@
   FALSE
 }
 
+#' Internal helper: get registered dummy variables for a named data frame
+#'
+#' Looks up the \code{jdummy()} registrations stored under the
+#' \code{.jst_dummy} option for a specific data frame name. Returns
+#' \code{NULL} if no dummies are registered for that data frame.
+#'
+#' @param data_name Character string giving the data frame name to look
+#'   up.
+#'
+#' @return The stored dummy-registration settings list, or \code{NULL}
+#'   if none.
+#'
 #' @keywords internal
 .jst_get_dummy <- function(data_name) {
   all_dummy <- getOption(".jst_dummy", default = list())
   all_dummy[[data_name]]
 }
 
+#' Internal helper: set registered dummy variables for a named data frame
+#'
+#' Stores dummy registrations under the \code{.jst_dummy} option, keyed
+#' by data frame name. Used internally by \code{jdummy()}.
+#'
+#' @param data_name Character string giving the data frame name.
+#' @param settings A list of dummy registrations to store.
+#'
+#' @return \code{invisible(NULL)}. Called for its side effect on the
+#'   \code{.jst_dummy} option.
+#'
 #' @keywords internal
 .jst_set_dummy <- function(data_name, settings) {
   all_dummy <- getOption(".jst_dummy", default = list())
@@ -680,17 +771,26 @@
   }
 }
 
-# -----------------------------------------------------------------------------
-# .jst_check_args()
-# Catches mis-named argument aliases passed via ... and errors with a helpful
-# "did you mean" suggestion. Also catches any other named argument in ... and
-# errors with a plain unused-argument message. Used by functions that accept
-# ... purely as a safety net (not for substantive variable-passing).
-#
-# aliases: named character vector where names are the wrong names users might
-#   type and values are the correct argument name to suggest.
-# -----------------------------------------------------------------------------
-
+#' Internal helper: validate named arguments captured via ...
+#'
+#' Catches mis-named argument aliases that users sometimes type instead of
+#' the correct name and errors with a "Did you mean" suggestion. Also
+#' catches any other named argument in \code{...} that isn't on the
+#' aliases list and errors with a plain unused-argument message. Used by
+#' functions that accept \code{...} as a safety net (not for substantive
+#' variable-passing).
+#'
+#' @param dots A list of arguments captured via \code{list(...)}.
+#' @param aliases Named character vector. Names are the incorrect argument
+#'   names that users might type; values are the correct argument names
+#'   to suggest in the error message.
+#' @param fn_name Character. The calling function's name, used in the
+#'   error message.
+#'
+#' @return \code{invisible(NULL)}. Called for its side effect of
+#'   throwing an error when an invalid argument name is found.
+#'
+#' @keywords internal
 .jst_check_args <- function(dots, aliases, fn_name) {
   if (length(dots) == 0) return(invisible(NULL))
   dot_names <- names(dots)
@@ -710,15 +810,28 @@
   invisible(NULL)
 }
 
-# -----------------------------------------------------------------------------
-# .jst_resolve_data()
-# Looks up the default data frame set by juse(). Called by all student-facing
-# functions when the data argument is not specified. Returns a list with
-# $data (the data frame) and $name (the stored name as a string).
-# Stops with a clear message if no default is set or the data frame is missing.
-# Uses the calling environment (passed in via envir) to look up the data frame.
-# -----------------------------------------------------------------------------
-
+#' Internal helper: resolve which data frame to use when none is explicitly given
+#'
+#' Looks up the data frame name set by \code{juse()} via the
+#' \code{.jst_default_data} option, fetches the object from the specified
+#' environment, and returns both the data frame itself and its name. The
+#' name is needed by callers for output messages such as "(Using default
+#' data frame: X)".
+#'
+#' Errors with a clear message if no default has been set, if the named
+#' object cannot be found in the supplied environment, or if it is not a
+#' data frame.
+#'
+#' @param envir Environment in which to look up the default data frame.
+#'   Defaults to the parent frame so the caller's environment is searched.
+#'
+#' @return A list with two components:
+#'   \describe{
+#'     \item{data}{The resolved data frame.}
+#'     \item{name}{Character string giving the name of the data frame.}
+#'   }
+#'
+#' @keywords internal
 .jst_resolve_data <- function(envir = parent.frame()) {
   data_name <- getOption(".jst_default_data", default = NULL)
   if (is.null(data_name)) {
@@ -737,19 +850,30 @@
   list(data = data, name = data_name)
 }
 
-# -----------------------------------------------------------------------------
-# .jst_detect_suspicious_values()
-# Detects values that look like coded missing values (e.g. -99, -9, 999).
-# Two detection rules:
-#   1. Any negative value when all other values are positive (catches -9,
-#      -99, etc. in categorical variables coded with positive integers)
-#   2. Any value whose absolute magnitude is 5+ times the maximum of the
-#      other values (catches 99 in a 1-5 variable, 999 in a 1-10 variable)
-#
-# Returns a numeric vector of suspicious values found (empty if none).
-# Does NOT print messages — the calling function handles messaging.
-# -----------------------------------------------------------------------------
-
+#' Internal helper: detect values that look like coded missing markers
+#'
+#' Scans a numeric vector for values likely to be coded missing markers
+#' (e.g. \code{99}, \code{999}, \code{-99}) rather than legitimate
+#' data. Two heuristics are applied:
+#' \enumerate{
+#'   \item Any negative value when all other values are positive —
+#'     catches conventions like \code{-99} or \code{-9} for missing in
+#'     otherwise non-negative categorical data.
+#'   \item Any value whose absolute magnitude is at least 5 times the
+#'     maximum of the other values — catches \code{99} in a 1-5 scale,
+#'     \code{999} in a 1-10 scale, and so on.
+#' }
+#' Does not print messages; the calling function decides how to surface
+#' the findings.
+#'
+#' @param x A variable (numeric or numeric-coercible).
+#' @param var_name Character. The variable's name; not used by this
+#'   helper but accepted for symmetry with callers that supply it.
+#'
+#' @return A sorted, unique numeric vector of suspicious values, or an
+#'   empty numeric if none are found.
+#'
+#' @keywords internal
 .jst_detect_suspicious_values <- function(x, var_name) {
 
   vals <- unique(as.numeric(x[!is.na(x)]))
@@ -1209,13 +1333,27 @@
 }
 
 
-# -----------------------------------------------------------------------------
-# .jst_missing_comma_error()
-# Called when a data-first function's data argument fails to evaluate. This
-# typically means the student wrote jfreq(VarName) instead of jfreq(, VarName).
-# Produces a helpful error message pointing them to the leading comma.
-# -----------------------------------------------------------------------------
-
+#' Internal helper: error when a data-first function is called without the leading comma
+#'
+#' Called when a data-first function's \code{data} argument fails to
+#' evaluate. This typically means the user wrote \code{jfreq(VarName)}
+#' instead of \code{jfreq(, VarName)} — they forgot the leading comma
+#' that signals "use the juse() default and treat this as a variable
+#' name." Produces a tailored error message pointing to the missing
+#' comma, with the precise wording adjusted depending on whether a
+#' \code{juse()} default is currently set.
+#'
+#' @param data_expr_str Character. The deparsed expression the user
+#'   passed for \code{data}, used verbatim in the error message.
+#' @param fn_name Character. The calling function's name, used in
+#'   suggested fixes within the error message.
+#' @param original_error The error object thrown by the failed evaluation
+#'   (retained for possible future inspection; not used by the helper
+#'   itself).
+#'
+#' @return Never returns — always calls \code{stop()}.
+#'
+#' @keywords internal
 .jst_missing_comma_error <- function(data_expr_str, fn_name, original_error) {
   default_df <- getOption(".jst_default_data", default = NULL)
   if (!is.null(default_df)) {
@@ -1234,17 +1372,29 @@
 }
 
 
-# -----------------------------------------------------------------------------
-# .jst_parse_map()
-# Parses a map string like "1=1; 2,3=2; 4,5=3; else=copy" into a structured
-# list of mapping rules and an else action. Returns:
-#   $mappings      - list of lists, each with $old_vals (numeric vector) and
-#                    $new_val (single numeric)
-#   $else_action   - "na" or "copy"
-#   $else_explicit - TRUE if the user wrote an else clause, FALSE if defaulted
-# Stops with a clear message if the string is malformed.
-# -----------------------------------------------------------------------------
-
+#' Internal helper: parse a recoding-map string into a structured rule list
+#'
+#' Parses a map string of the form \code{"1=1; 2,3=2; 4,5=3; else=copy"}
+#' (used by \code{jrecode()}) into a list of mapping rules plus an
+#' else-action. Each rule's left-hand side may be a single value or a
+#' comma-separated list of values; an explicit \code{else=...} clause
+#' sets the fallback action.
+#'
+#' Errors with a clear message if the string is malformed.
+#'
+#' @param map_str Character string giving the recoding map, e.g.
+#'   \code{"1=1; 2=0; else=NA"}.
+#'
+#' @return Invisibly, a list with components:
+#'   \describe{
+#'     \item{mappings}{List of lists; each inner list has \code{old_vals}
+#'       (numeric vector) and \code{new_val} (single numeric).}
+#'     \item{else_action}{Character: either \code{"na"} or \code{"copy"}.}
+#'     \item{else_explicit}{Logical: \code{TRUE} if the user wrote an
+#'       explicit \code{else=...} clause, \code{FALSE} if defaulted.}
+#'   }
+#'
+#' @keywords internal
 .jst_parse_map <- function(map_str) {
 
   rules <- trimws(strsplit(map_str, ";")[[1]])
@@ -1327,13 +1477,21 @@
 }
 
 
-# -----------------------------------------------------------------------------
-# .jst_parse_labels()
-# Parses a labels string like "1=Young; 2=Middle Aged; 3=Older" into a named
-# numeric vector in haven_labelled format (names = label text, values = codes).
-# Splits on the FIRST equals sign only, so label text may contain equals signs.
-# -----------------------------------------------------------------------------
-
+#' Internal helper: parse a label-spec string into a named numeric vector
+#'
+#' Parses a labels string of the form
+#' \code{"1=Young; 2=Middle Aged; 3=Older"} into a named numeric
+#' vector formatted for use with \code{haven_labelled} variables (names
+#' = label text, values = numeric codes). Splits on the first equals
+#' sign in each rule, so label text may itself contain equals signs.
+#'
+#' @param labels_str Character string of the form
+#'   \code{"value1=label1; value2=label2; ..."}.
+#'
+#' @return Invisibly, a named numeric vector. Names are label strings;
+#'   values are numeric codes.
+#'
+#' @keywords internal
 .jst_parse_labels <- function(labels_str) {
 
   rules <- trimws(strsplit(labels_str, ";")[[1]])
@@ -9024,6 +9182,27 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
 # -- Internal helpers for jplot ------------------------------------------------
 
+#' Internal helper: resolve the `which` argument for jplot dispatch methods
+#'
+#' Translates the user's \code{which} argument into a vector of plot
+#' identifiers. Accepts the special values \code{"core"} and
+#' \code{"all"} (resolved against the supplied \code{core} and
+#' \code{all_plots} vectors) or an explicit character vector of plot
+#' names. Errors with a clear message listing the valid options if any
+#' name in \code{which} isn't recognised.
+#'
+#' @param which The user's \code{which} argument: \code{"core"},
+#'   \code{"all"}, or a character vector of plot names.
+#' @param core Character vector of plot identifiers comprising the
+#'   "core" set for this jplot method.
+#' @param all_plots Character vector of all valid plot identifiers for
+#'   this jplot method.
+#' @param class_name Character. The S3 class being dispatched on, used
+#'   in the error message.
+#'
+#' @return A character vector of plot identifiers to produce.
+#'
+#' @keywords internal
 .jst_resolve_which <- function(which, core, all_plots, class_name) {
   if (length(which) == 1 && which %in% c("core", "all")) {
     return(if (which == "core") core else all_plots)
@@ -9040,6 +9219,23 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   which
 }
 
+#' Internal helper: standardise the return value of jplot dispatch methods
+#'
+#' Strips \code{NULL} entries from a list of ggplot objects, then
+#' returns the list invisibly — or, if exactly one plot remains,
+#' returns that plot alone. Used so that \code{jplot()} returns a
+#' sensible value for the single-plot case (suitable for further
+#' piping or printing) without losing flexibility for the multi-plot
+#' case.
+#'
+#' @param plots A list of ggplot objects, possibly containing
+#'   \code{NULL} entries.
+#'
+#' @return Invisibly: \code{NULL} if all plots are \code{NULL}; a
+#'   single ggplot if exactly one non-\code{NULL} plot remains;
+#'   otherwise the trimmed list.
+#'
+#' @keywords internal
 .jst_return_plots <- function(plots) {
   plots <- plots[!vapply(plots, is.null, logical(1))]
   if (length(plots) == 0) return(invisible(NULL))
@@ -9047,6 +9243,29 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   invisible(plots)
 }
 
+#' Internal helper: resolve the `at` argument for regression-line plots
+#'
+#' Computes the values at which non-focal predictors should be held when
+#' producing a fitted-line plot for a multiple-predictor regression. The
+#' \code{at} argument accepts \code{"zero"}, \code{"mean"},
+#' \code{"mixed"} (zero for dummies, mean for numeric), or a named
+#' list giving an explicit value per non-focal predictor.
+#'
+#' @param at User-supplied value: \code{"zero"}, \code{"mean"},
+#'   \code{"mixed"}, or a named list of explicit hold values.
+#' @param model_frame Data frame used to fit the model
+#'   (post-conversion).
+#' @param dv_name Character. The dependent variable name.
+#' @param focal_name Character. The focal predictor name (the one that
+#'   varies along the x-axis).
+#' @param dummy_coef_names Character vector of registered
+#'   dummy-coefficient names, used to identify which non-focal
+#'   predictors are dummies.
+#'
+#' @return A named list of hold values, one per non-focal predictor.
+#'   Empty list if there are no non-focal predictors.
+#'
+#' @keywords internal
 .jst_resolve_at <- function(at, model_frame, dv_name, focal_name,
                             dummy_coef_names) {
 
@@ -9093,6 +9312,23 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   setNames(lapply(non_focal, hold_at, mode = at), non_focal)
 }
 
+#' Internal helper: format a regression equation for plot subtitles
+#'
+#' Builds a short equation string from a coefficient vector for use as a
+#' plot subtitle. Truncates to \code{max_terms} predictors and joins
+#' them with appropriate sign characters.
+#'
+#' @param coefs_vec Named numeric vector of regression coefficients
+#'   (intercept first).
+#' @param dv_name Character. The dependent variable name used at the
+#'   left-hand side of the equation.
+#' @param max_terms Integer. Maximum number of predictor terms to
+#'   include. Default 3; additional terms are summarised as
+#'   \code{...}.
+#'
+#' @return A character string of the formatted equation.
+#'
+#' @keywords internal
 .jst_format_equation <- function(coefs_vec, dv_name, max_terms = 3) {
 
   intercept <- coefs_vec[1]
