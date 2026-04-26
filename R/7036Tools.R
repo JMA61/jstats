@@ -2876,6 +2876,203 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
 }
 
 
+#' Data screening overview
+#'
+#' Provides a quick overview of a data frame including the number of
+#' cases, variable types, missing data counts and percentages, and
+#' potential outliers for numeric variables. Handles haven-labelled
+#' variables by reporting their labelled status.
+#'
+#' When variable names are supplied, only those variables are screened.
+#' When omitted, all variables in the data frame are screened. If a
+#' \code{subset} expression references variables not already in the
+#' screening list, they are included automatically.
+#'
+#' A red "Data Screening" title is printed first, followed by a dataset
+#' summary, variable labels (if present), and the screening table.
+#'
+#' @param data A data frame.
+#' @param ... Optional unquoted variable names to screen. If omitted,
+#'   all variables in the data frame are screened.
+#' @param outlier.sd Numeric. Number of standard deviations from the mean
+#'   to flag as potential outliers. Default is 3.
+#' @param subset An optional unquoted logical expression (e.g.
+#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   jcomplete and jfilter. Does not affect other function calls.
+#' @param labels Logical. If TRUE (default), prints variable labels
+#'   when available.
+#'
+#' @return Invisibly returns a data frame containing the screening results.
+#'
+#' @examples
+#' # With explicit data frame
+#' jscreen(mtcars)
+#' jscreen(mtcars, outlier.sd = 2.5)
+#'
+#' # Using juse() default
+#' juse(mtcars)
+#' jscreen()
+#' jscreen(, mpg, hp, wt)
+#' jscreen(, mpg, hp, wt, subset = am == 1)
+#'
+#' @export
+jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
+
+  # Capture original expression before any evaluation
+  .data_expr <- if (!missing(data)) {
+    paste(deparse(substitute(data)), collapse = "")
+  } else NULL
+
+  # Catch missing-comma error
+  if (!missing(data)) {
+    mc <- match.call()
+    data <- tryCatch(force(data), error = function(e) {
+      .jst_missing_comma_error(deparse(mc$data), "jscreen", e)
+    })
+  }
+
+  # Resolve default data frame if not specified
+  .jst_default_used <- FALSE
+  .jst_data_name    <- NULL
+  if (missing(data)) {
+    resolved <- .jst_resolve_data(envir = parent.frame())
+    data <- resolved$data
+    .jst_default_used <- TRUE
+    .jst_data_name    <- resolved$name
+  } else {
+    .jst_data_name <- .data_expr
+  }
+
+  # Capture subset expression before evaluation
+  subset_expr <- substitute(subset)
+
+  # Determine which variables to screen
+  variables <- rlang::enquos(...)
+  if (length(variables) > 0) {
+    var_names <- vapply(variables, rlang::quo_name, character(1))
+    .jst_check_vars(data, var_names, .jst_data_name)
+
+    # Auto-include variables from subset expression
+    if (!is.null(subset_expr)) {
+      subset_vars <- all.vars(subset_expr)
+      extra_vars  <- setdiff(subset_vars, var_names)
+      extra_vars  <- extra_vars[extra_vars %in% names(data)]
+      if (length(extra_vars) > 0) {
+        var_names <- c(var_names, extra_vars)
+      }
+    }
+
+    data <- data[, var_names, drop = FALSE]
+  }
+
+  # Red title
+  .cat_red("Data Screening\n")
+  if (.jst_default_used) .jst_default_note(.jst_data_name)
+
+  # Apply data pipeline (jcomplete, jfilter, subset)
+  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
+                                  subset_expr = subset_expr, envir = parent.frame())
+  data     <- pipeline$data
+  .jst_print_msgs(pipeline$msgs)
+
+  n_cases   <- nrow(data)
+  n_vars    <- ncol(data)
+  var_names <- names(data)
+
+  cat("  Cases:", n_cases, "\n")
+  cat("  Variables:", n_vars, "\n")
+  cat("  Complete cases (no missing on any variable):",
+      sum(stats::complete.cases(data)), "\n")
+
+  screen_rows <- lapply(var_names, function(v) {
+    col <- data[[v]]
+
+    var_type <- if (haven::is.labelled(col)) {
+      "haven_labelled"
+    } else if (is.factor(col)) {
+      "factor"
+    } else if (is.numeric(col)) {
+      "numeric"
+    } else if (is.character(col)) {
+      "character"
+    } else {
+      paste(class(col), collapse = ", ")
+    }
+
+    n_missing   <- sum(is.na(col))
+    pct_missing <- round(n_missing / n_cases * 100, 1)
+    n_unique    <- length(unique(col[!is.na(col)]))
+
+    n_outliers <- NA
+    if (is.numeric(col) || haven::is.labelled(col)) {
+      num_col <- as.numeric(col)
+      m <- mean(num_col, na.rm = TRUE)
+      s <- stats::sd(num_col, na.rm = TRUE)
+      n_outliers <- if (!is.na(s) && s > 0) {
+        sum(abs(num_col - m) > outlier.sd * s, na.rm = TRUE)
+      } else {
+        0
+      }
+    }
+
+    data.frame(
+      Variable    = v,
+      Type        = var_type,
+      Unique      = n_unique,
+      Missing     = n_missing,
+      Pct_Missing = pct_missing,
+      Outliers    = n_outliers,
+      stringsAsFactors = FALSE
+    )
+  })
+
+  screen_table <- do.call(rbind, screen_rows)
+
+  if (labels) {
+    cat("\n")
+    .print_var_labels(data, var_names)
+  } else {
+    cat("\n")
+  }
+
+  .jst_print_table(screen_table,
+                   caption = paste0("Data Screening (outliers defined as > ",
+                                    outlier.sd, " SD from mean)"),
+                   col.names = c("Variable", "Type", "Unique Values",
+                                 "Missing", "% Missing", "Outliers"),
+                   row.names = FALSE)
+
+  missing_vars <- screen_table[screen_table$Missing > 0, ]
+  outlier_vars <- screen_table[!is.na(screen_table$Outliers) &
+                                 screen_table$Outliers > 0, ]
+
+  if (nrow(missing_vars) > 0) {
+    cat("\nVariables with missing data:\n")
+    for (i in seq_len(nrow(missing_vars))) {
+      cat("  ", missing_vars$Variable[i], ": ",
+          missing_vars$Missing[i], " missing (",
+          missing_vars$Pct_Missing[i], "%)\n", sep = "")
+    }
+  } else {
+    cat("\nNo missing data detected.\n")
+  }
+
+  if (nrow(outlier_vars) > 0) {
+    cat("\nVariables with potential outliers (> ", outlier.sd, " SD):\n", sep = "")
+    for (i in seq_len(nrow(outlier_vars))) {
+      cat("  ", outlier_vars$Variable[i], ": ",
+          outlier_vars$Outliers[i], " cases\n", sep = "")
+    }
+  } else {
+    cat("\nNo potential outliers detected.\n")
+  }
+
+  cat("\n")
+  cat("\n")
+  invisible(screen_table)
+}
+
+
 # =============================================================================
 #  INFERENCE / GROUP COMPARISON
 # =============================================================================
@@ -3632,7 +3829,287 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 }
 
 
+#' Cross-tabulation with optional chi-square test of independence
+#'
+#' Produces an SPSS-style cross-tabulation of two categorical variables
+#' with observed frequencies, expected frequencies, row percentages,
+#' and column percentages. Optionally includes a chi-square test of
+#' independence. Handles haven-labelled, numeric, factor, and character
+#' variables. For haven-labelled variables, numeric codes are displayed
+#' alongside labels.
+#'
+#' A red "Cross-Tabulation" title is printed first, followed by
+#' variable labels (if present), then the table and optional test results.
+#'
+#' @param formula A formula of the form \code{Row ~ Column}.
+#' @param data A data frame containing variables referenced in \code{formula}.
+#' @param chisq Logical. If TRUE, prints the chi-square test of independence
+#'   below the cross-tabulation. Default is FALSE.
+#' @param expected Logical. If TRUE, prints expected frequencies alongside
+#'   observed. Default is FALSE.
+#' @param row.pct Logical. If TRUE (default), shows row percentages.
+#' @param col.pct Logical. If TRUE, shows column percentages. Default is FALSE.
+#' @param subset An optional unquoted logical expression (e.g.
+#'   \code{Group == 1}) to filter cases for this call only. Applied after
+#'   jcomplete and jfilter. Does not affect other function calls.
+#' @param labels Logical. If TRUE (default), prints variable labels
+#'   when available.
+#'
+#' @return Invisibly returns a list of class \code{"jst_chisq"} containing:
+#'   \code{observed} (observed frequency table), \code{expected} (expected
+#'   frequency table), \code{n} (total N), \code{model_frame} (the analysis
+#'   data frame used for plotting), \code{sample_info} (pipeline and
+#'   missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
+#'   \code{df}, and \code{p}.
+#'
+#' @examples
+#' # Cross-tabulation only
+#' jcrosstab(cyl ~ am, data = mtcars)
+#'
+#' # With chi-square test
+#' jcrosstab(cyl ~ am, data = mtcars, chisq = TRUE)
+#'
+#' # With expected frequencies and column percentages
+#' jcrosstab(cyl ~ am, data = mtcars, expected = TRUE, col.pct = TRUE)
+#'
+#' # Using juse() default
+#' juse(mtcars)
+#' jcrosstab(cyl ~ am)
+#' jcrosstab(cyl ~ am, chisq = TRUE)
+#'
+#' @importFrom stats chisq.test
+#' @export
+jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
+                      row.pct = TRUE, col.pct = FALSE, subset = NULL,
+                      labels = TRUE) {
+
+  # Resolve default data frame if not specified
+  .jst_default_used <- FALSE
+  .jst_data_name    <- NULL
+  if (missing(data)) {
+    resolved <- .jst_resolve_data(envir = parent.frame())
+    data <- resolved$data
+    .jst_default_used <- TRUE
+    .jst_data_name    <- resolved$name
+  } else {
+    .jst_data_name <- deparse(substitute(data))
+  }
+
+  terms    <- all.vars(formula)
+  row_name <- terms[1]
+  col_name <- terms[2]
+
+  .jst_check_vars(data, terms, .jst_data_name)
+
+  # Red title
+  .cat_red("Cross-Tabulation\n")
+  if (.jst_default_used) .jst_default_note(.jst_data_name)
+
+  # Apply data pipeline (jcomplete, jfilter, subset)
+  subset_expr <- substitute(subset)
+  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
+                                  subset_expr = subset_expr, envir = parent.frame())
+  data     <- pipeline$data
+  .jst_print_msgs(pipeline$msgs)
+
+  # Resolve missing detail toggle
+  show_missing <- .jst_resolve_toggle("missing", NULL)
+
+  # Report cases excluded due to missing values
+  n_before_na <- nrow(data)
+  complete_on <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]), , drop = FALSE]
+  n_excluded_na <- n_before_na - nrow(complete_on)
+  if (n_excluded_na > 0) {
+    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
+    if (show_missing) {
+      mbv <- vapply(c(row_name, col_name), function(v) sum(is.na(data[[v]])), integer(1))
+      .jst_print_missing_detail(mbv)
+    }
+  }
+
+  row_var <- data[[row_name]]
+  col_var <- data[[col_name]]
+
+  row_labelled <- haven::is.labelled(row_var)
+  col_labelled <- haven::is.labelled(col_var)
+
+  if (row_labelled) {
+    row_codes <- sort(unique(as.numeric(row_var[!is.na(row_var)])))
+    row_var   <- haven::as_factor(row_var)
+  } else if (!is.factor(row_var)) {
+    row_var <- factor(row_var)
+  }
+
+  if (col_labelled) {
+    col_codes <- sort(unique(as.numeric(col_var[!is.na(col_var)])))
+    col_var   <- haven::as_factor(col_var)
+  } else if (!is.factor(col_var)) {
+    col_var <- factor(col_var)
+  }
+
+  if (labels) {
+    .print_var_labels(data, c(row_name, col_name))
+  }
+
+  # Drop empty factor levels (pipeline filtering may leave empty levels)
+  row_var <- droplevels(row_var)
+  col_var <- droplevels(col_var)
+
+  row_levels <- levels(row_var)
+  col_levels <- levels(col_var)
+
+  # Check minimum levels
+  for (check_info in list(list(name = row_name, lvls = row_levels),
+                          list(name = col_name, lvls = col_levels))) {
+    if (length(check_info$lvls) < 2) {
+      active_steps <- character(0)
+      if (.jst_default_used) {
+        cs <- .jst_get_complete(.jst_data_name)
+        if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
+        fs <- .jst_get_filter(.jst_data_name)
+        if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
+                                                         paste0("jfilter (", fs$expr_str, ")"))
+      }
+      context <- if (length(active_steps) > 0) {
+        paste0(" after applying ", paste(active_steps, collapse = " and "))
+      } else ""
+      stop(paste0("'", check_info$name, "' has ", length(check_info$lvls),
+                  " category(ies)", context,
+                  ". A chi-square test requires at least 2 categories ",
+                  "for each variable."), call. = FALSE)
+    }
+  }
+
+  row_labels <- if (row_labelled) paste0(row_codes, ": ", row_levels) else row_levels
+  col_labels <- if (col_labelled) paste0(col_codes, ": ", col_levels) else col_levels
+
+  obs_table  <- table(row_var, col_var)
+  chi_result <- suppressWarnings(stats::chisq.test(obs_table))
+  exp_table  <- chi_result$expected
+
+  p_val <- chi_result$p.value
+  p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
+
+  n_rows <- length(row_levels)
+  n_cols <- length(col_levels)
+  header <- c(row_name, col_labels, "Total")
+
+  display_rows <- list()
+
+  for (i in seq_len(n_rows)) {
+    obs_vals  <- as.numeric(obs_table[i, ])
+    row_total <- sum(obs_vals)
+    display_rows <- c(display_rows,
+                      list(c(row_labels[i], as.character(obs_vals),
+                             as.character(row_total))))
+
+    if (expected) {
+      exp_vals     <- round(exp_table[i, ], 1)
+      display_rows <- c(display_rows,
+                        list(c("  (Expected)", sprintf("%.1f", exp_vals),
+                               sprintf("%.1f", sum(exp_vals)))))
+    }
+
+    if (row.pct) {
+      row_pcts     <- round(obs_vals / row_total * 100, 1)
+      display_rows <- c(display_rows,
+                        list(c("  (Row %)", sprintf("%.1f%%", row_pcts), "100.0%")))
+    }
+
+    if (col.pct) {
+      col_totals    <- colSums(obs_table)
+      col_pcts      <- round(obs_vals / col_totals * 100, 1)
+      grand_total   <- sum(obs_table)
+      col_pct_total <- round(row_total / grand_total * 100, 1)
+      display_rows  <- c(display_rows,
+                         list(c("  (Col %)", sprintf("%.1f%%", col_pcts),
+                                sprintf("%.1f%%", col_pct_total))))
+    }
+  }
+
+  col_totals  <- colSums(obs_table)
+  grand_total <- sum(obs_table)
+  display_rows <- c(display_rows,
+                    list(c("Total", as.character(col_totals),
+                           as.character(grand_total))))
+
+  if (col.pct) {
+    display_rows <- c(display_rows,
+                      list(c("  (Col %)", rep("100.0%", n_cols), "100.0%")))
+  }
+
+  display_df           <- as.data.frame(do.call(rbind, display_rows),
+                                        stringsAsFactors = FALSE)
+  colnames(display_df) <- header
+
+  .jst_print_table(display_df,
+                   caption = paste("Cross-tabulation:", row_name, "by", col_name),
+                   row.names = FALSE)
+  cat("\n")
+
+  # Chi-square test (only if requested)
+  if (chisq) {
+    chi_table <- data.frame(
+      Chi_Square = round(chi_result$statistic, 3),
+      df         = chi_result$parameter,
+      p          = p_fmt,
+      N          = grand_total,
+      stringsAsFactors = FALSE,
+      row.names  = NULL
+    )
+
+    .jst_print_table(chi_table,
+                     caption = "Chi-Square Test of Independence",
+                     col.names = c("Chi-Square", "df", "p", "N"),
+                     row.names = FALSE)
+
+    min_expected <- min(exp_table)
+    n_below_5    <- sum(exp_table < 5)
+    if (n_below_5 > 0) {
+      cat(paste0("\nNote: ", n_below_5, " cell(s) have expected frequencies less than 5 ",
+                 "(minimum expected = ", round(min_expected, 1), "). ",
+                 "Chi-square results may not be reliable.\n"))
+    }
+  }
+
+  cat("\n")
+
+  # Build sample_info
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = c(row_name, col_name),
+    n_analysis      = grand_total
+  )
+
+  # Build analysis-level data frame for jplot()
+  mf <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]),
+             c(row_name, col_name), drop = FALSE]
+
+  ret <- list(
+    observed    = obs_table,
+    expected    = exp_table,
+    n           = grand_total,
+    model_frame = mf,
+    sample_info = sample_info
+  )
+  if (chisq) {
+    ret$chi_square <- chi_result$statistic
+    ret$df         <- chi_result$parameter
+    ret$p          <- chi_result$p.value
+  }
+  class(ret) <- "jst_chisq"
+  invisible(ret)
+}
+
+
 # -- jcorr --------------------------------------------------------------------
+
+
+# =============================================================================
+#  CORRELATION AND REGRESSION
+# =============================================================================
+
 
 #' Bivariate correlation matrix with p values and pairwise N
 #'
@@ -3840,10 +4317,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
   invisible(ret)
 }
 
-
-# =============================================================================
-#  REGRESSION
-# =============================================================================
 
 # -- Regression model helpers (jlm and jlogistic) -----------------------------
 
@@ -5582,480 +6055,17 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
 
 # -- jcrosstab -----------------------------------------------------------------
 
-#' Cross-tabulation with optional chi-square test of independence
-#'
-#' Produces an SPSS-style cross-tabulation of two categorical variables
-#' with observed frequencies, expected frequencies, row percentages,
-#' and column percentages. Optionally includes a chi-square test of
-#' independence. Handles haven-labelled, numeric, factor, and character
-#' variables. For haven-labelled variables, numeric codes are displayed
-#' alongside labels.
-#'
-#' A red "Cross-Tabulation" title is printed first, followed by
-#' variable labels (if present), then the table and optional test results.
-#'
-#' @param formula A formula of the form \code{Row ~ Column}.
-#' @param data A data frame containing variables referenced in \code{formula}.
-#' @param chisq Logical. If TRUE, prints the chi-square test of independence
-#'   below the cross-tabulation. Default is FALSE.
-#' @param expected Logical. If TRUE, prints expected frequencies alongside
-#'   observed. Default is FALSE.
-#' @param row.pct Logical. If TRUE (default), shows row percentages.
-#' @param col.pct Logical. If TRUE, shows column percentages. Default is FALSE.
-#' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
-#'
-#' @return Invisibly returns a list of class \code{"jst_chisq"} containing:
-#'   \code{observed} (observed frequency table), \code{expected} (expected
-#'   frequency table), \code{n} (total N), \code{model_frame} (the analysis
-#'   data frame used for plotting), \code{sample_info} (pipeline and
-#'   missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
-#'   \code{df}, and \code{p}.
-#'
-#' @examples
-#' # Cross-tabulation only
-#' jcrosstab(cyl ~ am, data = mtcars)
-#'
-#' # With chi-square test
-#' jcrosstab(cyl ~ am, data = mtcars, chisq = TRUE)
-#'
-#' # With expected frequencies and column percentages
-#' jcrosstab(cyl ~ am, data = mtcars, expected = TRUE, col.pct = TRUE)
-#'
-#' # Using juse() default
-#' juse(mtcars)
-#' jcrosstab(cyl ~ am)
-#' jcrosstab(cyl ~ am, chisq = TRUE)
-#'
-#' @importFrom stats chisq.test
-#' @export
-jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
-                      row.pct = TRUE, col.pct = FALSE, subset = NULL,
-                      labels = TRUE) {
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
-
-  terms    <- all.vars(formula)
-  row_name <- terms[1]
-  col_name <- terms[2]
-
-  .jst_check_vars(data, terms, .jst_data_name)
-
-  # Red title
-  .cat_red("Cross-Tabulation\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
-
-  # Apply data pipeline (jcomplete, jfilter, subset)
-  subset_expr <- substitute(subset)
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
-  data     <- pipeline$data
-  .jst_print_msgs(pipeline$msgs)
-
-  # Resolve missing detail toggle
-  show_missing <- .jst_resolve_toggle("missing", NULL)
-
-  # Report cases excluded due to missing values
-  n_before_na <- nrow(data)
-  complete_on <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]), , drop = FALSE]
-  n_excluded_na <- n_before_na - nrow(complete_on)
-  if (n_excluded_na > 0) {
-    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
-    if (show_missing) {
-      mbv <- vapply(c(row_name, col_name), function(v) sum(is.na(data[[v]])), integer(1))
-      .jst_print_missing_detail(mbv)
-    }
-  }
-
-  row_var <- data[[row_name]]
-  col_var <- data[[col_name]]
-
-  row_labelled <- haven::is.labelled(row_var)
-  col_labelled <- haven::is.labelled(col_var)
-
-  if (row_labelled) {
-    row_codes <- sort(unique(as.numeric(row_var[!is.na(row_var)])))
-    row_var   <- haven::as_factor(row_var)
-  } else if (!is.factor(row_var)) {
-    row_var <- factor(row_var)
-  }
-
-  if (col_labelled) {
-    col_codes <- sort(unique(as.numeric(col_var[!is.na(col_var)])))
-    col_var   <- haven::as_factor(col_var)
-  } else if (!is.factor(col_var)) {
-    col_var <- factor(col_var)
-  }
-
-  if (labels) {
-    .print_var_labels(data, c(row_name, col_name))
-  }
-
-  # Drop empty factor levels (pipeline filtering may leave empty levels)
-  row_var <- droplevels(row_var)
-  col_var <- droplevels(col_var)
-
-  row_levels <- levels(row_var)
-  col_levels <- levels(col_var)
-
-  # Check minimum levels
-  for (check_info in list(list(name = row_name, lvls = row_levels),
-                          list(name = col_name, lvls = col_levels))) {
-    if (length(check_info$lvls) < 2) {
-      active_steps <- character(0)
-      if (.jst_default_used) {
-        cs <- .jst_get_complete(.jst_data_name)
-        if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
-        fs <- .jst_get_filter(.jst_data_name)
-        if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
-                                                         paste0("jfilter (", fs$expr_str, ")"))
-      }
-      context <- if (length(active_steps) > 0) {
-        paste0(" after applying ", paste(active_steps, collapse = " and "))
-      } else ""
-      stop(paste0("'", check_info$name, "' has ", length(check_info$lvls),
-                  " category(ies)", context,
-                  ". A chi-square test requires at least 2 categories ",
-                  "for each variable."), call. = FALSE)
-    }
-  }
-
-  row_labels <- if (row_labelled) paste0(row_codes, ": ", row_levels) else row_levels
-  col_labels <- if (col_labelled) paste0(col_codes, ": ", col_levels) else col_levels
-
-  obs_table  <- table(row_var, col_var)
-  chi_result <- suppressWarnings(stats::chisq.test(obs_table))
-  exp_table  <- chi_result$expected
-
-  p_val <- chi_result$p.value
-  p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
-
-  n_rows <- length(row_levels)
-  n_cols <- length(col_levels)
-  header <- c(row_name, col_labels, "Total")
-
-  display_rows <- list()
-
-  for (i in seq_len(n_rows)) {
-    obs_vals  <- as.numeric(obs_table[i, ])
-    row_total <- sum(obs_vals)
-    display_rows <- c(display_rows,
-                      list(c(row_labels[i], as.character(obs_vals),
-                             as.character(row_total))))
-
-    if (expected) {
-      exp_vals     <- round(exp_table[i, ], 1)
-      display_rows <- c(display_rows,
-                        list(c("  (Expected)", sprintf("%.1f", exp_vals),
-                               sprintf("%.1f", sum(exp_vals)))))
-    }
-
-    if (row.pct) {
-      row_pcts     <- round(obs_vals / row_total * 100, 1)
-      display_rows <- c(display_rows,
-                        list(c("  (Row %)", sprintf("%.1f%%", row_pcts), "100.0%")))
-    }
-
-    if (col.pct) {
-      col_totals    <- colSums(obs_table)
-      col_pcts      <- round(obs_vals / col_totals * 100, 1)
-      grand_total   <- sum(obs_table)
-      col_pct_total <- round(row_total / grand_total * 100, 1)
-      display_rows  <- c(display_rows,
-                         list(c("  (Col %)", sprintf("%.1f%%", col_pcts),
-                                sprintf("%.1f%%", col_pct_total))))
-    }
-  }
-
-  col_totals  <- colSums(obs_table)
-  grand_total <- sum(obs_table)
-  display_rows <- c(display_rows,
-                    list(c("Total", as.character(col_totals),
-                           as.character(grand_total))))
-
-  if (col.pct) {
-    display_rows <- c(display_rows,
-                      list(c("  (Col %)", rep("100.0%", n_cols), "100.0%")))
-  }
-
-  display_df           <- as.data.frame(do.call(rbind, display_rows),
-                                        stringsAsFactors = FALSE)
-  colnames(display_df) <- header
-
-  .jst_print_table(display_df,
-                   caption = paste("Cross-tabulation:", row_name, "by", col_name),
-                   row.names = FALSE)
-  cat("\n")
-
-  # Chi-square test (only if requested)
-  if (chisq) {
-    chi_table <- data.frame(
-      Chi_Square = round(chi_result$statistic, 3),
-      df         = chi_result$parameter,
-      p          = p_fmt,
-      N          = grand_total,
-      stringsAsFactors = FALSE,
-      row.names  = NULL
-    )
-
-    .jst_print_table(chi_table,
-                     caption = "Chi-Square Test of Independence",
-                     col.names = c("Chi-Square", "df", "p", "N"),
-                     row.names = FALSE)
-
-    min_expected <- min(exp_table)
-    n_below_5    <- sum(exp_table < 5)
-    if (n_below_5 > 0) {
-      cat(paste0("\nNote: ", n_below_5, " cell(s) have expected frequencies less than 5 ",
-                 "(minimum expected = ", round(min_expected, 1), "). ",
-                 "Chi-square results may not be reliable.\n"))
-    }
-  }
-
-  cat("\n")
-
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = c(row_name, col_name),
-    n_analysis      = grand_total
-  )
-
-  # Build analysis-level data frame for jplot()
-  mf <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]),
-             c(row_name, col_name), drop = FALSE]
-
-  ret <- list(
-    observed    = obs_table,
-    expected    = exp_table,
-    n           = grand_total,
-    model_frame = mf,
-    sample_info = sample_info
-  )
-  if (chisq) {
-    ret$chi_square <- chi_result$statistic
-    ret$df         <- chi_result$parameter
-    ret$p          <- chi_result$p.value
-  }
-  class(ret) <- "jst_chisq"
-  invisible(ret)
-}
-
 
 # -- jscreen ------------------------------------------------------------------
 
-#' Data screening overview
-#'
-#' Provides a quick overview of a data frame including the number of
-#' cases, variable types, missing data counts and percentages, and
-#' potential outliers for numeric variables. Handles haven-labelled
-#' variables by reporting their labelled status.
-#'
-#' When variable names are supplied, only those variables are screened.
-#' When omitted, all variables in the data frame are screened. If a
-#' \code{subset} expression references variables not already in the
-#' screening list, they are included automatically.
-#'
-#' A red "Data Screening" title is printed first, followed by a dataset
-#' summary, variable labels (if present), and the screening table.
-#'
-#' @param data A data frame.
-#' @param ... Optional unquoted variable names to screen. If omitted,
-#'   all variables in the data frame are screened.
-#' @param outlier.sd Numeric. Number of standard deviations from the mean
-#'   to flag as potential outliers. Default is 3.
-#' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
-#'
-#' @return Invisibly returns a data frame containing the screening results.
-#'
-#' @examples
-#' # With explicit data frame
-#' jscreen(mtcars)
-#' jscreen(mtcars, outlier.sd = 2.5)
-#'
-#' # Using juse() default
-#' juse(mtcars)
-#' jscreen()
-#' jscreen(, mpg, hp, wt)
-#' jscreen(, mpg, hp, wt, subset = am == 1)
-#'
-#' @export
-jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
-
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
-
-  # Catch missing-comma error
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jscreen", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- .data_expr
-  }
-
-  # Capture subset expression before evaluation
-  subset_expr <- substitute(subset)
-
-  # Determine which variables to screen
-  variables <- rlang::enquos(...)
-  if (length(variables) > 0) {
-    var_names <- vapply(variables, rlang::quo_name, character(1))
-    .jst_check_vars(data, var_names, .jst_data_name)
-
-    # Auto-include variables from subset expression
-    if (!is.null(subset_expr)) {
-      subset_vars <- all.vars(subset_expr)
-      extra_vars  <- setdiff(subset_vars, var_names)
-      extra_vars  <- extra_vars[extra_vars %in% names(data)]
-      if (length(extra_vars) > 0) {
-        var_names <- c(var_names, extra_vars)
-      }
-    }
-
-    data <- data[, var_names, drop = FALSE]
-  }
-
-  # Red title
-  .cat_red("Data Screening\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
-
-  # Apply data pipeline (jcomplete, jfilter, subset)
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
-  data     <- pipeline$data
-  .jst_print_msgs(pipeline$msgs)
-
-  n_cases   <- nrow(data)
-  n_vars    <- ncol(data)
-  var_names <- names(data)
-
-  cat("  Cases:", n_cases, "\n")
-  cat("  Variables:", n_vars, "\n")
-  cat("  Complete cases (no missing on any variable):",
-      sum(stats::complete.cases(data)), "\n")
-
-  screen_rows <- lapply(var_names, function(v) {
-    col <- data[[v]]
-
-    var_type <- if (haven::is.labelled(col)) {
-      "haven_labelled"
-    } else if (is.factor(col)) {
-      "factor"
-    } else if (is.numeric(col)) {
-      "numeric"
-    } else if (is.character(col)) {
-      "character"
-    } else {
-      paste(class(col), collapse = ", ")
-    }
-
-    n_missing   <- sum(is.na(col))
-    pct_missing <- round(n_missing / n_cases * 100, 1)
-    n_unique    <- length(unique(col[!is.na(col)]))
-
-    n_outliers <- NA
-    if (is.numeric(col) || haven::is.labelled(col)) {
-      num_col <- as.numeric(col)
-      m <- mean(num_col, na.rm = TRUE)
-      s <- stats::sd(num_col, na.rm = TRUE)
-      n_outliers <- if (!is.na(s) && s > 0) {
-        sum(abs(num_col - m) > outlier.sd * s, na.rm = TRUE)
-      } else {
-        0
-      }
-    }
-
-    data.frame(
-      Variable    = v,
-      Type        = var_type,
-      Unique      = n_unique,
-      Missing     = n_missing,
-      Pct_Missing = pct_missing,
-      Outliers    = n_outliers,
-      stringsAsFactors = FALSE
-    )
-  })
-
-  screen_table <- do.call(rbind, screen_rows)
-
-  if (labels) {
-    cat("\n")
-    .print_var_labels(data, var_names)
-  } else {
-    cat("\n")
-  }
-
-  .jst_print_table(screen_table,
-                   caption = paste0("Data Screening (outliers defined as > ",
-                                    outlier.sd, " SD from mean)"),
-                   col.names = c("Variable", "Type", "Unique Values",
-                                 "Missing", "% Missing", "Outliers"),
-                   row.names = FALSE)
-
-  missing_vars <- screen_table[screen_table$Missing > 0, ]
-  outlier_vars <- screen_table[!is.na(screen_table$Outliers) &
-                                 screen_table$Outliers > 0, ]
-
-  if (nrow(missing_vars) > 0) {
-    cat("\nVariables with missing data:\n")
-    for (i in seq_len(nrow(missing_vars))) {
-      cat("  ", missing_vars$Variable[i], ": ",
-          missing_vars$Missing[i], " missing (",
-          missing_vars$Pct_Missing[i], "%)\n", sep = "")
-    }
-  } else {
-    cat("\nNo missing data detected.\n")
-  }
-
-  if (nrow(outlier_vars) > 0) {
-    cat("\nVariables with potential outliers (> ", outlier.sd, " SD):\n", sep = "")
-    for (i in seq_len(nrow(outlier_vars))) {
-      cat("  ", outlier_vars$Variable[i], ": ",
-          outlier_vars$Outliers[i], " cases\n", sep = "")
-    }
-  } else {
-    cat("\nNo potential outliers detected.\n")
-  }
-
-  cat("\n")
-  cat("\n")
-  invisible(screen_table)
-}
-
 
 # -- jalpha -------------------------------------------------------------------
+
+
+# =============================================================================
+#  SCALE CONSTRUCTION
+# =============================================================================
+
 
 #' Cronbach's Alpha Reliability Analysis
 #'
@@ -6296,10 +6306,6 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 }
 
 
-# =============================================================================
-#  SCALE CONSTRUCTION
-# =============================================================================
-
 # -- jsum / javg internal helper -----------------------------------------------
 
 #' Internal helper: resolve variable names from enquos, expanding colon ranges
@@ -6472,14 +6478,10 @@ jsum <- function(data, ..., min.valid = NULL, var_label = NULL) {
 
   .jst_check_vars(data, var_names, .jst_data_name)
 
-  # Extract columns and convert haven-labelled to numeric
+  # Extract columns and convert any haven-labelled to numeric
   items <- data[, var_names, drop = FALSE]
   for (v in var_names) {
-    if (haven::is.labelled(items[[v]])) {
-      items[[v]] <- as.numeric(items[[v]])
-    } else {
-      items[[v]] <- as.numeric(items[[v]])
-    }
+    items[[v]] <- as.numeric(items[[v]])
   }
 
   n_vars  <- length(var_names)
@@ -6664,14 +6666,10 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
 
   .jst_check_vars(data, var_names, .jst_data_name)
 
-  # Extract columns and convert haven-labelled to numeric
+  # Extract columns and convert any haven-labelled to numeric
   items <- data[, var_names, drop = FALSE]
   for (v in var_names) {
-    if (haven::is.labelled(items[[v]])) {
-      items[[v]] <- as.numeric(items[[v]])
-    } else {
-      items[[v]] <- as.numeric(items[[v]])
-    }
+    items[[v]] <- as.numeric(items[[v]])
   }
 
   n_vars  <- length(var_names)
@@ -9843,5 +9841,4 @@ jplot.jst_freq <- function(x, which = "core", ...) {
        "  jplot(SampleData, Gender, Employment)  # grouped bar chart",
        call. = FALSE)
 }
-
 
