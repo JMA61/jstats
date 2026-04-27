@@ -1909,6 +1909,28 @@ jfilter <- function(data, expr) {
 #' @keywords internal
 .jst_check_filter_syntax <- function(raw_expr, expr_str) {
 
+  # Catch a bare symbol used as the entire filter expression, e.g.
+  # jfilter(Gender). The user almost certainly meant a comparison
+  # like Gender == 1. Without this check, the symbol gets stored as
+  # the filter and later attempts to apply it produce cryptic errors
+  # from haven_labelled internals when subset_data is non-logical.
+  if (is.symbol(raw_expr)) {
+    sym <- as.character(raw_expr)
+    if (!sym %in% c("TRUE", "FALSE", "T", "F")) {
+      stop(
+        "Filter expression `", sym, "` is just a variable name and ",
+        "cannot be used as a filter on its own. A filter expression ",
+        "must compare a variable to a value (or evaluate to TRUE/FALSE ",
+        "for each row).\n",
+        "  Examples:\n",
+        "    jfilter(", sym, " == 1)         # keep rows where ", sym, " is 1\n",
+        "    jfilter(!is.na(", sym, "))       # keep rows where ", sym, " is not missing\n",
+        "  You wrote: jfilter(", sym, ")",
+        call. = FALSE
+      )
+    }
+  }
+
   # Collect all symbols referenced in the expression
   all_names <- all.names(raw_expr, unique = FALSE)
 
@@ -2900,7 +2922,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
     data     <- pipeline$data
 
     for (v in variable_names) {
-      .cat_red(paste0("Descriptive Statistics: ", v, " by ", by_name, "\n"))
+      .cat_red(paste0("Descriptive Statistics: ", v, " by ", by_name,
+                      " (", length(group_levels), " levels)\n"))
       if (.jst_default_used) .jst_default_note(.jst_data_name)
       .jst_print_msgs(pipeline$msgs)
 
@@ -2913,10 +2936,15 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
         cat("  Variable label: ", original_by_label, "\n", sep = "")
       }
 
-      # Warn if DV is haven-labelled (categorical)
-      if ("haven_labelled" %in% original_dv_info[[v]]$class) {
-        warning(paste0("'", v, "' is a categorical variable. Descriptive statistics ",
-                       "may not be meaningful. Use jfreq() for frequency tables."),
+      # Warn if DV has categorical-like structure (small-range labelled or
+      # whole-number 0-6). Uses the unified classifier so haven-labelled
+      # variables with many distinct values (e.g. Income with 10 broad
+      # categories) are NOT flagged.
+      if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name)) {
+        warning(paste0("'", v, "' has categorical-like structure ",
+                       "(small-range integer or labelled values). ",
+                       "Descriptive statistics may not be meaningful. ",
+                       "Use jfreq() for frequency tables."),
                 call. = FALSE)
       }
       cat("\n")
@@ -2946,8 +2974,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
           lvl
         }
 
-        data.frame(
-          Group = group_label,
+        df <- data.frame(
+          GROUP_PLACEHOLDER = group_label,
           N     = n,
           Min   = if (n > 0) round(min(subset_data), 3) else NA,
           Max   = if (n > 0) round(max(subset_data), 3) else NA,
@@ -2955,6 +2983,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
           SD    = if (n > 0) round(s, 3) else NA,
           stringsAsFactors = FALSE
         )
+        names(df)[1] <- by_name
+        df
       })
       group_table <- do.call(rbind, group_rows)
 
@@ -3010,11 +3040,16 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
     }
   }
 
-  # Warn if haven-labelled (categorical) variables are being described
+  # Warn for variables with categorical-like structure (small-range
+  # labelled or whole-number 0-6). Uses the unified classifier so
+  # haven-labelled variables with many distinct values (e.g. Income with
+  # 10 broad categories) are NOT flagged.
   for (v in variable_names) {
-    if ("haven_labelled" %in% original_var_info[[v]]$class) {
-      warning(paste0("'", v, "' is a categorical variable. Descriptive statistics ",
-                     "may not be meaningful. Use jfreq() for frequency tables."),
+    if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name)) {
+      warning(paste0("'", v, "' has categorical-like structure ",
+                     "(small-range integer or labelled values). ",
+                     "Descriptive statistics may not be meaningful. ",
+                     "Use jfreq() for frequency tables."),
               call. = FALSE)
     }
   }
@@ -4631,32 +4666,38 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
   cor_data <- data[, variable_names, drop = FALSE]
 
   for (v in variable_names) {
-    if (haven::is.labelled(cor_data[[v]])) {
-      warning(paste0("'", v, "' is a haven-labelled variable and may be categorical. ",
-                     "Pearson correlations assume continuous/interval data. ",
-                     "Verify this variable is appropriate for correlation."), call. = FALSE)
-      cor_data[[v]] <- as.numeric(cor_data[[v]])
-    } else if (is.factor(cor_data[[v]])) {
+    # Hard errors — variable types that cannot be coerced to numeric for
+    # correlation regardless of structure.
+    if (is.character(cor_data[[v]])) {
+      stop(paste0("'", v, "' is a character variable and cannot be used ",
+                  "in a correlation. Use a numeric variable instead."), call. = FALSE)
+    }
+    if (is.factor(cor_data[[v]])) {
       numeric_check <- suppressWarnings(as.numeric(as.character(cor_data[[v]])))
       if (all(is.na(numeric_check[!is.na(cor_data[[v]])]))) {
         stop(paste0("'", v,
                     "' is a factor with text categories and cannot be used ",
                     "in a correlation. Use a numeric variable instead."), call. = FALSE)
       }
-      warning(paste0("'", v, "' is a factor with numeric levels and may be categorical. ",
-                     "Pearson correlations assume continuous/interval data. ",
-                     "Verify this variable is appropriate for correlation."), call. = FALSE)
       cor_data[[v]] <- numeric_check
-    } else if (is.character(cor_data[[v]])) {
-      stop(paste0("'", v, "' is a character variable and cannot be used ",
-                  "in a correlation. Use a numeric variable instead."), call. = FALSE)
-    } else if (is.numeric(cor_data[[v]])) {
-      n_unique <- length(unique(cor_data[[v]][!is.na(cor_data[[v]])]))
-      if (n_unique <= 5) {
-        warning(paste0("'", v, "' has only ", n_unique, " unique values and may be categorical. ",
-                       "Pearson correlations assume continuous/interval data. ",
-                       "Verify this variable is appropriate for correlation."), call. = FALSE)
-      }
+    }
+
+    # Coerce labelled to numeric for correlation computation. The warning
+    # decision is delegated to the unified classifier below.
+    if (haven::is.labelled(cor_data[[v]])) {
+      cor_data[[v]] <- as.numeric(cor_data[[v]])
+    }
+
+    # Categorical-like warning — uses the same classifier as jlm so that
+    # haven-labelled variables with many distinct values (e.g. Income with
+    # 10 broad categories) are NOT flagged, while small-range labelled or
+    # whole-number 0-6 variables ARE flagged.
+    if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name)) {
+      warning(paste0("'", v, "' has categorical-like structure ",
+                     "(small-range integer or labelled values). Pearson ",
+                     "correlations assume continuous/interval data. Verify ",
+                     "this variable is appropriate for correlation."),
+              call. = FALSE)
     }
   }
 
