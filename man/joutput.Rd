@@ -11,18 +11,26 @@ joutput(
   levene = NULL,
   posthoc = NULL,
   missing = NULL,
-  diagnostics = NULL
+  diagnostics = NULL,
+  case.processing = NULL,
+  var.labels = NULL,
+  ref.categories = NULL
 )
 }
 \arguments{
-\item{level}{Character. One of \code{"minimal"} (default), \code{"standard"},
-or \code{"full"}. If omitted, prints the current settings.
-If \code{NULL}, resets to defaults (minimal with no toggle overrides).
+\item{level}{Character. One of \code{"minimal"}, \code{"standard"}
+(default), or \code{"full"}. If omitted, prints the current settings.
+If \code{NULL}, resets to defaults (standard with no toggle overrides).
 \describe{
-\item{minimal}{Current default behaviour. Core results only.}
-\item{standard}{Adds effect sizes and confidence intervals.}
-\item{full}{Adds assumption checks (Levene's test), post-hoc tests,
-diagnostics, and per-variable missing data detail.}
+\item{minimal}{Stripped-down output for power users. Core results
+only — no Case Processing Summary, no variable labels, no
+reference categories, no effect sizes, no CIs.}
+\item{standard}{Default. Suitable for teaching and routine use.
+Includes Case Processing Summary, variable labels, reference
+categories, effect sizes, and confidence intervals.}
+\item{full}{Everything in standard plus assumption checks
+(Levene's test), post-hoc tests, diagnostics, and per-variable
+missing data detail.}
 }}
 
 \item{effect.size}{Logical or NULL. Override the level's default for
@@ -42,6 +50,16 @@ per-variable missing data detail.}
 
 \item{diagnostics}{Logical or NULL. Override the level's default for
 regression diagnostic output (jlm only).}
+
+\item{case.processing}{Logical or NULL. Override the level's default
+for the Case Processing Summary table that appears near the top of
+each analysis function's output.}
+
+\item{var.labels}{Logical or NULL. Override the level's default for
+the variable labels block.}
+
+\item{ref.categories}{Logical or NULL. Override the level's default
+for the reference categories block (registered dummies).}
 }
 \value{
 Invisibly returns NULL. Called for its side effect of setting

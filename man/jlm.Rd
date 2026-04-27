@@ -8,7 +8,7 @@ jlm(
   formula,
   data,
   subset = NULL,
-  labels = TRUE,
+  labels = NULL,
   numeric = NULL,
   categorical = NULL,
   diagnostics = NULL,

@@ -19,8 +19,9 @@ to flag as potential outliers. Default is 3.}
 \code{Group == 1}) to filter cases for this call only. Applied after
 jcomplete and jfilter. Does not affect other function calls.}
 
-\item{labels}{Logical. If TRUE (default), prints variable labels
-when available.}
+\item{labels}{Logical or NULL. If TRUE, prints variable labels
+when available. If FALSE, suppresses them. If NULL (default),
+defers to \code{joutput()}'s \code{var.labels} setting.}
 }
 \value{
 Invisibly returns a data frame containing the screening results.
