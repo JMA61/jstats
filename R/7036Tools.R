@@ -5494,17 +5494,25 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
       if (iv_dich$is_dichotomy) {
         if (iv_dich$coding == "1/2") {
           warning(
-            "'", v, "' is a 1/2 dichotomy. The model runs correctly, but ",
-            "recoding to 0/1 with jrecode() makes the intercept easier to ",
-            "interpret.",
+            v, " is a 1/2 dichotomy. The model runs correctly, but ",
+            "recoding to 0/1 makes the intercept easier to interpret. ",
+            "To recode:\n\n",
+            "  ", .jst_data_name, "$", v, "R <- jrecode(",
+              .jst_data_name, ", ", v, ", map = \"1=0; 2=1\")\n",
+            "  jlm(", deparse(formula[[2]]), " ~ ", v, "R)\n\n",
+            "For other approaches (jdummy, categorical = ...) see ?jlm.",
             call. = FALSE
           )
         } else if (iv_dich$coding == "other") {
           warning(
-            "'", v, "' is a dichotomy with non-standard coding. The slope ",
+            v, " is a dichotomy with non-standard coding. The slope ",
             "represents per-unit change rather than the contrast between ",
-            "categories. Consider recoding to 0/1 with jrecode() for ",
-            "clearer interpretation.",
+            "categories. Consider recoding to 0/1 for clearer interpretation. ",
+            "Adapt the values below to match this variable's actual codes:\n\n",
+            "  ", .jst_data_name, "$", v, "R <- jrecode(",
+              .jst_data_name, ", ", v, ", map = \"<oldval1>=0; <oldval2>=1\")\n",
+            "  jlm(", deparse(formula[[2]]), " ~ ", v, "R)\n\n",
+            "For other approaches (jdummy, categorical = ...) see ?jlm.",
             call. = FALSE
           )
         }
@@ -5514,13 +5522,14 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
         # informational warning so the user can confirm continuous
         # treatment or switch to categorical.
         warning(
-          "'", v, "' has categorical-like structure (small-range integer ",
+          v, " has categorical-like structure (small-range integer ",
           "or labelled values) but is entering the model as continuous. ",
           "If continuous treatment is intended (e.g. a Likert scale), no ",
-          "action is needed. If categorical treatment was intended, either ",
-          "(a) register with: jdummy(", .jst_data_name, ", ", v,
-          ") before running jlm(), or (b) use: jlm(", deparse(formula),
-          ", ", .jst_data_name, ", categorical = \"", v, "\")",
+          "action is needed. To treat as categorical, register with jdummy:",
+          "\n\n",
+          "  jdummy(", .jst_data_name, ", ", v, ")\n",
+          "  jlm(", deparse(formula), ")\n\n",
+          "For other approaches (categorical = ...) see ?jlm.",
           call. = FALSE
         )
       }
@@ -5585,6 +5594,33 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   } else {
     # Build all_ref_cats anyway because downstream code (return object) uses it
     all_ref_cats <- c(ref_cats, auto_ref_cats)
+  }
+
+  # Pre-fit checks: catch conditions that would otherwise produce the
+  # confusing lm.fit error "0 (non-NA) cases" — distinguishing the two
+  # different underlying conditions for a clearer message.
+
+  if (nrow(mf) == 0L) {
+    stop("All cases were excluded by the pipeline and/or listwise ",
+         "deletion; no model can be fit. See the Case Processing ",
+         "Summary above to identify which stage(s) excluded the cases.",
+         call. = FALSE)
+  }
+
+  # Zero-variance predictor check: any IV with only one unique value in
+  # the analytic sample. Skip the response (column 1 of mf) and intercept.
+  iv_cols <- mf[, -1L, drop = FALSE]
+  if (ncol(iv_cols) > 0L) {
+    n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
+    constant_ivs <- names(n_unique)[n_unique < 2L]
+    if (length(constant_ivs) > 0L) {
+      stop("The following predictor(s) have no variation in the ",
+           "analysis sample (only one unique value); cannot fit slope: ",
+           paste(constant_ivs, collapse = ", "), ". This often happens ",
+           "when jfilter() restricts the sample to a single category of ",
+           "a variable that is then used as a predictor.",
+           call. = FALSE)
+    }
   }
 
   model         <- stats::lm(formula, data = mf)
