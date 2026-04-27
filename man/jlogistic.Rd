@@ -99,4 +99,26 @@ jlogistic(vs01 ~ hp + wt, data = df)
 juse(df)
 jlogistic(vs01 ~ hp + wt)
 
+\dontrun{
+# CATEGORICAL PREDICTORS
+#
+# The recommended approach: register the variable with jdummy()
+# before running jlogistic(). This sets categorical treatment
+# persistently across subsequent analyses.
+jdummy(SampleData, Program)
+jlogistic(Outcome ~ Program + ReadingScore)
+
+# To choose a non-default reference category:
+jdummy(SampleData, Program, ref = "Standard")
+jlogistic(Outcome ~ Program + ReadingScore)
+
+# Per-call alternative: categorical = ... applies for one call only.
+jlogistic(Outcome ~ Program + ReadingScore, categorical = "Program")
+
+# FORCING NUMERIC TREATMENT
+#
+# Use numeric = ... when a labelled variable should enter as a score.
+jlogistic(Outcome ~ Age + Employment, numeric = "Age")
+}
+
 }

@@ -120,13 +120,32 @@ juse(mtcars)
 jlm(mpg ~ hp + wt)
 
 \dontrun{
-# Force a variable with value labels to be treated as numeric
-jlm(Outcome ~ Age + Employment, numeric = "Age")
+# CATEGORICAL PREDICTORS
+#
+# The recommended approach: register the variable with jdummy()
+# before running jlm(). This sets the categorical treatment
+# persistently, so subsequent jlm() calls (and other analyses)
+# use the same coding without re-specifying.
+jdummy(SampleData, Program)
+jlm(Outcome ~ Program + ReadingScore)
 
-# Force a plain numeric variable to be treated as categorical
+# To choose a non-default reference category:
+jdummy(SampleData, Program, ref = "Standard")
+jlm(Outcome ~ Program + ReadingScore)
+
+# Per-call alternative: categorical = ... applies for one call only
+# and does not persist. Useful when you want categorical treatment
+# without registering, or when overriding a registration just once.
 jlm(Outcome ~ Program + ReadingScore, categorical = "Program")
 
-# Multiple overrides
+# FORCING NUMERIC TREATMENT
+#
+# Use numeric = ... when a variable has value labels (haven_labelled)
+# but you want it treated as a continuous score (e.g., a Likert
+# scale you want the slope-per-unit interpretation for).
+jlm(Outcome ~ Age + Employment, numeric = "Age")
+
+# Multiple overrides at once
 jlm(Outcome ~ Age + Education + Program,
     numeric = c("Age", "Education"), categorical = "Program")
 }
