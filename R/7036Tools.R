@@ -508,20 +508,11 @@
         n_after       <- nrow(data)
         n_after_complete <- n_after
         n_excluded    <- n_before - n_after
-        if (n_excluded > 0) {
-          vars_str <- if (length(valid_vars) == 1) valid_vars else {
-            paste(paste(valid_vars[-length(valid_vars)], collapse = ", "),
-                  "or", valid_vars[length(valid_vars)])
-          }
-          msgs <- c(msgs, paste0(
-            "[YELLOW](Listwise filter: ", n_excluded,
-            " cases excluded due to missing values on ", vars_str,
-            " \u2014 ", n_after, " of ", n_before, " cases)"))
-        } else {
-          msgs <- c(msgs, paste0(
-            "[YELLOW](Listwise filter: no missing values on the registered variables \u2014 ",
-            n_after, " of ", n_before, " cases)"))
+        vars_str <- if (length(valid_vars) == 1) valid_vars else {
+          paste(valid_vars, collapse = ", ")
         }
+        msgs <- c(msgs, paste0(
+          "[YELLOW](jcomplete active on: ", vars_str, ")"))
       } else {
         n_after_complete <- nrow(data)
       }
@@ -555,8 +546,7 @@
       n_after <- nrow(data)
       n_after_filter <- n_after
       msgs <- c(msgs, paste0(
-        "[YELLOW](Filtered by ", fs$expr_str, ": ",
-        n_after, " of ", n_before, " cases selected)"))
+        "[YELLOW](jfilter active: ", fs$expr_str, ")"))
     } else {
       msgs <- c(msgs, "[YELLOW](Filter set but inactive)")
     }
@@ -568,8 +558,11 @@
   }
 
   # -- Step 3: subset (always applies) -------------------------------------
+  # Per-call subset arg. Counts and expression are reported in the Case
+  # Processing Summary table; no pipeline message is produced.
+  subset_expr_str <- NULL
   if (!is.null(subset_expr)) {
-    n_before <- nrow(data)
+    subset_expr_str <- paste(deparse(subset_expr), collapse = " ")
     mask <- tryCatch(
       eval(subset_expr, data, envir),
       error = function(e) {
@@ -579,11 +572,7 @@
     )
     mask[is.na(mask)] <- FALSE
     data    <- data[mask, , drop = FALSE]
-    n_after <- nrow(data)
-    n_after_subset <- n_after
-    msgs <- c(msgs, paste0(
-      "(Subset: ", deparse(subset_expr), " \u2014 ",
-      n_after, " of ", n_before, " cases remaining)"))
+    n_after_subset <- nrow(data)
   }
 
   pipeline_counts <- list(
@@ -593,7 +582,8 @@
     n_after_subset   = n_after_subset,
     complete_active  = complete_active,
     filter_active    = filter_active,
-    filter_expr      = filter_expr_str
+    filter_expr      = filter_expr_str,
+    subset_expr      = subset_expr_str
   )
 
   list(data = data, msgs = msgs, pipeline_counts = pipeline_counts)
@@ -643,27 +633,31 @@
   n_excluded_missing <- n_after_pipeline - n_analysis
 
   list(
-    n_original       = pipeline_counts$n_original,
-    n_after_complete = pipeline_counts$n_after_complete,
-    n_after_filter   = pipeline_counts$n_after_filter,
-    n_after_subset   = pipeline_counts$n_after_subset,
-    n_analysis       = n_analysis,
+    n_original         = pipeline_counts$n_original,
+    n_after_complete   = pipeline_counts$n_after_complete,
+    n_after_filter     = pipeline_counts$n_after_filter,
+    n_after_subset     = pipeline_counts$n_after_subset,
+    n_analysis         = n_analysis,
     n_excluded_missing = n_excluded_missing,
-    missing_by_var   = missing_by_var,
-    complete_active  = pipeline_counts$complete_active,
-    filter_active    = pipeline_counts$filter_active,
-    filter_expr      = pipeline_counts$filter_expr
+    missing_by_var     = missing_by_var,
+    complete_active    = pipeline_counts$complete_active,
+    filter_active      = pipeline_counts$filter_active,
+    filter_expr        = pipeline_counts$filter_expr,
+    subset_expr        = pipeline_counts$subset_expr
   )
 }
 
 # Output level preset defaults (used by .jst_resolve_toggle and joutput)
 .jst_output_defaults <- list(
   minimal  = list(effect.size = FALSE, ci = FALSE, levene = FALSE,
-                  posthoc = FALSE, missing = FALSE, diagnostics = FALSE),
+                  posthoc = FALSE, missing = FALSE, diagnostics = FALSE,
+                  case.processing = FALSE, var.labels = FALSE, ref.categories = FALSE),
   standard = list(effect.size = TRUE,  ci = TRUE,  levene = FALSE,
-                  posthoc = FALSE, missing = FALSE, diagnostics = FALSE),
+                  posthoc = FALSE, missing = FALSE, diagnostics = FALSE,
+                  case.processing = TRUE,  var.labels = TRUE,  ref.categories = TRUE),
   full     = list(effect.size = TRUE,  ci = TRUE,  levene = TRUE,
-                  posthoc = TRUE,  missing = TRUE,  diagnostics = TRUE)
+                  posthoc = TRUE,  missing = TRUE,  diagnostics = TRUE,
+                  case.processing = TRUE,  var.labels = TRUE,  ref.categories = TRUE)
 )
 
 #' Internal helper: resolve a display toggle value
@@ -686,9 +680,109 @@
   toggles <- getOption(".jst_output_toggles", list())
   if (name %in% names(toggles)) return(toggles[[name]])
   # 3. Fall back to level default
-  level    <- getOption(".jst_output_level", "minimal")
+  level    <- getOption(".jst_output_level", "standard")
   defaults <- .jst_output_defaults
   defaults[[level]][[name]]
+}
+
+#' Internal helper: print the Case Processing Summary table
+#'
+#' Prints a small SPSS-style Case Processing Summary table at the top of
+#' an analysis function's output, showing how many cases were used in the
+#' analysis (Valid), how many were excluded due to missing values
+#' (Excluded), and the total available after pipeline filtering (Total).
+#'
+#' Designed to be called from any analysis function that uses listwise
+#' deletion. Functions using pairwise deletion (e.g. \code{jcorr}) need
+#' a different presentation and should not use this helper directly.
+#'
+#' @param sample_info A list as returned by \code{.jst_build_sample_info()},
+#'   containing at least \code{n_analysis} (cases used) and
+#'   \code{n_excluded_missing} (cases dropped due to missing values).
+#'
+#' @return \code{invisible(NULL)}. Called for its side effect of
+#'   printing the table.
+#'
+#' @keywords internal
+.jst_print_case_processing <- function(sample_info) {
+  n_original <- sample_info$n_original
+  n_analysis <- sample_info$n_analysis
+
+  if (is.null(n_original) || n_original == 0) return(invisible(NULL))
+
+  # Build the chain row-by-row, in time order.
+  # Pipeline drop rows appear only when the corresponding stage was active
+  # for this call. The listwise row is always shown (even when zero) since
+  # listwise applies to every analysis function.
+
+  labels <- character(0)
+  ns     <- integer(0)
+
+  # Anchor: Original
+  labels <- c(labels, "Original")
+  ns     <- c(ns, n_original)
+
+  # jcomplete drop (if active)
+  prior_n <- n_original
+  if (isTRUE(sample_info$complete_active) &&
+      !is.null(sample_info$n_after_complete)) {
+    excluded <- prior_n - sample_info$n_after_complete
+    labels <- c(labels, "Excluded by jcomplete")
+    ns     <- c(ns, excluded)
+    prior_n <- sample_info$n_after_complete
+  }
+
+  # jfilter drop (if active)
+  if (isTRUE(sample_info$filter_active) &&
+      !is.null(sample_info$n_after_filter)) {
+    excluded <- prior_n - sample_info$n_after_filter
+    label    <- if (!is.null(sample_info$filter_expr) &&
+                    nzchar(sample_info$filter_expr)) {
+      paste0("Excluded by jfilter (", sample_info$filter_expr, ")")
+    } else {
+      "Excluded by jfilter"
+    }
+    labels <- c(labels, label)
+    ns     <- c(ns, excluded)
+    prior_n <- sample_info$n_after_filter
+  }
+
+  # subset drop (if a per-call subset was applied)
+  if (!is.null(sample_info$n_after_subset)) {
+    excluded <- prior_n - sample_info$n_after_subset
+    label    <- if (!is.null(sample_info$subset_expr) &&
+                    nzchar(sample_info$subset_expr)) {
+      paste0("Excluded by subset (", sample_info$subset_expr, ")")
+    } else {
+      "Excluded by subset"
+    }
+    labels <- c(labels, label)
+    ns     <- c(ns, excluded)
+    prior_n <- sample_info$n_after_subset
+  }
+
+  # Listwise drop (always shown)
+  labels <- c(labels, "Excluded by listwise")
+  ns     <- c(ns, sample_info$n_excluded_missing)
+
+  # Anchor: Analysis N
+  labels <- c(labels, "Analysis N")
+  ns     <- c(ns, n_analysis)
+
+  case_table <- data.frame(
+    Stage   = labels,
+    N       = ns,
+    Percent = sprintf("%.1f", ns / n_original * 100),
+    stringsAsFactors = FALSE
+  )
+
+  cat("\n")
+  .jst_print_table(case_table,
+                   caption = "Case Processing Summary",
+                   col.names = c("", "N", "%"),
+                   row.names = FALSE)
+  cat("\n")
+  invisible(NULL)
 }
 
 #' Internal helper: print per-variable missing data breakdown
@@ -2385,14 +2479,19 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 #' within any level. Per-call arguments on analysis functions always take
 #' precedence over joutput() settings.
 #'
-#' @param level Character. One of \code{"minimal"} (default), \code{"standard"},
-#'   or \code{"full"}. If omitted, prints the current settings.
-#'   If \code{NULL}, resets to defaults (minimal with no toggle overrides).
+#' @param level Character. One of \code{"minimal"}, \code{"standard"}
+#'   (default), or \code{"full"}. If omitted, prints the current settings.
+#'   If \code{NULL}, resets to defaults (standard with no toggle overrides).
 #'   \describe{
-#'     \item{minimal}{Current default behaviour. Core results only.}
-#'     \item{standard}{Adds effect sizes and confidence intervals.}
-#'     \item{full}{Adds assumption checks (Levene's test), post-hoc tests,
-#'       diagnostics, and per-variable missing data detail.}
+#'     \item{minimal}{Stripped-down output for power users. Core results
+#'       only — no Case Processing Summary, no variable labels, no
+#'       reference categories, no effect sizes, no CIs.}
+#'     \item{standard}{Default. Suitable for teaching and routine use.
+#'       Includes Case Processing Summary, variable labels, reference
+#'       categories, effect sizes, and confidence intervals.}
+#'     \item{full}{Everything in standard plus assumption checks
+#'       (Levene's test), post-hoc tests, diagnostics, and per-variable
+#'       missing data detail.}
 #'   }
 #' @param effect.size Logical or NULL. Override the level's default for
 #'   effect size display.
@@ -2406,6 +2505,13 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 #'   per-variable missing data detail.
 #' @param diagnostics Logical or NULL. Override the level's default for
 #'   regression diagnostic output (jlm only).
+#' @param case.processing Logical or NULL. Override the level's default
+#'   for the Case Processing Summary table that appears near the top of
+#'   each analysis function's output.
+#' @param var.labels Logical or NULL. Override the level's default for
+#'   the variable labels block.
+#' @param ref.categories Logical or NULL. Override the level's default
+#'   for the reference categories block (registered dummies).
 #'
 #' @return Invisibly returns NULL. Called for its side effect of setting
 #'   session options.
@@ -2419,7 +2525,9 @@ jdummy <- function(data, var, ref = "first", show = FALSE, remove = FALSE) {
 #'
 #' @export
 joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
-                    posthoc = NULL, missing = NULL, diagnostics = NULL) {
+                    posthoc = NULL, missing = NULL, diagnostics = NULL,
+                    case.processing = NULL, var.labels = NULL,
+                    ref.categories = NULL) {
 
   valid_levels <- c("minimal", "standard", "full")
 
@@ -2428,18 +2536,21 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
     options(.jst_output_level = NULL)
     options(.jst_output_toggles = NULL)
     .cat_red("Output Settings\n")
-    cat("Reset to defaults (minimal, no toggle overrides).\n\n")
+    cat("Reset to defaults (standard, no toggle overrides).\n\n")
     return(invisible(NULL))
   }
 
   # Collect any explicit toggle overrides
   toggle_args <- list()
-  if (!is.null(effect.size))  toggle_args$effect.size  <- effect.size
-  if (!is.null(ci))           toggle_args$ci           <- ci
-  if (!is.null(levene))       toggle_args$levene       <- levene
-  if (!is.null(posthoc))      toggle_args$posthoc      <- posthoc
-  if (!is.null(missing))      toggle_args$missing      <- missing
-  if (!is.null(diagnostics))  toggle_args$diagnostics  <- diagnostics
+  if (!is.null(effect.size))     toggle_args$effect.size     <- effect.size
+  if (!is.null(ci))              toggle_args$ci              <- ci
+  if (!is.null(levene))          toggle_args$levene          <- levene
+  if (!is.null(posthoc))         toggle_args$posthoc         <- posthoc
+  if (!is.null(missing))         toggle_args$missing         <- missing
+  if (!is.null(diagnostics))     toggle_args$diagnostics     <- diagnostics
+  if (!is.null(case.processing)) toggle_args$case.processing <- case.processing
+  if (!is.null(var.labels))      toggle_args$var.labels      <- var.labels
+  if (!is.null(ref.categories))  toggle_args$ref.categories  <- ref.categories
 
   # joutput() with no level argument -- show status or apply toggles only
   if (missing(level)) {
@@ -2476,14 +2587,15 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #'
 #' @keywords internal
 .jst_output_status <- function() {
-  level   <- getOption(".jst_output_level", "minimal")
+  level   <- getOption(".jst_output_level", "standard")
   toggles <- getOption(".jst_output_toggles", list())
 
   .cat_red("Output Settings\n")
   cat("Level: ", level, "\n", sep = "")
 
   # Show effective value for each toggle
-  toggle_names <- c("effect.size", "ci", "levene", "posthoc", "missing", "diagnostics")
+  toggle_names <- c("effect.size", "ci", "levene", "posthoc", "missing", "diagnostics",
+                    "case.processing", "var.labels", "ref.categories")
   defaults     <- .jst_output_defaults[[level]]
 
   for (nm in toggle_names) {
@@ -3057,8 +3169,9 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Logical or NULL. If TRUE, prints variable labels
+#'   when available. If FALSE, suppresses them. If NULL (default),
+#'   defers to \code{joutput()}'s \code{var.labels} setting.
 #'
 #' @return Invisibly returns a data frame containing the screening results.
 #'
@@ -5027,7 +5140,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #' }
 #'
 #' @export
-jlm <- function(formula, data, subset = NULL, labels = TRUE,
+jlm <- function(formula, data, subset = NULL, labels = NULL,
                 numeric = NULL, categorical = NULL,
                 diagnostics = NULL, full = FALSE, ...) {
 
@@ -5061,8 +5174,11 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
-  # Resolve missing detail toggle
-  show_missing <- .jst_resolve_toggle("missing", NULL)
+  # Resolve display toggles
+  show_missing         <- .jst_resolve_toggle("missing",         NULL)
+  show_var_labels      <- .jst_resolve_toggle("var.labels",      labels)
+  show_ref_categories  <- .jst_resolve_toggle("ref.categories",  NULL)
+  show_case_processing <- .jst_resolve_toggle("case.processing", NULL)
 
   # Resolve diagnostics toggle
   if (full) {
@@ -5411,50 +5527,66 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
     }
   }
 
-  if (labels) {
+  # Build model frame and sample_info early so case processing block can
+  # use them. Listwise deletion is applied here via na.action = na.omit.
+  mf          <- stats::model.frame(formula, data = data, na.action = stats::na.omit)
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = all.vars(formula),
+    n_analysis      = nrow(mf)
+  )
+
+  # Case Processing Summary
+  if (show_case_processing) {
+    .jst_print_case_processing(sample_info)
+  }
+
+  # Per-variable missing detail (only if any cases were excluded by listwise)
+  if (show_missing && sample_info$n_excluded_missing > 0) {
+    .jst_print_missing_detail(sample_info$missing_by_var)
+  }
+
+  # Variable labels
+  if (show_var_labels) {
     .print_var_labels(data, all.vars(formula))
   }
 
-  # Print reference categories — registered dummies first, then auto/override
-  all_ref_cats <- c(ref_cats, auto_ref_cats)
-  if (length(all_ref_cats) > 0) {
-    cat("  Reference categories: ", paste(all_ref_cats, collapse = ", "), "\n", sep = "")
-  }
-
-  # Informational messages for auto-detected categoricals
-  auto_detected <- setdiff(sub(" = .*", "", auto_ref_cats),
-                           if (!is.null(categorical)) categorical else character(0))
-  if (length(auto_detected) > 0) {
-    cat("  (", paste(auto_detected, collapse = ", "),
-        " auto-detected as categorical. To choose a different\n",
-        "   reference category, use jdummy() before running jlm().\n",
-        "   If a variable should be numeric, use: numeric = \"",
-        auto_detected[1], "\")\n", sep = "")
-  }
-
-  # Informational message for categorical overrides
-  if (!is.null(categorical) && length(categorical) > 0) {
-    cat_in_model <- intersect(categorical, sub(" = .*", "", auto_ref_cats))
-    if (length(cat_in_model) > 0) {
-      cat("  (", paste(cat_in_model, collapse = ", "),
-          " treated as categorical via categorical argument.\n",
-          "   To choose a different reference, use jdummy() before running jlm().)\n",
-          sep = "")
+  # Reference categories block + categorical-handling notes
+  if (show_ref_categories) {
+    # Print reference categories — registered dummies first, then auto/override
+    all_ref_cats <- c(ref_cats, auto_ref_cats)
+    if (length(all_ref_cats) > 0) {
+      cat("  Reference categories: ", paste(all_ref_cats, collapse = ", "), "\n", sep = "")
     }
-  }
-  if (length(all_ref_cats) > 0) cat("\n")
 
-  mf            <- stats::model.frame(formula, data = data, na.action = stats::na.omit)
-  n_excluded_na <- nrow(data) - nrow(mf)
-  if (n_excluded_na > 0) {
-    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
-    if (show_missing) {
-      mbv <- vapply(model_vars, function(v) {
-        if (v %in% names(data)) sum(is.na(data[[v]])) else 0L
-      }, integer(1))
-      .jst_print_missing_detail(mbv)
+    # Informational messages for auto-detected categoricals
+    auto_detected <- setdiff(sub(" = .*", "", auto_ref_cats),
+                             if (!is.null(categorical)) categorical else character(0))
+    if (length(auto_detected) > 0) {
+      cat("  (", paste(auto_detected, collapse = ", "),
+          " auto-detected as categorical. To choose a different\n",
+          "   reference category, use jdummy() before running jlm().\n",
+          "   If a variable should be numeric, use: numeric = \"",
+          auto_detected[1], "\")\n", sep = "")
     }
+
+    # Informational message for categorical overrides
+    if (!is.null(categorical) && length(categorical) > 0) {
+      cat_in_model <- intersect(categorical, sub(" = .*", "", auto_ref_cats))
+      if (length(cat_in_model) > 0) {
+        cat("  (", paste(cat_in_model, collapse = ", "),
+            " treated as categorical via categorical argument.\n",
+            "   To choose a different reference, use jdummy() before running jlm().)\n",
+            sep = "")
+      }
+    }
+    if (length(all_ref_cats) > 0) cat("\n")
+  } else {
+    # Build all_ref_cats anyway because downstream code (return object) uses it
+    all_ref_cats <- c(ref_cats, auto_ref_cats)
   }
+
   model         <- stats::lm(formula, data = mf)
   model_summary <- summary(model)
 
@@ -5545,7 +5677,6 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
   cat("  Regression: ", sprintf("%.3f", ss_regression), "\n", sep = "")
   cat("  Residual:   ", sprintf("%.3f", ss_residual),   "\n", sep = "")
   cat("  Total:      ", sprintf("%.3f", ss_total),      "\n", sep = "")
-  cat("\nNumber of observations: ", n_obs, "\n", sep = "")
 
   # -- Diagnostics (VIF + plots) --------------------------------------------
   vif_values <- NULL
@@ -5606,14 +5737,6 @@ jlm <- function(formula, data, subset = NULL, labels = TRUE,
       .jst_plot_lm_diagnostics(model, which = plot_which)
     }
   }
-
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = all.vars(formula),
-    n_analysis      = n_obs
-  )
 
   ret <- list(
     model           = model,
