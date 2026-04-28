@@ -164,7 +164,12 @@
     text <- trimws(text)
     switch(alignment,
            "r" = formatC(text, width = width, flag = " "),
-           "c" = formatC(text, width = width, format = "s"),
+           "c" = {
+             pad   <- max(0L, width - nchar(text))
+             left  <- pad %/% 2
+             right <- pad - left
+             paste0(strrep(" ", left), text, strrep(" ", right))
+           },
            formatC(text, width = -width, flag = "-")
     )
   }
@@ -502,17 +507,9 @@
       complete_active <- TRUE
       valid_vars <- cs$vars[cs$vars %in% names(data)]
       if (length(valid_vars) > 0) {
-        n_before      <- nrow(data)
-        complete_mask <- stats::complete.cases(data[, valid_vars, drop = FALSE])
-        data          <- data[complete_mask, , drop = FALSE]
-        n_after       <- nrow(data)
-        n_after_complete <- n_after
-        n_excluded    <- n_before - n_after
-        vars_str <- if (length(valid_vars) == 1) valid_vars else {
-          paste(valid_vars, collapse = ", ")
-        }
-        msgs <- c(msgs, paste0(
-          "[YELLOW](jcomplete active on: ", vars_str, ")"))
+        complete_mask    <- stats::complete.cases(data[, valid_vars, drop = FALSE])
+        data             <- data[complete_mask, , drop = FALSE]
+        n_after_complete <- nrow(data)
       } else {
         n_after_complete <- nrow(data)
       }
@@ -532,7 +529,6 @@
     if (fs$active) {
       filter_active   <- TRUE
       filter_expr_str <- fs$expr_str
-      n_before <- nrow(data)
       mask <- tryCatch(
         eval(fs$expr, data, envir),
         error = function(e) {
@@ -542,11 +538,8 @@
         }
       )
       mask[is.na(mask)] <- FALSE
-      data    <- data[mask, , drop = FALSE]
-      n_after <- nrow(data)
-      n_after_filter <- n_after
-      msgs <- c(msgs, paste0(
-        "[YELLOW](jfilter active: ", fs$expr_str, ")"))
+      data           <- data[mask, , drop = FALSE]
+      n_after_filter <- nrow(data)
     } else {
       msgs <- c(msgs, "[YELLOW](Filter set but inactive)")
     }
@@ -685,35 +678,57 @@
   defaults[[level]][[name]]
 }
 
-#' Internal helper: print the Case Processing Summary table
+#' Internal helper: print the Case Processing table
 #'
-#' Prints a small SPSS-style Case Processing Summary table at the top of
-#' an analysis function's output, showing how many cases were used in the
-#' analysis (Valid), how many were excluded due to missing values
-#' (Excluded), and the total available after pipeline filtering (Total).
+#' Prints a compact "Case Processing" chain table at the top of an
+#' analysis function's output, tracing how the original N moves through
+#' jcomplete, jfilter, per-call subset, and (for listwise callers)
+#' listwise deletion to arrive at the analysis N. The table title is
+#' rendered inline as the first column header rather than as a separate
+#' caption row, which keeps the table compact.
 #'
-#' Designed to be called from any analysis function that uses listwise
-#' deletion. Functions using pairwise deletion (e.g. \code{jcorr}) need
-#' a different presentation and should not use this helper directly.
+#' Designed to be called from any analysis function that needs a Case
+#' Processing Summary. Listwise-deletion functions (e.g. \code{jlm()},
+#' \code{jt()}, \code{jaov()}) call with \code{listwise = TRUE} (the
+#' default) so the table includes an "Excluded listwise" row. Non-
+#' listwise functions (e.g. \code{jfreq()}, eventually \code{jcorr()})
+#' call with \code{listwise = FALSE}; in that mode the listwise row is
+#' omitted, and the table itself is suppressed entirely when no
+#' pipeline stage was active for this call (since the chain would
+#' otherwise reduce to Original = Analysis N, which carries no new
+#' information).
 #'
 #' @param sample_info A list as returned by \code{.jst_build_sample_info()},
 #'   containing at least \code{n_analysis} (cases used) and
 #'   \code{n_excluded_missing} (cases dropped due to missing values).
+#' @param listwise Logical. If \code{TRUE} (default), include an
+#'   "Excluded listwise" row and always print the table. If \code{FALSE},
+#'   omit the listwise row and suppress the table when no pipeline stage
+#'   was active.
 #'
 #' @return \code{invisible(NULL)}. Called for its side effect of
 #'   printing the table.
 #'
 #' @keywords internal
-.jst_print_case_processing <- function(sample_info) {
+.jst_print_case_processing <- function(sample_info, listwise = TRUE) {
   n_original <- sample_info$n_original
   n_analysis <- sample_info$n_analysis
 
   if (is.null(n_original) || n_original == 0) return(invisible(NULL))
 
-  # Build the chain row-by-row, in time order.
-  # Pipeline drop rows appear only when the corresponding stage was active
-  # for this call. The listwise row is always shown (even when zero) since
-  # listwise applies to every analysis function.
+  # Pipeline activity for this call (used to suppress the table for
+  # non-listwise callers when there is nothing to report).
+  pipeline_active <- isTRUE(sample_info$complete_active) ||
+                     isTRUE(sample_info$filter_active) ||
+                     !is.null(sample_info$n_after_subset)
+
+  if (!listwise && !pipeline_active) return(invisible(NULL))
+
+  # Build the chain row-by-row, in time order. Pipeline drop rows appear
+  # only when the corresponding stage was active for this call. The
+  # listwise row is included only when listwise = TRUE (it is always
+  # shown in that case, even when zero, since listwise is the deletion
+  # method these callers used).
 
   labels <- character(0)
   ns     <- integer(0)
@@ -761,9 +776,11 @@
     prior_n <- sample_info$n_after_subset
   }
 
-  # Listwise drop (always shown)
-  labels <- c(labels, "Excluded by listwise")
-  ns     <- c(ns, sample_info$n_excluded_missing)
+  # Listwise drop (only for listwise callers; always shown when listwise=TRUE)
+  if (listwise) {
+    labels <- c(labels, "Excluded listwise")
+    ns     <- c(ns, sample_info$n_excluded_missing)
+  }
 
   # Anchor: Analysis N
   labels <- c(labels, "Analysis N")
@@ -778,8 +795,8 @@
 
   cat("\n")
   .jst_print_table(case_table,
-                   caption = "Case Processing Summary",
-                   col.names = c("", "N", "%"),
+                   col.names = c("Case Processing", "N", "%"),
+                   align     = c("l", "c", "c"),
                    row.names = FALSE)
   cat("\n")
   invisible(NULL)
@@ -3134,10 +3151,15 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 #' each variable supplied. Designed for use with unquoted variable names, and
 #' also accepts a plain vector.
 #'
-#' Output is structured consistently with \code{jdesc()}: a red title
-#' ("Frequencies for \emph{varname}") is printed first, followed by the
-#' variable type and variable label (or "None" if absent), then a single blank
-#' line before the table. One complete block is printed per variable.
+#' Output is structured consistently with \code{jdesc()}: a single red
+#' "Frequencies" title is printed first, followed by the default-data note
+#' (if a juse() default was used), any pipeline messages, and the Case
+#' Processing Summary (when at least one pipeline stage was active for
+#' this call). Each variable then gets its own block consisting of the
+#' variable name on its own line, indented Type and Variable label lines
+#' (suppressed when \code{joutput()}'s \code{var.labels} toggle is off),
+#' a blank line, and the frequency table. The frequency table ends with
+#' a Total row showing the post-pipeline N.
 #'
 #' For haven-labelled variables, value labels and numeric codes are combined
 #' in the frequency table rows (e.g. \code{1: Strongly Oppose}). The type
@@ -3151,8 +3173,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to filter cases for this call only. Applied after
 #'   jcomplete and jfilter. Does not affect other function calls.
-#' @param labels Logical. If \code{TRUE} (default), prints the variable type
-#'   and label (or "None") beneath the title.
+#' @param labels Logical or NULL. If TRUE, prints the variable type and
+#'   label (or "None") beneath the title. If FALSE, suppresses them. If
+#'   NULL (default), defers to \code{joutput()}'s \code{var.labels}
+#'   setting.
 #'
 #' @return Invisibly returns a list of class \code{"jst_freq"} containing:
 #'   \code{frequencies} (named list of data frames, one per variable) and
@@ -3172,7 +3196,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 #' jfreq(mtcars$gear)
 #'
 #' @export
-jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
+jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 
   # Capture original expression before any evaluation (needed for vector input)
   .data_expr <- if (!missing(data)) {
@@ -3223,6 +3247,30 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
                                   subset_expr = subset_expr, envir = parent.frame())
   data     <- pipeline$data
 
+  # Resolve display toggles
+  show_var_labels      <- .jst_resolve_toggle("var.labels",      labels)
+  show_case_processing <- .jst_resolve_toggle("case.processing", NULL)
+
+  # Build sample_info (used by CPS and the return value)
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = var_names_check,
+    n_analysis      = nrow(data)
+  )
+
+  # -- Preamble (printed once, before any per-variable block) ----------------
+  .cat_red("Frequencies\n")
+  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  .jst_print_msgs(pipeline$msgs)
+
+  # Case Processing Summary (jfreq is non-listwise; the helper suppresses
+  # the table when no pipeline stage was active).
+  if (show_case_processing) {
+    .jst_print_case_processing(sample_info, listwise = FALSE)
+  }
+
+  # -- Per-variable blocks ---------------------------------------------------
   for (variable in variables) {
     variable_name <- rlang::quo_name(variable)
 
@@ -3283,14 +3331,11 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
 
     results[[variable_name]] <- freq_table
 
-    # -- Print: title -> type -> label -> single blank line -> table ----------
-    .cat_red(paste0("Frequencies for ", variable_name, "\n"))
-    if (.jst_default_used) .jst_default_note(.jst_data_name)
-    .jst_print_msgs(pipeline$msgs)
-
-    if (labels) {
-      cat("Type of variable: ", .format_var_type(var_class), "\n", sep = "")
-      cat("Variable label: ", var_label_val, "\n", sep = "")
+    # -- Print: variable-name anchor -> (optional Type/Label) -> blank -> table
+    cat(variable_name, "\n", sep = "")
+    if (show_var_labels) {
+      cat("  Type: ", .format_var_type(var_class), "\n", sep = "")
+      cat("  Variable label: ", var_label_val, "\n", sep = "")
     }
     cat("\n")
 
@@ -3307,6 +3352,17 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
       stringsAsFactors = FALSE
     )
 
+    # Append Total row (sum of all rows including NA = post-pipeline N)
+    total_row <- data.frame(
+      Value    = "Total",
+      Freq     = total_count,
+      TotalPct = "100.00",
+      ValidPct = "",
+      CumPct   = "",
+      stringsAsFactors = FALSE
+    )
+    display_df <- rbind(display_df, total_row)
+
     .jst_print_table(display_df,
                      col.names = c("", "Freq", "Total %", "Valid %", "Cum. %"),
                      row.names = FALSE)
@@ -3314,14 +3370,6 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
   }
 
   cat("\n")
-
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = var_names_check,
-    n_analysis      = nrow(data)
-  )
 
   ret <- list(
     frequencies = results,
@@ -3373,7 +3421,7 @@ jfreq <- function(data, ..., subset = NULL, labels = TRUE) {
 #' jscreen(, mpg, hp, wt, subset = am == 1)
 #'
 #' @export
-jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
+jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 
   # Capture original expression before any evaluation
   .data_expr <- if (!missing(data)) {
@@ -3431,6 +3479,9 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE) {
                                   subset_expr = subset_expr, envir = parent.frame())
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
+
+  # Resolve display toggles
+  labels <- .jst_resolve_toggle("var.labels", labels)
 
   n_cases   <- nrow(data)
   n_vars    <- ncol(data)

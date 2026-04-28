@@ -4,7 +4,7 @@
 \alias{jfreq}
 \title{SPSS-like frequency tables for categorical variables}
 \usage{
-jfreq(data, ..., subset = NULL, labels = TRUE)
+jfreq(data, ..., subset = NULL, labels = NULL)
 }
 \arguments{
 \item{data}{A data frame, or a vector.}
@@ -16,8 +16,10 @@ jfreq(data, ..., subset = NULL, labels = TRUE)
 \code{Group == 1}) to filter cases for this call only. Applied after
 jcomplete and jfilter. Does not affect other function calls.}
 
-\item{labels}{Logical. If \code{TRUE} (default), prints the variable type
-and label (or "None") beneath the title.}
+\item{labels}{Logical or NULL. If TRUE, prints the variable type and
+label (or "None") beneath the title. If FALSE, suppresses them. If
+NULL (default), defers to \code{joutput()}'s \code{var.labels}
+setting.}
 }
 \value{
 Invisibly returns a list of class \code{"jst_freq"} containing:
@@ -30,10 +32,15 @@ each variable supplied. Designed for use with unquoted variable names, and
 also accepts a plain vector.
 }
 \details{
-Output is structured consistently with \code{jdesc()}: a red title
-("Frequencies for \emph{varname}") is printed first, followed by the
-variable type and variable label (or "None" if absent), then a single blank
-line before the table. One complete block is printed per variable.
+Output is structured consistently with \code{jdesc()}: a single red
+"Frequencies" title is printed first, followed by the default-data note
+(if a juse() default was used), any pipeline messages, and the Case
+Processing Summary (when at least one pipeline stage was active for
+this call). Each variable then gets its own block consisting of the
+variable name on its own line, indented Type and Variable label lines
+(suppressed when \code{joutput()}'s \code{var.labels} toggle is off),
+a blank line, and the frequency table. The frequency table ends with
+a Total row showing the post-pipeline N.
 
 For haven-labelled variables, value labels and numeric codes are combined
 in the frequency table rows (e.g. \code{1: Strongly Oppose}). The type

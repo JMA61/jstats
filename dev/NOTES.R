@@ -25,19 +25,13 @@ devtools::check(remote = TRUE)
 # To Commit the new version:
 git add -A
 
-git commit -m "v0.8.2: jplot() unified plotting function
-
-Major work across Sessions 11-14:
-
-- New Case Processing Summary infrastructure: chain-style table
-  ...rest of the message...
-- 17 internal helpers gained full roxygen documentation."
+git commit -m "v0.8.3: jplot() unified plotting function"
 
 # To Push/Upload to GitHub
 git push
 
 # To create the version tag
-git tag -a v0.8.2 -m "Version 0.8.2"
+git tag -a v0.8.3 -m "Version 0.8.3"
 git push --tags
 
 # Verity that the tag exists:

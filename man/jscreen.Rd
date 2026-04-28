@@ -4,7 +4,7 @@
 \alias{jscreen}
 \title{Data screening overview}
 \usage{
-jscreen(data, ..., outlier.sd = 3, subset = NULL, labels = TRUE)
+jscreen(data, ..., outlier.sd = 3, subset = NULL, labels = NULL)
 }
 \arguments{
 \item{data}{A data frame.}

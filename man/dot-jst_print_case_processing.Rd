@@ -2,28 +2,42 @@
 % Please edit documentation in R/7036Tools.R
 \name{.jst_print_case_processing}
 \alias{.jst_print_case_processing}
-\title{Internal helper: print the Case Processing Summary table}
+\title{Internal helper: print the Case Processing table}
 \usage{
-.jst_print_case_processing(sample_info)
+.jst_print_case_processing(sample_info, listwise = TRUE)
 }
 \arguments{
 \item{sample_info}{A list as returned by \code{.jst_build_sample_info()},
 containing at least \code{n_analysis} (cases used) and
 \code{n_excluded_missing} (cases dropped due to missing values).}
+
+\item{listwise}{Logical. If \code{TRUE} (default), include an
+"Excluded listwise" row and always print the table. If \code{FALSE},
+omit the listwise row and suppress the table when no pipeline stage
+was active.}
 }
 \value{
 \code{invisible(NULL)}. Called for its side effect of
 printing the table.
 }
 \description{
-Prints a small SPSS-style Case Processing Summary table at the top of
-an analysis function's output, showing how many cases were used in the
-analysis (Valid), how many were excluded due to missing values
-(Excluded), and the total available after pipeline filtering (Total).
+Prints a compact "Case Processing" chain table at the top of an
+analysis function's output, tracing how the original N moves through
+jcomplete, jfilter, per-call subset, and (for listwise callers)
+listwise deletion to arrive at the analysis N. The table title is
+rendered inline as the first column header rather than as a separate
+caption row, which keeps the table compact.
 }
 \details{
-Designed to be called from any analysis function that uses listwise
-deletion. Functions using pairwise deletion (e.g. \code{jcorr}) need
-a different presentation and should not use this helper directly.
+Designed to be called from any analysis function that needs a Case
+Processing Summary. Listwise-deletion functions (e.g. \code{jlm()},
+\code{jt()}, \code{jaov()}) call with \code{listwise = TRUE} (the
+default) so the table includes an "Excluded listwise" row. Non-
+listwise functions (e.g. \code{jfreq()}, eventually \code{jcorr()})
+call with \code{listwise = FALSE}; in that mode the listwise row is
+omitted, and the table itself is suppressed entirely when no
+pipeline stage was active for this call (since the chain would
+otherwise reduce to Original = Analysis N, which carries no new
+information).
 }
 \keyword{internal}
