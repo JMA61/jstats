@@ -25,7 +25,9 @@ devtools::check(remote = TRUE)
 # To Commit the new version:
 git add -A
 
-git commit -m "v0.8.3: jplot() unified plotting function"
+git commit -m "v0.8.3: jfreq case processing + unified dummy naming"
+
+
 
 # To Push/Upload to GitHub
 git push
