@@ -1,6 +1,6 @@
 Package: JeffsStatTools
-Title: Simplified Statistics Tools for Social Science Research and Teaching
-Version: 0.8.4
+Title: Simplified Statistical Analysis Tools for Social Science
+Version: 0.8.7
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
 Description: Provides simplified tools for common statistical analyses
@@ -16,12 +16,14 @@ Description: Provides simplified tools for common statistical analyses
     Excel, CSV, and R formats. Functions accept unquoted variable
     names and formula syntax for ease of use, handle haven-labelled
     variables automatically, and return results invisibly while
-    printing user-friendly tables.
+    printing user-friendly tables. The package stays close enough to
+    base R conventions that users learn transferable skills rather
+    than a private dialect, supporting a smooth transition from SPSS,
+    Stata, or SAS into the broader R ecosystem.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends:
-    R (>= 4.2.0),
-    magrittr
+    R (>= 4.2.0)
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
@@ -31,4 +33,3 @@ Imports:
     rlang,
     readxl,
     writexl
-Date: 2026-04-30
