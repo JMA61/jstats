@@ -1233,6 +1233,145 @@
   list(data = data, name = data_name)
 }
 
+#' Internal helper: resolve the first positional argument of a data-first function
+#'
+#' Inspects the unevaluated first argument of a data-first function and
+#' decides whether the user passed a real data frame, omitted the data
+#' argument (so the \code{juse()} default should be used), or passed a
+#' bare variable name without a leading comma (so the default should be
+#' used and the captured symbol treated as the user's first content
+#' argument).
+#'
+#' Distinguishes five outcomes via the \code{mode} field:
+#' \describe{
+#'   \item{\code{"default"}}{Data argument was missing; juse default used.}
+#'   \item{\code{"null"}}{User passed literal \code{NULL}; only returned
+#'     when \code{allow_null = TRUE}. Caller handles (e.g., for global
+#'     clear semantics in jdummy/jfilter/jcomplete).}
+#'   \item{\code{"explicit"}}{User passed an expression that evaluated
+#'     to a data frame. That data frame is used.}
+#'   \item{\code{"vector_input"}}{Only returned when
+#'     \code{accept_vector = TRUE}. User passed an expression that
+#'     evaluated to a non-data-frame value (typically an atomic vector
+#'     or a column reference like \code{SampleData$Gender}). The caller
+#'     handles this --- usually by wrapping the value in a temporary
+#'     data frame.}
+#'   \item{\code{"symbol_with_default"}}{User passed a bare symbol that
+#'     did not evaluate (or evaluated to a non-data-frame value when
+#'     \code{accept_vector = FALSE}). Treated as a variable-name attempt
+#'     missing the leading comma. The juse default is used as the data
+#'     frame, and the caller is expected to inject \code{first_arg_sub}
+#'     as an additional content argument.}
+#' }
+#'
+#' Errors with a tailored message when the user passed something that
+#' cannot be resolved (e.g., bare symbol with no juse default set, or
+#' literal \code{NULL} when \code{allow_null = FALSE}).
+#'
+#' @param data_sub The substituted first argument, captured by the
+#'   caller via \code{substitute(data)}.
+#' @param data_missing Logical. The result of \code{missing(data)} in
+#'   the calling function. Must be captured by the caller because
+#'   \code{missing()} cannot be used reliably across function call
+#'   boundaries.
+#' @param fn_name Character. The calling function's name, used in
+#'   tailored error messages.
+#' @param envir Environment. The calling function's parent frame; used
+#'   for evaluating the first argument and looking up the juse default
+#'   data frame.
+#' @param allow_null Logical. If \code{TRUE}, literal \code{NULL} is
+#'   returned with mode \code{"null"} for the caller to handle.
+#'   Defaults to \code{FALSE}, in which case literal \code{NULL} errors.
+#' @param accept_vector Logical. If \code{TRUE}, an expression that
+#'   evaluates to a non-data-frame value is returned with mode
+#'   \code{"vector_input"} for the caller to handle. Defaults to
+#'   \code{FALSE}, in which case such inputs are treated as bare-symbol
+#'   variable-name attempts (mode \code{"symbol_with_default"}).
+#'
+#' @return A list with components:
+#'   \describe{
+#'     \item{\code{mode}}{Character. One of \code{"default"},
+#'       \code{"null"}, \code{"explicit"}, \code{"vector_input"},
+#'       \code{"symbol_with_default"}.}
+#'     \item{\code{data}}{The resolved data frame (or \code{NULL} for
+#'       modes \code{"null"} and \code{"vector_input"}).}
+#'     \item{\code{name}}{Character name string for messages (or
+#'       \code{NULL} for modes \code{"null"} and \code{"vector_input"}).}
+#'     \item{\code{first_arg_sub}}{The user's substituted first argument
+#'       (or \code{NULL} when not applicable). Set for modes
+#'       \code{"vector_input"} and \code{"symbol_with_default"}.}
+#'     \item{\code{first_arg_value}}{The evaluated value of the first
+#'       argument, set only for mode \code{"vector_input"}; \code{NULL}
+#'       otherwise.}
+#'   }
+#'
+#' @keywords internal
+.jst_resolve_first_arg <- function(data_sub, data_missing, fn_name,
+                                   envir         = parent.frame(),
+                                   allow_null    = FALSE,
+                                   accept_vector = FALSE) {
+
+  # -- Case 1: data argument truly missing ----------------------------------
+  if (data_missing) {
+    resolved <- .jst_resolve_data(envir = envir)
+    return(list(mode = "default",
+                data = resolved$data, name = resolved$name,
+                first_arg_sub = NULL, first_arg_value = NULL))
+  }
+
+  # -- Case 2: literal NULL passed in ---------------------------------------
+  if (is.null(data_sub)) {
+    if (allow_null) {
+      return(list(mode = "null",
+                  data = NULL, name = NULL,
+                  first_arg_sub = NULL, first_arg_value = NULL))
+    }
+    stop(paste0(fn_name, "(): NULL is not a valid data argument. ",
+                "Provide a data frame, or set a default first with juse()."),
+         call. = FALSE)
+  }
+
+  # -- Try to evaluate the substituted first argument -----------------------
+  eval_result <- tryCatch(
+    list(value = eval(data_sub, envir = envir), failed = FALSE),
+    error = function(e) list(value = NULL, failed = TRUE)
+  )
+
+  # -- Case 3: evaluated to a data frame ------------------------------------
+  if (!eval_result$failed && is.data.frame(eval_result$value)) {
+    return(list(mode = "explicit",
+                data = eval_result$value,
+                name = paste(deparse(data_sub), collapse = ""),
+                first_arg_sub = NULL, first_arg_value = NULL))
+  }
+
+  # -- Cases 4 and 5 both need the juse default to fall back on -------------
+  default_name <- getOption(".jst_default_data", default = NULL)
+
+  # -- Case 4: evaluated to a non-data-frame value (vector input) -----------
+  if (accept_vector && !eval_result$failed) {
+    return(list(mode = "vector_input",
+                data = NULL, name = NULL,
+                first_arg_sub  = data_sub,
+                first_arg_value = eval_result$value))
+  }
+
+  # -- Case 5: bare symbol that didn't evaluate (or non-data-frame value
+  #            when accept_vector = FALSE). Treat as a variable name. -------
+  if (is.null(default_name)) {
+    data_str <- paste(deparse(data_sub), collapse = "")
+    stop(paste0(
+      "'", data_str, "' not found. Did you mean to use it as a variable name?\n",
+      "If so, provide the data frame: ", fn_name, "(MyData, ", data_str, ")\n",
+      "Or set a default first with juse(MyData), then: ", fn_name, "(", data_str, ")"
+    ), call. = FALSE)
+  }
+  resolved <- .jst_resolve_data(envir = envir)
+  list(mode = "symbol_with_default",
+       data = resolved$data, name = resolved$name,
+       first_arg_sub = data_sub, first_arg_value = NULL)
+}
+
 #' Internal helper: detect values that look like coded missing markers
 #'
 #' Scans a numeric vector for values likely to be coded missing markers
@@ -3065,43 +3204,41 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #' @export
 jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation (needed for vector input)
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # Resolve the first argument: explicit data frame, juse default,
+  # vector input, or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jdesc",
+    envir         = parent.frame(),
+    accept_vector = TRUE
+  )
 
-  # Catch missing-comma error: jdesc(VarName) instead of jdesc(, VarName)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jdesc", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- .data_expr
-  }
-
-  # Handle vector input
-  if (is.atomic(data) && !is.data.frame(data)) {
-    var_name <- .data_expr
+  # Vector-input path (e.g. jdesc(SampleData$Gender)) — wrap and recurse
+  if (arg1$mode == "vector_input") {
+    var_name <- paste(deparse(arg1$first_arg_sub), collapse = "")
     if (grepl("\\$", var_name)) {
       var_name <- sub("^.*\\$", "", var_name)
     }
-    temp_df  <- data.frame(x = data)
+    temp_df  <- data.frame(x = arg1$first_arg_value)
     names(temp_df) <- var_name
     return(jdesc(temp_df, !!rlang::sym(var_name), labels = labels))
   }
 
-  variables      <- rlang::enquos(...)
+  data              <- arg1$data
+  .jst_data_name    <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  variables <- rlang::enquos(...)
+
+  # Leading-comma-omitted: prepend the captured symbol to variables list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+
   variable_names <- vapply(variables, rlang::quo_name, character(1))
   by_quo         <- rlang::enquo(by)
 
@@ -3404,44 +3541,42 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 #' @export
 jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 
-  # Capture original expression before any evaluation (needed for vector input)
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # Resolve the first argument: explicit data frame, juse default,
+  # vector input, or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jfreq",
+    envir         = parent.frame(),
+    accept_vector = TRUE
+  )
 
-  # Catch missing-comma error: jfreq(VarName) instead of jfreq(, VarName)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jfreq", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else if (is.data.frame(data)) {
-    .jst_data_name <- .data_expr
-  }
-
-  # Handle vector input
-  if (is.atomic(data) && !is.data.frame(data)) {
-    var_name <- .data_expr
+  # Vector-input path (e.g. jfreq(SampleData$Gender)) — wrap and recurse
+  if (arg1$mode == "vector_input") {
+    var_name <- paste(deparse(arg1$first_arg_sub), collapse = "")
     if (grepl("\\$", var_name)) {
       var_name <- sub("^.*\\$", "", var_name)
     }
-    temp_df  <- data.frame(x = data)
+    temp_df  <- data.frame(x = arg1$first_arg_value)
     names(temp_df) <- var_name
     return(jfreq(temp_df, !!rlang::sym(var_name), labels = labels))
   }
 
+  data              <- arg1$data
+  .jst_data_name    <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
   variables <- rlang::enquos(...)
-  results   <- list()
+
+  # Leading-comma-omitted: prepend the captured symbol to variables list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+
+  results <- list()
 
   # Check all variables exist before any processing
   var_names_check <- vapply(variables, rlang::quo_name, character(1))
@@ -3629,36 +3764,34 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 #' @export
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jscreen",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
-  # Catch missing-comma error
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jscreen", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- .data_expr
-  }
+  data              <- arg1$data
+  .jst_data_name    <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   # Capture subset expression before evaluation
   subset_expr <- substitute(subset)
 
   # Determine which variables to screen
   variables <- rlang::enquos(...)
+
+  # Leading-comma-omitted: prepend the captured symbol to variables list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+
   if (length(variables) > 0) {
     var_names <- vapply(variables, rlang::quo_name, character(1))
     .jst_check_vars(data, var_names, .jst_data_name)
@@ -4865,32 +4998,30 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @export
 jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jcorr",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
-  # Catch missing-comma error: jcorr(VarName, ...) instead of jcorr(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jcorr", e)
-    })
+  data              <- arg1$data
+  .jst_data_name    <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  variables <- rlang::enquos(...)
+
+  # Leading-comma-omitted: prepend the captured symbol to variables list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
   }
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- .data_expr
-  }
-
-  variables      <- rlang::enquos(...)
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
   .jst_check_vars(data, variable_names, .jst_data_name)
@@ -6995,32 +7126,30 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
 #' @export
 jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jalpha",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
-  # Catch missing-comma error: jalpha(VarName, ...) instead of jalpha(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jalpha", e)
-    })
+  data              <- arg1$data
+  .jst_data_name    <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  variables <- rlang::enquos(...)
+
+  # Leading-comma-omitted: prepend the captured symbol to variables list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
   }
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- .data_expr
-  }
-
-  variables      <- rlang::enquos(...)
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
   .jst_check_vars(data, variable_names, .jst_data_name)
@@ -7336,29 +7465,31 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 #' @export
 jsum <- function(data, ..., min.valid = NULL, var_label = NULL) {
 
-  # Capture the data name before any evaluation
-  .jst_data_name <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jsum",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
-  # Catch missing-comma error: jsum(VarName, ...) instead of jsum(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jsum", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_data_name <- resolved$name
-  }
+  data           <- arg1$data
+  .jst_data_name <- arg1$name
 
   # Resolve variable names (handles colon ranges)
   quos_list <- rlang::enquos(...)
-  resolved  <- .jst_resolve_varrange(quos_list, data, "jsum")
+
+  # Leading-comma-omitted: prepend the captured symbol to quos list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    quos_list <- c(list(extra_quo), quos_list)
+    class(quos_list) <- "quosures"
+  }
+
+  resolved    <- .jst_resolve_varrange(quos_list, data, "jsum")
   var_names   <- resolved$var_names
   label_parts <- resolved$label_parts
 
@@ -7524,29 +7655,31 @@ jsum <- function(data, ..., min.valid = NULL, var_label = NULL) {
 #' @export
 javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
 
-  # Capture the data name before any evaluation
-  .jst_data_name <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "javg",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
-  # Catch missing-comma error: javg(VarName, ...) instead of javg(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "javg", e)
-    })
-  }
-
-  # Resolve default data frame if not specified
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_data_name <- resolved$name
-  }
+  data           <- arg1$data
+  .jst_data_name <- arg1$name
 
   # Resolve variable names (handles colon ranges)
   quos_list <- rlang::enquos(...)
-  resolved  <- .jst_resolve_varrange(quos_list, data, "javg")
+
+  # Leading-comma-omitted: prepend the captured symbol to quos list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    quos_list <- c(list(extra_quo), quos_list)
+    class(quos_list) <- "quosures"
+  }
+
+  resolved    <- .jst_resolve_varrange(quos_list, data, "javg")
   var_names   <- resolved$var_names
   label_parts <- resolved$label_parts
 
@@ -7716,21 +7849,31 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
 #' @export
 jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 
-  # Catch missing-comma error: jrelabel(VarName, ...) instead of jrelabel(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jrelabel", e)
-    })
-  }
+  # --- Resolve first argument -----------------------------------------------
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jrelabel",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
-  # Resolve default data frame if not specified
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-  }
+  data <- arg1$data
 
-  var_name <- deparse(substitute(var))
+  # Determine variable name. If the user typed jrelabel(VarName, labels = ...)
+  # — data omitted, named labels — the helper captured VarName as first_arg_sub.
+  # Otherwise var is supplied positionally.
+  if (arg1$mode == "symbol_with_default") {
+    if (!missing(var)) {
+      displaced <- deparse(substitute(var))
+      stop("jrelabel(): when the data argument is omitted, all subsequent arguments must be named. ",
+           "Use jrelabel(", deparse(arg1$first_arg_sub), ", labels = ", displaced, ")",
+           call. = FALSE)
+    }
+    var_name <- deparse(arg1$first_arg_sub)
+  } else {
+    var_name <- deparse(substitute(var))
+  }
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
@@ -7926,30 +8069,32 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #' @export
 jrecode <- function(data, orig_var, map, labels = NULL) {
 
-  # Capture original expression before any evaluation
-  .data_expr <- if (!missing(data)) {
-    paste(deparse(substitute(data)), collapse = "")
-  } else NULL
+  # --- Resolve first argument -----------------------------------------------
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jrecode",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
-  # Catch missing-comma error: jrecode(VarName, ...) instead of jrecode(, VarName, ...)
-  if (!missing(data)) {
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jrecode", e)
-    })
-  }
+  data           <- arg1$data
+  .jst_data_name <- arg1$name
 
-  # Resolve default data frame if not specified
-  .jst_data_name <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_data_name <- resolved$name
+  # Determine variable name. If the user typed jrecode(VarName, map = "...")
+  # — data omitted, named map — the helper captured VarName as first_arg_sub.
+  # Otherwise orig_var is supplied positionally.
+  if (arg1$mode == "symbol_with_default") {
+    if (!missing(orig_var)) {
+      displaced <- deparse(substitute(orig_var))
+      stop("jrecode(): when the data argument is omitted, all subsequent arguments must be named. ",
+           "Use jrecode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
+           call. = FALSE)
+    }
+    orig_name <- deparse(arg1$first_arg_sub)
   } else {
-    .jst_data_name <- .data_expr
+    orig_name <- deparse(substitute(orig_var))
   }
-
-  orig_name <- deparse(substitute(orig_var))
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
@@ -8706,19 +8851,27 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @export
 jsave <- function(data, file, overwrite = FALSE) {
 
-  # --- Resolve data frame ----------------------------------------------------
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    data_name <- resolved$name
-  } else {
-    # Capture name before evaluation
-    data_name <- deparse(substitute(data))
-    # Check for missing-comma error
-    mc <- match.call()
-    data <- tryCatch(force(data), error = function(e) {
-      .jst_missing_comma_error(deparse(mc$data), "jsave", e)
-    })
+  # --- Resolve first argument -----------------------------------------------
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jsave",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
+
+  data      <- arg1$data
+  data_name <- arg1$name
+
+  # If data was omitted (e.g. jsave("file.rds")), route the captured first
+  # argument into the file slot.
+  if (arg1$mode == "symbol_with_default") {
+    if (!missing(file)) {
+      stop("jsave(): when the data argument is omitted, all subsequent arguments must be named. ",
+           "Use jsave(file = \"yourfile.ext\")",
+           call. = FALSE)
+    }
+    file <- eval(arg1$first_arg_sub, envir = parent.frame())
   }
 
   # --- Validate data is a data frame -----------------------------------------
@@ -9013,32 +9166,20 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                               parent_env = parent.frame()))
   }
 
-  # Capture original expression before any evaluation (for data-name reporting)
-  .data_expr <- if (!missing(x)) {
-    paste(deparse(substitute(x)), collapse = "")
-  } else NULL
-
-  # Catch missing-comma error: jplot(VarName) instead of jplot(, VarName).
-  # Only force evaluation if x was provided.
-  if (!missing(x)) {
-    x <- tryCatch(force(x), error = function(e) {
-      .jst_missing_comma_error(deparse(jplot_call$x), "jplot", e)
-    })
-  }
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(x),
+    data_missing  = missing(x),
+    fn_name       = "jplot",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
 
   # Alias to `data` internally for clarity; the generic uses `x` for S3 consistency
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(x)) {
-    # Resolve default data frame set by juse()
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    data <- x
-    .jst_data_name <- .data_expr
-  }
+  data              <- arg1$data
+  .jst_data_name    <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   if (!is.data.frame(data)) {
     stop("jplot(): the first argument must be a data frame. ",
@@ -9053,7 +9194,16 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
 
   # Capture variable names
-  variables      <- rlang::enquos(...)
+  variables <- rlang::enquos(...)
+
+  # Leading-comma-omitted: prepend the captured symbol to variables list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+
   variable_names <- vapply(variables, rlang::quo_name, character(1))
   by_quo         <- rlang::enquo(by)
   has_by         <- !rlang::quo_is_null(by_quo)
