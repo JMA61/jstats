@@ -4,7 +4,7 @@
 \alias{jdesc}
 \title{Descriptive statistics for one or more variables}
 \usage{
-jdesc(data, ..., by = NULL, subset = NULL, labels = TRUE)
+jdesc(data, ..., by = NULL, subset = NULL, labels = NULL)
 }
 \arguments{
 \item{data}{A data frame, or a numeric vector.}
@@ -63,4 +63,8 @@ jdesc(mpg, by = am)
 # With a vector directly
 jdesc(mtcars$mpg)
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

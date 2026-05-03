@@ -171,18 +171,20 @@
   cat(paste0("\033[33m", x, "\033[0m"))
 }
 
-#' Internal helper: print the "(Using default data frame: X)" note in yellow
+#' Internal helper: print the "Using default data frame: X" note in yellow
 #'
 #' Used by every analysis function immediately after its red title line.
 #' Groups the default-data-frame note with other session-state notes (filter,
 #' jcomplete) under a consistent yellow colouring.
 #'
 #' @param data_name Character string name of the default data frame.
-#' @param extra_newline Logical. If TRUE, adds a trailing blank line after
-#'   the note (used when no pipeline messages will follow).
+#' @param extra_newline Logical. If TRUE (default), adds a trailing blank
+#'   line after the note so it's visually separated from whatever prints
+#'   next. Set FALSE only when the caller wants the next line to abut
+#'   the note directly.
 #' @keywords internal
-.jst_default_note <- function(data_name, extra_newline = FALSE) {
-  .cat_yellow(paste0("(Using default data frame: ", data_name, ")\n"))
+.jst_default_note <- function(data_name, extra_newline = TRUE) {
+  .cat_yellow(paste0("Using default data frame: ", data_name, "\n"))
   if (extra_newline) cat("\n")
 }
 
@@ -237,10 +239,17 @@
 #'   character/other = left.
 #' @param caption Optional title string printed above the table.
 #' @param indent Number of leading spaces for each line. Default 2.
+#' @param header.indent Number of leading spaces for the caption,
+#'   header row, and separator row. Defaults to 0 (caption and header
+#'   flush-left at column 1, with data rows indented). Set to a
+#'   positive number to indent these alongside the data --- rare; the
+#'   default produces the package's standard "block header at column
+#'   1, data indented" layout.
 #'
 #' @keywords internal
 .jst_print_table <- function(df, col.names = NULL, row.names = TRUE,
-                             align = NULL, caption = NULL, indent = 2) {
+                             align = NULL, caption = NULL, indent = 2,
+                             header.indent = 0) {
 
   headers <- if (!is.null(col.names)) col.names else names(df)
 
@@ -290,6 +299,7 @@
 
   gap    <- "  "
   prefix <- paste(rep(" ", indent), collapse = "")
+  header_prefix <- paste(rep(" ", header.indent), collapse = "")
 
   fmt_cell <- function(text, width, alignment) {
     text <- trimws(text)
@@ -306,20 +316,20 @@
   }
 
   if (!is.null(caption)) {
-    cat(prefix, caption, "\n", sep = "")
+    cat(header_prefix, caption, "\n", sep = "")
   }
 
   # Header
   header_cells <- vapply(seq_len(n_cols), function(j) {
     fmt_cell(headers[j], col_widths[j], align[j])
   }, character(1))
-  cat(prefix, paste(header_cells, collapse = gap), "\n", sep = "")
+  cat(header_prefix, paste(header_cells, collapse = gap), "\n", sep = "")
 
   # Separator
   sep_cells <- vapply(col_widths, function(w) {
     paste(rep("-", w), collapse = "")
   }, character(1))
-  cat(prefix, paste(sep_cells, collapse = gap), "\n", sep = "")
+  cat(header_prefix, paste(sep_cells, collapse = gap), "\n", sep = "")
 
   # Data rows
   for (i in seq_len(n_rows)) {
@@ -1044,13 +1054,20 @@
 }
 
 # Output level preset defaults (used by .jst_resolve_toggle and joutput)
+#
+# case.processing supports three states:
+#   FALSE - never print CPS
+#   TRUE  - always print CPS (even when nothing was excluded)
+#   NULL  - "auto": print CPS only when something happened (any pipeline
+#           state active, or for listwise=TRUE callers, listwise excluded
+#           at least one case)
 .jst_output_defaults <- list(
   minimal  = list(effect.size = FALSE, ci = FALSE, levene = FALSE,
                   posthoc = FALSE, missing = FALSE, diagnostics = FALSE,
                   case.processing = FALSE, var.labels = FALSE, ref.categories = FALSE),
   standard = list(effect.size = TRUE,  ci = TRUE,  levene = FALSE,
                   posthoc = FALSE, missing = FALSE, diagnostics = FALSE,
-                  case.processing = TRUE,  var.labels = TRUE,  ref.categories = TRUE),
+                  case.processing = NULL,  var.labels = TRUE,  ref.categories = TRUE),
   full     = list(effect.size = TRUE,  ci = TRUE,  levene = TRUE,
                   posthoc = TRUE,  missing = TRUE,  diagnostics = TRUE,
                   case.processing = TRUE,  var.labels = TRUE,  ref.categories = TRUE)
@@ -1119,13 +1136,38 @@
 
   if (is.null(n_original) || n_original == 0) return(invisible(NULL))
 
-  # Pipeline activity for this call (used to suppress the table for
-  # non-listwise callers when there is nothing to report).
+  # Resolve the case.processing toggle to its three-state value:
+  #   FALSE - never print
+  #   TRUE  - always print
+  #   NULL  - "auto": print only when something was excluded (pipeline
+  #           state active, or for listwise = TRUE callers, listwise
+  #           excluded at least one case)
+  cps_setting <- .jst_resolve_toggle("case.processing", NULL)
+
+  if (isTRUE(cps_setting) == FALSE && !is.null(cps_setting)) {
+    # Explicitly FALSE - suppress
+    return(invisible(NULL))
+  }
+
+  # Pipeline activity for this call.
   pipeline_active <- isTRUE(sample_info$complete_active) ||
                      isTRUE(sample_info$filter_active) ||
                      !is.null(sample_info$n_after_subset)
 
-  if (!listwise && !pipeline_active) return(invisible(NULL))
+  # Auto state (cps_setting = NULL): print only when something happened.
+  if (is.null(cps_setting)) {
+    listwise_excluded_any <- listwise && !is.null(sample_info$n_excluded_missing) &&
+                             sample_info$n_excluded_missing > 0
+    if (!pipeline_active && !listwise_excluded_any) return(invisible(NULL))
+  }
+
+  # Non-listwise callers also suppress when no pipeline is active, even
+  # under the "always print" setting -- they have nothing meaningful to
+  # show beyond Original = Analysis N. (Skip this guard if cps_setting
+  # is explicitly TRUE: respect the user's explicit override.)
+  if (!isTRUE(cps_setting) && !listwise && !pipeline_active) {
+    return(invisible(NULL))
+  }
 
   # Build the chain row-by-row, in time order. Pipeline drop rows appear
   # only when the corresponding stage was active for this call. The
@@ -1219,7 +1261,7 @@
   if (length(has_missing) > 0) {
     detail <- paste0(names(has_missing), " (", has_missing, ")",
                      collapse = ", ")
-    cat("  Missing by variable: ", detail, "\n", sep = "")
+    cat("  Missing by variable: ", detail, "\n\n", sep = "")
   }
 }
 
@@ -2194,6 +2236,9 @@
 #' juse(NULL)             # Clear the default
 #' }
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 juse <- function(data) {
 
@@ -2283,6 +2328,9 @@ juse <- function(data) {
 #' jfilter()                     # Check status
 #' jfilter(NULL)                 # Clear entirely
 #' }
+#'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
 #'
 #' @export
 jfilter <- function(data, expr) {
@@ -2551,6 +2599,9 @@ jfilter <- function(data, expr) {
 #' jcomplete(NULL)                # Clear entirely
 #' }
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 jcomplete <- function(data, ...) {
 
@@ -2763,9 +2814,6 @@ jcomplete <- function(data, ...) {
 #'   table showing the pattern of 0s and 1s. Default is \code{FALSE}.
 #' @param remove Logical. If \code{TRUE}, removes the registration for
 #'   the specified variable. Default is \code{FALSE}.
-#' @param clear Logical. If \code{TRUE}, clears all dummy registrations
-#'   for the specified data frame. Use \code{jdummy(NULL)} to clear
-#'   registrations for all data frames at once. Default is \code{FALSE}.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
@@ -2781,13 +2829,16 @@ jcomplete <- function(data, ...) {
 #' jdummy(cyl, show = "all")            # Full scheme (for many categories)
 #' jdummy()                             # Show all registrations
 #' jdummy(cyl, remove = TRUE)           # Remove one registration
-#' jdummy(mtcars, clear = TRUE)         # Clear all registrations for mtcars
+#' jdummy(mtcars, NULL)                 # Clear all registrations for mtcars
 #' jdummy(NULL)                         # Clear registrations for ALL data frames
 #' }
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 jdummy <- function(data, var, ref = "first", show = FALSE,
-                   remove = FALSE, clear = FALSE) {
+                   remove = FALSE) {
 
   default_name <- getOption(".jst_default_data", default = NULL)
 
@@ -2919,7 +2970,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   # -- A' check: when data was omitted, the var slot must not be filled
-  # positionally. Named args (ref, show, remove, clear) are always fine.
+  # positionally. Named args (ref, show, remove) are always fine.
   if (arg1$mode == "symbol_with_default" && !missing(var)) {
     displaced <- deparse(substitute(var))
     stop("jdummy(): when the data argument is omitted, all subsequent arguments must be named. ",
@@ -2937,12 +2988,11 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
     var_name <- NULL  # only reachable in the clear-only path below
   }
 
-  # -- jdummy(SampleData, clear = TRUE) — per-data-frame clear ---------------
-  # Clears all dummy registrations for the named data frame. Other data
-  # frames' registrations are untouched. Runs before any var-related logic
-  # because clear is a data-frame-level operation; the var argument (if
-  # any) is irrelevant here.
-  if (isTRUE(clear)) {
+  # Treat jdummy(SampleData, NULL) as a per-dataset clear, matching the
+  # convention used by jfilter(SampleData, NULL) and jcomplete(SampleData,
+  # NULL). The clear-all form jdummy(NULL) is handled earlier and never
+  # reaches this point.
+  if (identical(var_name, "NULL")) {
     existing <- .jst_get_dummy(.jst_data_name)
     if (is.null(existing) || length(existing) == 0) {
       message("No dummy registrations to clear for ", .jst_data_name, ".")
@@ -2958,24 +3008,12 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
   }
 
   # If we got here without a var, the user passed neither data alone (above
-  # would have hit clear or returned), nor a usable variable name. Error.
+  # would have hit the clear path or returned), nor a usable variable name.
   if (is.null(var_name)) {
     stop("jdummy(): no variable supplied. ",
          "Use jdummy(VarName) to register, jdummy(VarName, remove = TRUE) ",
          "to remove, or jdummy(NULL) to clear all registrations.",
          call. = FALSE)
-  }
-
-  # Catch the literal NULL — users sometimes try `jdummy(SampleData, NULL)`
-  # or `jdummy(, NULL)`. Point them at the two valid clear syntaxes.
-  if (identical(var_name, "NULL")) {
-    stop(
-      "jdummy(): NULL is not a valid variable name. To clear dummy ",
-      "registrations for ", .jst_data_name, ", use jdummy(", .jst_data_name,
-      ", clear = TRUE). To clear registrations for ALL data frames, ",
-      "use jdummy(NULL) with no other arguments.",
-      call. = FALSE
-    )
   }
 
   .jst_check_vars(data, var_name, .jst_data_name)
@@ -3239,6 +3277,9 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #' joutput()                               # show current settings
 #' joutput(NULL)                           # reset to defaults
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
                     posthoc = NULL, missing = NULL, diagnostics = NULL,
@@ -3318,8 +3359,18 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
     default_val  <- defaults[[nm]]
     effective    <- if (nm %in% names(toggles)) toggles[[nm]] else default_val
     override_str <- if (nm %in% names(toggles)) " (override)" else ""
-    cat("  ", nm, ": ", if (effective) "ON" else "OFF",
-        override_str, "\n", sep = "")
+
+    # case.processing supports three states (TRUE/FALSE/NULL=AUTO);
+    # other toggles are binary.
+    label <- if (is.null(effective)) {
+      "AUTO"
+    } else if (isTRUE(effective)) {
+      "ON"
+    } else {
+      "OFF"
+    }
+
+    cat("  ", nm, ": ", label, override_str, "\n", sep = "")
   }
   cat("\n")
 }
@@ -3382,8 +3433,11 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #' # With a vector directly
 #' jdesc(mtcars$mpg)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
-jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
+jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # vector input, or bare-symbol-as-variable-name (leading comma omitted).
@@ -3462,13 +3516,24 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
                                     subset_expr = subset_expr, envir = parent.frame())
     data     <- pipeline$data
 
+    # Build sample_info once for the entire by-group output. For jdesc the
+    # analysis sample is the post-pipeline data; per-variable Ns are
+    # reported in each mini-table.
+    sample_info <- .jst_build_sample_info(
+      pipeline_counts = pipeline$pipeline_counts,
+      data            = pipeline$data,
+      analysis_vars   = c(variable_names, by_name),
+      n_analysis      = nrow(data)
+    )
     for (v in variable_names) {
       .cat_red(paste0("Descriptive Statistics: ", v, " by ", by_name,
                       " (", length(group_levels), " levels)\n"))
       if (.jst_default_used) .jst_default_note(.jst_data_name)
       .jst_print_msgs(pipeline$msgs)
 
-      if (labels) {
+      .jst_print_case_processing(sample_info, listwise = FALSE)
+
+      if (.jst_resolve_toggle("var.labels", labels)) {
         cat(v, "\n", sep = "")
         cat("  Type: ", .format_var_type(original_dv_info[[v]]$class), "\n", sep = "")
         cat("  Variable label: ", original_dv_info[[v]]$label, "\n", sep = "")
@@ -3573,7 +3638,19 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
-  if (labels) {
+  # Build sample_info (used by CPS and the return value). For jdesc the
+  # analysis sample is the post-pipeline data; per-variable Ns are
+  # reported in the descriptives table itself, not in CPS.
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = variable_names,
+    n_analysis      = nrow(data)
+  )
+
+  .jst_print_case_processing(sample_info, listwise = FALSE)
+
+  if (.jst_resolve_toggle("var.labels", labels)) {
     for (v in variable_names) {
       cat(v, "\n", sep = "")
       cat("  Type: ", .format_var_type(original_var_info[[v]]$class), "\n", sep = "")
@@ -3631,32 +3708,30 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
   descriptives_list <- Filter(Negate(is.null), descriptives_list)
   descriptives      <- do.call(rbind, descriptives_list)
 
-  listwise_cases <- sum(
-    stats::complete.cases(data[, variable_names, drop = FALSE])
-  )
-  listwise_row <- data.frame(
-    Variable    = "Listwise_N",
-    Total       = NA,
-    Non_missing = listwise_cases,
-    Min         = NA,
-    Max         = NA,
-    Mean        = NA,
-    SD          = NA,
-    stringsAsFactors = FALSE
-  )
-  descriptives <- rbind(descriptives, listwise_row)
-
   cat("\n")
   .jst_print_table(descriptives)
   cat("\n")
 
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = variable_names,
-    n_analysis      = listwise_cases
-  )
+  # Listwise-discrepancy notification (multi-variable calls only).
+  # Fires when listwise across all variables would exclude additional
+  # cases beyond what the smallest per-variable N already reflects --
+  # signalling a gap between what jdesc reports (per-variable) and what
+  # a multi-variable model would use (listwise). Suppressed at "minimal"
+  # output tier.
+  if (length(variable_names) >= 2 &&
+      getOption(".jst_output_level", "standard") != "minimal") {
+    listwise_n <- sum(stats::complete.cases(data[, variable_names, drop = FALSE]))
+    per_var_ns <- vapply(variable_names,
+                         function(v) sum(!is.na(data[[v]])),
+                         integer(1))
+    if (listwise_n < min(per_var_ns)) {
+      additional <- min(per_var_ns) - listwise_n
+      cat("Note: each statistic uses all non-missing values for that ",
+          "variable. Listwise deletion across all variables in this call ",
+          "would exclude an additional ", additional, " cases.\n\n",
+          sep = "")
+    }
+  }
 
   ret <- list(
     descriptives = descriptives,
@@ -3719,6 +3794,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = TRUE) {
 #' # With a vector directly
 #' jfreq(mtcars$gear)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 
@@ -3771,8 +3849,6 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 
   # Resolve display toggles
   show_var_labels      <- .jst_resolve_toggle("var.labels",      labels)
-  show_case_processing <- .jst_resolve_toggle("case.processing", NULL)
-
   # Build sample_info (used by CPS and the return value)
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
@@ -3788,9 +3864,7 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 
   # Case Processing Summary (jfreq is non-listwise; the helper suppresses
   # the table when no pipeline stage was active).
-  if (show_case_processing) {
-    .jst_print_case_processing(sample_info, listwise = FALSE)
-  }
+  .jst_print_case_processing(sample_info, listwise = FALSE)
 
   # -- Per-variable blocks ---------------------------------------------------
   for (variable in variables) {
@@ -3942,6 +4016,9 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 #' jscreen(mpg, hp, wt)
 #' jscreen(mpg, hp, wt, subset = am == 1)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 
@@ -4056,7 +4133,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 
   screen_table <- do.call(rbind, screen_rows)
 
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     cat("\n")
     .print_var_labels(data, var_names)
   } else {
@@ -4160,11 +4237,14 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 #' jt(mpg ~ am)
 #' jt(mpg ~ am, full = TRUE)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 #' @importFrom stats t.test sd qt
 jt <- function(formula, data, paired = FALSE, welch = FALSE,
                effect.size = NULL, levene = NULL, ci = NULL,
-               subset = NULL, labels = TRUE, full = FALSE) {
+               subset = NULL, labels = NULL, full = FALSE) {
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -4188,8 +4268,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   effect.size <- .jst_resolve_toggle("effect.size", effect.size)
   ci          <- .jst_resolve_toggle("ci",          ci)
   levene      <- .jst_resolve_toggle("levene",      levene)
-  show_missing <- .jst_resolve_toggle("missing",    NULL)
-
+  show_missing         <- .jst_resolve_toggle("missing",        NULL)
   # Red title - determined before any output
   if (paired) {
     .cat_red("Paired Samples T-Test\n")
@@ -4213,17 +4292,27 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   .jst_check_vars(data, terms, .jst_data_name)
 
-  # Report cases excluded due to missing values
-  n_before_na <- nrow(data)
-  complete_on <- data[stats::complete.cases(data[, terms, drop = FALSE]), , drop = FALSE]
-  n_excluded_na <- n_before_na - nrow(complete_on)
-  if (n_excluded_na > 0) {
-    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
-    if (show_missing) {
-      mbv <- vapply(terms, function(v) sum(is.na(data[[v]])), integer(1))
-      .jst_print_missing_detail(mbv)
-    }
+  # Build analysis-level data frame (listwise on all formula vars) and
+  # sample_info early so the Case Processing Summary can use them.
+  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
+             terms, drop = FALSE]
+
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = terms,
+    n_analysis      = nrow(mf)
+  )
+
+  # Case Processing Summary
+  .jst_print_case_processing(sample_info, listwise = TRUE)
+
+  # Per-variable missing detail (only at the "full" output tier, and
+  # only when listwise actually excluded cases)
+  if (show_missing && sample_info$n_excluded_missing > 0) {
+    .jst_print_missing_detail(sample_info$missing_by_var)
   }
+
 
   group_var   <- data[[group_name]]
   is_labelled <- haven::is.labelled(group_var)
@@ -4278,7 +4367,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     stop("Paired t-test requires equal sample sizes in both groups.", call. = FALSE)
   }
 
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, c(dv_name, group_name))
   }
 
@@ -4417,18 +4506,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     cat(paste0("\n", d_label, ": ", round(cohens_d, 3), "\n"))
   }
 
-  # Build sample_info
-  n_analysis <- n1 + n2
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = terms,
-    n_analysis      = n_analysis
-  )
-
-  # Build analysis-level data frame for jplot()
-  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
-             terms, drop = FALSE]
+  n_analysis <- nrow(mf)
 
   cat("\n")
   ret <- list(
@@ -4507,11 +4585,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' jaov(mpg ~ cyl)
 #' jaov(mpg ~ cyl, full = TRUE)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 #' @importFrom stats aov oneway.test TukeyHSD qt
 jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                  effect.size = NULL, levene = NULL, ci = NULL,
-                 subset = NULL, labels = TRUE, full = FALSE) {
+                 subset = NULL, labels = NULL, full = FALSE) {
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -4537,8 +4618,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   ci           <- .jst_resolve_toggle("ci",          ci)
   levene       <- .jst_resolve_toggle("levene",      levene)
   posthoc      <- .jst_resolve_toggle("posthoc",     posthoc)
-  show_missing <- .jst_resolve_toggle("missing",     NULL)
-
+  show_missing         <- .jst_resolve_toggle("missing",        NULL)
   # Red title
   if (welch) {
     .cat_red("Welch's One-Way ANOVA\n")
@@ -4560,16 +4640,25 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
   .jst_check_vars(data, terms, .jst_data_name)
 
-  # Report cases excluded due to missing values
-  n_before_na <- nrow(data)
-  complete_on <- data[stats::complete.cases(data[, terms, drop = FALSE]), , drop = FALSE]
-  n_excluded_na <- n_before_na - nrow(complete_on)
-  if (n_excluded_na > 0) {
-    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
-    if (show_missing) {
-      mbv <- vapply(terms, function(v) sum(is.na(data[[v]])), integer(1))
-      .jst_print_missing_detail(mbv)
-    }
+  # Build analysis-level data frame (listwise on all formula vars) and
+  # sample_info early so the Case Processing Summary can use them.
+  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
+             terms, drop = FALSE]
+
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = terms,
+    n_analysis      = nrow(mf)
+  )
+
+  # Case Processing Summary
+  .jst_print_case_processing(sample_info, listwise = TRUE)
+
+  # Per-variable missing detail (only at the "full" output tier, and
+  # only when listwise actually excluded cases)
+  if (show_missing && sample_info$n_excluded_missing > 0) {
+    .jst_print_missing_detail(sample_info$missing_by_var)
   }
 
   group_var   <- data[[group_name]]
@@ -4615,7 +4704,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     data[[dv_name]] <- as.numeric(data[[dv_name]])
   }
 
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, c(dv_name, group_name))
   }
 
@@ -4824,18 +4913,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     p_value <- result$`Pr(>F)`[1]
   }
 
-  # Build sample_info
-  n_analysis <- nrow(complete_on)
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = terms,
-    n_analysis      = n_analysis
-  )
-
-  # Build analysis-level data frame for jplot()
-  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
-             terms, drop = FALSE]
+  n_analysis <- nrow(mf)
 
   cat("\n")
   ret <- list(
@@ -4859,12 +4937,12 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
 #' Cross-tabulation with optional chi-square test of independence
 #'
-#' Produces an SPSS-style cross-tabulation of two categorical variables
-#' with observed frequencies, expected frequencies, row percentages,
-#' and column percentages. Optionally includes a chi-square test of
-#' independence. Handles haven-labelled, numeric, factor, and character
-#' variables. For haven-labelled variables, numeric codes are displayed
-#' alongside labels.
+#' Produces a cross-tabulation of two categorical variables, showing
+#' observed frequencies and row percentages by default. Column
+#' percentages, expected frequencies, and a chi-square test of
+#' independence are available via arguments. Handles haven-labelled,
+#' numeric, factor, and character variables. For haven-labelled
+#' variables, numeric codes are displayed alongside labels.
 #'
 #' A red "Cross-Tabulation" title is printed first, followed by
 #' variable labels (if present), then the table and optional test results.
@@ -4883,7 +4961,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #'
-#' @return Invisibly returns a list of class \code{"jst_chisq"} containing:
+#' @return Invisibly returns a list of class \code{"jst_crosstab"} containing:
 #'   \code{observed} (observed frequency table), \code{expected} (expected
 #'   frequency table), \code{n} (total N), \code{model_frame} (the analysis
 #'   data frame used for plotting), \code{sample_info} (pipeline and
@@ -4905,11 +4983,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' jcrosstab(cyl ~ am)
 #' jcrosstab(cyl ~ am, chisq = TRUE)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @importFrom stats chisq.test
 #' @export
 jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                       row.pct = TRUE, col.pct = FALSE, subset = NULL,
-                      labels = TRUE) {
+                      labels = NULL) {
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -4940,19 +5021,28 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
-  # Resolve missing detail toggle
-  show_missing <- .jst_resolve_toggle("missing", NULL)
+  # Resolve display toggles
+  show_missing         <- .jst_resolve_toggle("missing",         NULL)
 
-  # Report cases excluded due to missing values
-  n_before_na <- nrow(data)
-  complete_on <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]), , drop = FALSE]
-  n_excluded_na <- n_before_na - nrow(complete_on)
-  if (n_excluded_na > 0) {
-    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
-    if (show_missing) {
-      mbv <- vapply(c(row_name, col_name), function(v) sum(is.na(data[[v]])), integer(1))
-      .jst_print_missing_detail(mbv)
-    }
+  # Build analysis-level data frame (listwise on Row + Column) and
+  # sample_info early so the Case Processing Summary can use them.
+  mf <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]),
+             c(row_name, col_name), drop = FALSE]
+
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = c(row_name, col_name),
+    n_analysis      = nrow(mf)
+  )
+
+  # Case Processing Summary
+  .jst_print_case_processing(sample_info, listwise = TRUE)
+
+  # Per-variable missing detail (only at the "full" output tier, and
+  # only when listwise actually excluded cases)
+  if (show_missing && sample_info$n_excluded_missing > 0) {
+    .jst_print_missing_detail(sample_info$missing_by_var)
   }
 
   row_var <- data[[row_name]]
@@ -4975,7 +5065,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     col_var <- factor(col_var)
   }
 
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, c(row_name, col_name))
   }
 
@@ -5071,7 +5161,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   colnames(display_df) <- header
 
   .jst_print_table(display_df,
-                   caption = paste("Cross-tabulation:", row_name, "by", col_name),
+                   caption   = paste("Crosstab:", row_name, "by", col_name),
                    row.names = FALSE)
   cat("\n")
 
@@ -5087,8 +5177,9 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     )
 
     .jst_print_table(chi_table,
-                     caption = "Chi-Square Test of Independence",
+                     caption   = "Chi-Square Test of Independence",
                      col.names = c("Chi-Square", "df", "p", "N"),
+                     align     = c("c", "c", "c", "c"),
                      row.names = FALSE)
 
     min_expected <- min(exp_table)
@@ -5102,18 +5193,6 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   cat("\n")
 
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = c(row_name, col_name),
-    n_analysis      = grand_total
-  )
-
-  # Build analysis-level data frame for jplot()
-  mf <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]),
-             c(row_name, col_name), drop = FALSE]
-
   ret <- list(
     observed    = obs_table,
     expected    = exp_table,
@@ -5126,7 +5205,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     ret$df         <- chi_result$parameter
     ret$p          <- chi_result$p.value
   }
-  class(ret) <- "jst_chisq"
+  class(ret) <- "jst_crosstab"
   invisible(ret)
 }
 
@@ -5175,9 +5254,12 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' juse(mtcars)
 #' jcorr(mpg, hp, wt)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @importFrom stats cor.test complete.cases
 #' @export
-jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
+jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # or bare-symbol-as-variable-name (leading comma omitted).
@@ -5313,7 +5395,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 
   display_df <- as.data.frame(display, stringsAsFactors = FALSE)
 
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, variable_names)
   }
 
@@ -5919,6 +6001,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = TRUE) {
 #'     numeric = c("Age", "Education"), categorical = "Program")
 #' }
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 jlm <- function(formula, data, subset = NULL, labels = NULL,
                 numeric = NULL, categorical = NULL,
@@ -5958,8 +6043,6 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   show_missing         <- .jst_resolve_toggle("missing",         NULL)
   show_var_labels      <- .jst_resolve_toggle("var.labels",      labels)
   show_ref_categories  <- .jst_resolve_toggle("ref.categories",  NULL)
-  show_case_processing <- .jst_resolve_toggle("case.processing", NULL)
-
   # Resolve diagnostics toggle
   if (full) {
     if (is.null(diagnostics)) diagnostics <- TRUE
@@ -5976,7 +6059,13 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
     }
   }
 
-  model_vars <- all.vars(formula)
+  model_vars            <- all.vars(formula)
+  # Preserve the original (pre-expansion) variable names for use in
+  # missing-by-variable reporting. After dummy expansion, model_vars
+  # holds the dummy column names (e.g. ProgramApprenticeship); the
+  # user wrote "Program" in the formula and the diagnostic should
+  # speak the user's language.
+  original_formula_vars <- model_vars
 
   .jst_check_vars(data, model_vars, .jst_data_name)
 
@@ -6337,14 +6426,12 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
-    analysis_vars   = all.vars(formula),
+    analysis_vars   = original_formula_vars,
     n_analysis      = nrow(mf)
   )
 
   # Case Processing Summary
-  if (show_case_processing) {
-    .jst_print_case_processing(sample_info)
-  }
+  .jst_print_case_processing(sample_info, listwise = TRUE)
 
   # Per-variable missing detail (only if any cases were excluded by listwise)
   if (show_missing && sample_info$n_excluded_missing > 0) {
@@ -6493,9 +6580,11 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
     cat("\nWARNING: One or more variables have been removed from the model due to collinearity.\n")
   }
 
-  cat("\nCoefficients:\n")
+  cat("\n")
   .jst_print_table(out_coefs,
+                   caption   = "Coefficients",
                    col.names = c("b", "SE", "t", "\u03b2", "p"),
+                   align     = c("c", "c", "c", "c", "c"),
                    row.names = TRUE)
 
   cat("\nR-squared: ", sprintf("%.3f", r_squared),
@@ -6687,9 +6776,12 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 #' jlogistic(Outcome ~ Age + Employment, numeric = "Age")
 #' }
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 #' @importFrom stats glm binomial pchisq logLik as.formula
-jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
+jlogistic <- function(formula, data, subset = NULL, labels = NULL,
                       numeric = NULL, categorical = NULL,
                       ci = NULL, classification = FALSE,
                       diagnostics = NULL, full = FALSE, ...) {
@@ -6721,8 +6813,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
 
   # Resolve display toggles
   ci           <- .jst_resolve_toggle("ci", ci)
-  show_missing <- .jst_resolve_toggle("missing", NULL)
-
+  show_missing         <- .jst_resolve_toggle("missing",        NULL)
   # Resolve diagnostics toggle
   if (is.character(diagnostics)) {
     show_diag  <- TRUE
@@ -6743,8 +6834,14 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
-  model_vars <- all.vars(formula)
-  dv_name    <- model_vars[1]
+  model_vars            <- all.vars(formula)
+  dv_name               <- model_vars[1]
+
+  # Preserve the original (pre-expansion) variable names for use in
+  # missing-by-variable reporting. After dummy expansion, model_vars
+  # holds the dummy column names; the user wrote the originals in
+  # the formula and the diagnostic should speak the user's language.
+  original_formula_vars <- model_vars
 
   .jst_check_vars(data, model_vars, .jst_data_name)
 
@@ -6993,22 +7090,29 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
   }
   if (length(all_ref_cats) > 0) cat("\n")
 
-  if (labels) {
-    .print_var_labels(data, all.vars(formula))
+  # -- Build analysis-level data frame and sample_info early so the Case
+  # -- Processing Summary can use them.
+  mf <- stats::model.frame(formula, data = data,
+                           na.action = stats::na.omit)
+
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = original_formula_vars,
+    n_analysis      = nrow(mf)
+  )
+
+  # Case Processing Summary
+  .jst_print_case_processing(sample_info, listwise = TRUE)
+
+  # Per-variable missing detail (only at the "full" output tier, and
+  # only when listwise actually excluded cases)
+  if (show_missing && sample_info$n_excluded_missing > 0) {
+    .jst_print_missing_detail(sample_info$missing_by_var)
   }
 
-  # -- Fit model -------------------------------------------------------------
-  mf            <- stats::model.frame(formula, data = data,
-                                      na.action = stats::na.omit)
-  n_excluded_na <- nrow(data) - nrow(mf)
-  if (n_excluded_na > 0) {
-    cat("(", n_excluded_na, " cases excluded due to missing values)\n", sep = "")
-    if (show_missing) {
-      mbv <- vapply(model_vars, function(v) {
-        if (v %in% names(data)) sum(is.na(data[[v]])) else 0L
-      }, integer(1))
-      .jst_print_missing_detail(mbv)
-    }
+  if (.jst_resolve_toggle("var.labels", labels)) {
+    .print_var_labels(data, all.vars(formula))
   }
 
   # Capture DV label for "1" category (before model fitting, more reliable)
@@ -7129,8 +7233,12 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
     col_names <- c(col_names, "95% CI Lower", "95% CI Upper")
   }
 
-  cat("Coefficients:\n")
-  .jst_print_table(out_coefs, col.names = col_names, row.names = TRUE)
+  cat("\n")
+  .jst_print_table(out_coefs,
+                   caption   = "Coefficients",
+                   col.names = col_names,
+                   align     = rep("c", length(col_names)),
+                   row.names = TRUE)
 
   cat("\nNumber of observations: ", n_obs, "\n", sep = "")
 
@@ -7223,14 +7331,6 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
     }
   }
 
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = all.vars(formula),
-    n_analysis      = n_obs
-  )
-
   cat("\n")
   ret <- list(
     model           = model,
@@ -7304,8 +7404,11 @@ jlogistic <- function(formula, data, subset = NULL, labels = TRUE,
 #' juse(attitude)
 #' jalpha(rating, complaints, privileges, learning, raises)
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
-jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
+jalpha <- function(data, ..., subset = NULL, labels = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # or bare-symbol-as-variable-name (leading comma omitted).
@@ -7364,22 +7467,17 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
   n_excluded     <- n_total - n_used
   items_complete <- items[complete_mask, ]
 
-  # Case Processing Summary
-  case_table <- data.frame(
-    Cases   = c("Valid", "Excluded", "Total"),
-    N       = c(n_used, n_excluded, n_total),
-    Percent = sprintf("%.1f", c(n_used / n_total * 100,
-                                n_excluded / n_total * 100,
-                                100)),
-    stringsAsFactors = FALSE
+  # Build sample_info early so the Case Processing Summary can use it.
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = variable_names,
+    n_analysis      = n_used
   )
 
-  cat("\n")
-  .jst_print_table(case_table,
-                   caption = "Case Processing Summary",
-                   col.names = c("", "N", "%"),
-                   row.names = FALSE)
-  cat("\n")
+  # Case Processing Summary (standard CPS chain; jalpha uses listwise
+  # deletion across all scale items)
+  .jst_print_case_processing(sample_info, listwise = TRUE)
 
   # Overall Cronbach's Alpha
   k             <- ncol(items_complete)
@@ -7400,7 +7498,7 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
   cat("\n")
 
   # Variable Labels
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, variable_names)
   }
 
@@ -7483,14 +7581,6 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
                    row.names = FALSE)
 
   cat("\n")
-
-  # Build sample_info
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = variable_names,
-    n_analysis      = n_used
-  )
 
   ret <- list(
     alpha                 = alpha_overall,
@@ -7642,6 +7732,8 @@ jalpha <- function(data, ..., subset = NULL, labels = TRUE) {
 #' }
 #'
 #' @seealso \code{\link{javg}} for computing row-wise means.
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
 #'
 #' @export
 jsum <- function(data, ..., min.valid = NULL, var_label = NULL) {
@@ -7832,6 +7924,8 @@ jsum <- function(data, ..., min.valid = NULL, var_label = NULL) {
 #' }
 #'
 #' @seealso \code{\link{jsum}} for computing row-wise sums.
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
 #'
 #' @export
 javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
@@ -8026,6 +8120,8 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var_label = NULL) {
 #'
 #' @seealso \code{\link{jrecode}} for recoding values with optional labels
 #'   in a single step.
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
 #'
 #' @export
 jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
@@ -8246,6 +8342,8 @@ jrelabel <- function(data, var, labels = NULL, var_label = NULL) {
 #'
 #' @seealso \code{\link{jrelabel}} for applying labels to an existing variable
 #'   after a recode.
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
 #'
 #' @export
 jrecode <- function(data, orig_var, map, labels = NULL) {
@@ -8572,6 +8670,9 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
 #' # Full file path
 #' jload("C:/Projects/Data/mydata.dta")
 #' }
+#'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
 #'
 #' @export
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
@@ -9029,6 +9130,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' jsave(MyData, "C:/Output/mydata.sav")
 #' }
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 jsave <- function(data, file, overwrite = FALSE) {
 
@@ -9232,7 +9336,7 @@ jsave <- function(data, file, overwrite = FALSE) {
 #'   \item \code{jst_ttest}, \code{jst_anova}: \code{"box"}
 #'   \item \code{jst_corr}: \code{"heatmap"}, \code{"scatter"} (scatter requires
 #'     exactly 2 variables in the correlation)
-#'   \item \code{jst_chisq}: \code{"bar"}
+#'   \item \code{jst_crosstab}: \code{"bar"}
 #' }
 #'
 #' The shortcut keyword \code{"core"} (default) produces a curated default
@@ -9314,6 +9418,9 @@ jsave <- function(data, file, overwrite = FALSE) {
 #'   jplot(SampleData, Program, Employment)     # grouped bar chart
 #' }
 #'
+#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#'   workflow conventions, and complete function listing.
+#'
 #' @export
 #' @importFrom stats setNames
 #' @importFrom utils tail
@@ -9326,7 +9433,7 @@ jplot <- function(x, which = "core", ...) {
 #' @importFrom rlang .data
 jplot.default <- function(x, ..., by = NULL, type = NULL,
                           line = FALSE, equation = TRUE, r2 = TRUE,
-                          band = "ci", subset = NULL, labels = TRUE) {
+                          band = "ci", subset = NULL, labels = NULL) {
 
   # Capture the call for later argument-inspection (used by the ignored-arg
   # note that fires when, e.g., the user passes line = "lm" to a histogram).
@@ -9554,7 +9661,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
 
   # Print variable labels if requested
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, check_names)
   }
 
@@ -9758,7 +9865,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     data[[by_name]] <- factor(data[[by_name]])
   }
 
-  if (labels) {
+  if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, check_names)
   }
 
@@ -11058,18 +11165,18 @@ jplot.jst_corr <- function(x, which = "core", ...) {
 }
 
 
-# -- jplot.jst_chisq -----------------------------------------------------------
+# -- jplot.jst_crosstab --------------------------------------------------------
 
 #' @rdname jplot
 #' @export
 #' @importFrom rlang .data
-jplot.jst_chisq <- function(x, which = "core", ...) {
+jplot.jst_crosstab <- function(x, which = "core", ...) {
 
   .jst_check_args(
     list(...),
     aliases = c(diagnostics = "which", plots = "which",
                 show = "which", type = "which"),
-    fn_name = "jplot.jst_chisq"
+    fn_name = "jplot.jst_crosstab"
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -11078,7 +11185,7 @@ jplot.jst_chisq <- function(x, which = "core", ...) {
   }
 
   plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
-                                 class_name = "jst_chisq")
+                                 class_name = "jst_crosstab")
 
   plots <- list()
 

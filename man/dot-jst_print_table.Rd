@@ -10,7 +10,8 @@
   row.names = TRUE,
   align = NULL,
   caption = NULL,
-  indent = 2
+  indent = 2,
+  header.indent = 0
 )
 }
 \arguments{
@@ -28,6 +29,13 @@ character/other = left.}
 \item{caption}{Optional title string printed above the table.}
 
 \item{indent}{Number of leading spaces for each line. Default 2.}
+
+\item{header.indent}{Number of leading spaces for the caption,
+header row, and separator row. Defaults to 0 (caption and header
+flush-left at column 1, with data rows indented). Set to a
+positive number to indent these alongside the data --- rare; the
+default produces the package's standard "block header at column
+1, data indented" layout.}
 }
 \description{
 Purpose-built table printer that replaces knitr::kable() for console output.

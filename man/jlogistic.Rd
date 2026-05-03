@@ -8,7 +8,7 @@ jlogistic(
   formula,
   data,
   subset = NULL,
-  labels = TRUE,
+  labels = NULL,
   numeric = NULL,
   categorical = NULL,
   ci = NULL,
@@ -121,4 +121,8 @@ jlogistic(Outcome ~ Program + ReadingScore, categorical = "Program")
 jlogistic(Outcome ~ Age + Employment, numeric = "Age")
 }
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

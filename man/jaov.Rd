@@ -13,7 +13,7 @@ jaov(
   levene = NULL,
   ci = NULL,
   subset = NULL,
-  labels = TRUE,
+  labels = NULL,
   full = FALSE
 )
 }
@@ -81,4 +81,8 @@ juse(mtcars)
 jaov(mpg ~ cyl)
 jaov(mpg ~ cyl, full = TRUE)
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

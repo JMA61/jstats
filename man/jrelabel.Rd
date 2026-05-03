@@ -68,4 +68,7 @@ df$StatusR <- jrelabel(StatusR, labels = "1=Active; 0=Inactive")
 \seealso{
 \code{\link{jrecode}} for recoding values with optional labels
 in a single step.
+
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

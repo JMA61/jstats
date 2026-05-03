@@ -2,15 +2,17 @@
 % Please edit documentation in R/7036Tools.R
 \name{.jst_default_note}
 \alias{.jst_default_note}
-\title{Internal helper: print the "(Using default data frame: X)" note in yellow}
+\title{Internal helper: print the "Using default data frame: X" note in yellow}
 \usage{
-.jst_default_note(data_name, extra_newline = FALSE)
+.jst_default_note(data_name, extra_newline = TRUE)
 }
 \arguments{
 \item{data_name}{Character string name of the default data frame.}
 
-\item{extra_newline}{Logical. If TRUE, adds a trailing blank line after
-the note (used when no pipeline messages will follow).}
+\item{extra_newline}{Logical. If TRUE (default), adds a trailing blank
+line after the note so it's visually separated from whatever prints
+next. Set FALSE only when the caller wants the next line to abut
+the note directly.}
 }
 \description{
 Used by every analysis function immediately after its red title line.

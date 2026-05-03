@@ -13,7 +13,7 @@ jt(
   levene = NULL,
   ci = NULL,
   subset = NULL,
-  labels = TRUE,
+  labels = NULL,
   full = FALSE
 )
 }
@@ -81,4 +81,8 @@ juse(mtcars)
 jt(mpg ~ am)
 jt(mpg ~ am, full = TRUE)
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

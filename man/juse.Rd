@@ -41,3 +41,7 @@ juse(NULL)             # Clear the default
 }
 
 }
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
+}

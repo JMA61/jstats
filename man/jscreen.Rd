@@ -53,3 +53,7 @@ jscreen(mpg, hp, wt)
 jscreen(mpg, hp, wt, subset = am == 1)
 
 }
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
+}

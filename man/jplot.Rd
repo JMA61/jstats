@@ -8,7 +8,7 @@
 \alias{jplot.jst_ttest}
 \alias{jplot.jst_anova}
 \alias{jplot.jst_corr}
-\alias{jplot.jst_chisq}
+\alias{jplot.jst_crosstab}
 \alias{jplot.jst_desc}
 \alias{jplot.jst_freq}
 \title{Visualise jst_* result objects or plot variables directly from a data frame}
@@ -25,7 +25,7 @@ jplot(x, which = "core", ...)
   r2 = TRUE,
   band = "ci",
   subset = NULL,
-  labels = TRUE
+  labels = NULL
 )
 
 \method{jplot}{jst_lm}(
@@ -46,7 +46,7 @@ jplot(x, which = "core", ...)
 
 \method{jplot}{jst_corr}(x, which = "core", ...)
 
-\method{jplot}{jst_chisq}(x, which = "core", ...)
+\method{jplot}{jst_crosstab}(x, which = "core", ...)
 
 \method{jplot}{jst_desc}(x, which = "core", ...)
 
@@ -147,7 +147,7 @@ Valid plot names by class (for the result-object form):
 \item \code{jst_ttest}, \code{jst_anova}: \code{"box"}
 \item \code{jst_corr}: \code{"heatmap"}, \code{"scatter"} (scatter requires
 exactly 2 variables in the correlation)
-\item \code{jst_chisq}: \code{"bar"}
+\item \code{jst_crosstab}: \code{"bar"}
 }
 
 The shortcut keyword \code{"core"} (default) produces a curated default
@@ -185,4 +185,8 @@ band illustrating the homoskedasticity assumption), \code{"none"} (no band).
   jplot(SampleData, Program, Employment)     # grouped bar chart
 }
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

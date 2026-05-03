@@ -128,4 +128,7 @@ df$gearR6 <- jrecode(gear, map = "3=1; 4=2; 5=3",
 \seealso{
 \code{\link{jrelabel}} for applying labels to an existing variable
 after a recode.
+
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

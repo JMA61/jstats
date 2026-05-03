@@ -4,7 +4,7 @@
 \alias{jalpha}
 \title{Cronbach's Alpha Reliability Analysis}
 \usage{
-jalpha(data, ..., subset = NULL, labels = TRUE)
+jalpha(data, ..., subset = NULL, labels = NULL)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -46,4 +46,8 @@ jalpha(attitude, rating, complaints, privileges, learning, raises)
 juse(attitude)
 jalpha(rating, complaints, privileges, learning, raises)
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

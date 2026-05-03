@@ -4,7 +4,7 @@
 \alias{jcorr}
 \title{Bivariate correlation matrix with p values and pairwise N}
 \usage{
-jcorr(data, ..., method = "pearson", subset = NULL, labels = TRUE)
+jcorr(data, ..., method = "pearson", subset = NULL, labels = NULL)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -48,4 +48,8 @@ jcorr(mtcars, mpg, hp, wt, method = "spearman")
 juse(mtcars)
 jcorr(mpg, hp, wt)
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

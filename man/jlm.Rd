@@ -151,3 +151,7 @@ jlm(Outcome ~ Age + Education + Program,
 }
 
 }
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
+}

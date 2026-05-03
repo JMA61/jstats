@@ -62,3 +62,7 @@ jfreq(cyl, gear)
 jfreq(mtcars$gear)
 
 }
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
+}

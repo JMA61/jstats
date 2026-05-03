@@ -12,7 +12,7 @@ jcrosstab(
   row.pct = TRUE,
   col.pct = FALSE,
   subset = NULL,
-  labels = TRUE
+  labels = NULL
 )
 }
 \arguments{
@@ -38,7 +38,7 @@ jcomplete and jfilter. Does not affect other function calls.}
 when available.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_chisq"} containing:
+Invisibly returns a list of class \code{"jst_crosstab"} containing:
 \code{observed} (observed frequency table), \code{expected} (expected
 frequency table), \code{n} (total N), \code{model_frame} (the analysis
 data frame used for plotting), \code{sample_info} (pipeline and
@@ -46,12 +46,12 @@ missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
 \code{df}, and \code{p}.
 }
 \description{
-Produces an SPSS-style cross-tabulation of two categorical variables
-with observed frequencies, expected frequencies, row percentages,
-and column percentages. Optionally includes a chi-square test of
-independence. Handles haven-labelled, numeric, factor, and character
-variables. For haven-labelled variables, numeric codes are displayed
-alongside labels.
+Produces a cross-tabulation of two categorical variables, showing
+observed frequencies and row percentages by default. Column
+percentages, expected frequencies, and a chi-square test of
+independence are available via arguments. Handles haven-labelled,
+numeric, factor, and character variables. For haven-labelled
+variables, numeric codes are displayed alongside labels.
 }
 \details{
 A red "Cross-Tabulation" title is printed first, followed by
@@ -72,4 +72,8 @@ juse(mtcars)
 jcrosstab(cyl ~ am)
 jcrosstab(cyl ~ am, chisq = TRUE)
 
+}
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
 }

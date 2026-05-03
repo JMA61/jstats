@@ -133,3 +133,7 @@ jload("C:/Projects/Data/mydata.dta")
 }
 
 }
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
+}

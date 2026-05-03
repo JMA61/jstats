@@ -58,3 +58,7 @@ jfilter(NULL)                 # Clear entirely
 }
 
 }
+\seealso{
+\code{\link{JeffsStatTools}} for the package overview,
+workflow conventions, and complete function listing.
+}
