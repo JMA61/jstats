@@ -49,7 +49,7 @@ when available.}
 and ci all at once. Does not override explicit FALSE values.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_anova"} containing:
+Invisibly returns a list of class \code{jst_anova} containing:
 \code{model} (the \code{aov} or \code{oneway.test} object),
 \code{model_frame} (the analysis data frame used for plotting),
 \code{test_type}, \code{formula}, \code{descriptives}, \code{f},

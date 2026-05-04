@@ -23,7 +23,7 @@ jcomplete and jfilter. Does not affect other function calls.}
 and label (or "None") for each variable before the table.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_desc"} containing:
+Invisibly returns a list of class \code{jst_desc} containing:
 \code{descriptives} (data frame of statistics, or NULL for grouped output),
 and \code{sample_info} (pipeline and missing data counts). Also
 prints a formatted table to the console.

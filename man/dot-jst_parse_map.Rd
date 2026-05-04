@@ -15,7 +15,7 @@ Invisibly, a list with components:
 \describe{
 \item{mappings}{List of lists; each inner list has \code{old_vals}
 (numeric vector) and \code{new_val} (single numeric).}
-\item{else_action}{Character: either \code{"na"} or \code{"copy"}.}
+\item{else_action}{Character: either \code{na} or \code{copy}.}
 \item{else_explicit}{Logical: \code{TRUE} if the user wrote an
 explicit \code{else=...} clause, \code{FALSE} if defaulted.}
 }

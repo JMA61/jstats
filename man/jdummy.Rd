@@ -14,8 +14,8 @@ Pass \code{NULL} to clear all registrations.}
 to display all current registrations.}
 
 \item{ref}{The reference category (excluded from the regression model).
-Can be a numeric code, a quoted label name, or \code{"first"}
-(default) or \code{"last"}.}
+Can be a numeric code, a quoted label name, or \code{first}
+(default) or \code{last}.}
 
 \item{show}{Logical. If \code{TRUE}, prints the dummy coding scheme
 table showing the pattern of 0s and 1s. Default is \code{FALSE}.}

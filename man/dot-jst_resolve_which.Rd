@@ -7,8 +7,8 @@
 .jst_resolve_which(which, core, all_plots, class_name)
 }
 \arguments{
-\item{which}{The user's \code{which} argument: \code{"core"},
-\code{"all"}, or a character vector of plot names.}
+\item{which}{The user's \code{which} argument: \code{core},
+\code{all}, or a character vector of plot names.}
 
 \item{core}{Character vector of plot identifiers comprising the
 "core" set for this jplot method.}
@@ -24,8 +24,8 @@ A character vector of plot identifiers to produce.
 }
 \description{
 Translates the user's \code{which} argument into a vector of plot
-identifiers. Accepts the special values \code{"core"} and
-\code{"all"} (resolved against the supplied \code{core} and
+identifiers. Accepts the special values \code{core} and
+\code{all} (resolved against the supplied \code{core} and
 \code{all_plots} vectors) or an explicit character vector of plot
 names. Errors with a clear message listing the valid options if any
 name in \code{which} isn't recognised.

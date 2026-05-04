@@ -2,42 +2,72 @@
 % Please edit documentation in R/7036Tools.R
 \name{.jst_print_case_processing}
 \alias{.jst_print_case_processing}
-\title{Internal helper: print the Case Processing table}
+\title{Internal helper: print the Case Processing Summary (CPS) table}
 \usage{
-.jst_print_case_processing(sample_info, listwise = TRUE)
+.jst_print_case_processing(
+  sample_info,
+  analysis_type = "listwise",
+  notification_template = NULL,
+  data = NULL,
+  analysis_vars = NULL
+)
 }
 \arguments{
-\item{sample_info}{A list as returned by \code{.jst_build_sample_info()},
-containing at least \code{n_analysis} (cases used) and
-\code{n_excluded_missing} (cases dropped due to missing values).}
+\item{sample_info}{List built by \code{.jst_build_sample_info}.}
 
-\item{listwise}{Logical. If \code{TRUE} (default), include an
-"Excluded listwise" row and always print the table. If \code{FALSE},
-omit the listwise row and suppress the table when no pipeline stage
-was active.}
+\item{analysis_type}{Character, one of \code{listwise},
+\code{per_variable}, or \code{pairwise}.}
+
+\item{notification_template}{Character template for the
+listwise-discrepancy notification, used only when
+analysis_type = \code{per_variable}. May contain a single
+percent-d placeholder that will be replaced with the count of
+additional cases listwise would exclude. Set NULL to disable the
+notification for this caller (e.g. when there is only one analysis
+variable).}
+
+\item{data}{Data frame used by per-variable callers to compute the
+listwise-discrepancy count. Required when
+analysis_type = \code{per_variable} and
+\code{notification_template} is non-NULL.}
+
+\item{analysis_vars}{Character vector of analysis variable names
+used by per-variable callers to compute the listwise-discrepancy
+count. Required when analysis_type = \code{per_variable} and
+\code{notification_template} is non-NULL.}
 }
 \value{
 \code{invisible(NULL)}. Called for its side effect of
-printing the table.
+printing the table (and optionally the missing-by-var detail line
+and notification).
 }
 \description{
-Prints a compact "Case Processing" chain table at the top of an
-analysis function's output, tracing how the original N moves through
-jcomplete, jfilter, per-call subset, and (for listwise callers)
-listwise deletion to arrive at the analysis N. The table title is
-rendered inline as the first column header rather than as a separate
-caption row, which keeps the table compact.
+Centralises all CPS display logic. Callers specify an
+\code{analysis_type} that determines:
+\itemize{
+\item Whether the listwise row appears (only for \code{listwise}).
+\item The label of the final summary row (\code{Analysis N} for
+\code{listwise}; \code{Available N} for \code{per_variable}
+and \code{pairwise}).
+\item Whether the missing-by-variable diagnostic is eligible to
+print (only for \code{listwise}, when the missing toggle is on
+and listwise excluded at least one case).
+\item Whether the listwise-discrepancy notification is eligible
+(only for \code{per_variable}, only when 2+ analysis variables
+and the additional listwise drop is non-zero).
+}
 }
 \details{
-Designed to be called from any analysis function that needs a Case
-Processing Summary. Listwise-deletion functions (e.g. \code{jlm()},
-\code{jt()}, \code{jaov()}) call with \code{listwise = TRUE} (the
-default) so the table includes an "Excluded listwise" row. Non-
-listwise functions (e.g. \code{jfreq()}, eventually \code{jcorr()})
-call with \code{listwise = FALSE}; in that mode the listwise row is
-omitted, and the table itself is suppressed entirely when no
-pipeline stage was active for this call (since the chain would
-otherwise reduce to Original = Analysis N, which carries no new
-information).
+Auto-suppress rules (when \code{case.processing} toggle is NULL,
+i.e. the standard tier default):
+\itemize{
+\item \code{listwise}: print when pipeline is active OR listwise
+excluded at least one case.
+\item \code{per_variable}: print when pipeline is active.
+\item \code{pairwise}: print when pipeline is active.
+}
+
+Explicit toggle overrides (TRUE / FALSE in joutput) bypass the
+auto-suppress logic in the same way they did before.
 }
 \keyword{internal}

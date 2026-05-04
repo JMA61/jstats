@@ -19,7 +19,7 @@ jcomplete and jfilter. Does not affect other function calls.}
 when available.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_alpha"} containing:
+Invisibly returns a list of class \code{jst_alpha} containing:
 \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
 \code{n_excluded}, \code{item_statistics}, \code{item_total_statistics},
 and \code{sample_info} (pipeline and missing data counts).

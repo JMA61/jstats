@@ -18,8 +18,8 @@ joutput(
 )
 }
 \arguments{
-\item{level}{Character. One of \code{"minimal"}, \code{"standard"}
-(default), or \code{"full"}. If omitted, prints the current settings.
+\item{level}{Character. One of \code{minimal}, \code{standard}
+(default), or \code{full}. If omitted, prints the current settings.
 If \code{NULL}, resets to defaults (standard with no toggle overrides).
 \describe{
 \item{minimal}{Stripped-down output for power users. Core results
@@ -51,9 +51,17 @@ per-variable missing data detail.}
 \item{diagnostics}{Logical or NULL. Override the level's default for
 regression diagnostic output (jlm only).}
 
-\item{case.processing}{Logical or NULL. Override the level's default
-for the Case Processing Summary table that appears near the top of
-each analysis function's output.}
+\item{case.processing}{Three-state toggle. \code{TRUE} forces the
+Case Processing Summary to print on every call. \code{FALSE}
+suppresses it on every call. \code{NULL} (the auto-suppress default
+at the standard tier) prints only when the call had something to
+report — pipeline state was active (\code{jfilter},
+\code{jcomplete}, or per-call \code{subset}), listwise deletion
+excluded at least one case (in listwise functions like \code{jlm},
+\code{jt}), or a per-variable discrepancy notification fires (in
+\code{jdesc}/\code{jfreq}). The minimal tier sets this to
+\code{FALSE}; the full tier sets it to \code{TRUE}; the standard
+tier sets it to \code{NULL}.}
 
 \item{var.labels}{Logical or NULL. Override the level's default for
 the variable labels block.}

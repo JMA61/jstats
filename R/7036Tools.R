@@ -107,11 +107,15 @@
 #' rather than depending on hidden context.
 #'
 #' \strong{Output verbosity.} \code{joutput()} sets one of three
-#' preset levels — \code{"minimal"}, \code{"standard"} (default), or
-#' \code{"full"} — that modulate how much detail analysis functions
+#' preset levels — \code{minimal}, \code{standard} (default), or
+#' \code{full} — that modulate how much detail analysis functions
 #' print. Useful for stripping output in production scripts or
 #' expanding it during exploration. Per-call arguments always
-#' override session-level settings.
+#' override session-level settings. The Case Processing Summary
+#' table follows an auto-suppress rule at the standard tier: it
+#' prints when something happened (pipeline state, listwise drops,
+#' or a per-variable discrepancy notification) and stays silent
+#' otherwise. See \code{?joutput} for the full toggle behaviour.
 #'
 #' @section Where to go next:
 #' \itemize{
@@ -549,8 +553,8 @@
 #' @param x A vector — haven_labelled, factor, character, or numeric.
 #' @param var_name Character. The variable's name (used as the dummy
 #'   column prefix).
-#' @param ref Reference category specifier. May be \code{"first"} (default),
-#'   \code{"last"}, a numeric code, or a character string matching a
+#' @param ref Reference category specifier. May be \code{first} (default),
+#'   \code{last}, a numeric code, or a character string matching a
 #'   canonical label.
 #' @param name.length.warn Integer. Warn if any final dummy name exceeds
 #'   this many characters. Default 30.
@@ -1098,54 +1102,145 @@
   defaults[[level]][[name]]
 }
 
-#' Internal helper: print the Case Processing table
+#' Internal helper: print the Case Processing Summary (CPS) table
 #'
-#' Prints a compact "Case Processing" chain table at the top of an
-#' analysis function's output, tracing how the original N moves through
-#' jcomplete, jfilter, per-call subset, and (for listwise callers)
-#' listwise deletion to arrive at the analysis N. The table title is
-#' rendered inline as the first column header rather than as a separate
-#' caption row, which keeps the table compact.
+#' Centralises all CPS display logic. Callers specify an
+#' \code{analysis_type} that determines:
+#' \itemize{
+#'   \item Whether the listwise row appears (only for \code{listwise}).
+#'   \item The label of the final summary row (\code{Analysis N} for
+#'     \code{listwise}; \code{Available N} for \code{per_variable}
+#'     and \code{pairwise}).
+#'   \item Whether the missing-by-variable diagnostic is eligible to
+#'     print (only for \code{listwise}, when the missing toggle is on
+#'     and listwise excluded at least one case).
+#'   \item Whether the listwise-discrepancy notification is eligible
+#'     (only for \code{per_variable}, only when 2+ analysis variables
+#'     and the additional listwise drop is non-zero).
+#' }
 #'
-#' Designed to be called from any analysis function that needs a Case
-#' Processing Summary. Listwise-deletion functions (e.g. \code{jlm()},
-#' \code{jt()}, \code{jaov()}) call with \code{listwise = TRUE} (the
-#' default) so the table includes an "Excluded listwise" row. Non-
-#' listwise functions (e.g. \code{jfreq()}, eventually \code{jcorr()})
-#' call with \code{listwise = FALSE}; in that mode the listwise row is
-#' omitted, and the table itself is suppressed entirely when no
-#' pipeline stage was active for this call (since the chain would
-#' otherwise reduce to Original = Analysis N, which carries no new
-#' information).
+#' Auto-suppress rules (when \code{case.processing} toggle is NULL,
+#' i.e. the standard tier default):
+#' \itemize{
+#'   \item \code{listwise}: print when pipeline is active OR listwise
+#'     excluded at least one case.
+#'   \item \code{per_variable}: print when pipeline is active.
+#'   \item \code{pairwise}: print when pipeline is active.
+#' }
 #'
-#' @param sample_info A list as returned by \code{.jst_build_sample_info()},
-#'   containing at least \code{n_analysis} (cases used) and
-#'   \code{n_excluded_missing} (cases dropped due to missing values).
-#' @param listwise Logical. If \code{TRUE} (default), include an
-#'   "Excluded listwise" row and always print the table. If \code{FALSE},
-#'   omit the listwise row and suppress the table when no pipeline stage
-#'   was active.
+#' Explicit toggle overrides (TRUE / FALSE in joutput) bypass the
+#' auto-suppress logic in the same way they did before.
+#'
+#' @param sample_info List built by \code{.jst_build_sample_info}.
+#' @param analysis_type Character, one of \code{listwise},
+#'   \code{per_variable}, or \code{pairwise}.
+#' @param notification_template Character template for the
+#'   listwise-discrepancy notification, used only when
+#'   analysis_type = \code{per_variable}. May contain a single
+#'   percent-d placeholder that will be replaced with the count of
+#'   additional cases listwise would exclude. Set NULL to disable the
+#'   notification for this caller (e.g. when there is only one analysis
+#'   variable).
+#' @param data Data frame used by per-variable callers to compute the
+#'   listwise-discrepancy count. Required when
+#'   analysis_type = \code{per_variable} and
+#'   \code{notification_template} is non-NULL.
+#' @param analysis_vars Character vector of analysis variable names
+#'   used by per-variable callers to compute the listwise-discrepancy
+#'   count. Required when analysis_type = \code{per_variable} and
+#'   \code{notification_template} is non-NULL.
 #'
 #' @return \code{invisible(NULL)}. Called for its side effect of
-#'   printing the table.
+#'   printing the table (and optionally the missing-by-var detail line
+#'   and notification).
 #'
 #' @keywords internal
-.jst_print_case_processing <- function(sample_info, listwise = TRUE) {
+.jst_print_case_processing <- function(sample_info,
+                                       analysis_type        = "listwise",
+                                       notification_template = NULL,
+                                       data                  = NULL,
+                                       analysis_vars         = NULL) {
+
+  # Validate analysis_type: misuse here would otherwise produce a silently
+  # weird CPS, so error early with a clear message.
+  if (!analysis_type %in% c("listwise", "per_variable", "pairwise")) {
+    stop(".jst_print_case_processing(): analysis_type must be one of ",
+         "'listwise', 'per_variable', or 'pairwise'.", call. = FALSE)
+  }
+
   n_original <- sample_info$n_original
   n_analysis <- sample_info$n_analysis
 
   if (is.null(n_original) || n_original == 0) return(invisible(NULL))
 
+  # Local closure: print the listwise-discrepancy notification when its
+  # gating conditions are met. Used by every code path so the notification
+  # fires regardless of whether the CPS table itself prints. Returns
+  # invisible(TRUE) when the notification fires (so callers can know to
+  # force CPS printing for context); invisible(FALSE) otherwise.
+  print_notification_if_eligible <- function() {
+    if (analysis_type != "per_variable" ||
+        is.null(notification_template) ||
+        is.null(data) ||
+        is.null(analysis_vars) ||
+        length(analysis_vars) < 2 ||
+        getOption(".jst_output_level", "standard") == "minimal") {
+      return(invisible(FALSE))
+    }
+    # Suppress when jcomplete is active for this call: the user has
+    # already engaged with the missing-data question via jcomplete, so
+    # additional advice would be noise. (Refinement for partial-coverage
+    # case is on the to-do list.)
+    if (isTRUE(sample_info$complete_active)) {
+      return(invisible(FALSE))
+    }
+    listwise_n <- sum(stats::complete.cases(data[, analysis_vars, drop = FALSE]))
+    per_var_ns <- vapply(analysis_vars,
+                         function(v) sum(!is.na(data[[v]])),
+                         integer(1))
+    if (listwise_n < min(per_var_ns)) {
+      if (grepl("%d", notification_template, fixed = TRUE)) {
+        msg <- sprintf(notification_template, listwise_n)
+      } else {
+        msg <- notification_template
+      }
+      cat(msg, "\n\n", sep = "")
+      return(invisible(TRUE))
+    }
+    invisible(FALSE)
+  }
+
+  # Helper: would the notification fire? Used to decide whether to force
+  # CPS printing when the auto-suppress logic would otherwise hide it.
+  notification_will_fire <- function() {
+    if (analysis_type != "per_variable" ||
+        is.null(notification_template) ||
+        is.null(data) ||
+        is.null(analysis_vars) ||
+        length(analysis_vars) < 2 ||
+        getOption(".jst_output_level", "standard") == "minimal") {
+      return(FALSE)
+    }
+    if (isTRUE(sample_info$complete_active)) {
+      return(FALSE)
+    }
+    listwise_n <- sum(stats::complete.cases(data[, analysis_vars, drop = FALSE]))
+    per_var_ns <- vapply(analysis_vars,
+                         function(v) sum(!is.na(data[[v]])),
+                         integer(1))
+    listwise_n < min(per_var_ns)
+  }
+
   # Resolve the case.processing toggle to its three-state value:
   #   FALSE - never print
   #   TRUE  - always print
-  #   NULL  - "auto": print only when something was excluded (pipeline
-  #           state active, or for listwise = TRUE callers, listwise
-  #           excluded at least one case)
+  #   NULL  - "auto": print only when something happened
   cps_setting <- .jst_resolve_toggle("case.processing", NULL)
 
   if (isTRUE(cps_setting) == FALSE && !is.null(cps_setting)) {
-    # Explicitly FALSE - suppress
+    # Explicitly FALSE - suppress CPS, but the notification still has
+    # its own conditions and should fire if eligible.
+    print_notification_if_eligible()
     return(invisible(NULL))
   }
 
@@ -1155,26 +1250,42 @@
                      !is.null(sample_info$n_after_subset)
 
   # Auto state (cps_setting = NULL): print only when something happened.
+  # Definition of "happened" depends on analysis type.
   if (is.null(cps_setting)) {
-    listwise_excluded_any <- listwise && !is.null(sample_info$n_excluded_missing) &&
-                             sample_info$n_excluded_missing > 0
-    if (!pipeline_active && !listwise_excluded_any) return(invisible(NULL))
+    listwise_excluded_any <-
+      analysis_type == "listwise" &&
+      !is.null(sample_info$n_excluded_missing) &&
+      sample_info$n_excluded_missing > 0
+    if (!pipeline_active && !listwise_excluded_any) {
+      # If a notification is going to fire, force CPS to print so the
+      # notification has the "Available N" anchor for context.
+      if (notification_will_fire()) {
+        # Fall through to print the CPS table; notification fires after.
+      } else {
+        print_notification_if_eligible()
+        return(invisible(NULL))
+      }
+    }
   }
 
   # Non-listwise callers also suppress when no pipeline is active, even
   # under the "always print" setting -- they have nothing meaningful to
-  # show beyond Original = Analysis N. (Skip this guard if cps_setting
-  # is explicitly TRUE: respect the user's explicit override.)
-  if (!isTRUE(cps_setting) && !listwise && !pipeline_active) {
+  # show beyond Original = Available N. (Skip this guard if cps_setting
+  # is explicitly TRUE, OR if a notification is going to fire and needs
+  # the CPS table as anchor.)
+  if (!isTRUE(cps_setting) &&
+      analysis_type != "listwise" &&
+      !pipeline_active &&
+      !notification_will_fire()) {
+    print_notification_if_eligible()
     return(invisible(NULL))
   }
 
   # Build the chain row-by-row, in time order. Pipeline drop rows appear
   # only when the corresponding stage was active for this call. The
-  # listwise row is included only when listwise = TRUE (it is always
-  # shown in that case, even when zero, since listwise is the deletion
-  # method these callers used).
-
+  # listwise row is included only when analysis_type is "listwise"
+  # (always shown in that case, even when zero, since listwise is the
+  # deletion method these callers used).
   labels <- character(0)
   ns     <- integer(0)
 
@@ -1221,14 +1332,15 @@
     prior_n <- sample_info$n_after_subset
   }
 
-  # Listwise drop (only for listwise callers; always shown when listwise=TRUE)
-  if (listwise) {
+  # Listwise drop (only for listwise callers)
+  if (analysis_type == "listwise") {
     labels <- c(labels, "Excluded listwise")
     ns     <- c(ns, sample_info$n_excluded_missing)
   }
 
-  # Anchor: Analysis N
-  labels <- c(labels, "Analysis N")
+  # Final-row label depends on analysis_type
+  final_label <- if (analysis_type == "listwise") "Analysis N" else "Available N"
+  labels <- c(labels, final_label)
   ns     <- c(ns, n_analysis)
 
   case_table <- data.frame(
@@ -1244,6 +1356,26 @@
                    align     = c("l", "c", "c"),
                    row.names = FALSE)
   cat("\n")
+
+  # Per-variable missing-by-var diagnostic (listwise type only). Centralised
+  # here so call sites do not have to remember to gate-and-print it
+  # separately. Subject to the `missing` toggle and only fires when
+  # listwise excluded at least one case.
+  if (analysis_type == "listwise") {
+    show_missing <- .jst_resolve_toggle("missing", NULL)
+    if (isTRUE(show_missing) &&
+        !is.null(sample_info$n_excluded_missing) &&
+        sample_info$n_excluded_missing > 0) {
+      .jst_print_missing_detail(sample_info$missing_by_var)
+    }
+  }
+
+  # Listwise-discrepancy notification (per_variable type only). Fires when
+  # 2+ analysis variables AND listwise across all of them would exclude
+  # additional cases beyond the smallest per-variable N. Suppressed at
+  # "minimal" output tier and skipped when notification_template is NULL.
+  print_notification_if_eligible()
+
   invisible(NULL)
 }
 
@@ -1417,19 +1549,19 @@
 #'
 #' Distinguishes five outcomes via the \code{mode} field:
 #' \describe{
-#'   \item{\code{"default"}}{Data argument was missing; juse default used.}
-#'   \item{\code{"null"}}{User passed literal \code{NULL}; only returned
+#'   \item{\code{default}}{Data argument was missing; juse default used.}
+#'   \item{\code{null}}{User passed literal \code{NULL}; only returned
 #'     when \code{allow_null = TRUE}. Caller handles (e.g., for global
 #'     clear semantics in jdummy/jfilter/jcomplete).}
-#'   \item{\code{"explicit"}}{User passed an expression that evaluated
+#'   \item{\code{explicit}}{User passed an expression that evaluated
 #'     to a data frame. That data frame is used.}
-#'   \item{\code{"vector_input"}}{Only returned when
+#'   \item{\code{vector_input}}{Only returned when
 #'     \code{accept_vector = TRUE}. User passed an expression that
 #'     evaluated to a non-data-frame value (typically an atomic vector
 #'     or a column reference like \code{SampleData$Gender}). The caller
 #'     handles this --- usually by wrapping the value in a temporary
 #'     data frame.}
-#'   \item{\code{"symbol_with_default"}}{User passed a bare symbol that
+#'   \item{\code{symbol_with_default}}{User passed a bare symbol that
 #'     did not evaluate (or evaluated to a non-data-frame value when
 #'     \code{accept_vector = FALSE}). Treated as a variable-name attempt
 #'     missing the leading comma. The juse default is used as the data
@@ -1453,28 +1585,28 @@
 #'   for evaluating the first argument and looking up the juse default
 #'   data frame.
 #' @param allow_null Logical. If \code{TRUE}, literal \code{NULL} is
-#'   returned with mode \code{"null"} for the caller to handle.
+#'   returned with mode \code{null} for the caller to handle.
 #'   Defaults to \code{FALSE}, in which case literal \code{NULL} errors.
 #' @param accept_vector Logical. If \code{TRUE}, an expression that
 #'   evaluates to a non-data-frame value is returned with mode
-#'   \code{"vector_input"} for the caller to handle. Defaults to
+#'   \code{vector_input} for the caller to handle. Defaults to
 #'   \code{FALSE}, in which case such inputs are treated as bare-symbol
-#'   variable-name attempts (mode \code{"symbol_with_default"}).
+#'   variable-name attempts (mode \code{symbol_with_default}).
 #'
 #' @return A list with components:
 #'   \describe{
-#'     \item{\code{mode}}{Character. One of \code{"default"},
-#'       \code{"null"}, \code{"explicit"}, \code{"vector_input"},
-#'       \code{"symbol_with_default"}.}
+#'     \item{\code{mode}}{Character. One of \code{default},
+#'       \code{null}, \code{explicit}, \code{vector_input},
+#'       \code{symbol_with_default}.}
 #'     \item{\code{data}}{The resolved data frame (or \code{NULL} for
-#'       modes \code{"null"} and \code{"vector_input"}).}
+#'       modes \code{null} and \code{vector_input}).}
 #'     \item{\code{name}}{Character name string for messages (or
-#'       \code{NULL} for modes \code{"null"} and \code{"vector_input"}).}
+#'       \code{NULL} for modes \code{null} and \code{vector_input}).}
 #'     \item{\code{first_arg_sub}}{The user's substituted first argument
 #'       (or \code{NULL} when not applicable). Set for modes
-#'       \code{"vector_input"} and \code{"symbol_with_default"}.}
+#'       \code{vector_input} and \code{symbol_with_default}.}
 #'     \item{\code{first_arg_value}}{The evaluated value of the first
-#'       argument, set only for mode \code{"vector_input"}; \code{NULL}
+#'       argument, set only for mode \code{vector_input}; \code{NULL}
 #'       otherwise.}
 #'   }
 #'
@@ -2046,7 +2178,7 @@
 #'   \describe{
 #'     \item{mappings}{List of lists; each inner list has \code{old_vals}
 #'       (numeric vector) and \code{new_val} (single numeric).}
-#'     \item{else_action}{Character: either \code{"na"} or \code{"copy"}.}
+#'     \item{else_action}{Character: either \code{na} or \code{copy}.}
 #'     \item{else_explicit}{Logical: \code{TRUE} if the user wrote an
 #'       explicit \code{else=...} clause, \code{FALSE} if defaulted.}
 #'   }
@@ -2808,8 +2940,8 @@ jcomplete <- function(data, ...) {
 #' @param var Unquoted variable name to register. Omit (along with data)
 #'   to display all current registrations.
 #' @param ref The reference category (excluded from the regression model).
-#'   Can be a numeric code, a quoted label name, or \code{"first"}
-#'   (default) or \code{"last"}.
+#'   Can be a numeric code, a quoted label name, or \code{first}
+#'   (default) or \code{last}.
 #' @param show Logical. If \code{TRUE}, prints the dummy coding scheme
 #'   table showing the pattern of 0s and 1s. Default is \code{FALSE}.
 #' @param remove Logical. If \code{TRUE}, removes the registration for
@@ -3233,8 +3365,8 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #' within any level. Per-call arguments on analysis functions always take
 #' precedence over joutput() settings.
 #'
-#' @param level Character. One of \code{"minimal"}, \code{"standard"}
-#'   (default), or \code{"full"}. If omitted, prints the current settings.
+#' @param level Character. One of \code{minimal}, \code{standard}
+#'   (default), or \code{full}. If omitted, prints the current settings.
 #'   If \code{NULL}, resets to defaults (standard with no toggle overrides).
 #'   \describe{
 #'     \item{minimal}{Stripped-down output for power users. Core results
@@ -3259,9 +3391,17 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'   per-variable missing data detail.
 #' @param diagnostics Logical or NULL. Override the level's default for
 #'   regression diagnostic output (jlm only).
-#' @param case.processing Logical or NULL. Override the level's default
-#'   for the Case Processing Summary table that appears near the top of
-#'   each analysis function's output.
+#' @param case.processing Three-state toggle. \code{TRUE} forces the
+#'   Case Processing Summary to print on every call. \code{FALSE}
+#'   suppresses it on every call. \code{NULL} (the auto-suppress default
+#'   at the standard tier) prints only when the call had something to
+#'   report — pipeline state was active (\code{jfilter},
+#'   \code{jcomplete}, or per-call \code{subset}), listwise deletion
+#'   excluded at least one case (in listwise functions like \code{jlm},
+#'   \code{jt}), or a per-variable discrepancy notification fires (in
+#'   \code{jdesc}/\code{jfreq}). The minimal tier sets this to
+#'   \code{FALSE}; the full tier sets it to \code{TRUE}; the standard
+#'   tier sets it to \code{NULL}.
 #' @param var.labels Logical or NULL. Override the level's default for
 #'   the variable labels block.
 #' @param ref.categories Logical or NULL. Override the level's default
@@ -3413,7 +3553,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #' @param labels Logical. If \code{TRUE} (default), prints the variable type
 #'   and label (or "None") for each variable before the table.
 #'
-#' @return Invisibly returns a list of class \code{"jst_desc"} containing:
+#' @return Invisibly returns a list of class \code{jst_desc} containing:
 #'   \code{descriptives} (data frame of statistics, or NULL for grouped output),
 #'   and \code{sample_info} (pipeline and missing data counts). Also
 #'   prints a formatted table to the console.
@@ -3531,7 +3671,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
       if (.jst_default_used) .jst_default_note(.jst_data_name)
       .jst_print_msgs(pipeline$msgs)
 
-      .jst_print_case_processing(sample_info, listwise = FALSE)
+      .jst_print_case_processing(sample_info, analysis_type = "per_variable")
 
       if (.jst_resolve_toggle("var.labels", labels)) {
         cat(v, "\n", sep = "")
@@ -3648,7 +3788,15 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
     n_analysis      = nrow(data)
   )
 
-  .jst_print_case_processing(sample_info, listwise = FALSE)
+  .jst_print_case_processing(
+    sample_info,
+    analysis_type         = "per_variable",
+    notification_template = paste0(
+      "Note: Listwise deletion using jcomplete() first will reduce the Available N to %d."
+    ),
+    data          = data,
+    analysis_vars = variable_names
+  )
 
   if (.jst_resolve_toggle("var.labels", labels)) {
     for (v in variable_names) {
@@ -3712,27 +3860,6 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
   .jst_print_table(descriptives)
   cat("\n")
 
-  # Listwise-discrepancy notification (multi-variable calls only).
-  # Fires when listwise across all variables would exclude additional
-  # cases beyond what the smallest per-variable N already reflects --
-  # signalling a gap between what jdesc reports (per-variable) and what
-  # a multi-variable model would use (listwise). Suppressed at "minimal"
-  # output tier.
-  if (length(variable_names) >= 2 &&
-      getOption(".jst_output_level", "standard") != "minimal") {
-    listwise_n <- sum(stats::complete.cases(data[, variable_names, drop = FALSE]))
-    per_var_ns <- vapply(variable_names,
-                         function(v) sum(!is.na(data[[v]])),
-                         integer(1))
-    if (listwise_n < min(per_var_ns)) {
-      additional <- min(per_var_ns) - listwise_n
-      cat("Note: each statistic uses all non-missing values for that ",
-          "variable. Listwise deletion across all variables in this call ",
-          "would exclude an additional ", additional, " cases.\n\n",
-          sep = "")
-    }
-  }
-
   ret <- list(
     descriptives = descriptives,
     sample_info  = sample_info
@@ -3777,7 +3904,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
 #'   NULL (default), defers to \code{joutput()}'s \code{var.labels}
 #'   setting.
 #'
-#' @return Invisibly returns a list of class \code{"jst_freq"} containing:
+#' @return Invisibly returns a list of class \code{jst_freq} containing:
 #'   \code{frequencies} (named list of data frames, one per variable) and
 #'   \code{sample_info} (pipeline and missing data counts).
 #'
@@ -3864,7 +3991,15 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 
   # Case Processing Summary (jfreq is non-listwise; the helper suppresses
   # the table when no pipeline stage was active).
-  .jst_print_case_processing(sample_info, listwise = FALSE)
+  .jst_print_case_processing(
+    sample_info,
+    analysis_type         = "per_variable",
+    notification_template = paste0(
+      "Note: Listwise deletion using jcomplete() first will reduce the Available N to %d."
+    ),
+    data          = data,
+    analysis_vars = var_names_check
+  )
 
   # -- Per-variable blocks ---------------------------------------------------
   for (variable in variables) {
@@ -4219,7 +4354,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 #' @param full Logical. If TRUE, turns on effect.size, levene, and ci
 #'   all at once. Does not override explicit FALSE values.
 #'
-#' @return Invisibly returns a list of class \code{"jst_ttest"} containing:
+#' @return Invisibly returns a list of class \code{jst_ttest} containing:
 #'   \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
 #'   data frame used for plotting), \code{test_type}, \code{formula},
 #'   \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
@@ -4268,7 +4403,6 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   effect.size <- .jst_resolve_toggle("effect.size", effect.size)
   ci          <- .jst_resolve_toggle("ci",          ci)
   levene      <- .jst_resolve_toggle("levene",      levene)
-  show_missing         <- .jst_resolve_toggle("missing",        NULL)
   # Red title - determined before any output
   if (paired) {
     .cat_red("Paired Samples T-Test\n")
@@ -4305,13 +4439,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   )
 
   # Case Processing Summary
-  .jst_print_case_processing(sample_info, listwise = TRUE)
-
-  # Per-variable missing detail (only at the "full" output tier, and
-  # only when listwise actually excluded cases)
-  if (show_missing && sample_info$n_excluded_missing > 0) {
-    .jst_print_missing_detail(sample_info$missing_by_var)
-  }
+  .jst_print_case_processing(sample_info, analysis_type = "listwise")
 
 
   group_var   <- data[[group_name]]
@@ -4567,7 +4695,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' @param full Logical. If TRUE, turns on posthoc, effect.size, levene,
 #'   and ci all at once. Does not override explicit FALSE values.
 #'
-#' @return Invisibly returns a list of class \code{"jst_anova"} containing:
+#' @return Invisibly returns a list of class \code{jst_anova} containing:
 #'   \code{model} (the \code{aov} or \code{oneway.test} object),
 #'   \code{model_frame} (the analysis data frame used for plotting),
 #'   \code{test_type}, \code{formula}, \code{descriptives}, \code{f},
@@ -4618,7 +4746,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   ci           <- .jst_resolve_toggle("ci",          ci)
   levene       <- .jst_resolve_toggle("levene",      levene)
   posthoc      <- .jst_resolve_toggle("posthoc",     posthoc)
-  show_missing         <- .jst_resolve_toggle("missing",        NULL)
   # Red title
   if (welch) {
     .cat_red("Welch's One-Way ANOVA\n")
@@ -4653,13 +4780,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   )
 
   # Case Processing Summary
-  .jst_print_case_processing(sample_info, listwise = TRUE)
-
-  # Per-variable missing detail (only at the "full" output tier, and
-  # only when listwise actually excluded cases)
-  if (show_missing && sample_info$n_excluded_missing > 0) {
-    .jst_print_missing_detail(sample_info$missing_by_var)
-  }
+  .jst_print_case_processing(sample_info, analysis_type = "listwise")
 
   group_var   <- data[[group_name]]
   is_labelled <- haven::is.labelled(group_var)
@@ -4961,7 +5082,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #'
-#' @return Invisibly returns a list of class \code{"jst_crosstab"} containing:
+#' @return Invisibly returns a list of class \code{jst_crosstab} containing:
 #'   \code{observed} (observed frequency table), \code{expected} (expected
 #'   frequency table), \code{n} (total N), \code{model_frame} (the analysis
 #'   data frame used for plotting), \code{sample_info} (pipeline and
@@ -5022,8 +5143,6 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   .jst_print_msgs(pipeline$msgs)
 
   # Resolve display toggles
-  show_missing         <- .jst_resolve_toggle("missing",         NULL)
-
   # Build analysis-level data frame (listwise on Row + Column) and
   # sample_info early so the Case Processing Summary can use them.
   mf <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]),
@@ -5037,13 +5156,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   )
 
   # Case Processing Summary
-  .jst_print_case_processing(sample_info, listwise = TRUE)
-
-  # Per-variable missing detail (only at the "full" output tier, and
-  # only when listwise actually excluded cases)
-  if (show_missing && sample_info$n_excluded_missing > 0) {
-    .jst_print_missing_detail(sample_info$missing_by_var)
-  }
+  .jst_print_case_processing(sample_info, analysis_type = "listwise")
 
   row_var <- data[[row_name]]
   col_var <- data[[col_name]]
@@ -5093,7 +5206,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
       } else ""
       stop(paste0("'", check_info$name, "' has ", length(check_info$lvls),
                   " category(ies)", context,
-                  ". A chi-square test requires at least 2 categories ",
+                  ". A cross-tabulation requires at least 2 categories ",
                   "for each variable."), call. = FALSE)
     }
   }
@@ -5239,7 +5352,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #'
-#' @return Invisibly returns a list of class \code{"jst_corr"} containing:
+#' @return Invisibly returns a list of class \code{jst_corr} containing:
 #'   \code{r} (correlation matrix), \code{p} (p-value matrix),
 #'   \code{n} (pairwise N matrix), \code{method}, \code{model_frame} (the
 #'   analysis data frame used for plotting), and \code{sample_info}
@@ -5313,6 +5426,19 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
                                   subset_expr = subset_expr, envir = parent.frame())
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
+
+  # Build sample_info early so the Case Processing Summary can use it.
+  # jcorr uses pairwise deletion, not listwise.
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = variable_names,
+    n_analysis      = nrow(data)
+  )
+
+  # Case Processing Summary (jcorr is pairwise; the helper suppresses
+  # the table when no pipeline stage was active).
+  .jst_print_case_processing(sample_info, analysis_type = "pairwise")
 
   cor_data <- data[, variable_names, drop = FALSE]
 
@@ -5407,14 +5533,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
   }
 
   cat("\n")
-
-  # Build sample_info (jcorr uses pairwise deletion, not listwise)
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = variable_names,
-    n_analysis      = nrow(data)
-  )
 
   # Build analysis-level data frame for jplot() (2-variable scatter option)
   mf <- data[, variable_names, drop = FALSE]
@@ -5667,8 +5785,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
 #'
 #' @param model A fitted \code{glm} object with \code{family = binomial}.
 #' @param which Character vector of diagnostic names. Any subset of
-#'   \code{"binned"}, \code{"roc"}, \code{"calibration"}, \code{"cooks"},
-#'   \code{"leverage"}.
+#'   \code{binned}, \code{roc}, \code{calibration}, \code{cooks},
+#'   \code{leverage}.
 #' @param n_label Integer. Number of extreme observations to label on
 #'   relevant plots. Default 3.
 #'
@@ -5929,8 +6047,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
 #'   \code{jdummy()} for control over the reference category.
 #' @param diagnostics Logical, character vector, or NULL. If TRUE, prints VIF
 #'   table and diagnostic plots. If a character vector, specifies which
-#'   diagnostics to show: \code{"vif"}, \code{"residuals"}, \code{"qq"},
-#'   \code{"scale"}, \code{"cooks"}, \code{"leverage"}. If NULL (default),
+#'   diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
+#'   \code{scale}, \code{cooks}, \code{leverage}. If NULL (default),
 #'   defers to \code{joutput()} session setting.
 #' @param full Logical. If TRUE, turns on diagnostics. Does not override
 #'   explicit FALSE values.
@@ -5938,10 +6056,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
 #'   \code{plots}, or \code{show} will produce a helpful error suggesting
 #'   \code{diagnostics} instead.
 #'
-#' @return Invisibly returns a list of class \code{"jst_lm"} containing:
+#' @return Invisibly returns a list of class \code{jst_lm} containing:
 #'   \describe{
 #'     \item{model}{The fitted \code{lm} object.}
-#'     \item{model_type}{Character string \code{"linear"}.}
+#'     \item{model_type}{Character string \code{linear}.}
 #'     \item{model_frame}{The model frame used to fit the model.}
 #'     \item{formula_used}{The formula after dummy expansion.}
 #'     \item{coefficients}{Formatted coefficient table (data frame).}
@@ -6040,7 +6158,6 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   .jst_print_msgs(pipeline$msgs)
 
   # Resolve display toggles
-  show_missing         <- .jst_resolve_toggle("missing",         NULL)
   show_var_labels      <- .jst_resolve_toggle("var.labels",      labels)
   show_ref_categories  <- .jst_resolve_toggle("ref.categories",  NULL)
   # Resolve diagnostics toggle
@@ -6431,12 +6548,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   )
 
   # Case Processing Summary
-  .jst_print_case_processing(sample_info, listwise = TRUE)
-
-  # Per-variable missing detail (only if any cases were excluded by listwise)
-  if (show_missing && sample_info$n_excluded_missing > 0) {
-    .jst_print_missing_detail(sample_info$missing_by_var)
-  }
+  .jst_print_case_processing(sample_info, analysis_type = "listwise")
 
   # Variable labels
   if (show_var_labels) {
@@ -6716,7 +6828,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 #' @param classification Logical. If TRUE, prints a classification table
 #'   showing predicted vs observed outcomes. Default is FALSE.
 #' @param diagnostics Logical, character vector, or NULL. If TRUE, prints
-#'   VIF table. If a character vector, \code{"vif"} is currently the only
+#'   VIF table. If a character vector, \code{vif} is currently the only
 #'   supported option. If NULL (default), defers to \code{joutput()}.
 #' @param full Logical. If TRUE, turns on ci, classification, and
 #'   diagnostics. Does not override explicit FALSE values.
@@ -6724,10 +6836,10 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 #'   \code{plots}, or \code{show} will produce a helpful error suggesting
 #'   \code{diagnostics} instead.
 #'
-#' @return Invisibly returns a list of class \code{"jst_logistic"} containing:
+#' @return Invisibly returns a list of class \code{jst_logistic} containing:
 #'   \describe{
 #'     \item{model}{The fitted \code{glm} object.}
-#'     \item{model_type}{Character string \code{"logistic"}.}
+#'     \item{model_type}{Character string \code{logistic}.}
 #'     \item{model_frame}{The model frame used to fit the model.}
 #'     \item{formula_used}{The formula after dummy expansion.}
 #'     \item{coefficients}{Formatted coefficient table (data frame).}
@@ -6813,7 +6925,6 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
 
   # Resolve display toggles
   ci           <- .jst_resolve_toggle("ci", ci)
-  show_missing         <- .jst_resolve_toggle("missing",        NULL)
   # Resolve diagnostics toggle
   if (is.character(diagnostics)) {
     show_diag  <- TRUE
@@ -7103,13 +7214,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   )
 
   # Case Processing Summary
-  .jst_print_case_processing(sample_info, listwise = TRUE)
-
-  # Per-variable missing detail (only at the "full" output tier, and
-  # only when listwise actually excluded cases)
-  if (show_missing && sample_info$n_excluded_missing > 0) {
-    .jst_print_missing_detail(sample_info$missing_by_var)
-  }
+  .jst_print_case_processing(sample_info, analysis_type = "listwise")
 
   if (.jst_resolve_toggle("var.labels", labels)) {
     .print_var_labels(data, all.vars(formula))
@@ -7390,7 +7495,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #'
-#' @return Invisibly returns a list of class \code{"jst_alpha"} containing:
+#' @return Invisibly returns a list of class \code{jst_alpha} containing:
 #'   \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
 #'   \code{n_excluded}, \code{item_statistics}, \code{item_total_statistics},
 #'   and \code{sample_info} (pipeline and missing data counts).
@@ -7477,7 +7582,7 @@ jalpha <- function(data, ..., subset = NULL, labels = NULL) {
 
   # Case Processing Summary (standard CPS chain; jalpha uses listwise
   # deletion across all scale items)
-  .jst_print_case_processing(sample_info, listwise = TRUE)
+  .jst_print_case_processing(sample_info, analysis_type = "listwise")
 
   # Overall Cronbach's Alpha
   k             <- ncol(items_complete)
@@ -9327,66 +9432,66 @@ jsave <- function(data, file, overwrite = FALSE) {
 #'
 #' Valid plot names by class (for the result-object form):
 #' \itemize{
-#'   \item \code{jst_lm}: \code{"fit"}, \code{"predicted"}, \code{"effects"},
-#'     \code{"coef"}, \code{"vif"}, \code{"residuals"}, \code{"qq"},
-#'     \code{"scale"}, \code{"cooks"}, \code{"leverage"}
-#'   \item \code{jst_logistic}: \code{"probability"}, \code{"roc"},
-#'     \code{"calibration"}, \code{"binned"}, \code{"cooks"}, \code{"leverage"},
-#'     \code{"coef"}, \code{"vif"}
-#'   \item \code{jst_ttest}, \code{jst_anova}: \code{"box"}
-#'   \item \code{jst_corr}: \code{"heatmap"}, \code{"scatter"} (scatter requires
+#'   \item \code{jst_lm}: \code{fit}, \code{predicted}, \code{effects},
+#'     \code{coef}, \code{vif}, \code{residuals}, \code{qq},
+#'     \code{scale}, \code{cooks}, \code{leverage}
+#'   \item \code{jst_logistic}: \code{probability}, \code{roc},
+#'     \code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
+#'     \code{coef}, \code{vif}
+#'   \item \code{jst_ttest}, \code{jst_anova}: \code{box}
+#'   \item \code{jst_corr}: \code{heatmap}, \code{scatter} (scatter requires
 #'     exactly 2 variables in the correlation)
-#'   \item \code{jst_crosstab}: \code{"bar"}
+#'   \item \code{jst_crosstab}: \code{bar}
 #' }
 #'
-#' The shortcut keyword \code{"core"} (default) produces a curated default
-#' set for the class; \code{"all"} produces every plot the class supports.
+#' The shortcut keyword \code{core} (default) produces a curated default
+#' set for the class; \code{all} produces every plot the class supports.
 #'
-#' Valid plot types for the data-first form: \code{"histogram"}, \code{"bar"},
-#' \code{"scatter"}, \code{"box"}, \code{"grouped_bar"}.
+#' Valid plot types for the data-first form: \code{histogram}, \code{bar},
+#' \code{scatter}, \code{box}, \code{grouped_bar}.
 #'
 #' Valid \code{line} values: \code{FALSE} (default), \code{TRUE} (alias for
-#' \code{"lm"}), \code{"lm"}, \code{"loess"}, \code{"connect"}.
+#' \code{lm}), \code{lm}, \code{loess}, \code{connect}.
 #'
-#' Valid \code{band} values: \code{"ci"} (default confidence band around the
-#' regression line, flares at the ends), \code{"pi"} (prediction interval for
-#' individual observations, wider), \code{"see"} (constant-width +/- t*SEE
-#' band illustrating the homoskedasticity assumption), \code{"none"} (no band).
+#' Valid \code{band} values: \code{ci} (default confidence band around the
+#' regression line, flares at the ends), \code{pi} (prediction interval for
+#' individual observations, wider), \code{see} (constant-width +/- t*SEE
+#' band illustrating the homoskedasticity assumption), \code{none} (no band).
 #'
 #' @param x A result object from one of the package's analysis functions
 #'   (result-object form), or a data frame (data-first form).
-#' @param which Character vector. \code{"core"} (default), \code{"all"}, or
+#' @param which Character vector. \code{core} (default), \code{all}, or
 #'   one or more specific plot names valid for the object's class.
 #'   (Result-object form only.)
 #' @param ... Additional arguments: for the result-object form these are
 #'   passed to class-specific methods; for the data-first form these are
 #'   unquoted variable names (1 or 2).
 #' @param focal Unquoted name of the independent variable to place on the
-#'   x-axis for \code{jst_lm} / \code{jst_logistic} \code{"fit"} and
-#'   \code{"probability"} plots. Defaults to the first IV in the model.
+#'   x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
+#'   \code{probability} plots. Defaults to the first IV in the model.
 #' @param at Character string or named list specifying where non-focal
 #'   independent variables are held when drawing the fitted line in
-#'   \code{jst_lm} / \code{jst_logistic} methods. One of \code{"zero"}
-#'   (default), \code{"mean"}, \code{"mixed"} (categorical at 0, interval
+#'   \code{jst_lm} / \code{jst_logistic} methods. One of \code{zero}
+#'   (default), \code{mean}, \code{mixed} (categorical at 0, interval
 #'   at mean), or a named list \code{list(Var1 = value, ...)}.
 #' @param equation Logical. If TRUE (default), displays the equation in the
 #'   subtitle for \code{line = "lm"} scatter plots (data-first form) or
-#'   \code{jst_lm} \code{"fit"} plots (result-object form).
+#'   \code{jst_lm} \code{fit} plots (result-object form).
 #' @param r2 Logical. If TRUE (default), displays R-squared in the subtitle
 #'   alongside the equation.
 #' @param by Unquoted variable name for group-colouring (data-first form).
 #' @param type Character. Plot type override for the data-first form. One
-#'   of \code{"histogram"}, \code{"bar"}, \code{"scatter"}, \code{"box"},
-#'   \code{"grouped_bar"}. If NULL (default), auto-detected from variable
+#'   of \code{histogram}, \code{bar}, \code{scatter}, \code{box},
+#'   \code{grouped_bar}. If NULL (default), auto-detected from variable
 #'   types.
 #' @param line Controls a line overlay on data-first scatter plots. One of
-#'   \code{FALSE} (default; no line), \code{TRUE} (alias for \code{"lm"}),
-#'   \code{"lm"}, \code{"loess"}, \code{"connect"}.
+#'   \code{FALSE} (default; no line), \code{TRUE} (alias for \code{lm}),
+#'   \code{lm}, \code{loess}, \code{connect}.
 #' @param band Character. Uncertainty band type for \code{line = "lm"}
-#'   scatter plots. One of \code{"ci"} (default; 95\% confidence band for
-#'   the mean, flares at the ends), \code{"pi"} (95\% prediction interval
-#'   for individual observations), \code{"see"} (constant-width band at
-#'   +/- t*SEE; useful for teaching homoskedasticity), \code{"none"}.
+#'   scatter plots. One of \code{ci} (default; 95\% confidence band for
+#'   the mean, flares at the ends), \code{pi} (95\% prediction interval
+#'   for individual observations), \code{see} (constant-width band at
+#'   +/- t*SEE; useful for teaching homoskedasticity), \code{none}.
 #' @param subset Optional unquoted logical expression to filter cases for
 #'   this call only (data-first form).
 #' @param labels Logical. If TRUE (default), prints variable labels when
@@ -10355,14 +10460,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' Internal helper: resolve the `which` argument for jplot dispatch methods
 #'
 #' Translates the user's \code{which} argument into a vector of plot
-#' identifiers. Accepts the special values \code{"core"} and
-#' \code{"all"} (resolved against the supplied \code{core} and
+#' identifiers. Accepts the special values \code{core} and
+#' \code{all} (resolved against the supplied \code{core} and
 #' \code{all_plots} vectors) or an explicit character vector of plot
 #' names. Errors with a clear message listing the valid options if any
 #' name in \code{which} isn't recognised.
 #'
-#' @param which The user's \code{which} argument: \code{"core"},
-#'   \code{"all"}, or a character vector of plot names.
+#' @param which The user's \code{which} argument: \code{core},
+#'   \code{all}, or a character vector of plot names.
 #' @param core Character vector of plot identifiers comprising the
 #'   "core" set for this jplot method.
 #' @param all_plots Character vector of all valid plot identifiers for
@@ -10417,12 +10522,12 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #'
 #' Computes the values at which non-focal predictors should be held when
 #' producing a fitted-line plot for a multiple-predictor regression. The
-#' \code{at} argument accepts \code{"zero"}, \code{"mean"},
-#' \code{"mixed"} (zero for dummies, mean for numeric), or a named
+#' \code{at} argument accepts \code{zero}, \code{mean},
+#' \code{mixed} (zero for dummies, mean for numeric), or a named
 #' list giving an explicit value per non-focal predictor.
 #'
-#' @param at User-supplied value: \code{"zero"}, \code{"mean"},
-#'   \code{"mixed"}, or a named list of explicit hold values.
+#' @param at User-supplied value: \code{zero}, \code{mean},
+#'   \code{mixed}, or a named list of explicit hold values.
 #' @param model_frame Data frame used to fit the model
 #'   (post-conversion).
 #' @param dv_name Character. The dependent variable name.

@@ -40,8 +40,8 @@ The first sorted unique value becomes the reference category. Use
 
 \item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints VIF
 table and diagnostic plots. If a character vector, specifies which
-diagnostics to show: \code{"vif"}, \code{"residuals"}, \code{"qq"},
-\code{"scale"}, \code{"cooks"}, \code{"leverage"}. If NULL (default),
+diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
+\code{scale}, \code{cooks}, \code{leverage}. If NULL (default),
 defers to \code{joutput()} session setting.}
 
 \item{full}{Logical. If TRUE, turns on diagnostics. Does not override
@@ -52,10 +52,10 @@ explicit FALSE values.}
 \code{diagnostics} instead.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_lm"} containing:
+Invisibly returns a list of class \code{jst_lm} containing:
 \describe{
 \item{model}{The fitted \code{lm} object.}
-\item{model_type}{Character string \code{"linear"}.}
+\item{model_type}{Character string \code{linear}.}
 \item{model_frame}{The model frame used to fit the model.}
 \item{formula_used}{The formula after dummy expansion.}
 \item{coefficients}{Formatted coefficient table (data frame).}

@@ -7,8 +7,8 @@
 .jst_resolve_at(at, model_frame, dv_name, focal_name, dummy_coef_names)
 }
 \arguments{
-\item{at}{User-supplied value: \code{"zero"}, \code{"mean"},
-\code{"mixed"}, or a named list of explicit hold values.}
+\item{at}{User-supplied value: \code{zero}, \code{mean},
+\code{mixed}, or a named list of explicit hold values.}
 
 \item{model_frame}{Data frame used to fit the model
 (post-conversion).}
@@ -29,8 +29,8 @@ Empty list if there are no non-focal predictors.
 \description{
 Computes the values at which non-focal predictors should be held when
 producing a fitted-line plot for a multiple-predictor regression. The
-\code{at} argument accepts \code{"zero"}, \code{"mean"},
-\code{"mixed"} (zero for dummies, mean for numeric), or a named
+\code{at} argument accepts \code{zero}, \code{mean},
+\code{mixed} (zero for dummies, mean for numeric), or a named
 list giving an explicit value per non-focal predictor.
 }
 \keyword{internal}

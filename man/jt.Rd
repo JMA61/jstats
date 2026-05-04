@@ -50,7 +50,7 @@ when available.}
 all at once. Does not override explicit FALSE values.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_ttest"} containing:
+Invisibly returns a list of class \code{jst_ttest} containing:
 \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
 data frame used for plotting), \code{test_type}, \code{formula},
 \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},

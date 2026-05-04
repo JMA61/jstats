@@ -22,7 +22,7 @@ NULL (default), defers to \code{joutput()}'s \code{var.labels}
 setting.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_freq"} containing:
+Invisibly returns a list of class \code{jst_freq} containing:
 \code{frequencies} (named list of data frames, one per variable) and
 \code{sample_info} (pipeline and missing data counts).
 }

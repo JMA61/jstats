@@ -43,7 +43,7 @@ Exp(B). If NULL (default), defers to \code{joutput()}.}
 showing predicted vs observed outcomes. Default is FALSE.}
 
 \item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints
-VIF table. If a character vector, \code{"vif"} is currently the only
+VIF table. If a character vector, \code{vif} is currently the only
 supported option. If NULL (default), defers to \code{joutput()}.}
 
 \item{full}{Logical. If TRUE, turns on ci, classification, and
@@ -54,10 +54,10 @@ diagnostics. Does not override explicit FALSE values.}
 \code{diagnostics} instead.}
 }
 \value{
-Invisibly returns a list of class \code{"jst_logistic"} containing:
+Invisibly returns a list of class \code{jst_logistic} containing:
 \describe{
 \item{model}{The fitted \code{glm} object.}
-\item{model_type}{Character string \code{"logistic"}.}
+\item{model_type}{Character string \code{logistic}.}
 \item{model_frame}{The model frame used to fit the model.}
 \item{formula_used}{The formula after dummy expansion.}
 \item{coefficients}{Formatted coefficient table (data frame).}

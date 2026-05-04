@@ -10,8 +10,8 @@
 \item{model}{A fitted \code{glm} object with \code{family = binomial}.}
 
 \item{which}{Character vector of diagnostic names. Any subset of
-\code{"binned"}, \code{"roc"}, \code{"calibration"}, \code{"cooks"},
-\code{"leverage"}.}
+\code{binned}, \code{roc}, \code{calibration}, \code{cooks},
+\code{leverage}.}
 
 \item{n_label}{Integer. Number of extreme observations to label on
 relevant plots. Default 3.}

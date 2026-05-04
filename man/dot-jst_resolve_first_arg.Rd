@@ -30,30 +30,30 @@ for evaluating the first argument and looking up the juse default
 data frame.}
 
 \item{allow_null}{Logical. If \code{TRUE}, literal \code{NULL} is
-returned with mode \code{"null"} for the caller to handle.
+returned with mode \code{null} for the caller to handle.
 Defaults to \code{FALSE}, in which case literal \code{NULL} errors.}
 
 \item{accept_vector}{Logical. If \code{TRUE}, an expression that
 evaluates to a non-data-frame value is returned with mode
-\code{"vector_input"} for the caller to handle. Defaults to
+\code{vector_input} for the caller to handle. Defaults to
 \code{FALSE}, in which case such inputs are treated as bare-symbol
-variable-name attempts (mode \code{"symbol_with_default"}).}
+variable-name attempts (mode \code{symbol_with_default}).}
 }
 \value{
 A list with components:
 \describe{
-\item{\code{mode}}{Character. One of \code{"default"},
-\code{"null"}, \code{"explicit"}, \code{"vector_input"},
-\code{"symbol_with_default"}.}
+\item{\code{mode}}{Character. One of \code{default},
+\code{null}, \code{explicit}, \code{vector_input},
+\code{symbol_with_default}.}
 \item{\code{data}}{The resolved data frame (or \code{NULL} for
-modes \code{"null"} and \code{"vector_input"}).}
+modes \code{null} and \code{vector_input}).}
 \item{\code{name}}{Character name string for messages (or
-\code{NULL} for modes \code{"null"} and \code{"vector_input"}).}
+\code{NULL} for modes \code{null} and \code{vector_input}).}
 \item{\code{first_arg_sub}}{The user's substituted first argument
 (or \code{NULL} when not applicable). Set for modes
-\code{"vector_input"} and \code{"symbol_with_default"}.}
+\code{vector_input} and \code{symbol_with_default}.}
 \item{\code{first_arg_value}}{The evaluated value of the first
-argument, set only for mode \code{"vector_input"}; \code{NULL}
+argument, set only for mode \code{vector_input}; \code{NULL}
 otherwise.}
 }
 }
@@ -68,19 +68,19 @@ argument).
 \details{
 Distinguishes five outcomes via the \code{mode} field:
 \describe{
-\item{\code{"default"}}{Data argument was missing; juse default used.}
-\item{\code{"null"}}{User passed literal \code{NULL}; only returned
+\item{\code{default}}{Data argument was missing; juse default used.}
+\item{\code{null}}{User passed literal \code{NULL}; only returned
 when \code{allow_null = TRUE}. Caller handles (e.g., for global
 clear semantics in jdummy/jfilter/jcomplete).}
-\item{\code{"explicit"}}{User passed an expression that evaluated
+\item{\code{explicit}}{User passed an expression that evaluated
 to a data frame. That data frame is used.}
-\item{\code{"vector_input"}}{Only returned when
+\item{\code{vector_input}}{Only returned when
 \code{accept_vector = TRUE}. User passed an expression that
 evaluated to a non-data-frame value (typically an atomic vector
 or a column reference like \code{SampleData$Gender}). The caller
 handles this --- usually by wrapping the value in a temporary
 data frame.}
-\item{\code{"symbol_with_default"}}{User passed a bare symbol that
+\item{\code{symbol_with_default}}{User passed a bare symbol that
 did not evaluate (or evaluated to a non-data-frame value when
 \code{accept_vector = FALSE}). Treated as a variable-name attempt
 missing the leading comma. The juse default is used as the data

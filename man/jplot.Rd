@@ -56,7 +56,7 @@ jplot(x, which = "core", ...)
 \item{x}{A result object from one of the package's analysis functions
 (result-object form), or a data frame (data-first form).}
 
-\item{which}{Character vector. \code{"core"} (default), \code{"all"}, or
+\item{which}{Character vector. \code{core} (default), \code{all}, or
 one or more specific plot names valid for the object's class.
 (Result-object form only.)}
 
@@ -67,26 +67,26 @@ unquoted variable names (1 or 2).}
 \item{by}{Unquoted variable name for group-colouring (data-first form).}
 
 \item{type}{Character. Plot type override for the data-first form. One
-of \code{"histogram"}, \code{"bar"}, \code{"scatter"}, \code{"box"},
-\code{"grouped_bar"}. If NULL (default), auto-detected from variable
+of \code{histogram}, \code{bar}, \code{scatter}, \code{box},
+\code{grouped_bar}. If NULL (default), auto-detected from variable
 types.}
 
 \item{line}{Controls a line overlay on data-first scatter plots. One of
-\code{FALSE} (default; no line), \code{TRUE} (alias for \code{"lm"}),
-\code{"lm"}, \code{"loess"}, \code{"connect"}.}
+\code{FALSE} (default; no line), \code{TRUE} (alias for \code{lm}),
+\code{lm}, \code{loess}, \code{connect}.}
 
 \item{equation}{Logical. If TRUE (default), displays the equation in the
 subtitle for \code{line = "lm"} scatter plots (data-first form) or
-\code{jst_lm} \code{"fit"} plots (result-object form).}
+\code{jst_lm} \code{fit} plots (result-object form).}
 
 \item{r2}{Logical. If TRUE (default), displays R-squared in the subtitle
 alongside the equation.}
 
 \item{band}{Character. Uncertainty band type for \code{line = "lm"}
-scatter plots. One of \code{"ci"} (default; 95\\% confidence band for
-the mean, flares at the ends), \code{"pi"} (95\\% prediction interval
-for individual observations), \code{"see"} (constant-width band at
-+/- t*SEE; useful for teaching homoskedasticity), \code{"none"}.}
+scatter plots. One of \code{ci} (default; 95\\% confidence band for
+the mean, flares at the ends), \code{pi} (95\\% prediction interval
+for individual observations), \code{see} (constant-width band at
++/- t*SEE; useful for teaching homoskedasticity), \code{none}.}
 
 \item{subset}{Optional unquoted logical expression to filter cases for
 this call only (data-first form).}
@@ -95,13 +95,13 @@ this call only (data-first form).}
 available (data-first form).}
 
 \item{focal}{Unquoted name of the independent variable to place on the
-x-axis for \code{jst_lm} / \code{jst_logistic} \code{"fit"} and
-\code{"probability"} plots. Defaults to the first IV in the model.}
+x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
+\code{probability} plots. Defaults to the first IV in the model.}
 
 \item{at}{Character string or named list specifying where non-focal
 independent variables are held when drawing the fitted line in
-\code{jst_lm} / \code{jst_logistic} methods. One of \code{"zero"}
-(default), \code{"mean"}, \code{"mixed"} (categorical at 0, interval
+\code{jst_lm} / \code{jst_logistic} methods. One of \code{zero}
+(default), \code{mean}, \code{mixed} (categorical at 0, interval
 at mean), or a named list \code{list(Var1 = value, ...)}.}
 }
 \value{
@@ -138,31 +138,31 @@ equation/R-squared/band annotations.
 
 Valid plot names by class (for the result-object form):
 \itemize{
-\item \code{jst_lm}: \code{"fit"}, \code{"predicted"}, \code{"effects"},
-\code{"coef"}, \code{"vif"}, \code{"residuals"}, \code{"qq"},
-\code{"scale"}, \code{"cooks"}, \code{"leverage"}
-\item \code{jst_logistic}: \code{"probability"}, \code{"roc"},
-\code{"calibration"}, \code{"binned"}, \code{"cooks"}, \code{"leverage"},
-\code{"coef"}, \code{"vif"}
-\item \code{jst_ttest}, \code{jst_anova}: \code{"box"}
-\item \code{jst_corr}: \code{"heatmap"}, \code{"scatter"} (scatter requires
+\item \code{jst_lm}: \code{fit}, \code{predicted}, \code{effects},
+\code{coef}, \code{vif}, \code{residuals}, \code{qq},
+\code{scale}, \code{cooks}, \code{leverage}
+\item \code{jst_logistic}: \code{probability}, \code{roc},
+\code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
+\code{coef}, \code{vif}
+\item \code{jst_ttest}, \code{jst_anova}: \code{box}
+\item \code{jst_corr}: \code{heatmap}, \code{scatter} (scatter requires
 exactly 2 variables in the correlation)
-\item \code{jst_crosstab}: \code{"bar"}
+\item \code{jst_crosstab}: \code{bar}
 }
 
-The shortcut keyword \code{"core"} (default) produces a curated default
-set for the class; \code{"all"} produces every plot the class supports.
+The shortcut keyword \code{core} (default) produces a curated default
+set for the class; \code{all} produces every plot the class supports.
 
-Valid plot types for the data-first form: \code{"histogram"}, \code{"bar"},
-\code{"scatter"}, \code{"box"}, \code{"grouped_bar"}.
+Valid plot types for the data-first form: \code{histogram}, \code{bar},
+\code{scatter}, \code{box}, \code{grouped_bar}.
 
 Valid \code{line} values: \code{FALSE} (default), \code{TRUE} (alias for
-\code{"lm"}), \code{"lm"}, \code{"loess"}, \code{"connect"}.
+\code{lm}), \code{lm}, \code{loess}, \code{connect}.
 
-Valid \code{band} values: \code{"ci"} (default confidence band around the
-regression line, flares at the ends), \code{"pi"} (prediction interval for
-individual observations, wider), \code{"see"} (constant-width +/- t*SEE
-band illustrating the homoskedasticity assumption), \code{"none"} (no band).
+Valid \code{band} values: \code{ci} (default confidence band around the
+regression line, flares at the ends), \code{pi} (prediction interval for
+individual observations, wider), \code{see} (constant-width +/- t*SEE
+band illustrating the homoskedasticity assumption), \code{none} (no band).
 }
 \examples{
 \dontrun{

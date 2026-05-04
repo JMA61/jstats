@@ -12,8 +12,8 @@
 \item{var_name}{Character. The variable's name (used as the dummy
 column prefix).}
 
-\item{ref}{Reference category specifier. May be \code{"first"} (default),
-\code{"last"}, a numeric code, or a character string matching a
+\item{ref}{Reference category specifier. May be \code{first} (default),
+\code{last}, a numeric code, or a character string matching a
 canonical label.}
 
 \item{name.length.warn}{Integer. Warn if any final dummy name exceeds

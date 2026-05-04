@@ -117,11 +117,15 @@ output, so a script's behaviour stays visible and reproducible
 rather than depending on hidden context.
 
 \strong{Output verbosity.} \code{joutput()} sets one of three
-preset levels — \code{"minimal"}, \code{"standard"} (default), or
-\code{"full"} — that modulate how much detail analysis functions
+preset levels — \code{minimal}, \code{standard} (default), or
+\code{full} — that modulate how much detail analysis functions
 print. Useful for stripping output in production scripts or
 expanding it during exploration. Per-call arguments always
-override session-level settings.
+override session-level settings. The Case Processing Summary
+table follows an auto-suppress rule at the standard tier: it
+prints when something happened (pipeline state, listwise drops,
+or a per-variable discrepancy notification) and stays silent
+otherwise. See \code{?joutput} for the full toggle behaviour.
 }
 
 \section{Where to go next}{
