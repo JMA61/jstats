@@ -8689,14 +8689,22 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
     orig_val_labels <- if (is_haven) labelled::val_labels(orig) else NULL
 
     if (!is.null(orig_val_labels) && length(orig_val_labels) > 0) {
-      # Detect collapsing: multiple old values mapping to the same new value
-      is_collapsing <- any(vapply(parsed_map$mappings,
+      # Detect collapsing: multiple old values mapping to the same new
+      # NON-NA value. NA-targeted rules are missing-value conversion, not
+      # category collapse — combining several codes into NA is what the
+      # user explicitly asked for, not a side effect to flag. Without
+      # this filter, the duplicate-detection branch fires on common
+      # missing-conversion maps like "-99=NA; -98=NA; else=copy".
+      non_na_rules <- Filter(function(r) !is.na(r$new_val),
+                              parsed_map$mappings)
+
+      is_collapsing <- any(vapply(non_na_rules,
                                   function(r) length(r$old_vals) > 1,
                                   logical(1)))
       if (!is_collapsing) {
-        new_vals <- vapply(parsed_map$mappings,
-                           function(r) r$new_val, numeric(1))
-        is_collapsing <- anyDuplicated(new_vals) > 0
+        non_na_new_vals <- vapply(non_na_rules,
+                                   function(r) r$new_val, numeric(1))
+        is_collapsing <- anyDuplicated(non_na_new_vals) > 0
       }
 
       if (is_collapsing) {
@@ -8715,9 +8723,11 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
           label_name <- names(orig_val_labels)[i]
 
           if (as.character(old_code) %in% names(old_to_new)) {
-            # Explicitly mapped — use the new code
-            entry        <- old_to_new[[as.character(old_code)]]
-            names(entry) <- label_name
+            # Explicitly mapped — use the new code, but drop the label
+            # if the target is NA (no value to anchor the label to).
+            entry <- old_to_new[[as.character(old_code)]]
+            if (is.na(entry)) next
+            names(entry)   <- label_name
             new_val_labels <- c(new_val_labels, entry)
           } else if (parsed_map$else_action == "copy") {
             # Unmapped but carried across unchanged
@@ -8725,7 +8735,7 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
             names(entry) <- label_name
             new_val_labels <- c(new_val_labels, entry)
           }
-          # else: value became NA, label is dropped
+          # else: value became NA via else_action, label is dropped
         }
 
         if (length(new_val_labels) > 0) {
@@ -9666,6 +9676,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     spss_na_vals  <- attr(col, "na_values")
     spss_na_range <- attr(col, "na_range")
 
+    # Value labels are used by the heuristic branch's label-only check —
+    # values that have a label attached but no formal na_values
+    # declaration are reported as "label-only" rather than "suspected".
+    # This pattern arises commonly after .dta or .xpt round-trip, which
+    # preserve value labels but not the formal UDM declaration.
+    val_labs <- attr(col, "labels")
+
     # --- Check SPSS user-defined missing values (haven attribute) ---
     # SPSS-defined missings are checked on ALL values (including decimals)
     # because SPSS allows any value to be defined as missing.
@@ -9728,8 +9745,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         already <- any(vapply(findings, function(f) {
           f$var == vname && f$value == sv
         }, logical(1)))
-        if (!already) {
-          n_cases <- sum(num_vals == sv, na.rm = TRUE)
+        if (already) next
+
+        # Look up a value label for this code (if any). When the variable
+        # has a label attached to the value, the finding is "label-only"
+        # rather than "suspected" — the metadata signals UDM intent but
+        # the formal na_values declaration is missing.
+        val_label_text <- NULL
+        if (!is.null(val_labs)) {
+          match_idx <- which(val_labs == sv)
+          if (length(match_idx) > 0) {
+            candidate <- names(val_labs)[match_idx[1]]
+            if (nzchar(candidate)) val_label_text <- candidate
+          }
+        }
+
+        n_cases <- sum(num_vals == sv, na.rm = TRUE)
+        if (!is.null(val_label_text)) {
+          findings[[length(findings) + 1]] <- list(
+            var = vname, value = sv, count = n_cases,
+            label = val_label_text,
+            source = "label-only \u2014 not formally declared"
+          )
+        } else {
           findings[[length(findings) + 1]] <- list(
             var = vname, value = sv, count = n_cases,
             source = "suspected \u2014 not formally defined"
@@ -9746,13 +9784,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # render only the relevant legend lines, and fix the per-variable
     # jrecode example.
     sources_present <- unique(vapply(findings, function(f) f$source, character(1)))
-    has_udm  <- "user-defined missing value"          %in% sources_present
-    has_heur <- "suspected \u2014 not formally defined" %in% sources_present
+    has_udm        <- "user-defined missing value"            %in% sources_present
+    has_label_only <- "label-only \u2014 not formally declared" %in% sources_present
+    has_heur       <- "suspected \u2014 not formally defined"   %in% sources_present
 
-    # Heading: telegraph "suspected" only when ALL findings are heuristic
-    # (UDM-confirmed findings deserve the neutral wording even if some
-    # heuristic findings are mixed in).
-    heading <- if (has_heur && !has_udm) {
+    # Heading: telegraph "Suspected" only when ALL findings are pure
+    # heuristic (no formal UDMs and no label-only). Both formal UDMs and
+    # label-only findings represent real metadata that earns the neutral
+    # wording even when heuristic findings are mixed in.
+    heading <- if (has_heur && !has_udm && !has_label_only) {
       "Suspected missing-value codes detected:"
     } else {
       "Missing-value codes detected:"
@@ -9773,10 +9813,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (is.null(groups[[key]])) {
         group_keys <- c(group_keys, key)
         groups[[key]] <- list(var = f$var, source = f$source,
-                              values = numeric(0), counts = integer(0))
+                              values = numeric(0), counts = integer(0),
+                              labels = character(0))
       }
       groups[[key]]$values <- c(groups[[key]]$values, f$value)
       groups[[key]]$counts <- c(groups[[key]]$counts, f$count)
+      groups[[key]]$labels <- c(groups[[key]]$labels,
+                                if (!is.null(f$label)) f$label else "")
     }
 
     n_groups <- length(group_keys)
@@ -9791,10 +9834,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # Two-pass print: first build all the value-count strings so we can
     # compute the max width, then print with both name and vc columns
     # padded so the [source] brackets align vertically across rows.
+    # Label-only findings inline the label after the value, like
+    #   -99 "Refused" (3), -98 "Don't know" (3)
+    # Other source types use the compact form without labels.
     vc_parts <- character(n_show)
     for (i in seq_len(n_show)) {
       g <- groups[[group_keys[i]]]
-      vc_strs <- sprintf("%g (%d)", g$values, g$counts)
+      if (g$source == "label-only \u2014 not formally declared") {
+        vc_strs <- sprintf('%g "%s" (%d)', g$values, g$labels, g$counts)
+      } else {
+        vc_strs <- sprintf("%g (%d)", g$values, g$counts)
+      }
       vc_parts[i] <- paste(vc_strs, collapse = ", ")
     }
     max_vc_len <- max(nchar(vc_parts))
@@ -9807,19 +9857,30 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   g$source))
     }
     if (n_groups > max_report) {
-      # When the hidden rows span both source types, break down the counts
-      # so the reader can tell what kinds of findings are not visible.
-      # When all hidden rows share one source type, the legend already
-      # covers the interpretation and the simple count suffices.
+      # When the hidden rows span multiple source types, break down the
+      # counts so the reader can tell what kinds of findings are not
+      # visible. When all hidden rows share one source type, the legend
+      # already covers the interpretation and the simple count suffices.
       hidden_sources <- vapply(groups[group_keys[(max_report + 1):n_groups]],
                                function(g) g$source, character(1))
-      hidden_udm  <- sum(hidden_sources == "user-defined missing value")
-      hidden_heur <- sum(hidden_sources == "suspected \u2014 not formally defined")
+      hidden_udm        <- sum(hidden_sources == "user-defined missing value")
+      hidden_label_only <- sum(hidden_sources == "label-only \u2014 not formally declared")
+      hidden_heur       <- sum(hidden_sources == "suspected \u2014 not formally defined")
 
-      if (hidden_udm > 0 && hidden_heur > 0) {
+      mixed <- (hidden_udm > 0) + (hidden_label_only > 0) + (hidden_heur > 0) > 1
+      if (mixed) {
         cat(sprintf("  ... and %d more:\n", n_groups - max_report))
-        cat(sprintf("    %d with [user-defined missing value]\n", hidden_udm))
-        cat(sprintf("    %d with [suspected \u2014 not formally defined]\n", hidden_heur))
+        if (hidden_udm > 0) {
+          cat(sprintf("    %d with [user-defined missing value]\n", hidden_udm))
+        }
+        if (hidden_label_only > 0) {
+          cat(sprintf("    %d with [label-only \u2014 not formally declared]\n",
+                      hidden_label_only))
+        }
+        if (hidden_heur > 0) {
+          cat(sprintf("    %d with [suspected \u2014 not formally defined]\n",
+                      hidden_heur))
+        }
       } else {
         cat(sprintf("  ... and %d more.\n", n_groups - max_report))
       }
@@ -9832,18 +9893,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       cat("  if you'll use this dataset with base R or non-package functions where\n")
       cat("  the numeric values may be misinterpreted as real.\n")
     }
+    if (has_label_only) {
+      cat("[label-only \u2014 not formally declared]: not automatically treated as NA, but\n")
+      cat("  value labels look UDM-like (often after .dta or .xpt round-trip, which\n")
+      cat("  preserve labels but not the formal declaration). Convert if these are\n")
+      cat("  missing-value codes; leave as-is if real.\n")
+    }
     if (has_heur) {
       cat("[suspected \u2014 not formally defined]: not automatically treated as NA.\n")
       cat("  Convert if these are missing-value codes; leave as-is if real.\n")
     }
 
-    # Build a per-variable jrecode example. Prefer a UDM-bearing variable
-    # if present (more informative — UDMs typically have multiple codes).
-    # Collect all codes for the chosen variable so the map covers every
-    # finding for that variable in one call.
+    # Build a per-variable jrecode example. Preference order:
+    # UDM > label-only > suspected. Both UDM and label-only typically
+    # have multiple coded values (-99, -98, ...) which makes for a
+    # more informative map; pure heuristic findings often have just
+    # one code, so they fall through to the first finding.
     if (has_udm) {
       ex_var <- findings[[which(vapply(findings,
                                        function(f) f$source == "user-defined missing value",
+                                       logical(1)))[1]]]$var
+    } else if (has_label_only) {
+      ex_var <- findings[[which(vapply(findings,
+                                       function(f) f$source == "label-only \u2014 not formally declared",
                                        logical(1)))[1]]]$var
     } else {
       ex_var <- findings[[1]]$var
