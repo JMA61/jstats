@@ -8743,6 +8743,262 @@ jrecode <- function(data, orig_var, map, labels = NULL) {
 #  DATA I/O
 # =============================================================================
 
+# -- jstrip_udm --------------------------------------------------------------------
+
+#' Strip user-defined missing values from haven-labelled variables
+#'
+#' Converts user-defined missing-value (UDM) codes to plain \code{NA} on
+#' \code{haven_labelled_spss} variables already in memory. Useful when a
+#' dataset has been loaded with \code{jload(..., preserve_udm = TRUE)} (the
+#' default) for round-trip fidelity but a downstream operation — typically
+#' a base R or non-package function — would treat the UDM codes as real
+#' numeric values.
+#'
+#' @param data A data frame, or omitted to use the \code{juse()} default.
+#' @param ... Optional unquoted variable names. When supplied, only the
+#'   listed variables are scanned for UDMs; variables in the list that
+#'   have no UDMs are reported as skipped. When omitted, the entire data
+#'   frame is scanned.
+#' @param udm.notice Logical; \code{TRUE} (default) prints a notification
+#'   summarising what was converted (and what was skipped) along with an
+#'   assignment-syntax reminder. \code{FALSE} suppresses the message.
+#'   Unlike \code{jload()}, \code{jstrip_udm()} does not consult the
+#'   \code{joutput()} setting because the function's purpose is to report
+#'   an action that was just performed rather than to explain system
+#'   behaviour. The default is therefore always-on rather than
+#'   once-per-session.
+#'
+#' @return The data frame with UDMs converted to \code{NA}, returned
+#'   invisibly. As with \code{jrelabel()} and \code{jrecode()}, the user
+#'   must assign the return value back to retain the changes.
+#'
+#' @details
+#' For each \code{haven_labelled_spss} variable with a non-empty
+#' \code{na_values} attribute or a two-element \code{na_range} attribute,
+#' the function:
+#' \itemize{
+#'   \item Converts values matching \code{na_values} (or falling within
+#'     \code{na_range}) to \code{NA};
+#'   \item Removes the \code{na_values} and \code{na_range} attributes;
+#'   \item Leaves the value labels intact, including labels for the former
+#'     UDM codes, so the variable can still round-trip through
+#'     \code{jsave()} to \code{.sav} or \code{.dta} with the original
+#'     labelling preserved.
+#' }
+#'
+#' This matches the behaviour of \code{jload(file, preserve_udm = FALSE)},
+#' the "convert at load time" alternative. \code{jstrip_udm()} provides
+#' the same conversion for data already in memory.
+#'
+#' Variables that are not \code{haven_labelled_spss} (or are
+#' \code{haven_labelled_spss} but have no UDMs) are left unchanged.
+#' If named explicitly via \code{...}, they are reported in the
+#' notification's \emph{Skipped} list.
+#'
+#' @examples
+#' \dontrun{
+#' # Strip UDMs from every applicable variable:
+#' MyData <- jstrip_udm(MyData)
+#'
+#' # Strip UDMs from specific variables only:
+#' MyData <- jstrip_udm(MyData, Income, Age)
+#'
+#' # After juse(), bare call works the same way:
+#' juse(MyData)
+#' MyData <- jstrip_udm()
+#'
+#' # Suppress the notification (e.g. inside a script):
+#' MyData <- jstrip_udm(MyData, udm.notice = FALSE)
+#' }
+#'
+#' @seealso \code{\link{jload}} for the load-time alternative
+#'   (\code{preserve_udm = FALSE}).
+#'
+#' @export
+jstrip_udm <- function(data, ..., udm.notice = TRUE) {
+
+  # --- Resolve first argument -------------------------------------------------
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jstrip_udm",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
+
+  data      <- arg1$data
+  data_name <- arg1$name
+
+  # --- Variable list from ... ------------------------------------------------
+  variables <- rlang::enquos(...)
+
+  # Leading-comma-omitted form: if first arg was captured as a bare symbol
+  # alongside an active juse() default, prepend it to the variables list.
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+
+  variable_names <- vapply(variables, rlang::quo_name, character(1))
+
+  if (length(variable_names) == 0) {
+    target_vars    <- names(data)
+    user_specified <- FALSE
+  } else {
+    .jst_check_vars(data, variable_names, data_name)
+    target_vars    <- variable_names
+    user_specified <- TRUE
+  }
+
+  # --- Identify UDM-bearing variables (mirrors .jst_handle_udms) -------------
+  vars_with_udms    <- character(0)
+  vars_without_udms <- character(0)
+  udm_info          <- list()
+
+  for (vname in target_vars) {
+    col      <- data[[vname]]
+    na_vals  <- attr(col, "na_values")
+    na_range <- attr(col, "na_range")
+
+    has_udms <- (!is.null(na_vals)  && length(na_vals)  > 0) ||
+      (!is.null(na_range) && length(na_range) == 2)
+
+    if (has_udms) {
+      vars_with_udms <- c(vars_with_udms, vname)
+      val_labs <- if (haven::is.labelled(col)) {
+        labelled::val_labels(col)
+      } else {
+        NULL
+      }
+      udm_info[[vname]] <- list(
+        na_vals  = na_vals,
+        na_range = na_range,
+        val_labs = val_labs
+      )
+    } else {
+      vars_without_udms <- c(vars_without_udms, vname)
+    }
+  }
+
+  # --- Empty case: no UDMs found in scope ------------------------------------
+  if (length(vars_with_udms) == 0) {
+    if (isTRUE(udm.notice)) {
+      if (user_specified) {
+        message(
+          "No user-defined missing values found in: ",
+          paste(variable_names, collapse = ", "), "."
+        )
+      } else {
+        message(
+          "No user-defined missing values found in '", data_name, "'."
+        )
+      }
+    }
+    return(invisible(data))
+  }
+
+  # --- Strip UDMs (mirrors .jst_handle_udms preserve_udm = FALSE branch) -----
+  for (vname in vars_with_udms) {
+    col      <- data[[vname]]
+    na_vals  <- attr(col, "na_values")
+    na_range <- attr(col, "na_range")
+
+    # unclass() bypasses vctrs cast issues — see the matching note in
+    # .jst_detect_suspicious_values() and .jst_handle_udms() for context.
+    x_num <- suppressWarnings(as.numeric(unclass(col)))
+    mask  <- rep(FALSE, length(x_num))
+
+    if (!is.null(na_vals) && length(na_vals) > 0) {
+      mask <- mask | (!is.na(x_num) & x_num %in% as.numeric(na_vals))
+    }
+    if (!is.null(na_range) && length(na_range) == 2) {
+      mask <- mask | (!is.na(x_num) &
+                        x_num >= na_range[1] &
+                        x_num <= na_range[2])
+    }
+
+    data[[vname]][mask] <- NA
+    attr(data[[vname]], "na_values") <- NULL
+    attr(data[[vname]], "na_range")  <- NULL
+  }
+
+  # --- Notification ----------------------------------------------------------
+  if (isTRUE(udm.notice)) {
+    msg_lines <- character(0)
+
+    n_conv <- length(vars_with_udms)
+    msg_lines <- c(msg_lines, paste0(
+      "Converted user-defined missing values to NA on ",
+      n_conv, " variable", if (n_conv == 1) "" else "s", ":"
+    ))
+
+    # Per-variable lines: "  VarName  (-99 "Refused", -98 "Don't know")"
+    max_name_len <- max(nchar(vars_with_udms))
+    for (vname in vars_with_udms) {
+      info <- udm_info[[vname]]
+      code_parts <- character(0)
+
+      if (!is.null(info$na_vals) && length(info$na_vals) > 0) {
+        for (v in info$na_vals) {
+          lbl_match <- if (!is.null(info$val_labs)) {
+            names(info$val_labs)[info$val_labs == v]
+          } else {
+            character(0)
+          }
+          if (length(lbl_match) > 0 && nzchar(lbl_match[1])) {
+            code_parts <- c(code_parts,
+                            sprintf('%s "%s"', as.character(v), lbl_match[1]))
+          } else {
+            code_parts <- c(code_parts, as.character(v))
+          }
+        }
+      }
+      if (!is.null(info$na_range) && length(info$na_range) == 2) {
+        code_parts <- c(code_parts,
+                        sprintf("range [%s, %s]",
+                                as.character(info$na_range[1]),
+                                as.character(info$na_range[2])))
+      }
+
+      msg_lines <- c(msg_lines, paste0(
+        "  ", format(vname, width = max_name_len),
+        "  (", paste(code_parts, collapse = ", "), ")"
+      ))
+    }
+
+    # Skipped variables — only when user explicitly named some that had no UDMs
+    if (user_specified && length(vars_without_udms) > 0) {
+      msg_lines <- c(msg_lines, "")
+      msg_lines <- c(msg_lines,
+                     "Skipped (no user-defined missing values to convert):")
+      msg_lines <- c(msg_lines, paste0("  ",
+                                       paste(vars_without_udms, collapse = ", ")))
+    }
+
+    # Assignment reminder
+    msg_lines <- c(msg_lines, "")
+    msg_lines <- c(msg_lines,
+                   "To keep these changes, ensure that you've assigned the return back")
+    msg_lines <- c(msg_lines,
+                   "to your data frame:")
+
+    # Example call — explicit data form, with named variables when supplied
+    if (user_specified) {
+      var_args <- paste(variable_names, collapse = ", ")
+      example_call <- paste0(data_name, " <- jstrip_udm(",
+                             data_name, ", ", var_args, ")")
+    } else {
+      example_call <- paste0(data_name, " <- jstrip_udm(", data_name, ")")
+    }
+    msg_lines <- c(msg_lines, paste0("  ", example_call))
+
+    message(paste(msg_lines, collapse = "\n"))
+  }
+
+  invisible(data)
+}
+
 # -- jload --------------------------------------------------------------------
 
 #' Load a data file into R
@@ -9381,7 +9637,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   and \code{na_range} branches are skipped (only the suspicious-values
 #'   heuristic runs). Set to \code{FALSE} when called after
 #'   \code{.jst_handle_udms()} has already produced its narrative for
-#'   \code{.sav} loads, to avoid duplicate output.
+#'   \code{.sav} loads, to avoid duplicate output. The heuristic branch
+#'   always excludes values that are formally declared in
+#'   \code{na_values} or \code{na_range} on the variable, so passing
+#'   \code{scan_udm = FALSE} produces no UDM-related output — neither
+#'   tabular nor flagged-as-suspected.
 #'
 #' @keywords internal
 .jst_scan_coded_missing <- function(df, obj_name, ext, scan_udm = TRUE) {
@@ -9399,15 +9659,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     num_vals <- suppressWarnings(as.numeric(col))
     if (all(is.na(num_vals))) next
 
+    # Pull formal UDM declarations once per variable. Both branches use
+    # them: the formal branch (when scan_udm = TRUE) tabulates them, and
+    # the heuristic branch (always) filters them OUT so values formally
+    # declared as UDMs are never flagged as "suspected".
+    spss_na_vals  <- attr(col, "na_values")
+    spss_na_range <- attr(col, "na_range")
+
     # --- Check SPSS user-defined missing values (haven attribute) ---
     # SPSS-defined missings are checked on ALL values (including decimals)
     # because SPSS allows any value to be defined as missing.
     # Skipped (scan_udm = FALSE) when called from jload after the
     # narrative notification has already covered UDMs for .sav loads.
     if (scan_udm) {
-      spss_na_vals <- attr(col, "na_values")
-      spss_na_range <- attr(col, "na_range")
-
       if (!is.null(spss_na_vals)) {
         for (sv in spss_na_vals) {
           n_cases <- sum(num_vals == sv, na.rm = TRUE)
@@ -9449,6 +9713,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     if (length(whole_vals) >= 2) {
       suspicious <- .jst_detect_suspicious_values(whole_vals, vname)
       for (sv in suspicious) {
+        # Skip if formally declared as UDM on this variable. This filter
+        # runs whether or not scan_udm = TRUE: when scan_udm = FALSE the
+        # formal branch was gated off (because the .sav narrative covered
+        # the UDMs), and without this filter the heuristic would mislabel
+        # those same values as "suspected — not formally defined".
+        is_formal_udm <-
+          (!is.null(spss_na_vals) && sv %in% spss_na_vals) ||
+          (!is.null(spss_na_range) && length(spss_na_range) == 2 &&
+           sv >= spss_na_range[1] && sv <= spss_na_range[2])
+        if (is_formal_udm) next
+
         # Skip if already reported from SPSS metadata
         already <- any(vapply(findings, function(f) {
           f$var == vname && f$value == sv

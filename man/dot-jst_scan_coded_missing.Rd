@@ -11,7 +11,11 @@
 and \code{na_range} branches are skipped (only the suspicious-values
 heuristic runs). Set to \code{FALSE} when called after
 \code{.jst_handle_udms()} has already produced its narrative for
-\code{.sav} loads, to avoid duplicate output.}
+\code{.sav} loads, to avoid duplicate output. The heuristic branch
+always excludes values that are formally declared in
+\code{na_values} or \code{na_range} on the variable, so passing
+\code{scan_udm = FALSE} produces no UDM-related output — neither
+tabular nor flagged-as-suspected.}
 }
 \description{
 Internal: scan for coded missing values and report findings
