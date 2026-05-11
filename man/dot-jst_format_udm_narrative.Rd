@@ -8,9 +8,15 @@
 }
 \description{
 Builds the message string emitted when UDM-bearing variables are
-detected during a \code{.sav} load. Wording differs depending on
-whether the UDMs were preserved (\code{preserve_udm = TRUE}) or
-converted (\code{preserve_udm = FALSE}). Variable list is truncated
-at \code{max_show} entries with an "...and N more" tail.
+detected during a load. Wording differs depending on whether the
+UDMs were preserved (\code{preserve_udm = TRUE}) or converted
+(\code{preserve_udm = FALSE}). Variable list is truncated at
+\code{max_show} entries with an "...and N more" tail.
+}
+\details{
+Renders SPSS UDM codes (e.g. \code{-99}) and Stata tagged NAs
+(e.g. \code{.a}) using parallel notation: \code{code ["label"]} or
+\code{code (no label)}. The code form comes pre-rendered in the
+\code{code} column of \code{.jst_missing_info()}'s return.
 }
 \keyword{internal}

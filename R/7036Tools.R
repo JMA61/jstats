@@ -9330,18 +9330,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     df <- as.data.frame(df)
   }
 
-  # --- Handle UDMs (SPSS .sav only) ------------------------------------------
-  # Read above always passes user_na = TRUE for .sav, so UDM metadata is
-  # available regardless of preserve_udm. Here we either keep that metadata
-  # (preserve_udm = TRUE) or convert UDM cells to NA and strip the metadata
-  # (preserve_udm = FALSE). Either way we capture per-variable info for the
-  # narrative notification.
-  udm_info <- list()
-  if (ext == "sav") {
-    udm_result <- .jst_handle_udms(df, preserve_udm)
-    df         <- udm_result$df
-    udm_info   <- udm_result$udm_info
-  }
+  # --- Handle UDMs (all formats with potential UDM metadata) -----------------
+  # The read above passes user_na = TRUE for .sav so SPSS UDM metadata is
+  # available. For .dta and .sas7bdat, haven natively reads tagged NAs.
+  # .jst_handle_udms iterates columns and uses .jst_missing_info() to detect
+  # formal declarations in either representation. For UDM-free data the
+  # call is cheap and returns an empty udm_info; no narrative is emitted.
+  # Either preserve the metadata (preserve_udm = TRUE, the default) or
+  # convert UDM cells to plain NA and strip the metadata (preserve_udm
+  # = FALSE). Either way we capture per-variable info for the narrative.
+  udm_result <- .jst_handle_udms(df, preserve_udm)
+  df         <- udm_result$df
+  udm_info   <- udm_result$udm_info
 
   # --- Assign to environment -------------------------------------------------
   assign(obj_name, df, envir = target_env)
@@ -9359,7 +9359,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     message("Default data frame set to: ", obj_name)
   }
 
-  # --- UDM narrative notification (.sav only) --------------------------------
+  # --- UDM narrative notification --------------------------------------------
   # Toggle resolution: per-call udm.notice arg > joutput global toggle >
   # joutput level default. NULL at the resolved level means "auto" = show
   # once per session (tracked via .jst_udm_notice_shown option).
@@ -9380,13 +9380,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- Coded missing value scan ----------------------------------------------
-  # For .sav loads, UDMs were already handled above; pass scan_udm = FALSE
-  # to skip the na_values/na_range tabular lines (the narrative replaces them).
-  # For other formats, scan_udm = TRUE preserves the existing behaviour, which
-  # picks up haven_labelled_spss columns that may have arrived via .rds round-
-  # trip or R-side construction.
+  # When UDMs were found and announced by the narrative above, suppress the
+  # diagnostic's formal branch to avoid duplicate per-variable tabular
+  # output (scan_udm = FALSE). The heuristic branch always runs and can
+  # surface suspicious values that aren't formally declared anywhere.
+  # When no UDMs were found, scan_udm = TRUE so the formal branch picks
+  # up haven_labelled_spss columns that may have arrived via .rds round-
+  # trip or R-side construction (currently na_values-only; tagged_na
+  # reading via the abstraction is a future refactor step).
   if (check.missing) {
-    .jst_scan_coded_missing(df, obj_name, ext, scan_udm = (ext != "sav"))
+    .jst_scan_coded_missing(df, obj_name, ext, scan_udm = (length(udm_info) == 0))
   }
 
   invisible(df)
@@ -9412,61 +9415,198 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   )
 }
 
+#' Internal: read missing-value declarations from a column
+#'
+#' Central reading abstraction for the missing-value handling layer.
+#' Takes a column and returns a uniform structure describing the formal
+#' missing-value information attached to it, regardless of whether the
+#' column carries SPSS UDM representation (\code{na_values} and/or
+#' \code{na_range} attributes on \code{haven_labelled_spss}) or Stata
+#' UDM representation (\code{tagged_na} markers on \code{haven_labelled}
+#' or plain numeric). Downstream helpers consume this structure rather
+#' than reading raw attributes themselves; this keeps representation-
+#' specific knowledge in one place.
+#'
+#' Label-only detection (values with labels like "Refused" but no
+#' formal declaration) is NOT in scope here — that pattern is handled
+#' by \code{.jst_scan_coded_missing}'s heuristic branch.
+#'
+#' @param col A column from a data frame, possibly with UDM attributes
+#'   or tagged-NA markers.
+#'
+#' @return \code{NULL} if the column has no formal UDM declarations.
+#'   Otherwise a list with:
+#'   \describe{
+#'     \item{representation}{\code{"spss"} or \code{"stata"}}
+#'     \item{na_range}{Length-2 numeric vector for SPSS range-based
+#'       missingness, or \code{NULL}}
+#'     \item{codes}{A data frame with one row per declared code/tag,
+#'       or \code{NULL} if only \code{na_range} is present. Columns:
+#'       \code{code} (character display form, e.g. \code{"-99"} or
+#'       \code{".a"}), \code{label} (character or \code{NA}),
+#'       \code{source} (\code{"na_values"} or \code{"tagged_na"}),
+#'       \code{numeric} (underlying numeric value; \code{NA} for
+#'       tagged NAs), \code{tag} (tag letter for Stata; \code{NA} for
+#'       SPSS UDMs).}
+#'   }
+#'
+#' @keywords internal
+.jst_missing_info <- function(col) {
+  na_vals  <- attr(col, "na_values")
+  na_range <- attr(col, "na_range")
+
+  has_spss_udms <- (!is.null(na_vals)  && length(na_vals)  > 0) ||
+                   (!is.null(na_range) && length(na_range) == 2)
+
+  # Tagged NAs only exist on doubles; haven::na_tag returns NA for
+  # non-tagged elements on any double vector.
+  has_tagged <- FALSE
+  if (is.double(col)) {
+    has_tagged <- any(!is.na(haven::na_tag(col)))
+  }
+
+  if (!has_spss_udms && !has_tagged) return(NULL)
+
+  # Pathological: both representations on one column. haven's read paths
+  # produce one or the other, never both. Defensive branch prefers the
+  # formal SPSS declaration if somehow both are present.
+  if (has_spss_udms && has_tagged) has_tagged <- FALSE
+
+  val_labs <- if (haven::is.labelled(col)) labelled::val_labels(col) else NULL
+
+  if (has_spss_udms) {
+    # SPSS representation: na_values + optional na_range
+    codes_df <- NULL
+
+    if (!is.null(na_vals) && length(na_vals) > 0) {
+      n_vals     <- as.numeric(na_vals)
+      labels_vec <- rep(NA_character_, length(n_vals))
+
+      if (!is.null(val_labs) && length(val_labs) > 0) {
+        # Match labels by numeric equality; suppressWarnings handles any
+        # tagged-NA entries in val_labs (they coerce to NA and don't match).
+        numeric_labels <- suppressWarnings(as.numeric(val_labs))
+        for (i in seq_along(n_vals)) {
+          idx <- which(!is.na(numeric_labels) & numeric_labels == n_vals[i])
+          if (length(idx) > 0) labels_vec[i] <- names(val_labs)[idx[1]]
+        }
+      }
+
+      codes_df <- data.frame(
+        code    = format(n_vals),
+        label   = labels_vec,
+        source  = rep("na_values", length(n_vals)),
+        numeric = n_vals,
+        tag     = rep(NA_character_, length(n_vals)),
+        stringsAsFactors = FALSE
+      )
+    }
+
+    list(
+      representation = "spss",
+      na_range       = if (!is.null(na_range) && length(na_range) == 2) na_range else NULL,
+      codes          = codes_df
+    )
+
+  } else {
+    # Stata representation: tagged_na markers
+    tags_present <- unique(haven::na_tag(col))
+    tags_present <- tags_present[!is.na(tags_present)]
+
+    if (length(tags_present) == 0) return(NULL)  # defensive
+
+    labels_vec <- rep(NA_character_, length(tags_present))
+
+    if (!is.null(val_labs) && length(val_labs) > 0) {
+      val_tags <- haven::na_tag(val_labs)
+      for (i in seq_along(tags_present)) {
+        idx <- which(!is.na(val_tags) & val_tags == tags_present[i])
+        if (length(idx) > 0) labels_vec[i] <- names(val_labs)[idx[1]]
+      }
+    }
+
+    codes_df <- data.frame(
+      code    = paste0(".", tags_present),
+      label   = labels_vec,
+      source  = rep("tagged_na", length(tags_present)),
+      numeric = rep(NA_real_, length(tags_present)),
+      tag     = tags_present,
+      stringsAsFactors = FALSE
+    )
+
+    list(
+      representation = "stata",
+      na_range       = NULL,
+      codes          = codes_df
+    )
+  }
+}
+
 #' Internal: inspect a data frame for UDM-bearing columns and optionally
 #' convert UDM cells to NA
 #'
-#' Walks the columns of \code{df} looking for \code{na_values} and
-#' \code{na_range} attributes (the haven_labelled_spss UDM metadata).
-#' For each column with UDMs, captures the variable name, codes, and
-#' value labels into a list entry used downstream by the narrative
-#' formatter. When \code{preserve_udm = FALSE}, additionally converts
-#' UDM cells to \code{NA} and strips the \code{na_values} and
-#' \code{na_range} attributes (the haven_labelled / haven_labelled_spss
-#' class is left in place; the package's analysis functions handle both
-#' classes correctly via the existing classifier).
+#' Walks the columns of \code{df}, calling \code{.jst_missing_info()} on
+#' each to discover formal user-defined missing-value declarations.
+#' Captures per-variable information into a list entry used downstream
+#' by the narrative formatter. Covers both SPSS UDM representation
+#' (\code{na_values} and/or \code{na_range} on
+#' \code{haven_labelled_spss}) and Stata UDM representation
+#' (\code{tagged_na} markers on \code{haven_labelled}).
+#'
+#' When \code{preserve_udm = FALSE}, additionally converts UDM cells to
+#' \code{NA} and strips the corresponding metadata. For SPSS columns
+#' this strips \code{na_values} and \code{na_range}; for Stata columns
+#' \code{haven::zap_missing()} converts tagged-NA cells to plain NA.
+#' In both cases the column's other attributes (value labels for
+#' non-missing codes, variable label, class) are preserved.
 #'
 #' @return A list with elements \code{df} (possibly modified) and
-#'   \code{udm_info} (list of per-variable info; empty list if none found).
+#'   \code{udm_info} (list of per-variable info; empty list if no UDM-
+#'   bearing columns were found). Each \code{udm_info} entry is a list
+#'   with \code{var} (variable name) and \code{info}
+#'   (the \code{.jst_missing_info()} return value for that column).
 #'
 #' @keywords internal
 .jst_handle_udms <- function(df, preserve_udm) {
   udm_info <- list()
 
   for (vname in names(df)) {
-    col      <- df[[vname]]
-    na_vals  <- attr(col, "na_values")
-    na_range <- attr(col, "na_range")
+    col  <- df[[vname]]
+    info <- .jst_missing_info(col)
+    if (is.null(info)) next
 
-    has_udms <- (!is.null(na_vals)  && length(na_vals)  > 0) ||
-                (!is.null(na_range) && length(na_range) == 2)
-    if (!has_udms) next
-
-    val_labs <- if (haven::is.labelled(col)) labelled::val_labels(col) else NULL
-
+    # Capture per-variable info for the narrative
     udm_info[[length(udm_info) + 1]] <- list(
-      var      = vname,
-      na_vals  = na_vals,
-      na_range = na_range,
-      val_labs = val_labs
+      var  = vname,
+      info = info
     )
 
     if (!preserve_udm) {
-      # unclass() bypasses vctrs's "Can't convert <haven_labelled> to <double>"
-      # cast refusal in cold-session vec_cast dispatch ordering. See the matching
-      # note in .jst_detect_suspicious_values() for full context.
-      x_num <- suppressWarnings(as.numeric(unclass(col)))
-      mask  <- rep(FALSE, length(x_num))
+      if (info$representation == "spss") {
+        # unclass() bypasses vctrs's "Can't convert <haven_labelled> to <double>"
+        # cast refusal in cold-session vec_cast dispatch ordering. See the matching
+        # note in .jst_detect_suspicious_values() for full context.
+        x_num <- suppressWarnings(as.numeric(unclass(col)))
+        mask  <- rep(FALSE, length(x_num))
 
-      if (!is.null(na_vals) && length(na_vals) > 0) {
-        mask <- mask | (!is.na(x_num) & x_num %in% as.numeric(na_vals))
-      }
-      if (!is.null(na_range) && length(na_range) == 2) {
-        mask <- mask | (!is.na(x_num) & x_num >= na_range[1] & x_num <= na_range[2])
-      }
+        if (!is.null(info$codes)) {
+          mask <- mask | (!is.na(x_num) & x_num %in% info$codes$numeric)
+        }
+        if (!is.null(info$na_range)) {
+          mask <- mask | (!is.na(x_num) & x_num >= info$na_range[1] & x_num <= info$na_range[2])
+        }
 
-      df[[vname]][mask] <- NA
-      attr(df[[vname]], "na_values") <- NULL
-      attr(df[[vname]], "na_range")  <- NULL
+        df[[vname]][mask] <- NA
+        attr(df[[vname]], "na_values") <- NULL
+        attr(df[[vname]], "na_range")  <- NULL
+
+      } else if (info$representation == "stata") {
+        # Tagged NAs already satisfy is.na() in analysis paths; conversion
+        # here is for users who want plain-NA columns (no tagged-NA metadata
+        # to round-trip back to Stata). haven::zap_missing converts tagged
+        # NAs to plain NAs while preserving labels on non-missing values.
+        df[[vname]] <- haven::zap_missing(col)
+      }
     }
   }
 
@@ -9476,10 +9616,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Internal: format the UDM narrative notification text
 #'
 #' Builds the message string emitted when UDM-bearing variables are
-#' detected during a \code{.sav} load. Wording differs depending on
-#' whether the UDMs were preserved (\code{preserve_udm = TRUE}) or
-#' converted (\code{preserve_udm = FALSE}). Variable list is truncated
-#' at \code{max_show} entries with an "...and N more" tail.
+#' detected during a load. Wording differs depending on whether the
+#' UDMs were preserved (\code{preserve_udm = TRUE}) or converted
+#' (\code{preserve_udm = FALSE}). Variable list is truncated at
+#' \code{max_show} entries with an "...and N more" tail.
+#'
+#' Renders SPSS UDM codes (e.g. \code{-99}) and Stata tagged NAs
+#' (e.g. \code{.a}) using parallel notation: \code{code ["label"]} or
+#' \code{code (no label)}. The code form comes pre-rendered in the
+#' \code{code} column of \code{.jst_missing_info()}'s return.
 #'
 #' @keywords internal
 .jst_format_udm_narrative <- function(udm_info, preserve_udm, max_show = 10L) {
@@ -9490,31 +9635,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   var_strings <- character(show_n)
 
   for (i in seq_len(show_n)) {
-    info  <- udm_info[[i]]
+    entry <- udm_info[[i]]
+    info  <- entry$info
     parts <- character(0)
 
-    if (!is.null(info$na_vals) && length(info$na_vals) > 0) {
-      val_strs <- character(length(info$na_vals))
-      for (j in seq_along(info$na_vals)) {
-        v <- as.numeric(info$na_vals[j])
-
-        # Find the value label, if any
-        lbl <- NULL
-        if (!is.null(info$val_labs) && length(info$val_labs) > 0) {
-          lbl_idx <- which(suppressWarnings(as.numeric(info$val_labs)) == v)
-          if (length(lbl_idx) > 0) lbl <- names(info$val_labs)[lbl_idx[1]]
-        }
-
-        val_strs[j] <- if (!is.null(lbl) && nzchar(lbl)) {
-          sprintf('%s ["%s"]', format(v), lbl)
+    # Per-code rendering. info$codes is a data.frame with pre-rendered
+    # display forms in the `code` column ("-99" for SPSS, ".a" for Stata),
+    # and labels in the `label` column.
+    if (!is.null(info$codes) && nrow(info$codes) > 0) {
+      val_strs <- character(nrow(info$codes))
+      for (j in seq_len(nrow(info$codes))) {
+        code  <- info$codes$code[j]
+        label <- info$codes$label[j]
+        val_strs[j] <- if (!is.na(label) && nzchar(label)) {
+          sprintf('%s ["%s"]', code, label)
         } else {
-          sprintf('%s (no label)', format(v))
+          sprintf('%s (no label)', code)
         }
       }
       parts <- c(parts, paste(val_strs, collapse = ", "))
     }
 
-    if (!is.null(info$na_range) && length(info$na_range) == 2) {
+    # Range rendering (SPSS only — Stata has no equivalent)
+    if (!is.null(info$na_range)) {
       parts <- c(parts, sprintf("range %s to %s",
                                 format(info$na_range[1]),
                                 format(info$na_range[2])))
@@ -9523,7 +9666,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     body <- paste(parts, collapse = "; ")
     if (!preserve_udm) body <- paste0("was ", body)
 
-    var_strings[i] <- sprintf("%s: %s", info$var, body)
+    var_strings[i] <- sprintf("%s: %s", entry$var, body)
   }
 
   list_str <- paste(var_strings, collapse = "; ")
@@ -9534,19 +9677,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (preserve_udm) {
     sprintf(
       paste0(
-        "%d variables have user-defined missing-value codes preserved from the .sav ",
-        "file (%s). These codes appear as their original numeric values in the ",
-        "dataframe but are treated as NA in analysis functions. To convert them to ",
-        "plain NA on import instead, use jload(file, preserve_udm = FALSE)."
+        "%d variables have user-defined missing-value declarations preserved ",
+        "from the loaded data (%s). Declarations are retained for round-trip ",
+        "fidelity and these codes are treated as NA in analysis functions. ",
+        "To convert them to plain NA on import instead, use jload(file, ",
+        "preserve_udm = FALSE)."
       ),
       n_vars, list_str
     )
   } else {
     sprintf(
       paste0(
-        "%d variables had user-defined missing-value codes; these have been converted ",
-        "to plain NA per preserve_udm = FALSE (%s). To preserve them as their ",
-        "original numeric values instead, use jload(file, preserve_udm = TRUE)."
+        "%d variables had user-defined missing-value declarations; these have ",
+        "been converted to plain NA per preserve_udm = FALSE (%s). To preserve ",
+        "them as their original declarations instead, use jload(file, ",
+        "preserve_udm = TRUE)."
       ),
       n_vars, list_str
     )

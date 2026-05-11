@@ -9,17 +9,26 @@ convert UDM cells to NA}
 }
 \value{
 A list with elements \code{df} (possibly modified) and
-\code{udm_info} (list of per-variable info; empty list if none found).
+\code{udm_info} (list of per-variable info; empty list if no UDM-
+bearing columns were found). Each \code{udm_info} entry is a list
+with \code{var} (variable name) and \code{info}
+(the \code{.jst_missing_info()} return value for that column).
 }
 \description{
-Walks the columns of \code{df} looking for \code{na_values} and
-\code{na_range} attributes (the haven_labelled_spss UDM metadata).
-For each column with UDMs, captures the variable name, codes, and
-value labels into a list entry used downstream by the narrative
-formatter. When \code{preserve_udm = FALSE}, additionally converts
-UDM cells to \code{NA} and strips the \code{na_values} and
-\code{na_range} attributes (the haven_labelled / haven_labelled_spss
-class is left in place; the package's analysis functions handle both
-classes correctly via the existing classifier).
+Walks the columns of \code{df}, calling \code{.jst_missing_info()} on
+each to discover formal user-defined missing-value declarations.
+Captures per-variable information into a list entry used downstream
+by the narrative formatter. Covers both SPSS UDM representation
+(\code{na_values} and/or \code{na_range} on
+\code{haven_labelled_spss}) and Stata UDM representation
+(\code{tagged_na} markers on \code{haven_labelled}).
+}
+\details{
+When \code{preserve_udm = FALSE}, additionally converts UDM cells to
+\code{NA} and strips the corresponding metadata. For SPSS columns
+this strips \code{na_values} and \code{na_range}; for Stata columns
+\code{haven::zap_missing()} converts tagged-NA cells to plain NA.
+In both cases the column's other attributes (value labels for
+non-missing codes, variable label, class) are preserved.
 }
 \keyword{internal}
