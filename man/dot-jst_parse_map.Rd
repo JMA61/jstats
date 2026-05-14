@@ -8,14 +8,21 @@
 }
 \arguments{
 \item{map_str}{Character string giving the recoding map, e.g.
-\code{"1=1; 2=0; else=NA"}.}
+\code{"1=1; 2=0; else=NA"} or \code{"1=1; 2=0; else=.a"}.}
 }
 \value{
 Invisibly, a list with components:
 \describe{
 \item{mappings}{List of lists; each inner list has \code{old_vals}
-(numeric vector) and \code{new_val} (single numeric).}
-\item{else_action}{Character: either \code{na} or \code{copy}.}
+(numeric vector), \code{new_val} (single numeric; \code{NA_real_}
+for system-NA and tagged-NA rules), and \code{tagged} (NULL for
+numeric or system-NA rules; a single lowercase letter character
+for tagged-NA rules).}
+\item{else_action}{Character: \code{"na"}, \code{"copy"}, or
+\code{"tagged"}.}
+\item{else_tag}{NULL when \code{else_action} is \code{"na"} or
+\code{"copy"}; a single lowercase letter character when
+\code{else_action} is \code{"tagged"}.}
 \item{else_explicit}{Logical: \code{TRUE} if the user wrote an
 explicit \code{else=...} clause, \code{FALSE} if defaulted.}
 }
@@ -28,6 +35,13 @@ comma-separated list of values; an explicit \code{else=...} clause
 sets the fallback action.
 }
 \details{
+The right-hand side of each rule may be a numeric value, one of the
+system-NA aliases (\code{System}, \code{NA}, or \code{SYSMIS}, case-
+insensitive), or a Stata-style tagged-NA token (\code{.a} through
+\code{.z}). Tagged-NA tokens are recorded in the parsed structure
+but not validated against the active convention here; the caller
+(\code{jrecode()}) performs the convention check after parsing.
+
 Errors with a clear message if the string is malformed.
 }
 \keyword{internal}

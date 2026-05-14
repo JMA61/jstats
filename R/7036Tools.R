@@ -1150,6 +1150,70 @@
   defaults[[level]][[name]]
 }
 
+#' Internal helper: resolve the active missing-value convention
+#'
+#' Implements Decision 11's four-step precedence rule for determining
+#' which UDM convention (SPSS-form or Stata-form) applies to a fresh
+#' UDM declaration or convention-conditional recode. Returns either
+#' \code{"spss"} or \code{"stata"} -- never \code{NULL}.
+#'
+#' The four levels of the precedence rule, in order:
+#' \enumerate{
+#'   \item If the column already carries a UDM convention (na_values
+#'     metadata for SPSS-form, tagged_na markers for Stata-form),
+#'     match it. Handled at the call site by passing a non-NULL value
+#'     to \code{column_convention}; \code{jrecode()} does not engage
+#'     this level because it produces fresh columns.
+#'   \item If \code{per_call} is \code{"spss"} or \code{"stata"}, use
+#'     that.
+#'   \item If \code{joptions("missing.convention")} is \code{"spss"}
+#'     or \code{"stata"}, use that.
+#'   \item Else default to SPSS-form.
+#' }
+#'
+#' @param per_call The value of the calling function's
+#'   \code{convention} argument (typically NULL, "spss", or "stata").
+#'   Validated; values other than NULL, "spss", or "stata" raise an
+#'   error.
+#' @param column_convention Optional. \code{"spss"}, \code{"stata"},
+#'   or \code{NULL}. When non-NULL, level 1 of the precedence rule
+#'   applies and the function returns this value immediately. Step 5b
+#'   (\code{jdeclare_udm()}) will populate this argument from
+#'   \code{.jst_missing_info()} on the operand column.
+#'
+#' @return Single character: \code{"spss"} or \code{"stata"}.
+#'
+#' @keywords internal
+.jst_resolve_convention <- function(per_call = NULL, column_convention = NULL) {
+
+  # Validate per_call up front so the error fires whether or not the
+  # convention is actually consulted by the caller.
+  if (!is.null(per_call)) {
+    if (!is.character(per_call) || length(per_call) != 1L ||
+        !per_call %in% c("spss", "stata")) {
+      stop("The convention argument must be \"spss\" or \"stata\".",
+           call. = FALSE)
+    }
+  }
+
+  # Level 1: column already carries a convention.
+  if (!is.null(column_convention) &&
+      column_convention %in% c("spss", "stata")) {
+    return(column_convention)
+  }
+
+  # Level 2: per-call argument.
+  if (!is.null(per_call)) return(per_call)
+
+  # Level 3: joptions setting.
+  opt <- getOption(".jst_options_missing_convention",
+                   .jst_options_defaults$missing.convention)
+  if (opt %in% c("spss", "stata")) return(opt)
+
+  # Level 4: SPSS-form default.
+  return("spss")
+}
+
 #' Internal helper: print the Case Processing Summary (CPS) table
 #'
 #' Centralises all CPS display logic. Callers specify an
@@ -1941,6 +2005,81 @@
 }
 
 
+# -----------------------------------------------------------------------------
+# .jst_tag_letters_to_codes()
+#
+# Translates Stata-style tagged-NA letter tags (.a, .b, ...) into the
+# equivalent numeric UDM codes drawn from joptions("udm.convention.codes")
+# (default c(-99, -98, -97, -96)). Mapping is positional: .a -> codes[1],
+# .b -> codes[2], etc. Per Decision 4 of
+# JStats_Missing_Values_Reference.txt Part 4 (Session 25 walk-through
+# lock), this is the convention-based direction shared between
+# jconvert's Stata-to-SPSS conversion path and jrecode's cross-
+# convention error echo-back. jdeclare_udm in Step 5b will consume
+# the same helper.
+#
+# When the input letter count exceeds the convention code count, the
+# return covers only the mappable subset (in order) and
+# attr(result, "unmapped") holds the letters that could not be mapped.
+# Callers decide whether to error, truncate, or annotate based on the
+# unmapped attribute.
+# -----------------------------------------------------------------------------
+
+#' Internal helper: map Stata-style tagged-NA letters to UDM codes
+#'
+#' Translates a vector of lowercase letter tags (e.g.
+#' \code{c("a", "b")}) into the equivalent numeric UDM codes drawn
+#' from \code{joptions("udm.convention.codes")}. Mapping is positional:
+#' \code{.a} maps to the first code, \code{.b} to the second, etc.
+#'
+#' When \code{length(letters_in) > length(convention_codes)}, the
+#' return covers only the mappable subset (in order) and
+#' \code{attr(result, "unmapped")} holds the letters that could not be
+#' mapped. Callers decide whether to error, truncate, or annotate
+#' based on the unmapped attribute.
+#'
+#' @param letters_in Character vector of lowercase letter tags. Must
+#'   be single lowercase letters (\code{"a"} through \code{"z"}); no
+#'   leading period. Caller is responsible for stripping any leading
+#'   period before calling.
+#' @param convention_codes Optional numeric vector of UDM codes. When
+#'   \code{NULL} (the default), the helper sources the value of
+#'   \code{joptions("udm.convention.codes")} via the standard
+#'   \code{getOption()} fallback.
+#'
+#' @return Named numeric vector. Names are the input letters; values
+#'   are the corresponding convention codes. Carries an
+#'   \code{unmapped} attribute (character vector) when the input
+#'   letter count exceeded the convention code count.
+#'
+#' @keywords internal
+.jst_tag_letters_to_codes <- function(letters_in, convention_codes = NULL) {
+
+  if (is.null(convention_codes)) {
+    convention_codes <- getOption(".jst_options_udm_convention_codes",
+                                  .jst_options_defaults$udm.convention.codes)
+  }
+
+  if (length(letters_in) == 0L) {
+    return(stats::setNames(numeric(0), character(0)))
+  }
+
+  n_mappable <- min(length(letters_in), length(convention_codes))
+
+  result <- stats::setNames(
+    as.numeric(convention_codes)[seq_len(n_mappable)],
+    letters_in[seq_len(n_mappable)]
+  )
+
+  if (length(letters_in) > length(convention_codes)) {
+    attr(result, "unmapped") <-
+      letters_in[(length(convention_codes) + 1L):length(letters_in)]
+  }
+
+  result
+}
+
+
 # -- Variable classifier helpers ----------------------------------------------
 #
 # Four helpers that answer "what kind of variable is this?" Each does one
@@ -2280,16 +2419,30 @@
 #' comma-separated list of values; an explicit \code{else=...} clause
 #' sets the fallback action.
 #'
+#' The right-hand side of each rule may be a numeric value, one of the
+#' system-NA aliases (\code{System}, \code{NA}, or \code{SYSMIS}, case-
+#' insensitive), or a Stata-style tagged-NA token (\code{.a} through
+#' \code{.z}). Tagged-NA tokens are recorded in the parsed structure
+#' but not validated against the active convention here; the caller
+#' (\code{jrecode()}) performs the convention check after parsing.
+#'
 #' Errors with a clear message if the string is malformed.
 #'
 #' @param map_str Character string giving the recoding map, e.g.
-#'   \code{"1=1; 2=0; else=NA"}.
+#'   \code{"1=1; 2=0; else=NA"} or \code{"1=1; 2=0; else=.a"}.
 #'
 #' @return Invisibly, a list with components:
 #'   \describe{
 #'     \item{mappings}{List of lists; each inner list has \code{old_vals}
-#'       (numeric vector) and \code{new_val} (single numeric).}
-#'     \item{else_action}{Character: either \code{na} or \code{copy}.}
+#'       (numeric vector), \code{new_val} (single numeric; \code{NA_real_}
+#'       for system-NA and tagged-NA rules), and \code{tagged} (NULL for
+#'       numeric or system-NA rules; a single lowercase letter character
+#'       for tagged-NA rules).}
+#'     \item{else_action}{Character: \code{"na"}, \code{"copy"}, or
+#'       \code{"tagged"}.}
+#'     \item{else_tag}{NULL when \code{else_action} is \code{"na"} or
+#'       \code{"copy"}; a single lowercase letter character when
+#'       \code{else_action} is \code{"tagged"}.}
 #'     \item{else_explicit}{Logical: \code{TRUE} if the user wrote an
 #'       explicit \code{else=...} clause, \code{FALSE} if defaulted.}
 #'   }
@@ -2304,7 +2457,38 @@
     stop("The map argument is empty. Provide at least one rule, e.g. map = \"1=1; 2=0\".", call. = FALSE)
   }
 
-  result <- list(mappings = list(), else_action = "na", else_explicit = FALSE)
+  result <- list(mappings = list(), else_action = "na",
+                 else_tag = NULL, else_explicit = FALSE)
+
+  # Helper: parse an RHS token. Returns list(new_val = numeric,
+  # tagged = NULL | letter) or NULL if the token is not recognised
+  # (caller then falls through to the existing numeric-error path).
+  parse_rhs_token <- function(rhs_str, rule_str) {
+    rhs_lower <- tolower(trimws(rhs_str))
+
+    # System-NA aliases.
+    if (rhs_lower %in% c("na", "sysmis", "system")) {
+      return(list(new_val = NA_real_, tagged = NULL))
+    }
+
+    # Stata-style tagged-NA token: .a through .z.
+    if (grepl("^\\.[a-z]$", rhs_lower)) {
+      return(list(new_val = NA_real_,
+                  tagged = substr(rhs_lower, 2L, 2L)))
+    }
+
+    # Malformed tagged-NA shapes: helpful error.
+    if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
+      stop(paste0(
+        "Invalid new value '", rhs_str, "' in map rule '", rule_str, "'. ",
+        "Stata-style tagged-NA tokens must be '.a' through '.z' ",
+        "(a single lowercase letter after the period). The NA(a) ",
+        "longhand is not supported in the map argument."
+      ), call. = FALSE)
+    }
+
+    NULL
+  }
 
   for (rule in rules) {
 
@@ -2321,14 +2505,33 @@
 
     # else rule
     if (tolower(lhs) == "else") {
-      if (!tolower(rhs) %in% c("na", "copy")) {
+      rhs_lower <- tolower(rhs)
+      if (rhs_lower %in% c("na", "sysmis", "system")) {
+        result$else_action   <- "na"
+        result$else_tag      <- NULL
+        result$else_explicit <- TRUE
+      } else if (rhs_lower == "copy") {
+        result$else_action   <- "copy"
+        result$else_tag      <- NULL
+        result$else_explicit <- TRUE
+      } else if (grepl("^\\.[a-z]$", rhs_lower)) {
+        result$else_action   <- "tagged"
+        result$else_tag      <- substr(rhs_lower, 2L, 2L)
+        result$else_explicit <- TRUE
+      } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. ",
-          "Use 'else=NA' or 'else=copy'."
+          "Stata-style tagged-NA tokens must be '.a' through '.z' ",
+          "(a single lowercase letter after the period). The NA(a) ",
+          "longhand is not supported in the map argument."
+        ), call. = FALSE)
+      } else {
+        stop(paste0(
+          "Invalid else action '", rhs, "' in map argument. Use ",
+          "'else=NA', 'else=copy', or a Stata-style tagged-NA token ",
+          "such as 'else=.a' (Stata convention only)."
         ), call. = FALSE)
       }
-      result$else_action   <- tolower(rhs)
-      result$else_explicit <- TRUE
       next
     }
 
@@ -2344,9 +2547,13 @@
     }
 
     # new value
-    if (toupper(trimws(rhs)) == "NA") {
-      new_val <- NA_real_
+    rhs_parsed <- parse_rhs_token(rhs, rule)
+
+    if (!is.null(rhs_parsed)) {
+      new_val <- rhs_parsed$new_val
+      tagged  <- rhs_parsed$tagged
     } else {
+      tagged  <- NULL
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
         # Detect commas used instead of semicolons between rules
@@ -2358,14 +2565,16 @@
         }
         stop(paste0(
           "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-          "New values must be numeric (or NA)."
+          "New values must be numeric, a system-NA alias (NA, System, ",
+          "or SYSMIS), or a Stata-style tagged-NA token (.a through .z)."
         ), call. = FALSE)
       }
     }
 
     result$mappings[[length(result$mappings) + 1]] <- list(
       old_vals = old_vals,
-      new_val  = new_val
+      new_val  = new_val,
+      tagged   = tagged
     )
   }
 
@@ -2385,11 +2594,17 @@
 #' = label text, values = numeric codes). Splits on the first equals
 #' sign in each rule, so label text may itself contain equals signs.
 #'
+#' The left-hand side of each rule may be a numeric value or a Stata-
+#' style tagged-NA token (\code{.a} through \code{.z}). Tagged-NA
+#' entries are stored as \code{haven::tagged_na(<letter>)} values in
+#' the returned vector; callers can detect them via
+#' \code{haven::na_tag()}.
+#'
 #' @param labels_str Character string of the form
 #'   \code{"value1=label1; value2=label2; ..."}.
 #'
 #' @return Invisibly, a named numeric vector. Names are label strings;
-#'   values are numeric codes.
+#'   values are numeric codes, or tagged-NA values for tagged entries.
 #'
 #' @keywords internal
 .jst_parse_labels <- function(labels_str) {
@@ -2416,12 +2631,27 @@
     val_str   <- trimws(substr(rule, 1, eq_pos - 1))
     label_str <- trimws(substr(rule, eq_pos + 1, nchar(rule)))
 
-    val <- suppressWarnings(as.numeric(val_str))
-    if (is.na(val)) {
+    val_lower <- tolower(val_str)
+
+    if (grepl("^\\.[a-z]$", val_lower)) {
+      # Stata-style tagged-NA token: .a through .z.
+      val <- haven::tagged_na(substr(val_lower, 2L, 2L))
+    } else if (grepl("^\\.", val_lower) || grepl("^na\\(", val_lower)) {
       stop(paste0(
         "Invalid value '", val_str, "' in label rule '", rule, "'. ",
-        "The left side of each label rule must be numeric."
+        "Stata-style tagged-NA tokens must be '.a' through '.z' ",
+        "(a single lowercase letter after the period). The NA(a) ",
+        "longhand is not supported in the labels argument."
       ), call. = FALSE)
+    } else {
+      val <- suppressWarnings(as.numeric(val_str))
+      if (is.na(val)) {
+        stop(paste0(
+          "Invalid value '", val_str, "' in label rule '", rule, "'. ",
+          "The left side of each label rule must be numeric or a ",
+          "Stata-style tagged-NA token (.a through .z)."
+        ), call. = FALSE)
+      }
     }
 
     if (nchar(label_str) == 0) {
@@ -8797,6 +9027,216 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 }
 
 
+# -----------------------------------------------------------------------------
+# .jst_jrecode_convention_error()
+#
+# Builds the error message emitted by jrecode() when the user's map or
+# labels argument contains Stata-style tagged-NA tokens but the
+# resolved convention is SPSS. Constructs a dynamic echo-back of the
+# user's actual map and labels with tagged-NA tokens replaced by
+# equivalent numeric UDM codes drawn from
+# joptions("udm.convention.codes"), plus the canonical two-call
+# SPSS-style pattern (jrecode then jdeclare_udm) per Decision 10's
+# worked example.
+#
+# joutput-level gating:
+#   minimal  - three lines: what went wrong, see ?jrecode, the
+#              joptions switch hint. No dynamic echo-back.
+#   standard - full block with the rewritten jrecode and jdeclare_udm
+#   full       lines, plus the joptions switch line at the end.
+#
+# Cap behaviour: when tagged-NA token count exceeds the convention
+# code count, the helper substitutes the mappable subset and leaves
+# unmapped tokens in their original .x form. A plain-language cap
+# note explaining the situation is appended between the example
+# block and the switch-convention line.
+# -----------------------------------------------------------------------------
+
+#' Internal helper: build jrecode's cross-convention error message
+#'
+#' Produces the error message used by \code{jrecode()} when Stata-style
+#' tagged-NA tokens appear in the map or labels argument but the
+#' resolved convention is SPSS. Verbosity is controlled by the active
+#' \code{joutput()} level.
+#'
+#' @param parsed_map List returned by \code{.jst_parse_map()}.
+#' @param parsed_labels Named numeric vector returned by
+#'   \code{.jst_parse_labels()}, or \code{NULL} if no labels argument
+#'   was supplied.
+#' @param data_name Character. Name of the data frame in the user's
+#'   call (used to reconstruct the example).
+#' @param orig_name Character. Name of the variable being recoded.
+#'
+#' @return Character scalar suitable for passing to \code{stop()}.
+#'
+#' @keywords internal
+.jst_jrecode_convention_error <- function(parsed_map, parsed_labels,
+                                          data_name, orig_name) {
+
+  # --- Gather every tagged-NA letter that appeared --------------------------
+  map_tags <- unlist(lapply(parsed_map$mappings, function(r) r$tagged))
+  if (isTRUE(parsed_map$else_action == "tagged")) {
+    map_tags <- c(map_tags, parsed_map$else_tag)
+  }
+
+  label_tags_lookup <- character(0)  # letter -> label, for jdeclare_udm
+  if (!is.null(parsed_labels)) {
+    tags_in_labels <- haven::na_tag(parsed_labels)
+    for (i in seq_along(parsed_labels)) {
+      if (!is.na(tags_in_labels[i])) {
+        letter <- tags_in_labels[i]
+        label_tags_lookup[letter] <- names(parsed_labels)[i]
+      }
+    }
+  }
+  label_tags <- names(label_tags_lookup)
+
+  all_tags <- sort(unique(c(map_tags, label_tags)))
+  first_tag <- all_tags[1]
+
+  # --- Verbosity gate -------------------------------------------------------
+  output_level <- getOption(".jst_output_level", "standard")
+
+  if (identical(output_level, "minimal")) {
+    return(paste0(
+      "the map uses '.", first_tag, "', a Stata-style missing-value ",
+      "marker. The package is currently set to SPSS convention.\n",
+      "See ?jrecode for examples, or run\n",
+      "joptions(missing.convention = \"stata\") to switch."
+    ))
+  }
+
+  # --- Standard / full block ------------------------------------------------
+
+  letter_to_code <- .jst_tag_letters_to_codes(all_tags)
+  unmapped       <- attr(letter_to_code, "unmapped")
+  if (is.null(unmapped)) unmapped <- character(0)
+
+  # Reconstruct the user's map with tagged-NA tokens replaced by their
+  # equivalent SPSS-form numeric codes. Tokens that couldn't be mapped
+  # (cap exceeded) are left in their original .x form.
+  format_num <- function(x) {
+    if (is.na(x)) return("NA")
+    # Render integers without a trailing ".0".
+    if (x == floor(x)) format(as.integer(x)) else format(x)
+  }
+
+  rebuilt_map_parts <- character(0)
+  for (rule in parsed_map$mappings) {
+    lhs <- paste(vapply(rule$old_vals, format_num, character(1)),
+                 collapse = ",")
+    if (!is.null(rule$tagged)) {
+      code <- letter_to_code[rule$tagged]
+      rhs  <- if (is.na(code)) paste0(".", rule$tagged) else format_num(code)
+    } else if (is.na(rule$new_val)) {
+      rhs <- "NA"
+    } else {
+      rhs <- format_num(rule$new_val)
+    }
+    rebuilt_map_parts <- c(rebuilt_map_parts, paste0(lhs, "=", rhs))
+  }
+  if (isTRUE(parsed_map$else_explicit)) {
+    if (identical(parsed_map$else_action, "tagged")) {
+      code <- letter_to_code[parsed_map$else_tag]
+      else_rhs <- if (is.na(code)) {
+        paste0(".", parsed_map$else_tag)
+      } else format_num(code)
+    } else if (identical(parsed_map$else_action, "copy")) {
+      else_rhs <- "copy"
+    } else {
+      else_rhs <- "NA"
+    }
+    rebuilt_map_parts <- c(rebuilt_map_parts, paste0("else=", else_rhs))
+  }
+  rebuilt_map <- paste(rebuilt_map_parts, collapse = "; ")
+
+  # Rebuild the labels argument without tagged-NA entries; those move
+  # to the jdeclare_udm call per Decision 10's worked example.
+  rebuilt_labels <- NULL
+  if (!is.null(parsed_labels)) {
+    tags_in_labels <- haven::na_tag(parsed_labels)
+    non_tag_idx <- which(is.na(tags_in_labels))
+    if (length(non_tag_idx) > 0L) {
+      label_parts <- character(0)
+      for (i in non_tag_idx) {
+        label_parts <- c(label_parts,
+          paste0(format_num(parsed_labels[i]), "=", names(parsed_labels)[i]))
+      }
+      rebuilt_labels <- paste(label_parts, collapse = "; ")
+    }
+  }
+
+  # Compose the rewritten jrecode call.
+  jrecode_line <- paste0("    jrecode(", data_name, ", ", orig_name,
+                         ", map = \"", rebuilt_map, "\"")
+  if (!is.null(rebuilt_labels)) {
+    indent <- paste(rep(" ", nchar("    jrecode(")), collapse = "")
+    jrecode_line <- paste0(jrecode_line, ",\n", indent,
+                           "labels = \"", rebuilt_labels, "\"")
+  }
+  jrecode_line <- paste0(jrecode_line, ")")
+
+  # Compose the jdeclare_udm follow-up call, covering only the mapped
+  # (non-unmapped) tags so the example is syntactically valid.
+  mapped_tags <- setdiff(all_tags, unmapped)
+  jdeclare_line <- NULL
+  if (length(mapped_tags) > 0L) {
+    codes_parts <- character(0)
+    for (letter in mapped_tags) {
+      code  <- letter_to_code[letter]
+      label <- if (letter %in% names(label_tags_lookup)) {
+        label_tags_lookup[[letter]]
+      } else "Missing"
+      codes_parts <- c(codes_parts,
+                       paste0(label, " = ", format_num(code)))
+    }
+    jdeclare_line <- paste0("    jdeclare_udm(", data_name, ", ",
+                            orig_name, ", codes = c(",
+                            paste(codes_parts, collapse = ", "), "))")
+  }
+
+  # Assemble the message.
+  msg_parts <- c(
+    paste0("the map uses '.", first_tag, "', a Stata-style missing-",
+           "value marker. The package is currently set to SPSS"),
+    "convention, which uses numeric codes. Here is the equivalent",
+    "recode in SPSS style:",
+    "",
+    jrecode_line
+  )
+  if (!is.null(jdeclare_line)) {
+    msg_parts <- c(msg_parts, jdeclare_line)
+  }
+  msg_parts <- c(msg_parts, "",
+    paste0("The numeric code",
+           if (length(mapped_tags) > 1L) "s" else "",
+           " above came from joptions(\"udm.convention.codes\")."))
+
+  # Cap note: appended when one or more tags exceeded the convention
+  # code count. Plain-language explanation; no jargon.
+  if (length(unmapped) > 0L) {
+    n_tags  <- length(all_tags)
+    n_codes <- length(letter_to_code)
+    unmapped_render <- paste0("'.", unmapped, "'", collapse = ", ")
+    were_was <- if (length(unmapped) == 1L) "was" else "were"
+    msg_parts <- c(msg_parts, "",
+      paste0("Note: your map uses ", n_tags, " Stata-style markers (",
+             paste0(".", all_tags, collapse = ", "), ") but"),
+      paste0("joptions(\"udm.convention.codes\") currently holds only ",
+             n_codes, " values; ", unmapped_render, " ", were_was),
+      "not substituted in the example above. To add another code, run",
+      "something like joptions(udm.convention.codes = c(-99, -98, -97))."
+    )
+  }
+
+  msg_parts <- c(msg_parts, "",
+    "To switch to Stata convention instead, run:",
+    "joptions(missing.convention = \"stata\").")
+
+  paste(msg_parts, collapse = "\n")
+}
+
+
 # -- jrecode -----------------------------------------------------------------
 
 #' Recode a variable with explicit value mapping and optional labels
@@ -8806,6 +9246,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' how old values should be converted to new values. It is designed for
 #' situations where you need to collapse categories, change numeric codes,
 #' or recode dichotomies. Variable and value labels are handled automatically.
+#'
+#' Map and labels rules can also produce missing values: plain system NA
+#' via the \code{NA} / \code{System} / \code{SYSMIS} aliases, or
+#' Stata-style tagged missing values (\code{.a} through \code{.z}) when
+#' the active convention is Stata. See \emph{Missing values in the map}
+#' below for the canonical patterns under each convention.
 #'
 #' @param data     A data frame containing the original variable.
 #' @param orig.var The variable to recode (unquoted, e.g. \code{AgeGroup}).
@@ -8819,24 +9265,36 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   \itemize{
 #'     \item No else clause: the function stops with a message if any
 #'       values are left unmapped, so you can fix the map before proceeding.
-#'     \item \code{else=NA}: unmapped values are deliberately set to missing.
+#'     \item \code{else=NA} (also \code{else=System} or \code{else=SYSMIS}):
+#'       unmapped values are deliberately set to system NA.
 #'     \item \code{else=copy}: unmapped values are carried across unchanged.
+#'     \item \code{else=.a} (or any Stata-style tagged-NA token, Stata
+#'       convention only): unmapped values are set to that tagged-NA value.
 #'   }
 #'
-#'   Individual values can also be mapped to NA to convert coded missing
-#'   values: \code{"-5=NA"} or \code{"-99=NA; -5=NA"}.
+#'   Individual values can also be mapped to system NA using the same
+#'   aliases: \code{"-5=NA"}, \code{"-5=System"}, or \code{"-5=SYSMIS"}.
+#'
+#'   Under Stata convention, values can be mapped to tagged-NA tokens:
+#'   \code{"-99=.a; -98=.b"}.
 #'
 #'   Examples:
 #'   \itemize{
 #'     \item \code{"1=1; 2=0"}
 #'     \item \code{"1=1; 2,3=2; 4,5=3; else=NA"}
 #'     \item \code{"1=1; 2=0; else=copy"}
-#'     \item \code{"-5=NA; else=copy"}
+#'     \item \code{"-5=System; else=copy"}
+#'     \item \code{"3=1; 4=2; else=.a"} (Stata convention only)
 #'   }
 #'
 #' @param labels   Optional. A quoted string specifying value labels for the
 #'   new variable, using the format \code{"code=Label Text"} with rules
 #'   separated by semicolons. If supplied, these labels are used as-is.
+#'
+#'   The left side of each rule may be a numeric code or, under Stata
+#'   convention, a Stata-style tagged-NA token (\code{.a} through
+#'   \code{.z}). Tagged-NA labels are stored on the tag itself, not on
+#'   a numeric code.
 #'
 #'   If omitted, the function attempts to transfer value labels automatically
 #'   from the original variable. This works when the original variable has
@@ -8844,7 +9302,19 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   When categories are collapsed, labels cannot be transferred automatically
 #'   and a note is printed.
 #'
-#'   Example: \code{"1=Male; 0=Female"}
+#'   Example: \code{"1=Male; 0=Female"} or \code{".a=Refused; .b=Don't know"}.
+#'
+#' @param convention Optional. One of \code{"spss"}, \code{"stata"}, or
+#'   \code{NULL} (default). Controls whether Stata-style tagged-NA tokens
+#'   (\code{.a} through \code{.z}) are accepted in the map and labels
+#'   arguments. Inert when no tagged-NA tokens appear in either argument.
+#'
+#'   When \code{NULL}, the convention is resolved from
+#'   \code{joptions("missing.convention")}; if that is also unset, the
+#'   default is SPSS. Most users set the convention once at the top of a
+#'   session via \code{joptions()} (or in their \code{.Rprofile}) rather
+#'   than supplying this argument on every call. See \code{?joptions} for
+#'   details.
 #'
 #' @return A \code{haven_labelled} vector with the recoded values, variable
 #'   label, and (if supplied or auto-transferred) value labels applied. Assign
@@ -8885,6 +9355,45 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' warning is issued (but the function continues). This helps catch typos in
 #' the map string.
 #'
+#' \strong{Missing values in the map.} The package supports two conventions
+#' for representing user-defined missing values (UDMs), and the syntax for
+#' producing UDMs from \code{jrecode()} depends on which one is active:
+#'
+#' Under \strong{SPSS convention} (the default), UDMs are real numeric
+#' codes carrying metadata that flags them as missing. The two-step
+#' canonical pattern is:
+#'
+#' \preformatted{
+#' df$gearR <- jrecode(df, gear,
+#'                     map    = "3=1; 4=2; else=-99",
+#'                     labels = "1=Three gears; 2=Four gears")
+#' df <- jdeclare_udm(df, gearR, codes = c(Refused = -99))
+#' }
+#'
+#' The \code{jrecode()} call assigns the numeric sentinel \code{-99}; the
+#' subsequent \code{jdeclare_udm()} call attaches the label and flags
+#' \code{-99} as missing. Labelling \code{-99} inside the \code{labels}
+#' argument is unnecessary --- \code{jdeclare_udm()} owns that label.
+#'
+#' Under \strong{Stata convention}, UDMs are typed missing cells marked
+#' with Stata-style tags (\code{.a} through \code{.z}). The single-call
+#' canonical pattern is:
+#'
+#' \preformatted{
+#' df$gearR <- jrecode(df, gear,
+#'                     map    = "3=1; 4=2; else=.a",
+#'                     labels = "1=Three gears; 2=Four gears; .a=Refused")
+#' }
+#'
+#' Under Stata convention, \code{jdeclare_udm()} is not needed for this
+#' pattern --- \code{jrecode()} handles both the value recoding and the
+#' tagged-NA labelling in one call.
+#'
+#' Writing tagged-NA tokens while the active convention is SPSS raises an
+#' informative error that echoes the user's call rewritten in SPSS-style
+#' syntax. Switching the convention session-wide is one line:
+#' \code{joptions(missing.convention = "stata")}.
+#'
 #' @examples
 #' # Recode with explicit labels
 #' df <- data.frame(gear = mtcars$gear)
@@ -8902,26 +9411,38 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'                      map    = "3=1; else=copy",
 #'                      labels = "1=Three gears")
 #'
-#' # Use else=NA to deliberately drop unspecified values
+#' # Use else=NA to deliberately drop unspecified values to system NA
 #' df$gearR4 <- jrecode(df, gear,
 #'                      map    = "3=1; 4=2; else=NA",
 #'                      labels = "1=Three gears; 2=Four gears")
 #'
-#' # Convert a specific coded missing value to NA
-#' df$gearR5 <- jrecode(df, gear, map = "99=NA; else=copy")
+#' # Convert a specific coded missing value to system NA
+#' df$gearR5 <- jrecode(df, gear, map = "99=System; else=copy")
+#'
+#' # Stata convention: tagged-NA tokens in map and labels (single call)
+#' \dontrun{
+#' joptions(missing.convention = "stata")
+#' df$gearR6 <- jrecode(df, gear,
+#'                      map    = "3=1; 4=2; else=.a",
+#'                      labels = "1=Three gears; 2=Four gears; .a=Refused")
+#' }
 #'
 #' # Using juse() default
 #' juse(df)
-#' df$gearR6 <- jrecode(gear, map = "3=1; 4=2; 5=3",
+#' df$gearR7 <- jrecode(gear, map = "3=1; 4=2; 5=3",
 #'                       labels = "1=Three; 2=Four; 3=Five")
 #'
+#' @seealso \code{\link{jdeclare_udm}} for declaring user-defined missing
+#'   values on a column after a recode (the SPSS-style canonical pattern).
 #' @seealso \code{\link{jrelabel}} for applying labels to an existing variable
 #'   after a recode.
+#' @seealso \code{\link{joptions}} for the session-level
+#'   \code{missing.convention} setting.
 #' @seealso \code{\link{JeffsStatTools}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jrecode <- function(data, orig.var, map, labels = NULL) {
+jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   # --- Resolve first argument -----------------------------------------------
   arg1 <- .jst_resolve_first_arg(
@@ -8961,6 +9482,17 @@ jrecode <- function(data, orig.var, map, labels = NULL) {
     stop("The map argument must be a single quoted string, e.g. map = \"1=1; 2=0\".", call. = FALSE)
   }
 
+  # Validate convention argument up front so an invalid value errors
+  # whether or not the recode actually uses tagged-NA tokens. The
+  # resolved convention is consulted only when tokens are present.
+  if (!is.null(convention)) {
+    if (!is.character(convention) || length(convention) != 1L ||
+        !convention %in% c("spss", "stata")) {
+      stop("The convention argument must be \"spss\" or \"stata\".",
+           call. = FALSE)
+    }
+  }
+
   orig <- data[[orig_name]]
 
   # --- Detect suspicious coded missing values ---
@@ -8971,6 +9503,49 @@ jrecode <- function(data, orig.var, map, labels = NULL) {
     .jst_parse_map(map),
     error = function(e) stop(paste0("Error in map argument: ", conditionMessage(e)), call. = FALSE)
   )
+
+  # --- Parse labels string (if supplied) ---
+  # Parsed up front so the convention check below can scan both map
+  # and labels for tagged-NA tokens in a single pass. The parsed
+  # structure is consumed later in the value-label application step.
+  parsed_labels <- NULL
+  if (!is.null(labels)) {
+    if (!is.character(labels) || length(labels) != 1) {
+      stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
+    }
+    parsed_labels <- tryCatch(
+      .jst_parse_labels(labels),
+      error = function(e) stop(paste0("Error in labels argument: ",
+                                      conditionMessage(e)), call. = FALSE)
+    )
+  }
+
+  # --- Cross-convention validation ---
+  # Gather tagged-NA tokens from map and labels. If any are present,
+  # resolve the active convention; under SPSS convention, raise the
+  # cross-convention error with a dynamic echo-back of the user's
+  # call rewritten in SPSS-style syntax. Under Stata convention the
+  # tokens are accepted and flow through to the recode loop.
+  map_has_tag <- any(!vapply(parsed_map$mappings,
+                             function(r) is.null(r$tagged), logical(1))) ||
+                 identical(parsed_map$else_action, "tagged")
+  labels_has_tag <- if (!is.null(parsed_labels)) {
+    any(!is.na(haven::na_tag(parsed_labels)))
+  } else FALSE
+
+  if (map_has_tag || labels_has_tag) {
+    resolved_convention <- .jst_resolve_convention(convention)
+    if (identical(resolved_convention, "spss")) {
+      err_msg <- .jst_jrecode_convention_error(
+        parsed_map    = parsed_map,
+        parsed_labels = parsed_labels,
+        data_name     = .jst_data_name,
+        orig_name     = orig_name
+      )
+      stop(paste0("Error in jrecode(): ", err_msg), call. = FALSE)
+    }
+    # else: Stata convention — proceed; tagged-NA tokens are valid.
+  }
 
   # --- Apply recode ---
   # unclass() bypasses vctrs's "Can't convert <haven_labelled> to <double>"
@@ -8983,7 +9558,6 @@ jrecode <- function(data, orig.var, map, labels = NULL) {
 
   for (rule in parsed_map$mappings) {
     old_vals <- rule$old_vals
-    new_val  <- rule$new_val
     all_specified_old <- c(all_specified_old, old_vals)
 
     # Warn if a specified old value is not present in the data
@@ -8997,7 +9571,14 @@ jrecode <- function(data, orig.var, map, labels = NULL) {
       ))
     }
 
-    new_num[!is.na(orig_num) & orig_num %in% old_vals] <- new_val
+    rule_mask <- !is.na(orig_num) & orig_num %in% old_vals
+    if (!is.null(rule$tagged)) {
+      # Stata-style tagged-NA: assign haven::tagged_na(<letter>) so the
+      # tag attribute is preserved on the underlying double storage.
+      new_num[rule_mask] <- haven::tagged_na(rule$tagged)
+    } else {
+      new_num[rule_mask] <- rule$new_val
+    }
   }
 
   # --- Handle unspecified non-NA values ---
@@ -9025,6 +9606,11 @@ jrecode <- function(data, orig.var, map, labels = NULL) {
     } else if (parsed_map$else_explicit && parsed_map$else_action == "na") {
       # Explicit else=NA: set to NA silently (student is being deliberate)
       # Values are already NA, nothing to do
+    } else if (parsed_map$else_explicit && parsed_map$else_action == "tagged") {
+      # Stata-style tagged-NA else: assign haven::tagged_na(<letter>)
+      # to all legitimate unspecified cells.
+      legit_mask <- !is.na(orig_num) & orig_num %in% legitimate_unspecified
+      new_num[legit_mask] <- haven::tagged_na(parsed_map$else_tag)
     } else {
       # No else clause: stop so student can fix the map
       stop(paste0(
@@ -9097,16 +9683,10 @@ jrecode <- function(data, orig.var, map, labels = NULL) {
   labelled::var_label(result) <- new_var_label
 
   # --- Value labels ---
-  if (!is.null(labels)) {
-    # User-supplied labels always take precedence
-    if (!is.character(labels) || length(labels) != 1) {
-      stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
-    }
-    parsed_labels <- tryCatch(
-      .jst_parse_labels(labels),
-      error = function(e) stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e)), call. = FALSE)
-    )
+  if (!is.null(parsed_labels)) {
+    # User-supplied labels always take precedence. The labels argument
+    # was validated and parsed at the top of jrecode() so the parsed
+    # vector is consumed directly here.
     labelled::val_labels(result) <- parsed_labels
   } else {
     # No labels supplied — try to auto-transfer from original variable
@@ -9424,7 +10004,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
   convention_codes <- getOption(".jst_options_udm_convention_codes",
                                 .jst_options_defaults$udm.convention.codes)
   letter_codes <- letters[seq_along(convention_codes)]
-  code_for_tag <- stats::setNames(as.numeric(convention_codes), letter_codes)
+  code_for_tag <- .jst_tag_letters_to_codes(letter_codes, convention_codes)
   tag_for_code <- stats::setNames(letter_codes, as.character(convention_codes))
 
   if (to == "spss") {

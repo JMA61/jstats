@@ -12,7 +12,7 @@
 }
 \value{
 Invisibly, a named numeric vector. Names are label strings;
-values are numeric codes.
+values are numeric codes, or tagged-NA values for tagged entries.
 }
 \description{
 Parses a labels string of the form
@@ -20,5 +20,12 @@ Parses a labels string of the form
 vector formatted for use with \code{haven_labelled} variables (names
 = label text, values = numeric codes). Splits on the first equals
 sign in each rule, so label text may itself contain equals signs.
+}
+\details{
+The left-hand side of each rule may be a numeric value or a Stata-
+style tagged-NA token (\code{.a} through \code{.z}). Tagged-NA
+entries are stored as \code{haven::tagged_na(<letter>)} values in
+the returned vector; callers can detect them via
+\code{haven::na_tag()}.
 }
 \keyword{internal}
