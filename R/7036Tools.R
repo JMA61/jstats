@@ -904,27 +904,22 @@
   filter_active    <- FALSE
   filter_expr_str  <- NULL
 
-  # -- Step 0: NA preprocessing ---------------------------------------------
-  # Auto-convert values labelled "Missing" (case-insensitive, whitespace
-  # trimmed) to NA. This runs before jcomplete/jfilter/subset so those
-  # steps see a consistent view of what is missing. The haven_labelled
-  # class and value labels are preserved so metadata still round-trips
-  # through .sav/.dta exports.
-  na_result <- .jst_preprocess_na(data)
-  data      <- na_result$data
-  if (length(na_result$converted) > 0) {
-    conv_parts <- vapply(
-      names(na_result$converted),
-      function(v) {
-        codes <- na_result$converted[[v]]
-        paste0(v, " (", paste(codes, collapse = ", "), ")")
-      },
-      character(1)
-    )
-    msgs <- c(msgs, paste0(
-      "[YELLOW](Auto-converted to NA: values labelled \"Missing\" on ",
-      paste(conv_parts, collapse = "; "), ")"))
-  }
+  # -- Step 0: declared UDM masking on the analysis copy --------------------
+  # Mask values declared as user-defined missing values (UDMs) to NA on a
+  # copy of the data frame used for this analysis. The user's data frame in
+  # the workspace is unchanged — na_values / na_range metadata stays
+  # attached so round-trip fidelity through jsave is preserved. Stata-form
+  # tagged_na values are not touched here; they satisfy is.na() natively at
+  # the C level. Replaces the former auto-NA-by-label mechanism
+  # (.jst_preprocess_na, retired in v0.9.5) per Cross-cutting Decision 5 of
+  # JStats_Missing_Values_Reference.txt Part 4.
+  #
+  # The whole-DF YELLOW notice that previously announced UDM masking was
+  # dropped in v0.9.6 — the information is now surfaced per-variable via
+  # jfreq's Missing section and via the Case Processing Summary, scoped to
+  # the variables the analysis actually touches.
+  udm_result <- .jst_apply_declared_udms_as_na(data)
+  data       <- udm_result$data
 
   # -- Step 1: jcomplete -----------------------------------------------------
   # Applied whenever a jcomplete is set on the current dataset (by name),
@@ -1006,7 +1001,13 @@
     complete_active  = complete_active,
     filter_active    = filter_active,
     filter_expr      = filter_expr_str,
-    subset_expr      = subset_expr_str
+    subset_expr      = subset_expr_str,
+    # UDM masking activity from Step 0. udm_active = TRUE when at least
+    # one variable had declared UDMs masked to NA on the analysis copy.
+    # udm_masked_vars carries the per-variable detail (codes + n_cells)
+    # for downstream display (Case Processing Summary, etc.).
+    udm_active       = length(udm_result$converted) > 0L,
+    udm_masked_vars  = udm_result$converted
   )
 
   list(data = data, msgs = msgs, pipeline_counts = pipeline_counts)
@@ -1066,7 +1067,9 @@
     complete_active    = pipeline_counts$complete_active,
     filter_active      = pipeline_counts$filter_active,
     filter_expr        = pipeline_counts$filter_expr,
-    subset_expr        = pipeline_counts$subset_expr
+    subset_expr        = pipeline_counts$subset_expr,
+    udm_active         = pipeline_counts$udm_active,
+    udm_masked_vars    = pipeline_counts$udm_masked_vars
   )
 }
 
@@ -1800,90 +1803,137 @@
 
 
 # -----------------------------------------------------------------------------
-# .jst_detect_missing_labels()
-# Detects values in a haven_labelled variable whose value label matches
-# "Missing" case-insensitively with whitespace trimmed. Used by NA
-# preprocessing to auto-convert these values to NA before analysis.
+# Missing-label wordlist and predicate
 #
-# Matches: "Missing", "missing", "MISSING", " Missing " (and any other
-# case/whitespace variation).
-# Does NOT match: "DK", "Refused", "Not applicable", "Missing information
-# recorded" (must be an exact match on the trimmed, lower-cased text, not a
-# substring).
+# Canonical list of value-label strings that suggest a value is intended as
+# missing rather than as ordinary data. Used to classify Pattern A (label-
+# only, no formal declaration) variables in jconvert, and to narrow
+# .jst_scan_coded_missing's label-only branch so generic labels on
+# suspicious values fall through to the "suspected" classification while
+# missing-suggestive labels surface for jdeclare_udm action.
 #
-# Returns a numeric vector of the codes whose labels match, or numeric(0)
-# if no matches or x is not haven-labelled.
+# All entries are lower-case and whitespace-trimmed; .jst_label_suggests_
+# missing() applies tolower(trimws(...)) before matching. Apostrophe
+# variants of "don't know" are enumerated explicitly rather than via regex
+# normalisation — the explicit list is easier to audit and extend.
+#
+# Replaces the literal "missing" match formerly performed by
+# .jst_detect_missing_labels (retired in v0.9.5 per Cross-cutting Decision 1
+# of JStats_Missing_Values_Reference.txt Part 4).
 # -----------------------------------------------------------------------------
 
-#' Internal helper: detect values labelled "Missing" in a haven_labelled variable
+#' @keywords internal
+.jst_missing_label_wordlist <- c(
+  "missing", "refused", "don't know", "dont know",
+  "no answer", "not asked", "not applicable", "n/a", "na",
+  "skipped", "declined", "prefer not to say"
+)
+
+
+# -----------------------------------------------------------------------------
+# .jst_label_system_missing
+# Display label used in output tables for the system-missing row (R's
+# plain NA, distinct from declared UDMs). Locked to "System" per SPSS
+# convention; Stata documentation also uses "system missing" so this term
+# works across both audiences. Referenced wherever a per-row missing
+# label is rendered (jfreq's Missing section in v0.9.6; CP table missing
+# rows when the UDM-content work lands; future jscreen tweaks if its
+# format aligns). Centralising as a constant ensures consistency if the
+# term ever changes.
+# -----------------------------------------------------------------------------
+
+#' @keywords internal
+.jst_label_system_missing <- "System"
+
+
+#' Internal helper: does a value label suggest missingness?
+#'
+#' Returns \code{TRUE} when the supplied label string, after case-folding
+#' and whitespace trimming, matches an entry in
+#' \code{.jst_missing_label_wordlist}. Returns \code{FALSE} for \code{NULL},
+#' \code{NA}, non-character input, and labels that do not match the
+#' wordlist.
 #'
 #' @keywords internal
-.jst_detect_missing_labels <- function(x) {
-  if (!haven::is.labelled(x)) return(numeric(0))
-  val_labs <- labelled::val_labels(x)
-  if (is.null(val_labs) || length(val_labs) == 0) return(numeric(0))
-
-  label_names <- names(val_labs)
-  if (is.null(label_names)) return(numeric(0))
-
-  match_idx <- vapply(
-    label_names,
-    function(lbl) {
-      if (is.na(lbl)) return(FALSE)
-      trimws(tolower(lbl)) == "missing"
-    },
-    logical(1)
-  )
-
-  if (!any(match_idx)) return(numeric(0))
-
-  # Labels are attached to numeric codes for numeric labelled vectors,
-  # and to character values for character labelled vectors. Return as
-  # numeric when possible; callers working with character labelled data
-  # will not reach this path in practice.
-  codes <- unname(val_labs[match_idx])
-  suppressWarnings(as.numeric(codes))
+.jst_label_suggests_missing <- function(label) {
+  if (is.null(label)) return(FALSE)
+  if (!is.character(label)) return(FALSE)
+  if (length(label) != 1L) return(FALSE)
+  if (is.na(label)) return(FALSE)
+  tolower(trimws(label)) %in% .jst_missing_label_wordlist
 }
 
 
 # -----------------------------------------------------------------------------
-# .jst_preprocess_na()
-# Applies auto-NA detection to all variables in a data frame (or a specified
-# subset of variables). For each haven_labelled variable, values labelled
-# "Missing" are converted to NA. The haven_labelled class and value labels
-# are preserved so the metadata still round-trips through .sav/.dta exports.
+# .jst_apply_declared_udms_as_na()
+#
+# Pipeline-step helper invoked at .jst_apply_pipeline's Step 0. For each
+# column whose formal UDM information (as surfaced by .jst_missing_info)
+# uses SPSS representation, masks declared na_values codes and na_range
+# cells to NA on the analysis copy. The underlying data frame in the user's
+# workspace is unchanged — na_values / na_range metadata stays attached to
+# the column so round-trip fidelity through jsave is preserved. Stata-form
+# tagged_na columns are not touched; tagged NAs satisfy is.na() natively at
+# the C level and downstream code catches them without intervention.
+#
+# Replaces .jst_preprocess_na (retired in v0.9.5) per Cross-cutting Decision
+# 5 of JStats_Missing_Values_Reference.txt Part 4.
 #
 # Returns a list with:
-#   data      - the preprocessed data frame
-#   converted - a named list mapping variable names to the codes that were
-#               converted to NA (used by callers to emit a yellow note)
+#   data      - the modified analysis copy
+#   converted - a named list of per-variable entries: list(codes, n_cells)
+#               where codes is the character display form ("-99") and
+#               n_cells is the number of values masked. Used by
+#               .jst_apply_pipeline to build the YELLOW notification.
 # -----------------------------------------------------------------------------
 
-#' Internal helper: auto-convert values labelled "Missing" to NA
+#' Internal helper: mask declared SPSS-form UDM cells to NA on analysis copy
 #'
 #' @keywords internal
-.jst_preprocess_na <- function(data, var_names = NULL) {
-  if (is.null(var_names)) var_names <- names(data)
+.jst_apply_declared_udms_as_na <- function(data) {
   converted <- list()
 
-  for (v in var_names) {
-    if (!v %in% names(data)) next
-    x <- data[[v]]
-    codes <- .jst_detect_missing_labels(x)
-    if (length(codes) == 0) next
-    codes <- codes[!is.na(codes)]
-    if (length(codes) == 0) next
+  for (vname in names(data)) {
+    col  <- data[[vname]]
+    info <- .jst_missing_info(col)
+    if (is.null(info)) next
+    if (info$representation != "spss") next
 
-    # Compare underlying numeric values to the missing codes. Using
-    # as.numeric() here strips the class for comparison only; we write
-    # back to data[[v]] using positional indexing, which preserves the
-    # original class and value labels.
-    x_num <- suppressWarnings(as.numeric(x))
-    mask  <- !is.na(x_num) & x_num %in% codes
+    # unclass() bypasses vctrs cast issues — see the matching note in
+    # .jst_detect_suspicious_values() and .jst_handle_udms() for context.
+    x_num <- suppressWarnings(as.numeric(unclass(col)))
+    mask  <- rep(FALSE, length(x_num))
 
-    if (any(mask)) {
-      data[[v]][mask] <- NA
-      converted[[v]] <- sort(unique(codes[codes %in% x_num[mask]]))
+    if (!is.null(info$codes) && nrow(info$codes) > 0L) {
+      declared_codes <- info$codes$numeric
+      declared_codes <- declared_codes[!is.na(declared_codes)]
+      if (length(declared_codes) > 0L) {
+        mask <- mask | (!is.na(x_num) & x_num %in% declared_codes)
+      }
+    }
+    if (!is.null(info$na_range) && length(info$na_range) == 2L) {
+      mask <- mask | (!is.na(x_num) &
+                        x_num >= info$na_range[1] &
+                        x_num <= info$na_range[2])
+    }
+
+    n_cells <- sum(mask)
+    if (n_cells > 0L) {
+      # Positional indexing preserves class, na_values, na_range, and
+      # value labels — only the underlying values change.
+      data[[vname]][mask] <- NA
+
+      codes_display <- if (!is.null(info$codes)) info$codes$code else character(0)
+      if (!is.null(info$na_range) && length(info$na_range) == 2L) {
+        codes_display <- c(codes_display,
+                           sprintf("range [%s, %s]",
+                                   as.character(info$na_range[1]),
+                                   as.character(info$na_range[2])))
+      }
+      converted[[vname]] <- list(
+        codes   = codes_display,
+        n_cells = n_cells
+      )
     }
   }
 
@@ -3602,9 +3652,19 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
   cc <- getOption(".jst_options_udm_convention_codes",
                   .jst_options_defaults$udm.convention.codes)
 
+  # Map the slot value to a user-facing label. "none" reads as "None
+  # selected" so users understand they're in the no-auto-conversion
+  # default; "spss" / "stata" surface in their familiar capitalisations.
+  mc_label <- switch(mc,
+                     none  = "None selected",
+                     spss  = "SPSS",
+                     stata = "Stata",
+                     mc)
+
   .cat_red("Options Settings\n")
-  cat("missing.convention: ",   mc, "\n", sep = "")
-  cat("udm.convention.codes: ", paste(cc, collapse = ", "), "\n", sep = "")
+  cat("User-defined missing values (UDMs) convention: ", mc_label,
+      "\n", sep = "")
+  cat("UDM convention codes: ", paste(cc, collapse = ", "), "\n", sep = "")
   cat("\n")
 }
 
@@ -3678,7 +3738,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #' the non-display counterpart to \code{\link{joutput}}, which handles
 #' output verbosity. Settings are read fresh on each function call:
 #' changing a setting after data has been loaded does not retroactively
-#' transform data already in memory. \code{jconvert()} is the
+#' transform data already in memory. \code{\link{jconvert}} is the
 #' explicit transform path for data already in the workspace.
 #'
 #' @section Slots:
@@ -3693,7 +3753,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #'   \item{udm.convention.codes}{Numeric vector, length 1 to 4, whole
 #'     numbers, no duplicates. Sign unconstrained. Default:
 #'     \code{c(-99, -98, -97, -96)}. The recommended UDM code set used
-#'     by \code{jconvert()} when translating Stata tagged-NA values
+#'     by \code{\link{jconvert}} when translating Stata tagged-NA values
 #'     (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-form
 #'     numeric codes, and by the load-time diagnostic for
 #'     convention-matched detection.}
@@ -3717,7 +3777,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #' triggers a one-time scan of \code{globalenv()} for data frames whose
 #' predominant UDM convention differs from the newly-set value. When
 #' mismatches exist, a one-line notice lists the affected data frames
-#' and suggests \code{jconvert()} for alignment. The notice is
+#' and suggests \code{\link{jconvert}} for alignment. The notice is
 #' informational; nothing is changed. Plain data frames with no
 #' UDM-bearing columns -- including the course datasets in their
 #' standard form -- do not trigger the notice.
@@ -4297,6 +4357,7 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
   )
 
   # -- Per-variable blocks ---------------------------------------------------
+  udm_masked_vars <- pipeline$pipeline_counts$udm_masked_vars
   for (variable in variables) {
     variable_name <- rlang::quo_name(variable)
 
@@ -4305,57 +4366,123 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
     var_class     <- class(temp_var)
     var_label_val <- .get_var_label_str(data[[variable_name]])
 
-    # Haven-labelled: combine numeric codes with value labels
+    # Sort key for Valid rows: build a (display_string, sort_key) mapping
+    # so the table sorts numerically when the underlying values are
+    # numeric, regardless of the categorical-display treatment. Without
+    # this, factor() defaults to alphabetic ordering, putting "10" between
+    # "1" and "2".
+    sort_codes <- NULL
+    sort_levels <- NULL
+
+    # Haven-labelled: combine numeric codes with value labels.
     if (haven::is.labelled(temp_var)) {
       label_text <- as.character(haven::as_factor(temp_var))
       codes      <- as.numeric(temp_var)
-      temp_var   <- factor(
-        ifelse(is.na(codes), NA, paste(codes, label_text, sep = ": "))
-      )
+      display_str <- ifelse(is.na(codes), NA,
+                            paste(codes, label_text, sep = ": "))
+      # Map each unique display string to its underlying code for sorting
+      uniq        <- !is.na(codes) & !duplicated(display_str)
+      sort_codes  <- codes[uniq]
+      sort_levels <- display_str[uniq][order(sort_codes)]
+      temp_var    <- factor(display_str, levels = sort_levels)
+
+    } else if (is.numeric(temp_var)) {
+      # Plain numeric: numeric-ordered factor levels.
+      uniq_vals   <- sort(unique(temp_var[!is.na(temp_var)]))
+      sort_levels <- as.character(uniq_vals)
+      temp_var    <- factor(as.character(temp_var), levels = sort_levels)
     }
 
-    # Convert plain numeric to factor for counting
-    if (is.numeric(temp_var)) {
-      temp_var <- factor(temp_var)
-    }
-
-    # Frequency table (base R)
-    tbl         <- table(temp_var, useNA = "ifany")
+    # Frequency table (base R) for the post-masking analysis copy.
+    tbl         <- table(temp_var, useNA = "no")
     total_count <- length(temp_var)
     valid_count <- sum(!is.na(temp_var))
 
-    freq_table <- data.frame(
-      temp_var = factor(names(tbl), levels = names(tbl)),
-      Freq     = as.integer(tbl),
+    # Valid rows: in the level order determined above.
+    valid_df <- data.frame(
+      Value = names(tbl),
+      Freq  = as.integer(tbl),
       stringsAsFactors = FALSE
     )
 
-    # Handle NA row — table() with useNA="ifany" uses NA as a name
-    na_count <- sum(is.na(temp_var))
-    if (na_count > 0) {
-      na_row <- data.frame(temp_var = NA, Freq = na_count,
+    # Missing breakdown: UDM rows (if any) + system NA row (if any).
+    # UDM counts come from the pipeline's masking record; system NAs are
+    # whatever's left after subtracting UDM cells from the total NAs in
+    # the masked column.
+    udm_info <- udm_masked_vars[[variable_name]]
+    udm_total <- if (is.null(udm_info)) 0L else as.integer(udm_info$n_cells)
+    total_na  <- as.integer(sum(is.na(temp_var)))
+    sys_na    <- max(0L, total_na - udm_total)
+
+    # UDM rows — one per declared code, with label when available.
+    udm_rows <- data.frame(Value = character(0), Freq = integer(0),
                            stringsAsFactors = FALSE)
-      # Remove the NA row table() may have created with a literal "NA" name
-      freq_table <- freq_table[!is.na(freq_table$temp_var) &
-                                 freq_table$temp_var != "NA", , drop = FALSE]
-      freq_table <- rbind(freq_table, na_row)
+    if (!is.null(udm_info) && length(udm_info$codes) > 0L) {
+      original_col <- data[[variable_name]]  # already masked, but val_labels intact
+      val_labs <- if (haven::is.labelled(original_col)) {
+        labelled::val_labels(original_col)
+      } else NULL
+
+      # Per-code count: count of cells whose underlying code matched the
+      # declared UDM code. Read from the pre-mask data via the user's
+      # original frame, accessed through the caller's data argument. The
+      # arg1$data carries the unmasked column even after the pipeline
+      # masking, since the pipeline returned a copy.
+      raw_col <- arg1$data[[variable_name]]
+      raw_num <- suppressWarnings(as.numeric(unclass(raw_col)))
+
+      for (code_str in udm_info$codes) {
+        # code_str may be a numeric string or a range descriptor like
+        # "range [-100, -90]" — handle each.
+        if (startsWith(code_str, "range ")) {
+          # Range-form na_range counts: not common; fold into a single row.
+          row_label <- code_str
+          row_count <- NA_integer_  # leave NA — caller can inspect column
+        } else {
+          code_num <- suppressWarnings(as.numeric(code_str))
+          row_count <- sum(!is.na(raw_num) & raw_num == code_num)
+          # Look up label
+          lbl <- if (!is.null(val_labs)) {
+            mm <- which(unname(val_labs) == code_num & !is.na(unname(val_labs)))
+            if (length(mm) > 0L) names(val_labs)[mm[1]] else NA_character_
+          } else NA_character_
+          row_label <- if (!is.na(lbl) && nzchar(lbl)) {
+            sprintf("%s: %s", code_str, lbl)
+          } else code_str
+        }
+        udm_rows <- rbind(udm_rows,
+                          data.frame(Value = row_label,
+                                     Freq  = row_count,
+                                     stringsAsFactors = FALSE))
+      }
     }
 
-    freq_table$`Total %` <- (freq_table$Freq / total_count) * 100
-    freq_table$`Valid %` <- ifelse(
-      is.na(freq_table$temp_var),
-      NA_real_,
-      (freq_table$Freq / valid_count) * 100
-    )
-    valid_pcts <- ifelse(is.na(freq_table$temp_var), 0,
-                         (freq_table$Freq / valid_count) * 100)
-    freq_table$`Cum. %` <- ifelse(
-      is.na(freq_table$temp_var),
-      NA_real_,
-      cumsum(valid_pcts)
-    )
+    # System NA row
+    na_row <- if (sys_na > 0L) {
+      data.frame(Value = .jst_label_system_missing, Freq = sys_na,
+                 stringsAsFactors = FALSE)
+    } else NULL
 
-    results[[variable_name]] <- freq_table
+    has_missing <- (nrow(udm_rows) > 0L) || sys_na > 0L
+
+    # Compute Total % across all rows (Valid + Missing + Total = 100)
+    valid_df$TotalPct <- (valid_df$Freq / total_count) * 100
+    if (nrow(udm_rows) > 0L) {
+      udm_rows$TotalPct <- ifelse(is.na(udm_rows$Freq), NA_real_,
+                                  (udm_rows$Freq / total_count) * 100)
+    }
+    if (!is.null(na_row)) {
+      na_row$TotalPct <- (na_row$Freq / total_count) * 100
+    }
+
+    # Valid % and Cum. % apply only to Valid rows
+    valid_df$ValidPct <- (valid_df$Freq / valid_count) * 100
+    valid_df$CumPct   <- cumsum(valid_df$ValidPct)
+
+    results[[variable_name]] <- list(valid = valid_df,
+                                     udm   = udm_rows,
+                                     na    = na_row,
+                                     total = total_count)
 
     # -- Print: variable-name anchor -> (optional Type/Label) -> blank -> table
     cat(variable_name, "\n", sep = "")
@@ -4365,33 +4492,81 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
     }
     cat("\n")
 
-    # Build display data frame for the table printer
-    display_df <- data.frame(
-      Value   = ifelse(is.na(freq_table$temp_var), "NA",
-                       as.character(freq_table$temp_var)),
-      Freq    = freq_table$Freq,
-      TotalPct = sprintf("%.2f", freq_table$`Total %`),
-      ValidPct = ifelse(is.na(freq_table$`Valid %`), "",
-                        sprintf("%.2f", freq_table$`Valid %`)),
-      CumPct   = ifelse(is.na(freq_table$`Cum. %`), "",
-                        sprintf("%.2f", freq_table$`Cum. %`)),
-      stringsAsFactors = FALSE
-    )
+    # Build display rows. When missings exist, prepend "Valid" / "Missing"
+    # marker rows. When no missings exist, print flat (current behavior).
+    fmt_pct <- function(x) ifelse(is.na(x), "", sprintf("%.2f", x))
+    fmt_int <- function(x) ifelse(is.na(x), "", as.character(x))
 
-    # Append Total row (sum of all rows including NA = post-pipeline N)
-    total_row <- data.frame(
+    display_df <- data.frame(Value = character(0), Freq = character(0),
+                             TotalPct = character(0), ValidPct = character(0),
+                             CumPct = character(0), stringsAsFactors = FALSE)
+
+    if (has_missing) {
+      # Valid section header
+      display_df <- rbind(display_df, data.frame(
+        Value = "Valid", Freq = "", TotalPct = "",
+        ValidPct = "", CumPct = "", stringsAsFactors = FALSE))
+    }
+
+    # Valid data rows
+    if (nrow(valid_df) > 0L) {
+      display_df <- rbind(display_df, data.frame(
+        Value    = valid_df$Value,
+        Freq     = fmt_int(valid_df$Freq),
+        TotalPct = fmt_pct(valid_df$TotalPct),
+        ValidPct = fmt_pct(valid_df$ValidPct),
+        CumPct   = fmt_pct(valid_df$CumPct),
+        stringsAsFactors = FALSE))
+    }
+
+    if (has_missing) {
+      # Missing section header (blank line + header row for separation)
+      display_df <- rbind(display_df, data.frame(
+        Value = "", Freq = "", TotalPct = "",
+        ValidPct = "", CumPct = "", stringsAsFactors = FALSE))
+      display_df <- rbind(display_df, data.frame(
+        Value = "Missing", Freq = "", TotalPct = "",
+        ValidPct = "", CumPct = "", stringsAsFactors = FALSE))
+
+      # UDM rows (Valid % and Cum. % shown as "--" for missing rows)
+      if (nrow(udm_rows) > 0L) {
+        display_df <- rbind(display_df, data.frame(
+          Value    = udm_rows$Value,
+          Freq     = fmt_int(udm_rows$Freq),
+          TotalPct = fmt_pct(udm_rows$TotalPct),
+          ValidPct = "--",
+          CumPct   = "--",
+          stringsAsFactors = FALSE))
+      }
+
+      # System NA row
+      if (!is.null(na_row)) {
+        display_df <- rbind(display_df, data.frame(
+          Value    = .jst_label_system_missing,
+          Freq     = fmt_int(na_row$Freq),
+          TotalPct = fmt_pct(na_row$TotalPct),
+          ValidPct = "--",
+          CumPct   = "--",
+          stringsAsFactors = FALSE))
+      }
+    }
+
+    # Total row (always; no Valid % or Cum. %)
+    display_df <- rbind(display_df, data.frame(
+      Value = "", Freq = "", TotalPct = "",
+      ValidPct = "", CumPct = "", stringsAsFactors = FALSE))
+    display_df <- rbind(display_df, data.frame(
       Value    = "Total",
-      Freq     = total_count,
+      Freq     = as.character(total_count),
       TotalPct = "100.00",
       ValidPct = "",
       CumPct   = "",
-      stringsAsFactors = FALSE
-    )
-    display_df <- rbind(display_df, total_row)
+      stringsAsFactors = FALSE))
 
     .jst_print_table(display_df,
                      col.names = c("", "Freq", "Total %", "Valid %", "Cum. %"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     align     = c("l", "r", "r", "r", "r"))
     cat("\n")
   }
 
@@ -9002,85 +9177,136 @@ jrecode <- function(data, orig.var, map, labels = NULL) {
 #  DATA I/O
 # =============================================================================
 
-# -- jstrip_udm --------------------------------------------------------------------
+# -- jconvert -----------------------------------------------------------------
 
-#' Strip user-defined missing values from haven-labelled variables
+#' Convert user-defined missing value (UDM) declarations between formats
 #'
-#' Converts user-defined missing-value (UDM) codes to plain \code{NA} on
-#' \code{haven_labelled_spss} variables already in memory. Useful when a
-#' dataset has been loaded with \code{jload(..., preserve.udm = TRUE)} (the
-#' default) for round-trip fidelity but a downstream operation — typically
-#' a base R or non-package function — would treat the UDM codes as real
-#' numeric values.
+#' \code{jconvert()} provides a single entry point for changing how user-
+#' defined missing values (UDMs) are represented on the columns of a data
+#' frame already in memory. Three target formats are supported: SPSS-style
+#' (\code{na_values} on \code{haven_labelled_spss}), Stata-style
+#' (\code{tagged_na} on \code{haven_labelled}), and base R (declarations
+#' stripped, declared cells converted to plain \code{NA}). Replaces
+#' \code{jstrip_udm()} (retired in v0.9.5); the base R target is the strip
+#' behaviour.
 #'
 #' @param data A data frame, or omitted to use the \code{juse()} default.
+#' @param to One of \code{"baseR"}, \code{"spss"}, or \code{"stata"}
+#'   (case-sensitive). When \code{NULL} (the default), \code{jconvert()}
+#'   reads \code{joptions("missing.convention")}: if the slot is set to
+#'   \code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
+#'   the slot is at its \code{"none"} default, \code{jconvert()} errors
+#'   with guidance naming the three concrete options. The destructive
+#'   \code{"baseR"} target is never auto-resolved — it must always be
+#'   passed explicitly.
 #' @param ... Optional unquoted variable names. When supplied, only the
-#'   listed variables are scanned for UDMs; variables in the list that
-#'   have no UDMs are reported as skipped. When omitted, the entire data
-#'   frame is scanned.
+#'   listed variables are scanned. Mutually exclusive with \code{vars}.
+#' @param vars Alternative scope-by-vector path: a character vector of
+#'   variable names. Mutually exclusive with \code{...}. When both
+#'   \code{...} and \code{vars} are empty, \code{jconvert()} operates on
+#'   the whole data frame.
 #' @param udm.notice Logical; \code{TRUE} (default) prints a notification
 #'   summarising what was converted (and what was skipped) along with an
 #'   assignment-syntax reminder. \code{FALSE} suppresses the message.
-#'   Unlike \code{jload()}, \code{jstrip_udm()} does not consult the
-#'   \code{joutput()} setting because the function's purpose is to report
-#'   an action that was just performed rather than to explain system
-#'   behaviour. The default is therefore always-on rather than
-#'   once-per-session.
+#'   Always-on by default; does not consult \code{joutput()} because the
+#'   function reports an action it just performed rather than explaining
+#'   system behaviour.
 #'
-#' @return The data frame with UDMs converted to \code{NA}, returned
+#' @return The data frame with the requested conversions applied, returned
 #'   invisibly. As with \code{jrelabel()} and \code{jrecode()}, the user
 #'   must assign the return value back to retain the changes.
 #'
 #' @details
-#' For each \code{haven_labelled_spss} variable with a non-empty
-#' \code{na_values} attribute or a two-element \code{na_range} attribute,
-#' the function:
-#' \itemize{
-#'   \item Converts values matching \code{na_values} (or falling within
-#'     \code{na_range}) to \code{NA};
-#'   \item Removes the \code{na_values} and \code{na_range} attributes;
-#'   \item Leaves the value labels intact, including labels for the former
-#'     UDM codes, so the variable can still round-trip through
-#'     \code{jsave()} to \code{.sav} or \code{.dta} with the original
-#'     labelling preserved.
+#' The three target formats:
+#' \describe{
+#'   \item{\code{to = "baseR"}}{Strip all UDM declarations and convert
+#'     declared cells to plain \code{NA}. For SPSS-form columns
+#'     (\code{na_values} / \code{na_range} on
+#'     \code{haven_labelled_spss}), masks declared codes to \code{NA} and
+#'     removes the attributes; value labels are preserved so the column
+#'     can still round-trip through \code{jsave()} with original
+#'     labelling. For Stata-form columns (\code{tagged_na} markers), uses
+#'     \code{haven::zap_missing()} to convert tagged NAs to plain
+#'     \code{NA}s.}
+#'   \item{\code{to = "spss"}}{Convert Stata-form tagged-NA values to
+#'     SPSS-form numeric codes. Letter tags map to numeric codes via
+#'     \code{joptions("udm.convention.codes")} (default \code{-99},
+#'     \code{-98}, \code{-97}, \code{-96}): \code{.a -> codes[1]},
+#'     \code{.b -> codes[2]}, and so on. Letter tags beyond \code{.d}
+#'     are refused with guidance to use \code{jrecode()} for manual
+#'     mapping.}
+#'   \item{\code{to = "stata"}}{Convert SPSS-form numeric codes to Stata-
+#'     form tagged-NA values. Letter tags are assigned by ordering rather
+#'     than by convention: each column's own declared \code{na_values}
+#'     codes are sorted by absolute value descending (ties broken with
+#'     more-negative-first), then mapped \code{.a, .b, .c, .d} in that
+#'     order. Convention codes are NOT consulted for this direction;
+#'     they only govern the reverse (Stata to SPSS) mapping. Round-trip
+#'     conversions are not guaranteed to preserve the original numeric
+#'     codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.a, .b} -> SPSS
+#'     \code{c(-99, -98)} loses the original numbers), but the value
+#'     labels survive intact and the missingness semantics are preserved.
+#'     Range-based SPSS missings (\code{na_range}) are out of cross-format
+#'     scope; columns with \code{na_range} are refused with guidance to
+#'     enumerate the range in SPSS first. Columns with more than 4
+#'     distinct \code{na_values} codes are also refused (matches the
+#'     4-code cap on Stata letter-tag mapping).}
 #' }
 #'
-#' This matches the behaviour of \code{jload(file, preserve.udm = FALSE)},
-#' the "convert at load time" alternative. \code{jstrip_udm()} provides
-#' the same conversion for data already in memory.
+#' Pre-flight checks for \code{to = "spss"} include a collision check:
+#' if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
+#' present as genuine data in the column, the call errors before any
+#' data is touched. The error message lists every colliding column and
+#' presents three resolution paths: change the convention codes via
+#' \code{joptions(udm.convention.codes = ...)}, scope the call via
+#' \code{vars = c(...)} to exclude affected columns, or recode the real-
+#' data values via \code{jrecode()} first. Atomicity applies to every
+#' error mode — the entire \code{jconvert()} call either succeeds or
+#' errors before mutating the data frame.
 #'
-#' Variables that are not \code{haven_labelled_spss} (or are
-#' \code{haven_labelled_spss} but have no UDMs) are left unchanged.
-#' If named explicitly via \code{...}, they are reported in the
-#' notification's \emph{Skipped} list.
+#' \strong{Pattern A — value labels suggest missingness but no formal
+#' declaration.} When a column has no formal UDM declaration but carries
+#' value labels matching the package's missing-label wordlist (e.g.
+#' \code{"Refused"}, \code{"Don't know"}, \code{"Not applicable"}),
+#' \code{jconvert()} skips the column and surfaces it in the
+#' notification with the affected value/label pairs. To formalise these
+#' as UDMs use \code{jdeclare_udm()}; to leave them as ordinary data, no
+#' action is needed.
 #'
 #' @examples
 #' \dontrun{
 #' # Strip UDMs from every applicable variable:
-#' MyData <- jstrip_udm(MyData)
+#' MyData <- jconvert(MyData, to = "baseR")
 #'
-#' # Strip UDMs from specific variables only:
-#' MyData <- jstrip_udm(MyData, Income, Age)
+#' # Convert SPSS-form UDMs to Stata-form tagged NAs:
+#' MyData <- jconvert(MyData, to = "stata")
 #'
-#' # After juse(), bare call works the same way:
-#' juse(MyData)
-#' MyData <- jstrip_udm()
+#' # Convert with target inferred from joptions:
+#' joptions(missing.convention = "spss")
+#' MyData <- jconvert(MyData)   # converts any Stata-form columns to SPSS
+#'
+#' # Scope by unquoted names:
+#' MyData <- jconvert(MyData, to = "baseR", Income, Age)
+#'
+#' # Scope by character vector (alternative form):
+#' MyData <- jconvert(MyData, to = "baseR", vars = c("Income", "Age"))
 #'
 #' # Suppress the notification (e.g. inside a script):
-#' MyData <- jstrip_udm(MyData, udm.notice = FALSE)
+#' MyData <- jconvert(MyData, to = "baseR", udm.notice = FALSE)
 #' }
 #'
-#' @seealso \code{\link{jload}} for the load-time alternative
-#'   (\code{preserve.udm = FALSE}).
+#' @seealso \code{\link{jload}} for the load-time strip alternative
+#'   (\code{preserve.udm = FALSE}); \code{\link{joptions}} for setting
+#'   the default convention and convention codes session-wide.
 #'
 #' @export
-jstrip_udm <- function(data, ..., udm.notice = TRUE) {
+jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 
   # --- Resolve first argument -------------------------------------------------
   arg1 <- .jst_resolve_first_arg(
     data_sub      = substitute(data),
     data_missing  = missing(data),
-    fn_name       = "jstrip_udm",
+    fn_name       = "jconvert",
     envir         = parent.frame(),
     accept_vector = FALSE
   )
@@ -9088,7 +9314,32 @@ jstrip_udm <- function(data, ..., udm.notice = TRUE) {
   data      <- arg1$data
   data_name <- arg1$name
 
-  # --- Variable list from ... ------------------------------------------------
+  # --- Resolve `to` -----------------------------------------------------------
+  # Auto-resolve from joptions when to= is NULL. spss/stata flow through;
+  # "none" errors with guidance (Q5 of the Session 28 jconvert design lock).
+  # baseR never auto-resolves — destructive transformations require
+  # explicit intent.
+  if (is.null(to)) {
+    convention <- getOption(".jst_options_missing_convention",
+                            .jst_options_defaults$missing.convention)
+    if (convention %in% c("spss", "stata")) {
+      to <- convention
+    } else {
+      stop(
+        "jconvert() needs a target format. Pass to = \"baseR\", \"spss\", ",
+        "or \"stata\" explicitly, or set joptions(missing.convention = ",
+        "\"spss\") (or \"stata\") to enable auto-resolution.",
+        call. = FALSE
+      )
+    }
+  }
+  if (!is.character(to) || length(to) != 1L ||
+      !to %in% c("baseR", "spss", "stata")) {
+    stop("jconvert() argument `to` must be one of \"baseR\", \"spss\", ",
+         "or \"stata\" (case-sensitive).", call. = FALSE)
+  }
+
+  # --- Resolve variable list (... vs vars; mutually exclusive) ---------------
   variables <- rlang::enquos(...)
 
   # Leading-comma-omitted form: if first arg was captured as a bare symbol
@@ -9099,163 +9350,601 @@ jstrip_udm <- function(data, ..., udm.notice = TRUE) {
     class(variables) <- "quosures"
   }
 
-  variable_names <- vapply(variables, rlang::quo_name, character(1))
+  dot_names <- if (length(variables) > 0) {
+    vapply(variables, rlang::quo_name, character(1))
+  } else {
+    character(0)
+  }
 
-  if (length(variable_names) == 0) {
+  if (length(dot_names) > 0 && !is.null(vars)) {
+    stop("jconvert() accepts either unquoted variable names (...) or a ",
+         "character vector via vars = c(...), but not both.",
+         call. = FALSE)
+  }
+  if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
+    stop("jconvert() argument `vars` must be a non-empty character vector ",
+         "of variable names.", call. = FALSE)
+  }
+
+  if (length(dot_names) > 0) {
+    .jst_check_vars(data, dot_names, data_name)
+    target_vars    <- dot_names
+    user_specified <- TRUE
+    var_scope      <- "dots"
+  } else if (!is.null(vars)) {
+    .jst_check_vars(data, vars, data_name)
+    target_vars    <- vars
+    user_specified <- TRUE
+    var_scope      <- "vars"
+  } else {
     target_vars    <- names(data)
     user_specified <- FALSE
-  } else {
-    .jst_check_vars(data, variable_names, data_name)
-    target_vars    <- variable_names
-    user_specified <- TRUE
+    var_scope      <- "all"
   }
 
-  # --- Identify UDM-bearing variables (mirrors .jst_handle_udms) -------------
-  vars_with_udms    <- character(0)
-  vars_without_udms <- character(0)
-  udm_info          <- list()
+  # --- Classify each target column -------------------------------------------
+  info_list       <- list()
+  pattern_a       <- list()
+  skipped_no_udms <- character(0)
 
   for (vname in target_vars) {
-    col      <- data[[vname]]
-    na_vals  <- attr(col, "na_values")
-    na_range <- attr(col, "na_range")
+    col  <- data[[vname]]
+    info <- .jst_missing_info(col)
 
-    has_udms <- (!is.null(na_vals)  && length(na_vals)  > 0) ||
-      (!is.null(na_range) && length(na_range) == 2)
-
-    if (has_udms) {
-      vars_with_udms <- c(vars_with_udms, vname)
-      val_labs <- if (haven::is.labelled(col)) {
-        labelled::val_labels(col)
-      } else {
-        NULL
-      }
-      udm_info[[vname]] <- list(
-        na_vals  = na_vals,
-        na_range = na_range,
-        val_labs = val_labs
-      )
-    } else {
-      vars_without_udms <- c(vars_without_udms, vname)
-    }
-  }
-
-  # --- Empty case: no UDMs found in scope ------------------------------------
-  if (length(vars_with_udms) == 0) {
-    if (isTRUE(udm.notice)) {
-      if (user_specified) {
-        message(
-          "No user-defined missing values found in: ",
-          paste(variable_names, collapse = ", "), "."
-        )
-      } else {
-        message(
-          "No user-defined missing values found in '", data_name, "'."
-        )
-      }
-    }
-    return(invisible(data))
-  }
-
-  # --- Strip UDMs (mirrors .jst_handle_udms preserve.udm = FALSE branch) -----
-  for (vname in vars_with_udms) {
-    col      <- data[[vname]]
-    na_vals  <- attr(col, "na_values")
-    na_range <- attr(col, "na_range")
-
-    # unclass() bypasses vctrs cast issues — see the matching note in
-    # .jst_detect_suspicious_values() and .jst_handle_udms() for context.
-    x_num <- suppressWarnings(as.numeric(unclass(col)))
-    mask  <- rep(FALSE, length(x_num))
-
-    if (!is.null(na_vals) && length(na_vals) > 0) {
-      mask <- mask | (!is.na(x_num) & x_num %in% as.numeric(na_vals))
-    }
-    if (!is.null(na_range) && length(na_range) == 2) {
-      mask <- mask | (!is.na(x_num) &
-                        x_num >= na_range[1] &
-                        x_num <= na_range[2])
+    if (!is.null(info)) {
+      info_list[[vname]] <- info
+      next
     }
 
-    data[[vname]][mask] <- NA
-    attr(data[[vname]], "na_values") <- NULL
-    attr(data[[vname]], "na_range")  <- NULL
-  }
-
-  # --- Notification ----------------------------------------------------------
-  if (isTRUE(udm.notice)) {
-    msg_lines <- character(0)
-
-    n_conv <- length(vars_with_udms)
-    msg_lines <- c(msg_lines, paste0(
-      "Converted user-defined missing values to NA on ",
-      n_conv, " variable", if (n_conv == 1) "" else "s", ":"
-    ))
-
-    # Per-variable lines: "  VarName  (-99 "Refused", -98 "Don't know")"
-    max_name_len <- max(nchar(vars_with_udms))
-    for (vname in vars_with_udms) {
-      info <- udm_info[[vname]]
-      code_parts <- character(0)
-
-      if (!is.null(info$na_vals) && length(info$na_vals) > 0) {
-        for (v in info$na_vals) {
-          lbl_match <- if (!is.null(info$val_labs)) {
-            names(info$val_labs)[info$val_labs == v]
-          } else {
-            character(0)
-          }
-          if (length(lbl_match) > 0 && nzchar(lbl_match[1])) {
-            code_parts <- c(code_parts,
-                            sprintf('%s "%s"', as.character(v), lbl_match[1]))
-          } else {
-            code_parts <- c(code_parts, as.character(v))
+    # Pattern A scan: no formal declaration. Look for value labels matching
+    # the missing-label wordlist (.jst_label_suggests_missing).
+    pa_entries <- list()
+    if (haven::is.labelled(col)) {
+      val_labs <- labelled::val_labels(col)
+      if (!is.null(val_labs) && length(val_labs) > 0L) {
+        for (i in seq_along(val_labs)) {
+          lbl <- names(val_labs)[i]
+          if (.jst_label_suggests_missing(lbl)) {
+            pa_entries[[length(pa_entries) + 1L]] <- list(
+              value = unname(val_labs[i]),
+              label = lbl
+            )
           }
         }
       }
-      if (!is.null(info$na_range) && length(info$na_range) == 2) {
-        code_parts <- c(code_parts,
-                        sprintf("range [%s, %s]",
-                                as.character(info$na_range[1]),
-                                as.character(info$na_range[2])))
+    }
+    if (length(pa_entries) > 0L) {
+      pattern_a[[vname]] <- pa_entries
+    } else if (user_specified) {
+      skipped_no_udms <- c(skipped_no_udms, vname)
+    }
+  }
+
+  # --- Pre-flight checks: Q3 strict atomicity --------------------------------
+  convention_codes <- getOption(".jst_options_udm_convention_codes",
+                                .jst_options_defaults$udm.convention.codes)
+  letter_codes <- letters[seq_along(convention_codes)]
+  code_for_tag <- stats::setNames(as.numeric(convention_codes), letter_codes)
+  tag_for_code <- stats::setNames(letter_codes, as.character(convention_codes))
+
+  if (to == "spss") {
+    # Stata-to-SPSS: check for letter-tag-beyond-.d and collisions.
+    beyond_d_vars  <- list()
+    collision_vars <- list()
+
+    for (vname in names(info_list)) {
+      info <- info_list[[vname]]
+      if (info$representation != "stata") next
+
+      col  <- data[[vname]]
+      tags <- haven::na_tag(col)
+      unique_tags <- unique(tags[!is.na(tags)])
+
+      bad_tags <- unique_tags[!unique_tags %in% letter_codes]
+      if (length(bad_tags) > 0L) {
+        beyond_d_vars[[length(beyond_d_vars) + 1L]] <- list(
+          var = vname, tags = paste0(".", bad_tags))
+      }
+      good_tags <- intersect(unique_tags, letter_codes)
+      if (length(good_tags) > 0L) {
+        x_num         <- suppressWarnings(as.numeric(unclass(col)))
+        target_codes  <- unname(code_for_tag[good_tags])
+        real_values   <- x_num[!is.na(x_num)]
+        hits <- target_codes[
+          vapply(target_codes,
+                 function(tc) any(real_values == tc),
+                 logical(1))
+        ]
+        if (length(hits) > 0L) {
+          collision_vars[[length(collision_vars) + 1L]] <- list(
+            var = vname, codes = hits)
+        }
+      }
+    }
+
+    if (length(beyond_d_vars) > 0L || length(collision_vars) > 0L) {
+      msg_lines <- "jconvert() cannot proceed with to = \"spss\":"
+      if (length(beyond_d_vars) > 0L) {
+        msg_lines <- c(msg_lines, "",
+                       "  Letter tags beyond .d (jconvert supports .a-.d):")
+        for (e in beyond_d_vars) {
+          msg_lines <- c(msg_lines,
+                         sprintf("    %s: %s", e$var,
+                                 paste(e$tags, collapse = ", ")))
+        }
+      }
+      if (length(collision_vars) > 0L) {
+        msg_lines <- c(msg_lines, "",
+                       "  Target numeric codes collide with real data values:")
+        for (e in collision_vars) {
+          msg_lines <- c(msg_lines,
+                         sprintf("    %s: %s", e$var,
+                                 paste(e$codes, collapse = ", ")))
+        }
+      }
+      msg_lines <- c(msg_lines, "",
+                     "Resolution options:",
+                     "  1. Change the convention codes:",
+                     "       joptions(udm.convention.codes = c(...))",
+                     "  2. Scope the call to exclude affected columns:",
+                     sprintf("       jconvert(%s, to = \"spss\", vars = c(...))",
+                             data_name),
+                     "  3. Recode the real-data values first via jrecode().")
+      stop(paste(msg_lines, collapse = "\n"), call. = FALSE)
+    }
+  }
+
+  if (to == "stata") {
+    # SPSS-to-Stata: check for na_range (out of scope) and >4 codes. The
+    # codes themselves are mapped to letter tags by descending |code|
+    # within each column (per Q6 of the Session 29 design lock); the
+    # convention codes are NOT consulted for this direction.
+    range_vars     <- character(0)
+    over_cap_vars  <- list()
+
+    for (vname in names(info_list)) {
+      info <- info_list[[vname]]
+      if (info$representation != "spss") next
+
+      if (!is.null(info$na_range) && length(info$na_range) == 2L) {
+        range_vars <- c(range_vars, vname)
+      }
+      if (!is.null(info$codes) && nrow(info$codes) > 4L) {
+        over_cap_vars[[length(over_cap_vars) + 1L]] <- list(
+          var = vname, n_codes = nrow(info$codes))
+      }
+    }
+
+    if (length(range_vars) > 0L || length(over_cap_vars) > 0L) {
+      msg_lines <- "jconvert() cannot proceed with to = \"stata\":"
+      if (length(range_vars) > 0L) {
+        msg_lines <- c(msg_lines, "",
+                       "  Range-based SPSS missings (na_range) are out of",
+                       "  cross-format scope:")
+        for (v in range_vars) {
+          msg_lines <- c(msg_lines, sprintf("    %s", v))
+        }
+        msg_lines <- c(msg_lines,
+                       "  Enumerate the range as individual na_values codes",
+                       "  in SPSS before converting, or scope the call to",
+                       "  exclude these columns.")
+      }
+      if (length(over_cap_vars) > 0L) {
+        msg_lines <- c(msg_lines, "",
+                       "  More than 4 distinct na_values codes (jconvert",
+                       "  supports up to 4 distinct tags .a-.d):")
+        for (e in over_cap_vars) {
+          msg_lines <- c(msg_lines,
+                         sprintf("    %s: %d codes", e$var, e$n_codes))
+        }
+      }
+      msg_lines <- c(msg_lines, "",
+                     "Resolution options:",
+                     "  1. Scope the call to exclude affected columns:",
+                     sprintf("       jconvert(%s, to = \"stata\", vars = c(...))",
+                             data_name),
+                     "  2. Recode the codes manually via jrecode().")
+      stop(paste(msg_lines, collapse = "\n"), call. = FALSE)
+    }
+  }
+
+  # --- Perform conversions ---------------------------------------------------
+  converted_vars   <- character(0)
+  converted_info   <- list()
+  skipped_already  <- character(0)   # in target format already (user_specified only)
+
+  for (vname in names(info_list)) {
+    info <- info_list[[vname]]
+    col  <- data[[vname]]
+
+    if (to == "baseR") {
+
+      if (info$representation == "spss") {
+        x_num <- suppressWarnings(as.numeric(unclass(col)))
+        mask  <- rep(FALSE, length(x_num))
+        if (!is.null(info$codes) && nrow(info$codes) > 0L) {
+          declared_codes <- info$codes$numeric
+          declared_codes <- declared_codes[!is.na(declared_codes)]
+          if (length(declared_codes) > 0L) {
+            mask <- mask | (!is.na(x_num) & x_num %in% declared_codes)
+          }
+        }
+        if (!is.null(info$na_range) && length(info$na_range) == 2L) {
+          mask <- mask | (!is.na(x_num) &
+                            x_num >= info$na_range[1] &
+                            x_num <= info$na_range[2])
+        }
+        data[[vname]][mask]              <- NA
+        attr(data[[vname]], "na_values") <- NULL
+        attr(data[[vname]], "na_range")  <- NULL
+      } else {
+        # Stata-form: haven::zap_missing handles tagged NAs uniformly.
+        data[[vname]] <- haven::zap_missing(col)
       }
 
+      # Build the display entries from the original info (pre-strip codes).
+      display_entries <- character(0)
+      if (!is.null(info$codes) && nrow(info$codes) > 0L) {
+        for (i in seq_len(nrow(info$codes))) {
+          code <- info$codes$code[i]
+          lbl  <- info$codes$label[i]
+          display_entries <- c(display_entries,
+                               if (!is.na(lbl)) {
+                                 sprintf('%s "%s"', code, lbl)
+                               } else code)
+        }
+      }
+      if (!is.null(info$na_range) && length(info$na_range) == 2L) {
+        display_entries <- c(display_entries,
+                             sprintf("range [%s, %s]",
+                                     as.character(info$na_range[1]),
+                                     as.character(info$na_range[2])))
+      }
+      converted_vars         <- c(converted_vars, vname)
+      converted_info[[vname]] <- list(display = display_entries)
+
+    } else if (to == "spss") {
+
+      if (info$representation == "spss") {
+        # Already in target — silent for whole-DF, reported as skipped for
+        # explicit-named. Tracked unconditionally so the notification
+        # builder can detect the "everything already in target" whole-DF
+        # case and report it distinctly from the genuinely-empty case.
+        skipped_already <- c(skipped_already, vname)
+        next
+      }
+
+      tags  <- haven::na_tag(col)
+      x_num <- suppressWarnings(as.numeric(unclass(col)))
+      unique_tags <- unique(tags[!is.na(tags)])
+      for (tg in unique_tags) {
+        pos <- which(!is.na(tags) & tags == tg)
+        x_num[pos] <- code_for_tag[[tg]]
+      }
+
+      val_labs     <- labelled::val_labels(col)
+      new_val_labs <- val_labs
+      if (!is.null(new_val_labs) && length(new_val_labs) > 0L) {
+        vl_tags <- haven::na_tag(new_val_labs)
+        for (i in seq_along(new_val_labs)) {
+          if (!is.na(vl_tags[i]) && vl_tags[i] %in% letter_codes) {
+            new_val_labs[i] <- code_for_tag[[vl_tags[i]]]
+          }
+        }
+      }
+
+      used_codes <- unname(code_for_tag[unique_tags])
+      data[[vname]] <- haven::labelled_spss(
+        x         = x_num,
+        labels    = new_val_labs,
+        na_values = used_codes,
+        label     = attr(col, "label")
+      )
+
+      # Build display entries — source tag -> destination code, with the
+      # label on the source side. Sort by tag (a, b, c, d) for stable
+      # display order regardless of order-of-appearance in the data.
+      display_entries <- character(0)
+      for (tg in sort(unique_tags)) {
+        code <- code_for_tag[[tg]]
+        source_disp <- paste0(".", tg)
+        lbl  <- NA_character_
+        if (!is.null(val_labs) && length(val_labs) > 0L) {
+          vl_tags <- haven::na_tag(val_labs)
+          mm <- which(!is.na(vl_tags) & vl_tags == tg)
+          if (length(mm) > 0L) lbl <- names(val_labs)[mm[1]]
+        }
+        source_disp_with_lbl <- if (!is.na(lbl) && nzchar(lbl)) {
+          sprintf('%s "%s"', source_disp, lbl)
+        } else source_disp
+        display_entries <- c(display_entries,
+                             sprintf("%s -> %s",
+                                     source_disp_with_lbl,
+                                     as.character(code)))
+      }
+      converted_vars         <- c(converted_vars, vname)
+      converted_info[[vname]] <- list(display = display_entries)
+
+    } else if (to == "stata") {
+
+      if (info$representation == "stata") {
+        skipped_already <- c(skipped_already, vname)
+        next
+      }
+
+      x_num <- suppressWarnings(as.numeric(unclass(col)))
+      declared_codes <- info$codes$numeric
+      declared_codes <- declared_codes[!is.na(declared_codes)]
+
+      # Q6 (Session 29 design lock): SPSS->Stata mapping is ordering-based,
+      # not convention-based. Sort the column's own declared codes by
+      # absolute value descending, with more-negative-first as the tie-
+      # breaker. Then map sorted_codes[1] -> .a, sorted_codes[2] -> .b,
+      # etc. The convention codes are NOT consulted for this direction;
+      # they only govern the reverse (Stata->SPSS) direction.
+      ordering           <- order(-abs(declared_codes), declared_codes)
+      sorted_codes       <- declared_codes[ordering]
+      column_tag_letters <- letters[seq_along(sorted_codes)]
+      column_tag_for_code <- stats::setNames(column_tag_letters,
+                                             as.character(sorted_codes))
+
+      new_col   <- as.numeric(x_num)
+      used_tags <- character(0)
+      for (code in sorted_codes) {
+        tag_letter <- column_tag_for_code[[as.character(code)]]
+        pos        <- which(!is.na(x_num) & x_num == code)
+        new_col[pos] <- haven::tagged_na(tag_letter)
+        used_tags <- c(used_tags, tag_letter)
+      }
+
+      val_labs     <- labelled::val_labels(col)
+      new_val_labs <- val_labs
+      if (!is.null(new_val_labs) && length(new_val_labs) > 0L) {
+        for (i in seq_along(new_val_labs)) {
+          v <- unname(new_val_labs[i])
+          # Gate on declared_codes — val_labs entries pointing at codes
+          # that aren't formally declared are real-data labels and must
+          # stay as numeric entries. Otherwise a val_lab like "Don't know"
+          # = -98 on a column with na_values = c(-99) would be incorrectly
+          # converted to a tagged-NA marker, breaking the labeling for
+          # real -98 cells in the data.
+          if (!is.na(v) && v %in% declared_codes) {
+            new_val_labs[i] <- haven::tagged_na(
+              column_tag_for_code[[as.character(v)]])
+          }
+        }
+      }
+
+      data[[vname]] <- haven::labelled(
+        x      = new_col,
+        labels = new_val_labs,
+        label  = attr(col, "label")
+      )
+
+      # Build display entries — source code -> destination tag, with the
+      # label shown on the source side (the label survives unchanged on
+      # the destination, so showing it once on the source is enough). The
+      # entries are emitted in sorted_codes order (largest |code| first
+      # per Q6), so the user reads ".a came from the largest |code|" left
+      # to right.
+      display_entries <- character(0)
+      for (i in seq_along(sorted_codes)) {
+        code <- sorted_codes[i]
+        tg   <- column_tag_letters[i]
+        lbl  <- NA_character_
+        if (!is.null(val_labs) && length(val_labs) > 0L) {
+          mm <- which(unname(val_labs) == code & !is.na(unname(val_labs)))
+          if (length(mm) > 0L) lbl <- names(val_labs)[mm[1]]
+        }
+        source_disp <- if (!is.na(lbl) && nzchar(lbl)) {
+          sprintf('%s "%s"', as.character(code), lbl)
+        } else as.character(code)
+        display_entries <- c(display_entries,
+                             sprintf("%s -> .%s", source_disp, tg))
+      }
+      converted_vars         <- c(converted_vars, vname)
+      converted_info[[vname]] <- list(display = display_entries)
+    }
+  }
+
+  # --- Build notification (Q4 five-section format) --------------------------
+  if (isTRUE(udm.notice)) {
+
+    n_converted     <- length(converted_vars)
+    n_already       <- length(skipped_already)
+    n_pattern_a     <- length(pattern_a)
+    n_skipped_nodes <- length(skipped_no_udms)
+
+    # Empty-case detection. Two sub-cases need distinct messages:
+    #   genuinely_empty       — no UDMs anywhere, no Pattern A. The truly
+    #                           "nothing to look at" case.
+    #   all_already_in_target — UDM-bearing columns exist but all already
+    #                           match the requested target format. Whole-
+    #                           DF flavour gets a single-line summary
+    #                           since enumerating every already-in-target
+    #                           column would be noisy.
+    genuinely_empty       <- (length(info_list) == 0L && n_pattern_a == 0L)
+    all_already_in_target <- (n_converted == 0L && n_pattern_a == 0L &&
+                               n_skipped_nodes == 0L && n_already > 0L)
+
+    if (genuinely_empty) {
+      if (user_specified) {
+        message("No user-defined missing values found in: ",
+                paste(target_vars, collapse = ", "), ".")
+      } else {
+        message("No user-defined missing values found in '", data_name, "'.")
+      }
+      return(invisible(data))
+    }
+
+    if (all_already_in_target && !user_specified) {
+      message(sprintf(
+        "All UDM-bearing variables in '%s' are already in %s-form representation.",
+        data_name, to))
+      return(invisible(data))
+    }
+
+    msg_lines <- character(0)
+
+    # Header + Converted: section
+    if (n_converted > 0L) {
+      header_verb <- switch(
+        to,
+        baseR = "Stripped declarations of user-defined missing values (UDMs) from",
+        spss  = "Converted to SPSS-form user-defined missing values (UDMs) in",
+        stata = "Converted to Stata-form user-defined missing values (UDMs) in"
+      )
       msg_lines <- c(msg_lines, paste0(
-        "  ", format(vname, width = max_name_len),
-        "  (", paste(code_parts, collapse = ", "), ")"
-      ))
+        header_verb, " ", n_converted, " variable",
+        if (n_converted == 1L) "" else "s", ":"))
+
+      max_name_len <- max(nchar(converted_vars))
+      for (vname in converted_vars) {
+        ci <- converted_info[[vname]]
+        msg_lines <- c(msg_lines, paste0(
+          "  ", format(vname, width = max_name_len),
+          "  (", paste(ci$display, collapse = ", "), ")"))
+      }
     }
 
-    # Skipped variables — only when user explicitly named some that had no UDMs
-    if (user_specified && length(vars_without_udms) > 0) {
-      msg_lines <- c(msg_lines, "")
+    # Skipped — already in target format (user_specified only — for whole-DF
+    # the all_already_in_target short-circuit above already covered the case
+    # where everything was already in target; for whole-DF with some
+    # converted and some already in target, the already-in-target columns
+    # are intentionally not enumerated to avoid noise).
+    if (n_already > 0L && user_specified) {
+      if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
       msg_lines <- c(msg_lines,
-                     "Skipped (no user-defined missing values to convert):")
-      msg_lines <- c(msg_lines, paste0("  ",
-                                       paste(vars_without_udms, collapse = ", ")))
+                     sprintf("Skipped (already in %s-form representation):", to),
+                     paste0("  ", paste(skipped_already, collapse = ", ")))
     }
 
-    # Assignment reminder
-    msg_lines <- c(msg_lines, "")
-    msg_lines <- c(msg_lines,
-                   "To keep these changes, ensure that you've assigned the return back")
-    msg_lines <- c(msg_lines,
-                   "to your data frame:")
-
-    # Example call — explicit data form, with named variables when supplied
-    if (user_specified) {
-      var_args <- paste(variable_names, collapse = ", ")
-      example_call <- paste0(data_name, " <- jstrip_udm(",
-                             data_name, ", ", var_args, ")")
-    } else {
-      example_call <- paste0(data_name, " <- jstrip_udm(", data_name, ")")
+    # Skipped — no UDMs found (user_specified only by construction —
+    # skipped_no_udms is only populated when user_specified is TRUE)
+    if (n_skipped_nodes > 0L) {
+      if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
+      msg_lines <- c(msg_lines,
+                     "Skipped (no UDMs found):",
+                     paste0("  ", paste(skipped_no_udms, collapse = ", ")))
     }
-    msg_lines <- c(msg_lines, paste0("  ", example_call))
+
+    # Skipped — value labels suggest missingness (Pattern A)
+    if (n_pattern_a > 0L) {
+      if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
+      msg_lines <- c(msg_lines,
+                     "Skipped (value labels suggest missingness but not formally declared):")
+      for (vname in names(pattern_a)) {
+        entries <- pattern_a[[vname]]
+        for (e in entries) {
+          msg_lines <- c(msg_lines, sprintf(
+            "  %s: %s = \"%s\"",
+            vname, as.character(e$value), e$label))
+        }
+      }
+      msg_lines <- c(msg_lines,
+                     "",
+                     "  To formalise these as UDMs, see jdeclare_udm().",
+                     "  To leave them as ordinary data, no action is needed.")
+    }
+
+    # Assignment-syntax reminder (only when a conversion actually
+    # happened AND the output level isn't "minimal" — the reminder is an
+    # instructional aid for SPSS migrants new to R's assignment
+    # semantics, displayed on the "standard" and "full" levels but
+    # suppressed on "minimal" where users have already opted into
+    # less-verbose output).
+    if (n_converted > 0L) {
+      out_level <- getOption(".jst_output_level", "standard")
+      if (out_level != "minimal") {
+        if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
+        example_call <- .jst_build_jconvert_example(
+          data_name = data_name, to = to,
+          var_scope = var_scope,
+          dot_names = dot_names, vars = vars)
+        msg_lines <- c(msg_lines,
+                       "Reminder: Changes are retained only when assigning the result back to your data frame,",
+                       paste0("e.g., ", example_call))
+      }
+    }
 
     message(paste(msg_lines, collapse = "\n"))
   }
 
   invisible(data)
+}
+
+
+#' Internal: build the assignment-syntax example for jconvert notifications
+#'
+#' When the rendered call fits within the current terminal width (allowing
+#' for the \code{prefix_width}-character "e.g., " prefix the caller will
+#' prepend), the function returns a single-line string. When it doesn't,
+#' the call is broken across multiple lines, packing args greedily into
+#' each line, with continuation lines indented to align with the opening
+#' paren of the \code{jconvert(} call.
+#'
+#' @keywords internal
+.jst_build_jconvert_example <- function(data_name, to,
+                                        var_scope, dot_names, vars,
+                                        prefix_width = 6L) {
+  to_arg <- paste0("to = \"", to, "\"")
+
+  if (var_scope == "dots") {
+    args <- c(data_name, to_arg, dot_names)
+  } else if (var_scope == "vars") {
+    vars_str <- paste0("vars = c(\"",
+                       paste(vars, collapse = "\", \""),
+                       "\")")
+    args <- c(data_name, to_arg, vars_str)
+  } else {
+    args <- c(data_name, to_arg)
+  }
+
+  header <- paste0(data_name, " <- jconvert(")
+  width  <- getOption("width", 80L)
+
+  # Single-line case: the call (with the caller's "e.g., " prefix
+  # accounted for) fits within terminal width.
+  single <- paste0(header, paste(args, collapse = ", "), ")")
+  if (prefix_width + nchar(single) <= width) {
+    return(single)
+  }
+
+  # Multi-line wrap. Continuation lines align with the opening paren of
+  # the jconvert() call on the first line.
+  cont_indent <- strrep(" ", prefix_width + nchar(header))
+
+  # Each token = one arg with its trailing punctuation ("arg," or "arg)").
+  tokens <- vapply(seq_along(args), function(i) {
+    paste0(args[i], if (i < length(args)) "," else ")")
+  }, character(1))
+
+  out_lines <- character(0)
+  current   <- header
+  on_first  <- TRUE   # first line gets the "e.g., " prefix width
+  fresh     <- TRUE   # current line has no args yet (just header/indent)
+
+  for (tok in tokens) {
+    sep  <- if (fresh) "" else " "
+    test <- paste0(current, sep, tok)
+    eff  <- if (on_first) prefix_width + nchar(test) else nchar(test)
+
+    if (eff <= width || fresh) {
+      # Fits, or the line has no args yet — accept either way (a token too
+      # wide for an otherwise-empty line still has to go somewhere).
+      current <- test
+      fresh   <- FALSE
+    } else {
+      # Doesn't fit; flush current line and start a new continuation line.
+      out_lines <- c(out_lines, current)
+      current   <- paste0(cont_indent, tok)
+      on_first  <- FALSE
+      fresh     <- FALSE
+    }
+  }
+
+  out_lines <- c(out_lines, current)
+  paste(out_lines, collapse = "\n")
 }
 
 # -- jload --------------------------------------------------------------------
@@ -10142,15 +10831,24 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         if (already) next
 
         # Look up a value label for this code (if any). When the variable
-        # has a label attached to the value, the finding is "label-only"
-        # rather than "suspected" — the metadata signals UDM intent but
-        # the formal na_values declaration is missing.
+        # has a label that suggests missingness (per the package-wide
+        # wordlist defined at .jst_missing_label_wordlist), the finding is
+        # "label-only" — the metadata signals UDM intent but the formal
+        # na_values declaration is missing. Generic labels on suspicious
+        # values (e.g. "Bad data" on a -99) fall through to the
+        # "suspected" classification because they do not match the
+        # missing-suggestive wordlist. (Wordlist narrowing per Q1 of the
+        # Session 28 jconvert design lock; symmetric with jconvert's
+        # Pattern A detection.)
         val_label_text <- NULL
         if (!is.null(val_labs)) {
           match_idx <- which(val_labs == sv)
           if (length(match_idx) > 0) {
             candidate <- names(val_labs)[match_idx[1]]
-            if (nzchar(candidate)) val_label_text <- candidate
+            if (nzchar(candidate) &&
+                .jst_label_suggests_missing(candidate)) {
+              val_label_text <- candidate
+            }
           }
         }
 

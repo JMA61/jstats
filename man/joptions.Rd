@@ -22,7 +22,7 @@ missing-value information and related conventions. \code{joptions} is
 the non-display counterpart to \code{\link{joutput}}, which handles
 output verbosity. Settings are read fresh on each function call:
 changing a setting after data has been loaded does not retroactively
-transform data already in memory. \code{jconvert()} is the
+transform data already in memory. \code{\link{jconvert}} is the
 explicit transform path for data already in the workspace.
 }
 \section{Slots}{
@@ -38,7 +38,7 @@ fresh UDM declarations on columns with no existing convention.}
 \item{udm.convention.codes}{Numeric vector, length 1 to 4, whole
 numbers, no duplicates. Sign unconstrained. Default:
 \code{c(-99, -98, -97, -96)}. The recommended UDM code set used
-by \code{jconvert()} when translating Stata tagged-NA values
+by \code{\link{jconvert}} when translating Stata tagged-NA values
 (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-form
 numeric codes, and by the load-time diagnostic for
 convention-matched detection.}
@@ -66,7 +66,7 @@ Setting \code{missing.convention} to \code{"spss"} or \code{"stata"}
 triggers a one-time scan of \code{globalenv()} for data frames whose
 predominant UDM convention differs from the newly-set value. When
 mismatches exist, a one-line notice lists the affected data frames
-and suggests \code{jconvert()} for alignment. The notice is
+and suggests \code{\link{jconvert}} for alignment. The notice is
 informational; nothing is changed. Plain data frames with no
 UDM-bearing columns -- including the course datasets in their
 standard form -- do not trigger the notice.
