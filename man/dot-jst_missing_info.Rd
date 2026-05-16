@@ -8,7 +8,7 @@
 }
 \arguments{
 \item{col}{A column from a data frame, possibly with UDM attributes
-or tagged-NA markers.}
+or Stata-style missing-value markers.}
 }
 \value{
 \code{NULL} if the column has no formal UDM declarations.

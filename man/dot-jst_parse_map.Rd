@@ -37,7 +37,7 @@ sets the fallback action.
 \details{
 The right-hand side of each rule may be a numeric value, one of the
 system-NA aliases (\code{System}, \code{NA}, or \code{SYSMIS}, case-
-insensitive), or a Stata-style tagged-NA token (\code{.a} through
+insensitive), or a Stata-style missing-value token (\code{.a} through
 \code{.z}). Tagged-NA tokens are recorded in the parsed structure
 but not validated against the active convention here; the caller
 (\code{jrecode()}) performs the convention check after parsing.

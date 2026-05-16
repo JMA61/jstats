@@ -57,22 +57,23 @@ declared cells to plain \code{NA}. For SPSS-form columns
 \code{haven_labelled_spss}), masks declared codes to \code{NA} and
 removes the attributes; value labels are preserved so the column
 can still round-trip through \code{jsave()} with original
-labelling. For Stata-form columns (\code{tagged_na} markers), uses
-\code{haven::zap_missing()} to convert tagged NAs to plain
-\code{NA}s.}
-\item{\code{to = "spss"}}{Convert Stata-form tagged-NA values to
+labelling. For columns carrying Stata-style missing values
+(\code{tagged_na} markers), uses \code{haven::zap_missing()} to
+convert them to plain \code{NA}s.}
+\item{\code{to = "spss"}}{Convert Stata-style missing values to
 SPSS-form numeric codes. Letter tags map to numeric codes via
 \code{joptions("udm.convention.codes")} (default \code{-99},
 \code{-98}, \code{-97}, \code{-96}): \code{.a -> codes[1]},
 \code{.b -> codes[2]}, and so on. Letter tags beyond \code{.d}
 are refused with guidance to use \code{jrecode()} for manual
 mapping.}
-\item{\code{to = "stata"}}{Convert SPSS-form numeric codes to Stata-
-form tagged-NA values. Letter tags are assigned by ordering rather
-than by convention: each column's own declared \code{na_values}
-codes are sorted by absolute value descending (ties broken with
-more-negative-first), then mapped \code{.a, .b, .c, .d} in that
-order. Convention codes are NOT consulted for this direction;
+\item{\code{to = "stata"}}{Convert SPSS-form numeric codes to
+Stata-style missing values. Letter tags are assigned by ordering
+rather than by convention: each column's own declared
+\code{na_values} codes are sorted by absolute value descending
+(ties broken with more-negative-first), then mapped
+\code{.a, .b, .c, .d} in that order. Convention codes are NOT
+consulted for this direction;
 they only govern the reverse (Stata to SPSS) mapping. Round-trip
 conversions are not guaranteed to preserve the original numeric
 codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.a, .b} -> SPSS
@@ -110,7 +111,7 @@ action is needed.
 # Strip UDMs from every applicable variable:
 MyData <- jconvert(MyData, to = "baseR")
 
-# Convert SPSS-form UDMs to Stata-form tagged NAs:
+# Convert SPSS-form UDMs to Stata-style missing values:
 MyData <- jconvert(MyData, to = "stata")
 
 # Convert with target inferred from joptions:

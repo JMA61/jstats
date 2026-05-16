@@ -7,10 +7,15 @@
 .jst_has_tagged_na(data)
 }
 \description{
-Returns the names of variables where any cell is a tagged NA
-(\code{haven::tagged_na("a")}, \code{tagged_na("b")}, ...).
-Used by jsave's pre-flight check before writing to formats that
-do not support tagged NAs (notably .sav). Tagged NAs only exist
-in numeric/double vectors, so non-numeric columns are skipped.
+Returns the names of variables whose UDM representation is
+Stata-form (Stata-style tagged missing values, e.g.
+\code{haven::tagged_na("a")}). Used by jsave's pre-flight checks
+before writing to \code{.sav} and \code{.xpt} (neither format
+carries tagged NAs).
+}
+\details{
+Walks the columns of \code{data} via \code{.jst_missing_info()}
+for a single source of truth on UDM representation detection.
+Returns names where \code{representation == "stata"}.
 }
 \keyword{internal}

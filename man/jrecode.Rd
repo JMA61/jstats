@@ -24,14 +24,14 @@ values are left unmapped, so you can fix the map before proceeding.
 \item \code{else=NA} (also \code{else=System} or \code{else=SYSMIS}):
 unmapped values are deliberately set to system NA.
 \item \code{else=copy}: unmapped values are carried across unchanged.
-\item \code{else=.a} (or any Stata-style tagged-NA token, Stata
-convention only): unmapped values are set to that tagged-NA value.
+\item \code{else=.a} (or any Stata-style missing-value token, Stata
+convention only): unmapped values are set to that Stata-style missing value.
 }
 
 Individual values can also be mapped to system NA using the same
 aliases: \code{"-5=NA"}, \code{"-5=System"}, or \code{"-5=SYSMIS"}.
 
-Under Stata convention, values can be mapped to tagged-NA tokens:
+Under Stata convention, values can be mapped to Stata-style missing-value tokens:
 \code{"-99=.a; -98=.b"}.
 
 Examples:
@@ -48,7 +48,7 @@ new variable, using the format \code{"code=Label Text"} with rules
 separated by semicolons. If supplied, these labels are used as-is.
 
 The left side of each rule may be a numeric code or, under Stata
-convention, a Stata-style tagged-NA token (\code{.a} through
+convention, a Stata-style missing-value token (\code{.a} through
 \code{.z}). Tagged-NA labels are stored on the tag itself, not on
 a numeric code.
 
@@ -61,9 +61,9 @@ and a note is printed.
 Example: \code{"1=Male; 0=Female"} or \code{".a=Refused; .b=Don't know"}.}
 
 \item{convention}{Optional. One of \code{"spss"}, \code{"stata"}, or
-\code{NULL} (default). Controls whether Stata-style tagged-NA tokens
+\code{NULL} (default). Controls whether Stata-style missing-value tokens
 (\code{.a} through \code{.z}) are accepted in the map and labels
-arguments. Inert when no tagged-NA tokens appear in either argument.
+arguments. Inert when no Stata-style missing-value tokens appear in either argument.
 
 When \code{NULL}, the convention is resolved from
 \code{joptions("missing.convention")}; if that is also unset, the
@@ -156,9 +156,9 @@ df$gearR <- jrecode(df, gear,
 
 Under Stata convention, \code{jdeclare_udm()} is not needed for this
 pattern --- \code{jrecode()} handles both the value recoding and the
-tagged-NA labelling in one call.
+Stata-style missing-value labelling in one call.
 
-Writing tagged-NA tokens while the active convention is SPSS raises an
+Writing Stata-style missing-value tokens while the active convention is SPSS raises an
 informative error that echoes the user's call rewritten in SPSS-style
 syntax. Switching the convention session-wide is one line:
 \code{joptions(missing.convention = "stata")}.
@@ -188,7 +188,7 @@ df$gearR4 <- jrecode(df, gear,
 # Convert a specific coded missing value to system NA
 df$gearR5 <- jrecode(df, gear, map = "99=System; else=copy")
 
-# Stata convention: tagged-NA tokens in map and labels (single call)
+# Stata convention: Stata-style missing-value tokens in map and labels (single call)
 \dontrun{
 joptions(missing.convention = "stata")
 df$gearR6 <- jrecode(df, gear,

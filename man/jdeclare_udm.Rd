@@ -29,7 +29,7 @@ vector; labels supplied via the \code{labels} argument. E.g.
 names are the labels. E.g.
 \code{codes = c(Refused = -99, `Don't know` = -98)}.}
 }
-Under Stata convention, code values may be tagged-NA markers
+Under Stata convention, code values may be Stata-style missing-value markers
 created with \code{haven::tagged_na()}, e.g.
 \code{codes = c(Refused = tagged_na("a"))}.}
 
@@ -77,18 +77,18 @@ column's \code{na_values} attribute (haven's representation of
 SPSS-form UDMs). The data cells themselves are unchanged; only the
 metadata that flags certain values as missing is added.
 
-Under Stata convention with tagged-NA input, the function attaches
-value labels to existing tagged-NA cells on the column.
+Under Stata convention with Stata-style missing-value input, the function attaches
+value labels to existing Stata-style missing-value cells on the column.
 
 Under Stata convention with numeric input, the function converts
-matching cells to tagged-NA markers (Session 30 design lock). The
+matching cells to Stata-style missing-value markers (Session 30 design lock). The
 mapping is ordering-based: codes sorted by absolute value
 descending, more-negative-first as tie-breaker, then assigned
 \code{.a}, \code{.b}, \code{.c}, \code{.d} in that order. The
 assignment proceeds independently of \code{joptions("udm.convention.codes")}
 (which only governs the reverse Stata-to-SPSS direction). A
 conversion note in the standard/full \code{joutput} tier shows the
-tagged-NA equivalent for future calls.
+Stata-style equivalent for future calls.
 }
 
 \section{Mixed conventions and file export}{
@@ -97,7 +97,7 @@ A single data frame may carry both SPSS-form and Stata-form UDM
 columns. In-memory analysis and display tolerate the mix without
 issue (each column renders in its native form). The constraint
 shows up at file-export time: \code{.sav} and \code{.xpt} cannot
-represent tagged-NA values; \code{.dta} cannot represent SPSS-form
+represent Stata-style missing values; \code{.dta} cannot represent SPSS-form
 \code{na_values} declarations. \code{jsave()} pre-flights the DF
 against the destination format and errors with a pointer to
 \code{jconvert()} when the mix is incompatible. The
@@ -117,7 +117,7 @@ SampleData <- jdeclare_udm(SampleData, Income,
 SampleData <- jdeclare_udm(SampleData, Income,
                            codes = c(Refused = -99, DontKnow = -98))
 
-# Stata form: label existing tagged-NA cells
+# Stata-style: label existing Stata-style missing-value cells
 SampleData <- jdeclare_udm(SampleData, Income,
                            codes = c(Refused = tagged_na("a")))
 }

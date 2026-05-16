@@ -23,7 +23,7 @@ Character scalar suitable for passing to \code{stop()}.
 }
 \description{
 Produces the error message used by \code{jrecode()} when Stata-style
-tagged-NA tokens appear in the map or labels argument but the
+Stata-style missing-value tokens appear in the map or labels argument but the
 resolved convention is SPSS. Verbosity is controlled by the active
 \code{joutput()} level.
 }

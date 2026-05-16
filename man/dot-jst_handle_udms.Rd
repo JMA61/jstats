@@ -27,7 +27,7 @@ by the narrative formatter. Covers both SPSS UDM representation
 When \code{preserve.udm = FALSE}, additionally converts UDM cells to
 \code{NA} and strips the corresponding metadata. For SPSS columns
 this strips \code{na_values} and \code{na_range}; for Stata columns
-\code{haven::zap_missing()} converts tagged-NA cells to plain NA.
+\code{haven::zap_missing()} converts Stata-style missing-value cells to plain NA.
 In both cases the column's other attributes (value labels for
 non-missing codes, variable label, class) are preserved.
 }

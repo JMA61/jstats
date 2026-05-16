@@ -12,7 +12,7 @@
 }
 \value{
 Invisibly, a named numeric vector. Names are label strings;
-values are numeric codes, or tagged-NA values for tagged entries.
+values are numeric codes, or Stata-style missing values for tagged entries.
 }
 \description{
 Parses a labels string of the form
@@ -23,7 +23,7 @@ sign in each rule, so label text may itself contain equals signs.
 }
 \details{
 The left-hand side of each rule may be a numeric value or a Stata-
-style tagged-NA token (\code{.a} through \code{.z}). Tagged-NA
+style Stata-style missing-value token (\code{.a} through \code{.z}). Tagged-NA
 entries are stored as \code{haven::tagged_na(<letter>)} values in
 the returned vector; callers can detect them via
 \code{haven::na_tag()}.

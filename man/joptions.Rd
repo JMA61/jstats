@@ -38,7 +38,7 @@ fresh UDM declarations on columns with no existing convention.}
 \item{udm.convention.codes}{Numeric vector, length 1 to 4, whole
 numbers, no duplicates. Sign unconstrained. Default:
 \code{c(-99, -98, -97, -96)}. The recommended UDM code set used
-by \code{\link{jconvert}} when translating Stata tagged-NA values
+by \code{\link{jconvert}} when translating Stata-style missing values
 (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-form
 numeric codes, and by the load-time diagnostic for
 convention-matched detection.}

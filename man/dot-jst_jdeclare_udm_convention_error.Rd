@@ -21,7 +21,7 @@ Character scalar suitable for passing to \code{stop()}.
 }
 \description{
 Produces the error message used by \code{jdeclare_udm()} when
-Stata-style tagged-NA tokens appear in the \code{codes} argument but
+Stata-style missing-value tokens appear in the \code{codes} argument but
 the resolved convention is SPSS. Verbosity is controlled by the
 active \code{joutput()} level.
 }
