@@ -2,63 +2,27 @@
 % Please edit documentation in R/7036Tools.R
 \name{jfilter}
 \alias{jfilter}
-\title{Set, activate, deactivate, or clear a per-dataset filter}
+\title{Deprecated alias for \code{jsubset()}}
 \usage{
 jfilter(data, expr)
 }
 \arguments{
-\item{data}{Optional data frame. If supplied, the filter is stored on
-that dataset specifically. If omitted, the dataset set by
-\code{juse()} is used.}
+\item{data}{See \code{\link{jsubset}()}.}
 
-\item{expr}{A logical expression (e.g. \code{Age < 40 & Gender == 1}),
-or one of the following special values:
-\describe{
-\item{\code{off}}{Deactivate the filter but remember the expression.}
-\item{\code{on}}{Reactivate a previously deactivated filter.}
-\item{\code{NULL}}{Clear the filter entirely (forget the expression).}
-}
-If \code{expr} and \code{data} are both omitted, prints the current
-filter status.}
+\item{expr}{See \code{\link{jsubset}()}.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect.
 }
 \description{
-\code{jfilter()} sets a persistent filter expression that is applied
-automatically by JeffsStatTools analysis functions when the default
-data frame (set by \code{juse()}) is in use. This is analogous to
-the SPSS FILTER command.
-
-The filter is stored per dataset, so switching \code{juse()} between
-datasets preserves each dataset's filter independently.
-
-The filter applies whenever the matching dataset is used, regardless of
-whether it was supplied via \code{juse()} or specified explicitly in a
-function call. To bypass a filter temporarily without losing it, use
-\code{jfilter(off)} before the analysis and \code{jfilter(on)} afterward.
-This matches the SPSS FILTER / USE ALL convention.
-
-Filter expressions use standard R logical operators: \code{==}, \code{!=},
-\code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
-\code{!} (NOT), \code{xor()} (XOR), and \code{\%in\%}. Using \code{=} for
-equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
-produce a helpful error suggesting the correct R syntax.
-}
-\examples{
-\donttest{
-juse(mtcars)
-jfilter(cyl == 4)             # Set using juse default
-jfilter(mtcars, cyl == 4)     # Explicit dataset
-jfilter(cyl == 4 & mpg > 20)  # Compound condition
-jfilter(off)                  # Deactivate
-jfilter(on)                   # Reactivate
-jfilter()                     # Check status
-jfilter(NULL)                 # Clear entirely
-}
-
+\code{jfilter()} was renamed to \code{\link{jsubset}()} to align with
+base R's \code{subset =} argument and the per-call \code{subset =}
+argument used by JeffsStatTools analysis functions. \code{jfilter()}
+continues to work as a thin alias that forwards every call directly
+to \code{jsubset()}; the alias issues an \code{\link{.Deprecated}}
+message on each call and will be removed in a future release.
 }
 \seealso{
-\code{\link{JeffsStatTools}} for the package overview,
-workflow conventions, and complete function listing.
+\code{\link{jsubset}}
 }
+\keyword{internal}

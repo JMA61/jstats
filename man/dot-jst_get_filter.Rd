@@ -14,7 +14,7 @@ up. If \code{NULL}, returns \code{NULL}.}
 The stored filter settings list, or \code{NULL} if none.
 }
 \description{
-Looks up the \code{jfilter()} settings stored under the
+Looks up the \code{jsubset()} settings stored under the
 \code{.jst_filter} option for a specific data frame name. Returns
 \code{NULL} if no filter is set for that data frame.
 }

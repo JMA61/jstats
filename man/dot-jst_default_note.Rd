@@ -16,7 +16,7 @@ the note directly.}
 }
 \description{
 Used by every analysis function immediately after its red title line.
-Groups the default-data-frame note with other session-state notes (filter,
+Groups the default-data-frame note with other session-state notes (jsubset,
 jcomplete) under a consistent yellow colouring.
 }
 \keyword{internal}

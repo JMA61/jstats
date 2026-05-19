@@ -56,7 +56,7 @@ regression diagnostic output (jlm only).}
 Case Processing Summary to print on every call. \code{FALSE}
 suppresses it on every call. \code{NULL} (the auto-suppress default
 at the standard tier) prints only when the call had something to
-report — pipeline state was active (\code{jfilter},
+report — pipeline state was active (\code{jsubset},
 \code{jcomplete}, or per-call \code{subset}), listwise deletion
 excluded at least one case (in listwise functions like \code{jlm},
 \code{jt}), or a per-variable discrepancy notification fires (in

@@ -71,7 +71,7 @@ Distinguishes five outcomes via the \code{mode} field:
 \item{\code{default}}{Data argument was missing; juse default used.}
 \item{\code{null}}{User passed literal \code{NULL}; only returned
 when \code{allow_null = TRUE}. Caller handles (e.g., for global
-clear semantics in jdummy/jfilter/jcomplete).}
+clear semantics in jdummy/jsubset/jcomplete).}
 \item{\code{explicit}}{User passed an expression that evaluated
 to a data frame. That data frame is used.}
 \item{\code{vector_input}}{Only returned when

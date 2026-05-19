@@ -65,7 +65,7 @@ instructors. Feedback from this group shapes ongoing refinements.
 \strong{Pipeline state management}
 \itemize{
 \item \code{\link{juse}} — set the default data frame used implicitly by analysis functions
-\item \code{\link{jfilter}} — activate a row-level filter applied to subsequent calls
+\item \code{\link{jsubset}} — activate a row-level case-selection expression applied to subsequent calls
 \item \code{\link{jcomplete}} — activate listwise filtering on selected variables
 \item \code{\link{jdummy}} — register categorical variables for dummy coding in regression
 \item \code{\link{joutput}} — set session-level output verbosity (minimal / standard / full)
@@ -106,10 +106,10 @@ at the start of a session sets a default data frame. Subsequent
 analysis calls can then omit the data argument:
 \code{jfreq(Gender)} works the same as
 \code{jfreq(MyData, Gender)}. The default also scopes the
-pipeline-state functions, so \code{jfilter(Age < 30)} sets a
+pipeline-state functions, so \code{jsubset(Age < 30)} sets a
 filter on the current default without further specification.
 
-\strong{Pipeline stages.} \code{jfilter()}, \code{jcomplete()}, and
+\strong{Pipeline stages.} \code{jsubset()}, \code{jcomplete()}, and
 \code{jdummy()} modify session state that subsequent analysis calls
 read automatically. State is explicit — calls can be inspected,
 inactivated, and cleared, and active state is reported in analysis

@@ -22,8 +22,8 @@ jlm(
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
-\code{Group == 1}) to filter cases for this call only. Applied after
-jcomplete and jfilter. Does not affect other function calls.}
+\code{Group == 1}) to subset cases for this call only. Applied after
+jcomplete and jsubset. Does not affect other function calls.}
 
 \item{labels}{Logical. If TRUE (default), prints variable labels
 when available.}

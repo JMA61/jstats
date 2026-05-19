@@ -132,7 +132,7 @@ frame followed by one or two unquoted variable names. Used for histograms
 categorical). Calls that would otherwise auto-detect to a scatter or
 boxplot produce a helpful error directing you to the formula form.
 
-Supports pipeline integration (\code{jfilter}, \code{jcomplete}, per-call
+Supports pipeline integration (\code{jsubset}, \code{jcomplete}, per-call
 \code{subset}), grouping via \code{by = }, and regression lines with
 equation/R-squared/band annotations.
 

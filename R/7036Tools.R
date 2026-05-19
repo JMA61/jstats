@@ -57,7 +57,7 @@
 #' \strong{Pipeline state management}
 #' \itemize{
 #'   \item \code{\link{juse}} — set the default data frame used implicitly by analysis functions
-#'   \item \code{\link{jfilter}} — activate a row-level filter applied to subsequent calls
+#'   \item \code{\link{jsubset}} — activate a row-level case-selection expression applied to subsequent calls
 #'   \item \code{\link{jcomplete}} — activate listwise filtering on selected variables
 #'   \item \code{\link{jdummy}} — register categorical variables for dummy coding in regression
 #'   \item \code{\link{joutput}} — set session-level output verbosity (minimal / standard / full)
@@ -96,10 +96,10 @@
 #' analysis calls can then omit the data argument:
 #' \code{jfreq(Gender)} works the same as
 #' \code{jfreq(MyData, Gender)}. The default also scopes the
-#' pipeline-state functions, so \code{jfilter(Age < 30)} sets a
+#' pipeline-state functions, so \code{jsubset(Age < 30)} sets a
 #' filter on the current default without further specification.
 #'
-#' \strong{Pipeline stages.} \code{jfilter()}, \code{jcomplete()}, and
+#' \strong{Pipeline stages.} \code{jsubset()}, \code{jcomplete()}, and
 #' \code{jdummy()} modify session state that subsequent analysis calls
 #' read automatically. State is explicit — calls can be inspected,
 #' inactivated, and cleared, and active state is reported in analysis
@@ -178,7 +178,7 @@
 #' Internal helper: print the "Using default data frame: X" note in yellow
 #'
 #' Used by every analysis function immediately after its red title line.
-#' Groups the default-data-frame note with other session-state notes (filter,
+#' Groups the default-data-frame note with other session-state notes (jsubset,
 #' jcomplete) under a consistent yellow colouring.
 #'
 #' @param data_name Character string name of the default data frame.
@@ -359,14 +359,14 @@
 
 
 # -----------------------------------------------------------------------------
-# Data pipeline helpers: jcomplete / jfilter storage and application
+# Data pipeline helpers: jcomplete / jsubset storage and application
 # These helpers manage per-dataset filter and complete-case settings,
 # apply them in the correct order, and generate info-line messages.
 # -----------------------------------------------------------------------------
 
 #' Internal helper: get filter settings for a named data frame
 #'
-#' Looks up the \code{jfilter()} settings stored under the
+#' Looks up the \code{jsubset()} settings stored under the
 #' \code{.jst_filter} option for a specific data frame name. Returns
 #' \code{NULL} if no filter is set for that data frame.
 #'
@@ -405,7 +405,7 @@
 #' Internal helper: set filter settings for a named data frame
 #'
 #' Stores filter settings under the \code{.jst_filter} option, keyed by
-#' data frame name. Used internally by \code{jfilter()}.
+#' data frame name. Used internally by \code{jsubset()}.
 #'
 #' @param data_name Character string giving the data frame name. If
 #'   \code{NULL}, the call is a silent no-op.
@@ -853,25 +853,72 @@
        dummy_coef_names = dummy_coef_names)
 }
 
+#' Internal helper: apply a logical mask expression to a data frame
+#'
+#' Shared mechanic for Step 2 (persistent jsubset) and Step 3 (per-call
+#' \code{subset =} argument) of \code{.jst_apply_pipeline()}. Evaluates
+#' \code{expr} in the data + caller environment, coerces \code{NA}s in
+#' the resulting mask to \code{FALSE}, and returns the filtered data
+#' frame. The two callers differ in upstream source (joptions state vs.
+#' argument) and downstream bookkeeping (which \code{sample_info} slot
+#' is populated); the masking step itself is identical.
+#'
+#' @param data Data frame to mask.
+#' @param expr Unevaluated logical expression (a language object).
+#' @param envir Environment to evaluate \code{expr} in. Data columns
+#'   take precedence; \code{envir} provides fallback bindings.
+#' @param on_error One of \code{"warn"} or \code{"stop"}. \code{"warn"}
+#'   emits a warning and returns the data unchanged — used for the
+#'   persistent jsubset state, where the expression was validated when
+#'   set and a runtime failure is unexpected. \code{"stop"} raises an
+#'   error — used for the per-call \code{subset =} argument, where a
+#'   broken expression is a user error at call time.
+#' @param stage_label Character. Prefix used in the error/warning
+#'   message (e.g. \code{"jsubset"} or \code{"Subset"}) so failures
+#'   are attributable to the right pipeline stage.
+#'
+#' @return The data frame filtered to rows where \code{expr} evaluates
+#'   to \code{TRUE} (\code{NA} treated as \code{FALSE}).
+#'
+#' @keywords internal
+.jst_apply_mask <- function(data, expr, envir, on_error, stage_label) {
+  on_error <- match.arg(on_error, c("warn", "stop"))
+  mask <- tryCatch(
+    eval(expr, data, envir),
+    error = function(e) {
+      msg <- paste0(stage_label, " expression could not be evaluated: ",
+                    conditionMessage(e))
+      if (on_error == "warn") {
+        warning(msg, call. = FALSE)
+        rep(TRUE, nrow(data))
+      } else {
+        stop(msg, call. = FALSE)
+      }
+    }
+  )
+  mask[is.na(mask)] <- FALSE
+  data[mask, , drop = FALSE]
+}
+
 #' Internal helper: apply the full data pipeline and return filtered data + messages
 #'
 #' Order of operations:
 #' \enumerate{
 #'   \item jcomplete (listwise deletion for registered variables)
-#'   \item jfilter (substantive filtering expression)
-#'   \item subset (one-off per-call filter)
+#'   \item jsubset (persistent case-selection expression)
+#'   \item subset (one-off per-call case-selection expression)
 #' }
 #'
-#' jcomplete and jfilter are keyed per-dataset. They apply whenever the
+#' jcomplete and jsubset are keyed per-dataset. They apply whenever the
 #' matching dataset is used, regardless of whether that dataset was supplied
 #' via the juse() default or specified explicitly in the function call.
 #' This matches the SPSS FILTER model: persistent state remains in effect
-#' until explicitly turned off via jfilter(off) / jcomplete(off).
+#' until explicitly turned off via jsubset(off) / jcomplete(off).
 #'
-#' When the current dataset has no jfilter / jcomplete set but at least one
+#' When the current dataset has no jsubset / jcomplete set but at least one
 #' other dataset does have an active setting, a yellow-coloured note is
-#' included in the pipeline messages to remind the user that filtering is
-#' not active for this particular dataset.
+#' included in the pipeline messages to remind the user that case selection
+#' is not active for this particular dataset.
 #'
 #' @param data The data frame.
 #' @param data_name Character string name of the data frame.
@@ -948,30 +995,23 @@
     }
   }
 
-  # -- Step 2: jfilter -------------------------------------------------------
+  # -- Step 2: jsubset -------------------------------------------------------
   fs <- .jst_get_filter(data_name)
   if (!is.null(fs)) {
     if (fs$active) {
       filter_active   <- TRUE
       filter_expr_str <- fs$expr_str
-      mask <- tryCatch(
-        eval(fs$expr, data, envir),
-        error = function(e) {
-          warning("Filter expression could not be evaluated: ",
-                  conditionMessage(e), call. = FALSE)
-          rep(TRUE, nrow(data))
-        }
-      )
-      mask[is.na(mask)] <- FALSE
-      data           <- data[mask, , drop = FALSE]
-      n_after_filter <- nrow(data)
+      data            <- .jst_apply_mask(data, fs$expr, envir,
+                                         on_error    = "warn",
+                                         stage_label = "jsubset")
+      n_after_filter  <- nrow(data)
     } else {
-      msgs <- c(msgs, "[YELLOW](Filter set but inactive)")
+      msgs <- c(msgs, "[YELLOW](jsubset set but inactive)")
     }
   } else {
-    # No filter set for this dataset — but one is set elsewhere?
+    # No jsubset set for this dataset — but one is set elsewhere?
     if (.jst_any_filter_active()) {
-      msgs <- c(msgs, "[YELLOW](Filter not active for this dataset)")
+      msgs <- c(msgs, "[YELLOW](jsubset not active for this dataset)")
     }
   }
 
@@ -981,15 +1021,9 @@
   subset_expr_str <- NULL
   if (!is.null(subset_expr)) {
     subset_expr_str <- paste(deparse(subset_expr), collapse = " ")
-    mask <- tryCatch(
-      eval(subset_expr, data, envir),
-      error = function(e) {
-        stop("Subset expression could not be evaluated: ",
-             conditionMessage(e), call. = FALSE)
-      }
-    )
-    mask[is.na(mask)] <- FALSE
-    data    <- data[mask, , drop = FALSE]
+    data           <- .jst_apply_mask(data, subset_expr, envir,
+                                      on_error    = "stop",
+                                      stage_label = "Subset")
     n_after_subset <- nrow(data)
   }
 
@@ -1425,15 +1459,15 @@
     prior_n <- sample_info$n_after_complete
   }
 
-  # jfilter drop (if active)
+  # jsubset drop (if active)
   if (isTRUE(sample_info$filter_active) &&
       !is.null(sample_info$n_after_filter)) {
     excluded <- prior_n - sample_info$n_after_filter
     label    <- if (!is.null(sample_info$filter_expr) &&
                     nzchar(sample_info$filter_expr)) {
-      paste0("Excluded by jfilter (", sample_info$filter_expr, ")")
+      paste0("Excluded by jsubset (", sample_info$filter_expr, ")")
     } else {
-      "Excluded by jfilter"
+      "Excluded by jsubset"
     }
     labels <- c(labels, label)
     ns     <- c(ns, excluded)
@@ -1674,7 +1708,7 @@
 #'   \item{\code{default}}{Data argument was missing; juse default used.}
 #'   \item{\code{null}}{User passed literal \code{NULL}; only returned
 #'     when \code{allow_null = TRUE}. Caller handles (e.g., for global
-#'     clear semantics in jdummy/jfilter/jcomplete).}
+#'     clear semantics in jdummy/jsubset/jcomplete).}
 #'   \item{\code{explicit}}{User passed an expression that evaluated
 #'     to a data frame. That data frame is used.}
 #'   \item{\code{vector_input}}{Only returned when
@@ -1907,17 +1941,18 @@
 # -----------------------------------------------------------------------------
 # .jst_label_system_missing
 # Display label used in output tables for the system-missing row (R's
-# plain NA, distinct from declared UDMs). Locked to "System" per SPSS
-# convention; Stata documentation also uses "system missing" so this term
-# works across both audiences. Referenced wherever a per-row missing
-# label is rendered (jfreq's Missing section in v0.9.6; CP table missing
-# rows when the UDM-content work lands; future jscreen tweaks if its
-# format aligns). Centralising as a constant ensures consistency if the
-# term ever changes.
+# plain NA, distinct from declared UDMs). "System/NA" reads in two
+# audiences at once: SPSS/Stata users recognise "System" as the platform
+# term for system-missing, and R users recognise "NA" as the in-language
+# token for the same thing. Referenced wherever a per-row missing label
+# is rendered (jfreq's Missing section in v0.9.6; CP table missing rows
+# when the UDM-content work lands; future jscreen tweaks if its format
+# aligns). Centralising as a constant ensures consistency if the term
+# ever changes.
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_label_system_missing <- "System"
+.jst_label_system_missing <- "System/NA"
 
 
 #' Internal helper: does a value label suggest missingness?
@@ -2760,63 +2795,63 @@ juse <- function(data) {
 }
 
 
-# -- jfilter ------------------------------------------------------------------
+# -- jsubset ------------------------------------------------------------------
 
-#' Set, activate, deactivate, or clear a per-dataset filter
+#' Set, activate, deactivate, or clear a per-dataset case-selection expression
 #'
 #' @description
-#' \code{jfilter()} sets a persistent filter expression that is applied
-#' automatically by JeffsStatTools analysis functions when the default
-#' data frame (set by \code{juse()}) is in use. This is analogous to
-#' the SPSS FILTER command.
+#' \code{jsubset()} sets a persistent case-selection expression that is
+#' applied automatically by JeffsStatTools analysis functions when the
+#' default data frame (set by \code{juse()}) is in use. This is analogous
+#' to the SPSS FILTER command.
 #'
-#' The filter is stored per dataset, so switching \code{juse()} between
-#' datasets preserves each dataset's filter independently.
+#' The expression is stored per dataset, so switching \code{juse()} between
+#' datasets preserves each dataset's setting independently.
 #'
-#' The filter applies whenever the matching dataset is used, regardless of
-#' whether it was supplied via \code{juse()} or specified explicitly in a
-#' function call. To bypass a filter temporarily without losing it, use
-#' \code{jfilter(off)} before the analysis and \code{jfilter(on)} afterward.
+#' The expression applies whenever the matching dataset is used, regardless
+#' of whether it was supplied via \code{juse()} or specified explicitly in
+#' a function call. To bypass it temporarily without losing it, use
+#' \code{jsubset(off)} before the analysis and \code{jsubset(on)} afterward.
 #' This matches the SPSS FILTER / USE ALL convention.
 #'
-#' Filter expressions use standard R logical operators: \code{==}, \code{!=},
+#' Expressions use standard R logical operators: \code{==}, \code{!=},
 #' \code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
 #' \code{!} (NOT), \code{xor()} (XOR), and \code{\%in\%}. Using \code{=} for
 #' equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
 #' produce a helpful error suggesting the correct R syntax.
 #'
-#' @param data Optional data frame. If supplied, the filter is stored on
-#'   that dataset specifically. If omitted, the dataset set by
+#' @param data Optional data frame. If supplied, the expression is stored
+#'   on that dataset specifically. If omitted, the dataset set by
 #'   \code{juse()} is used.
 #' @param expr A logical expression (e.g. \code{Age < 40 & Gender == 1}),
 #'   or one of the following special values:
 #'   \describe{
-#'     \item{\code{off}}{Deactivate the filter but remember the expression.}
-#'     \item{\code{on}}{Reactivate a previously deactivated filter.}
-#'     \item{\code{NULL}}{Clear the filter entirely (forget the expression).}
+#'     \item{\code{off}}{Deactivate the setting but remember the expression.}
+#'     \item{\code{on}}{Reactivate a previously deactivated setting.}
+#'     \item{\code{NULL}}{Clear the setting entirely (forget the expression).}
 #'   }
 #'   If \code{expr} and \code{data} are both omitted, prints the current
-#'   filter status.
+#'   jsubset status.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
 #' @examples
 #' \donttest{
 #' juse(mtcars)
-#' jfilter(cyl == 4)             # Set using juse default
-#' jfilter(mtcars, cyl == 4)     # Explicit dataset
-#' jfilter(cyl == 4 & mpg > 20)  # Compound condition
-#' jfilter(off)                  # Deactivate
-#' jfilter(on)                   # Reactivate
-#' jfilter()                     # Check status
-#' jfilter(NULL)                 # Clear entirely
+#' jsubset(cyl == 4)             # Set using juse default
+#' jsubset(mtcars, cyl == 4)     # Explicit dataset
+#' jsubset(cyl == 4 & mpg > 20)  # Compound condition
+#' jsubset(off)                  # Deactivate
+#' jsubset(on)                   # Reactivate
+#' jsubset()                     # Check status
+#' jsubset(NULL)                 # Clear entirely
 #' }
 #'
 #' @seealso \code{\link{JeffsStatTools}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jfilter <- function(data, expr) {
+jsubset <- function(data, expr) {
 
   # -- No arguments: print status -------------------------------------------
   if (missing(data) && missing(expr)) {
@@ -2827,11 +2862,11 @@ jfilter <- function(data, expr) {
     }
     fs <- .jst_get_filter(default_name)
     if (is.null(fs)) {
-      message("No filter set for ", default_name, ".")
+      message("No jsubset set for ", default_name, ".")
     } else if (fs$active) {
-      message("Filter active for ", default_name, ": ", fs$expr_str)
+      message("jsubset active for ", default_name, ": ", fs$expr_str)
     } else {
-      message("Filter set but inactive for ", default_name, ".")
+      message("jsubset set but inactive for ", default_name, ".")
     }
     return(invisible(NULL))
   }
@@ -2840,15 +2875,15 @@ jfilter <- function(data, expr) {
   raw_data <- if (!missing(data)) substitute(data) else NULL
   raw_expr <- if (!missing(expr)) substitute(expr) else NULL
 
-  # -- jfilter(NULL) — true global clear across all data frames -------------
+  # -- jsubset(NULL) — true global clear across all data frames -------------
   # Mirrors jdummy(NULL) semantics. Ignores the juse default; always
-  # clears every per-data-frame filter setting. The condition
+  # clears every per-data-frame jsubset setting. The condition
   # "data was supplied AND substituted expression is NULL" detects the
-  # literal jfilter(NULL) call (cf. missing(data), which is FALSE here).
+  # literal jsubset(NULL) call (cf. missing(data), which is FALSE here).
   if (!missing(data) && is.null(raw_data)) {
     all_filters <- getOption(".jst_filter", default = list())
     if (length(all_filters) == 0) {
-      message("No filters to clear.")
+      message("No jsubset settings to clear.")
       return(invisible(NULL))
     }
     summary_lines <- character(length(all_filters))
@@ -2856,20 +2891,20 @@ jfilter <- function(data, expr) {
       dname <- names(all_filters)[i]
       fs    <- all_filters[[i]]
       if (is.null(fs)) {
-        summary_lines[i] <- paste0("  - ", dname, " (no filter)")
+        summary_lines[i] <- paste0("  - ", dname, " (no jsubset set)")
       } else {
         summary_lines[i] <- paste0("  - ", dname, " (had: ", fs$expr_str, ")")
       }
     }
     options(.jst_filter = NULL)
     n_frames <- length(all_filters)
-    cat("Cleared filter settings for ", n_frames,
+    cat("Cleared jsubset settings for ", n_frames,
         " data frame", if (n_frames == 1L) "" else "s", ":\n", sep = "")
     cat(paste(summary_lines, collapse = "\n"), "\n", sep = "")
     return(invisible(NULL))
   }
 
-  # -- jfilter(off) / jfilter(on) — default-scoped --------------------------
+  # -- jsubset(off) / jsubset(on) — default-scoped --------------------------
   # Symbol checks happen on raw_data BEFORE the helper, since `off` and
   # `on` aren't real R objects and would fail evaluation.
   if (!is.null(raw_data) && is.symbol(raw_data) && missing(expr)) {
@@ -2882,11 +2917,11 @@ jfilter <- function(data, expr) {
       }
       fs <- .jst_get_filter(default_name)
       if (is.null(fs)) {
-        message("No filter set for ", default_name, ". Nothing to deactivate.")
+        message("No jsubset set for ", default_name, ". Nothing to deactivate.")
       } else {
         fs$active <- FALSE
         .jst_set_filter(default_name, fs)
-        message("Filter deactivated for ", default_name, ".")
+        message("jsubset deactivated for ", default_name, ".")
       }
       return(invisible(NULL))
     }
@@ -2897,26 +2932,26 @@ jfilter <- function(data, expr) {
       }
       fs <- .jst_get_filter(default_name)
       if (is.null(fs)) {
-        message("No filter set for ", default_name,
-                ". Use jfilter(expression) to set one.")
+        message("No jsubset set for ", default_name,
+                ". Use jsubset(expression) to set one.")
       } else {
         fs$active <- TRUE
         .jst_set_filter(default_name, fs)
-        message("Filter reactivated for ", default_name, ": ", fs$expr_str)
+        message("jsubset reactivated for ", default_name, ": ", fs$expr_str)
       }
       return(invisible(NULL))
     }
   }
 
-  # -- Resolve which arg is the data and which is the filter expression -----
-  # Uses the standard helper. For jfilter, the helper distinguishes:
-  #   explicit            : raw_data is a data frame  -> raw_expr is the filter
-  #   default             : missing(data)             -> raw_expr is the filter
-  #   symbol_with_default : raw_data is the filter    -> juse default + raw_data
+  # -- Resolve which arg is the data and which is the expression ------------
+  # Uses the standard helper. For jsubset, the helper distinguishes:
+  #   explicit            : raw_data is a data frame  -> raw_expr is the expr
+  #   default             : missing(data)             -> raw_expr is the expr
+  #   symbol_with_default : raw_data is the expr      -> juse default + raw_data
   arg1 <- .jst_resolve_first_arg(
     data_sub      = raw_data,
     data_missing  = missing(data),
-    fn_name       = "jfilter",
+    fn_name       = "jsubset",
     envir         = parent.frame(),
     accept_vector = FALSE
   )
@@ -2924,21 +2959,21 @@ jfilter <- function(data, expr) {
   target_name <- arg1$name
 
   if (arg1$mode == "explicit") {
-    # jfilter(SampleData, <expr>) — explicit data frame + expression slot
+    # jsubset(SampleData, <expr>) — explicit data frame + expression slot
     if (missing(expr)) {
-      stop("jfilter(", target_name, ", ...) requires a filter expression. ",
-           "Example: jfilter(", target_name, ", Age < 40)", call. = FALSE)
+      stop("jsubset(", target_name, ", ...) requires a logical expression. ",
+           "Example: jsubset(", target_name, ", Age < 40)", call. = FALSE)
     }
     filter_raw <- raw_expr
   } else if (arg1$mode == "default") {
-    # jfilter(, <expr>) — leading comma + juse default
+    # jsubset(, <expr>) — leading comma + juse default
     if (is.null(raw_expr)) {
-      stop("jfilter(): no filter expression supplied. ",
-           "Example: jfilter(Age < 40)", call. = FALSE)
+      stop("jsubset(): no logical expression supplied. ",
+           "Example: jsubset(Age < 40)", call. = FALSE)
     }
     filter_raw <- raw_expr
   } else {
-    # symbol_with_default — jfilter(<expr>) bare-expression form
+    # symbol_with_default — jsubset(<expr>) bare-expression form
     filter_raw <- arg1$first_arg_sub
   }
 
@@ -2946,21 +2981,54 @@ jfilter <- function(data, expr) {
   expr_str_for_check <- deparse(filter_raw, width.cutoff = 500)
   .jst_check_filter_syntax(filter_raw, expr_str_for_check)
 
-  # -- Set and activate the filter -----------------------------------------
+  # -- Set and activate the expression --------------------------------------
   expr_str <- deparse(filter_raw, width.cutoff = 500)
   .jst_set_filter(target_name, list(
     expr     = filter_raw,
     expr_str = expr_str,
     active   = TRUE
   ))
-  message("Filter set and activated for ", target_name, ": ", expr_str)
+  message("jsubset set and activated for ", target_name, ": ", expr_str)
   invisible(NULL)
+}
+
+
+# -- jfilter (deprecation alias) ----------------------------------------------
+
+#' Deprecated alias for \code{jsubset()}
+#'
+#' @description
+#' \code{jfilter()} was renamed to \code{\link{jsubset}()} to align with
+#' base R's \code{subset =} argument and the per-call \code{subset =}
+#' argument used by JeffsStatTools analysis functions. \code{jfilter()}
+#' continues to work as a thin alias that forwards every call directly
+#' to \code{jsubset()}; the alias issues an \code{\link{.Deprecated}}
+#' message on each call and will be removed in a future release.
+#'
+#' @param data See \code{\link{jsubset}()}.
+#' @param expr See \code{\link{jsubset}()}.
+#'
+#' @return Invisibly returns \code{NULL}. Called for its side effect.
+#'
+#' @seealso \code{\link{jsubset}}
+#'
+#' @keywords internal
+#' @export
+jfilter <- function(data, expr) {
+  .Deprecated("jsubset",
+              msg = "jfilter() has been renamed to jsubset(). Please use jsubset() in new code.")
+  # Forward the captured call to jsubset() so substitute()-based argument
+  # handling sees the original unevaluated arguments (off / on / NULL /
+  # bare-symbol / explicit-data forms all need to reach jsubset intact).
+  cl    <- sys.call()
+  cl[[1L]] <- as.name("jsubset")
+  eval.parent(cl)
 }
 
 
 # -- .jst_check_filter_syntax -------------------------------------------------
 
-#' Internal helper: detect common SPSS-style syntax mistakes in jfilter
+#' Internal helper: detect common SPSS-style syntax mistakes in jsubset
 #' expressions and provide guidance toward standard R operators.
 #'
 #' Catches:
@@ -2968,28 +3036,29 @@ jfilter <- function(data, expr) {
 #' - \code{AND} / \code{OR} / \code{NOT} / \code{XOR} used as identifiers
 #'   where \code{&} / \code{|} / \code{!} / \code{xor()} were meant
 #'
-#' @param raw_expr The unevaluated filter expression (a language object).
+#' @param raw_expr The unevaluated expression (a language object).
 #' @param expr_str The deparsed expression string (for display in errors).
 #' @keywords internal
 .jst_check_filter_syntax <- function(raw_expr, expr_str) {
 
-  # Catch a bare symbol used as the entire filter expression, e.g.
-  # jfilter(Gender). The user almost certainly meant a comparison
+  # Catch a bare symbol used as the entire subset expression, e.g.
+  # jsubset(Gender). The user almost certainly meant a comparison
   # like Gender == 1. Without this check, the symbol gets stored as
-  # the filter and later attempts to apply it produce cryptic errors
-  # from haven_labelled internals when subset_data is non-logical.
+  # the expression and later attempts to apply it produce cryptic
+  # errors from haven_labelled internals when subset_data is
+  # non-logical.
   if (is.symbol(raw_expr)) {
     sym <- as.character(raw_expr)
     if (!sym %in% c("TRUE", "FALSE", "T", "F")) {
       stop(
-        "Filter expression `", sym, "` is just a variable name and ",
-        "cannot be used as a filter on its own. A filter expression ",
-        "must compare a variable to a value (or evaluate to TRUE/FALSE ",
-        "for each row).\n",
+        "Subset expression `", sym, "` is just a variable name and ",
+        "cannot be used as a subset expression on its own. A subset ",
+        "expression must compare a variable to a value (or evaluate to ",
+        "TRUE/FALSE for each row).\n",
         "  Examples:\n",
-        "    jfilter(", sym, " == 1)         # keep rows where ", sym, " is 1\n",
-        "    jfilter(!is.na(", sym, "))       # keep rows where ", sym, " is not missing\n",
-        "  You wrote: jfilter(", sym, ")",
+        "    jsubset(", sym, " == 1)         # keep rows where ", sym, " is 1\n",
+        "    jsubset(!is.na(", sym, "))       # keep rows where ", sym, " is not missing\n",
+        "  You wrote: jsubset(", sym, ")",
         call. = FALSE
       )
     }
@@ -3009,13 +3078,13 @@ jfilter <- function(data, expr) {
                           NOT = "`!` (exclamation mark)",
                           XOR = "`xor()` (a function call)")
     stop(
-      "It looks like you used `", kw, "` in your filter expression, ",
+      "It looks like you used `", kw, "` in your subset expression, ",
       "which R treats as a variable name, not a logical operator.\n",
       "  In R, use ", replacement, " instead.\n",
       "  Examples:\n",
-      "    jfilter(Age < 40 & Gender == 1)     # AND\n",
-      "    jfilter(Age < 40 | Age > 60)        # OR\n",
-      "    jfilter(!is.na(Age))                # NOT\n",
+      "    jsubset(Age < 40 & Gender == 1)     # AND\n",
+      "    jsubset(Age < 40 | Age > 60)        # OR\n",
+      "    jsubset(!is.na(Age))                # NOT\n",
       "  You wrote: ", expr_str,
       call. = FALSE
     )
@@ -3030,9 +3099,9 @@ jfilter <- function(data, expr) {
   # that isn't part of `==`, `<=`, `>=`, or `!=`.
   if (grepl("(?<![=<>!])=(?!=)", expr_str, perl = TRUE)) {
     stop(
-      "It looks like you used `=` in your filter expression. In R, `=` is ",
+      "It looks like you used `=` in your subset expression. In R, `=` is ",
       "assignment; equality comparison uses `==` (double equals).\n",
-      "  Example: jfilter(Gender == 1)\n",
+      "  Example: jsubset(Gender == 1)\n",
       "  You wrote: ", expr_str,
       call. = FALSE
     )
@@ -3128,7 +3197,7 @@ jcomplete <- function(data, ...) {
   raw_data <- if (!missing(data)) substitute(data) else NULL
 
   # -- jcomplete(NULL) — true global clear across all data frames -----------
-  # Mirrors jdummy(NULL) and jfilter(NULL) semantics. Ignores juse default;
+  # Mirrors jdummy(NULL) and jsubset(NULL) semantics. Ignores juse default;
   # always clears every per-data-frame jcomplete setting. The condition
   # "data was supplied AND substituted expression is NULL" detects the
   # literal jcomplete(NULL) call.
@@ -3400,7 +3469,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 
   # -- jdummy(NULL) — clear ALL registrations across every data frame --------
   # The condition "data was supplied AND substituted expression is NULL"
-  # detects the literal jdummy(NULL) call. Mirrors jfilter(NULL) and
+  # detects the literal jdummy(NULL) call. Mirrors jsubset(NULL) and
   # jcomplete(NULL).
   if (!missing(data) && is.null(raw_data)) {
     all_dummy <- getOption(".jst_dummy", default = list())
@@ -3472,7 +3541,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
   }
 
   # Treat jdummy(SampleData, NULL) as a per-dataset clear, matching the
-  # convention used by jfilter(SampleData, NULL) and jcomplete(SampleData,
+  # convention used by jsubset(SampleData, NULL) and jcomplete(SampleData,
   # NULL). The clear-all form jdummy(NULL) is handled earlier and never
   # reaches this point.
   if (identical(var_name, "NULL")) {
@@ -3746,7 +3815,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'   Case Processing Summary to print on every call. \code{FALSE}
 #'   suppresses it on every call. \code{NULL} (the auto-suppress default
 #'   at the standard tier) prints only when the call had something to
-#'   report — pipeline state was active (\code{jfilter},
+#'   report — pipeline state was active (\code{jsubset},
 #'   \code{jcomplete}, or per-call \code{subset}), listwise deletion
 #'   excluded at least one case (in listwise functions like \code{jlm},
 #'   \code{jt}), or a per-variable discrepancy notification fires (in
@@ -4169,8 +4238,8 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
 #'   descriptives are computed separately for each group, with a separate
 #'   titled table per dependent variable.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical. If \code{TRUE} (default), prints the variable type
 #'   and label (or "None") for each variable before the table.
 #'
@@ -4271,7 +4340,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
 
     group_levels <- levels(data[[by_name]])
 
-    # Apply data pipeline (jcomplete, jfilter, subset) — once before per-variable loop
+    # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
     subset_expr <- substitute(subset)
     pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                     subset_expr = subset_expr, envir = parent.frame())
@@ -4392,7 +4461,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
   .cat_red("Descriptive Statistics\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -4518,8 +4587,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL) {
 #' @param ... Unquoted variable name(s) within \code{data} (ignored if
 #'   \code{data} is a vector).
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical or NULL. If TRUE, prints the variable type and
 #'   label (or "None") beneath the title. If FALSE, suppresses them. If
 #'   NULL (default), defers to \code{joutput()}'s \code{var.labels}
@@ -4589,7 +4658,7 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
   var_names_check <- vapply(variables, rlang::quo_name, character(1))
   .jst_check_vars(data, var_names_check, .jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset) — once before per-variable loop
+  # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -4893,8 +4962,8 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL) {
 #' @param outlier.sd Numeric. Number of standard deviations from the mean
 #'   to flag as potential outliers. Default is 3.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical or NULL. If TRUE, prints variable labels
 #'   when available. If FALSE, suppresses them. If NULL (default),
 #'   defers to \code{joutput()}'s \code{var.labels} setting.
@@ -4967,7 +5036,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
   .cat_red("Data Screening\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
   data     <- pipeline$data
@@ -5108,8 +5177,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 #' @param ci Logical or NULL. If TRUE, adds 95\% confidence interval for the
 #'   mean difference. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #' @param full Logical. If TRUE, turns on effect.size, levene, and ci
@@ -5174,7 +5243,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   }
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -5227,13 +5296,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
       if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
       fs <- .jst_get_filter(.jst_data_name)
       if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
-                                                       paste0("jfilter (", fs$expr_str, ")"))
+                                                       paste0("jsubset (", fs$expr_str, ")"))
     }
     if (length(active_steps) > 0) {
       stop(paste0("'", group_name, "' has ", n_levels,
                   " category(ies) after applying ", paste(active_steps, collapse = " and "),
                   ". A t-test requires exactly 2. ",
-                  "Check whether your filter or complete-case settings ",
+                  "Check whether your jsubset or jcomplete settings ",
                   "are excluding one of the groups."), call. = FALSE)
     } else {
       stop(paste0("'", group_name, "' has ", n_levels,
@@ -5449,8 +5518,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' @param ci Logical or NULL. If TRUE, adds 95\% confidence intervals to the
 #'   group descriptives table. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #' @param full Logical. If TRUE, turns on posthoc, effect.size, levene,
@@ -5515,7 +5584,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   }
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -5567,13 +5636,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
       fs <- .jst_get_filter(.jst_data_name)
       if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
-                                                       paste0("jfilter (", fs$expr_str, ")"))
+                                                       paste0("jsubset (", fs$expr_str, ")"))
     }
     if (length(active_steps) > 0) {
       stop(paste0("'", group_name, "' has ", n_levels,
                   " category(ies) after applying ", paste(active_steps, collapse = " and "),
                   ". An ANOVA requires at least 2. ",
-                  "Check whether your filter or complete-case settings ",
+                  "Check whether your jsubset or jcomplete settings ",
                   "are excluding one or more groups."), call. = FALSE)
     } else {
       stop(paste0("'", group_name, "' has ", n_levels,
@@ -5838,8 +5907,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param row.pct Logical. If TRUE (default), shows row percentages.
 #' @param col.pct Logical. If TRUE, shows column percentages. Default is FALSE.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #'
@@ -5896,7 +5965,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   .cat_red("Cross-Tabulation\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -5960,7 +6029,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
         if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
         fs <- .jst_get_filter(.jst_data_name)
         if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
-                                                         paste0("jfilter (", fs$expr_str, ")"))
+                                                         paste0("jsubset (", fs$expr_str, ")"))
       }
       context <- if (length(active_steps) > 0) {
         paste0(" after applying ", paste(active_steps, collapse = " and "))
@@ -6108,8 +6177,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @param method Character. Correlation method: "pearson" (default),
 #'   "spearman", or "kendall".
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #'
@@ -6181,7 +6250,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
   .cat_red(paste0(method_label, " Bivariate Correlations\n"))
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -6794,8 +6863,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL) {
 #' @param formula A model formula, e.g. \code{y ~ x1 + x2}.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #' @param numeric Optional character vector of variable names that should be
@@ -6911,7 +6980,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   .cat_red("Linear Regression\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -7372,7 +7441,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
       stop("The following predictor(s) have no variation in the ",
            "analysis sample (only one unique value); cannot fit slope: ",
            paste(constant_ivs, collapse = ", "), ". This often happens ",
-           "when jfilter() restricts the sample to a single category of ",
+           "when jsubset() restricts the sample to a single category of ",
            "a variable that is then used as a predictor.",
            call. = FALSE)
     }
@@ -7577,7 +7646,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 #'   must be a binary variable coded 0/1.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only.
+#'   \code{Group == 1}) to subset cases for this call only.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #' @param numeric Optional character vector of variable names to treat
@@ -7699,7 +7768,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   .cat_red("Logistic Regression\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -8251,8 +8320,8 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
 #' @param data A data frame.
 #' @param ... Unquoted variable names (scale items) within \code{data}.
 #' @param subset An optional unquoted logical expression (e.g.
-#'   \code{Group == 1}) to filter cases for this call only. Applied after
-#'   jcomplete and jfilter. Does not affect other function calls.
+#'   \code{Group == 1}) to subset cases for this call only. Applied after
+#'   jcomplete and jsubset. Does not affect other function calls.
 #' @param labels Logical. If TRUE (default), prints variable labels
 #'   when available.
 #'
@@ -8312,7 +8381,7 @@ jalpha <- function(data, ..., subset = NULL, labels = NULL) {
   .cat_red("Reliability Analysis\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -13681,7 +13750,7 @@ jsave <- function(data, file, overwrite = FALSE) {
 #' categorical). Calls that would otherwise auto-detect to a scatter or
 #' boxplot produce a helpful error directing you to the formula form.
 #'
-#' Supports pipeline integration (\code{jfilter}, \code{jcomplete}, per-call
+#' Supports pipeline integration (\code{jsubset}, \code{jcomplete}, per-call
 #' \code{subset}), grouping via \code{by = }, and regression lines with
 #' equation/R-squared/band annotations.
 #'
@@ -13891,7 +13960,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "\"lm\", \"loess\", \"connect\".", call. = FALSE)
   }
 
-  # Apply data pipeline (jcomplete, jfilter, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr,

@@ -25,7 +25,7 @@ must be a binary variable coded 0/1.}
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
-\code{Group == 1}) to filter cases for this call only.}
+\code{Group == 1}) to subset cases for this call only.}
 
 \item{labels}{Logical. If TRUE (default), prints variable labels
 when available.}

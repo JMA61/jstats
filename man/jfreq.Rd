@@ -13,8 +13,8 @@ jfreq(data, ..., subset = NULL, labels = NULL)
 \code{data} is a vector).}
 
 \item{subset}{An optional unquoted logical expression (e.g.
-\code{Group == 1}) to filter cases for this call only. Applied after
-jcomplete and jfilter. Does not affect other function calls.}
+\code{Group == 1}) to subset cases for this call only. Applied after
+jcomplete and jsubset. Does not affect other function calls.}
 
 \item{labels}{Logical or NULL. If TRUE, prints the variable type and
 label (or "None") beneath the title. If FALSE, suppresses them. If

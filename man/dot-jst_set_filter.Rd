@@ -18,6 +18,6 @@
 }
 \description{
 Stores filter settings under the \code{.jst_filter} option, keyed by
-data frame name. Used internally by \code{jfilter()}.
+data frame name. Used internally by \code{jsubset()}.
 }
 \keyword{internal}

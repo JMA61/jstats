@@ -2,13 +2,13 @@
 % Please edit documentation in R/7036Tools.R
 \name{.jst_check_filter_syntax}
 \alias{.jst_check_filter_syntax}
-\title{Internal helper: detect common SPSS-style syntax mistakes in jfilter
+\title{Internal helper: detect common SPSS-style syntax mistakes in jsubset
 expressions and provide guidance toward standard R operators.}
 \usage{
 .jst_check_filter_syntax(raw_expr, expr_str)
 }
 \arguments{
-\item{raw_expr}{The unevaluated filter expression (a language object).}
+\item{raw_expr}{The unevaluated expression (a language object).}
 
 \item{expr_str}{The deparsed expression string (for display in errors).}
 }
