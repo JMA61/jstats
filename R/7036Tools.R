@@ -5207,6 +5207,22 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
 }
 
 
+#' Internal helper: coerce a POSIXlt vector to atomic POSIXct
+#'
+#' POSIXlt is list-backed (nine parallel components), which makes
+#' \code{table()}, \code{unique()}, and \code{stats::complete.cases()} either
+#' abort or misbehave. Returns the equivalent atomic POSIXct (same instants);
+#' non-POSIXlt input is returned unchanged. Mirrors the POSIXlt -> POSIXct
+#' remedy jsave recommends for unstorable column types.
+#'
+#' @param x A variable / data-frame column.
+#' @return \code{x} as POSIXct if it was POSIXlt, otherwise \code{x} unchanged.
+#' @keywords internal
+.jst_posixlt_to_posixct <- function(x) {
+  if (inherits(x, "POSIXlt")) as.POSIXct(x) else x
+}
+
+
 # -- jfreq --------------------------------------------------------------------
 
 #' SPSS-like frequency tables for categorical variables
@@ -5347,6 +5363,12 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
     analysis_vars = var_names_check
   )
 
+  # Distinct-value count above which a frequency table is flagged as possibly
+  # uninformative. Type-agnostic (catches timestamps, continuous measures, and
+  # free-text IDs alike); jfreq still tabulates — the note is advisory only.
+  # (Session 47)
+  card_warn_threshold <- 50L
+
   # -- Per-variable blocks ---------------------------------------------------
   for (variable in variables) {
     variable_name <- rlang::quo_name(variable)
@@ -5355,6 +5377,16 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
     temp_var      <- data[[variable_name]]
     var_class     <- class(temp_var)
     var_label_val <- .get_var_label_str(data[[variable_name]])
+
+    # POSIXlt is list-backed; table()/is.na() try to cross-classify its nine
+    # components and abort ("attempt to make a table with >= 2^31 elements").
+    # Coerce to atomic POSIXct for tabulation (same instants); var_class above
+    # keeps the displayed Type honest. (Session 47)
+    temp_var <- .jst_posixlt_to_posixct(temp_var)
+
+    # Cardinality guard: count distinct non-missing values for the advisory
+    # note printed with this variable's block below. (Session 47)
+    n_distinct_vals <- length(unique(temp_var[!is.na(temp_var)]))
 
     # Sort key for Valid rows: build a (display_string, sort_key) mapping
     # so the table sorts numerically when the underlying values are
@@ -5521,6 +5553,11 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
     if (show_var_labels) {
       cat("  Type: ", .format_var_type(var_class), "\n", sep = "")
       cat("  Variable label: ", var_label_val, "\n", sep = "")
+    }
+    if (n_distinct_vals > card_warn_threshold) {
+      cat("  Note: '", variable_name, "' has ", n_distinct_vals,
+          " distinct values; a frequency table may not be informative.\n",
+          sep = "")
     }
     cat("\n")
 
@@ -5713,6 +5750,15 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
                                   subset_expr = subset_expr, envir = parent.frame())
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
+
+  # POSIXlt columns are list-backed; stats::complete.cases() and unique()
+  # below either abort or misbehave on them. Coerce to atomic POSIXct (same
+  # instants) so screening degrades gracefully instead of erroring. A coerced
+  # column reports its Type as POSIXct rather than POSIXlt. (Session 47)
+  lt_cols <- vapply(data, function(col) inherits(col, "POSIXlt"), logical(1))
+  if (any(lt_cols)) {
+    data[lt_cols] <- lapply(data[lt_cols], .jst_posixlt_to_posixct)
+  }
 
   # Resolve display toggles
   labels <- .jst_resolve_toggle("var.labels", labels)
