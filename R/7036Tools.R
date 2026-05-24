@@ -261,7 +261,11 @@
   display_cols <- lapply(seq_len(ncol(df)), function(j) {
     col <- df[[j]]
     if (is.numeric(col)) {
-      ifelse(is.na(col), "", format(col, trim = TRUE))
+      # scientific = FALSE keeps round/large values in plain decimal form
+      # (e.g. 200000, not "2e+05"; 70, not "7e+01"). format() still gives a
+      # column uniform decimal places, so right-justified numeric columns
+      # align on the decimal point. (Session 50)
+      ifelse(is.na(col), "", format(col, trim = TRUE, scientific = FALSE))
     } else {
       as.character(ifelse(is.na(col), "", col))
     }
@@ -659,7 +663,7 @@
   if (is_haven) {
     var_type   <- "haven_labelled"
     val_labels <- labelled::val_labels(x)
-    codes      <- as.numeric(sort(unique(x[!is.na(x)])))
+    codes      <- .jst_as_numeric(sort(unique(x[!is.na(x)])))
     raw_labels <- character(length(codes))
     for (i in seq_along(codes)) {
       match_idx <- which(val_labels == codes[i])
@@ -848,7 +852,7 @@
 #' @keywords internal
 .jst_expand_one_dummy <- function(data, formula_str, reg) {
 
-  orig_col         <- as.numeric(data[[reg$var_name]])
+  orig_col         <- .jst_as_numeric(data[[reg$var_name]])
   dummy_coef_names <- character(0)
 
   for (j in seq_along(reg$non_ref_idx)) {
@@ -2706,6 +2710,25 @@
   )
 }
 
+#' Internal helper: class-safe numeric coercion for haven-input columns
+#'
+#' Equivalent to \code{as.numeric(x)} for every input type (numeric, factor,
+#' Date/POSIXct/difftime, character, and haven_labelled all give the same
+#' result, since \code{unclass()} strips only the class attribute), but
+#' bypasses vctrs method dispatch. A bare \code{as.numeric()} on a
+#' \code{haven_labelled} vector can abort with "Can't convert
+#' <haven_labelled> to <double>" in a fresh session where \code{readxl} was
+#' attached before haven registered its \code{vec_cast} method (and always
+#' aborts on a character-backed haven_labelled). Stripping the class first
+#' sidesteps the dispatch entirely. Standardised package-wide at the
+#' haven-input coercion sites in jdesc, jfreq, jscreen, jt, jaov, jcrosstab,
+#' jcorr, jlm, jlogistic, jalpha, jdummy, and jrecode. (Session 50)
+#'
+#' @param x A variable / data-frame column.
+#' @return A numeric vector.
+#' @keywords internal
+.jst_as_numeric <- function(x) as.numeric(unclass(x))
+
 #' Internal helper: classify a variable's analysis-relevant type "kind"
 #'
 #' Single source of truth for the variable-type distinctions the analysis
@@ -2726,7 +2749,7 @@
     return(list(kind = "datetime", num = NULL))
   if (is.complex(x)) return(list(kind = "complex", num = NULL))
   if (is.raw(x))     return(list(kind = "raw",     num = NULL))
-  if (haven::is.labelled(x)) return(list(kind = "labelled", num = as.numeric(x)))
+  if (haven::is.labelled(x)) return(list(kind = "labelled", num = .jst_as_numeric(x)))
   if (is.logical(x)) return(list(kind = "logical", num = as.numeric(x)))
   if (is.factor(x)) {
     num <- suppressWarnings(as.numeric(as.character(x)))
@@ -4996,7 +5019,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
 
     is_labelled_by <- haven::is.labelled(by_var)
     if (is_labelled_by) {
-      original_codes  <- sort(unique(as.numeric(by_var[!is.na(by_var)])))
+      original_codes  <- sort(unique(.jst_as_numeric(by_var[!is.na(by_var)])))
       data[[by_name]] <- haven::as_factor(by_var)
     } else if (!is.factor(data[[by_name]])) {
       data[[by_name]] <- factor(data[[by_name]])
@@ -5169,14 +5192,20 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
   # -- Compute descriptives on filtered data ---------------------------------
   descriptives_list <- lapply(good_vars, function(v) {
     var_data <- .jst_classify_desc_var(data[[v]], v)$num
+    n        <- sum(!is.na(var_data))
+    # Guard against a variable with zero non-missing values: min()/max()
+    # would return Inf/-Inf (and emit base R "no non-missing arguments"
+    # warnings), while mean()/sd() return NaN/NA. Report all four as NA
+    # (rendered blank) instead, matching the grouped path's per-group
+    # guard above. (Session 50)
     data.frame(
       Variable    = v,
       Total       = length(var_data),
-      Non_missing = sum(!is.na(var_data)),
-      Min         = round(min(var_data, na.rm = TRUE), 3),
-      Max         = round(max(var_data, na.rm = TRUE), 3),
-      Mean        = round(mean(var_data, na.rm = TRUE), 3),
-      SD          = round(stats::sd(var_data, na.rm = TRUE), 3),
+      Non_missing = n,
+      Min         = if (n > 0) round(min(var_data, na.rm = TRUE), 3) else NA,
+      Max         = if (n > 0) round(max(var_data, na.rm = TRUE), 3) else NA,
+      Mean        = if (n > 0) round(mean(var_data, na.rm = TRUE), 3) else NA,
+      SD          = if (n > 0) round(stats::sd(var_data, na.rm = TRUE), 3) else NA,
       stringsAsFactors = FALSE
     )
   })
@@ -5395,7 +5424,7 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
     # Haven-labelled: combine numeric codes with value labels.
     if (haven::is.labelled(temp_var)) {
       label_text <- as.character(haven::as_factor(temp_var))
-      codes      <- as.numeric(temp_var)
+      codes      <- .jst_as_numeric(temp_var)
       val_labs   <- labelled::val_labels(temp_var)
       # When a code has no entry in val_labels, haven::as_factor falls
       # back to the stringified value, producing display strings like
@@ -5748,12 +5777,23 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
   .jst_print_msgs(pipeline$msgs)
 
   # POSIXlt columns are list-backed; stats::complete.cases() and unique()
-  # below either abort or misbehave on them. Coerce to atomic POSIXct (same
-  # instants) so screening degrades gracefully instead of erroring. A coerced
-  # column reports its Type as POSIXct rather than POSIXlt. (Session 47)
-  lt_cols <- vapply(data, function(col) inherits(col, "POSIXlt"), logical(1))
+  # below either abort or misbehave on them. Capture each column's original
+  # class BEFORE coercing, then coerce any POSIXlt column to atomic POSIXct
+  # (same instants) so screening degrades gracefully instead of erroring.
+  # as.POSIXct() drops both the POSIXlt class and the `label` attribute, so
+  # the captured class keeps the displayed Type honest ("POSIXlt, POSIXt",
+  # not the coerced "POSIXct, POSIXt") and the label is re-attached so the
+  # column still appears in the Variable Labels list --- mirrors the
+  # pre-coercion capture jfreq already does. (Session 47; honesty fix
+  # Session 50)
+  orig_classes <- lapply(data, class)
+  lt_cols      <- vapply(data, function(col) inherits(col, "POSIXlt"), logical(1))
   if (any(lt_cols)) {
-    data[lt_cols] <- lapply(data[lt_cols], .jst_posixlt_to_posixct)
+    for (nm in names(data)[lt_cols]) {
+      lab        <- labelled::var_label(data[[nm]])
+      data[[nm]] <- .jst_posixlt_to_posixct(data[[nm]])
+      if (!is.null(lab)) labelled::var_label(data[[nm]]) <- lab
+    }
   }
 
   # Resolve display toggles
@@ -5780,7 +5820,9 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
     } else if (is.character(col)) {
       "character"
     } else {
-      paste(class(col), collapse = ", ")
+      # Use the pre-coercion class so a POSIXlt column coerced to POSIXct
+      # above still reports its original Type. (Session 50)
+      paste(orig_classes[[v]], collapse = ", ")
     }
 
     n_missing   <- sum(is.na(col))
@@ -5789,7 +5831,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL) {
 
     n_outliers <- NA
     if (is.numeric(col) || haven::is.labelled(col)) {
-      num_col <- as.numeric(col)
+      num_col <- .jst_as_numeric(col)
       m <- mean(num_col, na.rm = TRUE)
       s <- stats::sd(num_col, na.rm = TRUE)
       n_outliers <- if (!is.na(s) && s > 0) {
@@ -5999,7 +6041,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   group_var   <- data[[group_name]]
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
-    original_codes <- sort(unique(as.numeric(group_var[!is.na(group_var)])))
+    original_codes <- sort(unique(.jst_as_numeric(group_var[!is.na(group_var)])))
   }
 
   if (is_labelled) {
@@ -6036,7 +6078,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   }
 
   if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- as.numeric(data[[dv_name]])
+    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
   }
 
   levels      <- levels(data[[group_name]])
@@ -6348,7 +6390,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   group_var   <- data[[group_name]]
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
-    original_codes <- sort(unique(as.numeric(group_var[!is.na(group_var)])))
+    original_codes <- sort(unique(.jst_as_numeric(group_var[!is.na(group_var)])))
   }
 
   if (is_labelled) {
@@ -6385,7 +6427,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   }
 
   if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- as.numeric(data[[dv_name]])
+    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
   }
 
   if (.jst_resolve_toggle("var.labels", labels)) {
@@ -6735,14 +6777,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   col_labelled <- haven::is.labelled(col_var)
 
   if (row_labelled) {
-    row_codes <- sort(unique(as.numeric(row_var[!is.na(row_var)])))
+    row_codes <- sort(unique(.jst_as_numeric(row_var[!is.na(row_var)])))
     row_var   <- haven::as_factor(row_var)
   } else if (!is.factor(row_var)) {
     row_var <- factor(row_var)
   }
 
   if (col_labelled) {
-    col_codes <- sort(unique(as.numeric(col_var[!is.na(col_var)])))
+    col_codes <- sort(unique(.jst_as_numeric(col_var[!is.na(col_var)])))
     col_var   <- haven::as_factor(col_var)
   } else if (!is.factor(col_var)) {
     col_var <- factor(col_var)
@@ -7041,7 +7083,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
     # Coerce labelled to numeric for correlation computation. The warning
     # decision is delegated to the unified classifier below.
     if (haven::is.labelled(cor_data[[v]])) {
-      cor_data[[v]] <- as.numeric(cor_data[[v]])
+      cor_data[[v]] <- .jst_as_numeric(cor_data[[v]])
     }
 
     # Categorical-like warning — uses the same classifier as jlm so that
@@ -8002,14 +8044,14 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 
     if (v == dv_name) {
       # DV — always numeric
-      if (haven::is.labelled(data[[v]])) data[[v]] <- as.numeric(data[[v]])
+      if (haven::is.labelled(data[[v]])) data[[v]] <- .jst_as_numeric(data[[v]])
       next
     }
 
     # --- Override: numeric = "Var" forces numeric ---
     if (v %in% numeric) {
       if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- as.numeric(data[[v]])
+        data[[v]] <- .jst_as_numeric(data[[v]])
       }
       # Plain numeric stays as-is
       next
@@ -8049,7 +8091,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
       # Not intent-categorical. Strip haven class if present, leave as
       # numeric in the model.
       if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- as.numeric(data[[v]])
+        data[[v]] <- .jst_as_numeric(data[[v]])
       }
       # Check for dichotomy first: dichotomies are valid as numeric IVs
       # in linear regression (the slope is the mean difference). They do
@@ -8279,6 +8321,20 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 
   if (any(is.na(stats::coef(model)))) {
     cat("\nWARNING: One or more variables have been removed from the model due to collinearity.\n")
+  }
+
+  # Perfect-fit guard: when R-squared is 1 and the residual standard error is
+  # 0, the t and F statistics blow up to scientific-notation scale and the
+  # printed precision is meaningless. This almost always means a variable was
+  # regressed on itself or on an exact transformation of itself. Flag it so
+  # the absurd-looking statistics below are read as a model-specification
+  # error rather than a result; numeric output is retained. (Session 50)
+  if (isTRUE(model_summary$r.squared >= 1 - 1e-9) &&
+      isTRUE(model_summary$sigma <= 1e-9)) {
+    cat("\nWARNING: Perfect linear fit detected (R-squared = 1, residual SE = 0).\n",
+        "         This usually means a variable was regressed on itself or on an\n",
+        "         exact transformation of itself. The t and F statistics below are\n",
+        "         not meaningful -- check your model specification.\n", sep = "")
   }
 
   cat("\n")
@@ -8593,7 +8649,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
     # --- Override: numeric = "Var" forces continuous ---
     if (!is.null(numeric) && v %in% numeric) {
       if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- as.numeric(data[[v]])
+        data[[v]] <- .jst_as_numeric(data[[v]])
       }
       next
     }
@@ -8622,7 +8678,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
       # Not intent-categorical. Strip haven class if present, leave as
       # numeric in the model.
       if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- as.numeric(data[[v]])
+        data[[v]] <- .jst_as_numeric(data[[v]])
       }
       # Check for dichotomy first: dichotomies are valid as numeric IVs
       # in logistic regression (the slope on the log-odds is the
@@ -8701,7 +8757,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   }
 
   if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- as.numeric(data[[dv_name]])
+    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
   }
 
   # -- Validate DV is coded 0/1 ---------------------------------------------
@@ -9169,7 +9225,7 @@ jalpha <- function(data, ..., subset = NULL, labels = NULL,
 
   for (v in variable_names) {
     if (haven::is.labelled(items[[v]])) {
-      items[[v]] <- as.numeric(items[[v]])
+      items[[v]] <- .jst_as_numeric(items[[v]])
     }
   }
 
@@ -9487,7 +9543,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   # Extract columns and convert any haven-labelled to numeric
   items <- data[, var_names, drop = FALSE]
   for (v in var_names) {
-    items[[v]] <- as.numeric(items[[v]])
+    items[[v]] <- .jst_as_numeric(items[[v]])
   }
 
   n_vars  <- length(var_names)
@@ -9679,7 +9735,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   # Extract columns and convert any haven-labelled to numeric
   items <- data[, var_names, drop = FALSE]
   for (v in var_names) {
-    items[[v]] <- as.numeric(items[[v]])
+    items[[v]] <- .jst_as_numeric(items[[v]])
   }
 
   n_vars  <- length(var_names)
@@ -9882,7 +9938,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   # --- Convert to numeric vector for haven_labelled construction ---
   if (haven::is.labelled(x)) {
-    num_vals <- as.numeric(x)
+    num_vals <- .jst_as_numeric(x)
   } else if (is.factor(x)) {
     num_vals <- suppressWarnings(as.numeric(as.character(x)))
     if (all(is.na(num_vals[!is.na(x)]))) {
