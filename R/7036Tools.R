@@ -964,21 +964,11 @@
     }
   )
   mask[is.na(mask)] <- FALSE
-  out <- data[mask, , drop = FALSE]
-
-  # `[.data.frame` row subsetting drops the variable-label attribute from plain
-  # atomic and factor columns (haven_labelled columns keep theirs via their own
-  # `[` method). Restore each surviving column's label from the pre-subset data
-  # so variable labels survive row filtering in the functions that read the
-  # label from the filtered frame (jfreq, jt, jaov, jcrosstab, jcorr). jdesc
-  # captures labels before filtering and is unaffected either way.
-  for (nm in names(out)) {
-    lab <- attr(data[[nm]], "label", exact = TRUE)
-    if (!is.null(lab) && is.null(attr(out[[nm]], "label", exact = TRUE))) {
-      attr(out[[nm]], "label") <- lab
-    }
-  }
-  out
+  # Variable-label loss from `[.data.frame` row subsetting (plain atomic and
+  # factor columns lose their label; haven_labelled keep theirs) is restored
+  # once at the end of .jst_apply_pipeline, from the pre-pipeline snapshot, which
+  # covers this path plus jcomplete's direct subset uniformly.
+  data[mask, , drop = FALSE]
 }
 
 #' Internal helper: apply the full data pipeline and return filtered data + messages
@@ -1128,6 +1118,21 @@
   # so the returned analysis data is clean.
   surviving_ids    <- data$.jst_row_id
   data$.jst_row_id <- NULL
+
+  # Restore variable labels from the pre-pipeline snapshot. Row subsetting via
+  # `[.data.frame` (jcomplete's direct subset at Step 1, the jsubset / subset
+  # masks, and the temp id-column add/strip) drops the `label` attribute from
+  # plain atomic and factor columns; haven_labelled columns keep theirs via their
+  # own `[` method. Restoring once here, from the untouched pre_pipeline_data,
+  # covers all paths at a single point (a pass that never dropped the label is a
+  # no-op). Read by the functions that take the label off the filtered frame
+  # (jfreq, jt, jaov, jcrosstab, jcorr); jdesc captures labels before filtering.
+  for (nm in names(data)) {
+    lab <- attr(pre_pipeline_data[[nm]], "label", exact = TRUE)
+    if (!is.null(lab) && is.null(attr(data[[nm]], "label", exact = TRUE))) {
+      attr(data[[nm]], "label") <- lab
+    }
+  }
 
   pipeline_counts <- list(
     n_original       = n_original,
@@ -3678,7 +3683,11 @@ jcomplete <- function(data, ...) {
         valid_vars <- cs$vars[cs$vars %in% names(df)]
         if (length(valid_vars) > 0L) {
           n_total    <- nrow(df)
-          n_complete <- sum(stats::complete.cases(df[, valid_vars, drop = FALSE]))
+          # Mask SPSS-form UDMs first so the live count matches the analysis
+          # pipeline (Cross-cutting 5); see the setup-summary note below.
+          masked     <- .jst_apply_declared_udms_as_na(
+            df[, valid_vars, drop = FALSE])$data
+          n_complete <- sum(stats::complete.cases(masked[, valid_vars, drop = FALSE]))
           count_str  <- paste0(" (", n_complete, " of ", n_total,
                                " complete cases)")
         }
@@ -3802,17 +3811,25 @@ jcomplete <- function(data, ...) {
 
   .jst_check_vars(data, variable_names, .jst_data_name)
 
-  # Compute summary
+  # Compute summary. Mask declared SPSS-form UDMs (na_values / na_range) to NA on
+  # an analysis-only copy first, so this listwise diagnostic matches what the
+  # analysis pipeline will actually exclude (Cross-cutting 5). complete.cases()
+  # does not honour haven_labelled_spss na_values; is.na() does -- deriving both
+  # the Missing column and the complete-case count from the masked copy keeps them
+  # consistent. Stata/SAS tagged-NA values satisfy is.na() natively and are not
+  # touched by the helper, so they already flow through complete.cases() correctly.
   n_total <- nrow(data)
+  masked  <- .jst_apply_declared_udms_as_na(
+    data[, variable_names, drop = FALSE])$data
   missing_info <- data.frame(
     Variable  = variable_names,
     N         = rep(n_total, length(variable_names)),
-    Missing   = vapply(variable_names, function(v) sum(is.na(data[[v]])), integer(1)),
+    Missing   = vapply(variable_names, function(v) sum(is.na(masked[[v]])), integer(1)),
     stringsAsFactors = FALSE
   )
   missing_info$Pct <- sprintf("%.1f%%", missing_info$Missing / n_total * 100)
 
-  n_complete <- sum(stats::complete.cases(data[, variable_names, drop = FALSE]))
+  n_complete <- sum(stats::complete.cases(masked[, variable_names, drop = FALSE]))
   n_excluded <- n_total - n_complete
 
   # Store settings (capture any prior setting first, to flag replacement)
