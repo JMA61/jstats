@@ -4,15 +4,17 @@
 \alias{.jst_default_note}
 \title{Internal helper: print the "Using default data frame: X" note in yellow}
 \usage{
-.jst_default_note(data_name, extra_newline = TRUE)
+.jst_default_note(data_name, extra_newline = FALSE)
 }
 \arguments{
 \item{data_name}{Character string name of the default data frame.}
 
-\item{extra_newline}{Logical. If TRUE (default), adds a trailing blank
-line after the note so it's visually separated from whatever prints
-next. Set FALSE only when the caller wants the next line to abut
-the note directly.}
+\item{extra_newline}{Logical. If TRUE, adds a trailing blank line after
+the note so it's visually separated from whatever prints next.
+Defaults to FALSE, so the note abuts the next line directly; the
+jcomplete and jdummy summaries pass TRUE explicitly to keep their
+trailing blank. (Default flipped TRUE -> FALSE in Session 52 to
+collapse the double blank line above the Case Processing block.)}
 }
 \description{
 Used by every analysis function immediately after its red title line.

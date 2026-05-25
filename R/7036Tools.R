@@ -182,12 +182,14 @@
 #' jcomplete) under a consistent yellow coloring.
 #'
 #' @param data_name Character string name of the default data frame.
-#' @param extra_newline Logical. If TRUE (default), adds a trailing blank
-#'   line after the note so it's visually separated from whatever prints
-#'   next. Set FALSE only when the caller wants the next line to abut
-#'   the note directly.
+#' @param extra_newline Logical. If TRUE, adds a trailing blank line after
+#'   the note so it's visually separated from whatever prints next.
+#'   Defaults to FALSE, so the note abuts the next line directly; the
+#'   jcomplete and jdummy summaries pass TRUE explicitly to keep their
+#'   trailing blank. (Default flipped TRUE -> FALSE in Session 52 to
+#'   collapse the double blank line above the Case Processing block.)
 #' @keywords internal
-.jst_default_note <- function(data_name, extra_newline = TRUE) {
+.jst_default_note <- function(data_name, extra_newline = FALSE) {
   .cat_yellow(paste0("Using default data frame: ", data_name, "\n"))
   if (extra_newline) cat("\n")
 }
@@ -1169,6 +1171,10 @@
 #'
 #' @keywords internal
 .jst_print_msgs <- function(msgs) {
+  # One leading blank separates the message block from the note/title above.
+  # With .jst_default_note's default now FALSE (Session 52), this is what
+  # keeps a single blank line above pipeline messages.
+  if (length(msgs) > 0) cat("\n")
   for (m in msgs) {
     if (startsWith(m, "[YELLOW]")) {
       .cat_yellow(sub("^\\[YELLOW\\]", "", m))
@@ -1729,6 +1735,9 @@
 
   if (isTRUE(spec$render)) {
 
+    # Width of the widest rendered table; sizes the closing rule (Session 52).
+    rule_w <- 0L
+
     # ---- TOP TABLE: pipeline chain ----
     if (isTRUE(spec$render_top)) {
       labels <- "Original"; surv_v <- n_original; exc_v <- NA_integer_
@@ -1778,29 +1787,30 @@
       surv_v <- c(surv_v, prior)
 
       # Column widths sized to content (display width) so long labels and
-      # the multibyte em-dash both align. Header is indented 2, data rows 4;
-      # both pad their label field to the same absolute end column.
+      # the multibyte em-dash both align. Title is flush-left (indent 0),
+      # data rows indented 4; both pad their label field to the same absolute
+      # end column. (Session 52: dropped the "% Surviving" column, renamed
+      # the "Surviving" header to "Remaining", flush-left title.)
       exc_strs  <- vapply(seq_along(labels), function(i)
                      if (is.na(exc_v[i])) dash else as.character(exc_v[i]),
                      character(1))
       surv_strs <- as.character(surv_v)
-      pct_strs  <- fmt1(surv_v / n_original * 100)
-      h_ind <- 2L; r_ind <- 4L
+      h_ind <- 0L; r_ind <- 4L
       lab_end <- max(h_ind + dw("Case Processing"), r_ind + max(dw(labels)))
-      exc_w  <- max(dw("Excluded"),    max(dw(exc_strs)))
-      surv_w <- max(dw("Surviving"),   max(dw(surv_strs)))
-      pct_w  <- max(dw("% Surviving"), max(dw(pct_strs)))
+      exc_w  <- max(dw("Excluded"),  max(dw(exc_strs)))
+      surv_w <- max(dw("Remaining"), max(dw(surv_strs)))
       g <- "  "
 
       cat("\n")
       cat(strrep(" ", h_ind), padr("Case Processing", lab_end - h_ind), g,
-          padl("Excluded", exc_w), g, padl("Surviving", surv_w), g,
-          padl("% Surviving", pct_w), "\n", sep = "")
+          padl("Excluded", exc_w), g, padl("Remaining", surv_w),
+          "\n", sep = "")
       for (i in seq_along(labels)) {
         cat(strrep(" ", r_ind), padr(labels[i], lab_end - r_ind), g,
-            padl(exc_strs[i], exc_w), g, padl(surv_strs[i], surv_w), g,
-            padl(pct_strs[i], pct_w), "\n", sep = "")
+            padl(exc_strs[i], exc_w), g, padl(surv_strs[i], surv_w),
+            "\n", sep = "")
       }
+      rule_w <- max(rule_w, lab_end + exc_w + surv_w + 4L)
     }
 
     # ---- BOTTOM TABLE: missing-data breakdown (Form B) ----
@@ -1831,27 +1841,50 @@
         all_srcp <- fmt1(all_src  / n_original * 100)
         all_plp  <- fmt1(all_pool / n_pool     * 100)
 
-        h_ind <- 2L; c_ind <- 6L
+        h_ind <- 0L; c_ind <- 6L
         lab_end <- max(h_ind + dw("Missing-data breakdown"),
                        c_ind + max(dw(all_lab)))
-        srcn_w  <- max(dw(src_hdr),  max(dw(all_src)))
+        # The "From N" header defines each count column's width; the count
+        # value-block is sized to the widest count in that column and centred
+        # within the column (counts right-justified within the block). Percent
+        # columns keep their right-justified rendering. (Session 52.)
+        src_count_w  <- max(dw(all_src))
+        pool_count_w <- max(dw(all_pool))
+        srcn_w  <- max(dw(src_hdr),  src_count_w)
+        pooln_w <- max(dw(pool_hdr), pool_count_w)
         pct_w   <- max(dw("%"), max(dw(all_srcp), dw(all_plp)))
-        pooln_w <- max(dw(pool_hdr), max(dw(all_pool)))
         g <- "  "
 
-        emit <- function(indent, lab, lab_w, c1, p1, c2, p2) {
-          if (two_cols)
-            cat(strrep(" ", indent), padr(lab, lab_w), g, padl(c1, srcn_w), g,
-                padl(p1, pct_w), g, padl(c2, pooln_w), g, padl(p2, pct_w),
-                "\n", sep = "")
-          else
-            cat(strrep(" ", indent), padr(lab, lab_w), g, padl(c1, srcn_w), g,
-                padl(p1, pct_w), "\n", sep = "")
+        # Centre a count under its header: right-justify within the value
+        # block, then centre that block within the column width.
+        ctr_count <- function(x, block_w, col_w) {
+          s     <- padl(x, block_w)
+          extra <- max(0L, col_w - block_w)
+          left  <- extra %/% 2L
+          paste0(strrep(" ", left), s, strrep(" ", extra - left))
+        }
+
+        # Build each row as one string and strip trailing whitespace before
+        # printing, so header and label-only rows carry no trailing blanks
+        # (Session 52). centre_counts = FALSE on the header keeps the "From N"
+        # labels right-justified, since they define the column width.
+        emit <- function(indent, lab, lab_w, c1, p1, c2, p2,
+                         centre_counts = TRUE) {
+          c1_cell <- if (centre_counts) ctr_count(c1, src_count_w, srcn_w)
+                     else padl(c1, srcn_w)
+          line <- paste0(strrep(" ", indent), padr(lab, lab_w), g,
+                         c1_cell, g, padl(p1, pct_w))
+          if (two_cols) {
+            c2_cell <- if (centre_counts) ctr_count(c2, pool_count_w, pooln_w)
+                       else padl(c2, pooln_w)
+            line <- paste0(line, g, c2_cell, g, padl(p2, pct_w))
+          }
+          cat(sub("[ ]+$", "", line), "\n", sep = "")
         }
 
         cat("\n")
         emit(h_ind, "Missing-data breakdown", lab_end - h_ind,
-             src_hdr, "%", pool_hdr, "%")
+             src_hdr, "%", pool_hdr, "%", centre_counts = FALSE)
         for (d in disp) {
           cat(strrep(" ", 4L), d$var, "\n", sep = "")
           for (j in seq_len(nrow(d$rows))) {
@@ -1861,7 +1894,16 @@
                  as.character(pl), fmt1(pl / n_pool * 100))
           }
         }
+
+        bottom_w <- if (two_cols)
+                      lab_end + srcn_w + pooln_w + 2L * pct_w + 8L
+                    else
+                      lab_end + srcn_w + pct_w + 4L
+        rule_w <- max(rule_w, bottom_w)
       }
+    }
+    if (rule_w > 0L) {
+      cat("\n", strrep("\u2500", rule_w), "\n", sep = "")
     }
     cat("\n")
   }
