@@ -4,7 +4,16 @@
 \alias{jscreen}
 \title{Data screening overview}
 \usage{
-jscreen(data, ..., outlier.sd = 3, subset = NULL, labels = NULL)
+jscreen(
+  data,
+  ...,
+  outlier.sd = 3,
+  subset = NULL,
+  labels = NULL,
+  types = TRUE,
+  issues = TRUE,
+  r.type = FALSE
+)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -13,38 +22,77 @@ jscreen(data, ..., outlier.sd = 3, subset = NULL, labels = NULL)
 all variables in the data frame are screened.}
 
 \item{outlier.sd}{Numeric. Number of standard deviations from the mean
-to flag as potential outliers. Default is 3.}
+to flag as potential outliers (Numeric-class variables only). Default
+is 3.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Logical or NULL. If TRUE, prints variable labels
-when available. If FALSE, suppresses them. If NULL (default),
-defers to \code{joutput()}'s \code{var.labels} setting.}
+\item{labels}{Logical or NULL. If TRUE, prints the Variable Labels table
+(last) when labels are available. If FALSE, suppresses it. If NULL
+(default), defers to \code{joutput()}'s \code{var.labels} setting.}
+
+\item{types}{Logical. If TRUE (default), prints the Variable Types table.
+Set FALSE to suppress it.}
+
+\item{issues}{Logical. If TRUE (default), prints the Missing Data &
+Outliers table, which lists only the variables that actually have
+missing data or flagged outliers (clean variables are omitted). Set
+FALSE to suppress the table entirely. Suppressing \code{types},
+\code{issues}, and \code{labels} together leaves only the header block.}
+
+\item{r.type}{Logical. If TRUE, adds a "Base R Type" column (numeric /
+haven_labelled / factor / character / date-time) to the Variable Types
+table, showing each variable's storage type alongside its jstats class.
+Default is FALSE: the storage type is expert detail (its main signal is
+"this variable carries value labels / came from SPSS or Stata"), so it
+is opt-in rather than shown by default. The returned data frame always
+includes it regardless of this setting.}
 }
 \value{
-Invisibly returns a data frame containing the screening results.
+Invisibly returns a data frame of the screening results, with one
+row per variable and columns including the Base R type, the jstats
+\code{Class} and \code{SubClass}, distinct-value count, missing count
+and percentage, and the outlier count (NA for non-Numeric variables).
+The returned values are the raw counts; only the printed tables blank
+zeros and omit clean rows.
 }
 \description{
-Provides a quick overview of a data frame including the number of
-cases, variable types, missing data counts and percentages, and
-potential outliers for numeric variables. Handles haven-labelled
-variables by reporting their labelled status.
+Provides a quick overview of a data frame for screening. A red "Data
+Screening" title is printed first, then a short header block (case and
+variable counts, cases with missing data, variables with outliers),
+followed by up to three tables: a Variable Types table (Base R storage
+type, the jstats analysis-role class, an optional sub-class, and distinct-
+value counts), a Missing Data & Outliers table, and — when variable labels
+are shown — a Variable Labels table last. Handles haven-labelled and
+date/time variables gracefully.
 }
 \details{
-When variable names are supplied, only those variables are screened.
-When omitted, all variables in the data frame are screened. If a
-\code{subset} expression references variables not already in the
-screening list, they are included automatically.
+The jstats Class column reports how the package treats each variable in
+analyses (Numeric, Categorical, Numbers-as-text, Date-time, Unsupported),
+in contrast to the Base R Type column's storage view; the same
+classification gates outlier screening, so only Numeric-class variables
+are SD-screened and the Outliers cell is left blank for the rest. Zero
+counts are shown blank so only affected variables carry numbers; a column
+(or the whole Missing/Outliers table) is omitted entirely when nothing is
+flagged, and the header count lines explain the omission.
 
-A red "Data Screening" title is printed first, followed by a dataset
-summary, variable labels (if present), and the screening table.
+When variable names are supplied, only those variables are screened. When
+omitted, all variables in the data frame are screened. If a \code{subset}
+expression references variables not already in the screening list, they
+are included automatically.
 }
 \examples{
 # With explicit data frame
 jscreen(mtcars)
 jscreen(mtcars, outlier.sd = 2.5)
+
+# Show the Base R storage type column
+jscreen(mtcars, r.type = TRUE)
+
+# Suppress tables (header block only)
+jscreen(mtcars, types = FALSE, issues = FALSE)
 
 # Using juse() default
 juse(mtcars)

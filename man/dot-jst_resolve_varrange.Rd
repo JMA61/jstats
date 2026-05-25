@@ -4,7 +4,7 @@
 \alias{.jst_resolve_varrange}
 \title{Internal helper: resolve variable names from enquos, expanding colon ranges}
 \usage{
-.jst_resolve_varrange(quos_list, data, fn_name)
+.jst_resolve_varrange(quos_list, data, fn_name, data_name = NULL)
 }
 \arguments{
 \item{quos_list}{A list of quosures from rlang::enquos(...).}
