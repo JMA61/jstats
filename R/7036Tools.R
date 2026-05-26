@@ -230,6 +230,34 @@
   }
 }
 
+#' Internal helper: variable label for display, falling back to the name
+#'
+#' Used by the \code{"labels"} var.labels mode, where a variable's label
+#' replaces its name in table rows, table captions, crosstab dimnames, or
+#' (in jplot) axis/legend/facet titles. When the variable carries no
+#' non-empty variable label, its name is returned unchanged. This name
+#' fallback is the only sensible rendering for an unlabelled variable and
+#' is distinct from a mode fallback: \code{"labels"} is still honored
+#' literally (no switch to a legend), the label slot simply equals the
+#' name.
+#'
+#' @param data A data frame.
+#' @param var Single variable name (character).
+#'
+#' @return Single character string: the variable's label if present and
+#'   non-empty, otherwise \code{var}.
+#'
+#' @keywords internal
+.jst_label_or_name <- function(data, var) {
+  if (!is.null(data) && var %in% names(data)) {
+    vl <- labelled::var_label(data[[var]])
+    if (!is.null(vl) && length(vl) == 1 && !is.na(vl) && nzchar(vl)) {
+      return(as.character(vl))
+    }
+  }
+  var
+}
+
 #' Internal helper: print a formatted table with precise column alignment
 #'
 #' Purpose-built table printer that replaces knitr::kable() for console output.
@@ -1254,17 +1282,17 @@
   minimal  = list(effect.size = FALSE, ci = FALSE, levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = FALSE, case.processing.detail = "none",
-                  var.labels = FALSE, ref.categories = FALSE,
+                  var.labels = "none", ref.categories = FALSE,
                   udm.notice = FALSE),
   standard = list(effect.size = TRUE,  ci = TRUE,  levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = NULL,  case.processing.detail = "totals",
-                  var.labels = TRUE,  ref.categories = TRUE,
+                  var.labels = "none",  ref.categories = TRUE,
                   udm.notice = NULL),
   full     = list(effect.size = TRUE,  ci = TRUE,  levene = TRUE,
                   posthoc = TRUE,  diagnostics = TRUE,
                   case.processing = TRUE,  case.processing.detail = "per_code",
-                  var.labels = TRUE,  ref.categories = TRUE,
+                  var.labels = "legend",  ref.categories = TRUE,
                   udm.notice = TRUE)
 )
 
@@ -1324,6 +1352,33 @@
   level    <- getOption(".jst_output_level", "standard")
   defaults <- .jst_output_defaults
   defaults[[level]][[name]]
+}
+
+#' Internal helper: validate and resolve the var.labels display mode
+#'
+#' Thin wrapper over \code{.jst_resolve_toggle("var.labels", ...)} that
+#' first validates a non-NULL per-call \code{labels} argument against the
+#' four-token enum. Every analysis function's \code{labels =} argument is
+#' a string-only enum (no logical aliases); a bad token errors here with a
+#' consistent message rather than silently passing through to the renderer.
+#'
+#' @param per_call The value of the calling function's \code{labels}
+#'   argument: NULL (defer to joutput()), or one of \code{"none"},
+#'   \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.
+#'
+#' @return Single character token: one of \code{"none"}, \code{"labels"},
+#'   \code{"legend"}, \code{"legend.bottom"}.
+#'
+#' @keywords internal
+.jst_resolve_var_labels <- function(per_call) {
+  if (!is.null(per_call)) {
+    if (!is.character(per_call) || length(per_call) != 1 ||
+        !(per_call %in% c("none", "labels", "legend", "legend.bottom"))) {
+      stop("labels must be one of: \"none\", \"labels\", \"legend\", ",
+           "\"legend.bottom\".", call. = FALSE)
+    }
+  }
+  .jst_resolve_toggle("var.labels", per_call)
 }
 
 #' Internal helper: resolve the active missing-value convention
@@ -4731,11 +4786,14 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'       only — no Case Processing Summary, no variable labels, no
 #'       reference categories, no effect sizes, no CIs.}
 #'     \item{standard}{Default. Suitable for teaching and routine use.
-#'       Includes Case Processing Summary, variable labels, reference
-#'       categories, effect sizes, and confidence intervals.}
-#'     \item{full}{Everything in standard plus assumption checks
-#'       (Levene's test), post-hoc tests, regression diagnostics, and the
-#'       most detailed Case Processing Summary (per-code missing breakdown).}
+#'       Includes Case Processing Summary, reference categories, effect
+#'       sizes, and confidence intervals. Variable labels are off by
+#'       default (\code{var.labels = "none"}); request a label legend or
+#'       in-table labels per call or via the \code{var.labels} toggle.}
+#'     \item{full}{Everything in standard plus a variable label legend
+#'       (\code{var.labels = "legend"}), assumption checks (Levene's
+#'       test), post-hoc tests, regression diagnostics, and the most
+#'       detailed Case Processing Summary (per-code missing breakdown).}
 #'   }
 #' @param effect.size Logical or NULL. Override the level's default for
 #'   effect size display.
@@ -4764,8 +4822,21 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'   or \code{"per_code"} (per UDM code plus system-missing). The
 #'   minimal tier defaults to \code{"none"}, standard to
 #'   \code{"totals"}, full to \code{"per_code"}.
-#' @param var.labels Logical or NULL. Override the level's default for
-#'   the variable labels block.
+#' @param var.labels Character or NULL. Variable label display mode, one
+#'   of \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only, with
+#'   no labels block. \code{"labels"} replaces variable names with their
+#'   labels in the analysis output itself (table rows, captions, crosstab
+#'   dimnames, or \code{jplot} axis/legend titles) -- best when labels
+#'   are short. \code{"legend"} keeps names in place and prints a label
+#'   legend at the function's mid position (for \code{jlm}/\code{jlogistic}
+#'   between the coefficients and fit blocks; for \code{jfreq} under each
+#'   variable's own table; elsewhere directly after the single table).
+#'   \code{"legend.bottom"} keeps names in place and prints one
+#'   consolidated legend at the very end of the output. The minimal and
+#'   standard tiers default to \code{"none"}; the full tier defaults to
+#'   \code{"legend"}. Not a logical -- \code{TRUE}/\code{FALSE} are not
+#'   accepted.
 #' @param ref.categories Logical or NULL. Override the level's default
 #'   for the reference categories block (registered dummies).
 #' @param udm.notice Three-state toggle controlling the user-defined
@@ -4829,7 +4900,14 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
     }
     toggle_args$case.processing.detail <- case.processing.detail
   }
-  if (!is.null(var.labels))      toggle_args$var.labels      <- var.labels
+  if (!is.null(var.labels)) {
+    if (!is.character(var.labels) || length(var.labels) != 1 ||
+        !(var.labels %in% c("none", "labels", "legend", "legend.bottom"))) {
+      stop("var.labels must be one of: \"none\", \"labels\", \"legend\", ",
+           "\"legend.bottom\".", call. = FALSE)
+    }
+    toggle_args$var.labels <- var.labels
+  }
   if (!is.null(ref.categories))  toggle_args$ref.categories  <- ref.categories
   if (!is.null(udm.notice))      toggle_args$udm.notice      <- udm.notice
 
@@ -5251,8 +5329,15 @@ jdata_dir <- function(default = ".") {
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical. If \code{TRUE} (default), prints the variable type
-#'   and label (or "None") for each variable before the table.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} shows each variable's label in place of its name (in the
+#'   descriptives table; for grouped output, as the per-variable caption and
+#'   the grouping-variable column header) -- best for short labels;
+#'   \code{"legend"} and \code{"legend.bottom"} keep names and print a label
+#'   legend after the table. NULL (default) defers to \code{joutput()}'s
+#'   \code{var.labels} setting. Not a logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_desc} containing:
 #'   \code{descriptives} (data frame of statistics, or NULL for grouped output),
@@ -5428,22 +5513,28 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
                     " (", length(group_levels), " levels)\n"))
     if (.jst_default_used) .jst_default_note(.jst_data_name)
     .jst_print_msgs(pipeline$msgs)
-    if (.jst_resolve_toggle("var.labels", labels)) {
-      cat(by_name, "\n", sep = "")
-      cat("  Type: ", .format_var_type(original_by_class), "\n", sep = "")
-      cat("  Variable label: ", original_by_label, "\n", sep = "")
-    }
+    # Variable label display mode (B1: the former inline Type/label block is
+    # gone). jdesc grouped is a per-variable collapse layout: each mini-table
+    # is captioned with its DV anchor -- the variable name, or its label under
+    # "labels" -- which is structural (the only DV identifier on the table).
+    # Under "labels" the grouping variable's column header is its label too;
+    # group levels stay as value labels. "legend"/"legend.bottom" add one
+    # consolidated legend after all mini-tables.
+    vlmode   <- .jst_resolve_var_labels(labels)
+    lab_disp <- function(nm, lab) if (!identical(lab, "None") && nzchar(lab)) lab else nm
+    by_disp  <- if (identical(vlmode, "labels")) lab_disp(by_name, original_by_label) else by_name
     cat("\n")
 
     .jst_print_case_processing(sample_info, analysis_type = "per_var_desc",
                                detail = case.processing.detail)
 
     for (v in good_vars) {
-      if (.jst_resolve_toggle("var.labels", labels)) {
-        cat(v, "\n", sep = "")
-        cat("  Type: ", .format_var_type(original_dv_info[[v]]$class), "\n", sep = "")
-        cat("  Variable label: ", original_dv_info[[v]]$label, "\n", sep = "")
+      v_disp <- if (identical(vlmode, "labels")) {
+        lab_disp(v, original_dv_info[[v]]$label)
+      } else {
+        v
       }
+      cat(v_disp, "\n", sep = "")
 
       .emit_good_notes(v, data)
       cat("\n")
@@ -5479,7 +5570,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
           SD    = if (n > 0) round(s, 3) else NA,
           stringsAsFactors = FALSE
         )
-        names(df)[1] <- by_name
+        names(df)[1] <- by_disp
         df
       })
       group_table <- do.call(rbind, group_rows)
@@ -5490,6 +5581,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
 
     # Mixed case: warn for any variables that could not be summarized.
     .emit_bad_refusals()
+
+    if (vlmode %in% c("legend", "legend.bottom")) {
+      .print_var_labels(data, c(good_vars, by_name))
+    }
 
     cat("\n")
 
@@ -5554,13 +5649,12 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
     analysis_vars = good_vars
   )
 
-  if (.jst_resolve_toggle("var.labels", labels)) {
-    for (v in good_vars) {
-      cat(v, "\n", sep = "")
-      cat("  Type: ", .format_var_type(original_var_info[[v]]$class), "\n", sep = "")
-      cat("  Variable label: ", original_var_info[[v]]$label, "\n", sep = "")
-    }
-  }
+  # Variable label display mode (B1: former inline Type/label block removed).
+  # jdesc ungrouped is a collapse layout with one row per variable. Under
+  # "labels" the Variable column shows labels at print time only (the
+  # returned descriptives keep variable names); "legend"/"legend.bottom"
+  # collapse to one legend after the table.
+  vlmode <- .jst_resolve_var_labels(labels)
 
   # Categorical-like and numbers-as-text notes for each summarized variable.
   for (v in good_vars) .emit_good_notes(v, data)
@@ -5591,13 +5685,23 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
   # Defensive: with good_vars guaranteed non-empty this should always hold,
   # but guard against an empty table reaching the renderer.
   if (!is.null(descriptives) && nrow(descriptives) > 0) {
+    descriptives_disp <- descriptives
+    if (identical(vlmode, "labels")) {
+      descriptives_disp$Variable <- vapply(
+        descriptives$Variable,
+        function(v) .jst_label_or_name(data, v), character(1))
+    }
     cat("\n")
-    .jst_print_table(descriptives)
+    .jst_print_table(descriptives_disp)
     cat("\n")
   }
 
   # Mixed case: warn for any variables that could not be summarized.
   .emit_bad_refusals()
+
+  if (vlmode %in% c("legend", "legend.bottom")) {
+    .print_var_labels(data, good_vars)
+  }
 
   ret <- list(
     descriptives = descriptives,
@@ -5654,10 +5758,15 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical or NULL. If TRUE, prints the variable type and
-#'   label (or "None") beneath the title. If FALSE, suppresses them. If
-#'   NULL (default), defers to \code{joutput()}'s \code{var.labels}
-#'   setting.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} uses each variable's label as its table caption (best
+#'   for short labels); \code{"legend"} prints a label legend under each
+#'   variable's own table; \code{"legend.bottom"} prints one consolidated
+#'   legend after all tables. NULL (default) defers to \code{joutput()}'s
+#'   \code{var.labels} setting. Not a logical. (Replaces the former inline
+#'   Type/label block.)
 #'
 #' @return Invisibly returns a list of class \code{jst_freq} containing:
 #'   \code{frequencies} (named list of data frames, one per variable) and
@@ -5734,8 +5843,11 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
                                   subset_expr = subset_expr, envir = parent.frame())
   data     <- pipeline$data
 
-  # Resolve display toggles
-  show_var_labels      <- .jst_resolve_toggle("var.labels",      labels)
+  # Variable label display mode. jfreq is a distinct layout: under "labels"
+  # each variable's caption anchor is its label; "legend" prints a legend
+  # under each variable's own table; "legend.bottom" prints one consolidated
+  # legend after all tables. (Replaces the former inline Type/label block.)
+  vlmode <- .jst_resolve_var_labels(labels)
   # Build sample_info (used by CPS and the return value)
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
@@ -5975,12 +6087,13 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
                                      na    = na_row,
                                      total = total_count)
 
-    # -- Print: variable-name anchor -> (optional Type/Label) -> blank -> table
-    cat(variable_name, "\n", sep = "")
-    if (show_var_labels) {
-      cat("  Type: ", .format_var_type(var_class), "\n", sep = "")
-      cat("  Variable label: ", var_label_val, "\n", sep = "")
+    # -- Print: variable anchor (name, or label under "labels") -> blank -> table
+    anchor <- if (identical(vlmode, "labels")) {
+      .jst_label_or_name(data, variable_name)
+    } else {
+      variable_name
     }
+    cat(anchor, "\n", sep = "")
     if (n_distinct_vals > card_warn_threshold) {
       cat("  Note: '", variable_name, "' has ", n_distinct_vals,
           " distinct values; a frequency table may not be informative.\n",
@@ -6064,7 +6177,13 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
                      row.names = FALSE,
                      align     = c("l", "r", "r", "r", "r"))
     cat("\n")
+
+    # "legend": label legend under this variable's own table.
+    if (identical(vlmode, "legend")) .print_var_labels(data, variable_name)
   }
+
+  # "legend.bottom": one consolidated legend after all variable tables.
+  if (identical(vlmode, "legend.bottom")) .print_var_labels(data, var_names_check)
 
   cat("\n")
 
@@ -6111,9 +6230,13 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical or NULL. If TRUE, prints the Variable Labels table
-#'   (last) when labels are available. If FALSE, suppresses it. If NULL
-#'   (default), defers to \code{joutput()}'s \code{var.labels} setting.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} shows labels in each table's Variable column (best for
+#'   short labels); \code{"legend"} and \code{"legend.bottom"} keep names and
+#'   print a label legend after the tables. NULL (default) defers to
+#'   \code{joutput()}'s \code{var.labels} setting. Not a logical.
 #' @param types Logical. If TRUE (default), prints the Variable Types table.
 #'   Set FALSE to suppress it.
 #' @param issues Logical. If TRUE (default), prints the Missing Data &
@@ -6235,8 +6358,12 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
     }
   }
 
-  # Resolve display toggle for the Variable Labels table.
-  labels <- .jst_resolve_toggle("var.labels", labels)
+  # Variable label display mode. jscreen is a collapse layout screening all
+  # columns: under "labels" each table's Variable column shows labels at
+  # print time (the returned screen_table keeps names); "legend"/
+  # "legend.bottom" collapse to one legend after the tables (the former
+  # Variable Labels table); "none" prints no labels block.
+  vlmode <- .jst_resolve_var_labels(labels)
 
   n_cases   <- nrow(data)
   n_vars    <- ncol(data)
@@ -6337,8 +6464,13 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
     }
     cols  <- c(cols, "Unique")
     heads <- c(heads, "Unique Values")
+    t1 <- screen_table[, cols, drop = FALSE]
+    if (identical(vlmode, "labels")) {
+      t1$Variable <- vapply(t1$Variable,
+                            function(v) .jst_label_or_name(data, v), character(1))
+    }
     cat("\n")
-    .jst_print_table(screen_table[, cols, drop = FALSE],
+    .jst_print_table(t1,
                      caption   = "Variable Types",
                      col.names = heads,
                      row.names = FALSE)
@@ -6373,6 +6505,10 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
       t2$Outliers <- out
       heads <- c(heads, "Outliers")
     }
+    if (identical(vlmode, "labels")) {
+      t2$Variable <- vapply(t2$Variable,
+                            function(v) .jst_label_or_name(data, v), character(1))
+    }
     cat("\n")
     .jst_print_table(t2,
                      caption   = paste0("Missing Data & Outliers (outliers > ",
@@ -6381,8 +6517,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
                      row.names = FALSE)
   }
 
-  # -- Table 3: Variable Labels (last; only when toggled on) -----------------
-  if (isTRUE(labels)) {
+  # -- Variable label legend (last; only under "legend"/"legend.bottom") -----
+  if (vlmode %in% c("legend", "legend.bottom")) {
     cat("\n")
     .print_var_labels(data, var_names)
   }
@@ -6428,8 +6564,14 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} shows the DV and grouping-variable labels in the table
+#'   captions (group levels stay as value labels) -- best for short labels;
+#'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
+#'   legend after the output. NULL (default) defers to \code{joutput()}'s
+#'   \code{var.labels} setting. Not a logical.
 #' @param full Logical. If TRUE, turns on effect.size, levene, and ci
 #'   all at once. Does not override explicit FALSE values.
 #'
@@ -6515,6 +6657,12 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   .jst_check_analysis_var(data[[terms[1L]]], terms[1L], TRUE, "a t-test")
   for (.gv in terms[-1L]) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a t-test")
 
+  # Pre-conversion label source: variable labels survive here intact (mf's
+  # row subset would drop them from plain-numeric columns; the DV's haven ->
+  # numeric coercion below would drop them from labelled columns). Frozen by
+  # copy-on-modify, so later data[[...]] <- conversions do not affect it.
+  lab_src <- data
+
   # Build analysis-level data frame (listwise on all formula vars) and
   # sample_info early so the Case Processing Summary can use them.
   mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
@@ -6584,9 +6732,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     stop("Paired t-test requires equal sample sizes in both groups.", call. = FALSE)
   }
 
-  if (.jst_resolve_toggle("var.labels", labels)) {
-    .print_var_labels(data, c(dv_name, group_name))
-  }
+  # Variable label display mode. jt is a collapse layout: under "labels"
+  # the DV and grouping-variable names in the Group Descriptives caption are
+  # swapped for their labels (group levels in the rows stay as value
+  # labels); "legend"/"legend.bottom" collapse to a single legend after the
+  # output. Label lookups use the pristine pre-conversion source lab_src.
+  vlmode     <- .jst_resolve_var_labels(labels)
+  dv_disp    <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, dv_name)    else dv_name
+  group_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, group_name) else group_name
 
   # Levene's test
   if (levene && !paired) {
@@ -6652,7 +6805,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   )
 
   .jst_print_table(desc_table,
-                   caption = paste("Group Descriptives:", dv_name, "by", group_name),
+                   caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                    row.names = FALSE)
   cat("\n")
 
@@ -6723,6 +6876,11 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     cat(paste0("\n", d_label, ": ", round(cohens_d, 3), "\n"))
   }
 
+  if (vlmode %in% c("legend", "legend.bottom")) {
+    cat("\n")
+    .print_var_labels(lab_src, c(dv_name, group_name))
+  }
+
   n_analysis <- nrow(mf)
 
   cat("\n")
@@ -6779,8 +6937,15 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} shows the DV and grouping-variable labels wherever the
+#'   variable name appears (table captions and the ANOVA Source row; group
+#'   levels stay as value labels) -- best for short labels;
+#'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
+#'   legend after the output. NULL (default) defers to \code{joutput()}'s
+#'   \code{var.labels} setting. Not a logical.
 #' @param full Logical. If TRUE, turns on posthoc, effect.size, levene,
 #'   and ci all at once. Does not override explicit FALSE values.
 #'
@@ -6865,6 +7030,11 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   .jst_check_analysis_var(data[[terms[1L]]], terms[1L], TRUE, "an ANOVA")
   for (.gv in terms[-1L]) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "an ANOVA")
 
+  # Pre-conversion label source (see jt): variable labels survive here intact;
+  # mf's row subset and the DV's haven -> numeric coercion below would drop
+  # them. Frozen by copy-on-modify.
+  lab_src <- data
+
   # Build analysis-level data frame (listwise on all formula vars) and
   # sample_info early so the Case Processing Summary can use them.
   mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
@@ -6923,9 +7093,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
   }
 
-  if (.jst_resolve_toggle("var.labels", labels)) {
-    .print_var_labels(data, c(dv_name, group_name))
-  }
+  # Variable label display mode. jaov is a collapse layout: under "labels"
+  # the DV and grouping-variable names are swapped for their labels wherever
+  # the variable name appears (descriptives/Welch captions and the ANOVA
+  # Source row); group levels stay as value labels. "legend"/"legend.bottom"
+  # collapse to one legend after the output. Lookups use the pristine lab_src.
+  vlmode     <- .jst_resolve_var_labels(labels)
+  dv_disp    <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, dv_name)    else dv_name
+  group_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, group_name) else group_name
 
   # Levene's test
   if (levene) {
@@ -7010,13 +7185,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
   if (ci) {
     .jst_print_table(desc_table,
-                     caption = paste("Group Descriptives:", dv_name, "by", group_name),
+                     caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                      col.names = c("Group", "N", "Mean", "SD",
                                    "95% CI Lower", "95% CI Upper"),
                      row.names = FALSE)
   } else {
     .jst_print_table(desc_table,
-                     caption = paste("Group Descriptives:", dv_name, "by", group_name),
+                     caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                      row.names = FALSE)
   }
   cat("\n")
@@ -7037,7 +7212,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     )
 
     .jst_print_table(welch_table,
-                     caption = paste("Welch's ANOVA:", dv_name, "by", group_name),
+                     caption = paste("Welch's ANOVA:", dv_disp, "by", group_disp),
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE)
 
@@ -7076,7 +7251,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
 
     anova_table <- data.frame(
-      Source         = c(group_name, "Residual", "Total"),
+      Source         = c(group_disp, "Residual", "Total"),
       df             = c(result$Df, total_df),
       Sum_of_Squares = round(c(result$`Sum Sq`, total_ss), 3),
       Mean_Square    = c(round(result$`Mean Sq`, 3), NA),
@@ -7086,7 +7261,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     )
 
     .jst_print_table(anova_table,
-                     caption = paste("ANOVA:", dv_name, "by", group_name),
+                     caption = paste("ANOVA:", dv_disp, "by", group_disp),
                      col.names = c("Source", "df", "Sum of Squares",
                                    "Mean Square", "F", "p"),
                      row.names = FALSE)
@@ -7130,6 +7305,11 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     df1     <- result$Df[1]
     df2     <- result$Df[2]
     p_value <- result$`Pr(>F)`[1]
+  }
+
+  if (vlmode %in% c("legend", "legend.bottom")) {
+    cat("\n")
+    .print_var_labels(lab_src, c(dv_name, group_name))
   }
 
   n_analysis <- nrow(mf)
@@ -7177,8 +7357,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} shows the row/column variable labels (table header and
+#'   caption; cell value labels stay) -- best for short labels;
+#'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
+#'   legend after the table. NULL (default) defers to \code{joutput()}'s
+#'   \code{var.labels} setting. Not a logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_crosstab} containing:
 #'   \code{observed} (observed frequency table), \code{expected} (expected
@@ -7248,6 +7434,10 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   .jst_print_msgs(pipeline$msgs)
 
   # Resolve display toggles
+  # Pre-conversion label source (see jt): row/col labels survive here intact;
+  # mf's row subset and the factor coercions below would drop plain-numeric
+  # labels. Frozen by copy-on-modify.
+  lab_src <- data
   # Build analysis-level data frame (listwise on Row + Column) and
   # sample_info early so the Case Processing Summary can use them.
   mf <- data[stats::complete.cases(data[, c(row_name, col_name), drop = FALSE]),
@@ -7283,9 +7473,13 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     col_var <- factor(col_var)
   }
 
-  if (.jst_resolve_toggle("var.labels", labels)) {
-    .print_var_labels(data, c(row_name, col_name))
-  }
+  # Variable label display mode. jcrosstab is a collapse layout: under
+  # "labels" the row/column variable names (the first column header and the
+  # caption) are swapped for their labels; the cell value labels stay.
+  # "legend"/"legend.bottom" collapse to one legend after the table(s).
+  vlmode   <- .jst_resolve_var_labels(labels)
+  row_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, row_name) else row_name
+  col_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, col_name) else col_name
 
   # Drop empty factor levels (pipeline filtering may leave empty levels)
   row_var <- droplevels(row_var)
@@ -7328,7 +7522,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   n_rows <- length(row_levels)
   n_cols <- length(col_levels)
-  header <- c(row_name, col_labels, "Total")
+  header <- c(row_disp, col_labels, "Total")
 
   display_rows <- list()
 
@@ -7379,7 +7573,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   colnames(display_df) <- header
 
   .jst_print_table(display_df,
-                   caption   = paste("Crosstab:", row_name, "by", col_name),
+                   caption   = paste("Crosstab:", row_disp, "by", col_disp),
                    row.names = FALSE)
   cat("\n")
 
@@ -7407,6 +7601,11 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                  "(minimum expected = ", round(min_expected, 1), "). ",
                  "Chi-square results may not be reliable.\n"))
     }
+  }
+
+  if (vlmode %in% c("legend", "legend.bottom")) {
+    cat("\n")
+    .print_var_labels(lab_src, c(row_name, col_name))
   }
 
   cat("\n")
@@ -7454,8 +7653,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} shows variable labels as the matrix row/column headers
+#'   (honored even if the matrix grows wide -- best for short labels; rerun
+#'   with a legend mode otherwise); \code{"legend"}/\code{"legend.bottom"}
+#'   keep names and print a label legend after the table. NULL (default)
+#'   defers to \code{joutput()}'s \code{var.labels} setting. Not a logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_corr} containing:
 #'   \code{r} (correlation matrix), \code{p} (p-value matrix),
@@ -7635,12 +7840,25 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
 
   display_df <- as.data.frame(display, stringsAsFactors = FALSE)
 
-  if (.jst_resolve_toggle("var.labels", labels)) {
-    .print_var_labels(data, variable_names)
+  # Variable label display mode. "labels" replaces the matrix row/column
+  # variable names with their labels (honored literally even if the matrix
+  # goes wide -- best for short labels; rerun with a legend mode otherwise).
+  # "legend"/"legend.bottom" collapse to a single legend after the table.
+  vlmode <- .jst_resolve_var_labels(labels)
+  if (identical(vlmode, "labels")) {
+    disp_names <- vapply(variable_names,
+                         function(v) .jst_label_or_name(data, v), character(1))
+    rownames(display_df) <- disp_names
+    colnames(display_df) <- disp_names
   }
 
   .jst_print_table(display_df,
                    caption = paste0("Bivariate Correlations (", method_label, ")"))
+
+  if (vlmode %in% c("legend", "legend.bottom")) {
+    cat("\n")
+    .print_var_labels(data, variable_names)
+  }
 
   if (has_ties) {
     cat("\nNote: Spearman p-values are approximate due to tied values in the data.\n")
@@ -7698,6 +7916,50 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
     }
   }
   cleaned
+}
+
+#' Internal helper: relabel cleaned coefficient names with variable labels
+#'
+#' For the \code{"labels"} var.labels display mode (jlm / jlogistic). Given
+#' the cleaned names from \code{.jst_clean_coef_names()} -- numeric
+#' predictors as the bare variable name, factor terms as
+#' \code{"<var><sep><level>"}, intercept as \code{"(Intercept)"} -- replaces
+#' the variable-name portion of each term with the variable's label,
+#' preserving the \code{"<sep><level>"} decoration on factor terms. The
+#' intercept, and any term not attributable to a labelled IV (e.g. a
+#' clearly-named jdummy column carrying no variable label), are left
+#' unchanged. Display only: the returned coefficient table keeps the cleaned
+#' variable names so downstream code and the user's own indexing still work.
+#'
+#' @param coef_names Character vector of cleaned coefficient names.
+#' @param data Data frame used to fit the model (carries variable labels).
+#' @param iv_names Character vector of IV names from the model formula.
+#' @param sep Character separator used by \code{.jst_clean_coef_names()}.
+#'   Default \code{"-"}.
+#'
+#' @return Character vector the same length as \code{coef_names}.
+#'
+#' @keywords internal
+.jst_relabel_coef_names <- function(coef_names, data, iv_names, sep = "-") {
+  out <- coef_names
+  for (i in seq_along(out)) {
+    nm <- out[i]
+    if (identical(nm, "(Intercept)")) next
+    for (v in iv_names) {
+      lab <- .jst_label_or_name(data, v)
+      if (identical(lab, v)) next               # no label to apply
+      if (identical(nm, v)) {                    # bare numeric predictor
+        out[i] <- lab
+        break
+      }
+      prefix <- paste0(v, sep)                   # factor "<var><sep><level>"
+      if (startsWith(nm, prefix)) {
+        out[i] <- paste0(lab, sep, substring(nm, nchar(prefix) + 1L))
+        break
+      }
+    }
+  }
+  out
 }
 
 #' Internal helper: compute VIF for a fitted linear model
@@ -8149,8 +8411,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} replaces each coefficient's variable name with its label
+#'   in the Coefficients table (factor level decoration is preserved) -- best
+#'   for short labels; \code{"legend"} prints a label legend between the
+#'   Coefficients table and the R-squared/fit block; \code{"legend.bottom"}
+#'   prints it at the very end. NULL (default) defers to \code{joutput()}'s
+#'   \code{var.labels} setting. Not a logical.
 #' @param numeric Optional character vector of variable names that should be
 #'   treated as continuous (numeric) even if they have value labels. For
 #'   example, \code{numeric = "Age"} or \code{numeric = c("Age", "Education")}.
@@ -8276,9 +8545,17 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
-  # Resolve display toggles
-  show_var_labels      <- .jst_resolve_toggle("var.labels",      labels)
+  # Resolve display toggles. jlm is a distinct layout: "legend" prints the
+  # legend between the Coefficients table and the R-squared/fit block;
+  # "legend.bottom" prints it at the very end; "labels" relabels the
+  # coefficient-row terms (display only). See below.
+  vlmode               <- .jst_resolve_var_labels(labels)
   show_ref_categories  <- .jst_resolve_toggle("ref.categories",  NULL)
+  # Pre-conversion label source for "labels"/legend display: captured before
+  # the variable-type conversion below coerces haven-labelled IVs to numeric
+  # or factor (which would drop their variable labels). Frozen by
+  # copy-on-modify so later in-place conversions do not affect it.
+  lab_src <- data
   # Resolve diagnostics toggle
   if (full) {
     if (is.null(diagnostics)) diagnostics <- TRUE
@@ -8674,11 +8951,6 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
-  # Variable labels
-  if (show_var_labels) {
-    .print_var_labels(data, all.vars(formula))
-  }
-
   # Reference categories block + categorical-handling notes
   if (show_ref_categories) {
     # Print reference categories — registered dummies first, then auto/override
@@ -8831,11 +9103,22 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   }
 
   cat("\n")
-  .jst_print_table(out_coefs,
+  out_coefs_disp <- out_coefs
+  if (identical(vlmode, "labels")) {
+    rownames(out_coefs_disp) <- .jst_relabel_coef_names(
+      rownames(out_coefs), lab_src, all.vars(formula)[-1])
+  }
+  .jst_print_table(out_coefs_disp,
                    caption   = "Coefficients",
                    col.names = c("b", "SE", "t", "\u03b2", "p"),
                    align     = c("c", "c", "c", "c", "c"),
                    row.names = TRUE)
+
+  # "legend" (mid): between the Coefficients table and the R-squared/fit block.
+  if (identical(vlmode, "legend")) {
+    cat("\n")
+    .print_var_labels(lab_src, all.vars(formula))
+  }
 
   cat("\nR-squared: ", sprintf("%.3f", r_squared),
       "    Adjusted R-squared: ", sprintf("%.3f", adj_r_squared), "\n", sep = "")
@@ -8908,6 +9191,12 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
     }
   }
 
+  # "legend.bottom": one consolidated legend at the very end of the output.
+  if (identical(vlmode, "legend.bottom")) {
+    cat("\n")
+    .print_var_labels(lab_src, all.vars(formula))
+  }
+
   ret <- list(
     model           = model,
     model_type      = "linear",
@@ -8955,8 +9244,15 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} replaces each coefficient's variable name with its label
+#'   in the Coefficients table (factor level decoration is preserved) -- best
+#'   for short labels; \code{"legend"} prints a label legend between the
+#'   Model Summary (fit) block and the Coefficients table;
+#'   \code{"legend.bottom"} prints it at the very end. NULL (default) defers
+#'   to \code{joutput()}'s \code{var.labels} setting. Not a logical.
 #' @param numeric Optional character vector of variable names to treat
 #'   as continuous even if they have value labels.
 #' @param categorical Optional character vector of variable names to treat
@@ -9103,6 +9399,12 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   # enforces two levels. Predictors may be numeric or categorical; date/time
   # and complex/list/raw refused throughout. See .jst_check_analysis_var.
   for (.gv in model_vars) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a logistic regression")
+
+  # Pre-conversion label source for "labels"/legend display (see jlm):
+  # captured before dummy expansion and the variable-type conversion below,
+  # which would drop variable labels from coerced columns. Frozen by
+  # copy-on-modify.
+  lab_src <- data
 
   # -- Expand registered dummy variables ------------------------------------
   expanded         <- .jst_expand_dummies(data, formula, .jst_data_name)
@@ -9364,9 +9666,11 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
-  if (.jst_resolve_toggle("var.labels", labels)) {
-    .print_var_labels(data, all.vars(formula))
-  }
+  # Variable label display mode. jlogistic is a distinct layout: "legend"
+  # prints between the Model Summary (fit) block and the Coefficients table;
+  # "legend.bottom" at the very end; "labels" relabels coefficient-row terms
+  # (display only).
+  vlmode <- .jst_resolve_var_labels(labels)
 
   # Capture DV label for "1" category (before model fitting, more reliable)
   dv_label_1 <- NULL
@@ -9445,6 +9749,10 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
                    row.names = FALSE)
   cat("\n")
 
+  # "legend" (mid): between the fit (Model Summary) block and the Coefficients
+  # table -- the same coefficients/fit boundary jlm uses, here above the table.
+  if (identical(vlmode, "legend")) .print_var_labels(lab_src, all.vars(formula))
+
   # -- Coefficients table ----------------------------------------------------
   coefs    <- as.data.frame(model_summary$coefficients, stringsAsFactors = FALSE)
   colnames(coefs) <- c("b", "SE", "z", "P")
@@ -9487,7 +9795,12 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   }
 
   cat("\n")
-  .jst_print_table(out_coefs,
+  out_coefs_disp <- out_coefs
+  if (identical(vlmode, "labels")) {
+    rownames(out_coefs_disp) <- .jst_relabel_coef_names(
+      rownames(out_coefs), lab_src, all.vars(formula)[-1])
+  }
+  .jst_print_table(out_coefs_disp,
                    caption   = "Coefficients",
                    col.names = col_names,
                    align     = rep("c", length(col_names)),
@@ -9585,6 +9898,10 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   }
 
   cat("\n")
+
+  # "legend.bottom": one consolidated legend at the very end of the output.
+  if (identical(vlmode, "legend.bottom")) .print_var_labels(lab_src, all.vars(formula))
+
   ret <- list(
     model           = model,
     model_type      = "logistic",
@@ -9640,8 +9957,15 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Logical. If TRUE (default), prints variable labels
-#'   when available.
+#' @param labels Character or NULL. Variable label display mode: one of
+#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#'   \code{"labels"} shows each item's label in the Item column of the Item
+#'   Statistics and Item-Total Statistics tables (best for short labels; the
+#'   returned tables and the reverse-coding diagnostic keep variable names);
+#'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
+#'   legend after the final table. NULL (default) defers to \code{joutput()}'s
+#'   \code{var.labels} setting. Not a logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_alpha} containing:
 #'   \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
@@ -9758,9 +10082,17 @@ jalpha <- function(data, ..., subset = NULL, labels = NULL,
                    row.names = FALSE)
   cat("\n")
 
-  # Variable Labels
-  if (.jst_resolve_toggle("var.labels", labels)) {
-    .print_var_labels(data, variable_names)
+  # Variable label display mode. jalpha is a collapse layout: under "labels"
+  # the per-item names in the Item Statistics and Item-Total Statistics
+  # tables are swapped for their labels at print time only -- the returned
+  # objects and the reverse-coding diagnostic keep variable names so the
+  # user knows which column to act on. "legend"/"legend.bottom" collapse to
+  # one legend after the final table.
+  vlmode    <- .jst_resolve_var_labels(labels)
+  item_disp <- if (identical(vlmode, "labels")) {
+    vapply(variable_names, function(v) .jst_label_or_name(data, v), character(1))
+  } else {
+    variable_names
   }
 
   # Item Statistics
@@ -9773,7 +10105,9 @@ jalpha <- function(data, ..., subset = NULL, labels = NULL,
     row.names = NULL
   )
 
-  .jst_print_table(item_stats,
+  item_stats_disp      <- item_stats
+  item_stats_disp$Item <- item_disp
+  .jst_print_table(item_stats_disp,
                    caption = "Item Statistics",
                    row.names = FALSE)
   cat("\n")
@@ -9835,13 +10169,19 @@ jalpha <- function(data, ..., subset = NULL, labels = NULL,
     cat("\n")
   }
 
-  .jst_print_table(item_total_table,
+  item_total_disp      <- item_total_table
+  item_total_disp$Item <- item_disp
+  .jst_print_table(item_total_disp,
                    caption = "Item-Total Statistics",
                    col.names = c("Item", "Corrected Item-Total r",
                                  "Alpha if Item Deleted"),
                    row.names = FALSE)
 
   cat("\n")
+
+  if (vlmode %in% c("legend", "legend.bottom")) {
+    .print_var_labels(data, variable_names)
+  }
 
   ret <- list(
     alpha                 = alpha_overall,
@@ -15360,8 +15700,15 @@ jsave <- function(data, file, overwrite = FALSE) {
 #'   +/- t*SEE; useful for teaching homoskedasticity), \code{none}.
 #' @param subset Optional unquoted logical expression to filter cases for
 #'   this call only (data-first form).
-#' @param labels Logical. If TRUE (default), prints variable labels when
-#'   available (data-first form).
+#' @param labels Character or NULL. Variable label display mode (data-first
+#'   and formula forms): one of \code{"none"}, \code{"labels"},
+#'   \code{"legend"}, or \code{"legend.bottom"}. \code{"none"} uses variable
+#'   names as axis/legend titles; \code{"labels"} uses each variable's label
+#'   as its axis/legend title instead (falling back to the name when
+#'   unlabelled) and prints no console legend; \code{"legend"} and
+#'   \code{"legend.bottom"} keep names on the axes and print a console label
+#'   legend. NULL (default) defers to \code{joutput()}'s \code{var.labels}
+#'   setting. Not a logical.
 #'
 #' @return Invisibly, a single \code{ggplot} object if one plot is produced,
 #'   or a named list of \code{ggplot} objects if multiple are produced
@@ -15593,13 +15940,24 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
 
   # -- Capture axis labels BEFORE factor conversion strips them ------------
+  # Variable label display mode. jplot is a collapse layout where the
+  # analogue of "names in rows" is the axis/legend title: under "labels" each
+  # axis shows the variable's label, otherwise its name. "legend"/
+  # "legend.bottom" additionally print a console label legend (below).
+  vlmode <- .jst_resolve_var_labels(labels)
   axis_labels <- stats::setNames(
     vapply(variable_names,
-           function(v) .jst_short_label(data[[v]], v),
+           function(v) if (identical(vlmode, "labels")) {
+             .jst_short_label(data[[v]], v)
+           } else {
+             v
+           },
            character(1)),
     variable_names
   )
-  by_label <- if (has_by) .jst_short_label(data[[by_name]], by_name) else NULL
+  by_label <- if (has_by) {
+    if (identical(vlmode, "labels")) .jst_short_label(data[[by_name]], by_name) else by_name
+  } else NULL
 
   # -- Red title --------------------------------------------------------------
   plot_title <- .jst_plot_title(resolved_type, variable_names, by_name)
@@ -15631,8 +15989,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     data[[by_name]] <- factor(data[[by_name]])
   }
 
-  # Print variable labels if requested
-  if (.jst_resolve_toggle("var.labels", labels)) {
+  # Console label legend (only under "legend"/"legend.bottom"; collapse).
+  if (vlmode %in% c("legend", "legend.bottom")) {
     .print_var_labels(data, check_names)
   }
 
@@ -15796,13 +16154,22 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   variable_names <- c(x_name, y_name)
 
   # -- Capture axis labels BEFORE factor conversion -------------------------
+  # Variable label display mode (see jplot.default): "labels" puts the
+  # variable's label on each axis/legend title, otherwise its name.
+  vlmode <- .jst_resolve_var_labels(labels)
   axis_labels <- stats::setNames(
     vapply(variable_names,
-           function(v) .jst_short_label(data[[v]], v),
+           function(v) if (identical(vlmode, "labels")) {
+             .jst_short_label(data[[v]], v)
+           } else {
+             v
+           },
            character(1)),
     variable_names
   )
-  by_label <- if (has_by) .jst_short_label(data[[by_name]], by_name) else NULL
+  by_label <- if (has_by) {
+    if (identical(vlmode, "labels")) .jst_short_label(data[[by_name]], by_name) else by_name
+  } else NULL
 
   # -- Red title -------------------------------------------------------------
   plot_title <- .jst_plot_title(resolved_type, c(y_name, x_name), by_name)
@@ -15836,7 +16203,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     data[[by_name]] <- factor(data[[by_name]])
   }
 
-  if (.jst_resolve_toggle("var.labels", labels)) {
+  if (vlmode %in% c("legend", "legend.bottom")) {
     .print_var_labels(data, check_names)
   }
 

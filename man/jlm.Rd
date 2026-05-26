@@ -26,8 +26,15 @@ jlm(
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Logical. If TRUE (default), prints variable labels
-when available.}
+\item{labels}{Character or NULL. Variable label display mode: one of
+\code{"none"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\code{"labels"} replaces each coefficient's variable name with its label
+in the Coefficients table (factor level decoration is preserved) -- best
+for short labels; \code{"legend"} prints a label legend between the
+Coefficients table and the R-squared/fit block; \code{"legend.bottom"}
+prints it at the very end. NULL (default) defers to \code{joutput()}'s
+\code{var.labels} setting. Not a logical.}
 
 \item{numeric}{Optional character vector of variable names that should be
 treated as continuous (numeric) even if they have value labels. For

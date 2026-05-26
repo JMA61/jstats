@@ -29,9 +29,13 @@ is 3.}
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Logical or NULL. If TRUE, prints the Variable Labels table
-(last) when labels are available. If FALSE, suppresses it. If NULL
-(default), defers to \code{joutput()}'s \code{var.labels} setting.}
+\item{labels}{Character or NULL. Variable label display mode: one of
+\code{"none"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\code{"labels"} shows labels in each table's Variable column (best for
+short labels); \code{"legend"} and \code{"legend.bottom"} keep names and
+print a label legend after the tables. NULL (default) defers to
+\code{joutput()}'s \code{var.labels} setting. Not a logical.}
 
 \item{types}{Logical. If TRUE (default), prints the Variable Types table.
 Set FALSE to suppress it.}

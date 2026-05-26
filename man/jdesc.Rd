@@ -26,8 +26,15 @@ titled table per dependent variable.}
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Logical. If \code{TRUE} (default), prints the variable type
-and label (or "None") for each variable before the table.}
+\item{labels}{Character or NULL. Variable label display mode: one of
+\code{"none"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\code{"labels"} shows each variable's label in place of its name (in the
+descriptives table; for grouped output, as the per-variable caption and
+the grouping-variable column header) -- best for short labels;
+\code{"legend"} and \code{"legend.bottom"} keep names and print a label
+legend after the table. NULL (default) defers to \code{joutput()}'s
+\code{var.labels} setting. Not a logical.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},

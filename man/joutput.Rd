@@ -28,11 +28,14 @@ If \code{NULL}, resets to defaults (standard with no toggle overrides).
 only — no Case Processing Summary, no variable labels, no
 reference categories, no effect sizes, no CIs.}
 \item{standard}{Default. Suitable for teaching and routine use.
-Includes Case Processing Summary, variable labels, reference
-categories, effect sizes, and confidence intervals.}
-\item{full}{Everything in standard plus assumption checks
-(Levene's test), post-hoc tests, regression diagnostics, and the
-most detailed Case Processing Summary (per-code missing breakdown).}
+Includes Case Processing Summary, reference categories, effect
+sizes, and confidence intervals. Variable labels are off by
+default (\code{var.labels = "none"}); request a label legend or
+in-table labels per call or via the \code{var.labels} toggle.}
+\item{full}{Everything in standard plus a variable label legend
+(\code{var.labels = "legend"}), assumption checks (Levene's
+test), post-hoc tests, regression diagnostics, and the most
+detailed Case Processing Summary (per-code missing breakdown).}
 }}
 
 \item{effect.size}{Logical or NULL. Override the level's default for
@@ -69,8 +72,21 @@ or \code{"per_code"} (per UDM code plus system-missing). The
 minimal tier defaults to \code{"none"}, standard to
 \code{"totals"}, full to \code{"per_code"}.}
 
-\item{var.labels}{Logical or NULL. Override the level's default for
-the variable labels block.}
+\item{var.labels}{Character or NULL. Variable label display mode, one
+of \code{"none"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"none"} shows variable names only, with
+no labels block. \code{"labels"} replaces variable names with their
+labels in the analysis output itself (table rows, captions, crosstab
+dimnames, or \code{jplot} axis/legend titles) -- best when labels
+are short. \code{"legend"} keeps names in place and prints a label
+legend at the function's mid position (for \code{jlm}/\code{jlogistic}
+between the coefficients and fit blocks; for \code{jfreq} under each
+variable's own table; elsewhere directly after the single table).
+\code{"legend.bottom"} keeps names in place and prints one
+consolidated legend at the very end of the output. The minimal and
+standard tiers default to \code{"none"}; the full tier defaults to
+\code{"legend"}. Not a logical -- \code{TRUE}/\code{FALSE} are not
+accepted.}
 
 \item{ref.categories}{Logical or NULL. Override the level's default
 for the reference categories block (registered dummies).}

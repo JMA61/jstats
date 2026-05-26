@@ -25,8 +25,14 @@ jcorr(
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Logical. If TRUE (default), prints variable labels
-when available.}
+\item{labels}{Character or NULL. Variable label display mode: one of
+\code{"none"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\code{"labels"} shows variable labels as the matrix row/column headers
+(honored even if the matrix grows wide -- best for short labels; rerun
+with a legend mode otherwise); \code{"legend"}/\code{"legend.bottom"}
+keep names and print a label legend after the table. NULL (default)
+defers to \code{joutput()}'s \code{var.labels} setting. Not a logical.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},

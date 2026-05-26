@@ -28,8 +28,15 @@ must be a binary variable coded 0/1.}
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only.}
 
-\item{labels}{Logical. If TRUE (default), prints variable labels
-when available.}
+\item{labels}{Character or NULL. Variable label display mode: one of
+\code{"none"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\code{"labels"} replaces each coefficient's variable name with its label
+in the Coefficients table (factor level decoration is preserved) -- best
+for short labels; \code{"legend"} prints a label legend between the
+Model Summary (fit) block and the Coefficients table;
+\code{"legend.bottom"} prints it at the very end. NULL (default) defers
+to \code{joutput()}'s \code{var.labels} setting. Not a logical.}
 
 \item{numeric}{Optional character vector of variable names to treat
 as continuous even if they have value labels.}

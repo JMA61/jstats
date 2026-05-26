@@ -16,10 +16,15 @@ jfreq(data, ..., subset = NULL, labels = NULL, case.processing.detail = NULL)
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Logical or NULL. If TRUE, prints the variable type and
-label (or "None") beneath the title. If FALSE, suppresses them. If
-NULL (default), defers to \code{joutput()}'s \code{var.labels}
-setting.}
+\item{labels}{Character or NULL. Variable label display mode: one of
+\code{"none"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\code{"labels"} uses each variable's label as its table caption (best
+for short labels); \code{"legend"} prints a label legend under each
+variable's own table; \code{"legend.bottom"} prints one consolidated
+legend after all tables. NULL (default) defers to \code{joutput()}'s
+\code{var.labels} setting. Not a logical. (Replaces the former inline
+Type/label block.)}
 
 \item{case.processing.detail}{Accepted for API symmetry. jfreq's
 Case Processing Summary is top-table only (no missing-data

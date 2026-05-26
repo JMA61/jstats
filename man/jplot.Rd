@@ -91,8 +91,15 @@ for individual observations), \code{see} (constant-width band at
 \item{subset}{Optional unquoted logical expression to filter cases for
 this call only (data-first form).}
 
-\item{labels}{Logical. If TRUE (default), prints variable labels when
-available (data-first form).}
+\item{labels}{Character or NULL. Variable label display mode (data-first
+and formula forms): one of \code{"none"}, \code{"labels"},
+\code{"legend"}, or \code{"legend.bottom"}. \code{"none"} uses variable
+names as axis/legend titles; \code{"labels"} uses each variable's label
+as its axis/legend title instead (falling back to the name when
+unlabelled) and prints no console legend; \code{"legend"} and
+\code{"legend.bottom"} keep names on the axes and print a console label
+legend. NULL (default) defers to \code{joutput()}'s \code{var.labels}
+setting. Not a logical.}
 
 \item{focal}{Unquoted name of the independent variable to place on the
 x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
