@@ -4,7 +4,7 @@
 \alias{jcomplete}
 \title{Set a listwise complete-case filter for matching N across analyses}
 \usage{
-jcomplete(data, ...)
+jcomplete(data, ..., preview = FALSE, console = FALSE, non.deletes = FALSE)
 }
 \arguments{
 \item{data}{A data frame. If omitted, uses the default set by
@@ -13,9 +13,30 @@ Pass the bare word \code{off} to deactivate, or \code{on} to
 reactivate. Call with no arguments to check the current status.}
 
 \item{...}{Unquoted variable names to include in the listwise check.}
+
+\item{preview}{Logical. If \code{TRUE}, open a viewer (RStudio data tab)
+showing the rows the listwise filter will drop, with a leading
+\code{Row} column (original data position) and a trailing
+\code{DeletionCheck} flag (1 = the row will be dropped). May be used on
+its own to preview the already-set filter without re-listing the
+variables (\code{jcomplete(preview = TRUE)}). Default \code{FALSE}.}
+
+\item{console}{Logical or numeric. Print the dropped rows to the console.
+\code{TRUE} prints the first 10; a number prints that many. Independent of
+\code{preview}: on its own it prints to the console without opening the
+viewer; combine with \code{preview = TRUE} to get both. The console
+listing is always limited to the dropped rows so it cannot flood the
+console. Default \code{FALSE}.}
+
+\item{non.deletes}{Logical. If \code{TRUE}, the viewer shows every case
+(with \code{DeletionCheck} marking which will drop) rather than only the
+dropped rows. Affects the viewer only; the console listing stays
+deleted-rows-only. Default \code{FALSE}.}
 }
 \value{
-Invisibly returns \code{NULL}. Called for its side effect.
+Invisibly returns \code{NULL}. When a preview is requested,
+invisibly returns the previewed data frame instead, so it can be
+captured (e.g. \code{jcomplete_rows <- jcomplete(preview = TRUE)}).
 }
 \description{
 \code{jcomplete()} registers a set of variables and activates a listwise
@@ -39,6 +60,11 @@ FILTER convention.
 juse(mtcars)
 jcomplete(mpg, hp, wt, am)
 jdesc(mpg)                     # Uses only complete cases on those 4 vars
+jcomplete(mpg, hp, wt, am, preview = TRUE)     # Set and preview together
+jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)
+jcomplete(preview = TRUE, non.deletes = TRUE)  # Viewer shows all cases
+jcomplete(console = 10)        # Console only -- first 10 dropped rows
+jcomplete(preview = TRUE, console = 25)        # Viewer and console
 jcomplete(off)                 # Deactivate
 jcomplete(on)                  # Reactivate
 jcomplete()                    # Check status

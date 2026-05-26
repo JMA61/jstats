@@ -3746,6 +3746,137 @@ jfilter <- function(data, expr) {
 
 # -- jcomplete ----------------------------------------------------------------
 
+#' Internal helper: build and render the jcomplete deletion preview
+#'
+#' Constructs the row-level preview of what \code{jcomplete()}'s listwise
+#' deletion will drop and renders it. Reuses the masked analysis copy
+#' (SPSS-form UDMs already set to NA) so the preview reflects exactly what
+#' the filter excludes (Cross-cutting 5). The display frame carries a leading
+#' \code{Row} column (original position, as \code{which()} gives), the
+#' registered variables (non-integer numerics rounded to 1 dp for display
+#' only; integer-valued columns left untouched), and a trailing
+#' \code{DeletionCheck} flag (1 for rows the filter will drop).
+#'
+#' The viewer (RStudio data tab) and the console listing are controlled
+#' independently by the caller (\code{viewer} and \code{console}); each shows
+#' only what is asked for. The viewer shows either the deleted rows only or all
+#' cases (\code{show_all}); the console always shows deleted rows only, capped,
+#' so it cannot flood the console. The console listing also serves as the
+#' automatic fallback when the viewer was requested but no interactive viewer
+#' is available.
+#'
+#' @param masked Analysis copy with SPSS-form UDMs masked to NA.
+#' @param variable_names Character vector of the registered variables.
+#' @param show_all Logical. If \code{TRUE}, the viewer shows every case;
+#'   otherwise only the rows scheduled for deletion. Does not affect the
+#'   console output, which is always deleted-rows-only.
+#' @param console Logical or numeric. \code{FALSE} (default) prints nothing to
+#'   the console; \code{TRUE} prints the first 10 deleted rows; a number prints
+#'   that many. Independent of \code{viewer}.
+#' @param viewer Logical. If \code{TRUE} (and the session is interactive),
+#'   open the data viewer. Independent of \code{console}.
+#' @param data_name Character. The data frame name, used in the viewer title
+#'   and the fallback messages.
+#'
+#' @return Invisibly, the data frame shown in the viewer.
+#'
+#' @keywords internal
+.jst_jcomplete_preview <- function(masked, variable_names, show_all = FALSE,
+                                   console = FALSE, viewer = TRUE,
+                                   data_name = NULL) {
+
+  sub       <- masked[, variable_names, drop = FALSE]
+  drop_flag <- !stats::complete.cases(sub)
+  n_total   <- nrow(sub)
+
+  # Display copy: strip haven class and round non-integer numerics to 1 dp
+  # (display only). Already-integer and non-numeric columns are left as-is.
+  # The filter itself is unaffected -- drop_flag came from `masked`.
+  disp <- sub
+  for (v in variable_names) {
+    base <- unclass(disp[[v]])
+    if (is.numeric(base)) {
+      num    <- as.numeric(base)
+      non_na <- num[!is.na(num)]
+      if (length(non_na) && any(abs(non_na - round(non_na)) > 1e-8)) {
+        num <- round(num, 1)
+      }
+      disp[[v]] <- num
+    } else {
+      disp[[v]] <- as.character(base)
+    }
+  }
+
+  build <- function(idx) {
+    data.frame(
+      Row           = idx,
+      disp[idx, , drop = FALSE],
+      DeletionCheck = as.integer(drop_flag[idx]),
+      row.names        = NULL,
+      check.names      = FALSE,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  viewer_idx <- if (isTRUE(show_all)) seq_len(n_total) else which(drop_flag)
+  viewer_df  <- build(viewer_idx)
+  deleted_df <- build(which(drop_flag))
+
+  # -- Viewer (default surface) ---------------------------------------------
+  title <- if (!is.null(data_name)) paste0("jcomplete preview: ", data_name)
+           else "jcomplete preview"
+  viewer_ok <- FALSE
+  if (isTRUE(viewer) && interactive()) {
+    # Prefer RStudio's docked data viewer: it opens as a Source-pane tab and
+    # refreshes in place on a stable title, rather than stacking windows.
+    # utils::View() is deliberately NOT called directly -- the utils:: prefix
+    # bypasses RStudio's interception and opens base R's standalone viewer
+    # window, which the OS places independently of the IDE. Fall back to that
+    # base viewer only when not running under RStudio.
+    view_fn <- if ("tools:rstudio" %in% search()) {
+      tryCatch(get("View", envir = as.environment("tools:rstudio")),
+               error = function(e) utils::View)
+    } else {
+      utils::View
+    }
+    viewer_ok <- tryCatch({ view_fn(viewer_df, title); TRUE },
+                          error = function(e) FALSE)
+  }
+
+  # -- Console (independent of the viewer; also the no-viewer fallback) ------
+  console_n <- if (isTRUE(console)) 10L
+               else if (is.numeric(console) && length(console) == 1L &&
+                        !is.na(console) && console >= 1) as.integer(console)
+               else 0L
+  want_console <- console_n > 0L
+  # Fallback: the viewer was requested but could not open (no interactive
+  # session) and the caller did not separately ask for console output.
+  fallback     <- isTRUE(viewer) && !viewer_ok && !want_console
+
+  if (want_console || fallback) {
+    n_show <- if (want_console) console_n else 10L
+    .cat_red("jcomplete Preview \u2014 rows scheduled for deletion\n")
+    if (nrow(deleted_df) == 0L) {
+      cat("  No cases will be dropped",
+          " (no missing values on the registered variables).\n", sep = "")
+    } else {
+      .jst_print_table(utils::head(deleted_df, n_show), row.names = FALSE)
+      if (nrow(deleted_df) > n_show) {
+        more <- if (!fallback)
+          " Use preview = TRUE to see them all in the viewer." else ""
+        cat("\n  Showing the first ", n_show, " of ", nrow(deleted_df),
+            " dropped rows.", more, "\n", sep = "")
+      }
+    }
+    if (fallback) {
+      message("(The preview viewer needs an interactive RStudio session; ",
+              "showing the first ", n_show, " in the console instead.)")
+    }
+  }
+
+  invisible(viewer_df)
+}
+
 #' Set a listwise complete-case filter for matching N across analyses
 #'
 #' @description
@@ -3770,14 +3901,37 @@ jfilter <- function(data, expr) {
 #'   Pass the bare word \code{off} to deactivate, or \code{on} to
 #'   reactivate. Call with no arguments to check the current status.
 #' @param ... Unquoted variable names to include in the listwise check.
+#' @param preview Logical. If \code{TRUE}, open a viewer (RStudio data tab)
+#'   showing the rows the listwise filter will drop, with a leading
+#'   \code{Row} column (original data position) and a trailing
+#'   \code{DeletionCheck} flag (1 = the row will be dropped). May be used on
+#'   its own to preview the already-set filter without re-listing the
+#'   variables (\code{jcomplete(preview = TRUE)}). Default \code{FALSE}.
+#' @param console Logical or numeric. Print the dropped rows to the console.
+#'   \code{TRUE} prints the first 10; a number prints that many. Independent of
+#'   \code{preview}: on its own it prints to the console without opening the
+#'   viewer; combine with \code{preview = TRUE} to get both. The console
+#'   listing is always limited to the dropped rows so it cannot flood the
+#'   console. Default \code{FALSE}.
+#' @param non.deletes Logical. If \code{TRUE}, the viewer shows every case
+#'   (with \code{DeletionCheck} marking which will drop) rather than only the
+#'   dropped rows. Affects the viewer only; the console listing stays
+#'   deleted-rows-only. Default \code{FALSE}.
 #'
-#' @return Invisibly returns \code{NULL}. Called for its side effect.
+#' @return Invisibly returns \code{NULL}. When a preview is requested,
+#'   invisibly returns the previewed data frame instead, so it can be
+#'   captured (e.g. \code{jcomplete_rows <- jcomplete(preview = TRUE)}).
 #'
 #' @examples
 #' \donttest{
 #' juse(mtcars)
 #' jcomplete(mpg, hp, wt, am)
 #' jdesc(mpg)                     # Uses only complete cases on those 4 vars
+#' jcomplete(mpg, hp, wt, am, preview = TRUE)     # Set and preview together
+#' jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)
+#' jcomplete(preview = TRUE, non.deletes = TRUE)  # Viewer shows all cases
+#' jcomplete(console = 10)        # Console only -- first 10 dropped rows
+#' jcomplete(preview = TRUE, console = 25)        # Viewer and console
 #' jcomplete(off)                 # Deactivate
 #' jcomplete(on)                  # Reactivate
 #' jcomplete()                    # Check status
@@ -3788,9 +3942,25 @@ jfilter <- function(data, expr) {
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jcomplete <- function(data, ...) {
+jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
+                      non.deletes = FALSE) {
 
   default_name <- getOption(".jst_default_data", default = NULL)
+
+  # Any preview surface requested? console and non.deletes both imply the
+  # viewer, so any of the three turns the preview on.
+  .preview_on <- isTRUE(preview) || isTRUE(non.deletes) || isTRUE(console) ||
+    (is.numeric(console) && length(console) == 1L && !is.na(console) &&
+       console >= 1)
+
+  # A negative console value is meaningless; flag it rather than silently
+  # treating it as "off" (0 / FALSE turn the console off; TRUE or a positive
+  # number show that many dropped rows).
+  if (is.numeric(console) && length(console) == 1L && !is.na(console) &&
+      console < 0) {
+    stop("`console` must be TRUE or a positive number of rows to show ",
+         "(0 or FALSE turns it off); got ", console, ".", call. = FALSE)
+  }
 
   # -- No arguments: print session-wide status ------------------------------
   # Session-wide to match jcomplete(NULL). Collapse rule: 0 or 1 frame on a
@@ -3800,6 +3970,49 @@ jcomplete <- function(data, ...) {
   if (missing(data) && ...length() == 0) {
     reg <- getOption(".jst_complete", default = list())
     reg <- reg[!vapply(reg, is.null, logical(1))]
+
+    # Preview an already-registered filter without re-listing variables.
+    if (.preview_on) {
+      if (length(reg) == 0L) {
+        message("No jcomplete filter set. ",
+                "Run jcomplete(var1, var2, ...) first.")
+        return(invisible(NULL))
+      }
+      target <- default_name
+      if (is.null(target) || is.null(reg[[target]])) {
+        if (length(reg) == 1L) {
+          target <- names(reg)[1L]
+        } else {
+          message("Multiple jcomplete filters are set and no juse() default ",
+                  "is active; set a default with juse() to choose which to ",
+                  "preview.")
+          return(invisible(NULL))
+        }
+      }
+      cs          <- reg[[target]]
+      calling_env <- parent.frame()
+      if (!exists(target, envir = calling_env)) {
+        message("Data frame ", target,
+                " is not reachable here to build the preview.")
+        return(invisible(NULL))
+      }
+      df         <- get(target, envir = calling_env)
+      valid_vars <- cs$vars[cs$vars %in% names(df)]
+      if (length(valid_vars) == 0L) {
+        message("None of the registered variables are present in ",
+                target, ".")
+        return(invisible(NULL))
+      }
+      masked <- .jst_apply_declared_udms_as_na(
+        df[, valid_vars, drop = FALSE])$data
+      return(.jst_jcomplete_preview(masked, valid_vars,
+                                    show_all  = isTRUE(non.deletes),
+                                    console   = console,
+                                    viewer    = isTRUE(preview) ||
+                                                isTRUE(non.deletes),
+                                    data_name = target))
+    }
+
     if (length(reg) == 0L) {
       message("No jcomplete settings in this session.")
       return(invisible(NULL))
@@ -3991,6 +4204,19 @@ jcomplete <- function(data, ...) {
       !identical(prior_complete$vars, variable_names)) {
     cat("  Replaced the previous jcomplete on ", .jst_data_name, " (was: ",
         paste(prior_complete$vars, collapse = ", "), ").\n", sep = "")
+  }
+
+  # Optional row-level preview of what the filter will drop. `masked` and
+  # `variable_names` are already computed above for the summary, so the
+  # preview reflects exactly the same complete-case logic.
+  if (.preview_on) {
+    pv <- .jst_jcomplete_preview(masked, variable_names,
+                                 show_all  = isTRUE(non.deletes),
+                                 console   = console,
+                                 viewer    = isTRUE(preview) ||
+                                             isTRUE(non.deletes),
+                                 data_name = .jst_data_name)
+    return(invisible(pv))
   }
 
   invisible(NULL)
@@ -11100,7 +11326,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       stop(paste0(
         "Value(s) ", paste(legitimate_unspecified, collapse = ", "),
         " in '", orig_name, "' were not in the map. ",
-        "Map these values and re-run."
+        "Map these values and re-run. ",
+        "To leave unmapped values unchanged, add 'else=copy' to the map."
       ), call. = FALSE)
     }
   }
