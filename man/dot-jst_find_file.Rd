@@ -4,7 +4,12 @@
 \alias{.jst_find_file}
 \title{Internal: find a bare filename in Data/, data/, or working directory}
 \usage{
-.jst_find_file(filename)
+.jst_find_file(filename, quiet = FALSE)
+}
+\arguments{
+\item{quiet}{Logical; default FALSE. When TRUE, suppresses the
+"Reading from \if{html}{\out{<dir>}}" note (propagated from jload()'s quiet argument).
+The not-found error is unaffected.}
 }
 \description{
 Internal: find a bare filename in Data/, data/, or working directory

@@ -60,9 +60,10 @@ suppresses it; \code{NULL} at the global level shows once per session.
 See \code{?joutput} for the full toggle behavior.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, suppresses jload()'s
-informational messages (file found, load summary, default-data note,
-and the UDM narrative, overriding udm.notice). Errors, warnings, the
-multi-sheet advisory, and the overwrite prompt are still shown.}
+informational messages (the directory-resolution note, file found,
+load summary, default-data note, and the UDM narrative, overriding
+udm.notice). Errors, warnings, the multi-sheet advisory, and the
+overwrite prompt are still shown.}
 }
 \value{
 Invisibly returns the loaded data frame. The primary effect is

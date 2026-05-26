@@ -8,7 +8,7 @@ joptions(
   missing.convention = NULL,
   udm.convention.codes = NULL,
   data.dir = NULL,
-  echo = TRUE
+  quiet = FALSE
 )
 }
 \arguments{
@@ -19,9 +19,9 @@ joptions(
 
 \item{data.dir}{Character string (length 1), or \code{NULL}. See Slots.}
 
-\item{echo}{Logical; default TRUE. When FALSE, joptions() applies the
+\item{quiet}{Logical; default FALSE. When TRUE, joptions() applies the
 change silently, suppressing both the status panel and the convention
-nudge. A bare joptions() status query always prints regardless of echo.}
+nudge. A bare joptions() status query always prints regardless of quiet.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for the side effect of

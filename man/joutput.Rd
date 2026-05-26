@@ -16,7 +16,7 @@ joutput(
   var.labels = NULL,
   ref.categories = NULL,
   udm.notice = NULL,
-  echo = TRUE
+  quiet = FALSE
 )
 }
 \arguments{
@@ -83,9 +83,9 @@ it entirely; \code{NULL} ("auto") prints it only the first time
 in a session, then suppresses it. Standard level uses \code{NULL}
 (auto), minimal uses \code{FALSE}, full uses \code{TRUE}.}
 
-\item{echo}{Logical; default TRUE. When FALSE, joutput() applies the
+\item{quiet}{Logical; default FALSE. When TRUE, joutput() applies the
 level/toggle change silently (the status panel is not printed). A bare
-joutput() status query always prints regardless of echo.}
+joutput() status query always prints regardless of quiet.}
 }
 \value{
 Invisibly returns NULL. Called for its side effect of setting

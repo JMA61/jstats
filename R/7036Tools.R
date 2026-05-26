@@ -4749,14 +4749,14 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-#' @param echo Logical; default TRUE. When FALSE, joutput() applies the
+#' @param quiet Logical; default FALSE. When TRUE, joutput() applies the
 #'   level/toggle change silently (the status panel is not printed). A bare
-#'   joutput() status query always prints regardless of echo.
+#'   joutput() status query always prints regardless of quiet.
 joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
                     posthoc = NULL, diagnostics = NULL,
                     case.processing = NULL, case.processing.detail = NULL,
                     var.labels = NULL,
-                    ref.categories = NULL, udm.notice = NULL, echo = TRUE) {
+                    ref.categories = NULL, udm.notice = NULL, quiet = FALSE) {
 
   valid_levels <- c("minimal", "standard", "full")
 
@@ -4764,7 +4764,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
   if (!missing(level) && is.null(level)) {
     options(.jst_output_level = NULL)
     options(.jst_output_toggles = NULL)
-    if (echo) {
+    if (!quiet) {
       .cat_red("Output Settings\n")
       cat("Reset to defaults (standard, no toggle overrides).\n\n")
     }
@@ -4799,10 +4799,10 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
       current_toggles <- getOption(".jst_output_toggles", list())
       for (nm in names(toggle_args)) current_toggles[[nm]] <- toggle_args[[nm]]
       options(.jst_output_toggles = current_toggles)
-      # A toggle change respects echo.
-      if (echo) .jst_output_status()
+      # A toggle change respects quiet.
+      if (!quiet) .jst_output_status()
     } else {
-      # A bare joutput() query always prints, regardless of echo.
+      # A bare joutput() query always prints, regardless of quiet.
       .jst_output_status()
     }
     return(invisible(NULL))
@@ -4822,7 +4822,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
     options(.jst_output_toggles = NULL)
   }
 
-  if (echo) .jst_output_status()
+  if (!quiet) .jst_output_status()
   invisible(NULL)
 }
 
@@ -5043,11 +5043,11 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #'   \code{\link{JeffsStatTools}} for the package overview.
 #'
 #' @export
-#' @param echo Logical; default TRUE. When FALSE, joptions() applies the
+#' @param quiet Logical; default FALSE. When TRUE, joptions() applies the
 #'   change silently, suppressing both the status panel and the convention
-#'   nudge. A bare joptions() status query always prints regardless of echo.
+#'   nudge. A bare joptions() status query always prints regardless of quiet.
 joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
-                     data.dir = NULL, echo = TRUE) {
+                     data.dir = NULL, quiet = FALSE) {
 
   mc_supplied <- !missing(missing.convention)
   cc_supplied <- !missing(udm.convention.codes)
@@ -5066,11 +5066,11 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   # we inspect sys.call() directly. Detected shape: exactly one supplied
   # argument, unnamed in the source call, and NULL in value.
   call_args <- as.list(sys.call())[-1L]
-  # Ignore a named echo = ... when detecting the reset shape, so
-  # joptions(NULL, echo = FALSE) is still recognized as a (quiet) reset
+  # Ignore a named quiet = ... when detecting the reset shape, so
+  # joptions(NULL, quiet = TRUE) is still recognized as a (quiet) reset
   # rather than read as two arguments.
   arg_names <- names(call_args)
-  if (!is.null(arg_names)) call_args <- call_args[arg_names != "echo"]
+  if (!is.null(arg_names)) call_args <- call_args[arg_names != "quiet"]
   positional_null_reset <- length(call_args) == 1L &&
                            (is.null(names(call_args)) ||
                             names(call_args) == "") &&
@@ -5081,7 +5081,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     options(.jst_options_missing_convention   = NULL)
     options(.jst_options_udm_convention_codes = NULL)
     options(.jst_options_data_dir             = NULL)
-    if (echo) .jst_options_status()
+    if (!quiet) .jst_options_status()
     return(invisible(NULL))
   }
 
@@ -5128,9 +5128,9 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     options(.jst_options_data_dir = data.dir)
   }
 
-  # Status panel, then nudge (per Session 28 Item 1 decision). echo = FALSE
+  # Status panel, then nudge (per Session 28 Item 1 decision). quiet = TRUE
   # silences both -- a quiet call is fully quiet.
-  if (echo) {
+  if (!quiet) {
     .jst_options_status()
     if (trigger_nudge) .jst_options_nudge(missing.convention)
   }
@@ -13164,16 +13164,18 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 #'
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, suppresses jload()'s
-#'   informational messages (file found, load summary, default-data note,
-#'   and the UDM narrative, overriding udm.notice). Errors, warnings, the
-#'   multi-sheet advisory, and the overwrite prompt are still shown.
+#'   informational messages (the directory-resolution note, file found,
+#'   load summary, default-data note, and the UDM narrative, overriding
+#'   udm.notice). Errors, warnings, the multi-sheet advisory, and the
+#'   overwrite prompt are still shown.
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   check.missing = TRUE, sheet = NULL,
                   preserve.udm = TRUE, udm.notice = NULL, quiet = FALSE) {
 
-  # quiet = TRUE mutes informational messages (file found, load summary,
-  # default-data note, and the UDM narrative). Errors, warnings, the
-  # multi-sheet advisory, and the overwrite prompt are never muted.
+  # quiet = TRUE mutes informational messages (the directory-resolution
+  # note, file found, load summary, default-data note, and the UDM
+  # narrative). Errors, warnings, the multi-sheet advisory, and the
+  # overwrite prompt are never muted.
   say <- function(...) if (!quiet) message(...)
 
   # --- Validate file argument ------------------------------------------------
@@ -13260,7 +13262,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
   } else {
     # Bare filename — search Data/, data/, then working directory
-    resolved_path <- .jst_find_file(file)
+    resolved_path <- .jst_find_file(file, quiet = quiet)
   }
 
   # --- Determine object name -------------------------------------------------
@@ -13975,13 +13977,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 }
 
 #' Internal: find a bare filename in Data/, data/, or working directory
+#' @param quiet Logical; default FALSE. When TRUE, suppresses the
+#'   "Reading from <dir>" note (propagated from jload()'s quiet argument).
+#'   The not-found error is unaffected.
 #' @keywords internal
-.jst_find_file <- function(filename) {
+.jst_find_file <- function(filename, quiet = FALSE) {
   search_dirs <- .jst_get_search_dirs()
   for (d in search_dirs) {
     candidate <- file.path(d, filename)
     if (file.exists(candidate)) {
-      if (d != ".") {
+      if (d != "." && !quiet) {
         message("Reading from ", .jst_norm_path(d))
       }
       return(candidate)
