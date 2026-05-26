@@ -1619,6 +1619,39 @@
   rows
 }
 
+#' Internal helper: cap a pipeline-row label's parenthetical content for CPS
+#'
+#' Keeps the Case-Processing top table readable when a long jcomplete()
+#' variable set or a jsubset()/subset = expression would otherwise blow out
+#' the dynamic column width. Two modes:
+#'   "list" -- a character vector of names (jcomplete's complete_vars). With
+#'             more than max_items entries, returns the first max_items
+#'             followed by ", +N more". The full set stays visible via
+#'             jcomplete()'s own status query.
+#'   "expr" -- a single expression string (filter_expr / subset_expr).
+#'             Truncated to max_width display columns with a trailing
+#'             ellipsis when longer.
+#' Returns the (possibly shortened) content only; the caller supplies the
+#' operation prefix, e.g. sprintf("jcomplete (%s)", ...). Display width is
+#' measured with nchar(type = "width"), matching the renderer's dw().
+#' @keywords internal
+.jst_cps_cap_label <- function(content, mode = c("list", "expr"),
+                               max_items = 2L, max_width = 40L) {
+  mode <- match.arg(mode)
+  if (mode == "list") {
+    content <- as.character(content)
+    n <- length(content)
+    if (n <= max_items) return(paste(content, collapse = ", "))
+    sprintf("%s, +%d more",
+            paste(content[seq_len(max_items)], collapse = ", "),
+            n - max_items)
+  } else {
+    content <- as.character(content)[1L]
+    if (nchar(content, type = "width") <= max_width) return(content)
+    paste0(substr(content, 1L, max_width - 1L), "\u2026")
+  }
+}
+
 #' Internal helper: print the Case Processing Summary (CPS)
 #'
 #' Resolves a render spec from the .jst_cps_*_rules tables (via
@@ -1740,57 +1773,61 @@
 
     # ---- TOP TABLE: pipeline chain ----
     if (isTRUE(spec$render_top)) {
-      labels <- "Original"; surv_v <- n_original; exc_v <- NA_integer_
+      labels <- "Original"; detail <- ""
+      surv_v <- n_original; exc_v <- NA_integer_
       prior  <- n_original
 
       if (isTRUE(sample_info$complete_active) &&
           !is.null(sample_info$n_after_complete)) {
-        lab <- if (!is.null(sample_info$complete_vars) &&
+        det <- if (!is.null(sample_info$complete_vars) &&
                    length(sample_info$complete_vars))
-                 sprintf("jcomplete (%s)",
-                         paste(sample_info$complete_vars, collapse = ", "))
-               else "jcomplete"
-        labels <- c(labels, lab)
+                 .jst_cps_cap_label(sample_info$complete_vars, mode = "list")
+               else ""
+        labels <- c(labels, "jcomplete"); detail <- c(detail, det)
         exc_v  <- c(exc_v, prior - sample_info$n_after_complete)
         surv_v <- c(surv_v, sample_info$n_after_complete)
         prior  <- sample_info$n_after_complete
       }
       if (isTRUE(sample_info$filter_active) &&
           !is.null(sample_info$n_after_filter)) {
-        lab <- if (!is.null(sample_info$filter_expr) &&
+        det <- if (!is.null(sample_info$filter_expr) &&
                    nzchar(sample_info$filter_expr))
-                 sprintf("jsubset (%s)", sample_info$filter_expr)
-               else "jsubset"
-        labels <- c(labels, lab)
+                 .jst_cps_cap_label(sample_info$filter_expr, mode = "expr")
+               else ""
+        labels <- c(labels, "jsubset"); detail <- c(detail, det)
         exc_v  <- c(exc_v, prior - sample_info$n_after_filter)
         surv_v <- c(surv_v, sample_info$n_after_filter)
         prior  <- sample_info$n_after_filter
       }
       if (!is.null(sample_info$n_after_subset)) {
-        lab <- if (!is.null(sample_info$subset_expr) &&
+        det <- if (!is.null(sample_info$subset_expr) &&
                    nzchar(sample_info$subset_expr))
-                 sprintf("subset = %s", sample_info$subset_expr)
-               else "subset"
-        labels <- c(labels, lab)
+                 .jst_cps_cap_label(sample_info$subset_expr, mode = "expr")
+               else ""
+        labels <- c(labels, "subset ="); detail <- c(detail, det)
         exc_v  <- c(exc_v, prior - sample_info$n_after_subset)
         surv_v <- c(surv_v, sample_info$n_after_subset)
         prior  <- sample_info$n_after_subset
       }
       if (isTRUE(spec$show_auto_listwise)) {
-        labels <- c(labels, "Auto-listwise")
+        labels <- c(labels, "Auto-listwise"); detail <- c(detail, "")
         exc_v  <- c(exc_v, sample_info$n_excluded_missing)
         surv_v <- c(surv_v, n_analysis)
         prior  <- n_analysis
       }
-      labels <- c(labels, spec$endpoint_label)
+      labels <- c(labels, spec$endpoint_label); detail <- c(detail, "")
       exc_v  <- c(exc_v, NA_integer_)
       surv_v <- c(surv_v, prior)
 
-      # Column widths sized to content (display width) so long labels and
-      # the multibyte em-dash both align. Title is flush-left (indent 0),
-      # data rows indented 4; both pad their label field to the same absolute
-      # end column. (Session 52: dropped the "% Surviving" column, renamed
-      # the "Surviving" header to "Remaining", flush-left title.)
+      # Column widths sized to content (display width) so the multibyte
+      # em-dash aligns. Pipeline detail (jcomplete variables, jsubset /
+      # subset = expressions) renders as an UNHEADED trailing column after
+      # Remaining, so Excluded/Remaining sit in a stable position no matter
+      # how long or numerous the variable names are. Title flush-left (indent
+      # 0); data rows indented 4. (Session 52: dropped "% Surviving", renamed
+      # "Surviving" -> "Remaining". Session 57: pipeline detail moved to the
+      # trailing column; .jst_cps_cap_label truncation retained as a line-
+      # length guard only.)
       exc_strs  <- vapply(seq_along(labels), function(i)
                      if (is.na(exc_v[i])) dash else as.character(exc_v[i]),
                      character(1))
@@ -1806,11 +1843,15 @@
           padl("Excluded", exc_w), g, padl("Remaining", surv_w),
           "\n", sep = "")
       for (i in seq_along(labels)) {
+        det_str <- if (nzchar(detail[i])) paste0(g, detail[i]) else ""
         cat(strrep(" ", r_ind), padr(labels[i], lab_end - r_ind), g,
             padl(exc_strs[i], exc_w), g, padl(surv_strs[i], surv_w),
-            "\n", sep = "")
+            det_str, "\n", sep = "")
       }
-      rule_w <- max(rule_w, lab_end + exc_w + surv_w + 4L)
+      base_w  <- lab_end + exc_w + surv_w + 4L
+      det_ext <- if (any(nzchar(detail)))
+                   2L + max(dw(detail[nzchar(detail)])) else 0L
+      rule_w  <- max(rule_w, base_w + det_ext)
     }
 
     # ---- BOTTOM TABLE: missing-data breakdown (Form B) ----
