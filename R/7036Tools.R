@@ -5015,8 +5015,18 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 
   # data.dir: NULL displays as "Working directory" for parallelism with
   # the "None selected" reading of missing.convention. A set value
-  # displays as-is.
-  dd_label <- if (is.null(dd)) "Working directory" else dd
+  # displays as-is; if that folder does not exist yet, annotate that it
+  # will be created on first save. joptions() never creates the folder --
+  # creation stays deferred to jsave's first write (Option C decision) --
+  # so this note makes the pending side effect visible whenever the status
+  # panel displays while the folder is still absent.
+  dd_label <- if (is.null(dd)) {
+    "Working directory"
+  } else if (!dir.exists(dd)) {
+    paste0(dd, " (will be created in the working directory on first save)")
+  } else {
+    dd
+  }
 
   .cat_red("Options Settings\n")
   cat("User-defined missing values (UDMs) convention: ", mc_label,
@@ -13670,7 +13680,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- Overwrite check -------------------------------------------------------
   target_env <- parent.frame()
-  if (exists(obj_name, envir = target_env) && !overwrite) {
+  if (exists(obj_name, envir = target_env, inherits = FALSE) && !overwrite) {
     if (interactive()) {
       response <- readline(
         paste0("'", obj_name, "' already exists in your environment. ",
@@ -15293,6 +15303,35 @@ jsave <- function(data, file, overwrite = FALSE) {
       stop("'", data_str, "' is a ", class_desc, ", not a data frame. ",
            "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")",
            call. = FALSE)
+    }
+  }
+
+  # --- Pre-check: unquoted filename -----------------------------------------
+  # A bare filename like jsave(mtcars, mtcars.rds) parses mtcars.rds as a
+  # symbol, so forcing the file argument later yields the cryptic base-R
+  # message "object 'mtcars.rds' not found". Detect the forgot-the-quotes
+  # case up front and give a jsave-tailored message, mirroring the
+  # data-argument interception above. Only fires when the bare symbol does
+  # not resolve to any existing object (so a real variable passed by name is
+  # left for the downstream "provide a filename" check) and deparses to a
+  # name ending in a supported extension (so unrelated undefined symbols are
+  # not misreported as missing quotes).
+  if (!missing(file)) {
+    file_sub <- substitute(file)
+    if (is.symbol(file_sub)) {
+      file_str <- as.character(file_sub)
+      if (!exists(file_str, envir = parent.frame()) &&
+          tolower(tools::file_ext(file_str)) %in%
+            c("sav", "dta", "csv", "rds", "xpt", "xlsx", "xls")) {
+        ex_data <- if (!missing(data) && is.symbol(data_sub)) {
+          as.character(data_sub)
+        } else {
+          "MyData"
+        }
+        stop("'", file_str, "' is not quoted. Filenames must be in quotes, ",
+             "e.g. jsave(", ex_data, ", \"", file_str, "\")",
+             call. = FALSE)
+      }
     }
   }
 
