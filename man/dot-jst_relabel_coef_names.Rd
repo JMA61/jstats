@@ -20,7 +20,7 @@ Default \code{"-"}.}
 Character vector the same length as \code{coef_names}.
 }
 \description{
-For the \code{"labels"} var.labels display mode (jlm / jlogistic). Given
+For the \code{"labels"} variable.id display mode (jlm / jlogistic). Given
 the cleaned names from \code{.jst_clean_coef_names()} -- numeric
 predictors as the bare variable name, factor terms as
 \code{"<var><sep><level>"}, intercept as \code{"(Intercept)"} -- replaces

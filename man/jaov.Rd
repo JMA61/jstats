@@ -13,7 +13,8 @@ jaov(
   levene = NULL,
   ci = NULL,
   subset = NULL,
-  labels = NULL,
+  variable.id = NULL,
+  value.id = NULL,
   case.processing.detail = NULL,
   full = FALSE
 )
@@ -43,15 +44,27 @@ group descriptives table. If NULL (default), defers to \code{joutput()}.}
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Character or NULL. Variable label display mode: one of
-\code{"none"}, \code{"labels"}, \code{"legend"}, or
-\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\item{variable.id}{Character or NULL. Variable label display mode: one of
+\code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"names"} shows variable names only;
+\code{"both"} shows \code{"name: label"};
 \code{"labels"} shows the DV and grouping-variable labels wherever the
 variable name appears (table captions and the ANOVA Source row; group
-levels stay as value labels) -- best for short labels;
+levels follow the value.id mode) -- best for short labels;
 \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 legend after the output. NULL (default) defers to \code{joutput()}'s
-\code{var.labels} setting. Not a logical.}
+\code{variable.id} setting. Not a logical.}
+
+\item{value.id}{Character or NULL. Value-label display mode for the
+group descriptives rows: \code{"both"} (\code{"code: label"}),
+\code{"values"} (bare code), or \code{"labels"} (the label, degrading to
+the bare code where a code has none).
+\code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+table and print a value-label legend after it (\code{"legend"}
+per-table, \code{"legend.bottom"} consolidated where multiple tables
+are produced). A no-op for grouping variables with
+no value labels. NULL (default) defers to \code{joutput()}'s
+\code{value.id} setting. Not a logical.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},

@@ -230,9 +230,140 @@
   }
 }
 
+#' Internal helper: print a value-label legend block
+#'
+#' Companion to \code{.print_var_labels} for the \code{value.id} legend modes.
+#' Emits one line per variable that carries value labels, in the form
+#' \code{varname: code = label, code = label, ...} under a \code{Value Labels:}
+#' header, matching the variable-label block's header + indented-lines + blank
+#' line structure. One line per variable (locked design); legend lines are not
+#' table cells, so they are not width-capped. Variables without value labels
+#' contribute nothing; if no variable carries any, nothing is printed.
+#'
+#' @param data A data frame (or pre-conversion label source) whose columns may
+#'   carry value labels (\code{labelled::val_labels}).
+#' @param var_names Character vector of variable names to document, in order.
+#'
+#' @keywords internal
+.print_value_labels <- function(data, var_names) {
+  label_lines <- c()
+  for (v in var_names) {
+    if (v %in% names(data)) {
+      vls <- labelled::val_labels(data[[v]])
+      if (!is.null(vls) && length(vls) > 0L) {
+        pairs <- paste0(unname(vls), " = ", names(vls))
+        label_lines <- c(label_lines,
+                         paste0("  ", v, ": ", paste(pairs, collapse = ", ")))
+      }
+    }
+  }
+  if (length(label_lines) > 0) {
+    cat("Value Labels:\n")
+    cat(paste(label_lines, collapse = "\n"))
+    cat("\n\n")
+  }
+}
+
+#' Internal helper: print variable- and value-label legends (single position)
+#'
+#' For single-table functions (jt, jaov, jcrosstab) and grouped jdesc, where
+#' both \code{"legend"} and \code{"legend.bottom"} resolve to the same place --
+#' after the table. Emits one lead-in blank line if either block will print,
+#' then the variable-label block first and the value-label block second (the
+#' Session 60 ordering lock). Each block supplies its own trailing blank line,
+#' so co-located blocks are separated by exactly one blank line. The two blocks
+#' can document different variable sets (e.g. jt's variable legend covers DV +
+#' group, but only the group carries the value.id legend).
+#'
+#' @param data Data frame / label source.
+#' @param vars_var Variable names for the variable-label block.
+#' @param vars_val Variable names for the value-label block.
+#' @param vlmode Resolved variable.id mode.
+#' @param value_mode Resolved value.id mode.
+#' @param lead Logical. Emit the lead-in blank line. Default TRUE. Pass FALSE
+#'   when the caller's preceding output already supplies a trailing blank line
+#'   (e.g. grouped jdesc, where the last group table emits one).
+#'
+#' @keywords internal
+.jst_print_legends <- function(data, vars_var, vars_val, vlmode, value_mode,
+                               lead = TRUE) {
+  leg <- c("legend", "legend.bottom")
+  vmode_leg   <- vlmode %in% leg
+  valmode_leg <- value_mode %in% leg
+  if (lead && (vmode_leg || valmode_leg)) cat("\n")
+  if (vmode_leg)   .print_var_labels(data, vars_var)
+  if (valmode_leg) .print_value_labels(data, vars_val)
+}
+
+#' Internal helper: print legends at a specific position (per-table / bottom)
+#'
+#' For multi-variable functions (jfreq) where \code{"legend"} prints under each
+#' variable's own table and \code{"legend.bottom"} prints once after all
+#' tables. Called at each position; prints only the block(s) whose mode matches
+#' \code{position}. No lead-in blank: the caller's table already emits a
+#' trailing blank line. Variable-label block first, value-label block second
+#' when both land at the same position; each block's trailing blank line
+#' separates co-located blocks.
+#'
+#' @param data Data frame / label source.
+#' @param vars_var Variable names for the variable-label block.
+#' @param vars_val Variable names for the value-label block.
+#' @param vlmode Resolved variable.id mode.
+#' @param value_mode Resolved value.id mode.
+#' @param position Either \code{"legend"} or \code{"legend.bottom"}.
+#'
+#' @keywords internal
+.jst_print_legends_at <- function(data, vars_var, vars_val, vlmode, value_mode,
+                                  position) {
+  if (identical(vlmode, position))     .print_var_labels(data, vars_var)
+  if (identical(value_mode, position)) .print_value_labels(data, vars_val)
+}
+
+#' Internal helper: combine a variable's name and label per variable.id mode
+#'
+#' Decouples the \code{variable.id} display decision from how each call site
+#' fetches its label. The caller resolves two strings -- the bare \code{name}
+#' and a \code{label_or_name} (the variable's label if it has one, otherwise
+#' the name, as returned by \code{.jst_label_or_name} or an equivalent
+#' closure) -- and this helper combines them according to \code{mode}:
+#' \itemize{
+#'   \item \code{"labels"}: the label (i.e. \code{label_or_name}).
+#'   \item \code{"both"}: \code{"name: label"} when a label exists, else the
+#'     bare name. "A label exists" is inferred from \code{label_or_name}
+#'     differing from \code{name}; an unlabelled variable (where the two are
+#'     equal) collapses to the name, mirroring \code{value.id = "both"}'s
+#'     per-variable degrade.
+#'   \item \code{"names"}, \code{"legend"}, \code{"legend.bottom"}: the bare
+#'     name (legend modes keep the name in place and emit the label
+#'     separately via \code{.print_var_labels}).
+#' }
+#' The colon-space join matches \code{.jst_format_value_labels}'s
+#' \code{"both"} form, so a name+label identifier reads identically to a
+#' code+label category. \code{cap = TRUE} routes the result through the shared
+#' 40-column cap; pass it only for in-table-column surfaces (jdesc/jcorr/jalpha
+#' row-label columns), never for title or heading lines.
+#'
+#' @param name Single character: the bare variable name.
+#' @param label_or_name Single character: the label if present, else the name.
+#' @param mode One of \code{"both"}, \code{"names"}, \code{"labels"},
+#'   \code{"legend"}, \code{"legend.bottom"}.
+#' @param cap Logical. Apply the in-table width cap. Default FALSE.
+#'
+#' @return Single character display string.
+#'
+#' @keywords internal
+.jst_combine_id <- function(name, label_or_name, mode, cap = FALSE) {
+  out <- switch(mode,
+    labels = label_or_name,
+    both   = if (identical(label_or_name, name)) name
+             else paste0(name, ": ", label_or_name),
+    name)
+  if (isTRUE(cap)) .jst_truncate_ellipsis(out) else out
+}
+
 #' Internal helper: variable label for display, falling back to the name
 #'
-#' Used by the \code{"labels"} var.labels mode, where a variable's label
+#' Used by the \code{"labels"} variable.id mode, where a variable's label
 #' replaces its name in table rows, table captions, crosstab dimnames, or
 #' (in jplot) axis/legend/facet titles. When the variable carries no
 #' non-empty variable label, its name is returned unchanged. This name
@@ -1282,17 +1413,20 @@
   minimal  = list(effect.size = FALSE, ci = FALSE, levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = FALSE, case.processing.detail = "none",
-                  var.labels = "none", ref.categories = FALSE,
+                  variable.id = "names", value.id = "values",
+                  ref.categories = FALSE,
                   udm.notice = FALSE),
   standard = list(effect.size = TRUE,  ci = TRUE,  levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = NULL,  case.processing.detail = "totals",
-                  var.labels = "none",  ref.categories = TRUE,
+                  variable.id = "names", value.id = "both",
+                  ref.categories = TRUE,
                   udm.notice = NULL),
   full     = list(effect.size = TRUE,  ci = TRUE,  levene = TRUE,
                   posthoc = TRUE,  diagnostics = TRUE,
                   case.processing = TRUE,  case.processing.detail = "per_code",
-                  var.labels = "legend",  ref.categories = TRUE,
+                  variable.id = "legend", value.id = "both",
+                  ref.categories = TRUE,
                   udm.notice = TRUE)
 )
 
@@ -1354,31 +1488,141 @@
   defaults[[level]][[name]]
 }
 
-#' Internal helper: validate and resolve the var.labels display mode
+#' Internal helper: validate and resolve the variable.id display mode
 #'
-#' Thin wrapper over \code{.jst_resolve_toggle("var.labels", ...)} that
-#' first validates a non-NULL per-call \code{labels} argument against the
-#' four-token enum. Every analysis function's \code{labels =} argument is
-#' a string-only enum (no logical aliases); a bad token errors here with a
-#' consistent message rather than silently passing through to the renderer.
+#' Thin wrapper over \code{.jst_resolve_toggle("variable.id", ...)} that
+#' first validates a non-NULL per-call \code{variable.id} argument against
+#' the five-token enum. Every analysis function's \code{variable.id =}
+#' argument is a string-only enum (no logical aliases); a bad token errors
+#' here with a consistent message rather than silently passing through to the
+#' renderer. (\code{variable.id} controls the one-per-variable descriptive
+#' label; the distinct \code{value.id} control governs the per-code
+#' value-label mapping -- see \code{.jst_resolve_value_id}.)
 #'
-#' @param per_call The value of the calling function's \code{labels}
-#'   argument: NULL (defer to joutput()), or one of \code{"none"},
+#' The five tokens parallel \code{value.id}'s: \code{"names"} (bare variable
+#' name), \code{"labels"} (the variable label in place of the name),
+#' \code{"both"} (\code{"name: label"}), \code{"legend"} (names in the table
+#' plus a name->label legend block), \code{"legend.bottom"} (same, legend at
+#' the very end).
+#'
+#' @param per_call The value of the calling function's \code{variable.id}
+#'   argument: NULL (defer to joutput()), or one of \code{"both"},
+#'   \code{"names"}, \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.
+#'
+#' @return Single character token: one of \code{"both"}, \code{"names"},
 #'   \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.
 #'
-#' @return Single character token: one of \code{"none"}, \code{"labels"},
-#'   \code{"legend"}, \code{"legend.bottom"}.
-#'
 #' @keywords internal
-.jst_resolve_var_labels <- function(per_call) {
+.jst_resolve_variable_id <- function(per_call) {
   if (!is.null(per_call)) {
     if (!is.character(per_call) || length(per_call) != 1 ||
-        !(per_call %in% c("none", "labels", "legend", "legend.bottom"))) {
-      stop("labels must be one of: \"none\", \"labels\", \"legend\", ",
-           "\"legend.bottom\".", call. = FALSE)
+        !(per_call %in% c("both", "names", "labels", "legend", "legend.bottom"))) {
+      stop("variable.id must be one of: \"both\", \"names\", \"labels\", ",
+           "\"legend\", \"legend.bottom\".", call. = FALSE)
     }
   }
-  .jst_resolve_toggle("var.labels", per_call)
+  .jst_resolve_toggle("variable.id", per_call)
+}
+
+#' Internal helper: validate and resolve the value.id display mode
+#'
+#' Thin wrapper over \code{.jst_resolve_toggle("value.id", ...)} that
+#' first validates a non-NULL per-call \code{value.id} argument against
+#' the supported-token enum. \code{value.id} controls how a categorical
+#' variable's per-code value labels surface (code, label, or both) wherever
+#' categorical levels appear -- the frequency-table Value column, group
+#' headers, crosstab axes. It is distinct from \code{variable.id}, which
+#' governs the one-per-variable descriptive label.
+#'
+#' The five tokens: \code{"both"} (\code{"code: label"}), \code{"values"}
+#' (bare code), \code{"labels"} (the value label, degrading to the bare code
+#' per code where none exists), \code{"legend"} (bare codes in the table plus
+#' a code->label legend block), \code{"legend.bottom"} (same, legend at the
+#' very end). The legend modes keep the in-table category column compact when
+#' value labels are long, mirroring \code{variable.id}'s legend modes.
+#'
+#' @param per_call The value of the calling function's \code{value.id}
+#'   argument: NULL (defer to joutput()), or one of \code{"both"},
+#'   \code{"values"}, \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.
+#'
+#' @return Single character token: one of \code{"both"}, \code{"values"},
+#'   \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.
+#'
+#' @keywords internal
+.jst_resolve_value_id <- function(per_call) {
+  if (!is.null(per_call)) {
+    if (!is.character(per_call) || length(per_call) != 1 ||
+        !(per_call %in% c("both", "values", "labels", "legend", "legend.bottom"))) {
+      stop("value.id must be one of: \"both\", \"values\", \"labels\", ",
+           "\"legend\", \"legend.bottom\".", call. = FALSE)
+    }
+  }
+  .jst_resolve_toggle("value.id", per_call)
+}
+
+#' Internal helper: format categorical levels under a value.id mode
+#'
+#' Shared formatter that maps stored codes (plus their value labels, if any)
+#' to display strings under the active \code{value.id} mode. Every surface
+#' where categorical levels appear -- jfreq valid rows, jt/jaov group headers,
+#' jcrosstab axes, grouped jdesc group headers -- routes its code/label display
+#' through this one helper so the modes behave identically across functions and
+#' the per-code degrade logic lives in a single place.
+#'
+#' Degrades per CODE, not per variable: \code{"labels"} shows the label where
+#' one exists, otherwise that bare code; \code{"both"} shows \code{"code: label"}
+#' where a label exists, otherwise the bare code (so a variable with no value
+#' labels at all collapses to bare codes -- the emergent whole-variable
+#' behaviour). \code{"values"} always shows the bare stored code. The two
+#' legend modes (\code{"legend"}, \code{"legend.bottom"}) render bare codes
+#' in-table exactly like \code{"values"} -- the code->label mapping is emitted
+#' separately as a legend block by the calling function (see
+#' \code{.print_value_labels}). Plain numeric (unlabelled) variables therefore
+#' render identically under every mode, so value.id is a no-op for them.
+#'
+#' In-table content is capped to a display-width ceiling via
+#' \code{.jst_truncate_ellipsis} (shared 40-column cap). This bites only under
+#' \code{"both"}/\code{"labels"} where a long value label would otherwise widen
+#' the category column for every row; bare codes are short and unaffected. The
+#' cap is applied here, in the formatting layer, so the (already-capped) string
+#' is what reaches \code{.jst_print_table} -- the printer stays width-agnostic.
+#'
+#' Works for both numeric-backed and character-backed haven_labelled variables:
+#' codes are compared as character on both sides, so string codes (e.g.
+#' "US"/"UK") are never coerced to numeric.
+#'
+#' @param codes Vector of stored values (numeric or character), one per level
+#'   or per row. NA entries (system-missing) map to NA in the output.
+#' @param val_labels Named vector as returned by \code{labelled::val_labels()}
+#'   (names are the labels, values are the codes), or NULL / length-0 when the
+#'   variable carries no value labels.
+#' @param mode One of \code{"both"}, \code{"values"}, \code{"labels"},
+#'   \code{"legend"}, \code{"legend.bottom"}. The legend modes behave as
+#'   \code{"values"} for the returned in-table vector.
+#'
+#' @return Character vector parallel to \code{codes}.
+#'
+#' @keywords internal
+.jst_format_value_labels <- function(codes, val_labels, mode = "both") {
+  codes_chr <- as.character(codes)
+  lookup <- if (!is.null(val_labels) && length(val_labels) > 0L) {
+    stats::setNames(names(val_labels), as.character(unname(val_labels)))
+  } else {
+    character(0)
+  }
+  lab       <- unname(lookup[codes_chr])
+  has_label <- !is.na(lab) & nzchar(lab)
+  out <- switch(mode,
+    values         = codes_chr,
+    legend         = codes_chr,
+    legend.bottom  = codes_chr,
+    labels = ifelse(has_label, lab, codes_chr),
+    both   = ifelse(has_label, paste0(codes_chr, ": ", lab), codes_chr),
+    stop("Unknown value.id mode: ", mode, call. = FALSE))
+  # Cap in-table width (no-op for bare-code output; bites long labels only).
+  out <- vapply(out, .jst_truncate_ellipsis, character(1), USE.NAMES = FALSE)
+  out[is.na(codes)] <- NA_character_
+  out
 }
 
 #' Internal helper: resolve the active missing-value convention
@@ -1674,6 +1918,33 @@
   rows
 }
 
+#' Internal helper: truncate a string to a display-width cap with ellipsis
+#'
+#' Single source of truth for the package's table-cell width cap. A string
+#' wider than \code{max_width} display columns is cut to \code{max_width - 1}
+#' columns and given a trailing ellipsis character; shorter strings are
+#' returned unchanged. Display width is measured with
+#' \code{nchar(type = "width")} so double-width characters are counted
+#' correctly. The default 40-column cap is shared across every in-table label
+#' surface -- CPS pipeline detail (via \code{.jst_cps_cap_label}), jfreq value
+#' labels and grouped headers, jdesc/jcorr variable-identifier columns -- so a
+#' future change to the cap is made in this one place. Title and heading lines
+#' (which sit on their own line with no column to share) are never routed
+#' through this helper.
+#'
+#' @param content Character scalar (coerced; first element used).
+#' @param max_width Integer display-column cap. Default 40.
+#'
+#' @return Single character string, capped to \code{max_width} columns.
+#'
+#' @keywords internal
+.jst_truncate_ellipsis <- function(content, max_width = 40L) {
+  content <- as.character(content)[1L]
+  if (is.na(content)) return(content)
+  if (nchar(content, type = "width") <= max_width) return(content)
+  paste0(substr(content, 1L, max_width - 1L), "\u2026")
+}
+
 #' Internal helper: cap a pipeline-row label's parenthetical content for CPS
 #'
 #' Keeps the Case-Processing top table readable when a long jcomplete()
@@ -1701,9 +1972,7 @@
             paste(content[seq_len(max_items)], collapse = ", "),
             n - max_items)
   } else {
-    content <- as.character(content)[1L]
-    if (nchar(content, type = "width") <= max_width) return(content)
-    paste0(substr(content, 1L, max_width - 1L), "\u2026")
+    .jst_truncate_ellipsis(content, max_width = max_width)
   }
 }
 
@@ -4788,10 +5057,10 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'     \item{standard}{Default. Suitable for teaching and routine use.
 #'       Includes Case Processing Summary, reference categories, effect
 #'       sizes, and confidence intervals. Variable labels are off by
-#'       default (\code{var.labels = "none"}); request a label legend or
-#'       in-table labels per call or via the \code{var.labels} toggle.}
+#'       default (\code{variable.id = "names"}); request a label legend or
+#'       in-table labels per call or via the \code{variable.id} toggle.}
 #'     \item{full}{Everything in standard plus a variable label legend
-#'       (\code{var.labels = "legend"}), assumption checks (Levene's
+#'       (\code{variable.id = "legend"}), assumption checks (Levene's
 #'       test), post-hoc tests, regression diagnostics, and the most
 #'       detailed Case Processing Summary (per-code missing breakdown).}
 #'   }
@@ -4822,9 +5091,10 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'   or \code{"per_code"} (per UDM code plus system-missing). The
 #'   minimal tier defaults to \code{"none"}, standard to
 #'   \code{"totals"}, full to \code{"per_code"}.
-#' @param var.labels Character or NULL. Variable label display mode, one
-#'   of \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only, with
+#' @param variable.id Character or NULL. Variable label display mode, one
+#'   of \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"}, with
 #'   no labels block. \code{"labels"} replaces variable names with their
 #'   labels in the analysis output itself (table rows, captions, crosstab
 #'   dimnames, or \code{jplot} axis/legend titles) -- best when labels
@@ -4837,6 +5107,22 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'   standard tiers default to \code{"none"}; the full tier defaults to
 #'   \code{"legend"}. Not a logical -- \code{TRUE}/\code{FALSE} are not
 #'   accepted.
+#' @param value.id Character or NULL. Value-label display mode for the
+#'   categorical levels that appear in \code{jfreq} valid rows, the
+#'   \code{jt}/\code{jaov} group descriptives, the \code{jcrosstab} axes, and
+#'   the grouped \code{jdesc} headers. One of \code{"both"} (\code{"code: label"},
+#'   degrading to a bare code where a code has no label), \code{"values"} (the
+#'   bare stored code), or \code{"labels"} (the value label, degrading to the
+#'   bare code per code where none exists).
+#'   \code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+#'   table and print a value-label legend after it (\code{"legend"}
+#'   per-table, \code{"legend.bottom"} consolidated where multiple tables
+#'   are produced). Variables with no value labels
+#'   render identically under all three modes, so this is a no-op for plain
+#'   numeric data. The minimal tier defaults to \code{"values"}; the standard
+#'   and full tiers default to \code{"both"}. Distinct from
+#'   \code{variable.id}, which governs the one-per-variable descriptive
+#'   label. Not a logical.
 #' @param ref.categories Logical or NULL. Override the level's default
 #'   for the reference categories block (registered dummies).
 #' @param udm.notice Three-state toggle controlling the user-defined
@@ -4867,7 +5153,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
                     posthoc = NULL, diagnostics = NULL,
                     case.processing = NULL, case.processing.detail = NULL,
-                    var.labels = NULL,
+                    variable.id = NULL, value.id = NULL,
                     ref.categories = NULL, udm.notice = NULL, quiet = FALSE) {
 
   valid_levels <- c("minimal", "standard", "full")
@@ -4900,13 +5186,21 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
     }
     toggle_args$case.processing.detail <- case.processing.detail
   }
-  if (!is.null(var.labels)) {
-    if (!is.character(var.labels) || length(var.labels) != 1 ||
-        !(var.labels %in% c("none", "labels", "legend", "legend.bottom"))) {
-      stop("var.labels must be one of: \"none\", \"labels\", \"legend\", ",
-           "\"legend.bottom\".", call. = FALSE)
+  if (!is.null(variable.id)) {
+    if (!is.character(variable.id) || length(variable.id) != 1 ||
+        !(variable.id %in% c("both", "names", "labels", "legend", "legend.bottom"))) {
+      stop("variable.id must be one of: \"both\", \"names\", \"labels\", ",
+           "\"legend\", \"legend.bottom\".", call. = FALSE)
     }
-    toggle_args$var.labels <- var.labels
+    toggle_args$variable.id <- variable.id
+  }
+  if (!is.null(value.id)) {
+    if (!is.character(value.id) || length(value.id) != 1 ||
+        !(value.id %in% c("both", "values", "labels", "legend", "legend.bottom"))) {
+      stop("value.id must be one of: \"both\", \"values\", \"labels\", ",
+           "\"legend\", \"legend.bottom\".", call. = FALSE)
+    }
+    toggle_args$value.id <- value.id
   }
   if (!is.null(ref.categories))  toggle_args$ref.categories  <- ref.categories
   if (!is.null(udm.notice))      toggle_args$udm.notice      <- udm.notice
@@ -4958,18 +5252,26 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
   # Show effective value for each toggle
   toggle_names <- c("effect.size", "ci", "levene", "posthoc", "diagnostics",
                     "case.processing", "case.processing.detail",
-                    "var.labels", "ref.categories", "udm.notice")
+                    "variable.id", "value.id", "ref.categories",
+                    "udm.notice")
   defaults     <- .jst_output_defaults[[level]]
 
   for (nm in toggle_names) {
     default_val  <- defaults[[nm]]
     effective    <- if (nm %in% names(toggles)) toggles[[nm]] else default_val
-    override_str <- if (nm %in% names(toggles)) " (override)" else ""
+    # (override) marks settings whose effective value differs from the tier
+    # default -- i.e. an override with a visible effect. Setting a toggle back
+    # to its tier default (even explicitly) is not flagged, since nothing is
+    # actually overridden. identical() handles the NULL (AUTO) states cleanly.
+    override_str <- if (!identical(effective, default_val)) " (override)" else ""
 
     # case.processing.detail carries a string tier (none/totals/per_code);
-    # case.processing and udm.notice support three states (TRUE/FALSE/NULL=AUTO);
-    # other toggles are binary.
-    label <- if (identical(nm, "case.processing.detail")) {
+    # variable.id (none/labels/legend/legend.bottom) and value.id
+    # (both/values/labels) likewise carry string tiers -- show the token,
+    # not ON/OFF. case.processing and udm.notice support three states
+    # (TRUE/FALSE/NULL=AUTO); the remaining toggles are binary.
+    label <- if (nm %in% c("case.processing.detail", "variable.id",
+                           "value.id")) {
       toupper(effective)
     } else if (is.null(effective)) {
       "AUTO"
@@ -5339,15 +5641,27 @@ jdata_dir <- function(default = ".") {
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} shows each variable's label in place of its name (in the
 #'   descriptives table; for grouped output, as the per-variable caption and
 #'   the grouping-variable column header) -- best for short labels;
 #'   \code{"legend"} and \code{"legend.bottom"} keep names and print a label
 #'   legend after the table. NULL (default) defers to \code{joutput()}'s
-#'   \code{var.labels} setting. Not a logical.
+#'   \code{variable.id} setting. Not a logical.
+#' @param value.id Character or NULL. Value-label display mode for the
+#'   grouped descriptive headers (the \code{by}-group rows): \code{"both"}
+#'   (\code{"code: label"}), \code{"values"} (bare code), or \code{"labels"}
+#'   (the label, degrading to the bare code where a code has none).
+#'   \code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+#'   table and print a value-label legend after it (\code{"legend"}
+#'   per-table, \code{"legend.bottom"} consolidated where multiple tables
+#'   are produced). A no-op for
+#'   grouping variables with no value labels, and for ungrouped calls. NULL
+#'   (default) defers to \code{joutput()}'s \code{value.id} setting. Not a
+#'   logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_desc} containing:
 #'   \code{descriptives} (data frame of statistics, or NULL for grouped output),
@@ -5377,8 +5691,8 @@ jdata_dir <- function(default = ".") {
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
-jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
-                  case.processing.detail = NULL) {
+jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
+                  value.id = NULL, case.processing.detail = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # vector input, or bare-symbol-as-variable-name (leading comma omitted).
@@ -5398,7 +5712,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
     }
     temp_df  <- data.frame(x = arg1$first_arg_value)
     names(temp_df) <- var_name
-    return(jdesc(temp_df, !!rlang::sym(var_name), labels = labels))
+    return(jdesc(temp_df, !!rlang::sym(var_name), variable.id = variable.id,
+                 value.id = value.id))
   }
 
   data              <- arg1$data
@@ -5491,6 +5806,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
     is_labelled_by <- haven::is.labelled(by_var)
     if (is_labelled_by) {
       original_codes  <- sort(unique(.jst_as_numeric(by_var[!is.na(by_var)])))
+      by_val_labels   <- labelled::val_labels(by_var)
       data[[by_name]] <- haven::as_factor(by_var)
     } else if (!is.factor(data[[by_name]])) {
       data[[by_name]] <- factor(data[[by_name]])
@@ -5528,22 +5844,26 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
     # is captioned with its DV anchor -- the variable name, or its label under
     # "labels" -- which is structural (the only DV identifier on the table).
     # Under "labels" the grouping variable's column header is its label too;
-    # group levels stay as value labels. "legend"/"legend.bottom" add one
+    # group levels follow the value.id mode. "legend"/"legend.bottom" add one
     # consolidated legend after all mini-tables.
-    vlmode   <- .jst_resolve_var_labels(labels)
+    vlmode   <- .jst_resolve_variable_id(variable.id)
+    value_mode <- .jst_resolve_value_id(value.id)
     lab_disp <- function(nm, lab) if (!identical(lab, "None") && nzchar(lab)) lab else nm
-    by_disp  <- if (identical(vlmode, "labels")) lab_disp(by_name, original_by_label) else by_name
+    by_disp  <- .jst_combine_id(by_name, lab_disp(by_name, original_by_label), vlmode)
+    # Per-level group-header display under the active value.id mode (indexed
+    # [i] in the per-variable group loop). Empty when grouping var is unlabelled.
+    group_value_disp <- if (is_labelled_by) {
+      .jst_format_value_labels(original_codes, by_val_labels, value_mode)
+    } else {
+      NULL
+    }
     cat("\n")
 
     .jst_print_case_processing(sample_info, analysis_type = "per_var_desc",
                                detail = case.processing.detail)
 
     for (v in good_vars) {
-      v_disp <- if (identical(vlmode, "labels")) {
-        lab_disp(v, original_dv_info[[v]]$label)
-      } else {
-        v
-      }
+      v_disp <- .jst_combine_id(v, lab_disp(v, original_dv_info[[v]]$label), vlmode)
       cat(v_disp, "\n", sep = "")
 
       .emit_good_notes(v, data)
@@ -5566,7 +5886,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
         s <- if (n > 0) sd(subset_data)   else NA
 
         group_label <- if (is_labelled_by) {
-          paste0(original_codes[i], ": ", lvl)
+          group_value_disp[i]
         } else {
           lvl
         }
@@ -5592,8 +5912,16 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
     # Mixed case: warn for any variables that could not be summarized.
     .emit_bad_refusals()
 
-    if (vlmode %in% c("legend", "legend.bottom")) {
+    # Variable- and value-label legends at the single consolidated position.
+    # The grouping column in `data` has been factor-converted (value labels
+    # stripped), so the value-label block reads from `by_var`, which retains
+    # the original labelling. No lead-in blank: the last group table emits one.
+    leg_modes <- c("legend", "legend.bottom")
+    if (vlmode %in% leg_modes) {
       .print_var_labels(data, c(good_vars, by_name))
+    }
+    if (value_mode %in% leg_modes) {
+      .print_value_labels(stats::setNames(list(by_var), by_name), by_name)
     }
 
     cat("\n")
@@ -5664,7 +5992,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
   # "labels" the Variable column shows labels at print time only (the
   # returned descriptives keep variable names); "legend"/"legend.bottom"
   # collapse to one legend after the table.
-  vlmode <- .jst_resolve_var_labels(labels)
+  vlmode <- .jst_resolve_variable_id(variable.id)
 
   # Categorical-like and numbers-as-text notes for each summarized variable.
   for (v in good_vars) .emit_good_notes(v, data)
@@ -5696,10 +6024,11 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
   # but guard against an empty table reaching the renderer.
   if (!is.null(descriptives) && nrow(descriptives) > 0) {
     descriptives_disp <- descriptives
-    if (identical(vlmode, "labels")) {
+    if (vlmode %in% c("labels", "both")) {
       descriptives_disp$Variable <- vapply(
         descriptives$Variable,
-        function(v) .jst_label_or_name(data, v), character(1))
+        function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
+        character(1))
     }
     cat("\n")
     .jst_print_table(descriptives_disp)
@@ -5752,7 +6081,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
 #' Processing Summary (when at least one pipeline stage was active for
 #' this call). Each variable then gets its own block consisting of the
 #' variable name on its own line, indented Type and Variable label lines
-#' (suppressed when \code{joutput()}'s \code{var.labels} toggle is off),
+#' (suppressed when \code{joutput()}'s \code{variable.id} toggle is off),
 #' a blank line, and the frequency table. The frequency table ends with
 #' a Total row showing the post-pipeline N.
 #'
@@ -5768,15 +6097,26 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} uses each variable's label as its table caption (best
 #'   for short labels); \code{"legend"} prints a label legend under each
 #'   variable's own table; \code{"legend.bottom"} prints one consolidated
 #'   legend after all tables. NULL (default) defers to \code{joutput()}'s
-#'   \code{var.labels} setting. Not a logical. (Replaces the former inline
+#'   \code{variable.id} setting. Not a logical. (Replaces the former inline
 #'   Type/label block.)
+#' @param value.id Character or NULL. Value-label display mode for the
+#'   frequency-table valid rows: \code{"both"} (\code{"code: label"}),
+#'   \code{"values"} (bare code), or \code{"labels"} (the label, degrading to
+#'   the bare code where a code has none).
+#'   \code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+#'   table and print a value-label legend after it (\code{"legend"}
+#'   per-table, \code{"legend.bottom"} consolidated where multiple tables
+#'   are produced). A no-op for variables with no value
+#'   labels. NULL (default) defers to \code{joutput()}'s \code{value.id}
+#'   setting. Not a logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_freq} containing:
 #'   \code{frequencies} (named list of data frames, one per variable) and
@@ -5803,8 +6143,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, labels = NULL,
 #'   Case Processing Summary is top-table only (no missing-data
 #'   breakdown), so this argument has no effect; per-variable code
 #'   detail already appears in each variable's frequency table.
-jfreq <- function(data, ..., subset = NULL, labels = NULL,
-                  case.processing.detail = NULL) {
+jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
+                  value.id = NULL, case.processing.detail = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # vector input, or bare-symbol-as-variable-name (leading comma omitted).
@@ -5824,7 +6164,8 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
     }
     temp_df  <- data.frame(x = arg1$first_arg_value)
     names(temp_df) <- var_name
-    return(jfreq(temp_df, !!rlang::sym(var_name), labels = labels))
+    return(jfreq(temp_df, !!rlang::sym(var_name), variable.id = variable.id,
+                 value.id = value.id))
   }
 
   data              <- arg1$data
@@ -5857,7 +6198,11 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
   # each variable's caption anchor is its label; "legend" prints a legend
   # under each variable's own table; "legend.bottom" prints one consolidated
   # legend after all tables. (Replaces the former inline Type/label block.)
-  vlmode <- .jst_resolve_var_labels(labels)
+  vlmode <- .jst_resolve_variable_id(variable.id)
+  # Value-label display mode (code / label / both). Routes each variable's
+  # valid-row Value column through the shared formatter below. No-op for
+  # variables carrying no value labels.
+  value_mode <- .jst_resolve_value_id(value.id)
   # Build sample_info (used by CPS and the return value)
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
@@ -5928,43 +6273,25 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
     # .jst_var_kind detector routes this kind to text_character for jdesc;
     # jfreq tabulates it here instead of refusing. (Session 51)
     if (haven::is.labelled(temp_var) && typeof(temp_var) == "character") {
-      codes_chr  <- as.character(unclass(temp_var))
-      val_labs   <- labelled::val_labels(temp_var)
-      lab_lookup <- if (!is.null(val_labs) && length(val_labs) > 0L) {
-        stats::setNames(names(val_labs), as.character(unname(val_labs)))
-      } else {
-        character(0)
-      }
-      lab_for     <- unname(lab_lookup[codes_chr])
-      display_str <- ifelse(is.na(codes_chr), NA_character_,
-                            ifelse(!is.na(lab_for) & nzchar(lab_for),
-                                   paste(codes_chr, lab_for, sep = ": "),
-                                   codes_chr))
-      uniq        <- !is.na(codes_chr) & !duplicated(display_str)
+      codes_chr   <- as.character(unclass(temp_var))
+      val_labs    <- labelled::val_labels(temp_var)
+      display_str <- .jst_format_value_labels(codes_chr, val_labs, value_mode)
+      # Dedup on the underlying code (not the display string): under "values"/
+      # "labels" two distinct codes could in principle share a display string.
+      uniq        <- !is.na(codes_chr) & !duplicated(codes_chr)
       sort_codes  <- codes_chr[uniq]
       sort_levels <- display_str[uniq][order(sort_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
 
     # Haven-labelled (numeric-backed): combine numeric codes with value labels.
     } else if (haven::is.labelled(temp_var)) {
-      label_text <- as.character(haven::as_factor(temp_var))
-      codes      <- .jst_as_numeric(temp_var)
-      val_labs   <- labelled::val_labels(temp_var)
-      # When a code has no entry in val_labels, haven::as_factor falls
-      # back to the stringified value, producing display strings like
-      # "3: 3". Render those as bare code instead (Decision 7 Notes,
-      # fix (b) in the valid-row context).
-      has_label  <- if (!is.null(val_labs) && length(val_labs) > 0L) {
-        !is.na(codes) & (codes %in% unname(val_labs))
-      } else {
-        rep(FALSE, length(codes))
-      }
-      display_str <- ifelse(is.na(codes), NA_character_,
-                            ifelse(has_label,
-                                   paste(codes, label_text, sep = ": "),
-                                   as.character(codes)))
-      # Map each unique display string to its underlying code for sorting
-      uniq        <- !is.na(codes) & !duplicated(display_str)
+      codes       <- .jst_as_numeric(temp_var)
+      val_labs    <- labelled::val_labels(temp_var)
+      # The shared formatter renders an unlabelled code as a bare code rather
+      # than the "3: 3" haven::as_factor would produce (Decision 7 Notes,
+      # fix (b) in the valid-row context), and applies the value.id mode.
+      display_str <- .jst_format_value_labels(codes, val_labs, value_mode)
+      uniq        <- !is.na(codes) & !duplicated(codes)
       sort_codes  <- codes[uniq]
       sort_levels <- display_str[uniq][order(sort_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
@@ -6098,11 +6425,7 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
                                      total = total_count)
 
     # -- Print: variable anchor (name, or label under "labels") -> blank -> table
-    anchor <- if (identical(vlmode, "labels")) {
-      .jst_label_or_name(data, variable_name)
-    } else {
-      variable_name
-    }
+    anchor <- .jst_combine_id(variable_name, .jst_label_or_name(data, variable_name), vlmode)
     cat(anchor, "\n", sep = "")
     if (n_distinct_vals > card_warn_threshold) {
       cat("  Note: '", variable_name, "' has ", n_distinct_vals,
@@ -6188,12 +6511,14 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
                      align     = c("l", "r", "r", "r", "r"))
     cat("\n")
 
-    # "legend": label legend under this variable's own table.
-    if (identical(vlmode, "legend")) .print_var_labels(data, variable_name)
+    # value.id / variable.id legends under this variable's own table.
+    .jst_print_legends_at(data, variable_name, variable_name,
+                          vlmode, value_mode, "legend")
   }
 
-  # "legend.bottom": one consolidated legend after all variable tables.
-  if (identical(vlmode, "legend.bottom")) .print_var_labels(data, var_names_check)
+  # consolidated legends after all variable tables.
+  .jst_print_legends_at(data, var_names_check, var_names_check,
+                        vlmode, value_mode, "legend.bottom")
 
   cat("\n")
 
@@ -6240,13 +6565,14 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} shows labels in each table's Variable column (best for
 #'   short labels); \code{"legend"} and \code{"legend.bottom"} keep names and
 #'   print a label legend after the tables. NULL (default) defers to
-#'   \code{joutput()}'s \code{var.labels} setting. Not a logical.
+#'   \code{joutput()}'s \code{variable.id} setting. Not a logical.
 #' @param types Logical. If TRUE (default), prints the Variable Types table.
 #'   Set FALSE to suppress it.
 #' @param issues Logical. If TRUE (default), prints the Missing Data &
@@ -6290,7 +6616,7 @@ jfreq <- function(data, ..., subset = NULL, labels = NULL,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
+jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL,
                     types = TRUE, issues = TRUE, r.type = FALSE) {
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -6373,7 +6699,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
   # print time (the returned screen_table keeps names); "legend"/
   # "legend.bottom" collapse to one legend after the tables (the former
   # Variable Labels table); "none" prints no labels block.
-  vlmode <- .jst_resolve_var_labels(labels)
+  vlmode <- .jst_resolve_variable_id(variable.id)
 
   n_cases   <- nrow(data)
   n_vars    <- ncol(data)
@@ -6475,9 +6801,10 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
     cols  <- c(cols, "Unique")
     heads <- c(heads, "Unique Values")
     t1 <- screen_table[, cols, drop = FALSE]
-    if (identical(vlmode, "labels")) {
+    if (vlmode %in% c("labels", "both")) {
       t1$Variable <- vapply(t1$Variable,
-                            function(v) .jst_label_or_name(data, v), character(1))
+                            function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
+                            character(1))
     }
     cat("\n")
     .jst_print_table(t1,
@@ -6515,9 +6842,10 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
       t2$Outliers <- out
       heads <- c(heads, "Outliers")
     }
-    if (identical(vlmode, "labels")) {
+    if (vlmode %in% c("labels", "both")) {
       t2$Variable <- vapply(t2$Variable,
-                            function(v) .jst_label_or_name(data, v), character(1))
+                            function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
+                            character(1))
     }
     cat("\n")
     .jst_print_table(t2,
@@ -6574,14 +6902,25 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} shows the DV and grouping-variable labels in the table
-#'   captions (group levels stay as value labels) -- best for short labels;
+#'   captions (group levels follow the value.id mode) -- best for short labels;
 #'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 #'   legend after the output. NULL (default) defers to \code{joutput()}'s
-#'   \code{var.labels} setting. Not a logical.
+#'   \code{variable.id} setting. Not a logical.
+#' @param value.id Character or NULL. Value-label display mode for the
+#'   group descriptives rows: \code{"both"} (\code{"code: label"}),
+#'   \code{"values"} (bare code), or \code{"labels"} (the label, degrading to
+#'   the bare code where a code has none).
+#'   \code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+#'   table and print a value-label legend after it (\code{"legend"}
+#'   per-table, \code{"legend.bottom"} consolidated where multiple tables
+#'   are produced). A no-op for grouping variables with
+#'   no value labels. NULL (default) defers to \code{joutput()}'s
+#'   \code{value.id} setting. Not a logical.
 #' @param full Logical. If TRUE, turns on effect.size, levene, and ci
 #'   all at once. Does not override explicit FALSE values.
 #'
@@ -6614,7 +6953,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, labels = NULL,
 #'   uses the active \code{joutput()} level default.
 jt <- function(formula, data, paired = FALSE, welch = FALSE,
                effect.size = NULL, levene = NULL, ci = NULL,
-               subset = NULL, labels = NULL,
+               subset = NULL, variable.id = NULL, value.id = NULL,
                case.processing.detail = NULL, full = FALSE) {
 
   # Resolve default data frame if not specified
@@ -6693,6 +7032,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
     original_codes <- sort(unique(.jst_as_numeric(group_var[!is.na(group_var)])))
+    group_val_labels <- labelled::val_labels(group_var)
   }
 
   if (is_labelled) {
@@ -6747,9 +7087,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # swapped for their labels (group levels in the rows stay as value
   # labels); "legend"/"legend.bottom" collapse to a single legend after the
   # output. Label lookups use the pristine pre-conversion source lab_src.
-  vlmode     <- .jst_resolve_var_labels(labels)
-  dv_disp    <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, dv_name)    else dv_name
-  group_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, group_name) else group_name
+  vlmode     <- .jst_resolve_variable_id(variable.id)
+  value_mode <- .jst_resolve_value_id(value.id)
+  dv_disp    <- .jst_combine_id(dv_name,    .jst_label_or_name(lab_src, dv_name),    vlmode)
+  group_disp <- .jst_combine_id(group_name, .jst_label_or_name(lab_src, group_name), vlmode)
 
   # Levene's test
   if (levene && !paired) {
@@ -6801,7 +7142,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   # Group descriptives
   if (is_labelled) {
-    group_labels <- paste0(original_codes, ": ", levels)
+    group_labels <- .jst_format_value_labels(original_codes, group_val_labels,
+                                             value_mode)
   } else {
     group_labels <- levels
   }
@@ -6886,10 +7228,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     cat(paste0("\n", d_label, ": ", round(cohens_d, 3), "\n"))
   }
 
-  if (vlmode %in% c("legend", "legend.bottom")) {
-    cat("\n")
-    .print_var_labels(lab_src, c(dv_name, group_name))
-  }
+  .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
+                     vlmode, value_mode)
 
   n_analysis <- nrow(mf)
 
@@ -6947,15 +7287,26 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} shows the DV and grouping-variable labels wherever the
 #'   variable name appears (table captions and the ANOVA Source row; group
-#'   levels stay as value labels) -- best for short labels;
+#'   levels follow the value.id mode) -- best for short labels;
 #'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 #'   legend after the output. NULL (default) defers to \code{joutput()}'s
-#'   \code{var.labels} setting. Not a logical.
+#'   \code{variable.id} setting. Not a logical.
+#' @param value.id Character or NULL. Value-label display mode for the
+#'   group descriptives rows: \code{"both"} (\code{"code: label"}),
+#'   \code{"values"} (bare code), or \code{"labels"} (the label, degrading to
+#'   the bare code where a code has none).
+#'   \code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+#'   table and print a value-label legend after it (\code{"legend"}
+#'   per-table, \code{"legend.bottom"} consolidated where multiple tables
+#'   are produced). A no-op for grouping variables with
+#'   no value labels. NULL (default) defers to \code{joutput()}'s
+#'   \code{value.id} setting. Not a logical.
 #' @param full Logical. If TRUE, turns on posthoc, effect.size, levene,
 #'   and ci all at once. Does not override explicit FALSE values.
 #'
@@ -6988,7 +7339,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   uses the active \code{joutput()} level default.
 jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                  effect.size = NULL, levene = NULL, ci = NULL,
-                 subset = NULL, labels = NULL,
+                 subset = NULL, variable.id = NULL, value.id = NULL,
                  case.processing.detail = NULL, full = FALSE) {
 
   # Resolve default data frame if not specified
@@ -7064,6 +7415,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
     original_codes <- sort(unique(.jst_as_numeric(group_var[!is.na(group_var)])))
+    group_val_labels <- labelled::val_labels(group_var)
   }
 
   if (is_labelled) {
@@ -7106,11 +7458,19 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # Variable label display mode. jaov is a collapse layout: under "labels"
   # the DV and grouping-variable names are swapped for their labels wherever
   # the variable name appears (descriptives/Welch captions and the ANOVA
-  # Source row); group levels stay as value labels. "legend"/"legend.bottom"
+  # Source row); group levels follow the value.id mode. "legend"/"legend.bottom"
   # collapse to one legend after the output. Lookups use the pristine lab_src.
-  vlmode     <- .jst_resolve_var_labels(labels)
-  dv_disp    <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, dv_name)    else dv_name
-  group_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, group_name) else group_name
+  vlmode     <- .jst_resolve_variable_id(variable.id)
+  value_mode <- .jst_resolve_value_id(value.id)
+  dv_disp    <- .jst_combine_id(dv_name,    .jst_label_or_name(lab_src, dv_name),    vlmode)
+  group_disp <- .jst_combine_id(group_name, .jst_label_or_name(lab_src, group_name), vlmode)
+  # Per-level group display under the active value.id mode (indexed [i] in
+  # the descriptives loop below). Empty when the grouping variable is unlabelled.
+  group_value_disp <- if (is_labelled) {
+    .jst_format_value_labels(original_codes, group_val_labels, value_mode)
+  } else {
+    NULL
+  }
 
   # Levene's test
   if (levene) {
@@ -7169,7 +7529,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     s <- sd(group_data)
 
     group_label <- if (is_labelled) {
-      paste0(original_codes[i], ": ", lvl)
+      group_value_disp[i]
     } else {
       lvl
     }
@@ -7317,10 +7677,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     p_value <- result$`Pr(>F)`[1]
   }
 
-  if (vlmode %in% c("legend", "legend.bottom")) {
-    cat("\n")
-    .print_var_labels(lab_src, c(dv_name, group_name))
-  }
+  .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
+                     vlmode, value_mode)
 
   n_analysis <- nrow(mf)
 
@@ -7367,14 +7725,25 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} shows the row/column variable labels (table header and
-#'   caption; cell value labels stay) -- best for short labels;
+#'   caption; cell value levels follow the value.id mode) -- best for short labels;
 #'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 #'   legend after the table. NULL (default) defers to \code{joutput()}'s
-#'   \code{var.labels} setting. Not a logical.
+#'   \code{variable.id} setting. Not a logical.
+#' @param value.id Character or NULL. Value-label display mode for both
+#'   table axes: \code{"both"} (\code{"code: label"}), \code{"values"} (bare
+#'   code), or \code{"labels"} (the label, degrading to the bare code where a
+#'   code has none).
+#'   \code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+#'   table and print a value-label legend after it (\code{"legend"}
+#'   per-table, \code{"legend.bottom"} consolidated where multiple tables
+#'   are produced). A no-op for axis variables with no value labels. NULL
+#'   (default) defers to \code{joutput()}'s \code{value.id} setting. Not a
+#'   logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_crosstab} containing:
 #'   \code{observed} (observed frequency table), \code{expected} (expected
@@ -7409,7 +7778,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   uses the active \code{joutput()} level default.
 jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                       row.pct = TRUE, col.pct = FALSE, subset = NULL,
-                      labels = NULL, case.processing.detail = NULL) {
+                      variable.id = NULL, value.id = NULL,
+                      case.processing.detail = NULL) {
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -7471,6 +7841,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   if (row_labelled) {
     row_codes <- sort(unique(.jst_as_numeric(row_var[!is.na(row_var)])))
+    row_vl    <- labelled::val_labels(row_var)
     row_var   <- haven::as_factor(row_var)
   } else if (!is.factor(row_var)) {
     row_var <- factor(row_var)
@@ -7478,6 +7849,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   if (col_labelled) {
     col_codes <- sort(unique(.jst_as_numeric(col_var[!is.na(col_var)])))
+    col_vl    <- labelled::val_labels(col_var)
     col_var   <- haven::as_factor(col_var)
   } else if (!is.factor(col_var)) {
     col_var <- factor(col_var)
@@ -7485,11 +7857,12 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   # Variable label display mode. jcrosstab is a collapse layout: under
   # "labels" the row/column variable names (the first column header and the
-  # caption) are swapped for their labels; the cell value labels stay.
+  # caption) are swapped for their labels; the cell value levels follow the value.id mode.
   # "legend"/"legend.bottom" collapse to one legend after the table(s).
-  vlmode   <- .jst_resolve_var_labels(labels)
-  row_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, row_name) else row_name
-  col_disp <- if (identical(vlmode, "labels")) .jst_label_or_name(lab_src, col_name) else col_name
+  vlmode   <- .jst_resolve_variable_id(variable.id)
+  value_mode <- .jst_resolve_value_id(value.id)
+  row_disp <- .jst_combine_id(row_name, .jst_label_or_name(lab_src, row_name), vlmode)
+  col_disp <- .jst_combine_id(col_name, .jst_label_or_name(lab_src, col_name), vlmode)
 
   # Drop empty factor levels (pipeline filtering may leave empty levels)
   row_var <- droplevels(row_var)
@@ -7520,8 +7893,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     }
   }
 
-  row_labels <- if (row_labelled) paste0(row_codes, ": ", row_levels) else row_levels
-  col_labels <- if (col_labelled) paste0(col_codes, ": ", col_levels) else col_levels
+  row_labels <- if (row_labelled) .jst_format_value_labels(row_codes, row_vl, value_mode) else row_levels
+  col_labels <- if (col_labelled) .jst_format_value_labels(col_codes, col_vl, value_mode) else col_levels
 
   obs_table  <- table(row_var, col_var)
   chi_result <- suppressWarnings(stats::chisq.test(obs_table))
@@ -7532,7 +7905,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   n_rows <- length(row_levels)
   n_cols <- length(col_levels)
-  header <- c(row_disp, col_labels, "Total")
+  header <- c(.jst_truncate_ellipsis(row_disp), col_labels, "Total")
 
   display_rows <- list()
 
@@ -7613,10 +7986,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     }
   }
 
-  if (vlmode %in% c("legend", "legend.bottom")) {
-    cat("\n")
-    .print_var_labels(lab_src, c(row_name, col_name))
-  }
+  .jst_print_legends(lab_src, c(row_name, col_name), c(row_name, col_name),
+                     vlmode, value_mode)
 
   cat("\n")
 
@@ -7663,14 +8034,15 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} shows variable labels as the matrix row/column headers
 #'   (honored even if the matrix grows wide -- best for short labels; rerun
 #'   with a legend mode otherwise); \code{"legend"}/\code{"legend.bottom"}
 #'   keep names and print a label legend after the table. NULL (default)
-#'   defers to \code{joutput()}'s \code{var.labels} setting. Not a logical.
+#'   defers to \code{joutput()}'s \code{variable.id} setting. Not a logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_corr} containing:
 #'   \code{r} (correlation matrix), \code{p} (p-value matrix),
@@ -7696,7 +8068,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
-jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
+jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NULL,
                   case.processing.detail = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -7854,10 +8226,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
   # variable names with their labels (honored literally even if the matrix
   # goes wide -- best for short labels; rerun with a legend mode otherwise).
   # "legend"/"legend.bottom" collapse to a single legend after the table.
-  vlmode <- .jst_resolve_var_labels(labels)
-  if (identical(vlmode, "labels")) {
+  vlmode <- .jst_resolve_variable_id(variable.id)
+  if (vlmode %in% c("labels", "both")) {
     disp_names <- vapply(variable_names,
-                         function(v) .jst_label_or_name(data, v), character(1))
+                         function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
+                         character(1))
     rownames(display_df) <- disp_names
     colnames(display_df) <- disp_names
   }
@@ -7930,7 +8303,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
 
 #' Internal helper: relabel cleaned coefficient names with variable labels
 #'
-#' For the \code{"labels"} var.labels display mode (jlm / jlogistic). Given
+#' For the \code{"labels"} variable.id display mode (jlm / jlogistic). Given
 #' the cleaned names from \code{.jst_clean_coef_names()} -- numeric
 #' predictors as the bare variable name, factor terms as
 #' \code{"<var><sep><level>"}, intercept as \code{"(Intercept)"} -- replaces
@@ -8421,15 +8794,16 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} replaces each coefficient's variable name with its label
 #'   in the Coefficients table (factor level decoration is preserved) -- best
 #'   for short labels; \code{"legend"} prints a label legend between the
 #'   Coefficients table and the R-squared/fit block; \code{"legend.bottom"}
 #'   prints it at the very end. NULL (default) defers to \code{joutput()}'s
-#'   \code{var.labels} setting. Not a logical.
+#'   \code{variable.id} setting. Not a logical.
 #' @param numeric Optional character vector of variable names that should be
 #'   treated as continuous (numeric) even if they have value labels. For
 #'   example, \code{numeric = "Age"} or \code{numeric = c("Age", "Education")}.
@@ -8520,7 +8894,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, labels = NULL,
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
-jlm <- function(formula, data, subset = NULL, labels = NULL,
+jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL,
                 diagnostics = NULL, full = FALSE,
                 case.processing.detail = NULL, ...) {
@@ -8559,7 +8933,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
   # legend between the Coefficients table and the R-squared/fit block;
   # "legend.bottom" prints it at the very end; "labels" relabels the
   # coefficient-row terms (display only). See below.
-  vlmode               <- .jst_resolve_var_labels(labels)
+  vlmode               <- .jst_resolve_variable_id(variable.id)
   show_ref_categories  <- .jst_resolve_toggle("ref.categories",  NULL)
   # Pre-conversion label source for "labels"/legend display: captured before
   # the variable-type conversion below coerces haven-labelled IVs to numeric
@@ -9254,15 +9628,16 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} replaces each coefficient's variable name with its label
 #'   in the Coefficients table (factor level decoration is preserved) -- best
 #'   for short labels; \code{"legend"} prints a label legend between the
 #'   Model Summary (fit) block and the Coefficients table;
 #'   \code{"legend.bottom"} prints it at the very end. NULL (default) defers
-#'   to \code{joutput()}'s \code{var.labels} setting. Not a logical.
+#'   to \code{joutput()}'s \code{variable.id} setting. Not a logical.
 #' @param numeric Optional character vector of variable names to treat
 #'   as continuous even if they have value labels.
 #' @param categorical Optional character vector of variable names to treat
@@ -9341,7 +9716,7 @@ jlm <- function(formula, data, subset = NULL, labels = NULL,
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
-jlogistic <- function(formula, data, subset = NULL, labels = NULL,
+jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                       numeric = NULL, categorical = NULL,
                       ci = NULL, classification = FALSE,
                       diagnostics = NULL, full = FALSE,
@@ -9680,7 +10055,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
   # prints between the Model Summary (fit) block and the Coefficients table;
   # "legend.bottom" at the very end; "labels" relabels coefficient-row terms
   # (display only).
-  vlmode <- .jst_resolve_var_labels(labels)
+  vlmode <- .jst_resolve_variable_id(variable.id)
 
   # Capture DV label for "1" category (before model fitting, more reliable)
   dv_label_1 <- NULL
@@ -9967,15 +10342,16 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
-#' @param labels Character or NULL. Variable label display mode: one of
-#'   \code{"none"}, \code{"labels"}, \code{"legend"}, or
-#'   \code{"legend.bottom"}. \code{"none"} shows variable names only;
+#' @param variable.id Character or NULL. Variable label display mode: one of
+#'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+#'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
+#'   \code{"both"} shows \code{"name: label"};
 #'   \code{"labels"} shows each item's label in the Item column of the Item
 #'   Statistics and Item-Total Statistics tables (best for short labels; the
 #'   returned tables and the reverse-coding diagnostic keep variable names);
 #'   \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 #'   legend after the final table. NULL (default) defers to \code{joutput()}'s
-#'   \code{var.labels} setting. Not a logical.
+#'   \code{variable.id} setting. Not a logical.
 #'
 #' @return Invisibly returns a list of class \code{jst_alpha} containing:
 #'   \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
@@ -9999,7 +10375,7 @@ jlogistic <- function(formula, data, subset = NULL, labels = NULL,
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
-jalpha <- function(data, ..., subset = NULL, labels = NULL,
+jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    case.processing.detail = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -10098,9 +10474,11 @@ jalpha <- function(data, ..., subset = NULL, labels = NULL,
   # objects and the reverse-coding diagnostic keep variable names so the
   # user knows which column to act on. "legend"/"legend.bottom" collapse to
   # one legend after the final table.
-  vlmode    <- .jst_resolve_var_labels(labels)
-  item_disp <- if (identical(vlmode, "labels")) {
-    vapply(variable_names, function(v) .jst_label_or_name(data, v), character(1))
+  vlmode    <- .jst_resolve_variable_id(variable.id)
+  item_disp <- if (vlmode %in% c("labels", "both")) {
+    vapply(variable_names,
+           function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
+           character(1))
   } else {
     variable_names
   }
@@ -15740,14 +16118,16 @@ jsave <- function(data, file, overwrite = FALSE) {
 #' @param subset Optional unquoted logical expression to filter cases for
 #'   this call only (data-first form).
 #' @param labels Character or NULL. Variable label display mode (data-first
-#'   and formula forms): one of \code{"none"}, \code{"labels"},
-#'   \code{"legend"}, or \code{"legend.bottom"}. \code{"none"} uses variable
+#'   and formula forms): one of \code{"both"}, \code{"names"}, \code{"labels"},
+#'   \code{"legend"}, or \code{"legend.bottom"}. \code{"names"} uses variable
 #'   names as axis/legend titles; \code{"labels"} uses each variable's label
 #'   as its axis/legend title instead (falling back to the name when
 #'   unlabelled) and prints no console legend; \code{"legend"} and
 #'   \code{"legend.bottom"} keep names on the axes and print a console label
-#'   legend. NULL (default) defers to \code{joutput()}'s \code{var.labels}
-#'   setting. Not a logical.
+#'   legend. \code{"both"} is accepted but currently renders as \code{"names"}
+#'   on plots (the \code{"name: label"} form for plot titles is deferred to a
+#'   later phase). NULL (default) defers to \code{joutput()}'s
+#'   \code{variable.id} setting. Not a logical.
 #'
 #' @return Invisibly, a single \code{ggplot} object if one plot is produced,
 #'   or a named list of \code{ggplot} objects if multiple are produced
@@ -15983,7 +16363,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # analogue of "names in rows" is the axis/legend title: under "labels" each
   # axis shows the variable's label, otherwise its name. "legend"/
   # "legend.bottom" additionally print a console label legend (below).
-  vlmode <- .jst_resolve_var_labels(labels)
+  vlmode <- .jst_resolve_variable_id(labels)
   axis_labels <- stats::setNames(
     vapply(variable_names,
            function(v) if (identical(vlmode, "labels")) {
@@ -16195,7 +16575,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # -- Capture axis labels BEFORE factor conversion -------------------------
   # Variable label display mode (see jplot.default): "labels" puts the
   # variable's label on each axis/legend title, otherwise its name.
-  vlmode <- .jst_resolve_var_labels(labels)
+  vlmode <- .jst_resolve_variable_id(labels)
   axis_labels <- stats::setNames(
     vapply(variable_names,
            function(v) if (identical(vlmode, "labels")) {

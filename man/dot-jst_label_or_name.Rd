@@ -16,7 +16,7 @@ Single character string: the variable's label if present and
 non-empty, otherwise \code{var}.
 }
 \description{
-Used by the \code{"labels"} var.labels mode, where a variable's label
+Used by the \code{"labels"} variable.id mode, where a variable's label
 replaces its name in table rows, table captions, crosstab dimnames, or
 (in jplot) axis/legend/facet titles. When the variable carries no
 non-empty variable label, its name is returned unchanged. This name

@@ -4,7 +4,13 @@
 \alias{jalpha}
 \title{Cronbach's Alpha Reliability Analysis}
 \usage{
-jalpha(data, ..., subset = NULL, labels = NULL, case.processing.detail = NULL)
+jalpha(
+  data,
+  ...,
+  subset = NULL,
+  variable.id = NULL,
+  case.processing.detail = NULL
+)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -15,15 +21,16 @@ jalpha(data, ..., subset = NULL, labels = NULL, case.processing.detail = NULL)
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Character or NULL. Variable label display mode: one of
-\code{"none"}, \code{"labels"}, \code{"legend"}, or
-\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\item{variable.id}{Character or NULL. Variable label display mode: one of
+\code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"names"} shows variable names only;
+\code{"both"} shows \code{"name: label"};
 \code{"labels"} shows each item's label in the Item column of the Item
 Statistics and Item-Total Statistics tables (best for short labels; the
 returned tables and the reverse-coding diagnostic keep variable names);
 \code{"legend"}/\code{"legend.bottom"} keep names and print a label
 legend after the final table. NULL (default) defers to \code{joutput()}'s
-\code{var.labels} setting. Not a logical.}
+\code{variable.id} setting. Not a logical.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},

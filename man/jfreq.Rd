@@ -4,7 +4,14 @@
 \alias{jfreq}
 \title{SPSS-like frequency tables for categorical variables}
 \usage{
-jfreq(data, ..., subset = NULL, labels = NULL, case.processing.detail = NULL)
+jfreq(
+  data,
+  ...,
+  subset = NULL,
+  variable.id = NULL,
+  value.id = NULL,
+  case.processing.detail = NULL
+)
 }
 \arguments{
 \item{data}{A data frame, or a vector.}
@@ -16,15 +23,27 @@ jfreq(data, ..., subset = NULL, labels = NULL, case.processing.detail = NULL)
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Character or NULL. Variable label display mode: one of
-\code{"none"}, \code{"labels"}, \code{"legend"}, or
-\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\item{variable.id}{Character or NULL. Variable label display mode: one of
+\code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"names"} shows variable names only;
+\code{"both"} shows \code{"name: label"};
 \code{"labels"} uses each variable's label as its table caption (best
 for short labels); \code{"legend"} prints a label legend under each
 variable's own table; \code{"legend.bottom"} prints one consolidated
 legend after all tables. NULL (default) defers to \code{joutput()}'s
-\code{var.labels} setting. Not a logical. (Replaces the former inline
+\code{variable.id} setting. Not a logical. (Replaces the former inline
 Type/label block.)}
+
+\item{value.id}{Character or NULL. Value-label display mode for the
+frequency-table valid rows: \code{"both"} (\code{"code: label"}),
+\code{"values"} (bare code), or \code{"labels"} (the label, degrading to
+the bare code where a code has none).
+\code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+table and print a value-label legend after it (\code{"legend"}
+per-table, \code{"legend.bottom"} consolidated where multiple tables
+are produced). A no-op for variables with no value
+labels. NULL (default) defers to \code{joutput()}'s \code{value.id}
+setting. Not a logical.}
 
 \item{case.processing.detail}{Accepted for API symmetry. jfreq's
 Case Processing Summary is top-table only (no missing-data
@@ -48,7 +67,7 @@ Output is structured consistently with \code{jdesc()}: a single red
 Processing Summary (when at least one pipeline stage was active for
 this call). Each variable then gets its own block consisting of the
 variable name on its own line, indented Type and Variable label lines
-(suppressed when \code{joutput()}'s \code{var.labels} toggle is off),
+(suppressed when \code{joutput()}'s \code{variable.id} toggle is off),
 a blank line, and the frequency table. The frequency table ends with
 a Total row showing the post-pipeline N.
 

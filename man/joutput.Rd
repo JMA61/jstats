@@ -13,7 +13,8 @@ joutput(
   diagnostics = NULL,
   case.processing = NULL,
   case.processing.detail = NULL,
-  var.labels = NULL,
+  variable.id = NULL,
+  value.id = NULL,
   ref.categories = NULL,
   udm.notice = NULL,
   quiet = FALSE
@@ -30,10 +31,10 @@ reference categories, no effect sizes, no CIs.}
 \item{standard}{Default. Suitable for teaching and routine use.
 Includes Case Processing Summary, reference categories, effect
 sizes, and confidence intervals. Variable labels are off by
-default (\code{var.labels = "none"}); request a label legend or
-in-table labels per call or via the \code{var.labels} toggle.}
+default (\code{variable.id = "names"}); request a label legend or
+in-table labels per call or via the \code{variable.id} toggle.}
 \item{full}{Everything in standard plus a variable label legend
-(\code{var.labels = "legend"}), assumption checks (Levene's
+(\code{variable.id = "legend"}), assumption checks (Levene's
 test), post-hoc tests, regression diagnostics, and the most
 detailed Case Processing Summary (per-code missing breakdown).}
 }}
@@ -72,9 +73,10 @@ or \code{"per_code"} (per UDM code plus system-missing). The
 minimal tier defaults to \code{"none"}, standard to
 \code{"totals"}, full to \code{"per_code"}.}
 
-\item{var.labels}{Character or NULL. Variable label display mode, one
-of \code{"none"}, \code{"labels"}, \code{"legend"}, or
-\code{"legend.bottom"}. \code{"none"} shows variable names only, with
+\item{variable.id}{Character or NULL. Variable label display mode, one
+of \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"names"} shows variable names only;
+\code{"both"} shows \code{"name: label"}, with
 no labels block. \code{"labels"} replaces variable names with their
 labels in the analysis output itself (table rows, captions, crosstab
 dimnames, or \code{jplot} axis/legend titles) -- best when labels
@@ -87,6 +89,23 @@ consolidated legend at the very end of the output. The minimal and
 standard tiers default to \code{"none"}; the full tier defaults to
 \code{"legend"}. Not a logical -- \code{TRUE}/\code{FALSE} are not
 accepted.}
+
+\item{value.id}{Character or NULL. Value-label display mode for the
+categorical levels that appear in \code{jfreq} valid rows, the
+\code{jt}/\code{jaov} group descriptives, the \code{jcrosstab} axes, and
+the grouped \code{jdesc} headers. One of \code{"both"} (\code{"code: label"},
+degrading to a bare code where a code has no label), \code{"values"} (the
+bare stored code), or \code{"labels"} (the value label, degrading to the
+bare code per code where none exists).
+\code{"legend"} and \code{"legend.bottom"} keep the bare code in the
+table and print a value-label legend after it (\code{"legend"}
+per-table, \code{"legend.bottom"} consolidated where multiple tables
+are produced). Variables with no value labels
+render identically under all three modes, so this is a no-op for plain
+numeric data. The minimal tier defaults to \code{"values"}; the standard
+and full tiers default to \code{"both"}. Distinct from
+\code{variable.id}, which governs the one-per-variable descriptive
+label. Not a logical.}
 
 \item{ref.categories}{Logical or NULL. Override the level's default
 for the reference categories block (registered dummies).}

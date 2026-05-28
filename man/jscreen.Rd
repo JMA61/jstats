@@ -9,7 +9,7 @@ jscreen(
   ...,
   outlier.sd = 3,
   subset = NULL,
-  labels = NULL,
+  variable.id = NULL,
   types = TRUE,
   issues = TRUE,
   r.type = FALSE
@@ -29,13 +29,14 @@ is 3.}
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Character or NULL. Variable label display mode: one of
-\code{"none"}, \code{"labels"}, \code{"legend"}, or
-\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\item{variable.id}{Character or NULL. Variable label display mode: one of
+\code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"names"} shows variable names only;
+\code{"both"} shows \code{"name: label"};
 \code{"labels"} shows labels in each table's Variable column (best for
 short labels); \code{"legend"} and \code{"legend.bottom"} keep names and
 print a label legend after the tables. NULL (default) defers to
-\code{joutput()}'s \code{var.labels} setting. Not a logical.}
+\code{joutput()}'s \code{variable.id} setting. Not a logical.}
 
 \item{types}{Logical. If TRUE (default), prints the Variable Types table.
 Set FALSE to suppress it.}

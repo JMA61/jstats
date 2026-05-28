@@ -92,14 +92,16 @@ for individual observations), \code{see} (constant-width band at
 this call only (data-first form).}
 
 \item{labels}{Character or NULL. Variable label display mode (data-first
-and formula forms): one of \code{"none"}, \code{"labels"},
-\code{"legend"}, or \code{"legend.bottom"}. \code{"none"} uses variable
+and formula forms): one of \code{"both"}, \code{"names"}, \code{"labels"},
+\code{"legend"}, or \code{"legend.bottom"}. \code{"names"} uses variable
 names as axis/legend titles; \code{"labels"} uses each variable's label
 as its axis/legend title instead (falling back to the name when
 unlabelled) and prints no console legend; \code{"legend"} and
 \code{"legend.bottom"} keep names on the axes and print a console label
-legend. NULL (default) defers to \code{joutput()}'s \code{var.labels}
-setting. Not a logical.}
+legend. \code{"both"} is accepted but currently renders as \code{"names"}
+on plots (the \code{"name: label"} form for plot titles is deferred to a
+later phase). NULL (default) defers to \code{joutput()}'s
+\code{variable.id} setting. Not a logical.}
 
 \item{focal}{Unquoted name of the independent variable to place on the
 x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and

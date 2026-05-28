@@ -8,7 +8,7 @@ jlm(
   formula,
   data,
   subset = NULL,
-  labels = NULL,
+  variable.id = NULL,
   numeric = NULL,
   categorical = NULL,
   diagnostics = NULL,
@@ -26,15 +26,16 @@ jlm(
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Character or NULL. Variable label display mode: one of
-\code{"none"}, \code{"labels"}, \code{"legend"}, or
-\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\item{variable.id}{Character or NULL. Variable label display mode: one of
+\code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"names"} shows variable names only;
+\code{"both"} shows \code{"name: label"};
 \code{"labels"} replaces each coefficient's variable name with its label
 in the Coefficients table (factor level decoration is preserved) -- best
 for short labels; \code{"legend"} prints a label legend between the
 Coefficients table and the R-squared/fit block; \code{"legend.bottom"}
 prints it at the very end. NULL (default) defers to \code{joutput()}'s
-\code{var.labels} setting. Not a logical.}
+\code{variable.id} setting. Not a logical.}
 
 \item{numeric}{Optional character vector of variable names that should be
 treated as continuous (numeric) even if they have value labels. For

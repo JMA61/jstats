@@ -9,7 +9,7 @@ jcorr(
   ...,
   method = "pearson",
   subset = NULL,
-  labels = NULL,
+  variable.id = NULL,
   case.processing.detail = NULL
 )
 }
@@ -25,14 +25,15 @@ jcorr(
 \code{Group == 1}) to subset cases for this call only. Applied after
 jcomplete and jsubset. Does not affect other function calls.}
 
-\item{labels}{Character or NULL. Variable label display mode: one of
-\code{"none"}, \code{"labels"}, \code{"legend"}, or
-\code{"legend.bottom"}. \code{"none"} shows variable names only;
+\item{variable.id}{Character or NULL. Variable label display mode: one of
+\code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
+\code{"legend.bottom"}. \code{"names"} shows variable names only;
+\code{"both"} shows \code{"name: label"};
 \code{"labels"} shows variable labels as the matrix row/column headers
 (honored even if the matrix grows wide -- best for short labels; rerun
 with a legend mode otherwise); \code{"legend"}/\code{"legend.bottom"}
 keep names and print a label legend after the table. NULL (default)
-defers to \code{joutput()}'s \code{var.labels} setting. Not a logical.}
+defers to \code{joutput()}'s \code{variable.id} setting. Not a logical.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},
