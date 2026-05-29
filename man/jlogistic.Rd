@@ -14,6 +14,7 @@ jlogistic(
   ci = NULL,
   classification = FALSE,
   diagnostics = NULL,
+  ref.categories = NULL,
   full = FALSE,
   case.processing.detail = NULL,
   digits = NULL,
@@ -55,6 +56,13 @@ showing predicted vs observed outcomes. Default is FALSE.}
 \item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints
 VIF table. If a character vector, \code{vif} is currently the only
 supported option. If NULL (default), defers to \code{joutput()}.}
+
+\item{ref.categories}{Logical or NULL. Per-call override for showing the
+reference-categories block (the baseline level dropped from each set of
+dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
+\code{ref.categories} setting. Applies to \code{jlm()} and
+\code{jlogistic()} only, since they are the functions that produce
+dummy-coded coefficient tables.}
 
 \item{full}{Logical. If TRUE, turns on ci, classification, and
 diagnostics. Does not override explicit FALSE values.}

@@ -12,6 +12,7 @@ jlm(
   numeric = NULL,
   categorical = NULL,
   diagnostics = NULL,
+  ref.categories = NULL,
   full = FALSE,
   case.processing.detail = NULL,
   digits = NULL,
@@ -53,6 +54,13 @@ table and diagnostic plots. If a character vector, specifies which
 diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
 \code{scale}, \code{cooks}, \code{leverage}. If NULL (default),
 defers to \code{joutput()} session setting.}
+
+\item{ref.categories}{Logical or NULL. Per-call override for showing the
+reference-categories block (the baseline level dropped from each set of
+dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
+\code{ref.categories} setting. Applies to \code{jlm()} and
+\code{jlogistic()} only, since they are the functions that produce
+dummy-coded coefficient tables.}
 
 \item{full}{Logical. If TRUE, turns on diagnostics. Does not override
 explicit FALSE values.}

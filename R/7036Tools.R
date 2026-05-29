@@ -5980,10 +5980,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # explicitly because the data frame is reassigned by the pipeline below.
   .emit_good_notes <- function(v, dat) {
     if (.jst_is_discrete_integer(dat[[v]], v, .jst_data_name)) {
-      warning(paste0("'", v, "' has categorical-like structure ",
-                     "(small-range integer or labelled values). ",
-                     "Descriptive statistics may not be meaningful. ",
-                     "Use jfreq() for frequency tables."),
+      warning(paste0(v, " seems categorical. Descriptive statistics may ",
+                     "not be meaningful."),
               call. = FALSE)
     }
     if (!is.null(desc_class[[v]]$note)) {
@@ -8459,10 +8457,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # 10 broad categories) are NOT flagged, while small-range labelled or
     # whole-number 0-6 variables ARE flagged.
     if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name)) {
-      warning(paste0("'", v, "' has categorical-like structure ",
-                     "(small-range integer or labelled values). Pearson ",
-                     "correlations assume continuous/interval data. Verify ",
-                     "this variable is appropriate for correlation."),
+      warning(paste0(v, " seems categorical. Pearson correlations assume ",
+                     "continuous/interval data."),
               call. = FALSE)
     }
   }
@@ -9262,9 +9258,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
+#' @param ref.categories Logical or NULL. Per-call override for showing the
+#'   reference-categories block (the baseline level dropped from each set of
+#'   dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
+#'   \code{ref.categories} setting. Applies to \code{jlm()} and
+#'   \code{jlogistic()} only, since they are the functions that produce
+#'   dummy-coded coefficient tables.
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL,
-                diagnostics = NULL, full = FALSE,
+                diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...) {
 
   .jst_check_args(
@@ -9302,7 +9304,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # "legend.bottom" prints it at the very end; "labels" relabels the
   # coefficient-row terms (display only). See below.
   vlmode               <- .jst_resolve_variable_id(variable.id)
-  show_ref_categories  <- .jst_resolve_toggle("ref.categories",  NULL)
+  show_ref_categories  <- .jst_resolve_toggle("ref.categories",  ref.categories)
   digits_n             <- .jst_resolve_digits(digits)
   # Pre-conversion label source for "labels"/legend display: captured before
   # the variable-type conversion below coerces haven-labelled IVs to numeric
@@ -9348,12 +9350,29 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   dummy_coef_names <- expanded$dummy_coef_names
   model_vars       <- all.vars(formula)
 
+  # Conflict guard: a per-call numeric = override cannot un-register a
+  # jdummy-registered variable, because registrations are expanded above before
+  # the override is applied. Warn rather than silently ignore the request.
+  if (!is.null(numeric)) {
+    .dummy_regs <- .jst_get_dummy(.jst_data_name)
+    if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
+      .reg_names <- vapply(.dummy_regs, function(r) r$var_name, character(1))
+      .clash     <- intersect(numeric, .reg_names)
+      if (length(.clash) > 0) {
+        warning("numeric = was ignored for ", paste(.clash, collapse = ", "),
+                " (registered as a dummy via jdummy). Clear the registration ",
+                "with jdummy(NULL) to treat it as numeric.",
+                call. = FALSE)
+      }
+    }
+  }
+
   # -- Variable type conversion -------------------------------------------------
   # Priority order:
   #   1. jdummy() registrations (already expanded above)
   #   2. numeric/categorical overrides from this call
-  #   3. Auto-detection: haven-labelled with value labels → categorical,
-  #      everything else → numeric
+  #   3. Auto-detection: haven-labelled with value labels -> categorical,
+  #      everything else -> numeric
   # DV is always numeric regardless of overrides.
   auto_ref_cats <- character(0)
   auto_cat_regs <- list()  # in-flight registrations for auto-cat / categorical = vars
@@ -9657,14 +9676,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         # informational warning so the user can confirm continuous
         # treatment or switch to categorical.
         warning(
-          v, " has categorical-like structure (small-range integer ",
-          "or labelled values) but is entering the model as continuous. ",
-          "If continuous treatment is intended (e.g. a Likert scale), no ",
-          "action is needed. To treat as categorical, register with jdummy:",
-          "\n\n",
+          v, " seems categorical. To treat it that way, register it with ",
+          "jdummy() and rerun:\n\n",
           "  jdummy(", .jst_data_name, ", ", v, ")\n",
           "  jlm(", deparse(formula), ")\n\n",
-          "For other approaches (categorical = ...) see ?jlm.",
+          "Or: jlm(", deparse(formula), ", categorical = \"", v, "\")",
           call. = FALSE
         )
       }
@@ -9704,40 +9720,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
-  # Reference categories block + categorical-handling notes
-  if (show_ref_categories) {
-    # Print reference categories — registered dummies first, then auto/override
-    all_ref_cats <- c(ref_cats, auto_ref_cats)
-    if (length(all_ref_cats) > 0) {
-      cat("  Reference categories: ", paste(all_ref_cats, collapse = ", "), "\n", sep = "")
-    }
-
-    # Informational messages for auto-detected categoricals
-    auto_detected <- setdiff(sub(" = .*", "", auto_ref_cats),
-                             if (!is.null(categorical)) categorical else character(0))
-    if (length(auto_detected) > 0) {
-      cat("  (", paste(auto_detected, collapse = ", "),
-          " auto-detected as categorical. To choose a different\n",
-          "   reference category, use jdummy() before running jlm().\n",
-          "   If a variable should be numeric, use: numeric = \"",
-          auto_detected[1], "\")\n", sep = "")
-    }
-
-    # Informational message for categorical overrides
-    if (!is.null(categorical) && length(categorical) > 0) {
-      cat_in_model <- intersect(categorical, sub(" = .*", "", auto_ref_cats))
-      if (length(cat_in_model) > 0) {
-        cat("  (", paste(cat_in_model, collapse = ", "),
-            " treated as categorical via categorical argument.\n",
-            "   To choose a different reference, use jdummy() before running jlm().)\n",
-            sep = "")
-      }
-    }
-    if (length(all_ref_cats) > 0) cat("\n")
-  } else {
-    # Build all_ref_cats anyway because downstream code (return object) uses it
-    all_ref_cats <- c(ref_cats, auto_ref_cats)
-  }
+  # Reference categories are printed later, under the Outcome: line (just above
+  # the Coefficients table they describe). Build the vector here unconditionally
+  # because downstream code (the return object) uses it regardless of display.
+  all_ref_cats <- c(ref_cats, auto_ref_cats)
 
   # Pre-fit checks: catch conditions that would otherwise produce the
   # confusing lm.fit error "0 (non-NA) cases" — distinguishing the two
@@ -9876,6 +9862,23 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # label-bearing, role-grouped roster is the variable.id legend block.
   # (Session 62; placement settled Session 63)
   cat("Outcome: ", original_formula_vars[1], "\n", sep = "")
+  # Reference category line, directly under Outcome: and above the Coefficients
+  # table whose dummy rows it explains. The "Var_" prefix is stripped from each
+  # level for brevity ("Employment = Employment_Unemployed" -> "Employment =
+  # Unemployed"); the bare-level case leaves the value as-is.
+  if (show_ref_categories && length(all_ref_cats) > 0) {
+    disp_ref <- sub("^(.*) = \\1_", "\\1 = ", all_ref_cats)
+    if (length(disp_ref) == 1) {
+      cat("  Reference category: ", disp_ref, "\n", sep = "")
+    } else {
+      cat("  Reference categories:\n")
+      for (rc in disp_ref) cat("    ", rc, "\n", sep = "")
+    }
+  }
+  # TODO (value.id): shorten the dummy stub entries below (e.g.
+  # "Employment_Occasional" -> grouped variable header with indented levels).
+  # Jeff favours the grouped-header + indented-levels layout; settle across
+  # jlm/jlogistic (and decide jaov) as part of the value.id work.
   .jst_print_table(out_coefs_disp,
                    caption   = "Coefficients",
                    col.names = c("b", "SE", "t", "\u03b2", "p"),
@@ -10106,10 +10109,16 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
+#' @param ref.categories Logical or NULL. Per-call override for showing the
+#'   reference-categories block (the baseline level dropped from each set of
+#'   dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
+#'   \code{ref.categories} setting. Applies to \code{jlm()} and
+#'   \code{jlogistic()} only, since they are the functions that produce
+#'   dummy-coded coefficient tables.
 jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                       numeric = NULL, categorical = NULL,
                       ci = NULL, classification = FALSE,
-                      diagnostics = NULL, full = FALSE,
+                      diagnostics = NULL, ref.categories = NULL, full = FALSE,
                       case.processing.detail = NULL, digits = NULL, ...) {
 
   .jst_check_args(
@@ -10189,6 +10198,23 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   dummy_coef_names <- expanded$dummy_coef_names
   model_vars       <- all.vars(formula)
 
+  # Conflict guard: a per-call numeric = override cannot un-register a
+  # jdummy-registered variable, because registrations are expanded above before
+  # the override is applied. Warn rather than silently ignore the request.
+  if (!is.null(numeric)) {
+    .dummy_regs <- .jst_get_dummy(.jst_data_name)
+    if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
+      .reg_names <- vapply(.dummy_regs, function(r) r$var_name, character(1))
+      .clash     <- intersect(numeric, .reg_names)
+      if (length(.clash) > 0) {
+        warning("numeric = was ignored for ", paste(.clash, collapse = ", "),
+                " (registered as a dummy via jdummy). Clear the registration ",
+                "with jdummy(NULL) to treat it as numeric.",
+                call. = FALSE)
+      }
+    }
+  }
+
   # -- Variable type conversion (unified classifier) ------------------------
   # Priority order:
   #   1. jdummy() registrations (already expanded above)
@@ -10231,7 +10257,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       for (n in reg$notes) cat(n, "\n", sep = "")
       for (w in reg$warnings_msg) warning(w, call. = FALSE)
       auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", reg$ref_label, " (first category)"))
+                         paste0(v, " = ", reg$ref_label))
       next
     }
 
@@ -10243,7 +10269,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       for (w in reg$warnings_msg) warning(w, call. = FALSE)
       auto_detected <- c(auto_detected, v)
       auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", reg$ref_label, " (first category)"))
+                         paste0(v, " = ", reg$ref_label))
     } else {
       # Not intent-categorical. Strip haven class if present, leave as
       # numeric in the model.
@@ -10292,14 +10318,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         # informational warning so the user can confirm continuous
         # treatment or switch to categorical.
         warning(
-          v, " has categorical-like structure (small-range integer ",
-          "or labelled values) but is entering the model as a continuous ",
-          "predictor. If continuous treatment is intended (e.g. a Likert ",
-          "scale), no action is needed. To treat as categorical, register ",
-          "with jdummy:\n\n",
+          v, " seems categorical. To treat it that way, register it with ",
+          "jdummy() and rerun:\n\n",
           "  jdummy(", .jst_data_name, ", ", v, ")\n",
           "  jlogistic(", deparse(formula), ")\n\n",
-          "For other approaches (categorical = ...) see ?jlogistic.",
+          "Or: jlogistic(", deparse(formula), ", categorical = \"", v, "\")",
           call. = FALSE
         )
       }
@@ -10403,31 +10426,6 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     }
   }
 
-  # -- Reference category and variable label reporting -----------------------
-  if (length(all_ref_cats) > 0) {
-    cat("\n  Reference categories:\n")
-    for (rc in all_ref_cats) cat("    ", rc, "\n", sep = "")
-  }
-
-  if (length(auto_detected) > 0) {
-    cat("  (", paste(auto_detected, collapse = ", "),
-        " auto-detected as categorical. To choose a different\n",
-        "   reference category, use jdummy() before running jlogistic().\n",
-        "   If a variable should be numeric, use: numeric = \"",
-        auto_detected[1], "\")\n", sep = "")
-  }
-
-  if (!is.null(categorical) && length(categorical) > 0) {
-    cat_in_model <- intersect(categorical, sub(" = .*", "", auto_ref_cats))
-    if (length(cat_in_model) > 0) {
-      cat("  (", paste(cat_in_model, collapse = ", "),
-          " treated as categorical via categorical argument.\n",
-          "   To choose a different reference, use jdummy() before running jlogistic().)\n",
-          sep = "")
-    }
-  }
-  if (length(all_ref_cats) > 0) cat("\n")
-
   # -- Build analysis-level data frame and sample_info early so the Case
   # -- Processing Summary can use them.
   mf <- stats::model.frame(formula, data = data,
@@ -10442,6 +10440,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
+
+  # Reference categories are resolved here but printed later, under the Outcome:
+  # line (just above the Coefficients table they describe), to match jlm.
+  show_ref_categories <- .jst_resolve_toggle("ref.categories", ref.categories)
 
   # Variable label display mode. jlogistic is a distinct layout: "legend"
   # prints just below the Coefficients table (at the coefficients/fit seam,
@@ -10580,6 +10582,23 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # label-bearing roster is the variable.id legend block. (Session 62;
   # placement settled Session 63)
   cat("Outcome: ", original_formula_vars[1], "\n", sep = "")
+  # Reference category line, directly under Outcome: and above the Coefficients
+  # table whose dummy rows it explains. The "Var_" prefix is stripped from each
+  # level for brevity ("Employment = Employment_Unemployed" -> "Employment =
+  # Unemployed"); the bare-level case leaves the value as-is.
+  if (show_ref_categories && length(all_ref_cats) > 0) {
+    disp_ref <- sub("^(.*) = \\1_", "\\1 = ", all_ref_cats)
+    if (length(disp_ref) == 1) {
+      cat("  Reference category: ", disp_ref, "\n", sep = "")
+    } else {
+      cat("  Reference categories:\n")
+      for (rc in disp_ref) cat("    ", rc, "\n", sep = "")
+    }
+  }
+  # TODO (value.id): shorten the dummy stub entries below (e.g.
+  # "Employment_Occasional" -> grouped variable header with indented levels).
+  # Jeff favours the grouped-header + indented-levels layout; settle across
+  # jlm/jlogistic (and decide jaov) as part of the value.id work.
   .jst_print_table(out_coefs_disp,
                    caption   = "Coefficients",
                    col.names = col_names,
