@@ -8,6 +8,7 @@ joptions(
   missing.convention = NULL,
   udm.convention.codes = NULL,
   data.dir = NULL,
+  corr.layout = NULL,
   quiet = FALSE
 )
 }
@@ -19,6 +20,9 @@ joptions(
 
 \item{data.dir}{Character string (length 1), or \code{NULL}. See Slots.}
 
+\item{corr.layout}{One of \code{"wide"} or \code{"stacked"}, or
+\code{NULL}. See Slots.}
+
 \item{quiet}{Logical; default FALSE. When TRUE, joptions() applies the
 change silently, suppressing both the status panel and the convention
 nudge. A bare joptions() status query always prints regardless of quiet.}
@@ -29,9 +33,11 @@ updating session options and printing the status panel.
 }
 \description{
 Controls session-wide settings that affect how the package handles
-missing-value information and related conventions. \code{joptions} is
-the non-display counterpart to \code{\link{joutput}}, which handles
-output verbosity. Settings are read fresh on each function call:
+missing-value information and related conventions. \code{joptions}
+complements \code{\link{joutput}}: joutput governs output verbosity and
+tiering, while joptions holds session-wide conventions plus a small number
+of per-function display defaults (currently the \code{jcorr()} cell
+layout). Settings are read fresh on each function call:
 changing a setting after data has been loaded does not retroactively
 transform data already in memory. \code{\link{jconvert}} is the
 explicit transform path for data already in the workspace.
@@ -62,6 +68,15 @@ bare-filename saves and as the first directory searched on
 bare-filename loads. The folder is auto-created on first save if
 it doesn't already exist. Filenames containing a directory
 separator (\code{/}) bypass this setting and are taken literally.}
+\item{corr.layout}{Character, length 1. One of \code{"wide"} or
+\code{"stacked"}. Default: \code{"wide"}. The default cell layout for
+\code{\link{jcorr}} when three or more variables are correlated:
+\code{"wide"} puts r and p on one line with N beneath; \code{"stacked"}
+stacks r, p, and N on three lines for a narrower table that fits more
+variables. A per-call \code{layout} argument to \code{jcorr()}
+overrides this. It lives here rather than in \code{\link{joutput}}
+because it is specific to one function's output, not a tiered
+analysis-content toggle.}
 }
 }
 

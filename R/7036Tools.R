@@ -521,7 +521,15 @@
   # Column widths
   col_widths <- integer(n_cols)
   for (j in seq_len(n_cols)) {
-    data_widths <- nchar(trimws(display[, j]))
+    # "ln" (left, no-trim) columns carry caller-supplied leading whitespace
+    # that must count toward the width (otherwise an all-positive column of
+    # sign-slot-padded cells would overflow the gap). All other columns are
+    # measured trimmed, as before.
+    if (identical(align[j], "ln")) {
+      data_widths <- nchar(display[, j])
+    } else {
+      data_widths <- nchar(trimws(display[, j]))
+    }
     col_widths[j] <- max(nchar(headers[j]), max(data_widths, 0L, na.rm = TRUE))
   }
 
@@ -530,6 +538,12 @@
   header_prefix <- paste(rep(" ", header.indent), collapse = "")
 
   fmt_cell <- function(text, width, alignment) {
+    # "ln" (left, no-trim): left-justify but preserve the caller's leading
+    # whitespace (used by jcorr to reserve a sign slot so r decimals line up
+    # under a leading minus). Must NOT trim, unlike every other alignment.
+    if (identical(alignment, "ln")) {
+      return(formatC(text, width = -width, flag = "-"))
+    }
     text <- trimws(text)
     switch(alignment,
            "r" = formatC(text, width = width, flag = " "),
@@ -550,7 +564,7 @@
   # Decimal-tab columns ("d"): right-justify data so a uniform-dp column
   # aligns on the decimal point, while the header stays centered over
   # the column. Resolve "d" here; fmt_cell never sees "d".
-  header_align <- ifelse(align == "d", "c", align)
+  header_align <- ifelse(align == "d", "c", ifelse(align == "ln", "l", align))
   data_align   <- ifelse(align == "d", "r", align)
 
   # Header
@@ -1512,7 +1526,8 @@
 .jst_options_defaults <- list(
   missing.convention   = "none",
   udm.convention.codes = c(-99, -98, -97, -96),
-  data.dir             = NULL
+  data.dir             = NULL,
+  corr.layout          = "wide"
 )
 
 #' Internal helper: resolve a display toggle value
@@ -1624,6 +1639,38 @@
     }
   }
   .jst_resolve_toggle("variable.id", per_call)
+}
+
+#' Internal helper: validate and resolve the jcorr correlation-cell layout
+#'
+#' Resolves the \code{layout} argument of \code{jcorr()} to one of
+#' \code{"wide"} or \code{"stacked"}. Unlike the joutput()-backed display
+#' toggles, this layout choice is jcorr-specific (the only function that
+#' renders composite r / p / N cells), so its global default lives in
+#' joptions() rather than joutput(): a per-call value wins, else the
+#' \code{corr.layout} joptions slot, else the built-in default of "wide".
+#'
+#' @param per_call The value of jcorr()'s \code{layout} argument: NULL
+#'   (defer to joptions()), or one of \code{"wide"}, \code{"stacked"}.
+#'
+#' @return Single character token: \code{"wide"} or \code{"stacked"}.
+#'
+#' @keywords internal
+.jst_resolve_corr_layout <- function(per_call) {
+  if (!is.null(per_call)) {
+    if (!is.character(per_call) || length(per_call) != 1 ||
+        !(per_call %in% c("wide", "stacked"))) {
+      stop("layout must be one of: \"wide\", \"stacked\".", call. = FALSE)
+    }
+    return(per_call)
+  }
+  global <- getOption(".jst_options_corr_layout",
+                      .jst_options_defaults$corr.layout)
+  if (!is.null(global) && length(global) == 1 &&
+      global %in% c("wide", "stacked")) {
+    return(global)
+  }
+  "wide"
 }
 
 #' Internal helper: validate and resolve the value.id display mode
@@ -5429,6 +5476,8 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
                   .jst_options_defaults$udm.convention.codes)
   dd <- getOption(".jst_options_data_dir",
                   .jst_options_defaults$data.dir)
+  cl <- getOption(".jst_options_corr_layout",
+                  .jst_options_defaults$corr.layout)
 
   # Map the slot value to a user-facing label. "none" reads as "None
   # selected" so users understand they're in the no-auto-conversion
@@ -5459,6 +5508,7 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
       "\n", sep = "")
   cat("UDM convention codes: ", paste(cc, collapse = ", "), "\n", sep = "")
   cat("Data folder: ", dd_label, "\n", sep = "")
+  cat("Correlation layout: ", cl, "\n", sep = "")
   cat("\n")
 }
 
@@ -5518,9 +5568,11 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #' Set or display session-level package options
 #'
 #' Controls session-wide settings that affect how the package handles
-#' missing-value information and related conventions. \code{joptions} is
-#' the non-display counterpart to \code{\link{joutput}}, which handles
-#' output verbosity. Settings are read fresh on each function call:
+#' missing-value information and related conventions. \code{joptions}
+#' complements \code{\link{joutput}}: joutput governs output verbosity and
+#' tiering, while joptions holds session-wide conventions plus a small number
+#' of per-function display defaults (currently the \code{jcorr()} cell
+#' layout). Settings are read fresh on each function call:
 #' changing a setting after data has been loaded does not retroactively
 #' transform data already in memory. \code{\link{jconvert}} is the
 #' explicit transform path for data already in the workspace.
@@ -5550,6 +5602,15 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #'     bare-filename loads. The folder is auto-created on first save if
 #'     it doesn't already exist. Filenames containing a directory
 #'     separator (\code{/}) bypass this setting and are taken literally.}
+#'   \item{corr.layout}{Character, length 1. One of \code{"wide"} or
+#'     \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
+#'     \code{\link{jcorr}} when three or more variables are correlated:
+#'     \code{"wide"} puts r and p on one line with N beneath; \code{"stacked"}
+#'     stacks r, p, and N on three lines for a narrower table that fits more
+#'     variables. A per-call \code{layout} argument to \code{jcorr()}
+#'     overrides this. It lives here rather than in \code{\link{joutput}}
+#'     because it is specific to one function's output, not a tiered
+#'     analysis-content toggle.}
 #' }
 #'
 #' @section Call patterns:
@@ -5579,6 +5640,8 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #'   \code{"stata"}. See Slots.
 #' @param udm.convention.codes Numeric vector, length 1 to 4. See Slots.
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
+#' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
+#'   \code{NULL}. See Slots.
 #'
 #' @return Invisibly returns \code{NULL}. Called for the side effect of
 #'   updating session options and printing the status panel.
@@ -5602,14 +5665,15 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
 #'   change silently, suppressing both the status panel and the convention
 #'   nudge. A bare joptions() status query always prints regardless of quiet.
 joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
-                     data.dir = NULL, quiet = FALSE) {
+                     data.dir = NULL, corr.layout = NULL, quiet = FALSE) {
 
   mc_supplied <- !missing(missing.convention)
   cc_supplied <- !missing(udm.convention.codes)
   dd_supplied <- !missing(data.dir)
+  cl_supplied <- !missing(corr.layout)
 
   # joptions() -- no args, status only
-  if (!mc_supplied && !cc_supplied && !dd_supplied) {
+  if (!mc_supplied && !cc_supplied && !dd_supplied && !cl_supplied) {
     .jst_options_status()
     return(invisible(NULL))
   }
@@ -5636,6 +5700,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     options(.jst_options_missing_convention   = NULL)
     options(.jst_options_udm_convention_codes = NULL)
     options(.jst_options_data_dir             = NULL)
+    options(.jst_options_corr_layout          = NULL)
     if (!quiet) .jst_options_status()
     return(invisible(NULL))
   }
@@ -5669,6 +5734,13 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
            call. = FALSE)
     }
   }
+  if (cl_supplied && !is.null(corr.layout)) {
+    if (!is.character(corr.layout) ||
+        length(corr.layout) != 1L ||
+        !(corr.layout %in% c("wide", "stacked"))) {
+      stop("corr.layout must be one of: \"wide\", \"stacked\".", call. = FALSE)
+    }
+  }
 
   # Write -- only supplied non-NULL args; NULL means "leave alone"
   trigger_nudge <- FALSE
@@ -5681,6 +5753,9 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   }
   if (dd_supplied && !is.null(data.dir)) {
     options(.jst_options_data_dir = data.dir)
+  }
+  if (cl_supplied && !is.null(corr.layout)) {
+    options(.jst_options_corr_layout = corr.layout)
   }
 
   # Status panel, then nudge (per Session 28 Item 1 decision). quiet = TRUE
@@ -8227,6 +8302,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #'   display value labels, so passing this argument is an error. It exists
 #'   only to return a clear message rather than misreporting the token as a
 #'   missing variable. Leave at NULL (default).
+#' @param layout Character or NULL. How each correlation cell is laid out
+#'   when three or more variables are given: \code{"wide"} (default) puts r
+#'   and its p-value on one line with N on a second line beneath;
+#'   \code{"stacked"} places r, p, and N on three separate lines, giving a
+#'   narrower table that fits more variables before wrapping. Ignored for a
+#'   single pair (two variables), which always prints a one-line summary.
+#'   NULL (default) defers to the \code{corr.layout} setting in
+#'   \code{joptions()} (itself defaulting to "wide").
 #'
 #' @return Invisibly returns a list of class \code{jst_corr} containing:
 #'   \code{r} (correlation matrix), \code{p} (p-value matrix),
@@ -8259,7 +8342,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
 jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NULL,
-                  value.id = NULL, case.processing.detail = NULL, digits = NULL) {
+                  value.id = NULL, layout = NULL, case.processing.detail = NULL,
+                  digits = NULL) {
 
   digits_n <- .jst_resolve_digits(digits)
 
@@ -8321,7 +8405,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                          kendall  = "Kendall")
 
   # Red title
-  .cat_red(paste0(method_label, " Bivariate Correlations\n"))
+  .cat_red(paste0(method_label, " Bivariate Correlation",
+                  if (length(variable_names) == 2) "" else "s", "\n"))
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
   # Apply data pipeline (jcomplete, jsubset, subset)
@@ -8405,41 +8490,115 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     }
   }
 
-  display <- matrix("", n_vars, n_vars, dimnames = list(variable_names, variable_names))
+  # --- Resolve display options -----------------------------------------------
+  layout <- .jst_resolve_corr_layout(layout)
+  vlmode <- .jst_resolve_variable_id(variable.id)
+  use_labels <- vlmode %in% c("labels", "both")
+  # Display names for the row-label column and the column headers. labels/both
+  # substitute the variable label (capped); names and the legend modes keep
+  # bare names in the table (legend modes append a code->name legend below).
+  disp_names <- if (use_labels) {
+    vapply(variable_names,
+           function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
+           character(1))
+  } else {
+    variable_names
+  }
+
+  # --- Cell formatters (shared by both layouts and the 2-var block) ----------
+  # r: |r| <= 1 so the integer-part zero carries no information -- drop it,
+  # SPSS-style (".45" / "-.45"). The space flag reserves a sign slot so the
+  # printer's "ln" no-trim alignment lines decimals up down a column even when
+  # some r are negative. Exact +/-1 keeps its "1" (the sub() only bites "0.").
+  fmt_r <- function(x) {
+    s <- sprintf(paste0("% .", digits_n, "f"), x)
+    s <- sub("^([ -])0\\.", "\\1.", s)
+    # Negative zero -- a tiny negative r that rounds to zero at this precision
+    # (e.g. "-.000") -- reads as an error to most users; show it unsigned.
+    # Keep the sign slot as a space so the column still aligns.
+    if (startsWith(s, "-") && !grepl("[1-9]", s)) s <- sub("^-", " ", s)
+    s
+  }
+  # p: drop the leading zero; "<.001" floor. spaced = TRUE gives the roomy
+  # "p = .045" / "p < .001" for the 2-var block; FALSE the tight "p=.045" /
+  # "p<.001" for the in-matrix cells.
+  fmt_p <- function(p, spaced = FALSE) {
+    eq <- if (spaced) "p = " else "p="
+    lt <- if (spaced) "p < .001" else "p<.001"
+    if (!is.na(p) && p < 0.001) lt
+    else paste0(eq, sub("^0\\.", ".", sprintf("%.3f", p)))
+  }
+
+  # --- Single pair: compact one-line block instead of a 2x2 matrix -----------
+  # SPSS and Stata both keep the matrix form for one pair, but a single
+  # correlation has exactly one number of interest; the grid is scaffolding.
+  # layout is accepted-but-ignored here; legend modes degrade to plain names.
+  if (n_vars == 2) {
+    cat("  ", disp_names[1], " & ", disp_names[2], ":  r = ",
+        trimws(fmt_r(r_matrix[2, 1])), ",  ",
+        fmt_p(p_matrix[2, 1], spaced = TRUE), ",  N = ",
+        n_matrix[2, 1], "\n", sep = "")
+
+    if (has_ties) {
+      cat("\nNote: Spearman p-values are approximate due to tied values in the data.\n")
+    }
+    cat("\n")
+
+    mf <- data[, variable_names, drop = FALSE]
+    ret <- list(r = r_matrix, p = p_matrix, n = n_matrix, method = method,
+                model_frame = mf, sample_info = sample_info)
+    class(ret) <- "jst_corr"
+    return(invisible(ret))
+  }
+
+  # --- 3+ variables: lower-triangular matrix, cells stacked per layout -------
+  # Each variable contributes one or more physical rows (wide: r+p on top, N
+  # below; stacked: r / p / N) followed by a blank spacer row. The row label
+  # sits on the first physical row only; empty continuation rows (e.g. the
+  # first variable's N row) are dropped. The label is a real first column
+  # (left-aligned) rather than data-frame row names, which must be unique --
+  # the continuation/spacer rows all need a blank label.
+  lab_col   <- character(0)
+  data_rows <- list()
+  push_row  <- function(label, cells) {
+    lab_col[[length(lab_col) + 1L]]   <<- label
+    data_rows[[length(data_rows) + 1L]] <<- cells
+  }
+  blank_cells <- rep("", n_vars)
 
   for (i in seq_len(n_vars)) {
+    r_line <- character(n_vars)   # r (with inline p in wide layout)
+    p_line <- character(n_vars)   # stacked layout only
+    n_line <- character(n_vars)
     for (j in seq_len(n_vars)) {
-      if (i == j) {
-        display[i, j] <- "1"
+      if (j == i) {
+        r_line[j] <- " 1"
       } else if (j < i) {
-        r_fmt <- sprintf(paste0("%.", digits_n, "f"), r_matrix[i, j])
-        p_fmt <- if (!is.na(p_matrix[i, j]) && p_matrix[i, j] < 0.001) {
-          "<.001"
+        rv <- fmt_r(r_matrix[i, j])
+        if (layout == "wide") {
+          r_line[j] <- paste0(rv, " (", fmt_p(p_matrix[i, j]), ")")
         } else {
-          sprintf("%.3f", p_matrix[i, j])
+          r_line[j] <- rv
+          p_line[j] <- fmt_p(p_matrix[i, j])
         }
-        display[i, j] <- paste0(r_fmt, " (p=", p_fmt, ") N=", n_matrix[i, j])
+        n_line[j] <- paste0("N=", n_matrix[i, j])
       }
     }
+    push_row(disp_names[i], r_line)
+    if (layout == "stacked" && any(nzchar(p_line))) push_row("", p_line)
+    if (any(nzchar(n_line))) push_row("", n_line)
+    if (i < n_vars) push_row("", blank_cells)   # spacer between blocks
   }
 
-  display_df <- as.data.frame(display, stringsAsFactors = FALSE)
-
-  # Variable label display mode. "labels" replaces the matrix row/column
-  # variable names with their labels (honored literally even if the matrix
-  # goes wide -- best for short labels; rerun with a legend mode otherwise).
-  # "legend"/"legend.bottom" collapse to a single legend after the table.
-  vlmode <- .jst_resolve_variable_id(variable.id)
-  if (vlmode %in% c("labels", "both")) {
-    disp_names <- vapply(variable_names,
-                         function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
-                         character(1))
-    rownames(display_df) <- disp_names
-    colnames(display_df) <- disp_names
-  }
+  display_df <- data.frame(lab_col, do.call(rbind, data_rows),
+                           stringsAsFactors = FALSE, check.names = FALSE)
+  names(display_df) <- c("", disp_names)
 
   .jst_print_table(display_df,
-                   caption = paste0("Bivariate Correlations (", method_label, ")"))
+                   col.names = c("", disp_names),
+                   row.names = FALSE,
+                   align     = c("l", rep("ln", n_vars)),
+                   caption   = paste0("Bivariate Correlations (", method_label, ")"))
 
   if (vlmode %in% c("legend", "legend.bottom")) {
     cat("\n")
@@ -9647,8 +9806,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Continuous-statistic formatter honoring the joutput `digits` setting
   # (coefficients, SEs, t, standardized beta). P-values keep their own
-  # fixed convention (above).
-  fmt3 <- function(x) sprintf(paste0("%.", digits_n, "f"), as.numeric(x))
+  # fixed convention (above). A value that rounds to zero from below prints
+  # as a plain "0.000", not a signed "-0.000" (which reads as an error).
+  fmt3 <- function(x) {
+    s <- sprintf(paste0("%.", digits_n, "f"), as.numeric(x))
+    ifelse(startsWith(s, "-") & !grepl("[1-9]", s), sub("^-", "", s), s)
+  }
 
   # Clean up factor coefficient names for readability
   rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
@@ -10372,8 +10535,12 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Continuous-statistic formatter honoring the joutput `digits` setting
   # (coefficients, SEs, Wald, Exp(B), CI bounds). The Wald p-value and df
-  # keep their own fixed conventions.
-  fmt3 <- function(x) sprintf(paste0("%.", digits_n, "f"), as.numeric(x))
+  # keep their own fixed conventions. A value that rounds to zero from below
+  # prints as a plain "0.000", not a signed "-0.000" (which reads as an error).
+  fmt3 <- function(x) {
+    s <- sprintf(paste0("%.", digits_n, "f"), as.numeric(x))
+    ifelse(startsWith(s, "-") & !grepl("[1-9]", s), sub("^-", "", s), s)
+  }
 
   # Clean up factor coefficient names for readability
   rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,

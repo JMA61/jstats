@@ -11,6 +11,7 @@ jcorr(
   subset = NULL,
   variable.id = NULL,
   value.id = NULL,
+  layout = NULL,
   case.processing.detail = NULL,
   digits = NULL
 )
@@ -41,6 +42,15 @@ defers to \code{joutput()}'s \code{variable.id} setting. Not a logical.}
 display value labels, so passing this argument is an error. It exists
 only to return a clear message rather than misreporting the token as a
 missing variable. Leave at NULL (default).}
+
+\item{layout}{Character or NULL. How each correlation cell is laid out
+when three or more variables are given: \code{"wide"} (default) puts r
+and its p-value on one line with N on a second line beneath;
+\code{"stacked"} places r, p, and N on three separate lines, giving a
+narrower table that fits more variables before wrapping. Ignored for a
+single pair (two variables), which always prints a one-line summary.
+NULL (default) defers to the \code{corr.layout} setting in
+\code{joptions()} (itself defaulting to "wide").}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},
