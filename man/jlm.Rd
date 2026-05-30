@@ -11,6 +11,7 @@ jlm(
   variable.id = NULL,
   numeric = NULL,
   categorical = NULL,
+  ci = NULL,
   diagnostics = NULL,
   ref.categories = NULL,
   full = FALSE,
@@ -50,6 +51,12 @@ be treated as categorical even if they lack value labels. For example,
 The first sorted unique value becomes the reference category. Use
 \code{jdummy()} for control over the reference category.}
 
+\item{ci}{Logical or NULL. If TRUE, appends a 95\% confidence interval for
+each unstandardized coefficient (b) at the right of the coefficient table.
+If NULL (default), defers to \code{joutput()}'s regression.ci setting
+(off at minimal and standard, on at full). Computed as the closed form
+b +/- t(.975, residual df) * SE.}
+
 \item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints VIF
 table and diagnostic plots. If a character vector, specifies which
 diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
@@ -63,8 +70,8 @@ dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
 \code{jlogistic()} only, since they are the functions that produce
 dummy-coded coefficient tables.}
 
-\item{full}{Logical. If TRUE, turns on diagnostics. Does not override
-explicit FALSE values.}
+\item{full}{Logical. If TRUE, turns on the coefficient confidence interval
+and diagnostics. Does not override explicit FALSE values.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},
@@ -106,7 +113,17 @@ Invisibly returns a list of class \code{jst_lm} containing:
 \item{model_type}{Character string \code{linear}.}
 \item{model_frame}{The model frame used to fit the model.}
 \item{formula_used}{The formula after dummy expansion.}
-\item{coefficients}{Formatted coefficient table (data frame).}
+\item{coefficients}{Formatted coefficient table (data frame); includes
+95\% CI Lower / Upper columns when \code{ci} is on.}
+\item{coefficients_raw}{Flat data frame of raw, full-precision
+coefficient statistics (one row per coefficient): \code{term} (machine
+key), \code{b}, \code{SE}, \code{t}, \code{df}, \code{p}, \code{beta},
+and \code{ci_lower} / \code{ci_upper} bounds (present regardless of the
+\code{ci} display toggle). Carries \code{beta_standardization} and
+\code{outcome} attributes.}
+\item{fit_raw}{List of raw, full-precision fit statistics (R-squared,
+adjusted R-squared, residual SE, F with its dfs and p-value, residual
+df, and N).}
 \item{r_squared}{R-squared value.}
 \item{adj_r_squared}{Adjusted R-squared value.}
 \item{residual_se}{Residual standard error.}

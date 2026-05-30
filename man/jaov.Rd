@@ -38,7 +38,7 @@ Not available when welch = TRUE. If NULL (default), defers to
 \item{levene}{Logical or NULL. If TRUE, prints Levene's test for homogeneity
 of variance. If NULL (default), defers to \code{joutput()}.}
 
-\item{ci}{Logical or NULL. If TRUE, adds 95\\% confidence intervals to the
+\item{ci}{Logical or NULL. If TRUE, adds 95\% confidence intervals to the
 group descriptives table. If NULL (default), defers to \code{joutput()}.}
 
 \item{subset}{An optional unquoted logical expression (e.g.

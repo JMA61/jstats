@@ -48,7 +48,7 @@ as continuous even if they have value labels.}
 \item{categorical}{Optional character vector of variable names to treat
 as categorical even if they lack value labels.}
 
-\item{ci}{Logical or NULL. If TRUE, adds 95\\% confidence intervals for
+\item{ci}{Logical or NULL. If TRUE, adds 95\% confidence intervals for
 Exp(B). If NULL (default), defers to \code{joutput()}.}
 
 \item{classification}{Logical. If TRUE, prints a classification table

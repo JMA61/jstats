@@ -1485,19 +1485,22 @@
 #   NULL  - "auto": print once per session, then suppress (tracked via
 #           the .jst_udm_notice_shown option)
 .jst_output_defaults <- list(
-  minimal  = list(effect.size = FALSE, ci = FALSE, levene = FALSE,
+  minimal  = list(effect.size = FALSE,
+                  regression.ci = FALSE, means.ci = FALSE, levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = FALSE, case.processing.detail = "none",
-                  variable.id = "names", value.id = "values",
+                  variable.id = "names", value.id = "labels",
                   ref.categories = FALSE, digits = 3,
                   udm.notice = FALSE),
-  standard = list(effect.size = TRUE,  ci = TRUE,  levene = FALSE,
+  standard = list(effect.size = TRUE,
+                  regression.ci = FALSE, means.ci = TRUE,  levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = NULL,  case.processing.detail = "totals",
                   variable.id = "names", value.id = "both",
                   ref.categories = TRUE, digits = 3,
                   udm.notice = NULL),
-  full     = list(effect.size = TRUE,  ci = TRUE,  levene = TRUE,
+  full     = list(effect.size = TRUE,
+                  regression.ci = TRUE,  means.ci = TRUE,  levene = TRUE,
                   posthoc = TRUE,  diagnostics = TRUE,
                   case.processing = TRUE,  case.processing.detail = "per_code",
                   variable.id = "legend", value.id = "both",
@@ -1545,7 +1548,7 @@
 #' (2) individual joutput() toggle override, (3) joutput() level default.
 #' Per-call arguments use NULL to mean "I didn't specify -- defer to joutput()".
 #'
-#' @param name Character. Toggle name (e.g. "effect.size", "ci", "levene").
+#' @param name Character. Toggle name (e.g. "effect.size", "means.ci", "levene").
 #' @param per_call_value The value passed by the user in the function call,
 #'   or NULL if not specified.
 #'
@@ -1612,6 +1615,31 @@
     x <- suppressWarnings(as.numeric(x))
     ifelse(is.na(x), "", sprintf(spec, x))
   }
+}
+
+#' Internal helper: format a p-value for display
+#'
+#' Formats one or more p-values to three decimal places following the package
+#' convention: the leading zero is dropped (a p cannot exceed 1, so ".045" not
+#' "0.045"), values below .001 collapse to the "<.001" floor, and a missing p
+#' renders as the empty string (a blank cell) rather than a misleading "<.001"
+#' or a stray "NA". Vectorized; used by every analysis function that prints a
+#' p-value, matching jcorr's existing treatment. Statistics that can exceed 1
+#' (F, t, Wald, chi-square, coefficients, standard errors, confidence-interval
+#' bounds) keep their leading zero and are formatted elsewhere -- this helper is
+#' for p-values only. The three-decimal precision is fixed and does not follow
+#' the digits option (p-values keep their own convention).
+#'
+#' @param p Numeric vector of p-values (NA allowed).
+#'
+#' @return Character vector the same length as p.
+#'
+#' @keywords internal
+.jst_fmt_p <- function(p) {
+  p <- suppressWarnings(as.numeric(p))
+  ifelse(is.na(p), "",
+         ifelse(p < 0.001, "<.001",
+                sub("^0\\.", ".", sprintf("%.3f", p))))
 }
 
 #' Internal helper: validate and resolve the variable.id display mode
@@ -1702,17 +1730,24 @@
 #' @param per_call The value of the calling function's \code{value.id}
 #'   argument: NULL (defer to joutput()), or one of \code{"both"},
 #'   \code{"values"}, \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.
+#' @param allowed Character vector of the value.id modes the calling function
+#'   accepts. Defaults to the full set; \code{jlm()} and \code{jlogistic()}
+#'   pass the reduced set (\code{"both"}, \code{"values"}, \code{"labels"}) so
+#'   the "must be one of" message advertises only what they support, matching
+#'   their separate rejection of the legend modes.
 #'
 #' @return Single character token: one of \code{"both"}, \code{"values"},
 #'   \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.
 #'
 #' @keywords internal
-.jst_resolve_value_id <- function(per_call) {
+.jst_resolve_value_id <- function(per_call,
+                                  allowed = c("both", "values", "labels",
+                                              "legend", "legend.bottom")) {
   if (!is.null(per_call)) {
     if (!is.character(per_call) || length(per_call) != 1 ||
-        !(per_call %in% c("both", "values", "labels", "legend", "legend.bottom"))) {
-      stop("value.id must be one of: \"both\", \"values\", \"labels\", ",
-           "\"legend\", \"legend.bottom\".", call. = FALSE)
+        !(per_call %in% allowed)) {
+      stop("value.id must be one of: ",
+           paste0("\"", allowed, "\"", collapse = ", "), ".", call. = FALSE)
     }
   }
   .jst_resolve_toggle("value.id", per_call)
@@ -3963,7 +3998,7 @@ juse <- function(data) {
 #'
 #' Expressions use standard R logical operators: \code{==}, \code{!=},
 #' \code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
-#' \code{!} (NOT), \code{xor()} (XOR), and \code{\%in\%}. Using \code{=} for
+#' \code{!} (NOT), \code{xor()} (XOR), and `%in%`. Using \code{=} for
 #' equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
 #' produce a helpful error suggesting the correct R syntax.
 #'
@@ -5217,18 +5252,25 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'       reference categories, no effect sizes, no CIs.}
 #'     \item{standard}{Default. Suitable for teaching and routine use.
 #'       Includes Case Processing Summary, reference categories, effect
-#'       sizes, and confidence intervals. Variable labels are off by
+#'       sizes, and confidence intervals for means and mean differences
+#'       (\code{jt}, \code{jaov}); regression coefficient CIs (\code{jlm},
+#'       \code{jlogistic}) are reserved for full. Variable labels are off by
 #'       default (\code{variable.id = "names"}); request a label legend or
 #'       in-table labels per call or via the \code{variable.id} toggle.}
 #'     \item{full}{Everything in standard plus a variable label legend
-#'       (\code{variable.id = "legend"}), assumption checks (Levene's
+#'       (\code{variable.id = "legend"}), regression coefficient confidence
+#'       intervals, assumption checks (Levene's
 #'       test), post-hoc tests, regression diagnostics, and the most
 #'       detailed Case Processing Summary (per-code missing breakdown).}
 #'   }
 #' @param effect.size Logical or NULL. Override the level's default for
 #'   effect size display.
-#' @param ci Logical or NULL. Override the level's default for confidence
-#'   interval display.
+#' @param regression.ci Logical or NULL. Override the level's default for
+#'   confidence intervals on regression coefficients (\code{jlm},
+#'   \code{jlogistic}). Off at minimal and standard, on at full.
+#' @param means.ci Logical or NULL. Override the level's default for
+#'   confidence intervals on means and mean differences (\code{jt},
+#'   \code{jaov}). Off at minimal, on at standard and full.
 #' @param levene Logical or NULL. Override the level's default for
 #'   Levene's test display.
 #' @param posthoc Logical or NULL. Override the level's default for
@@ -5304,8 +5346,8 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'   session options.
 #'
 #' @examples
-#' joutput("standard")                     # effect sizes + CIs on all analyses
-#' joutput("minimal", ci = TRUE)           # minimal + CIs only
+#' joutput("standard")                       # effect sizes + means/diff CIs (jt, jaov)
+#' joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
 #' joutput("full")                         # everything
 #' joutput()                               # show current settings
 #' joutput(NULL)                           # reset to defaults
@@ -5317,7 +5359,8 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #' @param quiet Logical; default FALSE. When TRUE, joutput() applies the
 #'   level/toggle change silently (the status panel is not printed). A bare
 #'   joutput() status query always prints regardless of quiet.
-joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
+joutput <- function(level, effect.size = NULL,
+                    regression.ci = NULL, means.ci = NULL, levene = NULL,
                     posthoc = NULL, diagnostics = NULL,
                     case.processing = NULL, case.processing.detail = NULL,
                     variable.id = NULL, value.id = NULL,
@@ -5340,7 +5383,8 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
   # Collect any explicit toggle overrides
   toggle_args <- list()
   if (!is.null(effect.size))     toggle_args$effect.size     <- effect.size
-  if (!is.null(ci))              toggle_args$ci              <- ci
+  if (!is.null(regression.ci))   toggle_args$regression.ci   <- regression.ci
+  if (!is.null(means.ci))        toggle_args$means.ci        <- means.ci
   if (!is.null(levene))          toggle_args$levene          <- levene
   if (!is.null(posthoc))         toggle_args$posthoc         <- posthoc
   if (!is.null(diagnostics))     toggle_args$diagnostics     <- diagnostics
@@ -5427,7 +5471,8 @@ joutput <- function(level, effect.size = NULL, ci = NULL, levene = NULL,
   cat("Level: ", level, "\n", sep = "")
 
   # Show effective value for each toggle
-  toggle_names <- c("effect.size", "ci", "levene", "posthoc", "diagnostics",
+  toggle_names <- c("effect.size", "regression.ci", "means.ci", "levene",
+                    "posthoc", "diagnostics",
                     "case.processing", "case.processing.detail",
                     "variable.id", "value.id", "ref.categories",
                     "udm.notice", "digits")
@@ -6286,7 +6331,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
 #' SPSS-like frequency tables for categorical variables
 #'
-#' Prints an SPSS-style frequency table (Freq, Total \%, Valid \%, Cum. \%) for
+#' Prints an SPSS-style frequency table (Freq, Total %, Valid %, Cum. %) for
 #' each variable supplied. Designed for use with unquoted variable names, and
 #' also accepts a plain vector.
 #'
@@ -7135,7 +7180,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #' @param levene Logical or NULL. If TRUE, prints Levene's test for homogeneity
 #'   of variance. Ignored when paired = TRUE. If NULL (default), defers to
 #'   \code{joutput()}.
-#' @param ci Logical or NULL. If TRUE, adds 95\% confidence interval for the
+#' @param ci Logical or NULL. If TRUE, adds 95% confidence interval for the
 #'   mean difference. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
@@ -7166,7 +7211,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #'   \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
 #'   data frame used for plotting), \code{test_type}, \code{formula},
 #'   \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
-#'   \code{ci} (95\% CI), \code{cohens_d}, \code{d_label}, \code{n}, and
+#'   \code{ci} (95% CI), \code{cohens_d}, \code{d_label}, \code{n}, and
 #'   \code{sample_info} (pipeline and missing data counts).
 #'
 #' @examples
@@ -7222,7 +7267,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   # Resolve display toggles: per-call > joutput() toggle > joutput() level
   effect.size <- .jst_resolve_toggle("effect.size", effect.size)
-  ci          <- .jst_resolve_toggle("ci",          ci)
+  ci          <- .jst_resolve_toggle("means.ci",    ci)
   levene      <- .jst_resolve_toggle("levene",      levene)
   # Red title - determined before any output
   if (paired) {
@@ -7348,7 +7393,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     levene_result <- summary(levene_model)[[1]]
     levene_f      <- round(levene_result$`F value`[1], digits_n)
     levene_p      <- levene_result$`Pr(>F)`[1]
-    levene_p_fmt  <- if (!is.na(levene_p) && levene_p < 0.001) "<.001" else sprintf("%.3f", levene_p)
+    levene_p_fmt  <- .jst_fmt_p(levene_p)
 
     levene_table <- data.frame(
       F_value = levene_f,
@@ -7369,7 +7414,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
       group_ns       <- tapply(dv_vals, group_factor, function(x) sum(!is.na(x)))
       size_ratio     <- max(group_ns) / min(group_ns)
       balanced       <- size_ratio <= 1.5
-      levene_p_note  <- if (levene_p < 0.001) "<.001" else sprintf("%.3f", levene_p)
+      levene_p_note  <- .jst_fmt_p(levene_p)
       if (balanced) {
         cat("Note: Levene's test is significant (p = ", levene_p_note,
             "), but group sizes are approximately equal\n",
@@ -7415,7 +7460,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   }
 
   p_val <- result$p.value
-  p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
+  p_fmt <- .jst_fmt_p(p_val)
 
   test_table <- data.frame(
     t               = round(result$statistic, digits_n),
@@ -7528,7 +7573,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   (default), defers to \code{joutput()}.
 #' @param levene Logical or NULL. If TRUE, prints Levene's test for homogeneity
 #'   of variance. If NULL (default), defers to \code{joutput()}.
-#' @param ci Logical or NULL. If TRUE, adds 95\% confidence intervals to the
+#' @param ci Logical or NULL. If TRUE, adds 95% confidence intervals to the
 #'   group descriptives table. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
@@ -7617,7 +7662,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
   # Resolve display toggles: per-call > joutput() toggle > joutput() level
   effect.size  <- .jst_resolve_toggle("effect.size", effect.size)
-  ci           <- .jst_resolve_toggle("ci",          ci)
+  ci           <- .jst_resolve_toggle("means.ci",   ci)
   levene       <- .jst_resolve_toggle("levene",      levene)
   posthoc      <- .jst_resolve_toggle("posthoc",     posthoc)
   # Red title
@@ -7736,7 +7781,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     levene_result <- summary(levene_model)[[1]]
     levene_f      <- round(levene_result$`F value`[1], digits_n)
     levene_p      <- levene_result$`Pr(>F)`[1]
-    levene_p_fmt  <- if (!is.na(levene_p) && levene_p < 0.001) "<.001" else sprintf("%.3f", levene_p)
+    levene_p_fmt  <- .jst_fmt_p(levene_p)
 
     levene_table <- data.frame(
       F_value = levene_f,
@@ -7757,7 +7802,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       group_ns       <- tapply(dv_vals, group_factor, function(x) sum(!is.na(x)))
       size_ratio     <- max(group_ns) / min(group_ns)
       balanced       <- size_ratio <= 1.5
-      levene_p_note  <- if (levene_p < 0.001) "<.001" else sprintf("%.3f", levene_p)
+      levene_p_note  <- .jst_fmt_p(levene_p)
       if (balanced) {
         cat("Note: Levene's test is significant (p = ", levene_p_note,
             "), but group sizes are approximately equal\n",
@@ -7824,7 +7869,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     model <- oneway.test(formula, data = data, var.equal = FALSE)
 
     p_val <- model$p.value
-    p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
+    p_fmt <- .jst_fmt_p(p_val)
 
     welch_table <- data.frame(
       F_value = round(model$statistic, digits_n),
@@ -7872,7 +7917,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     total_ss <- sum(result$`Sum Sq`)
 
     p_val <- result$`Pr(>F)`[1]
-    p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
+    p_fmt <- .jst_fmt_p(p_val)
 
     anova_table <- data.frame(
       Source         = c(group_disp, "Residual", "Total"),
@@ -7902,8 +7947,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       tukey_result <- as.data.frame(tukey[[1]])
 
       tukey_p     <- tukey_result$`p adj`
-      tukey_p_fmt <- ifelse(!is.na(tukey_p) & tukey_p < 0.001, "<.001",
-                            sprintf("%.3f", tukey_p))
+      tukey_p_fmt <- .jst_fmt_p(tukey_p)
 
       tukey_table <- data.frame(
         Comparison = rownames(tukey_result),
@@ -8163,7 +8207,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   exp_table  <- chi_result$expected
 
   p_val <- chi_result$p.value
-  p_fmt <- if (!is.na(p_val) && p_val < 0.001) "<.001" else sprintf("%.3f", p_val)
+  p_fmt <- .jst_fmt_p(p_val)
 
   n_rows <- length(row_levels)
   n_cols <- length(col_levels)
@@ -9422,13 +9466,18 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
 #'   The first sorted unique value becomes the reference category. Use
 #'   \code{jdummy()} for control over the reference category.
+#' @param ci Logical or NULL. If TRUE, appends a 95% confidence interval for
+#'   each unstandardized coefficient (b) at the right of the coefficient table.
+#'   If NULL (default), defers to \code{joutput()}'s regression.ci setting
+#'   (off at minimal and standard, on at full). Computed as the closed form
+#'   b +/- t(.975, residual df) * SE.
 #' @param diagnostics Logical, character vector, or NULL. If TRUE, prints VIF
 #'   table and diagnostic plots. If a character vector, specifies which
 #'   diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
 #'   \code{scale}, \code{cooks}, \code{leverage}. If NULL (default),
 #'   defers to \code{joutput()} session setting.
-#' @param full Logical. If TRUE, turns on diagnostics. Does not override
-#'   explicit FALSE values.
+#' @param full Logical. If TRUE, turns on the coefficient confidence interval
+#'   and diagnostics. Does not override explicit FALSE values.
 #' @param ... Reserved for argument-name checking. Passing \code{which},
 #'   \code{plots}, or \code{show} will produce a helpful error suggesting
 #'   \code{diagnostics} instead.
@@ -9439,7 +9488,17 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     \item{model_type}{Character string \code{linear}.}
 #'     \item{model_frame}{The model frame used to fit the model.}
 #'     \item{formula_used}{The formula after dummy expansion.}
-#'     \item{coefficients}{Formatted coefficient table (data frame).}
+#'     \item{coefficients}{Formatted coefficient table (data frame); includes
+#'       95% CI Lower / Upper columns when \code{ci} is on.}
+#'     \item{coefficients_raw}{Flat data frame of raw, full-precision
+#'       coefficient statistics (one row per coefficient): \code{term} (machine
+#'       key), \code{b}, \code{SE}, \code{t}, \code{df}, \code{p}, \code{beta},
+#'       and \code{ci_lower} / \code{ci_upper} bounds (present regardless of the
+#'       \code{ci} display toggle). Carries \code{beta_standardization} and
+#'       \code{outcome} attributes.}
+#'     \item{fit_raw}{List of raw, full-precision fit statistics (R-squared,
+#'       adjusted R-squared, residual SE, F with its dfs and p-value, residual
+#'       df, and N).}
 #'     \item{r_squared}{R-squared value.}
 #'     \item{adj_r_squared}{Adjusted R-squared value.}
 #'     \item{residual_se}{Residual standard error.}
@@ -9518,6 +9577,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   dummy-coded coefficient tables.
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL,
+                ci = NULL,
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...,
                 value.id = NULL) {
@@ -9541,7 +9601,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
     stop("value.id '", value.id, "' is not supported by jlm().", call. = FALSE)
   }
-  value_mode      <- .jst_resolve_value_id(value.id)
+  value_mode      <- .jst_resolve_value_id(value.id,
+                                           allowed = c("both", "values", "labels"))
   value_mode_coef <- if (value_mode %in% c("legend", "legend.bottom")) {
     "both"
   } else {
@@ -9587,10 +9648,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # or factor (which would drop their variable labels). Frozen by
   # copy-on-modify so later in-place conversions do not affect it.
   lab_src <- data
-  # Resolve diagnostics toggle
+  # Resolve display toggles. `ci` wires the 95% coefficient CI to the joutput()
+  # regression.ci default (off at minimal and standard, on at full), matching
+  # jlogistic; `full` forces it on unless the caller set it FALSE. (Session 69)
   if (full) {
+    if (is.null(ci))          ci          <- TRUE
     if (is.null(diagnostics)) diagnostics <- TRUE
   }
+  ci <- .jst_resolve_toggle("regression.ci", ci)
   if (is.character(diagnostics)) {
     show_diag  <- TRUE
     diag_which <- diagnostics
@@ -10034,6 +10099,26 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   coefs <- as.data.frame(model_summary$coefficients, stringsAsFactors = FALSE)
   colnames(coefs)[1:4] <- c("b", "StdErr", "t", "P")
 
+  # Machine term keys (design-matrix coefficient names: "(Intercept)",
+  # "ProgramApprenticeship", "Age", ...), captured BEFORE the display rownames
+  # are cleaned below. They are the stable alignment key the japa-ready return
+  # carries beside each row; the final key form is a keystone of the broader
+  # return-shape audit and may be refined when that item is taken. (Session 69)
+  term_keys <- rownames(coefs)
+
+  # 95% confidence interval for each unstandardized b, computed inline as
+  # b +/- qt(.975, residual df) * SE -- the closed form jt uses for its
+  # mean-difference CI (no stats::confint(), no new dependency; jlogistic needs
+  # confint only because its interval is on the log-odds scale and is then
+  # exponentiated). Held at full precision: the `ci` toggle governs DISPLAY only
+  # (the rounded columns appended to the printed table below), while these raw
+  # bounds always travel on the returned object so a later collector (japa())
+  # can render the CI even when the console did not show it. (Session 69)
+  res_df       <- stats::df.residual(model)
+  ci_crit      <- stats::qt(0.975, res_df)
+  ci_lower_raw <- coefs$b - ci_crit * coefs$StdErr
+  ci_upper_raw <- coefs$b + ci_crit * coefs$StdErr
+
   mf_std   <- mf
   num_cols <- vapply(mf_std, is.numeric, logical(1))
   mf_std[, num_cols] <- lapply(mf_std[, num_cols, drop = FALSE], scale)
@@ -10074,8 +10159,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   }
 
   p_num <- suppressWarnings(as.numeric(coefs$P))
-  p_fmt <- ifelse(!is.na(p_num) & p_num < 0.001, "<.001",
-                  ifelse(is.na(p_num), "<.001", sprintf("%.3f", p_num)))
+  p_fmt <- .jst_fmt_p(p_num)
 
   # Continuous-statistic formatter honoring the joutput `digits` setting
   # (coefficients, SEs, t, standardized beta). P-values keep their own
@@ -10101,6 +10185,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     row.names = rownames(coefs)
   )
 
+  # When `ci` is on, append the 95% CI bounds at the right end of the table
+  # (after p -- the jlogistic append pattern). fmt3 applies the digits option and
+  # the negative-zero / leading-zero normalisation, same as the b column. On
+  # grouped multi-category dummy rows these columns ride through
+  # .jst_group_dummy_coefs() per category untouched (the CI tracks the raw b);
+  # blank_dummy_beta governs only the Beta column, decoupling the CI from the
+  # future none/regular/Gelman standardization switch. (Session 69)
+  if (ci) {
+    out_coefs$CI_Lower <- fmt3(ci_lower_raw)
+    out_coefs$CI_Upper <- fmt3(ci_upper_raw)
+  }
+
   r_squared     <- round(model_summary$r.squared, digits_n)
   adj_r_squared <- round(model_summary$adj.r.squared, digits_n)
   residual_se   <- round(model_summary$sigma, digits_n)
@@ -10111,7 +10207,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # Compute the F p-value from the full-precision F (NOT the display-rounded
   # value) so it never depends on the digits setting.
   f_p     <- stats::pf(unname(f_stat[1]), df1, df2, lower.tail = FALSE)
-  f_p_fmt <- ifelse(is.na(f_p) | f_p < 0.001, "<.001", sprintf("%.3f", f_p))
+  f_p_fmt <- .jst_fmt_p(f_p)
   f_value <- round(unname(f_stat[1]), digits_n)
 
   n_obs         <- stats::nobs(model)
@@ -10166,10 +10262,16 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
                                       value_mode_coef, vlmode, lab_src,
                                       show_ref_categories)
+  coef_col_names <- c("b", "SE", "t", "\u03b2", "p")
+  coef_align     <- c("d", "d", "d", "d", "d")
+  if (ci) {
+    coef_col_names <- c(coef_col_names, "95% CI Lower", "95% CI Upper")
+    coef_align     <- c(coef_align, "d", "d")
+  }
   .jst_print_table(coef_disp,
                    caption   = "Coefficients",
-                   col.names = c("", "b", "SE", "t", "\u03b2", "p"),
-                   align     = c("ln", "d", "d", "d", "d", "d"),
+                   col.names = c("", coef_col_names),
+                   align     = c("ln", coef_align),
                    row.names = FALSE)
 
   # Outcome named beneath the table, following variable.id; folds into the
@@ -10265,12 +10367,54 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
   }
 
+  # japa-ready coefficient frame: one flat row per coefficient carrying RAW,
+  # full-precision numbers (the printed `coefficients` frame above rounds for the
+  # eye; this keeps the values intact so a later collector rounds to APA spec
+  # itself). `term` is the machine alignment key; `df` is the shared residual df;
+  # `beta` is the raw standardized coefficient (NA where blanked on dummy rows);
+  # the CI bounds are present regardless of the `ci` display toggle. First
+  # down-payment on the cross-function return-shape audit -- the accessor
+  # contract and final key form remain that item's keystones. (Session 69)
+  coefficients_raw <- data.frame(
+    term     = term_keys,
+    b        = unname(coefs$b),
+    SE       = unname(coefs$StdErr),
+    t        = unname(coefs$t),
+    df       = res_df,
+    p        = suppressWarnings(as.numeric(coefs$P)),
+    beta     = unname(std_b[term_keys]),
+    ci_lower = unname(ci_lower_raw),
+    ci_upper = unname(ci_upper_raw),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  attr(coefficients_raw, "beta_standardization") <- "regular"
+  attr(coefficients_raw, "outcome") <- c(
+    name  = original_formula_vars[1],
+    label = .jst_label_or_name(lab_src, original_formula_vars[1]))
+
+  # Raw fit statistics mirroring the rounded fields below at full precision for
+  # japa(); the rounded fields are retained for back-compatibility. (Session 69)
+  fit_raw <- list(
+    r_squared     = unname(model_summary$r.squared),
+    adj_r_squared = unname(model_summary$adj.r.squared),
+    sigma         = unname(model_summary$sigma),
+    f_value       = unname(f_stat[1]),
+    f_df1         = df1,
+    f_df2         = df2,
+    f_p           = unname(f_p),
+    df_residual   = res_df,
+    n             = n_obs
+  )
+
   ret <- list(
     model           = model,
     model_type      = "linear",
     model_frame     = mf,
     formula_used    = formula,
     coefficients    = out_coefs,
+    coefficients_raw = coefficients_raw,
+    fit_raw         = fit_raw,
     r_squared       = r_squared,
     adj_r_squared   = adj_r_squared,
     residual_se     = residual_se,
@@ -10342,7 +10486,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   as continuous even if they have value labels.
 #' @param categorical Optional character vector of variable names to treat
 #'   as categorical even if they lack value labels.
-#' @param ci Logical or NULL. If TRUE, adds 95\% confidence intervals for
+#' @param ci Logical or NULL. If TRUE, adds 95% confidence intervals for
 #'   Exp(B). If NULL (default), defers to \code{joutput()}.
 #' @param classification Logical. If TRUE, prints a classification table
 #'   showing predicted vs observed outcomes. Default is FALSE.
@@ -10455,7 +10599,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     stop("value.id '", value.id, "' is not supported by jlogistic().",
          call. = FALSE)
   }
-  value_mode      <- .jst_resolve_value_id(value.id)
+  value_mode      <- .jst_resolve_value_id(value.id,
+                                           allowed = c("both", "values", "labels"))
   value_mode_coef <- if (value_mode %in% c("legend", "legend.bottom")) {
     "both"
   } else {
@@ -10488,7 +10633,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   }
 
   # Resolve display toggles
-  ci           <- .jst_resolve_toggle("ci", ci)
+  ci           <- .jst_resolve_toggle("regression.ci", ci)
   # Resolve diagnostics toggle
   if (is.character(diagnostics)) {
     show_diag  <- TRUE
@@ -10824,11 +10969,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   chi_sq      <- -2 * (ll_null - ll_model)
   omnibus_df  <- model$df.null - model$df.residual
   omnibus_p   <- stats::pchisq(chi_sq, df = omnibus_df, lower.tail = FALSE)
-  omnibus_fmt <- if (!is.na(omnibus_p) && omnibus_p < 0.001) {
-    "<.001"
-  } else {
-    sprintf("%.3f", omnibus_p)
-  }
+  omnibus_fmt <- .jst_fmt_p(omnibus_p)
 
   omnibus_table <- data.frame(
     Chi_Square = round(chi_sq, digits_n),
@@ -10868,8 +11009,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   wald <- coefs$z^2
 
   p_num <- suppressWarnings(as.numeric(coefs$P))
-  p_fmt <- ifelse(!is.na(p_num) & p_num < 0.001, "<.001",
-                  ifelse(is.na(p_num), "<.001", sprintf("%.3f", p_num)))
+  p_fmt <- .jst_fmt_p(p_num)
 
   exp_b <- exp(coefs$b)
 
@@ -16912,8 +17052,8 @@ jsave <- function(data, file, overwrite = FALSE) {
 #'   \code{FALSE} (default; no line), \code{TRUE} (alias for \code{lm}),
 #'   \code{lm}, \code{loess}, \code{connect}.
 #' @param band Character. Uncertainty band type for \code{line = "lm"}
-#'   scatter plots. One of \code{ci} (default; 95\% confidence band for
-#'   the mean, flares at the ends), \code{pi} (95\% prediction interval
+#'   scatter plots. One of \code{ci} (default; 95% confidence band for
+#'   the mean, flares at the ends), \code{pi} (95% prediction interval
 #'   for individual observations), \code{see} (constant-width band at
 #'   +/- t*SEE; useful for teaching homoskedasticity), \code{none}.
 #' @param subset Optional unquoted logical expression to filter cases for

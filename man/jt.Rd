@@ -39,7 +39,7 @@ when paired = TRUE.}
 of variance. Ignored when paired = TRUE. If NULL (default), defers to
 \code{joutput()}.}
 
-\item{ci}{Logical or NULL. If TRUE, adds 95\\% confidence interval for the
+\item{ci}{Logical or NULL. If TRUE, adds 95\% confidence interval for the
 mean difference. If NULL (default), defers to \code{joutput()}.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
@@ -87,7 +87,7 @@ Invisibly returns a list of class \code{jst_ttest} containing:
 \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
 data frame used for plotting), \code{test_type}, \code{formula},
 \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
-\code{ci} (95\\% CI), \code{cohens_d}, \code{d_label}, \code{n}, and
+\code{ci} (95\% CI), \code{cohens_d}, \code{d_label}, \code{n}, and
 \code{sample_info} (pipeline and missing data counts).
 }
 \description{

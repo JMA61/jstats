@@ -83,8 +83,8 @@ subtitle for \code{line = "lm"} scatter plots (data-first form) or
 alongside the equation.}
 
 \item{band}{Character. Uncertainty band type for \code{line = "lm"}
-scatter plots. One of \code{ci} (default; 95\\% confidence band for
-the mean, flares at the ends), \code{pi} (95\\% prediction interval
+scatter plots. One of \code{ci} (default; 95\% confidence band for
+the mean, flares at the ends), \code{pi} (95\% prediction interval
 for individual observations), \code{see} (constant-width band at
 +/- t*SEE; useful for teaching homoskedasticity), \code{none}.}
 

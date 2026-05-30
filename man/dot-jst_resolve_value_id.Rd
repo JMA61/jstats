@@ -4,12 +4,21 @@
 \alias{.jst_resolve_value_id}
 \title{Internal helper: validate and resolve the value.id display mode}
 \usage{
-.jst_resolve_value_id(per_call)
+.jst_resolve_value_id(
+  per_call,
+  allowed = c("both", "values", "labels", "legend", "legend.bottom")
+)
 }
 \arguments{
 \item{per_call}{The value of the calling function's \code{value.id}
 argument: NULL (defer to joutput()), or one of \code{"both"},
 \code{"values"}, \code{"labels"}, \code{"legend"}, \code{"legend.bottom"}.}
+
+\item{allowed}{Character vector of the value.id modes the calling function
+accepts. Defaults to the full set; \code{jlm()} and \code{jlogistic()}
+pass the reduced set (\code{"both"}, \code{"values"}, \code{"labels"}) so
+the "must be one of" message advertises only what they support, matching
+their separate rejection of the legend modes.}
 }
 \value{
 Single character token: one of \code{"both"}, \code{"values"},

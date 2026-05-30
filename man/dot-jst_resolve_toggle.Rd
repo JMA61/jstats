@@ -7,7 +7,7 @@
 .jst_resolve_toggle(name, per_call_value)
 }
 \arguments{
-\item{name}{Character. Toggle name (e.g. "effect.size", "ci", "levene").}
+\item{name}{Character. Toggle name (e.g. "effect.size", "means.ci", "levene").}
 
 \item{per_call_value}{The value passed by the user in the function call,
 or NULL if not specified.}

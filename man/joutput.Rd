@@ -7,7 +7,8 @@
 joutput(
   level,
   effect.size = NULL,
-  ci = NULL,
+  regression.ci = NULL,
+  means.ci = NULL,
   levene = NULL,
   posthoc = NULL,
   diagnostics = NULL,
@@ -31,11 +32,14 @@ only — no Case Processing Summary, no variable labels, no
 reference categories, no effect sizes, no CIs.}
 \item{standard}{Default. Suitable for teaching and routine use.
 Includes Case Processing Summary, reference categories, effect
-sizes, and confidence intervals. Variable labels are off by
+sizes, and confidence intervals for means and mean differences
+(\code{jt}, \code{jaov}); regression coefficient CIs (\code{jlm},
+\code{jlogistic}) are reserved for full. Variable labels are off by
 default (\code{variable.id = "names"}); request a label legend or
 in-table labels per call or via the \code{variable.id} toggle.}
 \item{full}{Everything in standard plus a variable label legend
-(\code{variable.id = "legend"}), assumption checks (Levene's
+(\code{variable.id = "legend"}), regression coefficient confidence
+intervals, assumption checks (Levene's
 test), post-hoc tests, regression diagnostics, and the most
 detailed Case Processing Summary (per-code missing breakdown).}
 }}
@@ -43,8 +47,13 @@ detailed Case Processing Summary (per-code missing breakdown).}
 \item{effect.size}{Logical or NULL. Override the level's default for
 effect size display.}
 
-\item{ci}{Logical or NULL. Override the level's default for confidence
-interval display.}
+\item{regression.ci}{Logical or NULL. Override the level's default for
+confidence intervals on regression coefficients (\code{jlm},
+\code{jlogistic}). Off at minimal and standard, on at full.}
+
+\item{means.ci}{Logical or NULL. Override the level's default for
+confidence intervals on means and mean differences (\code{jt},
+\code{jaov}). Off at minimal, on at standard and full.}
 
 \item{levene}{Logical or NULL. Override the level's default for
 Levene's test display.}
@@ -141,8 +150,8 @@ within any level. Per-call arguments on analysis functions always take
 precedence over joutput() settings.
 }
 \examples{
-joutput("standard")                     # effect sizes + CIs on all analyses
-joutput("minimal", ci = TRUE)           # minimal + CIs only
+joutput("standard")                       # effect sizes + means/diff CIs (jt, jaov)
+joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
 joutput("full")                         # everything
 joutput()                               # show current settings
 joutput(NULL)                           # reset to defaults

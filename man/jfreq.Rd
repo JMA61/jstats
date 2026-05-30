@@ -56,7 +56,7 @@ Invisibly returns a list of class \code{jst_freq} containing:
 \code{sample_info} (pipeline and missing data counts).
 }
 \description{
-Prints an SPSS-style frequency table (Freq, Total \\%, Valid \\%, Cum. \\%) for
+Prints an SPSS-style frequency table (Freq, Total \%, Valid \%, Cum. \%) for
 each variable supplied. Designed for use with unquoted variable names, and
 also accepts a plain vector.
 }
