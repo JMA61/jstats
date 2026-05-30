@@ -18,7 +18,8 @@ jlogistic(
   full = FALSE,
   case.processing.detail = NULL,
   digits = NULL,
-  ...
+  ...,
+  value.id = NULL
 )
 }
 \arguments{
@@ -82,6 +83,23 @@ which keep their own fixed conventions. NULL (default) defers to
 \item{...}{Reserved for argument-name checking. Passing \code{which},
 \code{plots}, or \code{show} will produce a helpful error suggesting
 \code{diagnostics} instead.}
+
+\item{value.id}{Character or NULL. Value-label display mode for the dummy
+category rows in the Coefficients table: one of \code{"both"}
+(\code{"code: label"}, degrading to a bare code where a code has no
+label), \code{"values"} (the bare code), or \code{"labels"} (the value
+label, degrading to the bare code where none exists). The reference
+category folded into each grouped variable's header follows the same
+mode. \code{"legend"} and \code{"legend.bottom"} are not supported here:
+a coefficient table already pairs each value label with its row, so a
+separate legend block would only duplicate it. Passing either explicitly
+is an error; a \code{joutput()} default of \code{"legend"} or
+\code{"legend.bottom"} is tolerated and rendered as \code{"both"}, so it
+does not break a bare call. Variables with no value labels render
+identically under all supported modes. NULL (default) defers to
+\code{joutput()}'s \code{value.id} setting. Applies only to multi-category
+dummy predictors; continuous and single-contrast (dichotomous) predictors
+are unaffected. Not a logical.}
 }
 \value{
 Invisibly returns a list of class \code{jst_logistic} containing:

@@ -210,7 +210,10 @@
 
 #' Internal helper: print variable label legend
 #'
-#' Used by jt, jaov, jcorr, jcrosstab, jscreen, and jalpha.
+#' Used by jt, jaov, jcorr, jcrosstab, jscreen, and jalpha. Lists only
+#' variables that carry a meaningful label: a variable with no label, or a
+#' label equal to its own name, is omitted (avoiding a redundant "X = X"
+#' line). If no variable has a meaningful label, nothing is printed.
 #'
 #' @keywords internal
 .print_var_labels <- function(data, var_names) {
@@ -218,7 +221,8 @@
   for (v in var_names) {
     if (v %in% names(data)) {
       vl <- labelled::var_label(data[[v]])
-      if (!is.null(vl) && !is.na(vl) && nzchar(vl)) {
+      if (!is.null(vl) && !is.na(vl) && nzchar(vl) &&
+          !identical(as.character(vl), v)) {
         label_lines <- c(label_lines, paste0("  ", v, " = ", vl))
       }
     }
@@ -234,9 +238,10 @@
 #'
 #' The regression layout's replacement for the flat \code{.print_var_labels}
 #' list: lists a model's variables grouped by role -- the outcome first, then
-#' the predictors. A variable with a label shows as "name = label"; a variable
-#' with no label shows as the bare "name" (absence of a label is conveyed by
-#' its absence, not by a "None" marker). Used by jlm and jlogistic in the
+#' the predictors. A variable with a label that differs from its name shows as
+#' "name = label"; a variable with no label (or a label equal to its name)
+#' shows as the bare "name" (absence of a meaningful label is conveyed by its
+#' absence, not by a "None" marker). Used by jlm and jlogistic in the
 #' "legend" and "legend.bottom" variable.id modes. Predictors are listed by
 #' their original formula names (e.g. "Program"), not expanded dummy columns;
 #' per-dummy-level value labelling is handled separately by the value.id
@@ -252,7 +257,11 @@
 .print_model_var_labels <- function(data, dv_name, iv_names) {
   fmt_line <- function(v) {
     vl <- labelled::var_label(data[[v]])
-    if (!is.null(vl) && length(vl) > 0 && !is.na(vl[1]) && nzchar(vl[1])) {
+    # Show "name = label" only when a label exists and differs from the name;
+    # a label equal to the name (or no label at all) shows the bare name,
+    # avoiding a redundant "X = X" line.
+    if (!is.null(vl) && length(vl) > 0 && !is.na(vl[1]) && nzchar(vl[1]) &&
+        !identical(as.character(vl[1]), v)) {
       paste0("  ", v, " = ", as.character(vl[1]))
     } else {
       paste0("  ", v)
@@ -8625,6 +8634,233 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 
 # -- Regression model helpers (jlm and jlogistic) -----------------------------
 
+#' Internal helper: value labels in val_labels() form for any variable type
+#'
+#' Returns the variable's value labels in \code{labelled::val_labels()} form
+#' (names are the labels, values are the codes) so the result can be fed
+#' straight to \code{.jst_format_value_labels()}. Plain numeric variables have
+#' no labels and return NULL (so value.id degrades to bare codes). Factor and
+#' character variables get synthetic 1..k codes whose ordering mirrors
+#' \code{.jst_make_dummy_names()}, so they line up with a dummy registration
+#' built from the same column.
+#'
+#' @param x A variable (haven-labelled, factor, character, or numeric).
+#'
+#' @return A named integer/numeric vector in val_labels() form, or NULL.
+#'
+#' @keywords internal
+.jst_var_value_labels <- function(x) {
+  if (haven::is.labelled(x)) return(labelled::val_labels(x))
+  if (is.factor(x)) {
+    lv <- levels(droplevels(x))
+    return(stats::setNames(seq_along(lv), lv))
+  }
+  if (is.character(x)) {
+    u <- sort(unique(x[!is.na(x) & nzchar(x)]))
+    return(stats::setNames(seq_along(u), u))
+  }
+  NULL
+}
+
+#' Internal helper: collect multi-category dummy registrations for grouping
+#'
+#' Gathers the registration-shaped objects for the MULTI-category dummy
+#' variables in a fitted model, from both pathways that create dummies:
+#' \code{jdummy()} registrations and the in-flight auto-categorical /
+#' \code{categorical =} registrations built inside jlm()/jlogistic(). A
+#' registration qualifies only when it produced two or more dummy columns and
+#' at least one of those columns is actually in the model. The two-or-more
+#' gate is what keeps single-contrast variables -- 0/1 and 1/2 numeric
+#' dichotomies, and jdummy-registered two-level variables -- out of the
+#' grouped layout, so their coefficient rows are left exactly as they are.
+#'
+#' @param dummy_regs List of jdummy registrations (from \code{.jst_get_dummy()}),
+#'   or NULL.
+#' @param auto_cat_regs Named list of in-flight registrations keyed by variable
+#'   name (the stored object carries no \code{var_name} field, so it is set
+#'   here from the list name).
+#' @param dummy_coef_names Character vector of dummy column names present in
+#'   the fitted model.
+#'
+#' @return A list of registration objects, each guaranteed to have
+#'   \code{var_name} set and two or more \code{dummy_names}.
+#'
+#' @keywords internal
+.jst_collect_multicat_regs <- function(dummy_regs, auto_cat_regs,
+                                       dummy_coef_names) {
+  out <- list()
+  if (!is.null(dummy_regs)) {
+    for (reg in dummy_regs) {
+      if (length(reg$dummy_names) >= 2L &&
+          any(reg$dummy_names %in% dummy_coef_names)) {
+        out[[length(out) + 1L]] <- reg
+      }
+    }
+  }
+  if (length(auto_cat_regs) > 0) {
+    for (vn in names(auto_cat_regs)) {
+      reg <- auto_cat_regs[[vn]]
+      reg$var_name <- vn
+      if (length(reg$dummy_names) >= 2L &&
+          any(reg$dummy_names %in% dummy_coef_names)) {
+        out[[length(out) + 1L]] <- reg
+      }
+    }
+  }
+  out
+}
+
+#' Internal helper: group multi-category dummy rows in a coefficient table
+#'
+#' Restructures a coefficient display data frame so each multi-category dummy
+#' variable prints as a header row -- the variable's name (or its label under
+#' \code{variable.id = "labels"}), optionally carrying its reference category
+#' as \code{"(ref = ...)"} -- with the variable's categories indented two
+#' spaces beneath it. Category-row labels follow the resolved value.id mode
+#' (both / values / labels). Rows that are not multi-category dummy members
+#' (the intercept, continuous predictors, single-contrast dichotomies, factor
+#' terms) pass through unchanged and in place.
+#'
+#' The result carries the display label for each row in a leading
+#' \code{.rowlab} column rather than in the row names, so the caller prints it
+#' with \code{row.names = FALSE} and an \code{"ln"} (left, no-trim) alignment
+#' on that column to preserve the indent. Using a real column sidesteps the
+#' data-frame unique-row-name constraint, which bare numeric codes would
+#' routinely violate. Header rows carry blank cells in every data column;
+#' category-row cells (including any standardized-beta column) are copied
+#' verbatim from \code{disp_df}, so a future standardization mode that
+#' populates beta on these rows needs no change here.
+#'
+#' @param disp_df The flat coefficient display data frame (character cells),
+#'   with coefficient names as its row names.
+#' @param regs List of multi-category registrations from
+#'   \code{.jst_collect_multicat_regs()}.
+#' @param value_mode Resolved value.id mode for the category rows: one of
+#'   \code{"both"}, \code{"values"}, \code{"labels"} (legend modes are folded
+#'   to \code{"both"} by the caller).
+#' @param vlmode Resolved variable.id mode; \code{"labels"} makes the header
+#'   use the variable's label.
+#' @param lab_src Pre-conversion data frame used as the label source.
+#' @param show_ref Logical. Whether to fold the reference category into each
+#'   variable's header.
+#'
+#' @return A data frame whose first column \code{.rowlab} holds the display
+#'   labels and whose remaining columns are \code{disp_df}'s columns verbatim.
+#'
+#' @keywords internal
+.jst_group_dummy_coefs <- function(disp_df, regs, value_mode, vlmode,
+                                    lab_src, show_ref) {
+  data_cols <- names(disp_df)
+  if (length(regs) == 0) {
+    out <- data.frame(.rowlab = rownames(disp_df),
+                      as.data.frame(as.matrix(disp_df), stringsAsFactors = FALSE,
+                                    check.names = FALSE),
+                      stringsAsFactors = FALSE, check.names = FALSE)
+    rownames(out) <- NULL
+    colnames(out) <- c(".rowlab", data_cols)
+    return(out)
+  }
+
+  dummy_to_group <- list()   # dummy column name -> group key (var_name)
+  cat_display    <- list()   # dummy column name -> indented category label
+  header_display <- list()   # group key -> header label
+
+  for (reg in regs) {
+    gkey <- reg$var_name
+    if (is.null(gkey) || !nzchar(gkey)) next
+    vl <- .jst_var_value_labels(
+      if (gkey %in% names(lab_src)) lab_src[[gkey]] else NULL)
+
+    head_name <- if (identical(vlmode, "labels")) {
+      .jst_label_or_name(lab_src, gkey)
+    } else {
+      gkey
+    }
+    if (isTRUE(show_ref)) {
+      ref_disp  <- .jst_format_value_labels(reg$codes[reg$ref_idx], vl, value_mode)
+      head_name <- paste0(head_name, " (ref = ", ref_disp, ")")
+    }
+    header_display[[gkey]] <- head_name
+
+    for (j in seq_along(reg$dummy_names)) {
+      dn   <- reg$dummy_names[j]
+      code <- reg$codes[reg$non_ref_idx[j]]
+      cat_display[[dn]]    <- paste0("  ",
+        .jst_format_value_labels(code, vl, value_mode))
+      dummy_to_group[[dn]] <- gkey
+    }
+  }
+
+  disp_mat <- as.matrix(disp_df)
+  rn       <- rownames(disp_df)
+  blank    <- rep("", ncol(disp_mat))
+
+  labels  <- character(0)
+  body    <- vector("list", 0L)
+  emitted <- character(0)
+
+  for (i in seq_len(nrow(disp_mat))) {
+    nm <- rn[i]
+    g  <- dummy_to_group[[nm]]
+    if (!is.null(g)) {
+      if (!(g %in% emitted)) {
+        labels <- c(labels, header_display[[g]])
+        body[[length(body) + 1L]] <- blank
+        emitted <- c(emitted, g)
+      }
+      labels <- c(labels, cat_display[[nm]])
+      body[[length(body) + 1L]] <- disp_mat[i, ]
+    } else {
+      labels <- c(labels, nm)
+      body[[length(body) + 1L]] <- disp_mat[i, ]
+    }
+  }
+
+  body_mat <- do.call(rbind, body)
+  out <- data.frame(.rowlab = labels,
+                    as.data.frame(body_mat, stringsAsFactors = FALSE,
+                                  check.names = FALSE),
+                    stringsAsFactors = FALSE, check.names = FALSE)
+  rownames(out) <- NULL
+  colnames(out) <- c(".rowlab", data_cols)
+  out
+}
+
+#' Internal helper: print the outcome name beneath a regression table
+#'
+#' Names the model outcome on its own line directly below the Coefficients
+#' table, for the non-legend variable.id modes. The line follows variable.id:
+#' the bare name under "names", the variable label under "labels", and
+#' "name: label" under "both" -- each degrading to the bare name when the
+#' outcome carries no variable label. Under the legend modes ("legend",
+#' "legend.bottom") nothing is printed here, because the variable-label legend
+#' (.print_model_var_labels) already carries the outcome in its Outcome
+#' section. Emits a leading blank line so it sits one line below the table.
+#'
+#' @param data Pre-conversion label source (the data frame jlm()/jlogistic()
+#'   captured for label lookups).
+#' @param dv_name The outcome variable name (the response in the model
+#'   formula).
+#' @param vlmode Resolved variable.id mode.
+#'
+#' @return Invisibly NULL; called for its printing side effect.
+#'
+#' @keywords internal
+.jst_print_outcome_line <- function(data, dv_name, vlmode) {
+  if (vlmode %in% c("legend", "legend.bottom")) return(invisible(NULL))
+  nm  <- dv_name
+  lab <- .jst_label_or_name(data, dv_name)
+  shown <- if (identical(vlmode, "labels")) {
+    lab
+  } else if (identical(vlmode, "both") && !identical(lab, nm)) {
+    paste0(nm, ": ", lab)
+  } else {
+    nm
+  }
+  cat("\nOutcome: ", shown, "\n", sep = "")
+  invisible(NULL)
+}
+
 #' Internal helper: clean up factor coefficient names for output
 #'
 #' By default, R concatenates factor variable names with level names when
@@ -9162,6 +9398,22 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   Coefficients table and the R-squared/fit block; \code{"legend.bottom"}
 #'   prints it at the very end. NULL (default) defers to \code{joutput()}'s
 #'   \code{variable.id} setting. Not a logical.
+#' @param value.id Character or NULL. Value-label display mode for the dummy
+#'   category rows in the Coefficients table: one of \code{"both"}
+#'   (\code{"code: label"}, degrading to a bare code where a code has no
+#'   label), \code{"values"} (the bare code), or \code{"labels"} (the value
+#'   label, degrading to the bare code where none exists). The reference
+#'   category folded into each grouped variable's header follows the same
+#'   mode. \code{"legend"} and \code{"legend.bottom"} are not supported here:
+#'   a coefficient table already pairs each value label with its row, so a
+#'   separate legend block would only duplicate it. Passing either explicitly
+#'   is an error; a \code{joutput()} default of \code{"legend"} or
+#'   \code{"legend.bottom"} is tolerated and rendered as \code{"both"}, so it
+#'   does not break a bare call. Variables with no value labels render
+#'   identically under all supported modes. NULL (default) defers to
+#'   \code{joutput()}'s \code{value.id} setting. Applies only to multi-category
+#'   dummy predictors; continuous and single-contrast (dichotomous) predictors
+#'   are unaffected. Not a logical.
 #' @param numeric Optional character vector of variable names that should be
 #'   treated as continuous (numeric) even if they have value labels. For
 #'   example, \code{numeric = "Age"} or \code{numeric = c("Age", "Education")}.
@@ -9267,7 +9519,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL,
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
-                case.processing.detail = NULL, digits = NULL, ...) {
+                case.processing.detail = NULL, digits = NULL, ...,
+                value.id = NULL) {
 
   .jst_check_args(
     list(...),
@@ -9275,6 +9528,32 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 show = "diagnostics"),
     fn_name = "jlm"
   )
+
+  # value.id is validated before any output, so an unsupported value fails
+  # fast (no title or data note printed first). It governs the dummy
+  # category-row labels and the reference folded into each grouped header.
+  # The legend modes have no separate-block meaning beneath a regression
+  # table -- the rows already pair each value label inline -- so passing one
+  # explicitly is an error; a joutput() "legend"/"legend.bottom" default is
+  # tolerated and folded to "both" (so a bare call does not break). Only that
+  # global-default path can reach the fold, since an explicit legend value is
+  # rejected here. The variable.id legend block is unrelated (handled later).
+  if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
+    stop("value.id '", value.id, "' is not supported by jlm().", call. = FALSE)
+  }
+  value_mode      <- .jst_resolve_value_id(value.id)
+  value_mode_coef <- if (value_mode %in% c("legend", "legend.bottom")) {
+    "both"
+  } else {
+    value_mode
+  }
+
+  # variable.id is likewise validated before any output (same fail-fast
+  # reason). It governs variable-name display in the coefficient table and
+  # whether/where the variable-label legend prints: "legend" between the
+  # Coefficients table and the fit block, "legend.bottom" at the very end,
+  # "labels" relabels the coefficient-row terms (display only).
+  vlmode          <- .jst_resolve_variable_id(variable.id)
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -9299,11 +9578,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
-  # Resolve display toggles. jlm is a distinct layout: "legend" prints the
-  # legend between the Coefficients table and the R-squared/fit block;
-  # "legend.bottom" prints it at the very end; "labels" relabels the
-  # coefficient-row terms (display only). See below.
-  vlmode               <- .jst_resolve_variable_id(variable.id)
+  # variable.id and value.id are validated and resolved above, before any
+  # output. Remaining display settings:
   show_ref_categories  <- .jst_resolve_toggle("ref.categories",  ref.categories)
   digits_n             <- .jst_resolve_digits(digits)
   # Pre-conversion label source for "labels"/legend display: captured before
@@ -9771,8 +10047,19 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   if ("(Intercept)" %in% names(std_b)) std_b["(Intercept)"] <- NA_real_
 
+  # Whether to blank the standardized beta on dummy / factor coefficient rows.
+  # A naive fully-standardized beta on a 0/1 indicator is scaled by the
+  # category's prevalence rather than by a meaningful unit, so it is not
+  # comparable to the continuous betas and is suppressed. This is the regular
+  # (SPSS-style) standardization regime, which is the only one currently
+  # offered. SEAM: when the planned none / regular / Gelman standardization
+  # switch lands, it sets this flag -- e.g. under Gelman, binary indicators are
+  # left on their 0/1 scale, where the standardized beta equals the raw b and
+  # would be shown. Display-only; the returned object is unaffected either way.
+  blank_dummy_beta <- TRUE
+
   factor_terms <- names(mf)[vapply(mf, is.factor, logical(1))]
-  if (length(factor_terms) > 0) {
+  if (blank_dummy_beta && length(factor_terms) > 0) {
     for (term in factor_terms) {
       dummy_rows        <- grep(paste0("^", term), rownames(coefs), value = TRUE)
       std_b[dummy_rows] <- NA_real_
@@ -9780,7 +10067,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   }
 
   # Blank β for registered dummy variables
-  if (length(dummy_coef_names) > 0) {
+  if (blank_dummy_beta && length(dummy_coef_names) > 0) {
     for (dname in dummy_coef_names) {
       if (dname %in% names(std_b)) std_b[dname] <- NA_real_
     }
@@ -9857,41 +10144,51 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     rownames(out_coefs_disp) <- .jst_relabel_coef_names(
       rownames(out_coefs), lab_src, all.vars(formula)[-1])
   }
-  # Always-on model header: name the outcome on the line directly above the
-  # Coefficients table (it heads that table; predictors are its rows). The
-  # label-bearing, role-grouped roster is the variable.id legend block.
-  # (Session 62; placement settled Session 63)
-  cat("Outcome: ", original_formula_vars[1], "\n", sep = "")
-  # Reference category line, directly under Outcome: and above the Coefficients
-  # table whose dummy rows it explains. The "Var_" prefix is stripped from each
-  # level for brevity ("Employment = Employment_Unemployed" -> "Employment =
-  # Unemployed"); the bare-level case leaves the value as-is.
-  if (show_ref_categories && length(all_ref_cats) > 0) {
-    disp_ref <- sub("^(.*) = \\1_", "\\1 = ", all_ref_cats)
-    if (length(disp_ref) == 1) {
-      cat("  Reference category: ", disp_ref, "\n", sep = "")
-    } else {
-      cat("  Reference categories:\n")
-      for (rc in disp_ref) cat("    ", rc, "\n", sep = "")
-    }
-  }
-  # TODO (value.id): shorten the dummy stub entries below (e.g.
-  # "Employment_Occasional" -> grouped variable header with indented levels).
-  # Jeff favours the grouped-header + indented-levels layout; settle across
-  # jlm/jlogistic (and decide jaov) as part of the value.id work.
-  .jst_print_table(out_coefs_disp,
+  # The outcome is named beneath the Coefficients table (not above), via
+  # .jst_print_outcome_line(); under the variable.id legend modes it is carried
+  # by the legend's Outcome section instead, so no standalone line prints.
+  # (Outcome placement moved below the table this session; previously above,
+  # per Session 62/63.)
+  # The reference category is no longer printed on its own line; it is folded
+  # into each multi-category variable's header below (e.g.
+  # "Employment (ref = 1: Employed full-time)"), governed by value.id and the
+  # ref.categories toggle. all_ref_cats still feeds the returned object.
+  #
+  # Multi-category dummy predictors are grouped: a header row carrying the
+  # variable name (its label under variable.id = "labels") with the reference
+  # folded in, and the categories indented two spaces beneath with value.id
+  # labels. Single-contrast (dichotomous) predictors and continuous predictors
+  # are left as flat rows. The display label rides in a leading column printed
+  # with "ln" (left, no-trim) alignment so the indent survives; the returned
+  # object is untouched.
+  multi_cat_regs <- .jst_collect_multicat_regs(dummy_regs, auto_cat_regs,
+                                               dummy_coef_names)
+  coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
+                                      value_mode_coef, vlmode, lab_src,
+                                      show_ref_categories)
+  .jst_print_table(coef_disp,
                    caption   = "Coefficients",
-                   col.names = c("b", "SE", "t", "\u03b2", "p"),
-                   align     = c("d", "d", "d", "d", "d"),
-                   row.names = TRUE)
+                   col.names = c("", "b", "SE", "t", "\u03b2", "p"),
+                   align     = c("ln", "d", "d", "d", "d", "d"),
+                   row.names = FALSE)
+
+  # Outcome named beneath the table, following variable.id; folds into the
+  # legend under the legend modes (see .jst_print_outcome_line).
+  .jst_print_outcome_line(lab_src, original_formula_vars[1], vlmode)
 
   # "legend" (mid): between the Coefficients table and the R-squared/fit block.
+  # In legend mode the roster's trailing blank line doubles as the separator
+  # before the fit block (matching jlogistic); otherwise one blank is emitted
+  # here. The R-squared line carries no leading newline, so exactly one blank
+  # precedes the fit block in every variable.id mode.
   if (identical(vlmode, "legend")) {
     cat("\n")
     .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
+  } else {
+    cat("\n")
   }
 
-  cat("\nR-squared: ", sprintf(paste0("%.", digits_n, "f"), r_squared),
+  cat("R-squared: ", sprintf(paste0("%.", digits_n, "f"), r_squared),
       "    Adjusted R-squared: ", sprintf(paste0("%.", digits_n, "f"), adj_r_squared), "\n", sep = "")
   cat("Residual Standard Error: ", sprintf(paste0("%.", digits_n, "f"), residual_se), "\n", sep = "")
   cat("\nF-statistic: ", sprintf(paste0("%.", digits_n, "f"), f_value),
@@ -10025,6 +10322,22 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   Coefficients table (at the coefficients/fit seam);
 #'   \code{"legend.bottom"} prints it at the very end. NULL (default) defers
 #'   to \code{joutput()}'s \code{variable.id} setting. Not a logical.
+#' @param value.id Character or NULL. Value-label display mode for the dummy
+#'   category rows in the Coefficients table: one of \code{"both"}
+#'   (\code{"code: label"}, degrading to a bare code where a code has no
+#'   label), \code{"values"} (the bare code), or \code{"labels"} (the value
+#'   label, degrading to the bare code where none exists). The reference
+#'   category folded into each grouped variable's header follows the same
+#'   mode. \code{"legend"} and \code{"legend.bottom"} are not supported here:
+#'   a coefficient table already pairs each value label with its row, so a
+#'   separate legend block would only duplicate it. Passing either explicitly
+#'   is an error; a \code{joutput()} default of \code{"legend"} or
+#'   \code{"legend.bottom"} is tolerated and rendered as \code{"both"}, so it
+#'   does not break a bare call. Variables with no value labels render
+#'   identically under all supported modes. NULL (default) defers to
+#'   \code{joutput()}'s \code{value.id} setting. Applies only to multi-category
+#'   dummy predictors; continuous and single-contrast (dichotomous) predictors
+#'   are unaffected. Not a logical.
 #' @param numeric Optional character vector of variable names to treat
 #'   as continuous even if they have value labels.
 #' @param categorical Optional character vector of variable names to treat
@@ -10119,7 +10432,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                       numeric = NULL, categorical = NULL,
                       ci = NULL, classification = FALSE,
                       diagnostics = NULL, ref.categories = NULL, full = FALSE,
-                      case.processing.detail = NULL, digits = NULL, ...) {
+                      case.processing.detail = NULL, digits = NULL, ...,
+                      value.id = NULL) {
 
   .jst_check_args(
     list(...),
@@ -10127,6 +10441,33 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                 show = "diagnostics"),
     fn_name = "jlogistic"
   )
+
+  # value.id is validated before any output, so an unsupported value fails
+  # fast (no title or data note printed first). It governs the dummy
+  # category-row labels and the reference folded into each grouped header.
+  # The legend modes have no separate-block meaning beneath a regression
+  # table -- the rows already pair each value label inline -- so passing one
+  # explicitly is an error; a joutput() "legend"/"legend.bottom" default is
+  # tolerated and folded to "both" (so a bare call does not break). Only that
+  # global-default path can reach the fold, since an explicit legend value is
+  # rejected here. The variable.id legend block is unrelated (handled later).
+  if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
+    stop("value.id '", value.id, "' is not supported by jlogistic().",
+         call. = FALSE)
+  }
+  value_mode      <- .jst_resolve_value_id(value.id)
+  value_mode_coef <- if (value_mode %in% c("legend", "legend.bottom")) {
+    "both"
+  } else {
+    value_mode
+  }
+
+  # variable.id is likewise validated before any output (same fail-fast
+  # reason). It governs variable-name display in the coefficient table and
+  # whether/where the variable-label legend prints: "legend" just below the
+  # Coefficients table (the coefficients/fit seam), "legend.bottom" at the
+  # very end, "labels" relabels the coefficient-row terms (display only).
+  vlmode          <- .jst_resolve_variable_id(variable.id)
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -10445,11 +10786,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # line (just above the Coefficients table they describe), to match jlm.
   show_ref_categories <- .jst_resolve_toggle("ref.categories", ref.categories)
 
-  # Variable label display mode. jlogistic is a distinct layout: "legend"
-  # prints just below the Coefficients table (at the coefficients/fit seam,
-  # mirroring jlm); "legend.bottom" at the very end; "labels" relabels
-  # coefficient-row terms (display only).
-  vlmode <- .jst_resolve_variable_id(variable.id)
+  # variable.id and value.id are validated and resolved above, before any
+  # output.
   digits_n <- .jst_resolve_digits(digits)
 
   # Capture DV label for "1" category (before model fitting, more reliable)
@@ -10576,34 +10914,38 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     rownames(out_coefs_disp) <- .jst_relabel_coef_names(
       rownames(out_coefs), lab_src, all.vars(formula)[-1])
   }
-  # Always-on model header: name the outcome on the line directly above the
-  # Coefficients table (it heads that table; predictors are its rows). The
-  # event-level annotation is deferred to the value.id outcome-level work; the
-  # label-bearing roster is the variable.id legend block. (Session 62;
-  # placement settled Session 63)
-  cat("Outcome: ", original_formula_vars[1], "\n", sep = "")
-  # Reference category line, directly under Outcome: and above the Coefficients
-  # table whose dummy rows it explains. The "Var_" prefix is stripped from each
-  # level for brevity ("Employment = Employment_Unemployed" -> "Employment =
-  # Unemployed"); the bare-level case leaves the value as-is.
-  if (show_ref_categories && length(all_ref_cats) > 0) {
-    disp_ref <- sub("^(.*) = \\1_", "\\1 = ", all_ref_cats)
-    if (length(disp_ref) == 1) {
-      cat("  Reference category: ", disp_ref, "\n", sep = "")
-    } else {
-      cat("  Reference categories:\n")
-      for (rc in disp_ref) cat("    ", rc, "\n", sep = "")
-    }
-  }
-  # TODO (value.id): shorten the dummy stub entries below (e.g.
-  # "Employment_Occasional" -> grouped variable header with indented levels).
-  # Jeff favours the grouped-header + indented-levels layout; settle across
-  # jlm/jlogistic (and decide jaov) as part of the value.id work.
-  .jst_print_table(out_coefs_disp,
+  # The outcome is named beneath the Coefficients table (not above), via
+  # .jst_print_outcome_line(); under the variable.id legend modes it is carried
+  # by the legend's Outcome section instead, so no standalone line prints.
+  # (Outcome placement moved below the table this session; previously above,
+  # per Session 62/63.)
+  # The reference category is no longer printed on its own line; it is folded
+  # into each multi-category variable's header below (e.g.
+  # "Employment (ref = 1: Employed full-time)"), governed by value.id and the
+  # ref.categories toggle. all_ref_cats still feeds the returned object.
+  #
+  # Multi-category dummy predictors are grouped: a header row carrying the
+  # variable name (its label under variable.id = "labels") with the reference
+  # folded in, and the categories indented two spaces beneath with value.id
+  # labels. Single-contrast (dichotomous) predictors and continuous predictors
+  # are left as flat rows. The display label rides in a leading column printed
+  # with "ln" (left, no-trim) alignment so the indent survives. jlogistic has
+  # no standardized-beta column, so there is nothing to blank on the grouped
+  # rows; the returned object is untouched.
+  multi_cat_regs <- .jst_collect_multicat_regs(dummy_regs, auto_cat_regs,
+                                               dummy_coef_names)
+  coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
+                                      value_mode_coef, vlmode, lab_src,
+                                      show_ref_categories)
+  .jst_print_table(coef_disp,
                    caption   = "Coefficients",
-                   col.names = col_names,
-                   align     = rep("d", length(col_names)),
-                   row.names = TRUE)
+                   col.names = c("", col_names),
+                   align     = c("ln", rep("d", length(col_names))),
+                   row.names = FALSE)
+
+  # Outcome named beneath the table, following variable.id; folds into the
+  # legend under the legend modes (see .jst_print_outcome_line).
+  .jst_print_outcome_line(lab_src, original_formula_vars[1], vlmode)
 
   # -- Fit block (coefficient-first layout: prints after the Coefficients
   # table). The variable.id "legend" roster sits at this coefficients/fit

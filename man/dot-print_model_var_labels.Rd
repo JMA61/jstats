@@ -17,9 +17,10 @@ carry variable labels.}
 \description{
 The regression layout's replacement for the flat \code{.print_var_labels}
 list: lists a model's variables grouped by role -- the outcome first, then
-the predictors. A variable with a label shows as "name = label"; a variable
-with no label shows as the bare "name" (absence of a label is conveyed by
-its absence, not by a "None" marker). Used by jlm and jlogistic in the
+the predictors. A variable with a label that differs from its name shows as
+"name = label"; a variable with no label (or a label equal to its name)
+shows as the bare "name" (absence of a meaningful label is conveyed by its
+absence, not by a "None" marker). Used by jlm and jlogistic in the
 "legend" and "legend.bottom" variable.id modes. Predictors are listed by
 their original formula names (e.g. "Program"), not expanded dummy columns;
 per-dummy-level value labelling is handled separately by the value.id
