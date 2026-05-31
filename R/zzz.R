@@ -165,6 +165,82 @@
 }
 
 
+# -- Internal: vendored s3_register --------------------------------------------
+#
+# Standalone copy of the canonical s3_register() (the version tidyverse
+# packages vendor). Registers the optional broom/generics methods at load
+# WITHOUT a hard dependency on broom or generics, and WITHOUT relying on rlang
+# exporting s3_register() -- it does not, even at 1.1.3. The methods activate
+# only if/when `generics` (re-exported by broom) is present. (Session 71)
+
+.jst_s3_register <- function(generic, class, method = NULL) {
+  stopifnot(is.character(generic), length(generic) == 1)
+  stopifnot(is.character(class), length(class) == 1)
+
+  pieces  <- strsplit(generic, "::")[[1]]
+  stopifnot(length(pieces) == 2)
+  package <- pieces[[1]]
+  generic <- pieces[[2]]
+
+  caller <- parent.frame()
+
+  get_method_env <- function() {
+    top <- topenv(caller)
+    if (isNamespace(top)) asNamespace(environmentName(top)) else caller
+  }
+  get_method <- function(method) {
+    if (is.null(method)) get(paste0(generic, ".", class), envir = get_method_env())
+    else method
+  }
+
+  register <- function(...) {
+    envir     <- asNamespace(package)
+    method_fn <- get_method(method)
+    stopifnot(is.function(method_fn))
+    if (exists(generic, envir)) {
+      registerS3method(generic, class, method_fn, envir = envir)
+    }
+  }
+
+  setHook(packageEvent(package, "onLoad"), function(...) register())
+  if (isNamespaceLoaded(package)) register()
+  invisible()
+}
+
+
+# -- .onLoad -------------------------------------------------------------------
+#
+# Runs automatically when the package namespace is loaded. Registers (1) the
+# internal APA-export accessor methods on their own internal generics, and
+# (2) the optional broom/generics adapter methods. Both are S3-method
+# registrations; neither exports anything to the user-facing namespace.
+
+.onLoad <- function(libname, pkgname) {
+  ns <- asNamespace(pkgname)
+
+  # Register the internal APA-export accessor methods on their own (internal)
+  # generics. Methods on a package's OWN generic must be registered for
+  # UseMethod() to find them under namespace semantics -- a bare definition in
+  # the namespace is not enough. Registering here keeps both the generics and
+  # the methods internal (no NAMESPACE export). (return-shape audit, Session 71)
+  for (cls in c("jst_lm", "jst_logistic", "jst_freq", "jst_desc", "jst_corr",
+                "default")) {
+    registerS3method(".jst_apa_terms", cls,
+                     get(paste0(".jst_apa_terms.", cls), envir = ns), envir = ns)
+    registerS3method(".jst_apa_model", cls,
+                     get(paste0(".jst_apa_model.", cls), envir = ns), envir = ns)
+  }
+
+  # Conditionally register the optional broom/generics adapter methods (defined
+  # in the main source file). No-op for users without broom/generics; japa()
+  # never uses these.
+  for (cls in c("jst_lm", "jst_logistic")) {
+    .jst_s3_register("generics::tidy",   cls)
+    .jst_s3_register("generics::glance", cls)
+  }
+}
+
+
 # -- .onAttach -----------------------------------------------------------------
 #
 # Runs automatically on library(JeffsStatTools). Non-interactive sessions

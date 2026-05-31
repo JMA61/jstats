@@ -109,6 +109,17 @@ Invisibly returns a list of class \code{jst_logistic} containing:
 \item{model_frame}{The model frame used to fit the model.}
 \item{formula_used}{The formula after dummy expansion.}
 \item{coefficients}{Formatted coefficient table (data frame).}
+\item{coefficients_raw}{Flat data frame of raw, full-precision
+coefficient statistics (one row per coefficient): \code{term} (machine
+key, shared with jlm), \code{b}, \code{SE}, \code{Wald}, \code{df},
+\code{p}, \code{exp_b}, and \code{exp_ci_lower} / \code{exp_ci_upper}
+odds-ratio CI bounds (present regardless of the \code{ci} display
+toggle). Carries an \code{outcome} attribute.}
+\item{fit_raw}{List of raw, full-precision model-level fit statistics:
+\code{ll_model}, \code{ll_null}, \code{deviance}, \code{null_deviance},
+the omnibus likelihood-ratio test (\code{chi_sq}, \code{omnibus_df},
+\code{omnibus_p}), Cox & Snell and Nagelkerke pseudo R-squared
+(\code{cox_snell_r2}, \code{nagelkerke_r2}), \code{aic}, and \code{n}.}
 \item{nagelkerke_r2}{Nagelkerke pseudo R-squared.}
 \item{cox_snell_r2}{Cox & Snell pseudo R-squared.}
 \item{neg2ll}{-2 Log Likelihood.}

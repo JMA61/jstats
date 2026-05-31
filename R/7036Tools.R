@@ -6196,6 +6196,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
     ret <- list(
       descriptives = NULL,
+      descriptives_raw = NULL,
       by           = by_name,
       sample_info  = sample_info
     )
@@ -6280,6 +6281,30 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
   descriptives <- do.call(rbind, descriptives_list)
 
+  # japa-ready descriptives: full-precision per-variable statistics built
+  # separately from the rounded display frame above (so the printout is
+  # untouched). Variable labels travel as a keyed `labels` attribute.
+  # (return-shape audit)
+  descriptives_raw <- do.call(rbind, lapply(good_vars, function(v) {
+    var_data <- .jst_classify_desc_var(data[[v]], v)$num
+    n        <- sum(!is.na(var_data))
+    data.frame(
+      variable  = v,
+      total     = length(var_data),
+      n_valid   = n,
+      n_missing = length(var_data) - n,
+      min       = if (n > 0) min(var_data, na.rm = TRUE)        else NA_real_,
+      max       = if (n > 0) max(var_data, na.rm = TRUE)        else NA_real_,
+      mean      = if (n > 0) mean(var_data, na.rm = TRUE)       else NA_real_,
+      sd        = if (n > 0) stats::sd(var_data, na.rm = TRUE)  else NA_real_,
+      stringsAsFactors = FALSE,
+      row.names = NULL
+    )
+  }))
+  attr(descriptives_raw, "labels") <- stats::setNames(
+    vapply(good_vars, function(v) .jst_label_or_name(data, v), character(1)),
+    good_vars)
+
   # Defensive: with good_vars guaranteed non-empty this should always hold,
   # but guard against an empty table reaching the renderer.
   if (!is.null(descriptives) && nrow(descriptives) > 0) {
@@ -6304,6 +6329,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
   ret <- list(
     descriptives = descriptives,
+    descriptives_raw = descriptives_raw,
     sample_info  = sample_info
   )
   class(ret) <- "jst_desc"
@@ -6682,7 +6708,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     results[[variable_name]] <- list(valid = valid_df,
                                      udm   = udm_rows,
                                      na    = na_row,
-                                     total = total_count)
+                                     total = total_count,
+                                     valid_count = valid_count,
+                                     missing     = total_count - valid_count,
+                                     var_label   = .jst_label_or_name(data, variable_name))
 
     # -- Print: variable anchor (name, or label under "labels") -> blank -> table
     anchor <- .jst_combine_id(variable_name, .jst_label_or_name(data, variable_name), vlmode)
@@ -8595,7 +8624,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 
     mf <- data[, variable_names, drop = FALSE]
     ret <- list(r = r_matrix, p = p_matrix, n = n_matrix, method = method,
-                model_frame = mf, sample_info = sample_info)
+                model_frame = mf, sample_info = sample_info,
+                labels = stats::setNames(
+                  vapply(variable_names, function(v) .jst_label_or_name(data, v),
+                         character(1)), variable_names))
     class(ret) <- "jst_corr"
     return(invisible(ret))
   }
@@ -8669,7 +8701,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     n           = n_matrix,
     method      = method,
     model_frame = mf,
-    sample_info = sample_info
+    sample_info = sample_info,
+    labels      = stats::setNames(
+      vapply(variable_names, function(v) .jst_label_or_name(data, v),
+             character(1)), variable_names)
   )
   class(ret) <- "jst_corr"
   invisible(ret)
@@ -10392,6 +10427,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   attr(coefficients_raw, "outcome") <- c(
     name  = original_formula_vars[1],
     label = .jst_label_or_name(lab_src, original_formula_vars[1]))
+  # Per-row display label keyed by term (sub-decision a: keyed attribute, not a
+  # column -- keeps the numeric frame flat). Uses the package's own coef
+  # relabeling; the accessor reads this alongside the dummy-group structure
+  # already on the return (dummy_coef_names / ref_cats). (return-shape audit)
+  attr(coefficients_raw, "labels") <- stats::setNames(
+    .jst_relabel_coef_names(term_keys, lab_src, all.vars(formula)[-1], sep = "_"),
+    term_keys)
 
   # Raw fit statistics mirroring the rounded fields below at full precision for
   # japa(); the rounded fields are retained for back-compatibility. (Session 69)
@@ -10506,6 +10548,17 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'     \item{model_frame}{The model frame used to fit the model.}
 #'     \item{formula_used}{The formula after dummy expansion.}
 #'     \item{coefficients}{Formatted coefficient table (data frame).}
+#'     \item{coefficients_raw}{Flat data frame of raw, full-precision
+#'       coefficient statistics (one row per coefficient): \code{term} (machine
+#'       key, shared with jlm), \code{b}, \code{SE}, \code{Wald}, \code{df},
+#'       \code{p}, \code{exp_b}, and \code{exp_ci_lower} / \code{exp_ci_upper}
+#'       odds-ratio CI bounds (present regardless of the \code{ci} display
+#'       toggle). Carries an \code{outcome} attribute.}
+#'     \item{fit_raw}{List of raw, full-precision model-level fit statistics:
+#'       \code{ll_model}, \code{ll_null}, \code{deviance}, \code{null_deviance},
+#'       the omnibus likelihood-ratio test (\code{chi_sq}, \code{omnibus_df},
+#'       \code{omnibus_p}), Cox & Snell and Nagelkerke pseudo R-squared
+#'       (\code{cox_snell_r2}, \code{nagelkerke_r2}), \code{aic}, and \code{n}.}
 #'     \item{nagelkerke_r2}{Nagelkerke pseudo R-squared.}
 #'     \item{cox_snell_r2}{Cox & Snell pseudo R-squared.}
 #'     \item{neg2ll}{-2 Log Likelihood.}
@@ -11022,6 +11075,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     ifelse(startsWith(s, "-") & !grepl("[1-9]", s), sub("^-", "", s), s)
   }
 
+  # Machine term keys (raw design-matrix coefficient names), captured BEFORE
+  # the display rownames are cleaned below -- the stable alignment key the
+  # japa-ready return carries beside each row, matching jlm. (return-shape audit)
+  term_keys <- rownames(coefs)
+
   # Clean up factor coefficient names for readability
   rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
                                             all.vars(formula)[-1])
@@ -11039,12 +11097,23 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   col_names <- c("b", "SE", "Wald", "df", "p", "Exp(B)")
 
+  # Profile-likelihood CI on the odds-ratio scale, computed once regardless of
+  # the `ci` display toggle so the japa-ready return always carries it.
+  # stats::confint() gives log-odds bounds; exp() puts them on the Exp(B) scale.
+  # A profiling failure (e.g. separation) degrades to NA rather than erroring.
+  ci_raw <- tryCatch(suppressMessages(stats::confint(model)),
+                     error = function(e) NULL)
+  if (is.null(ci_raw)) {
+    exp_ci_lower_raw <- rep(NA_real_, nrow(coefs))
+    exp_ci_upper_raw <- rep(NA_real_, nrow(coefs))
+  } else {
+    exp_ci_lower_raw <- exp(ci_raw[, 1])
+    exp_ci_upper_raw <- exp(ci_raw[, 2])
+  }
+
   if (ci) {
-    ci_vals <- suppressMessages(stats::confint(model))
-    exp_ci_lower <- exp(ci_vals[, 1])
-    exp_ci_upper <- exp(ci_vals[, 2])
-    out_coefs$CI_Lower <- fmt3(exp_ci_lower)
-    out_coefs$CI_Upper <- fmt3(exp_ci_upper)
+    out_coefs$CI_Lower <- fmt3(exp_ci_lower_raw)
+    out_coefs$CI_Upper <- fmt3(exp_ci_upper_raw)
     col_names <- c(col_names, "95% CI Lower", "95% CI Upper")
   }
 
@@ -11204,12 +11273,59 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # "legend.bottom": one consolidated legend at the very end of the output.
   if (identical(vlmode, "legend.bottom")) .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
 
+  # japa-ready coefficient frame: one flat row per coefficient at full
+  # precision (the printed `coefficients` frame rounds for the eye; this keeps
+  # the numbers intact for a later collector). `term` is the machine alignment
+  # key shared with jlm; `df` is the Wald df (always 1 here); `exp_b` and its
+  # CI bounds are on the odds-ratio scale and travel regardless of the `ci`
+  # display toggle. Mirrors jlm's coefficients_raw. (return-shape audit)
+  coefficients_raw <- data.frame(
+    term         = term_keys,
+    b            = unname(coefs$b),
+    SE           = unname(coefs$SE),
+    Wald         = unname(wald),
+    df           = rep(1L, nrow(coefs)),
+    p            = unname(p_num),
+    exp_b        = unname(exp_b),
+    exp_ci_lower = unname(exp_ci_lower_raw),
+    exp_ci_upper = unname(exp_ci_upper_raw),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  attr(coefficients_raw, "outcome") <- c(
+    name  = original_formula_vars[1],
+    label = .jst_label_or_name(lab_src, original_formula_vars[1]))
+  # Per-row display label keyed by term (sub-decision a: keyed attribute, not a
+  # column). Parity with jlm. (return-shape audit)
+  attr(coefficients_raw, "labels") <- stats::setNames(
+    .jst_relabel_coef_names(term_keys, lab_src, all.vars(formula)[-1], sep = "_"),
+    term_keys)
+
+  # Raw, full-precision model-level fit statistics for japa() (the printed
+  # Model Summary / Omnibus tables round these). Mirrors jlm's fit_raw with
+  # logistic-specific fields. (return-shape audit)
+  fit_raw <- list(
+    ll_model      = ll_model,
+    ll_null       = ll_null,
+    deviance      = neg2ll,
+    null_deviance = -2 * ll_null,
+    chi_sq        = unname(chi_sq),
+    omnibus_df    = omnibus_df,
+    omnibus_p     = unname(omnibus_p),
+    cox_snell_r2  = cox_snell_r2,
+    nagelkerke_r2 = nagelkerke_r2,
+    aic           = aic,
+    n             = n_obs
+  )
+
   ret <- list(
     model           = model,
     model_type      = "logistic",
     model_frame     = mf,
     formula_used    = formula,
     coefficients    = out_coefs,
+    coefficients_raw = coefficients_raw,
+    fit_raw         = fit_raw,
     nagelkerke_r2   = nagelkerke_r2,
     cox_snell_r2    = cox_snell_r2,
     neg2ll          = neg2ll,
@@ -18946,3 +19062,231 @@ jplot.jst_freq <- function(x, which = "core", ...) {
        call. = FALSE)
 }
 
+
+
+# =============================================================================
+#  APA-EXPORT ACCESSORS  (return-shape audit, Session 71)
+# =============================================================================
+#
+# Two INTERNAL S3 accessors give a future japa() a stable read surface over the
+# rich invisible return objects, so the stored layout can be rearranged later
+# without breaking japa:
+#
+#   .jst_apa_terms(x)  -> flat per-row data frame (one row per coefficient,
+#                         category, variable, or variable-pair, by class).
+#   .jst_apa_model(x)  -> one-row model-level data frame, or NULL for classes
+#                         with no single model-level summary.
+#
+# These never touch broom/generics. The per-row display label (stored as a
+# keyed attribute on the regression / descriptives frames) is assembled into a
+# `label` column HERE rather than carried as a column on the numeric frame.
+
+.jst_apa_terms <- function(x, ...) UseMethod(".jst_apa_terms")
+.jst_apa_model <- function(x, ...) UseMethod(".jst_apa_model")
+
+.jst_apa_terms.default <- function(x, ...) NULL
+.jst_apa_model.default <- function(x, ...) NULL
+
+# -- Regression terms: jlm / jlogistic ----------------------------------------
+
+.jst_apa_terms_regression <- function(x) {
+  cr <- x$coefficients_raw
+  if (is.null(cr)) return(NULL)
+  lab <- attr(cr, "labels")
+  out <- cr
+  out$label <- if (is.null(lab)) NA_character_ else unname(lab[out$term])
+  attr(out, "outcome") <- attr(cr, "outcome")
+  out
+}
+.jst_apa_terms.jst_lm       <- function(x, ...) .jst_apa_terms_regression(x)
+.jst_apa_terms.jst_logistic <- function(x, ...) .jst_apa_terms_regression(x)
+
+.jst_apa_model.jst_lm <- function(x, ...) {
+  f <- x$fit_raw
+  if (is.null(f)) return(NULL)
+  data.frame(
+    outcome       = unname(attr(x$coefficients_raw, "outcome")["name"]),
+    r_squared     = f$r_squared,
+    adj_r_squared = f$adj_r_squared,
+    sigma         = f$sigma,
+    f_value       = f$f_value,
+    f_df1         = f$f_df1,
+    f_df2         = f$f_df2,
+    f_p           = f$f_p,
+    df_residual   = f$df_residual,
+    n             = f$n,
+    stringsAsFactors = FALSE, row.names = NULL)
+}
+
+.jst_apa_model.jst_logistic <- function(x, ...) {
+  f <- x$fit_raw
+  if (is.null(f)) return(NULL)
+  data.frame(
+    outcome       = unname(attr(x$coefficients_raw, "outcome")["name"]),
+    ll_model      = f$ll_model,
+    ll_null       = f$ll_null,
+    deviance      = f$deviance,
+    null_deviance = f$null_deviance,
+    chi_sq        = f$chi_sq,
+    omnibus_df    = f$omnibus_df,
+    omnibus_p     = f$omnibus_p,
+    cox_snell_r2  = f$cox_snell_r2,
+    nagelkerke_r2 = f$nagelkerke_r2,
+    aic           = f$aic,
+    n             = f$n,
+    stringsAsFactors = FALSE, row.names = NULL)
+}
+
+# -- Frequencies: jst_freq -----------------------------------------------------
+# Per-row = one row per (variable, category); model-level = per-variable N.
+
+.jst_apa_terms.jst_freq <- function(x, ...) {
+  res <- x$frequencies
+  if (is.null(res) || length(res) == 0) return(NULL)
+  do.call(rbind, lapply(names(res), function(v) {
+    vd <- res[[v]]$valid
+    if (is.null(vd) || nrow(vd) == 0) return(NULL)
+    vl <- if (is.null(res[[v]]$var_label)) v else res[[v]]$var_label
+    data.frame(
+      variable  = v,
+      var_label = vl,
+      value     = vd$Value,
+      count     = vd$Freq,
+      total_pct = vd$TotalPct,
+      valid_pct = vd$ValidPct,
+      cum_pct   = vd$CumPct,
+      stringsAsFactors = FALSE, row.names = NULL)
+  }))
+}
+
+.jst_apa_model.jst_freq <- function(x, ...) {
+  res <- x$frequencies
+  if (is.null(res) || length(res) == 0) return(NULL)
+  do.call(rbind, lapply(names(res), function(v) {
+    vl <- if (is.null(res[[v]]$var_label)) v else res[[v]]$var_label
+    data.frame(
+      variable  = v,
+      var_label = vl,
+      n_total   = res[[v]]$total,
+      n_valid   = res[[v]]$valid_count,
+      n_missing = res[[v]]$missing,
+      stringsAsFactors = FALSE, row.names = NULL)
+  }))
+}
+
+# -- Descriptives: jst_desc ----------------------------------------------------
+
+.jst_apa_terms.jst_desc <- function(x, ...) {
+  dr <- x$descriptives_raw
+  if (is.null(dr)) return(NULL)
+  lab <- attr(dr, "labels")
+  out <- dr
+  out$var_label <- if (is.null(lab)) out$variable else unname(lab[out$variable])
+  out
+}
+.jst_apa_model.jst_desc <- function(x, ...) NULL
+
+# -- Correlations: jst_corr ----------------------------------------------------
+# Per-row = one row per unique variable pair (lower triangle).
+
+.jst_apa_terms.jst_corr <- function(x, ...) {
+  rmx <- x$r; pmx <- x$p; nmx <- x$n
+  if (is.null(rmx)) return(NULL)
+  vars <- rownames(rmx); k <- length(vars); lab <- x$labels
+  rows <- list()
+  for (i in seq_len(k)) for (j in seq_len(k)) if (j < i) {
+    rows[[length(rows) + 1L]] <- data.frame(
+      var1       = vars[i],
+      var2       = vars[j],
+      var1_label = if (is.null(lab)) vars[i] else unname(lab[vars[i]]),
+      var2_label = if (is.null(lab)) vars[j] else unname(lab[vars[j]]),
+      r          = rmx[i, j],
+      p          = pmx[i, j],
+      n          = nmx[i, j],
+      stringsAsFactors = FALSE, row.names = NULL)
+  }
+  if (length(rows) == 0) return(NULL)
+  do.call(rbind, rows)
+}
+.jst_apa_model.jst_corr <- function(x, ...) {
+  data.frame(method = x$method, n_vars = length(rownames(x$r)),
+             stringsAsFactors = FALSE, row.names = NULL)
+}
+
+
+# =============================================================================
+#  OPTIONAL broom / generics ADAPTER  (external-only; never on japa's path)
+# =============================================================================
+#
+# tidy() / glance() methods that project the rich jstats return DOWN to broom's
+# lossy frame, for external tools (modelsummary, gtsummary). They are NOT
+# exported and carry NO S3method() NAMESPACE entry; instead they are registered
+# CONDITIONALLY at load via rlang::s3_register() in zzz.R, so they force no
+# dependency -- a user without broom/generics never triggers them, and japa()
+# never uses them. (return-shape audit, Session 71)
+
+tidy.jst_lm <- function(x, conf.int = FALSE, conf.level = 0.95, ...) {
+  cr  <- x$coefficients_raw
+  out <- data.frame(
+    term      = cr$term,
+    estimate  = cr$b,
+    std.error = cr$SE,
+    statistic = cr$t,
+    p.value   = cr$p,
+    stringsAsFactors = FALSE, row.names = NULL)
+  if (isTRUE(conf.int)) {
+    out$conf.low  <- cr$ci_lower
+    out$conf.high <- cr$ci_upper
+  }
+  out
+}
+
+glance.jst_lm <- function(x, ...) {
+  f <- x$fit_raw
+  data.frame(
+    r.squared     = f$r_squared,
+    adj.r.squared = f$adj_r_squared,
+    sigma         = f$sigma,
+    statistic     = f$f_value,
+    p.value       = f$f_p,
+    df            = f$f_df1,
+    df.residual   = f$df_residual,
+    nobs          = f$n,
+    stringsAsFactors = FALSE, row.names = NULL)
+}
+
+tidy.jst_logistic <- function(x, conf.int = FALSE, conf.level = 0.95,
+                              exponentiate = FALSE, ...) {
+  cr  <- x$coefficients_raw
+  est <- if (isTRUE(exponentiate)) cr$exp_b else cr$b
+  out <- data.frame(
+    term      = cr$term,
+    estimate  = est,
+    std.error = cr$SE,
+    statistic = cr$b / cr$SE,
+    p.value   = cr$p,
+    stringsAsFactors = FALSE, row.names = NULL)
+  if (isTRUE(conf.int)) {
+    if (isTRUE(exponentiate)) {
+      out$conf.low  <- cr$exp_ci_lower
+      out$conf.high <- cr$exp_ci_upper
+    } else {
+      out$conf.low  <- log(cr$exp_ci_lower)
+      out$conf.high <- log(cr$exp_ci_upper)
+    }
+  }
+  out
+}
+
+glance.jst_logistic <- function(x, ...) {
+  f <- x$fit_raw
+  data.frame(
+    null.deviance = f$null_deviance,
+    df.null       = f$n - 1L,
+    logLik        = f$ll_model,
+    AIC           = f$aic,
+    deviance      = f$deviance,
+    df.residual   = f$n - nrow(x$coefficients_raw),
+    nobs          = f$n,
+    stringsAsFactors = FALSE, row.names = NULL)
+}
