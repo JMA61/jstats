@@ -233,9 +233,15 @@
 
   # Conditionally register the optional broom/generics adapter methods (defined
   # in the main source file). No-op for users without broom/generics; japa()
-  # never uses these.
-  for (cls in c("jst_lm", "jst_logistic")) {
-    .jst_s3_register("generics::tidy",   cls)
+  # never uses these. tidy() is provided for every analysis class with a broom
+  # door; glance() only for classes with a genuine model-level summary
+  # (regression and ANOVA) -- the htest-backed t-test and chi-square carry
+  # everything in tidy(), so they get no glance().
+  for (cls in c("jst_lm", "jst_logistic", "jst_ttest", "jst_anova",
+                "jst_crosstab")) {
+    .jst_s3_register("generics::tidy", cls)
+  }
+  for (cls in c("jst_lm", "jst_logistic", "jst_anova")) {
     .jst_s3_register("generics::glance", cls)
   }
 }

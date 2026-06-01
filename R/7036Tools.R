@@ -19290,3 +19290,84 @@ glance.jst_logistic <- function(x, ...) {
     nobs          = f$n,
     stringsAsFactors = FALSE, row.names = NULL)
 }
+
+
+# -- t-test / ANOVA / crosstab broom doors -------------------------------------
+# More of the same: project the rich jstats return DOWN to broom's frame for
+# external tools. tidy() only for the htest-backed t-test and chi-square (one
+# row carries everything); tidy() + glance() for one-way ANOVA. Registered
+# conditionally in zzz.R alongside the regression methods above.
+
+tidy.jst_ttest <- function(x, ...) {
+  ht  <- x$model
+  est <- unname(ht$estimate)
+  out <- data.frame(
+    estimate = if (length(est) == 2L) est[1] - est[2] else est[1],
+    stringsAsFactors = FALSE, row.names = NULL)
+  if (length(est) == 2L) {
+    out$estimate1 <- est[1]
+    out$estimate2 <- est[2]
+  }
+  out$statistic   <- unname(ht$statistic)
+  out$parameter   <- unname(ht$parameter)
+  out$p.value     <- ht$p.value
+  out$conf.low    <- ht$conf.int[1]
+  out$conf.high   <- ht$conf.int[2]
+  out$method      <- ht$method
+  out$alternative <- ht$alternative
+  out$cohens_d    <- x$cohens_d
+  out$d_type      <- x$d_label
+  out
+}
+
+tidy.jst_anova <- function(x, ...) {
+  if (identical(x$test_type, "welch")) {
+    # Welch one-way (stats::oneway.test): no sums of squares are available, so
+    # sumsq / meansq are NA -- the term table keeps the same columns as the
+    # traditional branch for a uniform shape.
+    term_lab <- attr(stats::terms(x$formula), "term.labels")[1]
+    return(data.frame(
+      term      = c(term_lab, "Residuals"),
+      df        = c(x$df1, x$df2),
+      sumsq     = c(NA_real_, NA_real_),
+      meansq    = c(NA_real_, NA_real_),
+      statistic = c(x$f, NA_real_),
+      p.value   = c(x$p, NA_real_),
+      stringsAsFactors = FALSE, row.names = NULL))
+  }
+  # Traditional aov: read the ANOVA table (effect row(s) + Residuals).
+  tab <- summary(x$model)[[1]]
+  data.frame(
+    term      = trimws(rownames(tab)),
+    df        = tab[["Df"]],
+    sumsq     = tab[["Sum Sq"]],
+    meansq    = tab[["Mean Sq"]],
+    statistic = tab[["F value"]],
+    p.value   = tab[["Pr(>F)"]],
+    stringsAsFactors = FALSE, row.names = NULL)
+}
+
+glance.jst_anova <- function(x, ...) {
+  data.frame(
+    statistic   = x$f,
+    df          = x$df1,
+    df.residual = x$df2,
+    p.value     = x$p,
+    eta.squared = x$eta_squared,
+    nobs        = x$n,
+    stringsAsFactors = FALSE, row.names = NULL)
+}
+
+tidy.jst_crosstab <- function(x, ...) {
+  if (is.null(x$chi_square)) {
+    stop("This jcrosstab() result has no chi-square test to tidy. ",
+         "Re-run with jcrosstab(..., chisq = TRUE).", call. = FALSE)
+  }
+  data.frame(
+    statistic = unname(x$chi_square),
+    parameter = unname(x$df),
+    p.value   = unname(x$p),
+    method    = "Pearson's Chi-squared test",
+    n         = x$n,
+    stringsAsFactors = FALSE, row.names = NULL)
+}
