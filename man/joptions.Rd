@@ -66,7 +66,11 @@ searches the working directory. When set, names a folder (relative
 to the working directory) used as both the save target for
 bare-filename saves and as the first directory searched on
 bare-filename loads. The folder is auto-created on first save if
-it doesn't already exist. Filenames containing a directory
+it doesn't already exist (nested paths are created in full).
+To clear a previously-set folder back to this default, pass
+\code{data.dir = ""} (an empty string); passing
+\code{data.dir = NULL} leaves the current setting unchanged
+(see Call patterns). Filenames containing a directory
 separator (\code{/}) bypass this setting and are taken literally.}
 \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
@@ -91,7 +95,9 @@ then print the panel. Passing \code{slot = NULL} as a named
 argument leaves that slot at its current value -- useful for
 setting one slot without touching another. To reset a single
 slot to its default, pass the default value explicitly (e.g.
-\code{joptions(missing.convention = "none")}).}
+\code{joptions(missing.convention = "none")}). Because
+\code{data.dir}'s default is \code{NULL} -- which already means
+"leave alone" -- it is cleared instead with \code{data.dir = ""}.}
 }
 }
 

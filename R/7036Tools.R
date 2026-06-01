@@ -5552,7 +5552,7 @@ joutput <- function(level, effect.size = NULL,
   dd_label <- if (is.null(dd)) {
     "Working directory"
   } else if (!dir.exists(dd)) {
-    paste0(dd, " (will be created in the working directory on first save)")
+    paste0(dd, " (will be created on first save)")
   } else {
     dd
   }
@@ -5654,7 +5654,11 @@ joutput <- function(level, effect.size = NULL,
 #'     to the working directory) used as both the save target for
 #'     bare-filename saves and as the first directory searched on
 #'     bare-filename loads. The folder is auto-created on first save if
-#'     it doesn't already exist. Filenames containing a directory
+#'     it doesn't already exist (nested paths are created in full).
+#'     To clear a previously-set folder back to this default, pass
+#'     \code{data.dir = ""} (an empty string); passing
+#'     \code{data.dir = NULL} leaves the current setting unchanged
+#'     (see Call patterns). Filenames containing a directory
 #'     separator (\code{/}) bypass this setting and are taken literally.}
 #'   \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 #'     \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
@@ -5677,7 +5681,9 @@ joutput <- function(level, effect.size = NULL,
 #'     argument leaves that slot at its current value -- useful for
 #'     setting one slot without touching another. To reset a single
 #'     slot to its default, pass the default value explicitly (e.g.
-#'     \code{joptions(missing.convention = "none")}).}
+#'     \code{joptions(missing.convention = "none")}). Because
+#'     \code{data.dir}'s default is \code{NULL} -- which already means
+#'     "leave alone" -- it is cleared instead with \code{data.dir = ""}.}
 #' }
 #'
 #' @section Environment-scan notice:
@@ -5782,9 +5788,18 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   if (dd_supplied && !is.null(data.dir)) {
     if (!is.character(data.dir) ||
         length(data.dir) != 1L ||
-        is.na(data.dir) ||
-        nchar(trimws(data.dir)) == 0L) {
-      stop("data.dir must be a single non-empty character string, or NULL.",
+        is.na(data.dir)) {
+      stop('data.dir must be a single character string, NULL, or "". ',
+           '(Use "" to clear the folder, NULL to leave it unchanged.)',
+           call. = FALSE)
+    }
+    # Guard the literal "NULL" string -- almost always a typo for one of
+    # the two real tokens. Case-sensitive, so a genuine folder named
+    # "null" (lowercase) is still permitted.
+    if (identical(trimws(data.dir), "NULL")) {
+      stop('data.dir = "NULL" looks like a typo. To clear the data folder ',
+           'back to the working directory, use data.dir = "" (empty quotes); ',
+           'to leave it unchanged, use data.dir = NULL (no quotes).',
            call. = FALSE)
     }
   }
@@ -5806,7 +5821,14 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     options(.jst_options_udm_convention_codes = udm.convention.codes)
   }
   if (dd_supplied && !is.null(data.dir)) {
-    options(.jst_options_data_dir = data.dir)
+    # "" (empty or whitespace-only) clears the slot back to its NULL
+    # default (working directory); any other string sets the folder.
+    # NULL never reaches here -- the !is.null gate above leaves it alone.
+    if (nchar(trimws(data.dir)) == 0L) {
+      options(.jst_options_data_dir = NULL)
+    } else {
+      options(.jst_options_data_dir = data.dir)
+    }
   }
   if (cl_supplied && !is.null(corr.layout)) {
     options(.jst_options_corr_layout = corr.layout)
@@ -16887,7 +16909,7 @@ jsave <- function(data, file, overwrite = FALSE) {
     } else {
       # Explicit data.dir — write to that folder, creating it if needed.
       if (!dir.exists(data_dir)) {
-        dir.create(data_dir)
+        dir.create(data_dir, recursive = TRUE)
         message("Created '", data_dir, "' folder in working directory.")
       }
       out_path <- file.path(data_dir, file)
