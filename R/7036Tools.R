@@ -2093,15 +2093,21 @@
     }
   }
 
-  # System/NA = plain NA cells. For Stata-form, exclude tagged NAs (those are
-  # the per-tag rows above); for SPSS/no-mi, is.na captures only genuine
-  # system-missing since UDM codes are live values in the pre-masking column.
+  # System/NA = genuine system-missing cells (NA in the raw data), counted
+  # separately from the declared-UDM rows above so each missing cell is counted
+  # exactly once. For Stata-form, exclude tagged NAs (those are the per-tag rows
+  # above). For the SPSS/no-mi branch, count is.na() on the UNCLASSED column: a
+  # live haven_labelled_spss reports its na_values cells as NA under is.na(),
+  # and those cells were already counted in the code/range rows above, so
+  # is.na(pre_col) would double-count them. unclass() drops the class that
+  # triggers that flagging, leaving only true system-missing (and is a harmless
+  # no-op for plain numeric / factor / character / non-spss labelled columns).
   if (!is.null(mi) && identical(mi$representation, "stata")) {
     sys_src  <- sum(is.na(pre_col)  & is.na(haven::na_tag(pre_col)))
     sys_pool <- sum(is.na(pool_col) & is.na(haven::na_tag(pool_col)))
   } else {
-    sys_src  <- sum(is.na(pre_col))
-    sys_pool <- sum(is.na(pool_col))
+    sys_src  <- sum(is.na(unclass(pre_col)))
+    sys_pool <- sum(is.na(unclass(pool_col)))
   }
   if (sys_src > 0L || sys_pool > 0L) {
     rows <- rbind(rows, data.frame(code_label = .jst_label_system_missing,
@@ -11036,12 +11042,15 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   cat("Model predicts: ", predicts_str, "\n", sep = "")
 
   # -- Omnibus test (model vs null) ------------------------------------------
-  null_model  <- stats::glm(as.formula(paste(dv_name, "~ 1")),
-                             data = data, family = stats::binomial,
-                             na.action = stats::na.omit)
-  ll_null     <- as.numeric(stats::logLik(null_model))
-  ll_model    <- as.numeric(stats::logLik(model))
-  chi_sq      <- -2 * (ll_null - ll_model)
+  # Use the fitted model's own null.deviance/deviance: glm computes both on the
+  # SAME listwise-complete cases as the full model. Refitting a null on `data`
+  # would keep rows the full model dropped (complete on the DV but missing on a
+  # predictor), mixing log-likelihoods from different N and inflating the
+  # statistic. For ungrouped binary data deviance == -2 * logLik, so ll_null and
+  # ll_model below remain correct for the pseudo-R-squared computations too.
+  ll_null     <- -model$null.deviance / 2
+  ll_model    <- -model$deviance / 2
+  chi_sq      <- model$null.deviance - model$deviance
   omnibus_df  <- model$df.null - model$df.residual
   omnibus_p   <- stats::pchisq(chi_sq, df = omnibus_df, lower.tail = FALSE)
   omnibus_fmt <- .jst_fmt_p(omnibus_p)

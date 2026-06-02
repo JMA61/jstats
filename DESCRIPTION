@@ -34,3 +34,4 @@ Imports:
     readxl,
     writexl
 Suggests: generics
+LazyData: true
