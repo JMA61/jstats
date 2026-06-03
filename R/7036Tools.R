@@ -5834,6 +5834,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
       options(.jst_options_data_dir = NULL)
     } else {
       options(.jst_options_data_dir = data.dir)
+      .jst_data_dir_case_warning(data.dir)
     }
   }
   if (cl_supplied && !is.null(corr.layout)) {
@@ -5882,6 +5883,56 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
 jdata_dir <- function(default = ".") {
   dir <- getOption(".jst_options_data_dir", .jst_options_defaults$data.dir)
   if (is.null(dir)) default else dir
+}
+
+#' Internal: warn on a case-only collision between data.dir and an existing
+#' folder
+#'
+#' @description
+#' On a case-insensitive filesystem (Windows, and macOS by default), a
+#' \code{data.dir} such as \code{"Data"} silently resolves onto an existing
+#' folder of a different case (e.g. \code{"data"}); saves and loads then use
+#' the existing folder, and a teardown aimed at the configured name could
+#' remove the wrong one. This emits a note at set time when that collision is
+#' detected. Case-sensitive filesystems (Linux) create a distinct folder and
+#' are not warned, so the behaviour is intentionally non-uniform across
+#' operating systems.
+#'
+#' @param dir Character(1). The data.dir value just set.
+#'
+#' @return Invisibly \code{NULL}; called for the message side effect.
+#'
+#' @keywords internal
+.jst_data_dir_case_warning <- function(dir) {
+  # Only a folder that already resolves on disk can collide. On a
+  # case-sensitive filesystem a differently-cased name does not exist, so
+  # dir.exists() is FALSE and nothing is warned.
+  if (!isTRUE(dir.exists(dir))) return(invisible(NULL))
+
+  parent <- dirname(dir)
+  if (identical(parent, "")) parent <- "."
+  want    <- basename(dir)
+  entries <- tryCatch(
+    list.dirs(parent, full.names = FALSE, recursive = FALSE),
+    error = function(e) character(0)
+  )
+
+  # An exact-case match means no collision. A match only under tolower()
+  # means the filesystem folded the case onto an existing, differently-cased
+  # folder.
+  if (!(want %in% entries)) {
+    hit <- entries[tolower(entries) == tolower(want)]
+    if (length(hit) > 0) {
+      message(
+        "Note: data.dir was set to '", want, "', but a folder named '",
+        hit[1], "' already exists and your filesystem treats the two as the ",
+        "same folder. Saves and loads will use the existing '", hit[1],
+        "'. To keep a separate folder, choose a name that differs by more ",
+        "than letter case."
+      )
+    }
+  }
+  invisible(NULL)
 }
 
 
@@ -15061,25 +15112,35 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- No extension: search for matching files -------------------------------
+  # from_package flags a fall-through to a package-shipped dataset (set in
+  # the search block below when nothing matches on disk).
+  from_package <- FALSE
   if (ext == "") {
     found <- .jst_search_no_extension(file, has_dir)
     if (length(found) == 0) {
-      search_dirs <- if (has_dir) character(0) else .jst_get_search_dirs()
-      stop(
-        "No file found matching '", file, "' with any supported extension ",
-        "(.sav, .dta, .csv, .rds, .sas7bdat, .xpt, .xlsx, .xls).\n",
-        if (length(search_dirs) > 0)
-          paste0("Searched in: ",
-                 paste(ifelse(search_dirs == ".", "working directory",
-                              paste0(search_dirs, " folder")),
-                       collapse = " and "),
-                 .jst_missing_data_dir_note())
-        else
-          paste0("Searched in: ", .jst_norm_path(dirname(file))),
-        call. = FALSE
-      )
-    }
-    if (length(found) == 1) {
+      # Disk files win: only when nothing matches on disk do we fall back to
+      # a package-shipped dataset of this name (e.g. jload("community")).
+      pkg_df <- .jst_get_package_dataset(file)
+      if (!is.null(pkg_df)) {
+        from_package <- TRUE
+        df <- pkg_df
+      } else {
+        search_dirs <- if (has_dir) character(0) else .jst_get_search_dirs()
+        stop(
+          "No file found matching '", file, "' with any supported extension ",
+          "(.sav, .dta, .csv, .rds, .sas7bdat, .xpt, .xlsx, .xls).\n",
+          if (length(search_dirs) > 0)
+            paste0("Searched in: ",
+                   paste(ifelse(search_dirs == ".", "working directory",
+                                paste0(search_dirs, " folder")),
+                         collapse = " and "),
+                   .jst_missing_data_dir_note())
+          else
+            paste0("Searched in: ", .jst_norm_path(dirname(file))),
+          call. = FALSE
+        )
+      }
+    } else if (length(found) == 1) {
       say("Found ", basename(found), " in ", .jst_norm_path(dirname(found)))
       file    <- found
       ext     <- tolower(tools::file_ext(file))
@@ -15095,7 +15156,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- Validate extension ----------------------------------------------------
-  if (!ext %in% supported_ext) {
+  if (!from_package && !ext %in% supported_ext) {
     stop(
       "Unsupported file extension '.", ext, "'. Supported formats:\n",
       "  .sav       SPSS\n",
@@ -15111,7 +15172,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- Resolve file path -----------------------------------------------------
-  if (has_dir) {
+  if (from_package) {
+    # Package dataset: df is already materialised; there is no file path to
+    # resolve (resolved_path is not used on this path).
+  } else if (has_dir) {
     # Full or relative path provided — use directly
     resolved_path <- file
     if (!file.exists(resolved_path)) {
@@ -15177,7 +15241,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # For .sav: always pass user_na = TRUE so UDM metadata is available for
   # the .jst_handle_udms step below, regardless of preserve.udm. The package
   # then decides whether to preserve or convert based on preserve.udm.
-  df <- switch(ext,
+  df <- if (from_package) df else switch(ext,
                sav      = haven::read_sav(resolved_path, user_na = TRUE),
                dta      = haven::read_dta(resolved_path),
                sas7bdat = haven::read_sas(resolved_path),
@@ -15236,12 +15300,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   assign(obj_name, df, envir = target_env)
 
   # --- Summary message -------------------------------------------------------
-  say(
-    "Loaded ", obj_name,
-    " (", .jst_format_label(ext), "; ",
-    format(nrow(df), big.mark = ","), " cases, ",
-    ncol(df), " variables)"
-  )
+  if (from_package) {
+    say("Loaded the jstats example dataset '", file, "'.")
+  } else {
+    say(
+      "Loaded ", obj_name,
+      " (", .jst_format_label(ext), "; ",
+      format(nrow(df), big.mark = ","), " cases, ",
+      ncol(df), " variables)"
+    )
+  }
 
   # --- Set as default with juse() if requested -------------------------------
   if (use) {
@@ -15287,6 +15355,55 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
 
 # -- jload internal helpers ---------------------------------------------------
+
+#' Internal: materialise a package-shipped dataset by name
+#'
+#' @description
+#' Backs jload's package-data fallback. When a bare name passed to
+#' \code{jload()} matches no file on disk, jload calls this to look for a
+#' dataset of that name shipped in the package's \code{data/} directory
+#' (e.g. \code{jload("community")}). Returns the dataset as an
+#' already-evaluated data frame -- forcing the lazy-load promise so the
+#' caller can \code{assign()} a materialised object into the workspace (the
+#' Data pane), not a promise that the IDE parks under Values until forced.
+#'
+#' @details
+#' Resolves the package by its own namespace, so it follows a later package
+#' rename automatically. Returns \code{NULL} -- so jload falls through to its
+#' usual not-found error -- when the package is not installed as a namespace
+#' (e.g. when the source is merely \code{source()}d during development), when
+#' no shipped dataset of that name exists, or when the named object is not a
+#' data frame.
+#'
+#' @param name Character(1). The bare dataset name requested.
+#'
+#' @return A data frame, or \code{NULL}.
+#'
+#' @keywords internal
+.jst_get_package_dataset <- function(name) {
+  pkg <- utils::packageName(environment())
+  if (is.null(pkg)) return(NULL)
+
+  avail <- tryCatch(
+    utils::data(package = pkg)$results[, "Item"],
+    error = function(e) character(0)
+  )
+  # data() item names can carry a parenthetical alias (e.g. "x (y)"); match
+  # on the leading token only.
+  items <- sub("\\s.*$", "", avail)
+  if (!name %in% items) return(NULL)
+
+  tmp <- new.env()
+  tryCatch(
+    utils::data(list = name, package = pkg, envir = tmp),
+    error = function(e) NULL
+  )
+  if (!exists(name, envir = tmp, inherits = FALSE)) return(NULL)
+
+  obj <- get(name, envir = tmp, inherits = FALSE)  # forces the promise
+  if (!is.data.frame(obj)) return(NULL)
+  obj
+}
 
 #' Internal: normalize a path for display in user-facing messages
 #'
@@ -16614,6 +16731,96 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   list(data = data, n_changed = n_changed)
 }
 
+#' Internal: build the label / missing-value loss note for Excel and CSV saves
+#'
+#' @description
+#' Excel and CSV cannot store variable labels, value labels, or
+#' missing-value declarations. jsave emits a note after a successful write
+#' to these formats describing what was (or, under
+#' \code{preserve.udm = FALSE}, would have been) lost. The wording depends
+#' on which missing-value form the frame carried and on whether
+#' \code{preserve.udm = FALSE} blanked the codes.
+#'
+#' @details
+#' Branching (SPSS-style codes write as literal numbers, while Stata-style
+#' tagged NAs write as blank cells):
+#' \itemize{
+#'   \item \code{preserve.udm = FALSE} and SPSS-style codes were blanked:
+#'     a confirmation giving the count of blanked cells.
+#'   \item both forms present (\code{preserve.udm = TRUE}): a generic note
+#'     that names neither platform, plus the \code{preserve.udm = FALSE}
+#'     suggestion.
+#'   \item SPSS-style only: the literal-numbers warning plus the suggestion.
+#'   \item Stata-style only: a brief note that the tags write as blank cells
+#'     and the distinction between them is not preserved.
+#'   \item neither: a plain labels-only note.
+#' }
+#' The note is a loss-of-fidelity warning per the locked jsave design; it is
+#' not gated to the joutput verbosity tiers.
+#'
+#' @param ext Lowercase target extension, \code{"xlsx"} or \code{"csv"}.
+#' @param spss_vars Character vector of SPSS-form UDM variable names, as
+#'   detected before any collapse.
+#' @param stata_vars Character vector of Stata-form tagged-NA variable
+#'   names, as detected before any collapse.
+#' @param preserve.udm Logical, the value passed to jsave.
+#' @param n_blanked Integer count of SPSS-style code cells blanked when
+#'   \code{preserve.udm = FALSE}; zero otherwise.
+#'
+#' @return A single message string, or \code{NULL} if no note applies.
+#'
+#' @keywords internal
+.jst_jsave_label_loss_note <- function(ext, spss_vars, stata_vars,
+                                       preserve.udm, n_blanked) {
+  fmt <- if (identical(ext, "xlsx")) {
+    "Excel format (.xlsx)"
+  } else {
+    "CSV format (.csv)"
+  }
+  has_spss  <- length(spss_vars)  > 0
+  has_stata <- length(stata_vars) > 0
+
+  # preserve.udm = FALSE that actually blanked SPSS-style codes -> confirm.
+  if (!preserve.udm && has_spss && n_blanked > 0) {
+    return(paste0(
+      "Note: ", fmt, " does not store variable labels or value labels. ",
+      n_blanked, " missing-value codes were blanked to empty cells ",
+      "(preserve.udm = FALSE)."))
+  }
+
+  # Both forms present: one generic note, no platform names.
+  if (has_spss && has_stata) {
+    return(paste0(
+      "Note: ", fmt, " does not store variable labels, value labels, or ",
+      "missing-value metadata. Declared missing-value codes lose their ",
+      "missing status, which may result in them being written as ordinary ",
+      "numbers. Alternatively, use jsave(..., preserve.udm = FALSE) to blank ",
+      "them to empty cells instead."))
+  }
+
+  # SPSS-style only: literal-numbers warning + suggestion.
+  if (has_spss) {
+    return(paste0(
+      "Note: ", fmt, " does not store variable labels, value labels, or ",
+      "missing-value metadata. Any SPSS-style missing-value codes (e.g. -99) ",
+      "are written as literal numbers and will read back as ordinary values. ",
+      "Alternatively, use jsave(..., preserve.udm = FALSE) to blank them to ",
+      "empty cells instead."))
+  }
+
+  # Stata-style only: brief flatten note.
+  if (has_stata) {
+    return(paste0(
+      "Note: ", fmt, " does not store variable labels, value labels, or ",
+      "missing-value metadata. Stata-style missing values (.a, .b, ...) are ",
+      "written as blank cells; the distinction between them is not preserved."))
+  }
+
+  # Neither: labels-only.
+  paste0("Note: ", fmt, " does not store variable labels or value labels.")
+}
+
+
 #' Save a data frame to a file
 #'
 #' @description
@@ -16645,6 +16852,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   without prompting. If \code{FALSE} (default), prompts for confirmation
 #'   in interactive sessions. In non-interactive sessions, stops with an
 #'   error.
+#' @param preserve.udm Logical. If \code{TRUE} (the default), missing-value
+#'   declarations are written as they stand; formats that cannot store them
+#'   (notably Excel and CSV) drop the metadata, and SPSS-style codes such as
+#'   -99 then read back as ordinary numbers. If \code{FALSE}, those codes are
+#'   blanked to plain NA before writing, so they become empty cells. Mirrors
+#'   the \code{preserve.udm} argument of \code{\link{jload}}. The pre-flight
+#'   checks for the .sav, .dta, and .xpt formats run before this step, so a
+#'   missing-value form a target format cannot represent is still reported
+#'   and blocked rather than silently dropped.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect of
 #'   writing a file to disk.
@@ -16705,7 +16921,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jsave <- function(data, file, overwrite = FALSE) {
+jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 
   # --- Pre-check: first argument must be a data frame -----------------------
   # The shared resolver (.jst_resolve_first_arg) frames a non-evaluating
@@ -17038,6 +17254,40 @@ jsave <- function(data, file, overwrite = FALSE) {
     }
   }
 
+  # --- Detect UDM forms and apply preserve.udm (collapse) --------------------
+  # Detection is captured here, on the frame as it stands after the ReadStat
+  # pre-flight, so the post-write note (Excel/CSV) can describe what was
+  # present. Option Y: the collapse runs AFTER the pre-flight, so a
+  # missing-value form a target format cannot represent is blocked above
+  # rather than silently dropped here. preserve.udm = FALSE then bites on the
+  # ungated formats (Excel, CSV, rds) and on same-platform codes that passed
+  # the pre-flight; on Excel/CSV it converts the post-write note from a
+  # warning to a confirmation. The .jst_handle_udms() call is shared with
+  # jload's preserve.udm path, so collapse semantics stay identical both ways.
+  spss_udm_vars  <- character(0)
+  stata_udm_vars <- character(0)
+  n_udm_blanked  <- 0L
+  if (ext %in% c("xlsx", "csv") || !preserve.udm) {
+    spss_udm_vars  <- .jst_has_spss_udm(data)
+    stata_udm_vars <- .jst_has_tagged_na(data)
+    if (!preserve.udm &&
+        (length(spss_udm_vars) > 0 || length(stata_udm_vars) > 0)) {
+      collapsed <- .jst_handle_udms(data, preserve.udm = FALSE)
+      if (length(spss_udm_vars) > 0) {
+        n_udm_blanked <- sum(vapply(spss_udm_vars, function(v) {
+          # Count on the underlying values: is.na() on a labelled_spss column
+          # treats the declared codes as missing, so a raw is.na() diff would
+          # see no change. unclass() exposes the stored numerics, letting us
+          # tell a blanked code cell from a pre-existing system-missing.
+          before <- unclass(data[[v]])
+          after  <- unclass(collapsed$df[[v]])
+          sum(is.na(after) & !is.na(before))
+        }, integer(1)))
+      }
+      data <- collapsed$df
+    }
+  }
+
   # --- Write the file (atomic: write to temp, then rename) -------------------
   # Issue 6: writes go to a temporary path adjacent to the target. On
   # success we rename the temp to the target; on any error we delete the
@@ -17065,7 +17315,8 @@ jsave <- function(data, file, overwrite = FALSE) {
            dta  = haven::write_dta(data, temp_path, version = 14),
            xpt  = haven::write_xpt(data, temp_path),
            xlsx = writexl::write_xlsx(data, temp_path),
-           csv  = utils::write.csv(data, temp_path, row.names = FALSE),
+           csv  = utils::write.csv(data, temp_path, row.names = FALSE,
+                                    na = ""),
            rds  = saveRDS(data, temp_path)
     )
   }, error = function(e) {
@@ -17090,11 +17341,15 @@ jsave <- function(data, file, overwrite = FALSE) {
          call. = FALSE)
   }
 
-  # Format-specific notes (emitted after a confirmed successful write)
-  if (ext == "xlsx") {
-    message("Note: Excel format does not preserve variable or value labels.")
-  } else if (ext == "csv") {
-    message("Note: CSV format does not preserve variable or value labels.")
+  # Format-specific notes (emitted after a confirmed successful write).
+  # Excel and CSV cannot store labels or missing-value metadata; the note
+  # describes the loss (and, when preserve.udm = FALSE blanked SPSS-style
+  # codes, confirms it). Not joutput-gated -- this is a loss-of-fidelity
+  # warning (Decision 6B), not a verbosity-tier detail.
+  if (ext %in% c("xlsx", "csv")) {
+    label_note <- .jst_jsave_label_loss_note(
+      ext, spss_udm_vars, stata_udm_vars, preserve.udm, n_udm_blanked)
+    if (!is.null(label_note)) message(label_note)
   }
 
   # --- Confirmation message --------------------------------------------------

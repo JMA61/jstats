@@ -51,6 +51,7 @@ rsconnect/
 # Development folder
 dev/
 
-
+# .gitignore        (keeps it out of commit/push)
+/demo_data/
 
 .positai
