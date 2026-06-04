@@ -4,14 +4,24 @@
 \alias{.jst_jstats_class}
 \title{Internal helper: jstats analysis-role class for display}
 \usage{
-.jst_jstats_class(x)
+.jst_jstats_class(x, var_name = NULL, data_name = NULL, override = NULL)
 }
 \arguments{
 \item{x}{A variable / data-frame column.}
+
+\item{var_name}{Optional character string naming the variable; required
+(with \code{data_name}) to consult registered intent.}
+
+\item{data_name}{Optional character string naming the data frame; required
+(with \code{var_name}) to consult registered intent.}
+
+\item{override}{Optional per-call asserted role ("numeric", "categorical",
+or "count"); highest-priority tier when supplied.}
 }
 \value{
-A list with \code{class} (character) and \code{subclass}
-(character, "" when none).
+A list with \code{class} (character), \code{subclass} (character,
+"" when none), and \code{source} (one of "per-call", "registered",
+"measure", "structural").
 }
 \description{
 Single display-layer resolver that reports how jstats treats a variable,
@@ -39,6 +49,20 @@ is exactly the package's existing rule: a dichotomy (any coding), a
 factor / logical / character, a haven-labelled variable with <= 6
 categories, or a whole-number 0-6 numeric is Categorical; everything else
 numeric-ish (continuous numeric, or labelled with 7+ categories) is
-Numeric. (A future jcount()/jdummy()-style registry would be read here.)
+Numeric. The Numeric subclass "Count" is registration-only (set via jcount,
+or the per-call override "count"); the structural classifier never emits it.
+
+Resolution stack (highest wins; first tier that yields a class short-
+circuits). Storage-determined edge kinds (date-time, numbers-as-text,
+unsupported) resolve structurally up front and are not role-assertion
+targets, so the user tiers operate only among Numeric, Categorical, and
+Count: (1) per-call \code{override} -> source "per-call"; (2) registered
+intent -- the \code{.jst_registry} notebook (jnumeric/jcount) and the
+\code{.jst_dummy} registry (jdummy -> categorical) -> source "registered";
+(3) SPSS measure -- designed but UNPOPULATED in v1, ignored; (4) structural
+guess -> source "structural". Identity (\code{var_name} + \code{data_name})
+is required to consult tiers 1-2; when omitted, the resolver returns the
+structural answer with source "structural", so a bare
+\code{.jst_jstats_class(x)} behaves as before but now also reports a source.
 }
 \keyword{internal}

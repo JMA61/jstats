@@ -760,6 +760,223 @@
   options(.jst_dummy = all_dummy)
 }
 
+#' Internal helper: get the intent registry for a named data frame
+#'
+#' Looks up the analysis-role intent records stored under the
+#' \code{.jst_registry} option for a specific data frame name. This is the
+#' general intent notebook for jnumeric()/jcount() registrations; it follows
+#' the same session-option, frame-keyed model as \code{.jst_dummy} but is a
+#' separate store, so the existing dummy consumers are unaffected. Records are
+#' a named list keyed by variable name (lookup and replace are the dominant
+#' operations), each a list with at least \code{kind} (one of "numeric" or
+#' "count"; the slot is general enough for later facets such as centering).
+#'
+#' @param data_name Character string giving the data frame name to look up.
+#' @return The stored intent records (a named list), or \code{NULL} if none.
+#' @keywords internal
+.jst_get_registry <- function(data_name) {
+  all_reg <- getOption(".jst_registry", default = list())
+  all_reg[[data_name]]
+}
+
+#' Internal helper: set the intent registry for a named data frame
+#'
+#' Stores analysis-role intent records under the \code{.jst_registry} option,
+#' keyed by data frame name. Used internally by the registration functions
+#' (jnumeric, jcount).
+#'
+#' @param data_name Character string giving the data frame name.
+#' @param settings A named list of intent records (keyed by variable name),
+#'   or \code{NULL} to clear the registry for this frame.
+#' @return \code{invisible(NULL)}. Called for its side effect on the
+#'   \code{.jst_registry} option.
+#' @keywords internal
+.jst_set_registry <- function(data_name, settings) {
+  all_reg <- getOption(".jst_registry", default = list())
+  all_reg[[data_name]] <- settings
+  options(.jst_registry = all_reg)
+}
+
+#' Internal helper: look up a single variable's registered intent
+#'
+#' Returns the intent record for one variable in a named data frame, or
+#' \code{NULL} if the variable has no registered intent. Consulted by the
+#' classification resolver (tier 2) and by the registration functions.
+#'
+#' @param data_name Character string giving the data frame name.
+#' @param var_name Character string giving the variable name.
+#' @return The intent record (a list with at least \code{kind}), or
+#'   \code{NULL}.
+#' @keywords internal
+.jst_get_intent <- function(data_name, var_name) {
+  reg <- .jst_get_registry(data_name)
+  if (is.null(reg)) return(NULL)
+  reg[[var_name]]
+}
+
+#' Internal helper: human-readable label for a registered intent kind
+#'
+#' @param kind One of "numeric", "count", "dummy".
+#' @param cap Logical; if TRUE, capitalize the first letter.
+#' @return A character label.
+#' @keywords internal
+.jst_intent_label <- function(kind, cap = FALSE) {
+  lab <- switch(kind, numeric = "numeric", count = "count",
+                dummy = "dummy", kind)
+  if (isTRUE(cap)) lab <- paste0(toupper(substring(lab, 1, 1)), substring(lab, 2))
+  lab
+}
+
+#' Internal helper: clear one variable's dummy registration
+#'
+#' Removes the \code{.jst_dummy} entry for a single variable in a named data
+#' frame, used to enforce mutual exclusion when the variable is re-registered
+#' as numeric or count. Returns TRUE when an entry was actually removed (so the
+#' caller can report the reclassification).
+#'
+#' @param data_name Character data-frame name.
+#' @param var_name Character variable name.
+#' @return Logical, invisibly: TRUE if a dummy entry was cleared.
+#' @keywords internal
+.jst_clear_dummy_var <- function(data_name, var_name) {
+  ds <- .jst_get_dummy(data_name)
+  if (is.null(ds) || length(ds) == 0) return(invisible(FALSE))
+  keep <- !vapply(ds, function(r) identical(r$var_name, var_name), logical(1))
+  if (all(keep)) return(invisible(FALSE))
+  ds <- ds[keep]
+  if (length(ds) == 0) ds <- NULL
+  .jst_set_dummy(data_name, ds)
+  invisible(TRUE)
+}
+
+#' Internal helper: clear one variable's intent-registry record
+#'
+#' Removes the \code{.jst_registry} record for a single variable in a named
+#' data frame. Used by \code{jdummy()} to enforce mutual exclusion (a variable
+#' that becomes a dummy drops any numeric/count registration).
+#'
+#' @param data_name Character data-frame name.
+#' @param var_name Character variable name.
+#' @return The kind that was cleared (character), or NULL if none, invisibly.
+#' @keywords internal
+.jst_clear_intent_var <- function(data_name, var_name) {
+  reg <- .jst_get_registry(data_name)
+  if (is.null(reg) || is.null(reg[[var_name]])) return(invisible(NULL))
+  cleared <- reg[[var_name]]$kind
+  reg[[var_name]] <- NULL
+  if (length(reg) == 0) reg <- NULL
+  .jst_set_registry(data_name, reg)
+  invisible(cleared)
+}
+
+#' Internal helper: clear all registrations of one kind across data frames
+#'
+#' Backs the \code{jnumeric(NULL)} / \code{jcount(NULL)} clear-all idiom,
+#' mirroring \code{jdummy(NULL)}. Removes every record of the given kind from
+#' the \code{.jst_registry} option, leaving other kinds untouched, and reports
+#' whether anything was cleared.
+#'
+#' @param kind One of "numeric", "count".
+#' @return \code{invisible(NULL)}.
+#' @keywords internal
+.jst_clear_all_intent <- function(kind) {
+  all_reg     <- getOption(".jst_registry", default = list())
+  removed_any <- FALSE
+  for (dn in names(all_reg)) {
+    reg <- all_reg[[dn]]
+    if (is.null(reg) || length(reg) == 0) next
+    keep <- !vapply(reg, function(r) identical(r$kind, kind), logical(1))
+    if (any(!keep)) removed_any <- TRUE
+    reg <- reg[keep]
+    if (length(reg) == 0) reg <- NULL
+    all_reg[[dn]] <- reg
+  }
+  options(.jst_registry = all_reg)
+  if (removed_any) {
+    message(.jst_intent_label(kind, cap = TRUE),
+            " registrations cleared across all data frames.")
+  } else {
+    message("No ", .jst_intent_label(kind), " registrations to clear.")
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: shared registration engine for jnumeric() / jcount()
+#'
+#' Validates the requested variables, then either removes their registrations
+#' of the given kind (\code{remove = TRUE}) or writes them, enforcing mutual
+#' exclusion: writing a record replaces any prior intent record for that
+#' variable (one record per variable in \code{.jst_registry}) and clears any
+#' \code{.jst_dummy} registration for it. Any reclassification (a variable that
+#' previously carried a different intent or a dummy registration) is reported.
+#' A standard-tier reminder notes that registrations are session-only and how
+#' to persist them.
+#'
+#' @param kind One of "numeric", "count".
+#' @param data The resolved data frame.
+#' @param data_name Character data-frame name (the registry key).
+#' @param default_used Logical; whether the \code{juse()} default frame was used.
+#' @param var_names Character vector of variable names to register.
+#' @param remove Logical; if TRUE, remove rather than write.
+#' @return \code{invisible(NULL)}.
+#' @keywords internal
+.jst_register_intent <- function(kind, data, data_name, default_used,
+                                 var_names, remove) {
+  .jst_check_vars(data, var_names, data_name)
+
+  if (isTRUE(remove)) {
+    reg     <- .jst_get_registry(data_name)
+    removed <- character(0)
+    for (v in var_names) {
+      rec <- if (!is.null(reg)) reg[[v]] else NULL
+      if (!is.null(rec) && identical(rec$kind, kind)) {
+        reg[[v]] <- NULL
+        removed  <- c(removed, v)
+      }
+    }
+    if (!is.null(reg) && length(reg) == 0) reg <- NULL
+    .jst_set_registry(data_name, reg)
+    if (length(removed) > 0) {
+      message(.jst_intent_label(kind, cap = TRUE), " registration removed for ",
+              paste0("'", removed, "'", collapse = ", "), " in ", data_name, ".")
+    } else {
+      message("No ", .jst_intent_label(kind), " registration to remove for ",
+              paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
+    }
+    return(invisible(NULL))
+  }
+
+  reg <- .jst_get_registry(data_name)
+  if (is.null(reg)) reg <- list()
+  reclass <- character(0)
+  for (v in var_names) {
+    prior <- reg[[v]]
+    if (!is.null(prior) && !identical(prior$kind, kind)) {
+      reclass <- c(reclass, paste0("'", v, "' (", .jst_intent_label(prior$kind),
+                                   " -> ", .jst_intent_label(kind), ")"))
+    }
+    if (isTRUE(.jst_clear_dummy_var(data_name, v))) {
+      reclass <- c(reclass, paste0("'", v, "' (dummy -> ",
+                                   .jst_intent_label(kind), ")"))
+    }
+    reg[[v]] <- list(var_name = v, kind = kind)
+  }
+  .jst_set_registry(data_name, reg)
+
+  if (isTRUE(default_used)) .jst_default_note(data_name)
+  message(.jst_intent_label(kind, cap = TRUE), " registration set for ",
+          paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
+  if (length(reclass) > 0) {
+    message("  Reclassified: ", paste(reclass, collapse = "; "), ".")
+  }
+  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    message("Registrations are stored for this session only. To keep them ",
+            "across sessions, save the data frame in R native format (.rds), ",
+            "e.g. jsave(", data_name, ", \"", data_name, ".rds\").")
+  }
+  invisible(NULL)
+}
+
 #' Internal helper: render a pipeline-state clear message
 #'
 #' Shared formatter for the \code{(NULL)} clear messages of
@@ -3585,6 +3802,35 @@
 }
 
 
+#' Internal helper: map an asserted analysis role to class + subclass
+#'
+#' Shared by the classification resolver's user-intent tiers (per-call
+#' override and registered intent) so an asserted role produces the same
+#' class/subclass pair however it was asserted. "numeric" and "count" fix the
+#' subclass; "categorical" still takes its dichotomy vs N-category subclass
+#' from the data structure, since the role assertion fixes the class but not
+#' the category count.
+#'
+#' @param role One of "numeric", "count", "categorical".
+#' @param x The variable (used only to derive the categorical subclass).
+#' @return A list with \code{class} and \code{subclass}, or \code{NULL} if
+#'   \code{role} is not recognized.
+#' @keywords internal
+.jst_class_from_role <- function(role, x) {
+  if (identical(role, "numeric"))
+    return(list(class = "Numeric", subclass = ""))
+  if (identical(role, "count"))
+    return(list(class = "Numeric", subclass = "Count"))
+  if (identical(role, "categorical")) {
+    if (.jst_is_dichotomy(x)$is_dichotomy)
+      return(list(class = "Categorical", subclass = "dichotomy"))
+    n_unique <- length(unique(x[!is.na(x)]))
+    return(list(class = "Categorical", subclass = paste0(n_unique, "-category")))
+  }
+  NULL
+}
+
+
 #' Internal helper: jstats analysis-role class for display
 #'
 #' Single display-layer resolver that reports how jstats treats a variable,
@@ -3611,21 +3857,76 @@
 #' factor / logical / character, a haven-labelled variable with <= 6
 #' categories, or a whole-number 0-6 numeric is Categorical; everything else
 #' numeric-ish (continuous numeric, or labelled with 7+ categories) is
-#' Numeric. (A future jcount()/jdummy()-style registry would be read here.)
+#' Numeric. The Numeric subclass "Count" is registration-only (set via jcount,
+#' or the per-call override "count"); the structural classifier never emits it.
+#'
+#' Resolution stack (highest wins; first tier that yields a class short-
+#' circuits). Storage-determined edge kinds (date-time, numbers-as-text,
+#' unsupported) resolve structurally up front and are not role-assertion
+#' targets, so the user tiers operate only among Numeric, Categorical, and
+#' Count: (1) per-call \code{override} -> source "per-call"; (2) registered
+#' intent -- the \code{.jst_registry} notebook (jnumeric/jcount) and the
+#' \code{.jst_dummy} registry (jdummy -> categorical) -> source "registered";
+#' (3) SPSS measure -- designed but UNPOPULATED in v1, ignored; (4) structural
+#' guess -> source "structural". Identity (\code{var_name} + \code{data_name})
+#' is required to consult tiers 1-2; when omitted, the resolver returns the
+#' structural answer with source "structural", so a bare
+#' \code{.jst_jstats_class(x)} behaves as before but now also reports a source.
 #'
 #' @param x A variable / data-frame column.
-#' @return A list with \code{class} (character) and \code{subclass}
-#'   (character, "" when none).
+#' @param var_name Optional character string naming the variable; required
+#'   (with \code{data_name}) to consult registered intent.
+#' @param data_name Optional character string naming the data frame; required
+#'   (with \code{var_name}) to consult registered intent.
+#' @param override Optional per-call asserted role ("numeric", "categorical",
+#'   or "count"); highest-priority tier when supplied.
+#' @return A list with \code{class} (character), \code{subclass} (character,
+#'   "" when none), and \code{source} (one of "per-call", "registered",
+#'   "measure", "structural").
 #' @keywords internal
-.jst_jstats_class <- function(x) {
+.jst_jstats_class <- function(x, var_name = NULL, data_name = NULL,
+                              override = NULL) {
   k <- .jst_var_kind(x)
 
-  # Non-analyzable / distinctly-handled kinds first.
-  if (k$kind == "datetime")     return(list(class = "Date-time",       subclass = ""))
-  if (k$kind == "numeric_text") return(list(class = "Numbers-as-text", subclass = ""))
+  # Storage-determined edge kinds are resolved structurally up front. They are
+  # not role-assertion targets (a date column is converted, not declared), so
+  # override / registration never apply to them.
+  if (k$kind == "datetime")
+    return(list(class = "Date-time",       subclass = "", source = "structural"))
+  if (k$kind == "numeric_text")
+    return(list(class = "Numbers-as-text", subclass = "", source = "structural"))
   if (k$kind %in% c("complex", "raw", "list", "other"))
-    return(list(class = "Unsupported", subclass = ""))
+    return(list(class = "Unsupported",     subclass = "", source = "structural"))
 
+  # -- Tier 1: per-call override -------------------------------------------
+  if (!is.null(override)) {
+    res <- .jst_class_from_role(override, x)
+    if (!is.null(res)) return(c(res, list(source = "per-call")))
+  }
+
+  # -- Tier 2: registered intent -------------------------------------------
+  # Numeric/count live in the .jst_registry notebook; categorical lives in the
+  # existing .jst_dummy registry. Both keyed by frame name + variable.
+  if (!is.null(var_name) && !is.null(data_name)) {
+    intent <- .jst_get_intent(data_name, var_name)
+    if (!is.null(intent) && !is.null(intent$kind)) {
+      res <- .jst_class_from_role(intent$kind, x)
+      if (!is.null(res)) return(c(res, list(source = "registered")))
+    }
+    dummy_regs <- .jst_get_dummy(data_name)
+    if (!is.null(dummy_regs) && length(dummy_regs) > 0) {
+      is_registered <- any(vapply(dummy_regs,
+                                  function(r) identical(r$var_name, var_name),
+                                  logical(1)))
+      if (is_registered)
+        return(c(.jst_class_from_role("categorical", x),
+                 list(source = "registered")))
+    }
+  }
+
+  # -- Tier 3: SPSS measure -- designed but UNPOPULATED in v1 (skipped). ----
+
+  # -- Tier 4: structural guess --------------------------------------------
   # Numeric-ish (numeric / labelled / logical / numeric_factor) or text
   # categorical (text_factor / text_character). Decide Numeric vs Categorical
   # with the same helpers the analysis gate and the outlier-skip use.
@@ -3635,11 +3936,9 @@
             dich$is_dichotomy ||
             .jst_is_discrete_integer(x)
 
-  if (!is_cat) return(list(class = "Numeric", subclass = ""))
+  if (!is_cat) return(list(class = "Numeric", subclass = "", source = "structural"))
 
-  if (dich$is_dichotomy) return(list(class = "Categorical", subclass = "dichotomy"))
-  n_unique <- length(unique(x[!is.na(x)]))
-  list(class = "Categorical", subclass = paste0(n_unique, "-category"))
+  c(.jst_class_from_role("categorical", x), list(source = "structural"))
 }
 
 
@@ -5162,6 +5461,15 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
   }
   .jst_set_dummy(.jst_data_name, ds)
 
+  # Mutual exclusion: a variable becoming a dummy drops any numeric/count
+  # intent registration it carried, so the .jst_dummy and .jst_registry stores
+  # stay disjoint per variable (the resolver reads both as tier 2).
+  .cleared_kind <- .jst_clear_intent_var(.jst_data_name, var_name)
+  if (!is.null(.cleared_kind)) {
+    message("Reclassified: '", var_name, "' (",
+            .jst_intent_label(.cleared_kind), " -> dummy).")
+  }
+
   # Print registration summary. ref_label and dummy_names are already in
   # canonical form from .jst_make_dummy_names() — no further processing
   # needed here.
@@ -5237,6 +5545,136 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
   for (w in built$warnings_msg) warning(w, call. = FALSE)
 
   invisible(NULL)
+}
+
+
+# -- jnumeric / jcount ---------------------------------------------------------
+
+#' Register variables as numeric for analysis
+#'
+#' \code{jnumeric()} tells jstats to treat one or more variables as numeric
+#' (continuous) wherever their analysis class matters, overriding the package's
+#' automatic structural guess. It is the counterpart to \code{\link{jdummy}}
+#' (categorical) and \code{\link{jcount}} (count): a variable carries exactly
+#' one registered intent at a time, so registering it as numeric clears any
+#' prior dummy or count registration. Registration changes no data and assigns
+#' nothing -- you do not write \code{df <- jnumeric(...)}. It is stored for the
+#' session, keyed by the data frame's name; save the data frame in R native
+#' format (.rds) to keep it across sessions.
+#'
+#' The typical use is a small-range whole number that the structural classifier
+#' would treat as categorical (e.g. a 0-6 attitude item) but that you want
+#' analyzed as a continuous score.
+#'
+#' @param data A data frame, or omitted to use the \code{\link{juse}} default.
+#'   \code{jnumeric(NULL)} clears all numeric registrations across data frames.
+#' @param ... One or more unquoted variable names to register.
+#' @param remove Logical; if \code{TRUE}, remove the numeric registration for
+#'   the named variables instead of adding it.
+#' @return \code{invisible(NULL)}. Called for its side effect on the session
+#'   registration notebook.
+#' @seealso \code{\link{jdummy}}, \code{\link{jcount}}
+#' @examples
+#' df <- data.frame(attitude = c(1, 2, 3, 4, 5, 2, 3),
+#'                  score    = c(10, 22, 31, 44, 55, 28, 33))
+#' jnumeric(df, attitude)              # treat the 1-5 item as continuous
+#' jnumeric(df, attitude, score)       # multiple variables at once
+#' jnumeric(df, attitude, remove = TRUE)
+#' jnumeric(NULL)                      # clear all numeric registrations
+#' @export
+jnumeric <- function(data, ..., remove = FALSE) {
+  raw_data <- if (!missing(data)) substitute(data) else NULL
+  if (!missing(data) && is.null(raw_data)) return(.jst_clear_all_intent("numeric"))
+
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jnumeric",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
+  data         <- arg1$data
+  data_name    <- arg1$name
+  default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  variables <- rlang::enquos(...)
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+  if (length(variables) == 0) {
+    stop("Specify one or more variables to register, e.g. ",
+         "jnumeric(", data_name, ", <var1>, <var2>).", call. = FALSE)
+  }
+  var_names <- vapply(variables, rlang::quo_name, character(1))
+
+  .jst_register_intent("numeric", data, data_name, default_used,
+                       var_names, remove)
+}
+
+
+#' Register variables as counts for analysis
+#'
+#' \code{jcount()} tells jstats to treat one or more variables as count
+#' variables (non-negative whole-number tallies). A count is numeric-like -- it
+#' passes wherever a numeric variable does and shows mean/median in
+#' \code{\link{jscreen}} -- and additionally carries count semantics: it is the
+#' asserted signal behind the count-regression caveat in \code{\link{jlm}} and
+#' the routing target for future count-model functions. Unlike the structural
+#' guess, jcount accepts counts of any range, including those outside the
+#' automatic small-range detection (e.g. a 0-30 victimization count).
+#'
+#' A variable carries exactly one registered intent at a time, so registering
+#' it as a count clears any prior dummy or numeric registration. Registration
+#' changes no data and assigns nothing. It is stored for the session, keyed by
+#' the data frame's name; save the data frame in R native format (.rds) to keep
+#' it across sessions.
+#'
+#' @param data A data frame, or omitted to use the \code{\link{juse}} default.
+#'   \code{jcount(NULL)} clears all count registrations across data frames.
+#' @param ... One or more unquoted variable names to register.
+#' @param remove Logical; if \code{TRUE}, remove the count registration for the
+#'   named variables instead of adding it.
+#' @return \code{invisible(NULL)}. Called for its side effect on the session
+#'   registration notebook.
+#' @seealso \code{\link{jnumeric}}, \code{\link{jdummy}}
+#' @examples
+#' df <- data.frame(arrests = c(0, 1, 2, 0, 3, 1, 0, 12),
+#'                  age      = c(21, 34, 45, 29, 51, 38, 26, 60))
+#' jcount(df, arrests)                 # treat as a count (here 0-12)
+#' jcount(df, arrests, remove = TRUE)
+#' jcount(NULL)                        # clear all count registrations
+#' @export
+jcount <- function(data, ..., remove = FALSE) {
+  raw_data <- if (!missing(data)) substitute(data) else NULL
+  if (!missing(data) && is.null(raw_data)) return(.jst_clear_all_intent("count"))
+
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jcount",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
+  data         <- arg1$data
+  data_name    <- arg1$name
+  default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  variables <- rlang::enquos(...)
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+  if (length(variables) == 0) {
+    stop("Specify one or more variables to register, e.g. ",
+         "jcount(", data_name, ", <var1>, <var2>).", call. = FALSE)
+  }
+  var_names <- vapply(variables, rlang::quo_name, character(1))
+
+  .jst_register_intent("count", data, data_name, default_used,
+                       var_names, remove)
 }
 
 
@@ -7112,7 +7550,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     # jstats analysis-role classification via the single resolver. The same
     # resolver gates outlier screening (Numeric only), so the Class column
     # and the Outliers column cannot disagree. (Session 51)
-    jc          <- .jst_jstats_class(col)
+    jc          <- .jst_jstats_class(col, v, .jst_data_name)
     n_missing   <- sum(is.na(col))
     pct_missing <- round(n_missing / n_cases * 100, 1)
     n_unique    <- length(unique(col[!is.na(col)]))
