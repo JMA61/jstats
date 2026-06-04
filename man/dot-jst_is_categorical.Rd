@@ -4,7 +4,7 @@
 \alias{.jst_is_categorical}
 \title{Internal helper: intent-based categorical classifier}
 \usage{
-.jst_is_categorical(x, var_name = NULL, data_name = NULL)
+.jst_is_categorical(x, var_name = NULL, data_name = NULL, override = NULL)
 }
 \arguments{
 \item{x}{A variable (vector).}
@@ -14,6 +14,11 @@ Required for the jdummy() registration check.}
 
 \item{data_name}{Optional character string. The data frame's name.
 Required for the jdummy() registration check.}
+
+\item{override}{Optional per-call asserted role for \code{x}: one of
+"categorical", "numeric", or "count" (or NULL for no override). When
+supplied it takes precedence over registration and structure, matching
+the tier-1 per-call slot in the classification resolver.}
 }
 \value{
 TRUE if the user has declared the variable categorical,
@@ -35,6 +40,9 @@ the structural helper only if this one returns FALSE.
 Rules (first match wins):
 
 \enumerate{
+\item Per-call \code{override}: "categorical" -> TRUE; "numeric" or
+"count" -> FALSE (a count is numeric-like for the categorical-vs-
+numeric decision this helper answers). NULL falls through.
 \item jdummy() registration for \code{var_name} on \code{data_name}
 -> categorical.
 \item Class factor, logical, or character -> categorical.

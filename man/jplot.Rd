@@ -25,7 +25,10 @@ jplot(x, which = "core", ...)
   r2 = TRUE,
   band = "ci",
   subset = NULL,
-  labels = NULL
+  labels = NULL,
+  numeric = NULL,
+  categorical = NULL,
+  count = NULL
 )
 
 \method{jplot}{jst_lm}(
@@ -102,6 +105,26 @@ legend. \code{"both"} is accepted but currently renders as \code{"names"}
 on plots (the \code{"name: label"} form for plot titles is deferred to a
 later phase). NULL (default) defers to \code{joutput()}'s
 \code{variable.id} setting. Not a logical.}
+
+\item{numeric}{Optional character vector of plotted-variable names to treat
+as continuous for this call (the per-call counterpart of
+\code{jnumeric()}). In \code{jplot()} a variable's class chooses the
+geometry, so this forces numeric handling (histogram for a single
+variable; scatter / numeric axis in the formula and two-variable forms).
+Applies to the plotted variables only, not the \code{by} grouping
+variable.}
+
+\item{categorical}{Optional character vector of plotted-variable names to
+treat as categorical for this call (the per-call counterpart of
+\code{jdummy()} for plotting purposes). Forces categorical geometry (bar
+for a single variable; box / categorical axis in the formula form). A
+variable cannot be listed in both \code{categorical} and
+\code{numeric}/\code{count}.}
+
+\item{count}{Optional character vector of plotted-variable names to treat
+as counts for this call (the per-call counterpart of \code{jcount()}). A
+count is numeric-like for plotting, so it draws the same as \code{numeric};
+it is provided for symmetry with the other analysis functions.}
 
 \item{focal}{Unquoted name of the independent variable to place on the
 x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and

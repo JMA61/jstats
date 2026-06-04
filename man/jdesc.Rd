@@ -10,6 +10,9 @@ jdesc(
   by = NULL,
   subset = NULL,
   variable.id = NULL,
+  numeric = NULL,
+  categorical = NULL,
+  count = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
   digits = NULL
@@ -38,6 +41,23 @@ the grouping-variable column header) -- best for short labels;
 \code{"legend"} and \code{"legend.bottom"} keep names and print a label
 legend after the table. NULL (default) defers to \code{joutput()}'s
 \code{variable.id} setting. Not a logical.}
+
+\item{numeric}{Optional character vector of variable names to treat as
+continuous for this call (the per-call counterpart of \code{jnumeric()}).
+Its only effect in \code{jdesc()} is to suppress the structural "seems
+categorical" descriptive caution for those variables; the descriptives
+themselves are computed the same way regardless.}
+
+\item{categorical}{Not supported by \code{jdesc()} yet. \code{jdesc()}
+always computes numeric descriptives; supplying \code{categorical} raises
+an error pointing to \code{jfreq()} for a categorical summary. (How
+\code{jdesc()} should handle an asserted-categorical variable is a parked
+design decision.)}
+
+\item{count}{Optional character vector of variable names to treat as counts
+for this call (the per-call counterpart of \code{jcount()}). A count is
+numeric-like here, so it behaves like \code{numeric}: it suppresses the
+"seems categorical" caution for those variables.}
 
 \item{value.id}{Character or NULL. Value-label display mode for the
 grouped descriptive headers (the \code{by}-group rows): \code{"both"}

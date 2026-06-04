@@ -3326,6 +3326,9 @@
 #' Rules (first match wins):
 #'
 #' \enumerate{
+#'   \item Per-call \code{override}: "categorical" -> TRUE; "numeric" or
+#'         "count" -> FALSE (a count is numeric-like for the categorical-vs-
+#'         numeric decision this helper answers). NULL falls through.
 #'   \item jdummy() registration for \code{var_name} on \code{data_name}
 #'         -> categorical.
 #'   \item Class factor, logical, or character -> categorical.
@@ -3341,10 +3344,21 @@
 #'   Required for the jdummy() registration check.
 #' @param data_name Optional character string. The data frame's name.
 #'   Required for the jdummy() registration check.
+#' @param override Optional per-call asserted role for \code{x}: one of
+#'   "categorical", "numeric", or "count" (or NULL for no override). When
+#'   supplied it takes precedence over registration and structure, matching
+#'   the tier-1 per-call slot in the classification resolver.
 #' @return TRUE if the user has declared the variable categorical,
 #'   FALSE otherwise.
 #' @keywords internal
-.jst_is_categorical <- function(x, var_name = NULL, data_name = NULL) {
+.jst_is_categorical <- function(x, var_name = NULL, data_name = NULL,
+                                override = NULL) {
+
+  # -- Rule 0: per-call override (highest priority) ------------------------
+  if (!is.null(override)) {
+    if (identical(override, "categorical")) return(TRUE)
+    if (override %in% c("numeric", "count")) return(FALSE)
+  }
 
   # -- Rule A: jdummy() registration ---------------------------------------
   if (!is.null(var_name) && !is.null(data_name)) {
@@ -6501,6 +6515,20 @@ jdata_dir <- function(default = ".") {
 #'   \code{"legend"} and \code{"legend.bottom"} keep names and print a label
 #'   legend after the table. NULL (default) defers to \code{joutput()}'s
 #'   \code{variable.id} setting. Not a logical.
+#' @param numeric Optional character vector of variable names to treat as
+#'   continuous for this call (the per-call counterpart of \code{jnumeric()}).
+#'   Its only effect in \code{jdesc()} is to suppress the structural "seems
+#'   categorical" descriptive caution for those variables; the descriptives
+#'   themselves are computed the same way regardless.
+#' @param categorical Not supported by \code{jdesc()} yet. \code{jdesc()}
+#'   always computes numeric descriptives; supplying \code{categorical} raises
+#'   an error pointing to \code{jfreq()} for a categorical summary. (How
+#'   \code{jdesc()} should handle an asserted-categorical variable is a parked
+#'   design decision.)
+#' @param count Optional character vector of variable names to treat as counts
+#'   for this call (the per-call counterpart of \code{jcount()}). A count is
+#'   numeric-like here, so it behaves like \code{numeric}: it suppresses the
+#'   "seems categorical" caution for those variables.
 #' @param value.id Character or NULL. Value-label display mode for the
 #'   grouped descriptive headers (the \code{by}-group rows): \code{"both"}
 #'   (\code{"code: label"}), \code{"values"} (bare code), or \code{"labels"}
@@ -6548,6 +6576,7 @@ jdata_dir <- function(default = ".") {
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
 jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
+                  numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, case.processing.detail = NULL,
                   digits = NULL) {
 
@@ -6572,6 +6601,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     temp_df  <- data.frame(x = arg1$first_arg_value)
     names(temp_df) <- var_name
     return(jdesc(temp_df, !!rlang::sym(var_name), variable.id = variable.id,
+                 numeric = numeric, categorical = categorical, count = count,
                  value.id = value.id))
   }
 
@@ -6598,6 +6628,36 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     check_names <- c(check_names, rlang::quo_name(by_quo))
   }
   .jst_check_vars(data, check_names, .jst_data_name)
+
+  # -- Per-call classification overrides -------------------------------------
+  # jdesc is per-variable and numeric-coercing. numeric=/count= assert a
+  # numeric-like analysis role for the named variables, which here serves a
+  # single purpose: suppressing the structural "seems categorical" descriptive
+  # caution (the override is consulted by .jst_role_asserted_numeric in
+  # .emit_good_notes below). A count is numeric-like in this context, so
+  # count= behaves like numeric= for the caution. categorical= is accepted only
+  # to fail cleanly: deciding what jdesc should DO with an asserted-categorical
+  # variable is a parked design (see JStats_Classification_Registry_Reference
+  # Part 4), so rather than silently summarizing a variable the user asked to
+  # treat categorically, jdesc stops and points to jfreq().
+  if (!is.null(categorical)) {
+    stop("categorical = is not supported by jdesc() yet: jdesc() always ",
+         "computes numeric descriptives. For a categorical summary use ",
+         "jfreq() instead.", call. = FALSE)
+  }
+  for (.arg in c("numeric", "count")) {
+    .val <- get(.arg)
+    if (!is.null(.val)) {
+      .bad <- setdiff(.val, variable_names)
+      if (length(.bad) > 0) {
+        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the variables passed to jdesc(). Check for typos.",
+             call. = FALSE)
+      }
+    }
+  }
+  # numeric and count are both "numeric-like" assertions, so naming a variable
+  # in both is harmless rather than a conflict (mirrors jlm).
 
   # Classify each analysis variable for summarizability. Shared by both the
   # grouped and ungrouped paths so the two cannot diverge. Numeric, labelled,
@@ -6630,8 +6690,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # note. Defined once so both paths warn identically. `dat` is passed
   # explicitly because the data frame is reassigned by the pipeline below.
   .emit_good_notes <- function(v, dat) {
+    .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
     if (.jst_is_discrete_integer(dat[[v]], v, .jst_data_name) &&
-        !.jst_role_asserted_numeric(dat[[v]], v, .jst_data_name)) {
+        !.jst_role_asserted_numeric(dat[[v]], v, .jst_data_name,
+                                    override = .ov)) {
       warning(paste0(v, " seems categorical. Descriptive statistics may ",
                      "not be meaningful."),
               call. = FALSE)
@@ -7813,11 +7875,14 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
     # The Source column appears only when a registration exists, so it reads
     # cleanest as an exception-marker: the structural rows are blanked in the
-    # display copy, leaving "registered" against the registered variables only.
+    # display copy, leaving the registered variables marked. The display label
+    # is "User-declared" (clearer to readers than the mechanism term
+    # "registered"; avoids collision with "user-defined missing values").
     # Display-only -- the returned screen_table keeps the literal per-row
-    # provenance ("registered" / "structural"). (Session 83)
+    # provenance ("registered" / "structural"). (Session 83; label Session 84)
     if ("Source" %in% cols) {
       t1$Source[screen_table$Source == "structural"] <- ""
+      t1$Source[screen_table$Source == "registered"] <- "User-declared"
     }
 
     if (vlmode %in% c("labels", "both")) {
@@ -7833,7 +7898,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
     # Conditional one-line legend, printed only when a "*" actually appeared.
     if (show_star) {
-      cat("* coded other than 0/1; mean is not a proportion -- recode to 0/1\n")
+      cat("* coded other than 0/1; mean is not a proportion\n")
     }
   }
 
@@ -9100,6 +9165,20 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #'   with a legend mode otherwise); \code{"legend"}/\code{"legend.bottom"}
 #'   keep names and print a label legend after the table. NULL (default)
 #'   defers to \code{joutput()}'s \code{variable.id} setting. Not a logical.
+#' @param numeric Optional character vector of variable names to treat as
+#'   continuous for this call (the per-call counterpart of \code{jnumeric()}).
+#'   Its only effect in \code{jcorr()} is to suppress the structural "seems
+#'   categorical" caution for those variables; correlations are computed the
+#'   same way regardless (labelled variables are coerced to numeric either way).
+#' @param categorical Not supported by \code{jcorr()} yet. Correlation
+#'   requires numeric variables; supplying \code{categorical} raises an error
+#'   pointing to \code{jcrosstab()} for association between categorical
+#'   variables. (How \code{jcorr()} should handle an asserted-categorical
+#'   variable is a parked design decision.)
+#' @param count Optional character vector of variable names to treat as counts
+#'   for this call (the per-call counterpart of \code{jcount()}). A count is
+#'   numeric-like here, so it behaves like \code{numeric}: it suppresses the
+#'   "seems categorical" caution for those variables.
 #' @param value.id Not supported by \code{jcorr()}. The function does not
 #'   display value labels, so passing this argument is an error. It exists
 #'   only to return a clear message rather than misreporting the token as a
@@ -9144,6 +9223,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
 jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NULL,
+                  numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, layout = NULL, case.processing.detail = NULL,
                   digits = NULL) {
 
@@ -9187,6 +9267,37 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
   .jst_check_vars(data, variable_names, .jst_data_name)
+
+  # -- Per-call classification overrides -------------------------------------
+  # jcorr is pairwise and numeric-coercing. numeric=/count= assert a numeric-
+  # like analysis role for the named variables; here that serves a single
+  # purpose -- suppressing the structural "seems categorical" caution (consulted
+  # by .jst_role_asserted_numeric at the per-variable loop below). A count is
+  # numeric-like in this context, so count= behaves like numeric=. categorical=
+  # is accepted only to fail cleanly: what jcorr should DO with an asserted-
+  # categorical variable is a parked design (see
+  # JStats_Classification_Registry_Reference Part 4), so rather than coercing a
+  # variable the user asked to treat categorically, jcorr stops and points to
+  # jcrosstab().
+  if (!is.null(categorical)) {
+    stop("categorical = is not supported by jcorr() yet: correlation requires ",
+         "numeric variables. For association between categorical variables use ",
+         "jcrosstab() instead.", call. = FALSE)
+  }
+  for (.arg in c("numeric", "count")) {
+    .val <- get(.arg)
+    if (!is.null(.val)) {
+      .bad <- setdiff(.val, variable_names)
+      if (length(.bad) > 0) {
+        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the variables passed to jcorr(). Check for typos.",
+             call. = FALSE)
+      }
+    }
+  }
+  # numeric and count are both numeric-like assertions, so naming a variable in
+  # both is harmless rather than a conflict (mirrors jlm).
+
   # Type gate (Session 46): correlation needs numeric variables; refuse text,
   # dates, and complex/list/raw up front (the loop below coerces the accepted
   # labelled / numeric-factor variables). See .jst_check_analysis_var.
@@ -9260,8 +9371,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # haven-labelled variables with many distinct values (e.g. Income with
     # 10 broad categories) are NOT flagged, while small-range labelled or
     # whole-number 0-6 variables ARE flagged.
+    .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
     if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
-        !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
+        !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name,
+                                    override = .ov)) {
       warning(paste0(v, " seems categorical. Pearson correlations assume ",
                      "continuous/interval data."),
               call. = FALSE)
@@ -11361,6 +11474,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   as continuous even if they have value labels.
 #' @param categorical Optional character vector of variable names to treat
 #'   as categorical even if they lack value labels.
+#' @param count Optional character vector of independent-variable names to
+#'   treat as counts for this call (the per-call counterpart of
+#'   \code{jcount()}). A count predictor is numeric-like, so it enters the
+#'   model exactly as \code{numeric} would; the argument is provided for
+#'   symmetry with the other analysis functions. The binary dependent
+#'   variable is fixed, so naming it here has no effect. A variable cannot be
+#'   listed in both \code{count} and \code{categorical}.
 #' @param ci Logical or NULL. If TRUE, adds 95% confidence intervals for
 #'   Exp(B). If NULL (default), defers to \code{joutput()}.
 #' @param classification Logical. If TRUE, prints a classification table
@@ -11459,7 +11579,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   \code{jlogistic()} only, since they are the functions that produce
 #'   dummy-coded coefficient tables.
 jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
-                      numeric = NULL, categorical = NULL,
+                      numeric = NULL, categorical = NULL, count = NULL,
                       ci = NULL, classification = FALSE,
                       diagnostics = NULL, ref.categories = NULL, full = FALSE,
                       case.processing.detail = NULL, digits = NULL, ...,
@@ -11586,13 +11706,29 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       }
     }
   }
+  # count = is numeric-like, so it gets the same dummy-clash guard as numeric =.
+  if (!is.null(count)) {
+    .dummy_regs <- .jst_get_dummy(.jst_data_name)
+    if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
+      .reg_names <- vapply(.dummy_regs, function(r) r$var_name, character(1))
+      .clash     <- intersect(count, .reg_names)
+      if (length(.clash) > 0) {
+        warning("count = was ignored for ", paste(.clash, collapse = ", "),
+                " (registered as a dummy via jdummy). Clear the registration ",
+                "with jdummy(NULL) to treat it as numeric.",
+                call. = FALSE)
+      }
+    }
+  }
 
   # -- Variable type conversion (unified classifier) ------------------------
   # Priority order:
   #   1. jdummy() registrations (already expanded above)
-  #   2. numeric/categorical overrides from this call
+  #   2. numeric/count/categorical overrides from this call
   #   3. Auto-detection via .jst_is_categorical()
-  # DV is always numeric; handled after this loop.
+  # DV is always numeric; handled after this loop. (numeric=/count=/categorical=
+  # naming the DV is a no-op here -- the DV is excluded from iv_names below and
+  # the binary response is fixed regardless of any role assertion.)
   dv_name  <- all.vars(formula)[1]
   iv_names <- setdiff(model_vars, c(dv_name, dummy_coef_names))
 
@@ -11616,6 +11752,16 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Override: numeric = "Var" forces continuous ---
     if (!is.null(numeric) && v %in% numeric) {
+      if (haven::is.labelled(data[[v]])) {
+        data[[v]] <- .jst_as_numeric(data[[v]])
+      }
+      next
+    }
+
+    # --- Override: count = "Var" forces numeric (a count predictor enters the
+    # model as a numeric predictor; the Count subclass carries no special IV
+    # handling, only the DV count caveat in jlm, which does not apply here). ---
+    if (!is.null(count) && v %in% count) {
       if (haven::is.labelled(data[[v]])) {
         data[[v]] <- .jst_as_numeric(data[[v]])
       }
@@ -18227,6 +18373,23 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 #'   on plots (the \code{"name: label"} form for plot titles is deferred to a
 #'   later phase). NULL (default) defers to \code{joutput()}'s
 #'   \code{variable.id} setting. Not a logical.
+#' @param numeric Optional character vector of plotted-variable names to treat
+#'   as continuous for this call (the per-call counterpart of
+#'   \code{jnumeric()}). In \code{jplot()} a variable's class chooses the
+#'   geometry, so this forces numeric handling (histogram for a single
+#'   variable; scatter / numeric axis in the formula and two-variable forms).
+#'   Applies to the plotted variables only, not the \code{by} grouping
+#'   variable.
+#' @param categorical Optional character vector of plotted-variable names to
+#'   treat as categorical for this call (the per-call counterpart of
+#'   \code{jdummy()} for plotting purposes). Forces categorical geometry (bar
+#'   for a single variable; box / categorical axis in the formula form). A
+#'   variable cannot be listed in both \code{categorical} and
+#'   \code{numeric}/\code{count}.
+#' @param count Optional character vector of plotted-variable names to treat
+#'   as counts for this call (the per-call counterpart of \code{jcount()}). A
+#'   count is numeric-like for plotting, so it draws the same as \code{numeric};
+#'   it is provided for symmetry with the other analysis functions.
 #'
 #' @return Invisibly, a single \code{ggplot} object if one plot is produced,
 #'   or a named list of \code{ggplot} objects if multiple are produced
@@ -18269,7 +18432,8 @@ jplot <- function(x, which = "core", ...) {
 #' @importFrom rlang .data
 jplot.default <- function(x, ..., by = NULL, type = NULL,
                           line = FALSE, equation = TRUE, r2 = TRUE,
-                          band = "ci", subset = NULL, labels = NULL) {
+                          band = "ci", subset = NULL, labels = NULL,
+                          numeric = NULL, categorical = NULL, count = NULL) {
 
   # Capture the call for later argument-inspection (used by the ignored-arg
   # note that fires when, e.g., the user passes line = "lm" to a histogram).
@@ -18287,6 +18451,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                               equation = equation, r2 = r2, band = band,
                               subset_expr = substitute(subset),
                               labels = labels,
+                              numeric = numeric, categorical = categorical,
+                              count = count,
                               parent_env = parent.frame()))
   }
 
@@ -18350,6 +18516,34 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (has_by) check_names <- c(check_names, by_name)
   .jst_check_vars(data, check_names, .jst_data_name)
 
+  # -- Per-call classification overrides -------------------------------------
+  # In jplot a variable's class chooses the geometry (numeric -> histogram /
+  # scatter point; categorical -> bar / box grouping). numeric=/categorical=/
+  # count= assert that class for the named plotted variables, overriding the
+  # structural guess (threaded into .jst_is_categorical below). A count is
+  # numeric-like for geometry, so count= draws the same as numeric=; it is
+  # exposed for symmetry and forward-compatibility. Overrides apply to the
+  # plotted variables only, not to the by= grouping variable.
+  for (.arg in c("numeric", "categorical", "count")) {
+    .val <- get(.arg)
+    if (!is.null(.val)) {
+      .bad <- setdiff(.val, variable_names)
+      if (length(.bad) > 0) {
+        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the variables passed to jplot(). Check for typos.",
+             call. = FALSE)
+      }
+    }
+  }
+  # A variable cannot be both categorical and numeric-like (the assertions
+  # contradict). numeric and count are both numeric-like, so they do not clash.
+  .cat_clash <- intersect(categorical, c(numeric, count))
+  if (length(.cat_clash) > 0) {
+    stop(paste0("'", .cat_clash, "'", collapse = ", "),
+         " listed in both categorical and numeric/count arguments.",
+         call. = FALSE)
+  }
+
   # Validate band argument
   valid_bands <- c("ci", "pi", "see", "none")
   if (!is.character(band) || length(band) != 1 || !band %in% valid_bands) {
@@ -18375,11 +18569,17 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   data <- pipeline$data
   # Pipeline messages are printed below, after the red title
 
-  # Classify variables
+  # Classify variables (per-call override > structure; see .jst_is_categorical)
   var_types <- vapply(variable_names,
-                      function(v) if (.jst_is_categorical(data[[v]], v,
-                                                           .jst_data_name))
-                                    "categorical" else "numeric",
+                      function(v) {
+                        ov <- if (v %in% categorical) "categorical"
+                              else if (v %in% count)   "count"
+                              else if (v %in% numeric) "numeric"
+                              else NULL
+                        if (.jst_is_categorical(data[[v]], v, .jst_data_name,
+                                                override = ov))
+                          "categorical" else "numeric"
+                      },
                       character(1))
 
   # Auto-detect plot type if not specified
@@ -18546,6 +18746,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @keywords internal
 .jst_jplot_formula <- function(formula, jplot_call, ..., by_expr, type, line,
                                equation, r2, band, subset_expr, labels,
+                               numeric = NULL, categorical = NULL, count = NULL,
                                parent_env) {
 
   # -- Parse formula ---------------------------------------------------------
@@ -18620,6 +18821,37 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (has_by) check_names <- c(check_names, by_name)
   .jst_check_vars(data, check_names, .jst_data_name)
 
+  # -- Per-call classification overrides (formula form) ---------------------
+  # Same semantics as the variable-list form: numeric=/categorical=/count=
+  # assert a plotted variable's class, which here decides scatter-vs-box (and
+  # guards the numeric-DV requirement). count is numeric-like for geometry.
+  # Scoped to the two formula variables (DV and IV); not the by= variable.
+  .plot_vars <- c(y_name, x_name)
+  for (.arg in c("numeric", "categorical", "count")) {
+    .val <- get(.arg)
+    if (!is.null(.val)) {
+      .bad <- setdiff(.val, .plot_vars)
+      if (length(.bad) > 0) {
+        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the formula variables in jplot(). Check for typos.",
+             call. = FALSE)
+      }
+    }
+  }
+  .cat_clash <- intersect(categorical, c(numeric, count))
+  if (length(.cat_clash) > 0) {
+    stop(paste0("'", .cat_clash, "'", collapse = ", "),
+         " listed in both categorical and numeric/count arguments.",
+         call. = FALSE)
+  }
+  # Per-variable override role for .jst_is_categorical (NULL when unasserted).
+  .ov_for <- function(v) {
+    if (v %in% categorical) "categorical"
+    else if (v %in% count)  "count"
+    else if (v %in% numeric) "numeric"
+    else NULL
+  }
+
   # -- Validate line / band arguments ----------------------------------------
   valid_bands <- c("ci", "pi", "see", "none")
   if (!is.character(band) || length(band) != 1 || !band %in% valid_bands) {
@@ -18647,8 +18879,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   # -- Decide plot type from IV's class -------------------------------------
   # Numeric IV -> scatter; categorical IV -> box (numeric DV is required).
-  y_is_num <- !.jst_is_categorical(data[[y_name]], y_name, .jst_data_name)
-  x_is_cat <-  .jst_is_categorical(data[[x_name]], x_name, .jst_data_name)
+  y_is_num <- !.jst_is_categorical(data[[y_name]], y_name, .jst_data_name,
+                                   override = .ov_for(y_name))
+  x_is_cat <-  .jst_is_categorical(data[[x_name]], x_name, .jst_data_name,
+                                   override = .ov_for(x_name))
 
   if (!is.null(type)) {
     resolved_type <- type
@@ -18662,9 +18896,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   # Classify both vars for downstream builders
   var_types <- c(
-    if (.jst_is_categorical(data[[x_name]], x_name, .jst_data_name))
+    if (.jst_is_categorical(data[[x_name]], x_name, .jst_data_name,
+                            override = .ov_for(x_name)))
       "categorical" else "numeric",
-    if (.jst_is_categorical(data[[y_name]], y_name, .jst_data_name))
+    if (.jst_is_categorical(data[[y_name]], y_name, .jst_data_name,
+                            override = .ov_for(y_name)))
       "categorical" else "numeric"
   )
   # Note: for builders, variable_names is ordered (x, y) for scatter,

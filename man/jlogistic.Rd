@@ -11,6 +11,7 @@ jlogistic(
   variable.id = NULL,
   numeric = NULL,
   categorical = NULL,
+  count = NULL,
   ci = NULL,
   classification = FALSE,
   diagnostics = NULL,
@@ -47,6 +48,14 @@ as continuous even if they have value labels.}
 
 \item{categorical}{Optional character vector of variable names to treat
 as categorical even if they lack value labels.}
+
+\item{count}{Optional character vector of independent-variable names to
+treat as counts for this call (the per-call counterpart of
+\code{jcount()}). A count predictor is numeric-like, so it enters the
+model exactly as \code{numeric} would; the argument is provided for
+symmetry with the other analysis functions. The binary dependent
+variable is fixed, so naming it here has no effect. A variable cannot be
+listed in both \code{count} and \code{categorical}.}
 
 \item{ci}{Logical or NULL. If TRUE, adds 95\% confidence intervals for
 Exp(B). If NULL (default), defers to \code{joutput()}.}
