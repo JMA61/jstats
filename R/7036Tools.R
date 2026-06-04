@@ -3782,11 +3782,36 @@
 #'   \item at least 2 non-NA values
 #' }
 #'
+#' Registered intent overrides the structural rules ("Rule A"). When the
+#' variable has been registered as a count via \code{jcount()}, or a per-call
+#' \code{override = "count"} is supplied, this helper returns TRUE regardless
+#' of the structural range checks, so a conceptual count outside the 0-6 band
+#' (e.g. a 0-30 victimization tally a user has declared a count) still routes
+#' to the count branch. Identity (\code{var_name} + \code{data_name}) is
+#' required to consult the registration; without it the helper is purely
+#' structural, as before.
+#'
 #' @param x A variable (vector).
-#' @return TRUE if the variable looks like a small-range count, FALSE
-#'   otherwise.
+#' @param var_name Optional variable name (with \code{data_name}) used to
+#'   consult a \code{jcount()} registration.
+#' @param data_name Optional data-frame name (with \code{var_name}) used to
+#'   consult a \code{jcount()} registration.
+#' @param override Optional per-call asserted role; \code{"count"} forces TRUE
+#'   (the per-call counterpart of a \code{jcount()} registration).
+#' @return TRUE if the variable is an asserted count, or looks like a
+#'   small-range count structurally; FALSE otherwise.
 #' @keywords internal
-.jst_is_count <- function(x) {
+.jst_is_count <- function(x, var_name = NULL, data_name = NULL,
+                          override = NULL) {
+
+  # -- Rule A: an asserted count (per-call override or jcount registration)
+  # wins over the structural range rules, catching conceptual counts that
+  # sit outside the structural 0-6 band.
+  if (identical(override, "count")) return(TRUE)
+  if (!is.null(var_name) && !is.null(data_name)) {
+    intent <- .jst_get_intent(data_name, var_name)
+    if (!is.null(intent) && identical(intent$kind, "count")) return(TRUE)
+  }
 
   if (haven::is.labelled(x))   return(FALSE)
   if (!is.numeric(x))          return(FALSE)
@@ -3941,6 +3966,33 @@
   c(.jst_class_from_role("categorical", x), list(source = "structural"))
 }
 
+
+#' Internal helper: is a variable's Numeric role user-asserted?
+#'
+#' TRUE when the classification resolver places the variable in the Numeric
+#' class (continuous or the Count subclass) via a NON-structural source -- a
+#' per-call override (numeric=/count=) or a registration (jnumeric/jcount).
+#' Used by the analysis functions to suppress the structural "seems
+#' categorical" hedge: that hedge is only a guess, and a user who has
+#' asserted a numeric role has already answered it. A structural (inferred)
+#' Numeric, or any Categorical (including a jdummy-asserted one), returns
+#' FALSE so the hedge fires as before -- the jdummy/jcorr/jdesc interaction
+#' is deliberately left to its own (parked) design.
+#'
+#' @param x A variable / data-frame column.
+#' @param var_name Optional variable name (with \code{data_name}) for
+#'   consulting a registration.
+#' @param data_name Optional data-frame name (with \code{var_name}) for
+#'   consulting a registration.
+#' @param override Optional per-call asserted role ("numeric", "count", or
+#'   "categorical").
+#' @return Logical scalar.
+#' @keywords internal
+.jst_role_asserted_numeric <- function(x, var_name = NULL, data_name = NULL,
+                                       override = NULL) {
+  res <- .jst_jstats_class(x, var_name, data_name, override = override)
+  !identical(res$source, "structural") && identical(res$class, "Numeric")
+}
 
 
 #' Internal helper: parse a recoding-map string into a structured rule list
@@ -6550,7 +6602,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # note. Defined once so both paths warn identically. `dat` is passed
   # explicitly because the data frame is reassigned by the pipeline below.
   .emit_good_notes <- function(v, dat) {
-    if (.jst_is_discrete_integer(dat[[v]], v, .jst_data_name)) {
+    if (.jst_is_discrete_integer(dat[[v]], v, .jst_data_name) &&
+        !.jst_role_asserted_numeric(dat[[v]], v, .jst_data_name)) {
       warning(paste0(v, " seems categorical. Descriptive statistics may ",
                      "not be meaningful."),
               call. = FALSE)
@@ -9055,7 +9108,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # haven-labelled variables with many distinct values (e.g. Income with
     # 10 broad categories) are NOT flagged, while small-range labelled or
     # whole-number 0-6 variables ARE flagged.
-    if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name)) {
+    if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
+        !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
       warning(paste0(v, " seems categorical. Pearson correlations assume ",
                      "continuous/interval data."),
               call. = FALSE)
@@ -9976,7 +10030,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \item The \code{categorical} argument forces variables without value
 #'     labels (or plain numeric variables) to be treated as categorical
 #'     (e.g. a numeric Program variable coded 1--4 from a CSV file).
-#'   \item The dependent variable is always treated as numeric.
+#'   \item The dependent variable is always modelled as numeric. Naming it in
+#'     \code{numeric} or \code{count} does not change that; it only asserts the
+#'     DV's role so the count / categorical-like note is silenced
+#'     (\code{numeric}) or stated definitively (\code{count}).
 #' }
 #'
 #' @param formula A model formula, e.g. \code{y ~ x1 + x2}.
@@ -10018,6 +10075,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
 #'   The first sorted unique value becomes the reference category. Use
 #'   \code{jdummy()} for control over the reference category.
+#' @param count Optional character vector of variable names to treat as counts
+#'   for this call (the per-call counterpart of \code{jcount()}). On the
+#'   dependent variable it speaks the count-regression caveat definitively
+#'   rather than as a hedge, and applies even when the variable sits outside
+#'   the structural 0-6 band. On an independent variable it behaves like
+#'   \code{numeric} (a count predictor enters the model as numeric). A
+#'   variable cannot be listed in both \code{count} and \code{categorical}.
 #' @param ci Logical or NULL. If TRUE, appends a 95% confidence interval for
 #'   each unstandardized coefficient (b) at the right of the coefficient table.
 #'   If NULL (default), defers to \code{joutput()}'s regression.ci setting
@@ -10128,7 +10192,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{jlogistic()} only, since they are the functions that produce
 #'   dummy-coded coefficient tables.
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
-                numeric = NULL, categorical = NULL,
+                numeric = NULL, categorical = NULL, count = NULL,
                 ci = NULL,
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...,
@@ -10278,6 +10342,28 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # structure, the user may have meant a different model. Warn but don't
   # stop — the user might genuinely want continuous treatment of a
   # 0/1-coded variable, for example, which is mathematically valid.
+  #
+  # Provenance gate (message-provenance sweep): a user-asserted numeric/count
+  # role on the DV silences or de-hedges the count and categorical-like notes
+  # below. dv_override captures a per-call count =/ numeric = naming the DV
+  # (count wins if both name it); the resolver also reads a jcount()/jnumeric()
+  # registration. The DV is modelled as numeric either way -- this affects
+  # only which note prints, not the model.
+  dv_override <- if (dv_name %in% count) {
+    "count"
+  } else if (dv_name %in% numeric) {
+    "numeric"
+  } else {
+    NULL
+  }
+  dv_res <- .jst_jstats_class(data[[dv_name]], dv_name, .jst_data_name,
+                              override = dv_override)
+  dv_asserted_count   <- !identical(dv_res$source, "structural") &&
+                         identical(dv_res$class, "Numeric") &&
+                         identical(dv_res$subclass, "Count")
+  dv_asserted_numeric <- !identical(dv_res$source, "structural") &&
+                         identical(dv_res$class, "Numeric") &&
+                         !identical(dv_res$subclass, "Count")
   dv_dich <- .jst_is_dichotomy(data[[dv_name]])
   if (dv_dich$is_dichotomy) {
     # Dichotomy-specific warning: jlogistic is the most likely intended
@@ -10313,30 +10399,45 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       )
     }
     warning(base_msg, tail_msg, call. = FALSE)
-  } else if (.jst_is_count(data[[dv_name]])) {
-    # Count DV: small-range non-negative integer starting at 0. Linear
-    # regression assumptions (normal residuals, constant variance) are
-    # usually violated by small counts. The package does not yet have
-    # count-model functions; for now, warn and let the model run.
-    n_unique <- length(unique(data[[dv_name]][!is.na(data[[dv_name]])]))
-    warning(
-      "'", dv_name, "' looks like a count variable (non-negative integer ",
-      "in the 0-6 range, ", n_unique, " unique values). Linear regression ",
-      "assumes a continuous DV with at least 6-7 distinct values for ",
-      "reliable inference. With small-range counts, the linear-regression ",
-      "assumptions of normally distributed residuals and constant variance ",
-      "are usually violated. Consider whether to (a) collapse '", dv_name,
-      "' into broader categories and treat it as ordinal, or (b) wait ",
-      "for count-model functions in a future package version (Poisson or ",
-      "negative binomial regression). The model will run, but interpret ",
-      "with caution.",
-      call. = FALSE
-    )
+  } else if (.jst_is_count(data[[dv_name]], dv_name, .jst_data_name,
+                           override = dv_override)) {
+    # Count DV. Three provenance cases (resolved above):
+    #   asserted count   -> de-hedged, definitive count caveat (and no "0-6
+    #                       range" claim, since an asserted count may sit
+    #                       outside the structural band);
+    #   asserted numeric -> suppressed (user declared continuous intent);
+    #   structural       -> today's hedged "looks like a count" warning.
+    if (dv_asserted_count) {
+      warning(
+        "'", dv_name, "' is currently listed as a count variable. Linear ",
+        "regression assumes a continuous DV.",
+        call. = FALSE
+      )
+    } else if (!dv_asserted_numeric) {
+      n_unique <- length(unique(data[[dv_name]][!is.na(data[[dv_name]])]))
+      warning(
+        "'", dv_name, "' looks like a count variable (non-negative integer ",
+        "in the 0-6 range, ", n_unique, " unique values). Linear regression ",
+        "assumes a continuous DV with at least 6-7 distinct values for ",
+        "reliable inference. With small-range counts, the linear-regression ",
+        "assumptions of normally distributed residuals and constant variance ",
+        "are usually violated. Consider whether to (a) collapse '", dv_name,
+        "' into broader categories and treat it as ordinal, or (b) wait ",
+        "for count-model functions in a future package version (Poisson or ",
+        "negative binomial regression). The model will run, but interpret ",
+        "with caution.",
+        call. = FALSE
+      )
+    }
+    # asserted numeric: hedge suppressed, no warning.
   } else if (.jst_is_discrete_integer(data[[dv_name]], dv_name,
-                                      .jst_data_name)) {
+                                      .jst_data_name) &&
+             !dv_asserted_numeric) {
     # Non-dichotomous but categorical-like (e.g. a Likert item used as DV).
-    # Three plausible alternatives: reverse formula, jlogistic (multinomial
-    # would apply but that's beyond current package scope), or jaov/jt.
+    # Suppressed when the DV's numeric role is user-asserted (jnumeric /
+    # per-call numeric=); otherwise three plausible alternatives: reverse
+    # formula, jlogistic (multinomial would apply but that's beyond current
+    # package scope), or jaov/jt.
     other_ivs <- all.vars(formula)[-1]
     reverse_formula <- paste0(other_ivs[1], " ~ ", dv_name)
     if (length(other_ivs) > 1) {
@@ -10366,17 +10467,22 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   iv_names <- setdiff(iv_names, expanded_originals)
 
   if (!is.null(numeric)) {
-    # Check if any numeric overrides refer to the DV
-    dv_in_numeric <- intersect(numeric, dv_name)
-    if (length(dv_in_numeric) > 0) {
-      message(
-        "Note: '", dv_in_numeric, "' is the dependent variable and is always ",
-        "treated as numeric.\n",
-        "The numeric argument is only needed for independent variables."
-      )
-      numeric <- setdiff(numeric, dv_name)
-      if (length(numeric) == 0) numeric <- NULL
-    }
+    # A numeric = naming the DV asserts a continuous DV for this call,
+    # silencing the count / categorical-like DV note (consumed into
+    # dv_override above). Modelling is unchanged (the DV is always numeric),
+    # so drop it from the IV-override set silently -- the absence of the
+    # note is the confirmation.
+    numeric <- setdiff(numeric, dv_name)
+    if (length(numeric) == 0) numeric <- NULL
+  }
+
+  if (!is.null(count)) {
+    # A count = naming the DV asserts a count DV for this call (consumed into
+    # dv_override above -> de-hedged count caveat). Drop it from the IV set;
+    # any remaining count = names are IV predictors, treated as numeric and
+    # validated below.
+    count <- setdiff(count, dv_name)
+    if (length(count) == 0) count <- NULL
   }
 
   if (!is.null(categorical)) {
@@ -10461,6 +10567,36 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     }
   }
 
+  if (!is.null(count)) {
+    # Remaining count = names (DV already consumed) are IV predictors; a count
+    # IV is just a numeric predictor, so validate exactly like numeric =.
+    bad <- setdiff(count, iv_names)
+    if (length(bad) > 0) {
+      bad_registered <- intersect(bad, expanded_originals)
+      bad_unknown    <- setdiff(bad, expanded_originals)
+      if (length(bad_registered) > 0) {
+        warning(
+          "count argument ",
+          paste0("'", bad_registered, "'", collapse = ", "),
+          " is ignored: already registered as a dummy variable via ",
+          "jdummy(), which takes precedence. To model as numeric, first ",
+          "clear the registration with: jdummy(NULL)",
+          call. = FALSE
+        )
+      }
+      if (length(bad_unknown) > 0) {
+        stop(
+          "count argument: ",
+          paste0("'", bad_unknown, "'", collapse = ", "),
+          " not found among independent variables in ", .jst_data_name,
+          ". Check for typos.",
+          call. = FALSE
+        )
+      }
+      count <- intersect(count, iv_names)
+    }
+  }
+
   # Check for conflicts between numeric and categorical
   if (!is.null(numeric) && !is.null(categorical)) {
     conflict <- intersect(numeric, categorical)
@@ -10468,6 +10604,20 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       stop(
         paste0("'", conflict, "'", collapse = ", "),
         " listed in both numeric and categorical arguments.",
+        call. = FALSE
+      )
+    }
+  }
+
+  # A variable cannot be both a count and a categorical (the assertions
+  # contradict). count and numeric both mean "numeric-like", so they are not
+  # treated as a conflict.
+  if (!is.null(count) && !is.null(categorical)) {
+    conflict <- intersect(count, categorical)
+    if (length(conflict) > 0) {
+      stop(
+        paste0("'", conflict, "'", collapse = ", "),
+        " listed in both count and categorical arguments.",
         call. = FALSE
       )
     }
@@ -10489,6 +10639,16 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         data[[v]] <- .jst_as_numeric(data[[v]])
       }
       # Plain numeric stays as-is
+      next
+    }
+
+    # --- Override: count = "Var" forces numeric (a count predictor enters
+    # the model as a numeric predictor; the Count subclass matters only for
+    # the DV count caveat, not for IV handling). ---
+    if (v %in% count) {
+      if (haven::is.labelled(data[[v]])) {
+        data[[v]] <- .jst_as_numeric(data[[v]])
+      }
       next
     }
 
@@ -10564,10 +10724,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
           )
         }
         # 0/1, factor, character, logical: no warning.
-      } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name)) {
+      } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
+                 !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
         # Non-dichotomous but categorical-like structure: emit the
         # informational warning so the user can confirm continuous
-        # treatment or switch to categorical.
+        # treatment or switch to categorical. Suppressed when the user has
+        # asserted a numeric/count role (jnumeric/jcount) -- the hedge is a
+        # guess they have already answered. (A per-call numeric=/count= IV
+        # short-circuits earlier, so only registration reaches this gate.)
         warning(
           v, " seems categorical. To treat it that way, register it with ",
           "jdummy() and rerun:\n\n",
@@ -11369,10 +11533,12 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
           )
         }
         # 0/1, factor, character, logical: no warning.
-      } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name)) {
+      } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
+                 !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
         # Non-dichotomous but categorical-like structure: emit the
         # informational warning so the user can confirm continuous
-        # treatment or switch to categorical.
+        # treatment or switch to categorical. Suppressed when the user has
+        # asserted a numeric/count role (jnumeric/jcount).
         warning(
           v, " seems categorical. To treat it that way, register it with ",
           "jdummy() and rerun:\n\n",

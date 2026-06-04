@@ -11,6 +11,7 @@ jlm(
   variable.id = NULL,
   numeric = NULL,
   categorical = NULL,
+  count = NULL,
   ci = NULL,
   diagnostics = NULL,
   ref.categories = NULL,
@@ -50,6 +51,14 @@ be treated as categorical even if they lack value labels. For example,
 \code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
 The first sorted unique value becomes the reference category. Use
 \code{jdummy()} for control over the reference category.}
+
+\item{count}{Optional character vector of variable names to treat as counts
+for this call (the per-call counterpart of \code{jcount()}). On the
+dependent variable it speaks the count-regression caveat definitively
+rather than as a hedge, and applies even when the variable sits outside
+the structural 0-6 band. On an independent variable it behaves like
+\code{numeric} (a count predictor enters the model as numeric). A
+variable cannot be listed in both \code{count} and \code{categorical}.}
 
 \item{ci}{Logical or NULL. If TRUE, appends a 95\% confidence interval for
 each unstandardized coefficient (b) at the right of the coefficient table.
@@ -170,7 +179,10 @@ with labels like "18 years", "19 years").
 \item The \code{categorical} argument forces variables without value
 labels (or plain numeric variables) to be treated as categorical
 (e.g. a numeric Program variable coded 1--4 from a CSV file).
-\item The dependent variable is always treated as numeric.
+\item The dependent variable is always modelled as numeric. Naming it in
+\code{numeric} or \code{count} does not change that; it only asserts the
+DV's role so the count / categorical-like note is silenced
+(\code{numeric}) or stated definitively (\code{count}).
 }
 }
 \examples{

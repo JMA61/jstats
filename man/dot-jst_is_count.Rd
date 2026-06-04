@@ -4,14 +4,23 @@
 \alias{.jst_is_count}
 \title{Internal helper: count-variable classifier}
 \usage{
-.jst_is_count(x)
+.jst_is_count(x, var_name = NULL, data_name = NULL, override = NULL)
 }
 \arguments{
 \item{x}{A variable (vector).}
+
+\item{var_name}{Optional variable name (with \code{data_name}) used to
+consult a \code{jcount()} registration.}
+
+\item{data_name}{Optional data-frame name (with \code{var_name}) used to
+consult a \code{jcount()} registration.}
+
+\item{override}{Optional per-call asserted role; \code{"count"} forces TRUE
+(the per-call counterpart of a \code{jcount()} registration).}
 }
 \value{
-TRUE if the variable looks like a small-range count, FALSE
-otherwise.
+TRUE if the variable is an asserted count, or looks like a
+small-range count structurally; FALSE otherwise.
 }
 \description{
 Returns TRUE when a variable's values fit the structural pattern of a
@@ -49,5 +58,14 @@ Detection criteria, all required:
 \item maximum value <= 6
 \item at least 2 non-NA values
 }
+
+Registered intent overrides the structural rules ("Rule A"). When the
+variable has been registered as a count via \code{jcount()}, or a per-call
+\code{override = "count"} is supplied, this helper returns TRUE regardless
+of the structural range checks, so a conceptual count outside the 0-6 band
+(e.g. a 0-30 victimization tally a user has declared a count) still routes
+to the count branch. Identity (\code{var_name} + \code{data_name}) is
+required to consult the registration; without it the helper is purely
+structural, as before.
 }
 \keyword{internal}
