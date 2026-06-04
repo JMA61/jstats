@@ -4,24 +4,26 @@
 \alias{jdummy}
 \title{Register categorical variables for dummy coding in regression}
 \usage{
-jdummy(data, var, ref = "first", show = FALSE, remove = FALSE)
+jdummy(data, ..., ref = "first", show = FALSE, remove = FALSE)
 }
 \arguments{
 \item{data}{A data frame, or omit to use the \code{juse()} default.
 Pass \code{NULL} to clear all registrations.}
 
-\item{var}{Unquoted variable name to register. Omit (along with data)
-to display all current registrations.}
+\item{...}{One or more unquoted variable names to register. Omit (along
+with data) to display all current registrations.}
 
 \item{ref}{The reference category (excluded from the regression model).
 Can be a numeric code, a quoted label name, or \code{first}
-(default) or \code{last}.}
+(default) or \code{last}. Applied to every variable named in the call;
+to use different reference categories, register the variables in
+separate calls.}
 
 \item{show}{Logical. If \code{TRUE}, prints the dummy coding scheme
 table showing the pattern of 0s and 1s. Default is \code{FALSE}.}
 
 \item{remove}{Logical. If \code{TRUE}, removes the registration for
-the specified variable. Default is \code{FALSE}.}
+the specified variable(s). Default is \code{FALSE}.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect.
@@ -29,7 +31,9 @@ Invisibly returns \code{NULL}. Called for its side effect.
 \description{
 \code{jdummy()} registers a categorical variable so that \code{jlm()}
 automatically expands it into dummy (indicator) variables when it appears
-in a regression formula. The original data frame is never modified.
+in a regression formula. The original data frame is never modified. Several
+variables can be registered in one call; the \code{ref} setting then applies
+to each of them.
 
 Registrations are stored per dataset, so switching \code{juse()} between
 datasets preserves each dataset's registrations independently.
@@ -38,6 +42,7 @@ datasets preserves each dataset's registrations independently.
 \donttest{
 juse(mtcars)
 jdummy(cyl)                          # Register, first category as reference
+jdummy(cyl, gear)                    # Register several at once
 jdummy(cyl, ref = "last")            # Last category as reference
 jdummy(cyl, ref = 6)                 # Reference by numeric code
 # For haven-labelled variables, use the label name:

@@ -8,7 +8,9 @@ jcount(data, ..., remove = FALSE)
 }
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{\link{juse}} default.
-\code{jcount(NULL)} clears all count registrations across data frames.}
+\code{jcount(NULL)} clears all count registrations across data frames.
+Called with no arguments, \code{jcount()} lists the session's numeric and
+count registrations.}
 
 \item{...}{One or more unquoted variable names to register.}
 
@@ -41,6 +43,7 @@ df <- data.frame(arrests = c(0, 1, 2, 0, 3, 1, 0, 12),
                  age      = c(21, 34, 45, 29, 51, 38, 26, 60))
 jcount(df, arrests)                 # treat as a count (here 0-12)
 jcount(df, arrests, remove = TRUE)
+jcount()                            # list all registrations
 jcount(NULL)                        # clear all count registrations
 }
 \seealso{

@@ -13,7 +13,9 @@ jscreen(
   value.id = NULL,
   types = TRUE,
   issues = TRUE,
-  r.type = FALSE
+  r.type = FALSE,
+  stats = FALSE,
+  digits = NULL
 )
 }
 \arguments{
@@ -60,24 +62,40 @@ Default is FALSE: the storage type is expert detail (its main signal is
 "this variable carries value labels / came from SPSS or Stata"), so it
 is opt-in rather than shown by default. The returned data frame always
 includes it regardless of this setting.}
+
+\item{stats}{Logical or character. Adds central-tendency columns to the
+Variable Types table for numeric-like variables. FALSE (default) shows
+none; TRUE shows both Mean and Median; \code{"mean"} or \code{"median"}
+shows only that one. Numeric and Count variables show both; a numeric
+dichotomy shows its raw mean and a blank median; N-category and other
+non-numeric variables are blank. The returned data frame always includes
+Mean and Median regardless of this setting.}
+
+\item{digits}{Integer or NULL. Number of decimal places for the Mean and
+Median columns. NULL (default) defers to \code{joutput()}'s \code{digits}
+setting (default 3).}
 }
 \value{
 Invisibly returns a data frame of the screening results, with one
 row per variable and columns including the Base R type, the jstats
-\code{Class} and \code{SubClass}, distinct-value count, missing count
-and percentage, and the outlier count (NA for non-Numeric variables).
-The returned values are the raw counts; only the printed tables blank
-zeros and omit clean rows.
+\code{Class} and \code{SubClass}, the classification \code{Source}
+("registered" or "structural"), distinct-value count, missing count
+and percentage, the outlier count (NA for non-Numeric variables), and
+the \code{Mean} and \code{Median} (NA where not meaningful: Median is NA
+for dichotomies, and both are NA for non-numeric-like variables). The
+returned values are the raw counts; only the printed tables blank zeros
+and omit clean rows.
 }
 \description{
 Provides a quick overview of a data frame for screening. A red "Data
 Screening" title is printed first, then a short header block (case and
 variable counts, cases with missing data, variables with outliers),
 followed by up to three tables: a Variable Types table (Base R storage
-type, the jstats analysis-role class, an optional sub-class, and distinct-
-value counts), a Missing Data & Outliers table, and — when variable labels
-are shown — a Variable Labels table last. Handles haven-labelled and
-date/time variables gracefully.
+type, the jstats analysis-role class, an optional sub-class, an optional
+classification source, distinct-value counts, and optional central-
+tendency columns), a Missing Data & Outliers table, and — when variable
+labels are shown — a Variable Labels table last. Handles haven-labelled
+and date/time variables gracefully.
 }
 \details{
 The jstats Class column reports how the package treats each variable in
@@ -88,6 +106,17 @@ are SD-screened and the Outliers cell is left blank for the rest. Zero
 counts are shown blank so only affected variables carry numbers; a column
 (or the whole Missing/Outliers table) is omitted entirely when nothing is
 flagged, and the header count lines explain the omission.
+
+When at least one variable's class comes from a registration (jnumeric,
+jcount, or jdummy) rather than the structural guess, a Source column
+appears reporting the deciding tier ("registered" or "structural") for
+every variable. Set \code{stats = TRUE} (or "mean" / "median") to add
+central-tendency columns for the numeric-like variables: Numeric and Count
+variables show Mean and Median, while a numeric dichotomy shows the raw
+mean of its stored codes and a blank median. A numeric dichotomy coded
+other than 0/1 (e.g. the 1/2 Group-4 coding) is flagged with a "*" on its
+sub-class cell, since its raw mean is not a proportion; the marker shows
+even when \code{stats} is off, surfacing the recode need.
 
 When variable names are supplied, only those variables are screened. When
 omitted, all variables in the data frame are screened. If a \code{subset}
@@ -101,6 +130,9 @@ jscreen(mtcars, outlier.sd = 2.5)
 
 # Show the Base R storage type column
 jscreen(mtcars, r.type = TRUE)
+
+# Add Mean and Median columns for numeric-like variables
+jscreen(mtcars, stats = TRUE)
 
 # Suppress tables (header block only)
 jscreen(mtcars, types = FALSE, issues = FALSE)

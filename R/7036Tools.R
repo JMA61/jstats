@@ -5138,6 +5138,64 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 }
 
 
+#' Internal helper: render a dummy coding-scheme table
+#'
+#' Single source of truth for the 0/1 dummy coding-scheme table shown by
+#' \code{jdummy()} -- on registration, on display-only inspection, and in the
+#' no-argument registration overview. Prints the identity-pattern table with
+#' the reference category starred, the reference footnote, and, when there are
+#' more than five categories and \code{show} is not "all", the truncation note.
+#' The caller prints the "Dummy Coding Scheme:" header before calling this.
+#'
+#' @param codes The category codes (numeric or character) in display order.
+#' @param labels The category labels parallel to \code{codes}.
+#' @param ref_idx Integer index of the reference category within \code{codes}.
+#' @param show The caller's \code{show} argument; "all" (any case) shows every
+#'   category, otherwise the first five.
+#'
+#' @return \code{invisible(NULL)}. Called for its printed side effect.
+#'
+#' @keywords internal
+.jst_print_dummy_scheme <- function(codes, labels, ref_idx, show) {
+  n_cats   <- length(codes)
+  show_all <- is.character(show) && tolower(show) == "all"
+  n_show   <- if (show_all) n_cats else min(n_cats, 5)
+
+  all_col_names <- character(n_show)
+  for (i in seq_len(n_show)) {
+    all_col_names[i] <- if (i == ref_idx) paste0(labels[i], "*") else labels[i]
+  }
+
+  row_labels <- character(n_show)
+  for (i in seq_len(n_show)) {
+    row_labels[i] <- if (i == ref_idx) {
+      paste0(codes[i], ": ", labels[i], "*")
+    } else {
+      paste0(codes[i], ": ", labels[i])
+    }
+  }
+
+  scheme <- matrix(0L, nrow = n_show, ncol = n_show)
+  for (i in seq_len(n_show)) scheme[i, i] <- 1L
+  scheme_df <- as.data.frame(scheme, stringsAsFactors = FALSE)
+  names(scheme_df)    <- all_col_names
+  rownames(scheme_df) <- row_labels
+
+  .jst_print_table(scheme_df,
+                   col.names     = all_col_names,
+                   row.names     = TRUE,
+                   indent        = 4,
+                   header.indent = 4)
+
+  cat("\n    * Reference category\n")
+  if (n_cats > 5 && !show_all) {
+    cat("    (Showing first 5 of ", n_cats,
+        " categories \u2014 use show = \"all\" for complete table)\n", sep = "")
+  }
+  invisible(NULL)
+}
+
+
 # -- jdummy -------------------------------------------------------------------
 
 #' Register categorical variables for dummy coding in regression
@@ -5145,22 +5203,26 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' @description
 #' \code{jdummy()} registers a categorical variable so that \code{jlm()}
 #' automatically expands it into dummy (indicator) variables when it appears
-#' in a regression formula. The original data frame is never modified.
+#' in a regression formula. The original data frame is never modified. Several
+#' variables can be registered in one call; the \code{ref} setting then applies
+#' to each of them.
 #'
 #' Registrations are stored per dataset, so switching \code{juse()} between
 #' datasets preserves each dataset's registrations independently.
 #'
 #' @param data A data frame, or omit to use the \code{juse()} default.
 #'   Pass \code{NULL} to clear all registrations.
-#' @param var Unquoted variable name to register. Omit (along with data)
-#'   to display all current registrations.
+#' @param ... One or more unquoted variable names to register. Omit (along
+#'   with data) to display all current registrations.
 #' @param ref The reference category (excluded from the regression model).
 #'   Can be a numeric code, a quoted label name, or \code{first}
-#'   (default) or \code{last}.
+#'   (default) or \code{last}. Applied to every variable named in the call;
+#'   to use different reference categories, register the variables in
+#'   separate calls.
 #' @param show Logical. If \code{TRUE}, prints the dummy coding scheme
 #'   table showing the pattern of 0s and 1s. Default is \code{FALSE}.
 #' @param remove Logical. If \code{TRUE}, removes the registration for
-#'   the specified variable. Default is \code{FALSE}.
+#'   the specified variable(s). Default is \code{FALSE}.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
@@ -5168,6 +5230,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' \donttest{
 #' juse(mtcars)
 #' jdummy(cyl)                          # Register, first category as reference
+#' jdummy(cyl, gear)                    # Register several at once
 #' jdummy(cyl, ref = "last")            # Last category as reference
 #' jdummy(cyl, ref = 6)                 # Reference by numeric code
 #' # For haven-labelled variables, use the label name:
@@ -5184,7 +5247,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jdummy <- function(data, var, ref = "first", show = FALSE,
+jdummy <- function(data, ..., ref = "first", show = FALSE,
                    remove = FALSE) {
 
   default_name <- getOption(".jst_default_data", default = NULL)
@@ -5196,7 +5259,7 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
   # variable names), with the juse() default marked. jdummy holds a list of
   # registrations per frame and has no active/inactive toggle, so there is
   # no off/on state to show here (unlike jsubset / jcomplete).
-  if (missing(data) && missing(var)) {
+  if (missing(data) && ...length() == 0L) {
     reg <- getOption(".jst_dummy", default = list())
     reg <- reg[vapply(reg, function(x) !is.null(x) && length(x) > 0L,
                       logical(1))]
@@ -5235,47 +5298,8 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 
       # Show coding scheme if requested
       if (!identical(show, FALSE)) {
-        n_cats <- length(regn$codes)
-        show_all <- is.character(show) && tolower(show) == "all"
-        n_show <- if (show_all) n_cats else min(n_cats, 5)
-
-        all_col_names <- character(n_show)
-        for (i in seq_len(n_show)) {
-          if (i == regn$ref_idx) {
-            all_col_names[i] <- paste0(regn$labels[i], "*")
-          } else {
-            all_col_names[i] <- regn$labels[i]
-          }
-        }
-
-        row_labels <- character(n_show)
-        for (i in 1:n_show) {
-          if (i == regn$ref_idx) {
-            row_labels[i] <- paste0(regn$codes[i], ": ", regn$labels[i], "*")
-          } else {
-            row_labels[i] <- paste0(regn$codes[i], ": ", regn$labels[i])
-          }
-        }
-
-        scheme <- matrix(0L, nrow = n_show, ncol = n_show)
-        for (i in 1:n_show) scheme[i, i] <- 1L
-
-        scheme_df <- as.data.frame(scheme, stringsAsFactors = FALSE)
-        names(scheme_df) <- all_col_names
-        rownames(scheme_df) <- row_labels
-
         cat("\n  Dummy Coding Scheme:\n\n")
-        .jst_print_table(scheme_df,
-                         col.names = all_col_names,
-                         row.names = TRUE,
-                         indent = 4,
-                         header.indent = 4)
-        cat("\n    * Reference category\n")
-
-        if (n_cats > 5 && !show_all) {
-          cat("    (Showing first 5 of ", n_cats,
-              " categories \u2014 use show = \"all\" for complete table)\n", sep = "")
-        }
+        .jst_print_dummy_scheme(regn$codes, regn$labels, regn$ref_idx, show)
       }
       cat("\n")
     }
@@ -5319,9 +5343,9 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 
   # -- Resolve the first argument via the standard helper -------------------
   # Three modes possible at this point:
-  #   explicit            : jdummy(SampleData, ...)        - data is a frame
-  #   default             : jdummy(, var)                  - leading-comma form
-  #   symbol_with_default : jdummy(var, ...)               - bare-symbol form
+  #   explicit            : jdummy(SampleData, A, B)        - data is a frame
+  #   default             : jdummy(, A, B)                  - leading-comma form
+  #   symbol_with_default : jdummy(A, B)                    - bare-symbol form
   arg1 <- .jst_resolve_first_arg(
     data_sub      = raw_data,
     data_missing  = missing(data),
@@ -5334,62 +5358,61 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
   .jst_data_name    <- arg1$name
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
-  # -- A' check: when data was omitted, the var slot must not be filled
-  # positionally. Named args (ref, show, remove) are always fine.
-  if (arg1$mode == "symbol_with_default" && !missing(var)) {
-    displaced <- deparse(substitute(var))
-    stop("jdummy(): when the data argument is omitted, all subsequent arguments must be named. ",
-         "Use jdummy(", deparse(arg1$first_arg_sub),
-         ", ref = ", displaced, ")",
-         call. = FALSE)
-  }
-
-  # -- Determine var_name based on mode -------------------------------------
+  # -- Collect variable names (multivariable) -------------------------------
+  # jdummy accepts one or more variables. In symbol_with_default mode the first
+  # argument is itself a variable (data came from the juse() default), so fold
+  # it back in ahead of the dots -- the same pattern jnumeric()/jcount() use.
+  # ref/show/remove sit after the dots and are therefore always named, which
+  # removes the need for the old positional-argument guard.
+  variables <- rlang::enquos(...)
   if (arg1$mode == "symbol_with_default") {
-    var_name <- deparse(arg1$first_arg_sub)
-  } else if (!missing(var)) {
-    var_name <- deparse(substitute(var))
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+  var_names <- if (length(variables) > 0L) {
+    unname(vapply(variables, rlang::quo_name, character(1)))
   } else {
-    var_name <- NULL  # only reachable in the clear-only path below
+    character(0)
   }
 
-  # Treat jdummy(SampleData, NULL) as a per-dataset clear, matching the
-  # convention used by jsubset(SampleData, NULL) and jcomplete(SampleData,
-  # NULL). The clear-all form jdummy(NULL) is handled earlier and never
-  # reaches this point.
-  if (identical(var_name, "NULL")) {
+  # -- jdummy(data, NULL) -- per-dataset clear ------------------------------
+  # A lone NULL in the variable slot clears this dataset's registrations,
+  # matching jsubset(data, NULL) / jcomplete(data, NULL). The clear-all form
+  # jdummy(NULL) is handled earlier and never reaches this point.
+  if (identical(var_names, "NULL")) {
     existing <- .jst_get_dummy(.jst_data_name)
     if (is.null(existing) || length(existing) == 0) {
       message("No dummy registrations to clear for ", .jst_data_name, ".")
     } else {
-      var_names <- vapply(existing, function(r) r$var_name, character(1))
+      cleared <- vapply(existing, function(r) r$var_name, character(1))
       .jst_set_dummy(.jst_data_name, NULL)
-      cat("Cleared ", length(var_names),
-          " dummy registration", if (length(var_names) == 1L) "" else "s",
+      cat("Cleared ", length(cleared),
+          " dummy registration", if (length(cleared) == 1L) "" else "s",
           " from ", .jst_data_name, ": ",
-          paste(var_names, collapse = ", "), ".\n", sep = "")
+          paste(cleared, collapse = ", "), ".\n", sep = "")
     }
     return(invisible(NULL))
   }
 
-  # If we got here without a var, the user passed neither data alone (above
-  # would have hit the clear path or returned), nor a usable variable name.
-  if (is.null(var_name)) {
+  # No usable variable: data supplied but no variable named.
+  if (length(var_names) == 0L) {
     stop("jdummy(): no variable supplied. ",
          "Use jdummy(VarName) to register, jdummy(VarName, remove = TRUE) ",
          "to remove, or jdummy(NULL) to clear all registrations.",
          call. = FALSE)
   }
 
-  .jst_check_vars(data, var_name, .jst_data_name)
+  .jst_check_vars(data, var_names, .jst_data_name)
 
-  # -- jdummy(var, show = ...) on already-registered var: display only ------
-  # If the user calls jdummy() naming an already-registered variable and
-  # passes show = ... but does NOT pass ref = ..., treat the call as a
-  # display-only request. This prevents accidentally clobbering a non-
-  # default reference when the user just wants to inspect the existing
-  # registration with the structural-table view.
-  if (!identical(show, FALSE) && missing(ref) && !remove) {
+  # -- jdummy(var, show = ...) on an already-registered var: display only ----
+  # Single-variable inspection convenience: naming one already-registered
+  # variable with show = ... but no ref = ... displays the existing scheme
+  # without re-registering (which would clobber a non-default reference).
+  # With two or more variables the call always registers.
+  if (length(var_names) == 1L && !identical(show, FALSE) &&
+      missing(ref) && !remove) {
+    var_name <- var_names[1L]
     ds <- .jst_get_dummy(.jst_data_name)
     if (!is.null(ds)) {
       existing_idx <- which(vapply(ds, function(r) r$var_name == var_name,
@@ -5397,205 +5420,184 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
       if (length(existing_idx) > 0) {
         reg <- ds[[existing_idx[1]]]
 
-        # Print the existing registration summary
         .cat_red("Dummy Variable Registration\n")
         if (.jst_default_used) .jst_default_note(.jst_data_name, extra_newline = TRUE)
         cat("  Variable: ", reg$var_name, " (", reg$var_type, ")\n", sep = "")
-
-        # ref_label is stored in canonical form from the original registration
         cat("  Reference category: ", reg$ref_label, "\n", sep = "")
         cat("  Dummy variables: ", paste(reg$dummy_names, collapse = ", "),
             "\n", sep = "")
         cat("  Cases: ", reg$n_total, " (", reg$n_missing, " missing)\n",
             sep = "")
 
-        # Show coding scheme using stored codes/labels/ref_idx
         cat("\n  Dummy Coding Scheme:\n\n")
-        n_cats   <- length(reg$codes)
-        show_all <- is.character(show) && tolower(show) == "all"
-        n_show   <- if (show_all) n_cats else min(n_cats, 5)
-
-        all_col_names <- character(n_show)
-        for (i in seq_len(n_show)) {
-          if (i == reg$ref_idx) {
-            all_col_names[i] <- paste0(reg$labels[i], "*")
-          } else {
-            all_col_names[i] <- reg$labels[i]
-          }
-        }
-
-        row_labels <- character(n_show)
-        for (i in 1:n_show) {
-          if (i == reg$ref_idx) {
-            row_labels[i] <- paste0(reg$codes[i], ": ", reg$labels[i], "*")
-          } else {
-            row_labels[i] <- paste0(reg$codes[i], ": ", reg$labels[i])
-          }
-        }
-
-        scheme <- matrix(0L, nrow = n_show, ncol = n_show)
-        for (i in 1:n_show) scheme[i, i] <- 1L
-        scheme_df <- as.data.frame(scheme, stringsAsFactors = FALSE)
-        names(scheme_df)    <- all_col_names
-        rownames(scheme_df) <- row_labels
-
-        .jst_print_table(scheme_df,
-                         col.names = all_col_names,
-                         row.names = TRUE,
-                         indent = 4,
-                         header.indent = 4)
-
-        cat("\n    * Reference category\n")
-        if (n_cats > 5 && !show_all) {
-          cat("    (Showing first 5 of ", n_cats,
-              " categories \u2014 use show = \"all\" for complete table)\n",
-              sep = "")
-        }
+        .jst_print_dummy_scheme(reg$codes, reg$labels, reg$ref_idx, show)
         cat("\n")
         return(invisible(NULL))
       }
     }
-    # If no existing registration, fall through to register-and-display.
+    # No existing registration -- fall through to register-and-display.
   }
 
-  # -- jdummy(var, remove = TRUE) — remove one registration -----------------
+  # -- jdummy(..., remove = TRUE) -- remove registrations -------------------
   if (remove) {
-    ds <- .jst_get_dummy(.jst_data_name)
+    ds      <- .jst_get_dummy(.jst_data_name)
+    removed <- character(0)
     if (!is.null(ds)) {
-      ds <- ds[!vapply(ds, function(r) r$var_name == var_name, logical(1))]
+      drop    <- vapply(ds, function(r) r$var_name %in% var_names, logical(1))
+      removed <- vapply(ds[drop], function(r) r$var_name, character(1))
+      ds      <- ds[!drop]
       if (length(ds) == 0) ds <- NULL
       .jst_set_dummy(.jst_data_name, ds)
     }
-    message("Dummy registration removed for '", var_name, "' in ", .jst_data_name, ".")
+    if (length(removed) > 0) {
+      message("Dummy registration removed for ",
+              paste0("'", removed, "'", collapse = ", "), " in ",
+              .jst_data_name, ".")
+    } else {
+      message("No dummy registration to remove for ",
+              paste0("'", var_names, "'", collapse = ", "), " in ",
+              .jst_data_name, ".")
+    }
     return(invisible(NULL))
   }
 
-  # -- Build registration via central helper --------------------------------
-  # All naming logic lives in .jst_make_dummy_names() so that jdummy and
-  # the auto-categorical pathways in jlm/jlogistic produce identical
-  # column names for the same input.
-  col <- data[[var_name]]
-  built <- .jst_make_dummy_names(col, var_name, ref = ref)
-
-  n_total   <- length(col)
-  n_missing <- sum(is.na(col))
-
-  # Print any informational notes from the helper (e.g. "codes used as
-  # fallback because labels were not descriptive"). Warnings are deferred
-  # until after the registration summary so the user sees the full result
-  # first.
-  for (n in built$notes) cat(n, "\n", sep = "")
-
-  # Store registration
-  reg <- list(
-    var_name    = var_name,
-    var_type    = built$var_type,
-    codes       = built$codes,
-    labels      = built$labels,
-    ref_idx     = built$ref_idx,
-    ref_code    = built$ref_code,
-    ref_label   = built$ref_label,
-    dummy_names = built$dummy_names,
-    non_ref_idx = built$non_ref_idx,
-    n_total     = n_total,
-    n_missing   = n_missing
-  )
-
-  ds <- .jst_get_dummy(.jst_data_name)
-  if (is.null(ds)) ds <- list()
-
-  # Replace existing registration for this variable, or append
-  existing_idx <- which(vapply(ds, function(r) r$var_name == var_name, logical(1)))
-  if (length(existing_idx) > 0) {
-    ds[[existing_idx[1]]] <- reg
-  } else {
-    ds[[length(ds) + 1]] <- reg
-  }
-  .jst_set_dummy(.jst_data_name, ds)
-
-  # Mutual exclusion: a variable becoming a dummy drops any numeric/count
-  # intent registration it carried, so the .jst_dummy and .jst_registry stores
-  # stay disjoint per variable (the resolver reads both as tier 2).
-  .cleared_kind <- .jst_clear_intent_var(.jst_data_name, var_name)
-  if (!is.null(.cleared_kind)) {
-    message("Reclassified: '", var_name, "' (",
-            .jst_intent_label(.cleared_kind), " -> dummy).")
-  }
-
-  # Print registration summary. ref_label and dummy_names are already in
-  # canonical form from .jst_make_dummy_names() — no further processing
-  # needed here.
+  # -- Register one or more variables ---------------------------------------
+  # The red header and the juse() default note print once; each variable then
+  # gets its own block. The standard-tier persist reminder prints once after
+  # all registrations, and any deferred naming warnings are emitted last so
+  # they carry full context. (Session 82: multivariable + persist reminder.)
   .cat_red("Dummy Variable Registration\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name, extra_newline = TRUE)
-  cat("  Variable: ", var_name, " (", built$var_type, ")\n", sep = "")
-  cat("  Reference category: ", built$ref_label, "\n", sep = "")
-  cat("  Dummy variables: ", paste(built$dummy_names, collapse = ", "),
-      "\n", sep = "")
-  cat("  Cases: ", n_total, " (", n_missing, " missing)\n", sep = "")
 
-  # Pull short locals out of `built` to keep the show=TRUE block readable.
-  codes      <- built$codes
-  labels_vec <- built$labels
-  ref_idx    <- built$ref_idx
-  n_cats     <- length(codes)
+  deferred <- character(0)
+  for (var_name in var_names) {
+    col   <- data[[var_name]]
+    built <- .jst_make_dummy_names(col, var_name, ref = ref)
 
-  # Show coding scheme if requested
-  if (!identical(show, FALSE)) {
-    cat("\n  Dummy Coding Scheme:\n\n")
+    n_total   <- length(col)
+    n_missing <- sum(is.na(col))
 
-    show_all <- is.character(show) && tolower(show) == "all"
-    n_show   <- if (show_all) n_cats else min(n_cats, 5)
+    # Informational notes from the helper (e.g. labels not descriptive).
+    for (n in built$notes) cat(n, "\n", sep = "")
 
-    # Build column names — truncated to n_show
-    all_col_names <- character(n_show)
-    for (i in seq_len(n_show)) {
-      if (i == ref_idx) {
-        all_col_names[i] <- paste0(labels_vec[i], "*")
-      } else {
-        all_col_names[i] <- labels_vec[i]
-      }
+    reg <- list(
+      var_name    = var_name,
+      var_type    = built$var_type,
+      codes       = built$codes,
+      labels      = built$labels,
+      ref_idx     = built$ref_idx,
+      ref_code    = built$ref_code,
+      ref_label   = built$ref_label,
+      dummy_names = built$dummy_names,
+      non_ref_idx = built$non_ref_idx,
+      n_total     = n_total,
+      n_missing   = n_missing
+    )
+
+    ds <- .jst_get_dummy(.jst_data_name)
+    if (is.null(ds)) ds <- list()
+    existing_idx <- which(vapply(ds, function(r) r$var_name == var_name,
+                                 logical(1)))
+    if (length(existing_idx) > 0) {
+      ds[[existing_idx[1]]] <- reg
+    } else {
+      ds[[length(ds) + 1]] <- reg
+    }
+    .jst_set_dummy(.jst_data_name, ds)
+
+    # Mutual exclusion: becoming a dummy drops any numeric/count intent so the
+    # .jst_dummy and .jst_registry stores stay disjoint per variable.
+    .cleared_kind <- .jst_clear_intent_var(.jst_data_name, var_name)
+    if (!is.null(.cleared_kind)) {
+      message("Reclassified: '", var_name, "' (",
+              .jst_intent_label(.cleared_kind), " -> dummy).")
     }
 
-    # Build row labels — add asterisk to reference category
-    row_labels <- character(n_show)
-    for (i in 1:n_show) {
-      if (i == ref_idx) {
-        row_labels[i] <- paste0(codes[i], ": ", labels_vec[i], "*")
-      } else {
-        row_labels[i] <- paste0(codes[i], ": ", labels_vec[i])
-      }
+    cat("  Variable: ", var_name, " (", built$var_type, ")\n", sep = "")
+    cat("  Reference category: ", built$ref_label, "\n", sep = "")
+    cat("  Dummy variables: ", paste(built$dummy_names, collapse = ", "),
+        "\n", sep = "")
+    cat("  Cases: ", n_total, " (", n_missing, " missing)\n", sep = "")
+
+    if (!identical(show, FALSE)) {
+      cat("\n  Dummy Coding Scheme:\n\n")
+      .jst_print_dummy_scheme(built$codes, built$labels, built$ref_idx, show)
     }
 
-    # Build matrix of 0s and 1s
-    scheme <- matrix(0L, nrow = n_show, ncol = n_show)
-    for (i in 1:n_show) {
-      scheme[i, i] <- 1L
-    }
-
-    scheme_df <- as.data.frame(scheme, stringsAsFactors = FALSE)
-    names(scheme_df) <- all_col_names
-    rownames(scheme_df) <- row_labels
-
-    .jst_print_table(scheme_df,
-                     col.names = all_col_names,
-                     row.names = TRUE,
-                     indent = 4,
-                     header.indent = 4)
-
-    cat("\n    * Reference category\n")
-
-    if (n_cats > 5 && !show_all) {
-      cat("    (Showing first 5 of ", n_cats,
-          " categories \u2014 use show = \"all\" for complete table)\n", sep = "")
-    }
+    cat("\n")
+    deferred <- c(deferred, built$warnings_msg)
   }
 
+  # Persist reminder (standard-tier; suppressed at minimal output).
+  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    message("Registrations are stored for this session only. To keep them ",
+            "across sessions, save the data frame in R native format (.rds), ",
+            "e.g. jsave(", .jst_data_name, ", \"", .jst_data_name, ".rds\").")
+  }
+
+  for (w in deferred) warning(w, call. = FALSE)
+
+  invisible(NULL)
+}
+
+
+#' Internal helper: render the session-wide numeric/count registration status
+#'
+#' Backs the no-argument calls \code{jnumeric()} and \code{jcount()}, which
+#' both show the same unified view of the \code{.jst_registry} notebook
+#' (numeric and count intents, each tagged by kind) across all data frames.
+#' Dummy registrations live in a separate store and are shown by
+#' \code{jdummy()}. Mirrors the jdummy no-argument overview layout: a single
+#' registered frame renders a red header plus one line per variable; two or
+#' more frames render a header plus one indented line per frame, with the
+#' \code{juse()} default marked.
+#'
+#' @return \code{invisible(NULL)}. Called for its message side effect.
+#'
+#' @keywords internal
+.jst_registry_status <- function() {
+  default_name <- getOption(".jst_default_data", default = NULL)
+  all_reg <- getOption(".jst_registry", default = list())
+  all_reg <- all_reg[vapply(all_reg, function(x) !is.null(x) && length(x) > 0L,
+                            logical(1))]
+  if (length(all_reg) == 0L) {
+    message("No numeric or count registrations in this session.")
+    return(invisible(NULL))
+  }
+  dnames <- names(all_reg)
+
+  # Render one frame's records as "var (kind)" pieces.
+  frame_items <- function(recs) {
+    vapply(recs, function(r) paste0(r$var_name, " (",
+                                    .jst_intent_label(r$kind), ")"),
+           character(1))
+  }
+
+  if (length(all_reg) > 1L) {
+    lines <- vapply(seq_along(all_reg), function(i) {
+      items <- frame_items(all_reg[[i]])
+      tag   <- if (identical(dnames[i], default_name)) "  [default]" else ""
+      paste0("  - ", dnames[i], ": ", paste(items, collapse = ", "), tag)
+    }, character(1))
+    message("jstats registrations (", length(all_reg), " data frames):\n",
+            paste(lines, collapse = "\n"))
+    return(invisible(NULL))
+  }
+
+  # Single frame: red header plus one line per registered variable.
+  frame_name <- dnames[1L]
+  recs       <- all_reg[[1L]]
+  .cat_red("Variable Registrations\n")
+  if (identical(frame_name, default_name)) {
+    .jst_default_note(frame_name, extra_newline = TRUE)
+  } else {
+    .cat_yellow(paste0("Data frame: ", frame_name, "\n"))
+    cat("\n")
+  }
+  for (r in recs) {
+    cat("  ", r$var_name, ": ", .jst_intent_label(r$kind), "\n", sep = "")
+  }
   cat("\n")
-
-  # Emit any deferred warnings (e.g. long names) after the user has seen
-  # the full registration so the warning has context.
-  for (w in built$warnings_msg) warning(w, call. = FALSE)
-
   invisible(NULL)
 }
 
@@ -5620,6 +5622,8 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #'
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
 #'   \code{jnumeric(NULL)} clears all numeric registrations across data frames.
+#'   Called with no arguments, \code{jnumeric()} lists the session's numeric
+#'   and count registrations.
 #' @param ... One or more unquoted variable names to register.
 #' @param remove Logical; if \code{TRUE}, remove the numeric registration for
 #'   the named variables instead of adding it.
@@ -5632,9 +5636,12 @@ jdummy <- function(data, var, ref = "first", show = FALSE,
 #' jnumeric(df, attitude)              # treat the 1-5 item as continuous
 #' jnumeric(df, attitude, score)       # multiple variables at once
 #' jnumeric(df, attitude, remove = TRUE)
+#' jnumeric()                          # list all registrations
 #' jnumeric(NULL)                      # clear all numeric registrations
 #' @export
 jnumeric <- function(data, ..., remove = FALSE) {
+  # jnumeric() with no arguments: show the session-wide registry status.
+  if (missing(data) && ...length() == 0L) return(.jst_registry_status())
   raw_data <- if (!missing(data)) substitute(data) else NULL
   if (!missing(data) && is.null(raw_data)) return(.jst_clear_all_intent("numeric"))
 
@@ -5685,6 +5692,8 @@ jnumeric <- function(data, ..., remove = FALSE) {
 #'
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
 #'   \code{jcount(NULL)} clears all count registrations across data frames.
+#'   Called with no arguments, \code{jcount()} lists the session's numeric and
+#'   count registrations.
 #' @param ... One or more unquoted variable names to register.
 #' @param remove Logical; if \code{TRUE}, remove the count registration for the
 #'   named variables instead of adding it.
@@ -5696,9 +5705,12 @@ jnumeric <- function(data, ..., remove = FALSE) {
 #'                  age      = c(21, 34, 45, 29, 51, 38, 26, 60))
 #' jcount(df, arrests)                 # treat as a count (here 0-12)
 #' jcount(df, arrests, remove = TRUE)
+#' jcount()                            # list all registrations
 #' jcount(NULL)                        # clear all count registrations
 #' @export
 jcount <- function(data, ..., remove = FALSE) {
+  # jcount() with no arguments: show the session-wide registry status.
+  if (missing(data) && ...length() == 0L) return(.jst_registry_status())
   raw_data <- if (!missing(data)) substitute(data) else NULL
   if (!missing(data) && is.null(raw_data)) return(.jst_clear_all_intent("count"))
 
@@ -7396,10 +7408,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' Screening" title is printed first, then a short header block (case and
 #' variable counts, cases with missing data, variables with outliers),
 #' followed by up to three tables: a Variable Types table (Base R storage
-#' type, the jstats analysis-role class, an optional sub-class, and distinct-
-#' value counts), a Missing Data & Outliers table, and — when variable labels
-#' are shown — a Variable Labels table last. Handles haven-labelled and
-#' date/time variables gracefully.
+#' type, the jstats analysis-role class, an optional sub-class, an optional
+#' classification source, distinct-value counts, and optional central-
+#' tendency columns), a Missing Data & Outliers table, and — when variable
+#' labels are shown — a Variable Labels table last. Handles haven-labelled
+#' and date/time variables gracefully.
 #'
 #' The jstats Class column reports how the package treats each variable in
 #' analyses (Numeric, Categorical, Numbers-as-text, Date-time, Unsupported),
@@ -7409,6 +7422,17 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' counts are shown blank so only affected variables carry numbers; a column
 #' (or the whole Missing/Outliers table) is omitted entirely when nothing is
 #' flagged, and the header count lines explain the omission.
+#'
+#' When at least one variable's class comes from a registration (jnumeric,
+#' jcount, or jdummy) rather than the structural guess, a Source column
+#' appears reporting the deciding tier ("registered" or "structural") for
+#' every variable. Set \code{stats = TRUE} (or "mean" / "median") to add
+#' central-tendency columns for the numeric-like variables: Numeric and Count
+#' variables show Mean and Median, while a numeric dichotomy shows the raw
+#' mean of its stored codes and a blank median. A numeric dichotomy coded
+#' other than 0/1 (e.g. the 1/2 Group-4 coding) is flagged with a "*" on its
+#' sub-class cell, since its raw mean is not a proportion; the marker shows
+#' even when \code{stats} is off, surfacing the recode need.
 #'
 #' When variable names are supplied, only those variables are screened. When
 #' omitted, all variables in the data frame are screened. If a \code{subset}
@@ -7450,13 +7474,26 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'   "this variable carries value labels / came from SPSS or Stata"), so it
 #'   is opt-in rather than shown by default. The returned data frame always
 #'   includes it regardless of this setting.
+#' @param stats Logical or character. Adds central-tendency columns to the
+#'   Variable Types table for numeric-like variables. FALSE (default) shows
+#'   none; TRUE shows both Mean and Median; \code{"mean"} or \code{"median"}
+#'   shows only that one. Numeric and Count variables show both; a numeric
+#'   dichotomy shows its raw mean and a blank median; N-category and other
+#'   non-numeric variables are blank. The returned data frame always includes
+#'   Mean and Median regardless of this setting.
+#' @param digits Integer or NULL. Number of decimal places for the Mean and
+#'   Median columns. NULL (default) defers to \code{joutput()}'s \code{digits}
+#'   setting (default 3).
 #'
 #' @return Invisibly returns a data frame of the screening results, with one
 #'   row per variable and columns including the Base R type, the jstats
-#'   \code{Class} and \code{SubClass}, distinct-value count, missing count
-#'   and percentage, and the outlier count (NA for non-Numeric variables).
-#'   The returned values are the raw counts; only the printed tables blank
-#'   zeros and omit clean rows.
+#'   \code{Class} and \code{SubClass}, the classification \code{Source}
+#'   ("registered" or "structural"), distinct-value count, missing count
+#'   and percentage, the outlier count (NA for non-Numeric variables), and
+#'   the \code{Mean} and \code{Median} (NA where not meaningful: Median is NA
+#'   for dichotomies, and both are NA for non-numeric-like variables). The
+#'   returned values are the raw counts; only the printed tables blank zeros
+#'   and omit clean rows.
 #'
 #' @examples
 #' # With explicit data frame
@@ -7465,6 +7502,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'
 #' # Show the Base R storage type column
 #' jscreen(mtcars, r.type = TRUE)
+#'
+#' # Add Mean and Median columns for numeric-like variables
+#' jscreen(mtcars, stats = TRUE)
 #'
 #' # Suppress tables (header block only)
 #' jscreen(mtcars, types = FALSE, issues = FALSE)
@@ -7480,7 +7520,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'
 #' @export
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL,
-                    value.id = NULL, types = TRUE, issues = TRUE, r.type = FALSE) {
+                    value.id = NULL, types = TRUE, issues = TRUE, r.type = FALSE,
+                    stats = FALSE, digits = NULL) {
 
   # jscreen has no per-code surface to display value labels on, so value.id
   # is accepted only to give an explicit, accurate error. A global
@@ -7493,6 +7534,15 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     stop("value.id is not supported by jscreen(); it does not display ",
          "value labels.", call. = FALSE)
   }
+
+  # Resolve stats= : hybrid logical-or-character. FALSE -> "none" (default),
+  # TRUE -> "both", or one of "mean" / "median". TRUE is kept working (novices
+  # try it) despite being the one non-boolean toggle. digits governs the
+  # decimal places of the Mean/Median columns, deferring to joutput() when NULL.
+  if (isTRUE(stats))  stats <- "both"
+  if (isFALSE(stats)) stats <- "none"
+  stats_mode <- match.arg(stats, c("none", "mean", "median", "both"))
+  digits_n   <- .jst_resolve_digits(digits)
 
   # Resolve the first argument: explicit data frame, juse default,
   # or bare-symbol-as-variable-name (leading comma omitted).
@@ -7602,11 +7652,41 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
     # jstats analysis-role classification via the single resolver. The same
     # resolver gates outlier screening (Numeric only), so the Class column
-    # and the Outliers column cannot disagree. (Session 51)
+    # and the Outliers column cannot disagree. (Session 51) Source is the
+    # resolved provenance ("registered" / "structural" in jscreen, which takes
+    # no per-call override and leaves measure unpopulated in v1). (Session 82)
     jc          <- .jst_jstats_class(col, v, .jst_data_name)
     n_missing   <- sum(is.na(col))
     pct_missing <- round(n_missing / n_cases * 100, 1)
     n_unique    <- length(unique(col[!is.na(col)]))
+
+    # Central tendency for NUMERIC-LIKE variables: Numeric and Count (resolved
+    # class "Numeric") get Mean and Median; a numeric-backed dichotomy gets the
+    # raw mean of its stored codes and a BLANK median (the median of a two-value
+    # variable is degenerate). N-category Categoricals, text/factor/logical
+    # dichotomies, and the edge classes stay blank. A numeric dichotomy coded
+    # other than 0/1 is flagged ("*") on its Sub-class cell, since its raw mean
+    # is not a proportion -- the marker is display-only and shows even with
+    # stats off. Mean/Median are always computed (returned regardless of the
+    # stats= display gate), rounded to the resolved digits. (Session 82)
+    dich         <- .jst_is_dichotomy(col)
+    is_num_dich  <- isTRUE(dich$is_dichotomy) &&
+                    dich$coding %in% c("0/1", "1/2", "other")
+    numeric_like <- jc$class == "Numeric" || is_num_dich
+    star         <- is_num_dich && dich$coding %in% c("1/2", "other")
+
+    mean_val   <- NA_real_
+    median_val <- NA_real_
+    if (numeric_like) {
+      num_vals <- .jst_as_numeric(col)
+      if (any(!is.na(num_vals))) {
+        mean_val <- round(mean(num_vals, na.rm = TRUE), digits_n)
+        # Median for Numeric/Count only; a dichotomy keeps a blank median.
+        if (jc$class == "Numeric") {
+          median_val <- round(stats::median(num_vals, na.rm = TRUE), digits_n)
+        }
+      }
+    }
 
     # SD-outlier screening applies only to Numeric-class variables. For every
     # other class (Categorical including dichotomies, Numbers-as-text,
@@ -7629,10 +7709,14 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       Type        = var_type,
       Class       = jc$class,
       SubClass    = jc$subclass,
+      Source      = jc$source,
       Unique      = n_unique,
       Missing     = n_missing,
       Pct_Missing = pct_missing,
       Outliers    = n_outliers,
+      Mean        = mean_val,
+      Median      = median_val,
+      Star        = star,
       stringsAsFactors = FALSE
     )
   })
@@ -7658,9 +7742,21 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   any_subclass <- any(nzchar(screen_table$SubClass))
 
   # -- Table 1: Variable Types -----------------------------------------------
-  # Base R Type column is opt-in (r.type = TRUE); Sub-class column appears
-  # only when at least one variable has a sub-class.
+  # Base R Type column is opt-in (r.type = TRUE); the Sub-class column appears
+  # only when at least one variable has a sub-class; the Source column appears
+  # only when at least one variable resolves non-structurally (a registration);
+  # the Mean/Median columns are opt-in via stats= and appear only when a
+  # numeric-like variable carrying that statistic is present (so a dichotomy-
+  # only frame requesting "median" does not print an all-blank column).
+  # (Session 82)
   if (isTRUE(types)) {
+    show_source <- any(screen_table$Source != "structural")
+    show_mean   <- stats_mode %in% c("mean", "both") &&
+                   any(!is.na(screen_table$Mean))
+    show_median <- stats_mode %in% c("median", "both") &&
+                   any(!is.na(screen_table$Median))
+    show_star   <- any(screen_table$Star)
+
     cols  <- "Variable"
     heads <- "Variable"
     if (isTRUE(r.type)) {
@@ -7673,9 +7769,30 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       cols  <- c(cols, "SubClass")
       heads <- c(heads, "Sub-class")
     }
+    if (show_source) {
+      cols  <- c(cols, "Source")
+      heads <- c(heads, "Source")
+    }
     cols  <- c(cols, "Unique")
     heads <- c(heads, "Unique Values")
+    if (show_mean) {
+      cols  <- c(cols, "Mean")
+      heads <- c(heads, "Mean")
+    }
+    if (show_median) {
+      cols  <- c(cols, "Median")
+      heads <- c(heads, "Median")
+    }
     t1 <- screen_table[, cols, drop = FALSE]
+
+    # Append the "*" recode marker to the Sub-class display cell for numeric
+    # non-0/1 dichotomies. Display-only: the returned screen_table keeps the
+    # clean "dichotomy". A "*" implies a sub-class, so the column is present.
+    if (show_star && "SubClass" %in% cols) {
+      t1$SubClass[screen_table$Star] <-
+        paste0(t1$SubClass[screen_table$Star], "*")
+    }
+
     if (vlmode %in% c("labels", "both")) {
       t1$Variable <- vapply(t1$Variable,
                             function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
@@ -7686,6 +7803,11 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
                      caption   = "Variable Types",
                      col.names = heads,
                      row.names = FALSE)
+
+    # Conditional one-line legend, printed only when a "*" actually appeared.
+    if (show_star) {
+      cat("* coded other than 0/1; mean is not a proportion -- recode to 0/1\n")
+    }
   }
 
   # -- Table 2: Missing Data & Outliers --------------------------------------
@@ -7744,6 +7866,9 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   }
 
   cat("\n")
+  # Star is an internal display flag (the "*" recode marker); it is not part of
+  # the returned screening results.
+  screen_table$Star <- NULL
   invisible(screen_table)
 }
 

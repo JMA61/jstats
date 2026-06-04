@@ -8,7 +8,9 @@ jnumeric(data, ..., remove = FALSE)
 }
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{\link{juse}} default.
-\code{jnumeric(NULL)} clears all numeric registrations across data frames.}
+\code{jnumeric(NULL)} clears all numeric registrations across data frames.
+Called with no arguments, \code{jnumeric()} lists the session's numeric
+and count registrations.}
 
 \item{...}{One or more unquoted variable names to register.}
 
@@ -41,6 +43,7 @@ df <- data.frame(attitude = c(1, 2, 3, 4, 5, 2, 3),
 jnumeric(df, attitude)              # treat the 1-5 item as continuous
 jnumeric(df, attitude, score)       # multiple variables at once
 jnumeric(df, attitude, remove = TRUE)
+jnumeric()                          # list all registrations
 jnumeric(NULL)                      # clear all numeric registrations
 }
 \seealso{
