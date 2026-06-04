@@ -3832,9 +3832,11 @@
 #' Shared by the classification resolver's user-intent tiers (per-call
 #' override and registered intent) so an asserted role produces the same
 #' class/subclass pair however it was asserted. "numeric" and "count" fix the
-#' subclass; "categorical" still takes its dichotomy vs N-category subclass
-#' from the data structure, since the role assertion fixes the class but not
-#' the category count.
+#' subclass; "categorical" still takes its dichotomy / N-category / identifier
+#' subclass from the data structure, since the role assertion fixes the class
+#' but not the category count. ("identifier" is a text/factor categorical whose
+#' every non-missing value is distinct -- a cosmetic sub-class only; the
+#' variable is still Categorical for all analysis purposes.)
 #'
 #' @param role One of "numeric", "count", "categorical".
 #' @param x The variable (used only to derive the categorical subclass).
@@ -3850,6 +3852,17 @@
     if (.jst_is_dichotomy(x)$is_dichotomy)
       return(list(class = "Categorical", subclass = "dichotomy"))
     n_unique <- length(unique(x[!is.na(x)]))
+    # Identifier: a text/factor categorical whose every non-missing value is
+    # distinct (e.g. a respondent ID). Cosmetic sub-class only -- the variable
+    # stays Categorical for every analysis and screening purpose; only the
+    # displayed sub-class changes from "<n>-category" to "identifier". Gated to
+    # character/factor backing (an all-distinct numeric resolves to Numeric, so
+    # never reaches here) and to 7+ distinct values, so a tiny all-distinct text
+    # column is not labeled an identifier. (Session 83)
+    n_present <- sum(!is.na(x))
+    if ((is.character(x) || is.factor(x)) &&
+        n_unique > 6L && n_unique == n_present)
+      return(list(class = "Categorical", subclass = "identifier"))
     return(list(class = "Categorical", subclass = paste0(n_unique, "-category")))
   }
   NULL
@@ -3876,8 +3889,11 @@
 #' on the analysis-relevant structure.
 #'
 #' Sub-class (for Categorical only; "" otherwise): "dichotomy" for a two-
-#' value variable, else "N-category" (e.g. "4-category") from the count of
-#' distinct non-missing values. The boundary between Numeric and Categorical
+#' value variable, "identifier" for a text/factor variable whose every non-
+#' missing value is distinct (7+ values; a respondent ID is the typical case),
+#' else "N-category" (e.g. "4-category") from the count of distinct non-missing
+#' values. The "identifier" label is cosmetic: such a variable is still
+#' Categorical for every analysis and screening purpose. The boundary between Numeric and Categorical
 #' is exactly the package's existing rule: a dichotomy (any coding), a
 #' factor / logical / character, a haven-labelled variable with <= 6
 #' categories, or a whole-number 0-6 numeric is Categorical; everything else
@@ -7425,8 +7441,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'
 #' When at least one variable's class comes from a registration (jnumeric,
 #' jcount, or jdummy) rather than the structural guess, a Source column
-#' appears reporting the deciding tier ("registered" or "structural") for
-#' every variable. Set \code{stats = TRUE} (or "mean" / "median") to add
+#' appears. It reads as an exception-marker: "registered" is shown against
+#' the registered variables and the structurally classified rows are left
+#' blank, so the registrations stand out at a glance. (The returned data
+#' frame still records the literal tier for every row.) Set \code{stats = TRUE} (or "mean" / "median") to add
 #' central-tendency columns for the numeric-like variables: Numeric and Count
 #' variables show Mean and Median, while a numeric dichotomy shows the raw
 #' mean of its stored codes and a blank median. A numeric dichotomy coded
@@ -7791,6 +7809,15 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     if (show_star && "SubClass" %in% cols) {
       t1$SubClass[screen_table$Star] <-
         paste0(t1$SubClass[screen_table$Star], "*")
+    }
+
+    # The Source column appears only when a registration exists, so it reads
+    # cleanest as an exception-marker: the structural rows are blanked in the
+    # display copy, leaving "registered" against the registered variables only.
+    # Display-only -- the returned screen_table keeps the literal per-row
+    # provenance ("registered" / "structural"). (Session 83)
+    if ("Source" %in% cols) {
+      t1$Source[screen_table$Source == "structural"] <- ""
     }
 
     if (vlmode %in% c("labels", "both")) {

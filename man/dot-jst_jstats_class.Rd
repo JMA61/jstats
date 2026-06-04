@@ -43,8 +43,11 @@ Categorical (dichotomy), or to Categorical (N-category), depending only
 on the analysis-relevant structure.
 
 Sub-class (for Categorical only; "" otherwise): "dichotomy" for a two-
-value variable, else "N-category" (e.g. "4-category") from the count of
-distinct non-missing values. The boundary between Numeric and Categorical
+value variable, "identifier" for a text/factor variable whose every non-
+missing value is distinct (7+ values; a respondent ID is the typical case),
+else "N-category" (e.g. "4-category") from the count of distinct non-missing
+values. The "identifier" label is cosmetic: such a variable is still
+Categorical for every analysis and screening purpose. The boundary between Numeric and Categorical
 is exactly the package's existing rule: a dichotomy (any coding), a
 factor / logical / character, a haven-labelled variable with <= 6
 categories, or a whole-number 0-6 numeric is Categorical; everything else

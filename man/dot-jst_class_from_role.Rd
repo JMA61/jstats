@@ -19,8 +19,10 @@ A list with \code{class} and \code{subclass}, or \code{NULL} if
 Shared by the classification resolver's user-intent tiers (per-call
 override and registered intent) so an asserted role produces the same
 class/subclass pair however it was asserted. "numeric" and "count" fix the
-subclass; "categorical" still takes its dichotomy vs N-category subclass
-from the data structure, since the role assertion fixes the class but not
-the category count.
+subclass; "categorical" still takes its dichotomy / N-category / identifier
+subclass from the data structure, since the role assertion fixes the class
+but not the category count. ("identifier" is a text/factor categorical whose
+every non-missing value is distinct -- a cosmetic sub-class only; the
+variable is still Categorical for all analysis purposes.)
 }
 \keyword{internal}

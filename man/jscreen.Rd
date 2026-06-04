@@ -109,8 +109,10 @@ flagged, and the header count lines explain the omission.
 
 When at least one variable's class comes from a registration (jnumeric,
 jcount, or jdummy) rather than the structural guess, a Source column
-appears reporting the deciding tier ("registered" or "structural") for
-every variable. Set \code{stats = TRUE} (or "mean" / "median") to add
+appears. It reads as an exception-marker: "registered" is shown against
+the registered variables and the structurally classified rows are left
+blank, so the registrations stand out at a glance. (The returned data
+frame still records the literal tier for every row.) Set \code{stats = TRUE} (or "mean" / "median") to add
 central-tendency columns for the numeric-like variables: Numeric and Count
 variables show Mean and Median, while a numeric dichotomy shows the raw
 mean of its stored codes and a blank median. A numeric dichotomy coded
