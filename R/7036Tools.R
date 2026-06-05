@@ -943,7 +943,7 @@
 #' @keywords internal
 .jst_intent_label <- function(kind, cap = FALSE) {
   lab <- switch(kind, numeric = "numeric", count = "count",
-                dummy = "dummy", kind)
+                dummy = "dummy", likert = "Likert", kind)
   if (isTRUE(cap)) lab <- paste0(toupper(substring(lab, 1, 1)), substring(lab, 2))
   lab
 }
@@ -3726,6 +3726,74 @@
 }
 
 
+#' Internal helper: does a variable look like a Likert (ordered scale) item?
+#'
+#' The single structural detector for the "Likert" Categorical sub-class. A
+#' Likert item is identified value-label-led: it must be a value-labelled
+#' variable whose labelled codes form a consecutive integer run of 3 to 7
+#' categories, with every value present in the data being one of those labelled
+#' scale points. This is deliberately conservative -- it leans on the label
+#' metadata (the strong signal) rather than distribution shape, which is
+#' unreliable at small N and few categories.
+#'
+#' Detection rule (all must hold):
+#' \enumerate{
+#'   \item The variable is haven-labelled with at least one value label.
+#'   \item The labelled codes are whole numbers forming a consecutive run
+#'         (no gaps) of length 3 to 7. A two-code variable is a dichotomy
+#'         (handled earlier), not a Likert; 8+ codes is treated as continuous.
+#'   \item Every non-missing value present in the data is one of the labelled
+#'         codes. An undeclared sentinel (e.g. a literal -99 not declared as
+#'         missing) is therefore NOT silently absorbed: its presence makes the
+#'         variable fail the Likert test, leaving the existing load-time
+#'         coded-missing scan to nudge the user to declare it. Declared missing
+#'         values are already NA before this runs and so are ignored.
+#' }
+#'
+#' This is display/reporting scoped: a TRUE result refines the Categorical
+#' sub-class to "Likert" but never changes a variable's analysis class or how
+#' analyses treat it. The genuinely hard Likert-vs-nominal case (both labelled,
+#' both small-range) is NOT solved here -- a labelled nominal with consecutive
+#' codes (e.g. a region code) will read as "Likert", which is a tolerated
+#' cosmetic mislabel given the sub-class carries no analysis consequence and no
+#' Likert-specific rendering.
+#'
+#' Because this is called only from the Categorical branch of
+#' \code{.jst_class_from_role()}, it is reached structurally only for variables
+#' the package already routes to Categorical (<= 6 categories). A 7-point
+#' labelled scale therefore resolves to Numeric structurally (the existing
+#' Numeric/Categorical boundary is unchanged) and must be declared with
+#' \code{jlikert()} to carry the Likert sub-class.
+#'
+#' @param x A variable / data-frame column.
+#' @param var_name Optional variable name; accepted for call-site symmetry with
+#'   the other structural classifiers, not used here.
+#' @param data_name Optional data-frame name; accepted for call-site symmetry,
+#'   not used here.
+#' @return TRUE if the variable has Likert (ordered labelled scale) structure,
+#'   FALSE otherwise.
+#' @keywords internal
+.jst_is_likert <- function(x, var_name = NULL, data_name = NULL) {
+  if (!haven::is.labelled(x)) return(FALSE)
+  vl <- labelled::val_labels(x)
+  if (is.null(vl) || length(vl) == 0) return(FALSE)
+
+  codes <- suppressWarnings(as.numeric(unname(vl)))
+  if (any(is.na(codes)) || any(codes != floor(codes))) return(FALSE)
+  codes_sorted <- sort(unique(codes))
+  n_codes <- length(codes_sorted)
+  if (n_codes < 3L || n_codes > 7L) return(FALSE)
+  if (any(diff(codes_sorted) != 1)) return(FALSE)
+
+  xn      <- suppressWarnings(as.numeric(x))
+  present <- xn[!is.na(xn)]
+  if (length(present) == 0L) return(FALSE)
+  if (!all(present %in% codes_sorted)) return(FALSE)
+
+  TRUE
+}
+
+
 #' Internal helper: classify a variable for descriptive summarization
 #'
 #' Single source of truth for \code{jdesc()}'s decision about whether a
@@ -4105,9 +4173,20 @@
     return(list(class = "Numeric", subclass = ""))
   if (identical(role, "count"))
     return(list(class = "Numeric", subclass = "Count"))
+  if (identical(role, "likert"))
+    return(list(class = "Categorical", subclass = "Likert"))
   if (identical(role, "categorical")) {
     if (.jst_is_dichotomy(x)$is_dichotomy)
       return(list(class = "Categorical", subclass = "dichotomy"))
+    # Likert: a value-labelled ordered response scale (consecutive run of 3-7
+    # labelled codes; every data value a labelled point). A display/reporting
+    # refinement only -- still Categorical for every analysis purpose; surfaces
+    # in jscreen's Sub-class column. Reached structurally only for variables
+    # already routed to Categorical (<= 6 categories), so 3-6 auto-detect; a
+    # 7-point scale resolves Numeric structurally and needs jlikert(). The
+    # registered/per-call "likert" role above asserts it directly. (Session 86)
+    if (.jst_is_likert(x))
+      return(list(class = "Categorical", subclass = "Likert"))
     n_unique <- length(unique(x[!is.na(x)]))
     # Identifier: a text/factor categorical whose every non-missing value is
     # distinct (e.g. a respondent ID). Cosmetic sub-class only -- the variable
@@ -4146,10 +4225,12 @@
 #' on the analysis-relevant structure.
 #'
 #' Sub-class (for Categorical only; "" otherwise): "dichotomy" for a two-
-#' value variable, "identifier" for a text/factor variable whose every non-
+#' value variable, "Likert" for a value-labelled ordered scale (a consecutive
+#' run of 3-7 labelled codes; structural detection or a jlikert()/likert=
+#' assertion), "identifier" for a text/factor variable whose every non-
 #' missing value is distinct (7+ values; a respondent ID is the typical case),
 #' else "N-category" (e.g. "4-category") from the count of distinct non-missing
-#' values. The "identifier" label is cosmetic: such a variable is still
+#' values. The "Likert" and "identifier" labels are display refinements: such a variable is still
 #' Categorical for every analysis and screening purpose. The boundary between Numeric and Categorical
 #' is exactly the package's existing rule: a dichotomy (any coding), a
 #' factor / logical / character, a haven-labelled variable with <= 6
@@ -5813,7 +5894,7 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
   all_reg <- all_reg[vapply(all_reg, function(x) !is.null(x) && length(x) > 0L,
                             logical(1))]
   if (length(all_reg) == 0L) {
-    message("No numeric or count registrations in this session.")
+    message("No variable registrations in this session.")
     return(invisible(NULL))
   }
   dnames <- names(all_reg)
@@ -6024,6 +6105,104 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
   .jst_register_intent("count", data, data_name, default_used,
+                       var_names, remove)
+}
+
+
+#' Register variables as Likert (ordered response) items
+#'
+#' \code{jlikert()} declares one or more value-labelled variables as Likert
+#' items -- ordered response scales (for example 1 = Strongly disagree through
+#' 5 = Strongly agree). It is the ordered-scale counterpart to
+#' \code{\link{jdummy}} (categorical), \code{\link{jnumeric}} (continuous), and
+#' \code{\link{jcount}} (count): a variable carries exactly one registered
+#' intent at a time, so registering it as Likert clears any prior numeric,
+#' count, or dummy registration on it.
+#'
+#' \strong{Scope -- display only.} The Likert intent refines reporting, not
+#' analysis. It sets the variable's sub-class to "Likert" in
+#' \code{\link{jscreen}}'s Variable Types table, marking it as an ordered scale
+#' rather than a generic N-category variable. It does NOT change how any
+#' analysis treats the variable (there is no order-aware modelling), and it does
+#' not by itself change \code{\link{jplot}} output -- a value-labelled
+#' small-range variable already plots as an ordered, labelled bar regardless of
+#' this registration.
+#'
+#' Like the other registration verbs, registrations are session-scoped and keyed
+#' by data-frame name; save the frame in R native format (.rds) with
+#' \code{\link{jsave}} to keep them across sessions.
+#'
+#' @param data A data frame, or omitted to use the \code{\link{juse}} default.
+#' @param ... One or more unquoted variable names to register, or a single
+#'   \code{NULL} to clear this frame's Likert registrations (see Details).
+#' @param remove Logical; if TRUE, remove the named variables' Likert
+#'   registrations instead of adding them.
+#' @param clear.all Logical; if TRUE, clear Likert registrations on every data
+#'   frame.
+#'
+#' @details
+#' Clearing mirrors the other registration verbs:
+#' \itemize{
+#'   \item \code{jlikert(data, NULL)} -- clear this frame's Likert
+#'     registrations.
+#'   \item \code{jlikert(NULL)} -- clear the \code{juse()} default frame (or the
+#'     sole frame carrying Likert registrations; if several do, it asks rather
+#'     than clearing them all).
+#'   \item \code{jlikert(clear.all = TRUE)} -- clear every frame.
+#' }
+#' \code{jlikert()} with no arguments prints the current registration status.
+#'
+#' @return Invisibly NULL. Called for its side effect on the session registry.
+#' @examples
+#' \dontrun{
+#'   jlikert(community, Environment1, Environment2)  # declare two Likert items
+#'   jscreen(community)                              # Sub-class shows "Likert"
+#'   jlikert(community, Environment1, remove = TRUE) # undo one
+#' }
+#' @seealso \code{\link{jnumeric}}, \code{\link{jcount}}, \code{\link{jdummy}},
+#'   \code{\link{jscreen}}
+#' @export
+jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
+  # jlikert(clear.all = TRUE): clear Likert registrations on every frame.
+  if (isTRUE(clear.all)) return(.jst_handle_clear("likert", clear.all = TRUE))
+  # jlikert() with no arguments: show the session-wide registry status.
+  if (missing(data) && ...length() == 0L) return(.jst_registry_status())
+  raw_data <- if (!missing(data)) substitute(data) else NULL
+  # jlikert(NULL): clear the default frame (or the sole registered frame, or
+  # ask) -- never a silent all-frames wipe (use clear.all = TRUE for that).
+  if (!missing(data) && is.null(raw_data)) {
+    return(.jst_handle_clear("likert",
+             default_name = getOption(".jst_default_data", default = NULL)))
+  }
+
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jlikert",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
+  data         <- arg1$data
+  data_name    <- arg1$name
+  default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  variables <- rlang::enquos(...)
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+  # jlikert(data, NULL): clear this frame's Likert registrations.
+  if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
+    return(.jst_handle_clear("likert", explicit_frame = data_name))
+  }
+  if (length(variables) == 0) {
+    stop("Specify one or more variables to register, e.g. ",
+         "jlikert(", data_name, ", <var1>, <var2>).", call. = FALSE)
+  }
+  var_names <- vapply(variables, rlang::quo_name, character(1))
+
+  .jst_register_intent("likert", data, data_name, default_used,
                        var_names, remove)
 }
 
@@ -18559,6 +18738,150 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 }
 
 
+#' Copy a data frame, carrying its classification registrations
+#'
+#' Copies a data frame to a new name AND clones any classification
+#' registrations (jnumeric / jcount / jdummy) attached to it, so the copy
+#' behaves the same as the original under later analysis calls. A plain
+#' assignment (newdata <- mydata) copies the data but not the registrations,
+#' because registrations live in a name-keyed session notebook rather than on
+#' the data object; jcopy() is the verb that keeps the two together across a
+#' rename or copy.
+#'
+#' Like jload(), jcopy() cannot see the name on the left of an assignment, so
+#' the new name is supplied as an argument. The destination name is unquoted,
+#' and a single name is always taken as the destination, with the source coming
+#' from the juse() default:
+#'
+#' \itemize{
+#'   \item \code{jcopy(mydata, newdata)} -- copy \code{mydata} to
+#'     \code{newdata}.
+#'   \item \code{jcopy(newdata)} -- copy the juse() default frame to
+#'     \code{newdata}.
+#' }
+#'
+#' Registrations travel only when the source frame carries them; copying an
+#' unregistered frame just copies the data. The copy is independent of the
+#' original.
+#'
+#' @param data The source data frame (unquoted). May be omitted when a juse()
+#'   default is set, in which case the default frame is the source.
+#' @param name The destination name (unquoted) the copy is assigned to. When a
+#'   single name is given it is read as the destination, not the source.
+#' @param overwrite Logical; if FALSE (the default) and the destination name
+#'   already exists in your environment, an interactive session asks before
+#'   overwriting.
+#' @param quiet Logical; if TRUE, suppress the confirmation message.
+#' @return Invisibly NULL. Called for its side effect: the copy is assigned into
+#'   the calling environment under \code{name}, and its registrations are cloned
+#'   onto that name.
+#' @examples
+#' \dontrun{
+#'   jdummy(community, Region)        # register a classification on community
+#'   jcopy(community, survey)         # survey carries Region's registration
+#'
+#'   juse(community)
+#'   jcopy(survey2)                   # copy the default (community) to survey2
+#' }
+#' @seealso \code{\link{jload}}, \code{\link{jsave}}, \code{\link{juse}}
+#' @export
+jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
+  say <- function(...) if (!quiet) message(...)
+
+  # Resolve source and destination. The destination name is unquoted and is
+  # never evaluated -- it may not exist yet. A single supplied name is the
+  # destination (source from the juse() default); two names are source then
+  # destination. Keying off missing(name) -- not on what a symbol resolves to
+  # -- keeps the one-argument form unambiguous.
+  if (missing(name)) {
+    # jcopy(newdata): the single positional argument is the destination; the
+    # source is the juse() default. `data` is the destination promise and must
+    # not be forced.
+    if (missing(data)) {
+      stop("Provide a destination name, e.g. jcopy(mydata, newdata).",
+           call. = FALSE)
+    }
+    dest_sub <- substitute(data)
+    src <- tryCatch(
+      .jst_resolve_data(envir = parent.frame()),
+      error = function(e)
+        stop("No source given and no juse() default set. Either name the ",
+             "source -- jcopy(mydata, ", paste(deparse(dest_sub),
+             collapse = ""), ") -- or set a default with juse(mydata).",
+             call. = FALSE)
+    )
+    src_data <- src$data
+    src_name <- src$name
+  } else {
+    dest_sub <- substitute(name)
+    if (missing(data)) {
+      # jcopy(name = newdata): source from the juse() default.
+      src      <- .jst_resolve_data(envir = parent.frame())
+      src_data <- src$data
+      src_name <- src$name
+    } else {
+      # jcopy(mydata, newdata): explicit source then destination.
+      src_sub  <- substitute(data)
+      src_data <- data
+      if (!is.data.frame(src_data)) {
+        stop("The source must be a data frame. ",
+             "Provide one, e.g. jcopy(mydata, newdata).", call. = FALSE)
+      }
+      src_name <- paste(deparse(src_sub), collapse = "")
+    }
+  }
+
+  # Validate and normalise the destination name (mirrors jload()).
+  dest_name <- paste(deparse(dest_sub), collapse = "")
+  if (grepl("^[0-9]", dest_name)) {
+    stop("The name '", dest_name, "' starts with a number. ",
+         "R does not allow variable names to start with a digit.",
+         call. = FALSE)
+  }
+  dest_name <- make.names(dest_name)
+
+  # Overwrite check in the calling environment.
+  target_env <- parent.frame()
+  if (exists(dest_name, envir = target_env, inherits = FALSE) && !overwrite) {
+    if (interactive()) {
+      response <- readline(
+        paste0("'", dest_name, "' already exists in your environment. ",
+               "Overwrite? (y/n): "))
+      if (!tolower(trimws(response)) %in% c("y", "yes")) {
+        message("Copy cancelled.")
+        return(invisible(NULL))
+      }
+    } else {
+      warning("'", dest_name, "' already existed and has been replaced.",
+              call. = FALSE)
+    }
+  }
+
+  # Assign the data copy.
+  assign(dest_name, src_data, envir = target_env)
+
+  # Clone the name-keyed classification registrations onto the new name. Both
+  # registries are frame-keyed; passing NULL through clears any stale entry
+  # already sitting under the destination name (set-NULL removes the entry), so
+  # the destination ends up matching the source either way.
+  reg   <- .jst_get_registry(src_name)
+  dummy <- .jst_get_dummy(src_name)
+  .jst_set_registry(dest_name, reg)
+  .jst_set_dummy(dest_name, dummy)
+  carried <- !is.null(reg) || !is.null(dummy)
+
+  # Confirmation.
+  say("Copied ", src_name, " to ", dest_name, " (",
+      format(nrow(src_data), big.mark = ","), " cases, ",
+      ncol(src_data), " variables)")
+  if (carried) {
+    say("Carried over the classification registrations from ", src_name, ".")
+  }
+
+  invisible(NULL)
+}
+
+
 # =============================================================================
 #  PLOTTING
 # =============================================================================
@@ -19013,11 +19336,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # variable with value labels was factored regardless of geometry, which is
   # what broke a histogram of a labelled Likert.) var_types is the per-variable
   # class the builders also read, so keying off it keeps conversion and
-  # geometry consistent.
+  # geometry consistent. Index with [[i]]: var_types here is a NAMED vector
+  # (vapply over variable_names), so var_types[i] would carry the variable's
+  # name and identical(named, "categorical") is always FALSE -- which silently
+  # skipped the as_factor branch and bared the value labels off labelled bars.
   for (i in seq_along(variable_names)) {
     v <- variable_names[i]
     if (!haven::is.labelled(data[[v]])) next
-    if (identical(var_types[i], "categorical")) {
+    if (identical(var_types[[i]], "categorical")) {
       data[[v]] <- haven::as_factor(data[[v]])
     } else {
       data[[v]] <- as.numeric(data[[v]])
@@ -19262,15 +19588,24 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
 
-  # -- Convert haven-labelled categoricals to factors -----------------------
-  for (v in variable_names) {
-    if (haven::is.labelled(data[[v]])) {
-      val_labs <- labelled::val_labels(data[[v]])
-      if (!is.null(val_labs) && length(val_labs) > 0) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else {
-        data[[v]] <- as.numeric(data[[v]])
-      }
+  # -- Convert haven-labelled variables by their resolved class -------------
+  # Geometry-aware, mirroring jplot.default: a categorical-typed variable
+  # becomes a factor (so a box's x-axis shows its value labels); a numeric-
+  # typed variable is reduced to its underlying numeric (so scatter points and
+  # a box's numeric y-axis get a continuous aesthetic). Keying off var_types --
+  # not the presence of value labels -- keeps conversion and geometry
+  # consistent; the old label-led rule factored any labelled variable that
+  # carried labels, which factorised a labelled continuous DV and made the
+  # scatter/box error on a discrete axis. variable_names and var_types are both
+  # ordered (x, y), so positional indexing aligns. Index with [[i]] (drops any
+  # name) so identical() matches even if var_types is ever built named.
+  for (i in seq_along(variable_names)) {
+    v <- variable_names[i]
+    if (!haven::is.labelled(data[[v]])) next
+    if (identical(var_types[[i]], "categorical")) {
+      data[[v]] <- haven::as_factor(data[[v]])
+    } else {
+      data[[v]] <- as.numeric(data[[v]])
     }
   }
   if (has_by && haven::is.labelled(data[[by_name]])) {

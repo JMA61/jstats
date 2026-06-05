@@ -43,10 +43,12 @@ Categorical (dichotomy), or to Categorical (N-category), depending only
 on the analysis-relevant structure.
 
 Sub-class (for Categorical only; "" otherwise): "dichotomy" for a two-
-value variable, "identifier" for a text/factor variable whose every non-
+value variable, "Likert" for a value-labelled ordered scale (a consecutive
+run of 3-7 labelled codes; structural detection or a jlikert()/likert=
+assertion), "identifier" for a text/factor variable whose every non-
 missing value is distinct (7+ values; a respondent ID is the typical case),
 else "N-category" (e.g. "4-category") from the count of distinct non-missing
-values. The "identifier" label is cosmetic: such a variable is still
+values. The "Likert" and "identifier" labels are display refinements: such a variable is still
 Categorical for every analysis and screening purpose. The boundary between Numeric and Categorical
 is exactly the package's existing rule: a dichotomy (any coding), a
 factor / logical / character, a haven-labelled variable with <= 6
