@@ -4,12 +4,18 @@
 \alias{.jst_class_from_role}
 \title{Internal helper: map an asserted analysis role to class + subclass}
 \usage{
-.jst_class_from_role(role, x)
+.jst_class_from_role(role, x, var_name = NULL, data_name = NULL)
 }
 \arguments{
 \item{role}{One of "numeric", "count", "categorical".}
 
 \item{x}{The variable (used only to derive the categorical subclass).}
+
+\item{var_name}{Optional variable name; passed through to the Likert battery
+detector so it can locate the variable among its siblings.}
+
+\item{data_name}{Optional data-frame name; passed through to the Likert
+battery detector so it can read adjacent columns.}
 }
 \value{
 A list with \code{class} and \code{subclass}, or \code{NULL} if

@@ -9,53 +9,72 @@
 \arguments{
 \item{x}{A variable / data-frame column.}
 
-\item{var_name}{Optional variable name; accepted for call-site symmetry with
-the other structural classifiers, not used here.}
+\item{var_name}{Optional variable name; with \code{data_name}, lets the
+battery branch locate the column among its siblings.}
 
-\item{data_name}{Optional data-frame name; accepted for call-site symmetry,
-not used here.}
+\item{data_name}{Optional data-frame name; with \code{var_name}, names the
+frame the battery branch fetches to read adjacent columns.}
 }
 \value{
-TRUE if the variable has Likert (ordered labelled scale) structure,
-FALSE otherwise.
+TRUE if the variable is detected as a Likert (ordered labelled
+scale) item, FALSE otherwise.
 }
 \description{
-The single structural detector for the "Likert" Categorical sub-class. A
-Likert item is identified value-label-led: it must be a value-labelled
-variable whose labelled codes form a consecutive integer run of 3 to 7
-categories, with every value present in the data being one of those labelled
-scale points. This is deliberately conservative -- it leans on the label
-metadata (the strong signal) rather than distribution shape, which is
-unreliable at small N and few categories.
+The single detector for the "Likert" Categorical sub-class. Detection is in
+two stages: a NECESSARY structural gate, then a SUFFICIENT discriminator that
+separates a real ordered scale from a labelled nominal that happens to share
+the same shape (the hard case the v1 consecutive-only detector could not tell
+apart).
 }
 \details{
-Detection rule (all must hold):
+Necessary structure (all must hold):
 \enumerate{
 \item The variable is haven-labelled with at least one value label.
-\item The labelled codes are whole numbers forming a consecutive run
-(no gaps) of length 3 to 7. A two-code variable is a dichotomy
-(handled earlier), not a Likert; 8+ codes is treated as continuous.
-\item Every non-missing value present in the data is one of the labelled
-codes. An undeclared sentinel (e.g. a literal -99 not declared as
-missing) is therefore NOT silently absorbed: its presence makes the
-variable fail the Likert test, leaving the existing load-time
-coded-missing scan to nudge the user to declare it. Declared missing
-values are already NA before this runs and so are ignored.
+\item Its SURVIVING value labels -- the labelled codes left after declared
+missing values are removed (SPSS-style \code{na_values} /
+\code{na_range}, Stata-/SAS-style tagged NAs), read through
+\code{.jst_missing_info()} -- are whole numbers forming a consecutive
+run (no gaps) of length 3 to 7. Removing the missing sentinels first
+is what lets a 1-to-5 item carrying a Refused code of -99 and a
+Don't-know code of -98 read as a clean 5-point scale rather than
+seven codes with a gap. A two-code variable is a dichotomy (handled
+earlier); 8 or more surviving codes is treated as continuous.
+\item Every value present in the data (declared missings excluded, which
+\code{is.na()} already flags on \code{labelled_spss} and tagged-NA
+columns) is one of the surviving scale points. An UNDECLARED sentinel
+(e.g. a literal -99 never declared missing) is therefore NOT silently
+absorbed: its presence fails the test, leaving the load-time coded-
+missing scan to nudge the user to declare it.
 }
 
-This is display/reporting scoped: a TRUE result refines the Categorical
-sub-class to "Likert" but never changes a variable's analysis class or how
-analyses treat it. The genuinely hard Likert-vs-nominal case (both labelled,
-both small-range) is NOT solved here -- a labelled nominal with consecutive
-codes (e.g. a region code) will read as "Likert", which is a tolerated
-cosmetic mislabel given the sub-class carries no analysis consequence and no
-Likert-specific rendering.
+Sufficient discriminator (Likert if EITHER fires):
+\itemize{
+\item ANCHORS -- the surviving labels contain both pole words of a
+recognised ordered family (see \code{.jst_likert_anchor_families}),
+matched on whole tokens. Column-local, so it catches a lone item;
+reverse-coding-agnostic; English-centric.
+\item BATTERY -- the column sits in a contiguous run of adjacent columns
+sharing the same normalized non-missing label set (see
+\code{.jst_in_likert_battery()}). Language-agnostic; needs the
+resolver to carry the variable and frame identity.
+}
+Category count plays no role in either branch -- matching on count would re-
+admit the very property a nominal shares with a battery.
+
+This is display/reporting scoped: a TRUE result refines the Categorical sub-
+class to "Likert" but never changes a variable's analysis class or how
+analyses treat it. The detector does not have to be perfect: a non-English
+lone scale with no recognised anchor, or a scattered (non-adjacent) battery,
+is not auto-detected and is declared with \code{jlikert()}; a labelled
+nominal whose labels happen to carry an anchor pair could still read
+"Likert", a tolerated cosmetic call given the sub-class carries no analysis
+consequence.
 
 Because this is called only from the Categorical branch of
 \code{.jst_class_from_role()}, it is reached structurally only for variables
-the package already routes to Categorical (<= 6 categories). A 7-point
-labelled scale therefore resolves to Numeric structurally (the existing
-Numeric/Categorical boundary is unchanged) and must be declared with
-\code{jlikert()} to carry the Likert sub-class.
+already routed to Categorical (<= 6 categories), so the auto-detected range
+is 3 to 6 in practice. A 7-point labelled scale resolves to Numeric
+structurally (the Numeric/Categorical boundary is unchanged) and must be
+declared with \code{jlikert()}.
 }
 \keyword{internal}

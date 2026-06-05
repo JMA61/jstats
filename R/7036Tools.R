@@ -3726,71 +3726,264 @@
 }
 
 
+#' Internal helper: a labelled variable's surviving (non-missing) value labels
+#'
+#' Returns the value labels of a haven-labelled column with every code that is
+#' declared missing removed, so the scale-detection helpers judge a variable on
+#' its real response options rather than on missing-value sentinels mixed into
+#' the label set. Declared-missing codes are read through the central
+#' \code{.jst_missing_info()} reader, so SPSS-style \code{na_values} and
+#' \code{na_range} declarations and Stata-/SAS-style tagged NAs are all handled
+#' in one place. (A 1-to-5 agreement item carrying a Refused code of -99 and a
+#' Don't-know code of -98 as declared missings therefore yields the five real
+#' scale points, not seven codes with a gap.)
+#'
+#' @param col A variable / data-frame column.
+#' @return A named numeric vector of surviving value labels (names are the
+#'   label texts, values the codes), or \code{NULL} if the column is not
+#'   labelled or has no value labels. Length 0 if every label is a declared
+#'   missing.
+#' @keywords internal
+.jst_surviving_value_labels <- function(col) {
+  if (!haven::is.labelled(col)) return(NULL)
+  vl <- labelled::val_labels(col)
+  if (is.null(vl) || length(vl) == 0L) return(NULL)
+
+  codes <- suppressWarnings(as.numeric(unname(vl)))
+  keep  <- !is.na(codes)                 # drops tagged-NA labels (Stata / SAS)
+
+  mi <- .jst_missing_info(col)
+  if (!is.null(mi)) {
+    if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
+      na_num <- mi$codes$numeric[!is.na(mi$codes$numeric)]
+      if (length(na_num) > 0L) keep <- keep & !(codes %in% na_num)
+    }
+    if (!is.null(mi$na_range) && length(mi$na_range) == 2L) {
+      lo <- min(mi$na_range); hi <- max(mi$na_range)
+      keep <- keep & !(codes >= lo & codes <= hi)
+    }
+  }
+  vl[keep]
+}
+
+
+#' Internal helper: a labelled variable's normalized non-missing label set
+#'
+#' The set of surviving (non-missing) value-label texts, trimmed and case-
+#' folded, sorted and de-duplicated. This is the unit the Likert battery test
+#' compares between adjacent columns: two columns belong to the same battery
+#' when their normalized label sets are equal, regardless of which code each
+#' label is mapped to (so a reverse-keyed sibling, which shares the same answer
+#' words on a flipped code mapping, still matches).
+#'
+#' @param col A variable / data-frame column.
+#' @return A character vector (sorted, unique, lower-cased, trimmed) of the
+#'   surviving label texts, or \code{character(0)}.
+#' @keywords internal
+.jst_nonmissing_label_set <- function(col) {
+  surv <- .jst_surviving_value_labels(col)
+  if (is.null(surv) || length(surv) == 0L) return(character(0))
+  txt <- names(surv)
+  txt <- txt[!is.na(txt)]
+  txt <- trimws(tolower(txt))
+  sort(unique(txt[nzchar(txt)]))
+}
+
+
+# .jst_likert_anchor_families
+#
+# The maintained list of ordered scale families used by the anchor branch of
+# .jst_is_likert. Each entry is the pair of opposite pole WORDS for one family;
+# a column fires the anchor test when BOTH pole words of any family appear as
+# whole tokens among its (non-missing) label texts. Matching is on whole tokens
+# (labels split on non-letters and case-folded), so an intensity modifier rides
+# along for free -- "Strongly Disagree" tokenizes to {strongly, disagree} and
+# is caught by the "disagree" pole without listing "strongly" here, and the two
+# poles are distinct tokens ("disagree" is not "agree"; "dissatisfied" is not
+# "satisfied"), so a one-pole-only scale does not fire. English-centric by
+# design; a non-English scale is reached through the battery test or declared
+# with jlikert(). Deliberately small and easily extended. (Session 87)
+.jst_likert_anchor_families <- list(
+  agreement    = c("agree",     "disagree"),
+  satisfaction = c("satisfied", "dissatisfied"),
+  frequency    = c("never",     "always"),
+  likelihood   = c("likely",    "unlikely"),
+  quality      = c("poor",      "excellent")
+)
+
+
+#' Internal helper: do a variable's labels carry a recognised scale anchor pair?
+#'
+#' The column-local (single-item) half of the Likert sufficient discriminator.
+#' Tokenizes the supplied label texts (split on non-letters, case-folded) and
+#' returns TRUE when both pole words of any family in
+#' \code{.jst_likert_anchor_families} are present. Because it tests for the
+#' PRESENCE of both poles, it is reverse-coding-agnostic (the direction of the
+#' code mapping is irrelevant). English-centric.
+#'
+#' @param label_texts Character vector of label texts (typically the surviving,
+#'   non-missing labels of a column).
+#' @return TRUE if a recognised anchor pair is present, FALSE otherwise.
+#' @keywords internal
+.jst_labels_match_anchor <- function(label_texts) {
+  if (length(label_texts) == 0L) return(FALSE)
+  toks <- unlist(strsplit(tolower(label_texts), "[^a-z]+"))
+  toks <- unique(toks[nzchar(toks)])
+  if (length(toks) == 0L) return(FALSE)
+  for (fam in .jst_likert_anchor_families) {
+    if (all(fam %in% toks)) return(TRUE)
+  }
+  FALSE
+}
+
+
+#' Internal helper: does a column sit in a contiguous Likert battery?
+#'
+#' The sibling-aware half of the Likert sufficient discriminator. A column is
+#' part of a battery when at least one IMMEDIATELY ADJACENT column (the one to
+#' its left or right in data-frame column order) shares its normalized non-
+#' missing label set (see \code{.jst_nonmissing_label_set()}). Adjacency uses
+#' the column's position in the named frame fetched by \code{data_name}; the
+#' run breaks at the first neighbour with a different label set, so an adjacent
+#' same-size nominal or a different-scale battery is naturally excluded. Two
+#' matching columns are enough (a run of length 2 or more). Category count plays
+#' no part -- the match is on the answer-word set, not the number of categories.
+#'
+#' The frame is fetched by name from the global environment (and the attached
+#' search path); when \code{var_name} or \code{data_name} is absent, the named
+#' object is not a data frame, the column is not found in it, or the column has
+#' no surviving labels, the test returns FALSE and the caller falls back to the
+#' anchor branch. A battery member therefore needs the resolver to have been
+#' given the variable and frame identity (jscreen always supplies both); a bare
+#' \code{.jst_is_likert(x)} relies on anchors alone. The name-based fetch can
+#' miss when the frame is local to a calling function rather than global, a
+#' tolerated gap: anchors still carry English scales and \code{jlikert()} is
+#' always available.
+#'
+#' @param col The column under test.
+#' @param var_name Character string naming the column, or NULL.
+#' @param data_name Character string naming the data frame, or NULL.
+#' @return TRUE if the column is part of an adjacent same-label-set run of
+#'   length 2 or more, FALSE otherwise.
+#' @keywords internal
+.jst_in_likert_battery <- function(col, var_name = NULL, data_name = NULL) {
+  if (is.null(var_name) || is.null(data_name)) return(FALSE)
+
+  df <- get0(data_name, envir = globalenv(), inherits = TRUE, ifnotfound = NULL)
+  if (is.null(df) || !is.data.frame(df)) return(FALSE)
+
+  nms <- names(df)
+  pos <- match(var_name, nms)
+  if (is.na(pos)) return(FALSE)
+
+  this_set <- .jst_nonmissing_label_set(col)
+  if (length(this_set) == 0L) return(FALSE)
+
+  neighbours <- integer(0)
+  if (pos > 1L)           neighbours <- c(neighbours, pos - 1L)
+  if (pos < length(nms))  neighbours <- c(neighbours, pos + 1L)
+
+  for (j in neighbours) {
+    nb_set <- .jst_nonmissing_label_set(df[[j]])
+    if (length(nb_set) > 0L && setequal(this_set, nb_set)) return(TRUE)
+  }
+  FALSE
+}
+
+
 #' Internal helper: does a variable look like a Likert (ordered scale) item?
 #'
-#' The single structural detector for the "Likert" Categorical sub-class. A
-#' Likert item is identified value-label-led: it must be a value-labelled
-#' variable whose labelled codes form a consecutive integer run of 3 to 7
-#' categories, with every value present in the data being one of those labelled
-#' scale points. This is deliberately conservative -- it leans on the label
-#' metadata (the strong signal) rather than distribution shape, which is
-#' unreliable at small N and few categories.
+#' The single detector for the "Likert" Categorical sub-class. Detection is in
+#' two stages: a NECESSARY structural gate, then a SUFFICIENT discriminator that
+#' separates a real ordered scale from a labelled nominal that happens to share
+#' the same shape (the hard case the v1 consecutive-only detector could not tell
+#' apart).
 #'
-#' Detection rule (all must hold):
+#' Necessary structure (all must hold):
 #' \enumerate{
 #'   \item The variable is haven-labelled with at least one value label.
-#'   \item The labelled codes are whole numbers forming a consecutive run
-#'         (no gaps) of length 3 to 7. A two-code variable is a dichotomy
-#'         (handled earlier), not a Likert; 8+ codes is treated as continuous.
-#'   \item Every non-missing value present in the data is one of the labelled
-#'         codes. An undeclared sentinel (e.g. a literal -99 not declared as
-#'         missing) is therefore NOT silently absorbed: its presence makes the
-#'         variable fail the Likert test, leaving the existing load-time
-#'         coded-missing scan to nudge the user to declare it. Declared missing
-#'         values are already NA before this runs and so are ignored.
+#'   \item Its SURVIVING value labels -- the labelled codes left after declared
+#'         missing values are removed (SPSS-style \code{na_values} /
+#'         \code{na_range}, Stata-/SAS-style tagged NAs), read through
+#'         \code{.jst_missing_info()} -- are whole numbers forming a consecutive
+#'         run (no gaps) of length 3 to 7. Removing the missing sentinels first
+#'         is what lets a 1-to-5 item carrying a Refused code of -99 and a
+#'         Don't-know code of -98 read as a clean 5-point scale rather than
+#'         seven codes with a gap. A two-code variable is a dichotomy (handled
+#'         earlier); 8 or more surviving codes is treated as continuous.
+#'   \item Every value present in the data (declared missings excluded, which
+#'         \code{is.na()} already flags on \code{labelled_spss} and tagged-NA
+#'         columns) is one of the surviving scale points. An UNDECLARED sentinel
+#'         (e.g. a literal -99 never declared missing) is therefore NOT silently
+#'         absorbed: its presence fails the test, leaving the load-time coded-
+#'         missing scan to nudge the user to declare it.
 #' }
 #'
-#' This is display/reporting scoped: a TRUE result refines the Categorical
-#' sub-class to "Likert" but never changes a variable's analysis class or how
-#' analyses treat it. The genuinely hard Likert-vs-nominal case (both labelled,
-#' both small-range) is NOT solved here -- a labelled nominal with consecutive
-#' codes (e.g. a region code) will read as "Likert", which is a tolerated
-#' cosmetic mislabel given the sub-class carries no analysis consequence and no
-#' Likert-specific rendering.
+#' Sufficient discriminator (Likert if EITHER fires):
+#' \itemize{
+#'   \item ANCHORS -- the surviving labels contain both pole words of a
+#'         recognised ordered family (see \code{.jst_likert_anchor_families}),
+#'         matched on whole tokens. Column-local, so it catches a lone item;
+#'         reverse-coding-agnostic; English-centric.
+#'   \item BATTERY -- the column sits in a contiguous run of adjacent columns
+#'         sharing the same normalized non-missing label set (see
+#'         \code{.jst_in_likert_battery()}). Language-agnostic; needs the
+#'         resolver to carry the variable and frame identity.
+#' }
+#' Category count plays no role in either branch -- matching on count would re-
+#' admit the very property a nominal shares with a battery.
+#'
+#' This is display/reporting scoped: a TRUE result refines the Categorical sub-
+#' class to "Likert" but never changes a variable's analysis class or how
+#' analyses treat it. The detector does not have to be perfect: a non-English
+#' lone scale with no recognised anchor, or a scattered (non-adjacent) battery,
+#' is not auto-detected and is declared with \code{jlikert()}; a labelled
+#' nominal whose labels happen to carry an anchor pair could still read
+#' "Likert", a tolerated cosmetic call given the sub-class carries no analysis
+#' consequence.
 #'
 #' Because this is called only from the Categorical branch of
 #' \code{.jst_class_from_role()}, it is reached structurally only for variables
-#' the package already routes to Categorical (<= 6 categories). A 7-point
-#' labelled scale therefore resolves to Numeric structurally (the existing
-#' Numeric/Categorical boundary is unchanged) and must be declared with
-#' \code{jlikert()} to carry the Likert sub-class.
+#' already routed to Categorical (<= 6 categories), so the auto-detected range
+#' is 3 to 6 in practice. A 7-point labelled scale resolves to Numeric
+#' structurally (the Numeric/Categorical boundary is unchanged) and must be
+#' declared with \code{jlikert()}.
 #'
 #' @param x A variable / data-frame column.
-#' @param var_name Optional variable name; accepted for call-site symmetry with
-#'   the other structural classifiers, not used here.
-#' @param data_name Optional data-frame name; accepted for call-site symmetry,
-#'   not used here.
-#' @return TRUE if the variable has Likert (ordered labelled scale) structure,
-#'   FALSE otherwise.
+#' @param var_name Optional variable name; with \code{data_name}, lets the
+#'   battery branch locate the column among its siblings.
+#' @param data_name Optional data-frame name; with \code{var_name}, names the
+#'   frame the battery branch fetches to read adjacent columns.
+#' @return TRUE if the variable is detected as a Likert (ordered labelled
+#'   scale) item, FALSE otherwise.
 #' @keywords internal
 .jst_is_likert <- function(x, var_name = NULL, data_name = NULL) {
   if (!haven::is.labelled(x)) return(FALSE)
-  vl <- labelled::val_labels(x)
-  if (is.null(vl) || length(vl) == 0) return(FALSE)
 
-  codes <- suppressWarnings(as.numeric(unname(vl)))
+  # -- Necessary structure: surviving codes form a consecutive integer run ----
+  surv <- .jst_surviving_value_labels(x)
+  if (is.null(surv) || length(surv) == 0L) return(FALSE)
+
+  codes <- suppressWarnings(as.numeric(unname(surv)))
   if (any(is.na(codes)) || any(codes != floor(codes))) return(FALSE)
   codes_sorted <- sort(unique(codes))
   n_codes <- length(codes_sorted)
   if (n_codes < 3L || n_codes > 7L) return(FALSE)
   if (any(diff(codes_sorted) != 1)) return(FALSE)
 
-  xn      <- suppressWarnings(as.numeric(x))
-  present <- xn[!is.na(xn)]
+  # Every present value (declared missings already dropped by is.na()) must be
+  # one of the surviving scale points.
+  xn      <- .jst_as_numeric(x)
+  present <- xn[!is.na(x)]
+  present <- present[!is.na(present)]
   if (length(present) == 0L) return(FALSE)
   if (!all(present %in% codes_sorted)) return(FALSE)
 
-  TRUE
+  # -- Sufficient discriminator: anchors (column-local) OR battery (siblings) -
+  if (.jst_labels_match_anchor(names(surv))) return(TRUE)
+  if (.jst_in_likert_battery(x, var_name, data_name)) return(TRUE)
+
+  FALSE
 }
 
 
@@ -4165,10 +4358,14 @@
 #'
 #' @param role One of "numeric", "count", "categorical".
 #' @param x The variable (used only to derive the categorical subclass).
+#' @param var_name Optional variable name; passed through to the Likert battery
+#'   detector so it can locate the variable among its siblings.
+#' @param data_name Optional data-frame name; passed through to the Likert
+#'   battery detector so it can read adjacent columns.
 #' @return A list with \code{class} and \code{subclass}, or \code{NULL} if
 #'   \code{role} is not recognized.
 #' @keywords internal
-.jst_class_from_role <- function(role, x) {
+.jst_class_from_role <- function(role, x, var_name = NULL, data_name = NULL) {
   if (identical(role, "numeric"))
     return(list(class = "Numeric", subclass = ""))
   if (identical(role, "count"))
@@ -4184,8 +4381,10 @@
     # in jscreen's Sub-class column. Reached structurally only for variables
     # already routed to Categorical (<= 6 categories), so 3-6 auto-detect; a
     # 7-point scale resolves Numeric structurally and needs jlikert(). The
-    # registered/per-call "likert" role above asserts it directly. (Session 86)
-    if (.jst_is_likert(x))
+    # registered/per-call "likert" role above asserts it directly. Detection is
+    # the two-stage anchor/battery test; var_name/data_name let the battery
+    # branch see sibling columns. (Session 86; redesign Session 87)
+    if (.jst_is_likert(x, var_name, data_name))
       return(list(class = "Categorical", subclass = "Likert"))
     n_unique <- length(unique(x[!is.na(x)]))
     # Identifier: a text/factor categorical whose every non-missing value is
@@ -4226,8 +4425,9 @@
 #'
 #' Sub-class (for Categorical only; "" otherwise): "dichotomy" for a two-
 #' value variable, "Likert" for a value-labelled ordered scale (a consecutive
-#' run of 3-7 labelled codes; structural detection or a jlikert()/likert=
-#' assertion), "identifier" for a text/factor variable whose every non-
+#' run of 3-7 surviving labelled codes plus an anchor-or-battery discriminator;
+#' structural detection or a jlikert() assertion), "identifier" for a
+#' text/factor variable whose every non-
 #' missing value is distinct (7+ values; a respondent ID is the typical case),
 #' else "N-category" (e.g. "4-category") from the count of distinct non-missing
 #' values. The "Likert" and "identifier" labels are display refinements: such a variable is still
@@ -4279,7 +4479,7 @@
 
   # -- Tier 1: per-call override -------------------------------------------
   if (!is.null(override)) {
-    res <- .jst_class_from_role(override, x)
+    res <- .jst_class_from_role(override, x, var_name, data_name)
     if (!is.null(res)) return(c(res, list(source = "per-call")))
   }
 
@@ -4289,7 +4489,7 @@
   if (!is.null(var_name) && !is.null(data_name)) {
     intent <- .jst_get_intent(data_name, var_name)
     if (!is.null(intent) && !is.null(intent$kind)) {
-      res <- .jst_class_from_role(intent$kind, x)
+      res <- .jst_class_from_role(intent$kind, x, var_name, data_name)
       if (!is.null(res)) return(c(res, list(source = "registered")))
     }
     dummy_regs <- .jst_get_dummy(data_name)
@@ -4298,7 +4498,7 @@
                                   function(r) identical(r$var_name, var_name),
                                   logical(1)))
       if (is_registered)
-        return(c(.jst_class_from_role("categorical", x),
+        return(c(.jst_class_from_role("categorical", x, var_name, data_name),
                  list(source = "registered")))
     }
   }
@@ -4317,7 +4517,7 @@
 
   if (!is_cat) return(list(class = "Numeric", subclass = "", source = "structural"))
 
-  c(.jst_class_from_role("categorical", x), list(source = "structural"))
+  c(.jst_class_from_role("categorical", x, var_name, data_name), list(source = "structural"))
 }
 
 
