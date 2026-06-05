@@ -4372,6 +4372,20 @@
     return(list(class = "Numeric", subclass = "Count"))
   if (identical(role, "likert"))
     return(list(class = "Categorical", subclass = "Likert"))
+  # A user-declared dummy (jdummy). A dichotomy is a special case of a dummy and
+  # keeps its own "dichotomy" sub-class (with the existing "*" recode marker and
+  # User-declared Source where they apply); a variable with more than two
+  # categories declared as a dummy gets the registration-only "<N>-cat dummy"
+  # sub-class (e.g. "5-cat dummy"), carrying the category count in short form.
+  # Registration asserts dummy intent, so the Likert/identifier auto-detectors
+  # are skipped. Display-only -- still Categorical for every analysis purpose;
+  # the structural classifier never emits "<N>-cat dummy". (Session 88)
+  if (identical(role, "dummy")) {
+    if (.jst_is_dichotomy(x)$is_dichotomy)
+      return(list(class = "Categorical", subclass = "dichotomy"))
+    n_unique <- length(unique(x[!is.na(x)]))
+    return(list(class = "Categorical", subclass = paste0(n_unique, "-cat dummy")))
+  }
   if (identical(role, "categorical")) {
     if (.jst_is_dichotomy(x)$is_dichotomy)
       return(list(class = "Categorical", subclass = "dichotomy"))
@@ -4438,6 +4452,11 @@
 #' numeric-ish (continuous numeric, or labelled with 7+ categories) is
 #' Numeric. The Numeric subclass "Count" is registration-only (set via jcount,
 #' or the per-call override "count"); the structural classifier never emits it.
+#' The Categorical subclass "<N>-cat dummy" (e.g. "5-cat dummy") is likewise
+#' registration-only -- set via jdummy() on a variable with more than two
+#' categories; the structural classifier never emits it, and a dichotomy
+#' declared via jdummy() keeps its "dichotomy" subclass, a dichotomy being a
+#' special case of a dummy.
 #'
 #' Resolution stack (highest wins; first tier that yields a class short-
 #' circuits). Storage-determined edge kinds (date-time, numbers-as-text,
@@ -4498,7 +4517,7 @@
                                   function(r) identical(r$var_name, var_name),
                                   logical(1)))
       if (is_registered)
-        return(c(.jst_class_from_role("categorical", x, var_name, data_name),
+        return(c(.jst_class_from_role("dummy", x, var_name, data_name),
                  list(source = "registered")))
     }
   }

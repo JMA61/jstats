@@ -57,6 +57,11 @@ categories, or a whole-number 0-6 numeric is Categorical; everything else
 numeric-ish (continuous numeric, or labelled with 7+ categories) is
 Numeric. The Numeric subclass "Count" is registration-only (set via jcount,
 or the per-call override "count"); the structural classifier never emits it.
+The Categorical subclass "\if{html}{\out{<N>}}-cat dummy" (e.g. "5-cat dummy") is likewise
+registration-only -- set via jdummy() on a variable with more than two
+categories; the structural classifier never emits it, and a dichotomy
+declared via jdummy() keeps its "dichotomy" subclass, a dichotomy being a
+special case of a dummy.
 
 Resolution stack (highest wins; first tier that yields a class short-
 circuits). Storage-determined edge kinds (date-time, numbers-as-text,
