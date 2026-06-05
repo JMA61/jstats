@@ -814,6 +814,127 @@
   reg[[var_name]]
 }
 
+#' Internal helper: bake classification registrations onto a frame for saving
+#'
+#' Gathers the active classification registrations for a named data frame --
+#' the jnumeric/jcount intent records (the .jst_registry notebook) and the
+#' jdummy registrations (the .jst_dummy registry) -- and attaches them to the
+#' data frame as a single list-valued attribute (".jst_registrations") so they
+#' travel inside an R native format (.rds) save. The original frame name is
+#' recorded alongside as provenance only; it is informational and is NOT used
+#' as the lookup key on load (jload re-keys under the name the frame is loaded
+#' as, which is the name later analysis calls will reference). The attribute is
+#' attached only when at least one registration exists, so a frame with none is
+#' returned unchanged and saves without the attribute. Only the .rds format
+#' carries arbitrary R attributes, so this is called only on the .rds save path.
+#'
+#' @param data A data frame.
+#' @param data_name Character string giving the data frame name to look up in
+#'   the two registries.
+#' @return The data frame, with a ".jst_registrations" attribute attached when
+#'   registrations exist, otherwise unchanged.
+#' @keywords internal
+.jst_bake_registrations <- function(data, data_name) {
+  reg   <- .jst_get_registry(data_name)
+  dummy <- .jst_get_dummy(data_name)
+  if (is.null(reg) && is.null(dummy)) {
+    return(data)
+  }
+  attr(data, ".jst_registrations") <- list(
+    registry = reg,
+    dummy    = dummy,
+    origin   = data_name
+  )
+  data
+}
+
+#' Internal helper: refresh the registration notebook from a loaded frame
+#'
+#' On load, makes the session notebook for a frame name match what the file
+#' carries (the file is the source of truth at load time). When the loaded
+#' object carries baked registrations, they are written into the .jst_registry
+#' and .jst_dummy notebooks under the load-time name, replacing any differing
+#' in-session registrations already sitting under that name. When the loaded
+#' object carries none -- a non-.rds file, an older .rds saved before this
+#' feature existed, or freshly unregistered data -- any stale registrations
+#' under the reused name are cleared. Returns a one-line note describing what
+#' happened (or NULL when nothing changed), for the caller to emit subject to
+#' its own quiet setting.
+#'
+#' @param obj_name Character string giving the name the frame is loaded as
+#'   (jload's name= argument, or the file stem) -- the key the analysis
+#'   functions will look the frame up by.
+#' @param baked The ".jst_registrations" attribute read from the loaded object
+#'   (a list with registry, dummy, and origin entries), or NULL when the object
+#'   carried none.
+#' @return A character note, or NULL when no notebook change was made.
+#' @keywords internal
+.jst_refresh_registrations <- function(obj_name, baked) {
+  existing_reg   <- .jst_get_registry(obj_name)
+  existing_dummy <- .jst_get_dummy(obj_name)
+  had_existing   <- !is.null(existing_reg) || !is.null(existing_dummy)
+
+  if (is.null(baked)) {
+    # Loaded data carries no registrations: clear any stale notebook entry
+    # sitting under this reused name. Silent when there was nothing to clear.
+    if (had_existing) {
+      .jst_set_registry(obj_name, NULL)
+      .jst_set_dummy(obj_name, NULL)
+      return(paste0(
+        "Cleared the classification registrations you had set this session ",
+        "for '", obj_name, "' (the loaded data carries none)."))
+    }
+    return(NULL)
+  }
+
+  # Loaded data carries registrations: make the notebook match the file.
+  replaced <- had_existing &&
+    (!identical(existing_reg, baked$registry) ||
+       !identical(existing_dummy, baked$dummy))
+  .jst_set_registry(obj_name, baked$registry)
+  .jst_set_dummy(obj_name, baked$dummy)
+
+  origin_note <- if (!is.null(baked$origin) &&
+                     !identical(baked$origin, obj_name)) {
+    paste0(" (saved under '", baked$origin, "')")
+  } else {
+    ""
+  }
+  if (replaced) {
+    paste0("Restored the classification registrations saved with this file",
+           origin_note, ", replacing different registrations you had set ",
+           "this session for '", obj_name, "'.")
+  } else {
+    paste0("Restored the classification registrations saved with this file",
+           origin_note, ".")
+  }
+}
+
+#' Internal helper: note that registrations are not kept in a non-rds format
+#'
+#' Builds the loss-of-fidelity note emitted when a frame that has active
+#' classification registrations is saved to a format other than R native
+#' format (.rds). Parallels the label and missing-value loss notes: the data
+#' write succeeds, but the registrations are dropped because only the .rds
+#' format carries them. Returns NULL when the frame has no registrations, so
+#' the note fires only when there is something to lose.
+#'
+#' @param ext The (lower-case) target file extension.
+#' @param data_name Character string giving the data frame name to look up.
+#' @return A character note, or NULL when the frame has no registrations.
+#' @keywords internal
+.jst_jsave_registration_loss_note <- function(ext, data_name) {
+  reg   <- .jst_get_registry(data_name)
+  dummy <- .jst_get_dummy(data_name)
+  if (is.null(reg) && is.null(dummy)) {
+    return(NULL)
+  }
+  paste0(
+    "Note: classification registrations (jnumeric/jcount/jdummy) are not ",
+    "kept in ", .jst_format_label(ext), " (.", ext, "); they persist only ",
+    "in R native format (.rds).")
+}
+
 #' Internal helper: human-readable label for a registered intent kind
 #'
 #' @param kind One of "numeric", "count", "dummy".
@@ -869,36 +990,158 @@
   invisible(cleared)
 }
 
-#' Internal helper: clear all registrations of one kind across data frames
+#' Internal helper: names of data frames carrying registrations of one kind
 #'
-#' Backs the \code{jnumeric(NULL)} / \code{jcount(NULL)} clear-all idiom,
-#' mirroring \code{jdummy(NULL)}. Removes every record of the given kind from
-#' the \code{.jst_registry} option, leaving other kinds untouched, and reports
-#' whether anything was cleared.
+#' Scans the relevant session store and returns the names of the data frames
+#' that currently hold at least one registration of the requested kind:
+#' \code{.jst_registry} for "numeric"/"count" (a frame qualifies if it has any
+#' record of that kind), \code{.jst_dummy} for "dummy" (a frame qualifies if it
+#' has any dummy registration). Used by the clear dispatcher to decide, when no
+#' frame is named and no default is set, whether a bare clear is unambiguous.
 #'
-#' @param kind One of "numeric", "count".
+#' @param kind One of "numeric", "count", "dummy".
+#' @return Character vector of data-frame names (possibly empty).
+#' @keywords internal
+.jst_frames_with_registrations <- function(kind) {
+  if (identical(kind, "dummy")) {
+    all_d <- getOption(".jst_dummy", default = list())
+    nm <- names(all_d)[vapply(all_d, function(x) !is.null(x) && length(x) > 0,
+                              logical(1))]
+    return(if (is.null(nm)) character(0) else nm)
+  }
+  all_r <- getOption(".jst_registry", default = list())
+  keep <- vapply(all_r, function(reg) {
+    !is.null(reg) && length(reg) > 0 &&
+      any(vapply(reg, function(r) identical(r$kind, kind), logical(1)))
+  }, logical(1))
+  nm <- names(all_r)[keep]
+  if (is.null(nm)) character(0) else nm
+}
+
+#' Internal helper: clear one frame's registrations of one kind
+#'
+#' Removes the requested kind's registrations for a single named data frame and
+#' returns the variable names that were cleared (empty when there were none).
+#' "dummy" clears the frame's \code{.jst_dummy} entry; "numeric"/"count" remove
+#' only the matching-kind records from the frame's \code{.jst_registry} entry,
+#' leaving any records of the other kind in place.
+#'
+#' @param kind One of "numeric", "count", "dummy".
+#' @param data_name Character data-frame name.
+#' @return Character vector of cleared variable names (possibly empty).
+#' @keywords internal
+.jst_clear_one_frame <- function(kind, data_name) {
+  if (identical(kind, "dummy")) {
+    existing <- .jst_get_dummy(data_name)
+    if (is.null(existing) || length(existing) == 0) return(character(0))
+    cleared <- vapply(existing, function(r) r$var_name, character(1))
+    .jst_set_dummy(data_name, NULL)
+    return(unname(cleared))
+  }
+  reg <- .jst_get_registry(data_name)
+  if (is.null(reg) || length(reg) == 0) return(character(0))
+  is_kind <- vapply(reg, function(r) identical(r$kind, kind), logical(1))
+  if (!any(is_kind)) return(character(0))
+  cleared <- vapply(reg[is_kind], function(r) r$var_name, character(1))
+  reg <- reg[!is_kind]
+  if (length(reg) == 0) reg <- NULL
+  .jst_set_registry(data_name, reg)
+  unname(cleared)
+}
+
+#' Internal helper: the registration verb name for a kind
+#'
+#' @param kind One of "numeric", "count", "dummy".
+#' @return The user-facing function name ("jnumeric"/"jcount"/"jdummy").
+#' @keywords internal
+.jst_clear_verb <- function(kind) {
+  switch(kind, numeric = "jnumeric", count = "jcount", dummy = "jdummy",
+         paste0("j", kind))
+}
+
+#' Internal helper: resolve and perform a registration clear
+#'
+#' The single decision point for clearing classification registrations, shared
+#' by \code{jnumeric()}, \code{jcount()}, and \code{jdummy()} so the three verbs
+#' behave identically. Three entry shapes feed it:
+#' \itemize{
+#'   \item \code{clear.all = TRUE} -- clear this kind on every data frame that
+#'         carries it.
+#'   \item \code{explicit_frame} set (the \code{verb(data, NULL)} form) -- clear
+#'         this kind on that one frame.
+#'   \item neither (the \code{verb(NULL)} form) -- clear the \code{juse()}
+#'         default frame if one is set; otherwise clear the sole frame carrying
+#'         this kind if exactly one does; otherwise stop and ask the user to
+#'         name a frame or pass \code{clear.all = TRUE} (never a silent
+#'         multi-frame wipe).
+#' }
+#' Messages are emitted here, not by the callers, so the wording stays uniform.
+#'
+#' @param kind One of "numeric", "count", "dummy".
+#' @param clear.all Logical; clear every frame carrying this kind.
+#' @param explicit_frame Character data-frame name for the \code{verb(data,
+#'   NULL)} form, or NULL.
+#' @param default_name The \code{juse()} default frame name, or NULL.
 #' @return \code{invisible(NULL)}.
 #' @keywords internal
-.jst_clear_all_intent <- function(kind) {
-  all_reg     <- getOption(".jst_registry", default = list())
-  removed_any <- FALSE
-  for (dn in names(all_reg)) {
-    reg <- all_reg[[dn]]
-    if (is.null(reg) || length(reg) == 0) next
-    keep <- !vapply(reg, function(r) identical(r$kind, kind), logical(1))
-    if (any(!keep)) removed_any <- TRUE
-    reg <- reg[keep]
-    if (length(reg) == 0) reg <- NULL
-    all_reg[[dn]] <- reg
+.jst_handle_clear <- function(kind, clear.all = FALSE, explicit_frame = NULL,
+                              default_name = NULL) {
+  klab <- .jst_intent_label(kind)
+  Klab <- .jst_intent_label(kind, cap = TRUE)
+
+  report_one <- function(frame, cleared, default = FALSE) {
+    tag <- if (isTRUE(default)) " (the default data frame)" else ""
+    if (length(cleared) == 0) {
+      message("No ", klab, " registrations to clear for ", frame, tag, ".")
+    } else {
+      message(Klab, " registrations cleared for ", frame, tag, ": ",
+              paste(cleared, collapse = ", "), ".")
+    }
   }
-  options(.jst_registry = all_reg)
-  if (removed_any) {
-    message(.jst_intent_label(kind, cap = TRUE),
-            " registrations cleared across all data frames.")
-  } else {
-    message("No ", .jst_intent_label(kind), " registrations to clear.")
+
+  # clear.all: every frame carrying this kind.
+  if (isTRUE(clear.all)) {
+    frames <- .jst_frames_with_registrations(kind)
+    if (length(frames) == 0) {
+      message("No ", klab, " registrations to clear.")
+      return(invisible(NULL))
+    }
+    for (fr in frames) .jst_clear_one_frame(kind, fr)
+    message(Klab, " registrations cleared across all data frames (",
+            paste(frames, collapse = ", "), ").")
+    return(invisible(NULL))
   }
-  invisible(NULL)
+
+  # verb(data, NULL): clear the named frame only.
+  if (!is.null(explicit_frame)) {
+    report_one(explicit_frame, .jst_clear_one_frame(kind, explicit_frame))
+    return(invisible(NULL))
+  }
+
+  # verb(NULL): default frame wins when one is set.
+  if (!is.null(default_name)) {
+    report_one(default_name, .jst_clear_one_frame(kind, default_name),
+               default = TRUE)
+    return(invisible(NULL))
+  }
+
+  # verb(NULL), no default: clear the sole registered frame, else nothing,
+  # else ask rather than wipe several silently.
+  frames <- .jst_frames_with_registrations(kind)
+  if (length(frames) == 0) {
+    message("No ", klab, " registrations to clear.")
+    return(invisible(NULL))
+  }
+  if (length(frames) == 1) {
+    report_one(frames, .jst_clear_one_frame(kind, frames))
+    return(invisible(NULL))
+  }
+  verb <- .jst_clear_verb(kind)
+  stop(Klab, " registrations exist on more than one data frame: ",
+       paste(frames, collapse = ", "), ".\n",
+       "Name the one to clear, e.g. ", verb, "(", frames[1], ", NULL), ",
+       "or clear them all with ", verb, "(clear.all = TRUE).",
+       call. = FALSE)
 }
 
 #' Internal helper: shared registration engine for jnumeric() / jcount()
@@ -5241,9 +5484,13 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' datasets preserves each dataset's registrations independently.
 #'
 #' @param data A data frame, or omit to use the \code{juse()} default.
-#'   Pass \code{NULL} to clear all registrations.
+#'   \code{jdummy(NULL)} clears the dummy registrations on the \code{juse()}
+#'   default data frame (or, with no default set, the only frame that carries
+#'   them; if several do, it asks rather than wiping all).
 #' @param ... One or more unquoted variable names to register. Omit (along
-#'   with data) to display all current registrations.
+#'   with data) to display all current registrations. A lone \code{NULL} in the
+#'   variable slot -- \code{jdummy(data, NULL)} -- clears that frame's dummy
+#'   registrations.
 #' @param ref The reference category (excluded from the regression model).
 #'   Can be a numeric code, a quoted label name, or \code{first}
 #'   (default) or \code{last}. Applied to every variable named in the call;
@@ -5253,6 +5500,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'   table showing the pattern of 0s and 1s. Default is \code{FALSE}.
 #' @param remove Logical. If \code{TRUE}, removes the registration for
 #'   the specified variable(s). Default is \code{FALSE}.
+#' @param clear.all Logical. If \code{TRUE}, clears dummy registrations on
+#'   every data frame that carries them. Default is \code{FALSE}.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
@@ -5269,8 +5518,9 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' jdummy(cyl, show = "all")            # Full scheme (for many categories)
 #' jdummy()                             # Show all registrations
 #' jdummy(cyl, remove = TRUE)           # Remove one registration
-#' jdummy(mtcars, NULL)                 # Clear all registrations for mtcars
-#' jdummy(NULL)                         # Clear registrations for ALL data frames
+#' jdummy(mtcars, NULL)                 # Clear mtcars' dummy registrations
+#' jdummy(NULL)                         # Clear the default frame's (or ask)
+#' jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 #' }
 #'
 #' @seealso \code{\link{JeffsStatTools}} for the package overview,
@@ -5278,9 +5528,12 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'
 #' @export
 jdummy <- function(data, ..., ref = "first", show = FALSE,
-                   remove = FALSE) {
+                   remove = FALSE, clear.all = FALSE) {
 
   default_name <- getOption(".jst_default_data", default = NULL)
+
+  # jdummy(clear.all = TRUE): clear dummy registrations on every frame.
+  if (isTRUE(clear.all)) return(.jst_handle_clear("dummy", clear.all = TRUE))
 
   # -- jdummy() — no arguments: session-wide registration status ------------
   # Session-wide to match jdummy(NULL). Collapse rule: 1 frame renders the
@@ -5340,35 +5593,14 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
   # Needed for the literal-NULL detection idiom and for the helper call.
   raw_data <- if (!missing(data)) substitute(data) else NULL
 
-  # -- jdummy(NULL) — clear ALL registrations across every data frame --------
-  # The condition "data was supplied AND substituted expression is NULL"
-  # detects the literal jdummy(NULL) call. Mirrors jsubset(NULL) and
-  # jcomplete(NULL).
+  # -- jdummy(NULL) — clear the default frame (or sole/ask) -----------------
+  # "data supplied AND substituted expression is NULL" detects the literal
+  # jdummy(NULL) call. No longer an all-frames wipe: it clears the juse()
+  # default frame if one is set, else the sole registered frame, else asks --
+  # use jdummy(clear.all = TRUE) for every frame. Unified with jnumeric(NULL)/
+  # jcount(NULL) via the shared dispatcher.
   if (!missing(data) && is.null(raw_data)) {
-    all_dummy <- getOption(".jst_dummy", default = list())
-    if (length(all_dummy) == 0) {
-      message("No dummy registrations to clear.")
-      return(invisible(NULL))
-    }
-
-    # Build a per-data-frame summary BEFORE clearing, so the message can
-    # tell the user what was lost.
-    dnames <- names(all_dummy)
-    hads <- vapply(seq_along(all_dummy), function(i) {
-      regs <- all_dummy[[i]]
-      if (is.null(regs) || length(regs) == 0) {
-        "no registrations"
-      } else {
-        var_names <- vapply(regs, function(r) r$var_name, character(1))
-        paste0("had ", length(var_names), " registered: ",
-               paste(var_names, collapse = ", "))
-      }
-    }, character(1))
-
-    options(.jst_dummy = NULL)
-
-    .jst_render_clear("jdummy", dnames, hads)
-    return(invisible(NULL))
+    return(.jst_handle_clear("dummy", default_name = default_name))
   }
 
   # -- Resolve the first argument via the standard helper -------------------
@@ -5408,28 +5640,18 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 
   # -- jdummy(data, NULL) -- per-dataset clear ------------------------------
   # A lone NULL in the variable slot clears this dataset's registrations,
-  # matching jsubset(data, NULL) / jcomplete(data, NULL). The clear-all form
-  # jdummy(NULL) is handled earlier and never reaches this point.
+  # matching jnumeric(data, NULL) / jcount(data, NULL). The default/sole/ask
+  # form jdummy(NULL) is handled earlier and never reaches this point.
   if (identical(var_names, "NULL")) {
-    existing <- .jst_get_dummy(.jst_data_name)
-    if (is.null(existing) || length(existing) == 0) {
-      message("No dummy registrations to clear for ", .jst_data_name, ".")
-    } else {
-      cleared <- vapply(existing, function(r) r$var_name, character(1))
-      .jst_set_dummy(.jst_data_name, NULL)
-      cat("Cleared ", length(cleared),
-          " dummy registration", if (length(cleared) == 1L) "" else "s",
-          " from ", .jst_data_name, ": ",
-          paste(cleared, collapse = ", "), ".\n", sep = "")
-    }
-    return(invisible(NULL))
+    return(.jst_handle_clear("dummy", explicit_frame = .jst_data_name))
   }
 
   # No usable variable: data supplied but no variable named.
   if (length(var_names) == 0L) {
     stop("jdummy(): no variable supplied. ",
          "Use jdummy(VarName) to register, jdummy(VarName, remove = TRUE) ",
-         "to remove, or jdummy(NULL) to clear all registrations.",
+         "to remove, jdummy(VarName = NULL) to clear this frame, ",
+         "or jdummy(clear.all = TRUE) to clear every frame.",
          call. = FALSE)
   }
 
@@ -5651,12 +5873,17 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 #' analyzed as a continuous score.
 #'
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
-#'   \code{jnumeric(NULL)} clears all numeric registrations across data frames.
+#'   \code{jnumeric(NULL)} clears the numeric registrations on the
+#'   \code{\link{juse}} default frame (or, with no default set, the only frame
+#'   that carries them; if several do, it asks rather than wiping all).
+#'   \code{jnumeric(data, NULL)} clears that one frame's numeric registrations.
 #'   Called with no arguments, \code{jnumeric()} lists the session's numeric
 #'   and count registrations.
 #' @param ... One or more unquoted variable names to register.
 #' @param remove Logical; if \code{TRUE}, remove the numeric registration for
 #'   the named variables instead of adding it.
+#' @param clear.all Logical; if \code{TRUE}, clear numeric registrations on
+#'   every data frame that carries them.
 #' @return \code{invisible(NULL)}. Called for its side effect on the session
 #'   registration notebook.
 #' @seealso \code{\link{jdummy}}, \code{\link{jcount}}
@@ -5667,13 +5894,21 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 #' jnumeric(df, attitude, score)       # multiple variables at once
 #' jnumeric(df, attitude, remove = TRUE)
 #' jnumeric()                          # list all registrations
-#' jnumeric(NULL)                      # clear all numeric registrations
+#' jnumeric(df, NULL)                  # clear df's numeric registrations
+#' jnumeric(clear.all = TRUE)          # clear every frame's numeric registrations
 #' @export
-jnumeric <- function(data, ..., remove = FALSE) {
+jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
+  # jnumeric(clear.all = TRUE): clear numeric registrations on every frame.
+  if (isTRUE(clear.all)) return(.jst_handle_clear("numeric", clear.all = TRUE))
   # jnumeric() with no arguments: show the session-wide registry status.
   if (missing(data) && ...length() == 0L) return(.jst_registry_status())
   raw_data <- if (!missing(data)) substitute(data) else NULL
-  if (!missing(data) && is.null(raw_data)) return(.jst_clear_all_intent("numeric"))
+  # jnumeric(NULL): clear the default frame (or the sole registered frame, or
+  # ask) -- never a silent all-frames wipe (use clear.all = TRUE for that).
+  if (!missing(data) && is.null(raw_data)) {
+    return(.jst_handle_clear("numeric",
+             default_name = getOption(".jst_default_data", default = NULL)))
+  }
 
   arg1 <- .jst_resolve_first_arg(
     data_sub      = substitute(data),
@@ -5691,6 +5926,11 @@ jnumeric <- function(data, ..., remove = FALSE) {
     extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
+  }
+  # jnumeric(data, NULL): clear this frame's numeric registrations (mirrors
+  # jdummy(data, NULL); the lone NULL sits in the variable slot).
+  if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
+    return(.jst_handle_clear("numeric", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
     stop("Specify one or more variables to register, e.g. ",
@@ -5721,12 +5961,16 @@ jnumeric <- function(data, ..., remove = FALSE) {
 #' it across sessions.
 #'
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
-#'   \code{jcount(NULL)} clears all count registrations across data frames.
-#'   Called with no arguments, \code{jcount()} lists the session's numeric and
-#'   count registrations.
+#'   \code{jcount(NULL)} clears the count registrations on the \code{\link{juse}}
+#'   default frame (or, with no default set, the only frame that carries them;
+#'   if several do, it asks rather than wiping all). \code{jcount(data, NULL)}
+#'   clears that one frame's count registrations. Called with no arguments,
+#'   \code{jcount()} lists the session's numeric and count registrations.
 #' @param ... One or more unquoted variable names to register.
 #' @param remove Logical; if \code{TRUE}, remove the count registration for the
 #'   named variables instead of adding it.
+#' @param clear.all Logical; if \code{TRUE}, clear count registrations on every
+#'   data frame that carries them.
 #' @return \code{invisible(NULL)}. Called for its side effect on the session
 #'   registration notebook.
 #' @seealso \code{\link{jnumeric}}, \code{\link{jdummy}}
@@ -5736,13 +5980,21 @@ jnumeric <- function(data, ..., remove = FALSE) {
 #' jcount(df, arrests)                 # treat as a count (here 0-12)
 #' jcount(df, arrests, remove = TRUE)
 #' jcount()                            # list all registrations
-#' jcount(NULL)                        # clear all count registrations
+#' jcount(df, NULL)                    # clear df's count registrations
+#' jcount(clear.all = TRUE)            # clear every frame's count registrations
 #' @export
-jcount <- function(data, ..., remove = FALSE) {
+jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
+  # jcount(clear.all = TRUE): clear count registrations on every frame.
+  if (isTRUE(clear.all)) return(.jst_handle_clear("count", clear.all = TRUE))
   # jcount() with no arguments: show the session-wide registry status.
   if (missing(data) && ...length() == 0L) return(.jst_registry_status())
   raw_data <- if (!missing(data)) substitute(data) else NULL
-  if (!missing(data) && is.null(raw_data)) return(.jst_clear_all_intent("count"))
+  # jcount(NULL): clear the default frame (or the sole registered frame, or
+  # ask) -- never a silent all-frames wipe (use clear.all = TRUE for that).
+  if (!missing(data) && is.null(raw_data)) {
+    return(.jst_handle_clear("count",
+             default_name = getOption(".jst_default_data", default = NULL)))
+  }
 
   arg1 <- .jst_resolve_first_arg(
     data_sub      = substitute(data),
@@ -5760,6 +6012,10 @@ jcount <- function(data, ..., remove = FALSE) {
     extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
+  }
+  # jcount(data, NULL): clear this frame's count registrations.
+  if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
+    return(.jst_handle_clear("count", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
     stop("Specify one or more variables to register, e.g. ",
@@ -16185,6 +16441,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     df <- as.data.frame(df)
   }
 
+  # --- Capture baked classification registrations ----------------------------
+  # An .rds saved by jsave may carry the active registrations as a frame-level
+  # ".jst_registrations" attribute. Capture it now and strip it from the frame
+  # so the object assigned to the environment is clean (the notebook, not an
+  # on-object attribute, is the runtime source of truth). Non-.rds files and
+  # pre-feature .rds files carry nothing, so baked_regs is NULL there. The
+  # notebook is refreshed from this below, once obj_name is settled.
+  baked_regs <- attr(df, ".jst_registrations")
+  attr(df, ".jst_registrations") <- NULL
+
   # --- Handle UDMs (all formats with potential UDM metadata) -----------------
   # The read above passes user_na = TRUE for .sav so SPSS UDM metadata is
   # available. For .dta and .sas7bdat, haven natively reads tagged NAs.
@@ -16212,6 +16478,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       ncol(df), " variables)"
     )
   }
+
+  # --- Refresh classification registrations ----------------------------------
+  # Make the session notebook for this frame name match the file (the file is
+  # the source of truth at load time). Keyed by obj_name -- the name the frame
+  # is loaded as, which is what later analysis calls reference -- not the name
+  # it was saved under. Restores baked registrations (replacing any differing
+  # in-session ones), or clears stale ones when the loaded data carries none.
+  reg_note <- .jst_refresh_registrations(obj_name, baked_regs)
+  if (!is.null(reg_note)) say(reg_note)
 
   # --- Set as default with juse() if requested -------------------------------
   if (use) {
@@ -18211,6 +18486,15 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
     fileext = paste0(".", ext)
   )
 
+  # Registration-aware save: only the .rds format carries arbitrary R
+  # attributes, so bake the active classification registrations (jnumeric/
+  # jcount via .jst_registry, jdummy via .jst_dummy) onto the frame just for
+  # that path. Other formats get a loss note after the write instead. No-op
+  # when the frame has no registrations.
+  if (ext == "rds") {
+    data <- .jst_bake_registrations(data, data_name)
+  }
+
   tryCatch({
     switch(ext,
            sav  = haven::write_sav(data, temp_path),
@@ -18252,6 +18536,15 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
     label_note <- .jst_jsave_label_loss_note(
       ext, spss_udm_vars, stata_udm_vars, preserve.udm, n_udm_blanked)
     if (!is.null(label_note)) message(label_note)
+  }
+
+  # Classification registrations ride along only in .rds (baked above). Any
+  # other format silently drops them, so note the loss -- but only when the
+  # frame actually has registrations to lose. Same loss-of-fidelity footing as
+  # the label note above; not joutput-gated.
+  if (ext != "rds") {
+    reg_loss_note <- .jst_jsave_registration_loss_note(ext, data_name)
+    if (!is.null(reg_loss_note)) message(reg_loss_note)
   }
 
   # --- Confirmation message --------------------------------------------------
@@ -18582,6 +18875,32 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                       },
                       character(1))
 
+  # -- Single-variable geometry redirect (display only) ----------------------
+  # The intent helper above calls an un-asserted labelled Likert (e.g.
+  # community$Education, Environment1-5) "numeric", which routes it to a
+  # histogram -- but a labelled/discrete vector is discrete on the x axis, so
+  # geom_histogram() errors ("requires a continuous x aesthetic"). For the
+  # single-variable auto case, when the variable carries NO explicit
+  # numeric/count assertion (per-call override OR jnumeric/jcount registration)
+  # and is structurally discrete (the existing structural detector --
+  # centralizing the call so geometry and warnings can't drift apart), draw a
+  # bar instead. This is a display choice only; it never changes analysis
+  # classification, and an explicit numeric=/count= or registration is honoured
+  # (those keep the histogram, which the builder hardens against labels below).
+  if (n_vars == 1L && is.null(type) && var_types[1] == "numeric") {
+    v1 <- variable_names[1]
+    asserted_numeric <- v1 %in% c(numeric, count)
+    intent <- if (!is.null(.jst_data_name))
+      .jst_get_intent(.jst_data_name, v1) else NULL
+    registered_numeric <- !is.null(intent) &&
+      intent$kind %in% c("numeric", "count")
+    if (!asserted_numeric && !registered_numeric &&
+        inherits(data[[v1]], "haven_labelled") &&
+        .jst_is_discrete_integer(data[[v1]], v1, .jst_data_name)) {
+      var_types[1] <- "categorical"
+    }
+  }
+
   # Auto-detect plot type if not specified
   resolved_type <- type
   if (is.null(resolved_type)) {
@@ -18685,15 +19004,23 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
 
-  # Convert haven-labelled categoricals to factors for plotting
-  for (v in variable_names) {
-    if (haven::is.labelled(data[[v]])) {
-      val_labs <- labelled::val_labels(data[[v]])
-      if (!is.null(val_labs) && length(val_labs) > 0) {
-        data[[v]] <- haven::as_factor(data[[v]])
-      } else {
-        data[[v]] <- as.numeric(data[[v]])
-      }
+  # Convert haven-labelled variables for plotting, by their resolved class.
+  # A variable plotted with categorical geometry (bar, grouped bar, the x of a
+  # box) becomes a factor so its value labels show; one plotted with numeric
+  # geometry (histogram, scatter, the y of a box) is reduced to its underlying
+  # numeric, because a labelled/factor column is discrete on a continuous axis
+  # and would make geom_histogram() / scatter error. (Previously every labelled
+  # variable with value labels was factored regardless of geometry, which is
+  # what broke a histogram of a labelled Likert.) var_types is the per-variable
+  # class the builders also read, so keying off it keeps conversion and
+  # geometry consistent.
+  for (i in seq_along(variable_names)) {
+    v <- variable_names[i]
+    if (!haven::is.labelled(data[[v]])) next
+    if (identical(var_types[i], "categorical")) {
+      data[[v]] <- haven::as_factor(data[[v]])
+    } else {
+      data[[v]] <- as.numeric(data[[v]])
     }
   }
   if (has_by && haven::is.labelled(data[[by_name]])) {
@@ -19111,7 +19438,18 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @importFrom rlang .data
 .jst_build_histogram <- function(data, x_name, by_name = NULL,
                                  axis_labels = NULL, by_label = NULL) {
-  plot_df <- data.frame(x = data[[x_name]])
+  # A haven-labelled column is discrete on the x axis, so geom_histogram()
+  # errors ("requires a continuous x aesthetic"). Strip the labels to the
+  # underlying numeric for plotting -- declared missing codes have already
+  # been converted to NA by the analysis pipeline before this point, so
+  # as.numeric() yields the clean values. Handles both haven_labelled and
+  # haven_labelled_spss. The geometry redirect in jplot() already sends most
+  # labelled small-range variables to a bar; this is the safety net for any
+  # that still route here (an explicit numeric=/count= or a labelled
+  # continuous variable like a coded income).
+  x_col <- data[[x_name]]
+  if (inherits(x_col, "haven_labelled")) x_col <- as.numeric(x_col)
+  plot_df <- data.frame(x = x_col)
   if (!is.null(by_name)) plot_df$by <- data[[by_name]]
 
   plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]

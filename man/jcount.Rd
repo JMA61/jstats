@@ -4,18 +4,23 @@
 \alias{jcount}
 \title{Register variables as counts for analysis}
 \usage{
-jcount(data, ..., remove = FALSE)
+jcount(data, ..., remove = FALSE, clear.all = FALSE)
 }
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{\link{juse}} default.
-\code{jcount(NULL)} clears all count registrations across data frames.
-Called with no arguments, \code{jcount()} lists the session's numeric and
-count registrations.}
+\code{jcount(NULL)} clears the count registrations on the \code{\link{juse}}
+default frame (or, with no default set, the only frame that carries them;
+if several do, it asks rather than wiping all). \code{jcount(data, NULL)}
+clears that one frame's count registrations. Called with no arguments,
+\code{jcount()} lists the session's numeric and count registrations.}
 
 \item{...}{One or more unquoted variable names to register.}
 
 \item{remove}{Logical; if \code{TRUE}, remove the count registration for the
 named variables instead of adding it.}
+
+\item{clear.all}{Logical; if \code{TRUE}, clear count registrations on every
+data frame that carries them.}
 }
 \value{
 \code{invisible(NULL)}. Called for its side effect on the session
@@ -44,7 +49,8 @@ df <- data.frame(arrests = c(0, 1, 2, 0, 3, 1, 0, 12),
 jcount(df, arrests)                 # treat as a count (here 0-12)
 jcount(df, arrests, remove = TRUE)
 jcount()                            # list all registrations
-jcount(NULL)                        # clear all count registrations
+jcount(df, NULL)                    # clear df's count registrations
+jcount(clear.all = TRUE)            # clear every frame's count registrations
 }
 \seealso{
 \code{\link{jnumeric}}, \code{\link{jdummy}}

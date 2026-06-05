@@ -4,11 +4,14 @@
 \alias{jnumeric}
 \title{Register variables as numeric for analysis}
 \usage{
-jnumeric(data, ..., remove = FALSE)
+jnumeric(data, ..., remove = FALSE, clear.all = FALSE)
 }
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{\link{juse}} default.
-\code{jnumeric(NULL)} clears all numeric registrations across data frames.
+\code{jnumeric(NULL)} clears the numeric registrations on the
+\code{\link{juse}} default frame (or, with no default set, the only frame
+that carries them; if several do, it asks rather than wiping all).
+\code{jnumeric(data, NULL)} clears that one frame's numeric registrations.
 Called with no arguments, \code{jnumeric()} lists the session's numeric
 and count registrations.}
 
@@ -16,6 +19,9 @@ and count registrations.}
 
 \item{remove}{Logical; if \code{TRUE}, remove the numeric registration for
 the named variables instead of adding it.}
+
+\item{clear.all}{Logical; if \code{TRUE}, clear numeric registrations on
+every data frame that carries them.}
 }
 \value{
 \code{invisible(NULL)}. Called for its side effect on the session
@@ -44,7 +50,8 @@ jnumeric(df, attitude)              # treat the 1-5 item as continuous
 jnumeric(df, attitude, score)       # multiple variables at once
 jnumeric(df, attitude, remove = TRUE)
 jnumeric()                          # list all registrations
-jnumeric(NULL)                      # clear all numeric registrations
+jnumeric(df, NULL)                  # clear df's numeric registrations
+jnumeric(clear.all = TRUE)          # clear every frame's numeric registrations
 }
 \seealso{
 \code{\link{jdummy}}, \code{\link{jcount}}

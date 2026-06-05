@@ -4,14 +4,25 @@
 \alias{jdummy}
 \title{Register categorical variables for dummy coding in regression}
 \usage{
-jdummy(data, ..., ref = "first", show = FALSE, remove = FALSE)
+jdummy(
+  data,
+  ...,
+  ref = "first",
+  show = FALSE,
+  remove = FALSE,
+  clear.all = FALSE
+)
 }
 \arguments{
 \item{data}{A data frame, or omit to use the \code{juse()} default.
-Pass \code{NULL} to clear all registrations.}
+\code{jdummy(NULL)} clears the dummy registrations on the \code{juse()}
+default data frame (or, with no default set, the only frame that carries
+them; if several do, it asks rather than wiping all).}
 
 \item{...}{One or more unquoted variable names to register. Omit (along
-with data) to display all current registrations.}
+with data) to display all current registrations. A lone \code{NULL} in the
+variable slot -- \code{jdummy(data, NULL)} -- clears that frame's dummy
+registrations.}
 
 \item{ref}{The reference category (excluded from the regression model).
 Can be a numeric code, a quoted label name, or \code{first}
@@ -24,6 +35,9 @@ table showing the pattern of 0s and 1s. Default is \code{FALSE}.}
 
 \item{remove}{Logical. If \code{TRUE}, removes the registration for
 the specified variable(s). Default is \code{FALSE}.}
+
+\item{clear.all}{Logical. If \code{TRUE}, clears dummy registrations on
+every data frame that carries them. Default is \code{FALSE}.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect.
@@ -51,8 +65,9 @@ jdummy(cyl, show = TRUE)             # Show coding scheme
 jdummy(cyl, show = "all")            # Full scheme (for many categories)
 jdummy()                             # Show all registrations
 jdummy(cyl, remove = TRUE)           # Remove one registration
-jdummy(mtcars, NULL)                 # Clear all registrations for mtcars
-jdummy(NULL)                         # Clear registrations for ALL data frames
+jdummy(mtcars, NULL)                 # Clear mtcars' dummy registrations
+jdummy(NULL)                         # Clear the default frame's (or ask)
+jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 }
 
 }
