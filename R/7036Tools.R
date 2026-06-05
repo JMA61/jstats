@@ -4263,6 +4263,54 @@
 }
 
 
+#' Internal helper: recognized affirmative/negative token matcher
+#'
+#' Given the two distinct category strings of a text dichotomy, decides
+#' whether they form a recognized affirmative/negative pair and, if so,
+#' which is the affirmative (the event modeled as 1) and which is the
+#' negative (the reference, 0). Matching is case-insensitive and ignores
+#' surrounding whitespace. The recognized vocabulary is:
+#' \itemize{
+#'   \item affirmative: yes, y, true, t, present, success
+#'   \item negative:    no, n, false, f, absent, failure
+#' }
+#' A pair is recognized only when exactly one category is affirmative and
+#' the other is negative, so two affirmatives (e.g. "yes"/"true") or an
+#' unrecognized pair (e.g. "high"/"low") return \code{recognized = FALSE}.
+#' The caller supplies the original-cased strings; the returned
+#' \code{event} and \code{reference} echo them unchanged for display.
+#'
+#' Used by jlogistic() to coerce a recognized text/factor response to 0/1
+#' with a known, announced direction, rather than letting glm() pick the
+#' event by alphabetical level order (which silently models the wrong
+#' category for pairs like high/low). See the DV-resolution block in
+#' jlogistic().
+#'
+#' @param cats Character vector of length 2: the two distinct category
+#'   strings, original casing preserved.
+#' @return A list with elements \code{recognized} (logical),
+#'   \code{event} (the affirmative category string, or NA), and
+#'   \code{reference} (the negative category string, or NA).
+#' @keywords internal
+.jst_match_binary_tokens <- function(cats) {
+
+  affirmative <- c("yes", "y", "true", "t", "present", "success")
+  negative    <- c("no",  "n", "false", "f", "absent",  "failure")
+
+  norm   <- tolower(trimws(as.character(cats)))
+  is_aff <- norm %in% affirmative
+  is_neg <- norm %in% negative
+
+  if (sum(is_aff) == 1L && sum(is_neg) == 1L) {
+    return(list(recognized = TRUE,
+                event       = cats[is_aff][1],
+                reference   = cats[is_neg][1]))
+  }
+
+  list(recognized = FALSE, event = NA_character_, reference = NA_character_)
+}
+
+
 #' Internal helper: count-variable classifier
 #'
 #' Returns TRUE when a variable's values fit the structural pattern of a
@@ -12324,10 +12372,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   original_formula_vars <- model_vars
 
   .jst_check_vars(data, model_vars, .jst_data_name)
-  # Type gate (Session 46): the response is binary and may be a text factor
-  # ("Yes"/"No"), so it passes as categorical here -- the dichotomy check below
-  # enforces two levels. Predictors may be numeric or categorical; date/time
-  # and complex/list/raw refused throughout. See .jst_check_analysis_var.
+  # Type gate (Session 46): the response is binary and may be a recognized
+  # text/factor pair (e.g. "Yes"/"No") or logical, so it passes as categorical
+  # here -- the DV-resolution block below classifies it via .jst_is_dichotomy(),
+  # coerces a recognized response to 0/1, and records the modeled direction for
+  # the Dependent Variable Encoding block. Predictors may be numeric or
+  # categorical; date/time and complex/list/raw refused throughout. See
+  # .jst_check_analysis_var.
   for (.gv in model_vars) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a logistic regression")
 
   # Pre-conversion label source for "labels"/legend display (see jlm):
@@ -12523,37 +12574,108 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     model_vars <- all.vars(formula)
   }
 
-  if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
-  }
+  # -- Resolve and validate the binary response -----------------------------
+  # .jst_is_dichotomy() is the single source of truth for numeric dichotomy
+  # detection and coding; .jst_match_binary_tokens() resolves recognized
+  # text/logical responses. Every valid form is coerced to 0/1 here so all
+  # downstream steps (model.frame, glm, CPS, the coefficient table) see a clean
+  # numeric binary. The event (modeled as 1) and reference (0) categories are
+  # captured in dv_event_disp / dv_ref_disp for the Dependent Variable Encoding
+  # block printed at the end. .jst_var_kind() routes numeric-coded factors and
+  # character vectors (e.g. "0"/"1") through the numeric path and genuine text
+  # (e.g. "Yes"/"No") through the recognized-vocabulary path.
+  orig_dv       <- pipeline$data[[dv_name]]
+  dv_kind       <- .jst_var_kind(orig_dv)
+  dv_event_disp <- NULL
+  dv_ref_disp   <- NULL
 
-  # -- Validate DV is coded 0/1 ---------------------------------------------
-  dv_vals     <- data[[dv_name]][!is.na(data[[dv_name]])]
-  unique_vals <- sort(unique(dv_vals))
+  if (identical(dv_kind$kind, "logical")) {
+    # Logical: TRUE is the event. .jst_is_dichotomy() guards single-value input.
+    if (!.jst_is_dichotomy(orig_dv)$is_dichotomy) {
+      stop(paste0(
+        "'", dv_name, "' has only one value. Logistic regression requires a ",
+        "binary variable with two categories."
+      ), call. = FALSE)
+    }
+    data[[dv_name]] <- as.numeric(orig_dv)   # FALSE -> 0, TRUE -> 1
+    dv_event_disp   <- "TRUE"
+    dv_ref_disp     <- "FALSE"
 
-  if (!(length(unique_vals) == 2L && all(unique_vals %in% c(0, 1)))) {
-    # Determine what kind of problem it is
-    n_unique <- length(unique_vals)
+  } else if (dv_kind$kind %in% c("text_factor", "text_character")) {
+    # Genuine text/factor: accept only the recognized affirmative/negative
+    # vocabulary (C-strict). Matching is case-insensitive and whitespace-
+    # trimmed, so "Yes"/"yes" collapse to one category.
+    chr     <- as.character(orig_dv)
+    nonmiss <- chr[!is.na(chr)]
+    norm    <- tolower(trimws(nonmiss))
+    u_norm  <- unique(norm)
 
-    # Check for suspected coded missings among unique values
-    if (n_unique >= 2) {
-      non_binary <- setdiff(unique_vals, c(0, 1))
-      suspicious <- .jst_detect_suspicious_values(dv_vals, dv_name)
-      coded_miss <- intersect(non_binary, suspicious)
-    } else {
-      non_binary <- unique_vals
-      coded_miss <- numeric(0)
+    if (length(u_norm) != 2L) {
+      # After case/whitespace folding, not a clean two-category text variable:
+      # one category (no variation) or three or more.
+      n_show <- unique(nonmiss)
+      n_show <- n_show[seq_len(min(5L, length(n_show)))]
+      stop(paste0(
+        "'", dv_name, "' has ", length(u_norm),
+        if (length(u_norm) == 1L) " category" else " categories",
+        " (", paste(n_show, collapse = ", "),
+        if (length(unique(nonmiss)) > 5L) ", ..." else "", ").\n",
+        "Logistic regression requires exactly two categories. Recode to a 0/1 ",
+        "variable before running jlogistic()."
+      ), call. = FALSE)
     }
 
-    # Get value labels for display if available
-    orig_dv   <- pipeline$data[[dv_name]]
-    dv_labels <- NULL
-    if (haven::is.labelled(orig_dv)) {
-      dv_labels <- labelled::val_labels(orig_dv)
+    # Representative original-cased label for each normalized category.
+    disp <- vapply(u_norm, function(z) nonmiss[norm == z][1], character(1))
+    disp <- unname(disp)
+    mb   <- .jst_match_binary_tokens(disp)
+
+    if (!mb$recognized) {
+      stop(paste0(
+        "'", dv_name, "' has the text categories: ",
+        paste(disp, collapse = ", "),
+        ". jlogistic() recognizes yes/no, y/n, true/false, t/f, present/absent, ",
+        "and success/failure (case-insensitive); for any other pair, recode to ",
+        "a 0/1 variable so the modeled category is explicit:\n",
+        "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ",
+        dv_name, ", map = \"", disp[1], "=0; ", disp[2], "=1\")\n",
+        "Then use ", dv_name, "R as your dependent variable (the category mapped ",
+        "to 1 is the one jlogistic models)."
+      ), call. = FALSE)
     }
 
-    if (n_unique == 2 && all(unique_vals %in% c(1, 2))) {
-      # Common 1/2 coding — suggest recode to 0/1
+    event_norm      <- tolower(trimws(mb$event))
+    y               <- rep(NA_real_, length(chr))
+    keep            <- !is.na(chr)
+    y[keep]         <- ifelse(tolower(trimws(chr[keep])) == event_norm, 1, 0)
+    data[[dv_name]] <- y
+    dv_event_disp   <- mb$event
+    dv_ref_disp     <- mb$reference
+
+  } else {
+    # Numeric family (numeric, haven_labelled numeric, numeric-coded factor /
+    # character). Classify the numeric coding via the single-source helper.
+    x_num     <- dv_kind$num
+    dv_dich   <- .jst_is_dichotomy(x_num)
+    dv_vals   <- x_num[!is.na(x_num)]
+    dv_labels <- if (haven::is.labelled(orig_dv)) labelled::val_labels(orig_dv) else NULL
+
+    if (dv_dich$is_dichotomy && identical(dv_dich$coding, "0/1")) {
+      # Valid. Coerce to plain numeric 0/1 (strips any labelled wrapper).
+      code_label <- function(code) {
+        if (!is.null(dv_labels) && length(dv_labels) > 0) {
+          nm <- names(dv_labels)[as.numeric(dv_labels) == code]
+          nm <- nm[!is.na(nm) & nzchar(nm)]
+          if (length(nm) >= 1) return(nm[1])
+        }
+        as.character(code)
+      }
+      data[[dv_name]] <- as.numeric(x_num)
+      dv_event_disp   <- code_label(1)
+      dv_ref_disp     <- code_label(0)
+
+    } else if (dv_dich$is_dichotomy && identical(dv_dich$coding, "1/2")) {
+      # Common 1/2 coding -- suggest recode to 0/1 (with labels if present).
       if (!is.null(dv_labels) && length(dv_labels) >= 2) {
         label_1 <- names(dv_labels[dv_labels == 1])
         label_2 <- names(dv_labels[dv_labels == 2])
@@ -12561,8 +12683,6 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         if (length(label_2) == 0) label_2 <- "2"
         recode_labels <- paste0(", labels = \"0=", label_1, "; 1=", label_2, "\"")
       } else {
-        label_1 <- "1"
-        label_2 <- "2"
         recode_labels <- ""
       }
       stop(paste0(
@@ -12575,28 +12695,39 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         "instead, reverse the map and labels.)"
       ), call. = FALSE)
 
-    } else if (length(coded_miss) > 0) {
-      # Has suspected coded missings
-      miss_str <- paste(coded_miss, collapse = ", ")
-      stop(paste0(
-        "'", dv_name, "' has ", n_unique, " unique values (",
-        paste(unique_vals, collapse = ", "),
-        "). The dependent variable must have exactly 2 categories coded 0/1.\n",
-        "The value(s) ", miss_str, " may be coded missing value(s).\n",
-        "Convert to NA before running jlogistic():\n",
-        "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ", dv_name,
-        ", map = \"", paste0(coded_miss, "=NA", collapse = "; "),
-        "; else=copy\")"
-      ), call. = FALSE)
-
     } else {
-      # Generic — wrong number of categories or wrong codes
-      stop(paste0(
-        "'", dv_name, "' has values: ",
-        paste(unique_vals, collapse = ", "),
-        ". Logistic regression requires a binary variable coded 0/1.\n",
-        "Use jrecode() to create a 0/1 coded version before running jlogistic()."
-      ), call. = FALSE)
+      # Not a valid 0/1 dichotomy: distinguish suspected coded missings from a
+      # generic wrong-codes / wrong-count problem (behavior preserved).
+      unique_vals <- sort(unique(dv_vals))
+      n_unique    <- length(unique_vals)
+      if (n_unique >= 2) {
+        non_binary <- setdiff(unique_vals, c(0, 1))
+        suspicious <- .jst_detect_suspicious_values(dv_vals, dv_name)
+        coded_miss <- intersect(non_binary, suspicious)
+      } else {
+        coded_miss <- numeric(0)
+      }
+
+      if (length(coded_miss) > 0) {
+        miss_str <- paste(coded_miss, collapse = ", ")
+        stop(paste0(
+          "'", dv_name, "' has ", n_unique, " unique values (",
+          paste(unique_vals, collapse = ", "),
+          "). The dependent variable must have exactly 2 categories coded 0/1.\n",
+          "The value(s) ", miss_str, " may be coded missing value(s).\n",
+          "Convert to NA before running jlogistic():\n",
+          "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ", dv_name,
+          ", map = \"", paste0(coded_miss, "=NA", collapse = "; "),
+          "; else=copy\")"
+        ), call. = FALSE)
+      } else {
+        stop(paste0(
+          "'", dv_name, "' has values: ",
+          paste(unique_vals, collapse = ", "),
+          ". Logistic regression requires a binary variable coded 0/1.\n",
+          "Use jrecode() to create a 0/1 coded version before running jlogistic()."
+        ), call. = FALSE)
+      }
     }
   }
 
@@ -12623,30 +12754,17 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # output.
   digits_n <- .jst_resolve_digits(digits)
 
-  # Capture DV label for "1" category (before model fitting, more reliable)
-  dv_label_1 <- NULL
-  orig_dv    <- pipeline$data[[dv_name]]
-  if (haven::is.labelled(orig_dv)) {
-    all_labels <- labelled::val_labels(orig_dv)
-    if (!is.null(all_labels) && length(all_labels) > 0) {
-      match_idx <- which(as.numeric(all_labels) == 1)
-      if (length(match_idx) >= 1) {
-        candidate <- names(all_labels)[match_idx[1]]
-        if (!is.null(candidate) && nchar(candidate) > 0) {
-          dv_label_1 <- candidate
-        }
-      }
-    }
-  }
-
   model <- stats::glm(formula, data = data, family = stats::binomial,
                        na.action = stats::na.omit)
   model_summary <- summary(model)
   n_obs         <- stats::nobs(model)
 
-  # -- What does the model predict? ------------------------------------------
-  predicts_str <- if (!is.null(dv_label_1)) dv_label_1 else "1"
-  cat("Model predicts: ", predicts_str, "\n", sep = "")
+  # The modeled (event) category is reported in the Dependent Variable Encoding
+  # block at the end of the output, not as an up-front line. predicts_str feeds
+  # the returned object's `predicts` field; dv_event_disp was resolved with the
+  # DV above and now carries the recognized text/logical category (not a bare
+  # "1") when the response was coerced.
+  predicts_str <- dv_event_disp
 
   # -- Omnibus test (model vs null) ------------------------------------------
   # Use the fitted model's own null.deviance/deviance: glm computes both on the
@@ -12815,7 +12933,6 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                    col.names = c("-2 Log Likelihood", "Cox & Snell R\u00b2",
                                  "Nagelkerke R\u00b2", "AIC"),
                    row.names = FALSE)
-  cat("\n")
 
   # -- Classification table (optional) ---------------------------------------
   if (classification) {
@@ -12910,6 +13027,17 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # "legend.bottom": one consolidated legend at the very end of the output.
   if (identical(vlmode, "legend.bottom")) .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
+
+  # -- Dependent Variable Encoding -------------------------------------------
+  # Always shown, for every valid DV type (numeric 0/1, logical, recognized
+  # text). Names which category the model treats as the event (internal 1) and
+  # which is the reference (0), so the modeled direction is never silent the way
+  # base glm()/lm() leave it (glm picks the event by alphabetical level order).
+  # The SPSS analogue is the "Dependent Variable Encoding" table. dv_event_disp
+  # / dv_ref_disp were resolved with the DV above.
+  cat("Dependent Variable Encoding\n")
+  cat("  Modeled (1):   ", dv_event_disp, "\n", sep = "")
+  cat("  Reference (0): ", dv_ref_disp,   "\n", sep = "")
 
   # japa-ready coefficient frame: one flat row per coefficient at full
   # precision (the printed `coefficients` frame rounds for the eye; this keeps
