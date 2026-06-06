@@ -4616,6 +4616,102 @@
 }
 
 
+# -----------------------------------------------------------------------------
+# Assumption-check warning generator (the analysis-function audit)
+#
+# One source of wording for the "this variable looks like the wrong kind for
+# this analysis" warnings, so phrasing cannot drift across functions (the same
+# idea as the centralized .jst_cps_*_rules tables for CPS rendering).
+# .jst_assumption_clauses is the single place the wording lives; call sites pass
+# a site key and the variable name. Two warning families share the generator:
+#
+#   "seems" sites -- triggered by STRUCTURE (the variable only looks
+#                    categorical), so the message hedges: "X seems categorical.
+#                    <consequence>". Gated by .jst_warns_seems_categorical().
+#   "is" sites    -- triggered by an explicit user DECLARATION (a jdummy
+#                    registration), so the message speaks definitively: "X is
+#                    categorical; <consequence>". Matches the v0.9.41 provenance
+#                    rule (drop the hedge when the class was asserted).
+# -----------------------------------------------------------------------------
+
+#' Internal data: assumption-check warning clauses, keyed by call site
+#'
+#' One entry per warning site. \code{verb} is "seems" (a structural hedge) or
+#' "is" (asserted, definitive); \code{connector} joins the opener to the
+#' consequence (". " starts a new sentence for the hedge sites, "; " keeps one
+#' sentence for the definitive sites); \code{clause} is the analysis-specific
+#' consequence text. Editing wording here changes it everywhere that site fires.
+#'
+#' @keywords internal
+.jst_assumption_clauses <- list(
+  jdesc  = list(verb = "seems", connector = ". ",
+                clause = paste0("Descriptive statistics assume ",
+                                "continuous/interval data; the mean and SD ",
+                                "may not be meaningful.")),
+  jcorr  = list(verb = "seems", connector = ". ",
+                clause = "Pearson correlations assume continuous/interval data."),
+  jt     = list(verb = "seems", connector = ". ",
+                clause = "A t-test treats the outcome as continuous/interval data."),
+  jaov   = list(verb = "seems", connector = ". ",
+                clause = "ANOVA treats the outcome as continuous/interval data."),
+  jsum   = list(verb = "is",    connector = "; ",
+                clause = "summing it may not be meaningful."),
+  javg   = list(verb = "is",    connector = "; ",
+                clause = "averaging it may not be meaningful."),
+  jalpha = list(verb = "is",    connector = "; ",
+                clause = "reliability analysis assumes numeric scale items.")
+)
+
+#' Internal helper: build an assumption-check warning string
+#'
+#' Assembles the warning for one call site from the central clause table, so
+#' every site shares one consistent phrasing. The result is
+#' \code{paste0(var_name, " ", verb, " categorical", connector, clause)}.
+#'
+#' @param var_name Character. The variable's name (used verbatim in the text).
+#' @param site Character. The call-site key into \code{.jst_assumption_clauses}
+#'   (e.g. "jcorr", "jsum").
+#' @return A single character string ready to pass to \code{warning()}.
+#' @keywords internal
+.jst_assumption_warning <- function(var_name, site) {
+  spec <- .jst_assumption_clauses[[site]]
+  if (is.null(spec)) {
+    stop("Internal error: unknown assumption-warning site '", site, "'.",
+         call. = FALSE)
+  }
+  paste0(var_name, " ", spec$verb, " categorical", spec$connector, spec$clause)
+}
+
+#' Internal helper: should a "seems categorical" hedge fire for this variable?
+#'
+#' The shared trigger predicate for the structural ("seems") warning sites
+#' (jdesc, jcorr, the jt outcome, the jaov outcome). Centralizing the gate
+#' keeps the four sites from drifting on the rule. Fires when the variable is
+#' structurally categorical-looking AND the user has not asserted a numeric
+#' role AND it is not a Likert item. Likert items are exempt because treating
+#' them as interval is the accepted convention; the check covers both
+#' auto-detection and a jlikert() assertion via the resolved sub-class.
+#'
+#' @param x A variable (vector / data-frame column).
+#' @param var_name Optional character. The variable's name.
+#' @param data_name Optional character. The data frame's name.
+#' @param override Optional per-call asserted role ("numeric", "count",
+#'   "categorical", or NULL), passed through to the classifier for sites that
+#'   accept per-call overrides (jdesc, jcorr).
+#' @return TRUE if the hedge should fire, FALSE otherwise.
+#' @keywords internal
+.jst_warns_seems_categorical <- function(x, var_name = NULL, data_name = NULL,
+                                         override = NULL) {
+  if (!.jst_is_discrete_integer(x, var_name, data_name)) return(FALSE)
+  if (.jst_role_asserted_numeric(x, var_name, data_name, override = override)) {
+    return(FALSE)
+  }
+  cls <- .jst_jstats_class(x, var_name, data_name, override = override)
+  if (identical(cls$subclass, "Likert")) return(FALSE)
+  TRUE
+}
+
+
 #' Internal helper: parse a recoding-map string into a structured rule list
 #'
 #' Parses a map string of the form \code{"1=1; 2,3=2; 4,5=3; else=copy"}
@@ -7393,12 +7489,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # explicitly because the data frame is reassigned by the pipeline below.
   .emit_good_notes <- function(v, dat) {
     .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
-    if (.jst_is_discrete_integer(dat[[v]], v, .jst_data_name) &&
-        !.jst_role_asserted_numeric(dat[[v]], v, .jst_data_name,
-                                    override = .ov)) {
-      warning(paste0(v, " seems categorical. Descriptive statistics may ",
-                     "not be meaningful."),
-              call. = FALSE)
+    if (.jst_warns_seems_categorical(dat[[v]], v, .jst_data_name,
+                                     override = .ov)) {
+      warning(.jst_assumption_warning(v, "jdesc"), call. = FALSE)
     }
     if (!is.null(desc_class[[v]]$note)) {
       warning(desc_class[[v]]$note, call. = FALSE)
@@ -8877,6 +8970,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     }
   }
 
+  # Assumption-check warning (audit): the outcome looks categorical where a
+  # continuous outcome is expected. Likert outcomes and an asserted numeric
+  # role are exempt (handled inside .jst_warns_seems_categorical).
+  if (.jst_warns_seems_categorical(data[[dv_name]], dv_name, .jst_data_name)) {
+    warning(.jst_assumption_warning(dv_name, "jt"), call. = FALSE)
+  }
+
   if (haven::is.labelled(data[[dv_name]])) {
     data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
   }
@@ -9266,6 +9366,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                   " category(ies). An ANOVA requires at least 2 groups."),
            call. = FALSE)
     }
+  }
+
+  # Assumption-check warning (audit): the outcome looks categorical where a
+  # continuous outcome is expected. Likert outcomes and an asserted numeric
+  # role are exempt (handled inside .jst_warns_seems_categorical).
+  if (.jst_warns_seems_categorical(data[[dv_name]], dv_name, .jst_data_name)) {
+    warning(.jst_assumption_warning(dv_name, "jaov"), call. = FALSE)
   }
 
   if (haven::is.labelled(data[[dv_name]])) {
@@ -10074,12 +10181,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # 10 broad categories) are NOT flagged, while small-range labelled or
     # whole-number 0-6 variables ARE flagged.
     .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
-    if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
-        !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name,
-                                    override = .ov)) {
-      warning(paste0(v, " seems categorical. Pearson correlations assume ",
-                     "continuous/interval data."),
-              call. = FALSE)
+    if (.jst_warns_seems_categorical(data[[v]], v, .jst_data_name,
+                                     override = .ov)) {
+      warning(.jst_assumption_warning(v, "jcorr"), call. = FALSE)
     }
   }
 
@@ -13247,6 +13351,21 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
+  # Assumption-check warning (audit): nudge only on a declared contradiction --
+  # an item the user registered as categorical via jdummy() and is now putting
+  # into a reliability analysis. Likert items (including yes/no items, the KR-20
+  # case) and other numeric items stay silent; the warning fires only when the
+  # categorical intent is explicit.
+  .dummy_regs <- .jst_get_dummy(.jst_data_name)
+  if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
+    for (v in variable_names) {
+      if (any(vapply(.dummy_regs,
+                     function(r) identical(r$var_name, v), logical(1)))) {
+        warning(.jst_assumption_warning(v, "jalpha"), call. = FALSE)
+      }
+    }
+  }
+
   items <- data[, variable_names, drop = FALSE]
 
   for (v in variable_names) {
@@ -13593,6 +13712,21 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 
   .jst_check_vars(data, var_names, .jst_data_name)
 
+  # Assumption-check warning (audit): nudge only on a declared contradiction --
+  # a variable the user registered as categorical via jdummy() and is now
+  # summing. Structural categoricals (e.g. a labelled nominal), counts, Likert
+  # items, and logicals stay silent: combining small-integer items is the point
+  # of jsum(), so the warning fires only when the categorical intent is explicit.
+  .dummy_regs <- .jst_get_dummy(.jst_data_name)
+  if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
+    for (v in var_names) {
+      if (any(vapply(.dummy_regs,
+                     function(r) identical(r$var_name, v), logical(1)))) {
+        warning(.jst_assumption_warning(v, "jsum"), call. = FALSE)
+      }
+    }
+  }
+
   # Extract columns and convert any haven-labelled to numeric
   items <- data[, var_names, drop = FALSE]
   for (v in var_names) {
@@ -13784,6 +13918,21 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   }
 
   .jst_check_vars(data, var_names, .jst_data_name)
+
+  # Assumption-check warning (audit): nudge only on a declared contradiction --
+  # a variable the user registered as categorical via jdummy() and is now
+  # averaging. Structural categoricals (e.g. a labelled nominal), counts, Likert
+  # items, and logicals stay silent: combining small-integer items is the point
+  # of javg(), so the warning fires only when the categorical intent is explicit.
+  .dummy_regs <- .jst_get_dummy(.jst_data_name)
+  if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
+    for (v in var_names) {
+      if (any(vapply(.dummy_regs,
+                     function(r) identical(r$var_name, v), logical(1)))) {
+        warning(.jst_assumption_warning(v, "javg"), call. = FALSE)
+      }
+    }
+  }
 
   # Extract columns and convert any haven-labelled to numeric
   items <- data[, var_names, drop = FALSE]
