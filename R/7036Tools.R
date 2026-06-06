@@ -1137,11 +1137,10 @@
     return(invisible(NULL))
   }
   verb <- .jst_clear_verb(kind)
-  stop(Klab, " registrations exist on more than one data frame: ",
+  .jst_stop(Klab, " registrations exist on more than one data frame: ",
        paste(frames, collapse = ", "), ".\n",
        "Name the one to clear, e.g. ", verb, "(", frames[1], ", NULL), ",
-       "or clear them all with ", verb, "(clear.all = TRUE).",
-       call. = FALSE)
+       "or clear them all with ", verb, "(clear.all = TRUE).")
 }
 
 #' Internal helper: shared registration engine for jnumeric() / jcount()
@@ -1389,15 +1388,14 @@
     codes      <- sort(unique(x[!is.na(x)]))
     raw_labels <- as.character(codes)
   } else {
-    stop("'", var_name, "' has an unsupported type for dummy coding ",
-         "(class: ", paste(class(x), collapse = "/"), ").",
-         call. = FALSE)
+    .jst_stop("'", var_name, "' has an unsupported type for dummy coding ",
+         "(class: ", paste(class(x), collapse = "/"), ").")
   }
 
   n_cats <- length(codes)
   if (n_cats < 2) {
-    stop("'", var_name, "' has fewer than 2 categories. ",
-         "Cannot create dummy variables.", call. = FALSE)
+    .jst_stop("'", var_name, "' has fewer than 2 categories. ",
+         "Cannot create dummy variables.")
   }
 
   # -- Step 2: choose suffix source per category ----------------------------
@@ -1446,12 +1444,11 @@
       paste0("'", paste(offenders, collapse = "' and '"),
              "' both produce '", d, "'")
     }, character(1))
-    stop(
+    .jst_stop(
       "Cannot create unique dummy names for '", var_name, "': ",
       paste(dup_pairs, collapse = "; "), ". ",
       "Use jrelabel() to give these categories distinct labels, or ",
-      "jrecode() to merge or rename them.",
-      call. = FALSE
+      "jrecode() to merge or rename them."
     )
   }
 
@@ -1463,9 +1460,8 @@
   } else if (is.numeric(ref)) {
     ref_idx <- which(codes == ref)
     if (length(ref_idx) == 0) {
-      stop("Reference code ", ref, " not found in '", var_name,
-           "'. Available codes: ", paste(codes, collapse = ", "),
-           call. = FALSE)
+      .jst_stop("Reference code ", ref, " not found in '", var_name,
+           "'. Available codes: ", paste(codes, collapse = ", "))
     }
   } else if (is.character(ref)) {
     # Try direct match against canonical labels first.
@@ -1486,9 +1482,8 @@
       ref_idx <- which(code_as_str == ref)
     }
     if (length(ref_idx) == 0) {
-      stop("Reference '", ref, "' not found in '", var_name,
-           "'. Available labels: ", paste(final_labels, collapse = ", "),
-           call. = FALSE)
+      .jst_stop("Reference '", ref, "' not found in '", var_name,
+           "'. Available labels: ", paste(final_labels, collapse = ", "))
     }
   } else {
     ref_idx <- 1L
@@ -2053,8 +2048,7 @@
     if (length(per_call) != 1L || is.na(per_call) ||
         !is.numeric(per_call) || per_call != as.integer(per_call) ||
         per_call < 0L || per_call > 7L) {
-      stop("digits must be a single whole number between 0 and 7.",
-           call. = FALSE)
+      .jst_stop_arg(arg = "digits", requirement = "a single whole number between 0 and 7.")
     }
   }
   as.integer(.jst_resolve_toggle("digits", per_call))
@@ -2136,8 +2130,7 @@
   if (!is.null(per_call)) {
     if (!is.character(per_call) || length(per_call) != 1 ||
         !(per_call %in% c("both", "names", "labels", "legend", "legend.bottom"))) {
-      stop("variable.id must be one of: \"both\", \"names\", \"labels\", ",
-           "\"legend\", \"legend.bottom\".", call. = FALSE)
+      .jst_stop_arg(arg = "variable.id", choices = c("both", "names", "labels", "legend", "legend.bottom"))
     }
   }
   .jst_resolve_toggle("variable.id", per_call)
@@ -2162,7 +2155,7 @@
   if (!is.null(per_call)) {
     if (!is.character(per_call) || length(per_call) != 1 ||
         !(per_call %in% c("wide", "stacked"))) {
-      stop("layout must be one of: \"wide\", \"stacked\".", call. = FALSE)
+      .jst_stop_arg(arg = "layout", choices = c("wide", "stacked"))
     }
     return(per_call)
   }
@@ -2211,8 +2204,7 @@
   if (!is.null(per_call)) {
     if (!is.character(per_call) || length(per_call) != 1 ||
         !(per_call %in% allowed)) {
-      stop("value.id must be one of: ",
-           paste0("\"", allowed, "\"", collapse = ", "), ".", call. = FALSE)
+      .jst_stop_arg(arg = "value.id", choices = allowed)
     }
   }
   .jst_resolve_toggle("value.id", per_call)
@@ -2324,8 +2316,7 @@
   if (!is.null(per_call)) {
     if (!is.character(per_call) || length(per_call) != 1L ||
         !per_call %in% c("spss", "stata")) {
-      stop("The convention argument must be \"spss\" or \"stata\".",
-           call. = FALSE)
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
     }
   }
 
@@ -2963,30 +2954,30 @@
   # -- First: confirm `data` is actually a data frame ----------------------
   if (!is.data.frame(data)) {
     if (is.character(data) && length(data) == 1) {
-      stop(paste0(
+      .jst_stop(
         "'", data, "' (passed as a character string) is not a data frame. ",
         "Remove the quotes - e.g., ", data, " instead of \"", data, "\"."
-      ), call. = FALSE)
+      )
     }
     if (is.null(data)) {
-      stop(paste0(
+      .jst_stop(
         "data = NULL: no data frame supplied. Pass a data frame as the ",
         "data argument, or set a default with juse() first."
-      ), call. = FALSE)
+      )
     }
     if (is.matrix(data)) {
       label <- if (!is.null(data_name)) data_name else "data"
-      stop(paste0(
+      .jst_stop(
         "'", label, "' is a matrix, not a data frame. ",
         "Convert it first with: as.data.frame(", label, ")"
-      ), call. = FALSE)
+      )
     }
     # Catch-all: non-data-frame R object of some other type.
     label <- if (!is.null(data_name)) data_name else "data"
-    stop(paste0(
+    .jst_stop(
       "'", label, "' is a ", class(data)[1], " object, not a data frame. ",
       "The data argument requires a data frame."
-    ), call. = FALSE)
+    )
   }
 
   # -- Then: confirm the requested variables exist in the data frame -------
@@ -2997,11 +2988,11 @@
     } else {
       "the data frame"
     }
-    stop(paste0(
+    .jst_stop(
       "Variable(s) not found in ", df_label, ": ",
       paste(missing_vars, collapse = ", "), ".\n",
       "Check spelling and make sure the variable exists."
-    ), call. = FALSE)
+    )
   }
 }
 
@@ -3032,14 +3023,12 @@
 
   for (nm in dot_names) {
     if (nzchar(nm) && nm %in% names(aliases)) {
-      stop(sprintf("Argument '%s' is not valid in %s(). Did you mean `%s`?",
-                   nm, fn_name, aliases[[nm]]), call. = FALSE)
+      .jst_stop("Argument '", nm, "' is not valid. Did you mean `", aliases[[nm]], "`?", fn = fn_name)
     }
   }
   bad <- dot_names[nzchar(dot_names)]
   if (length(bad) > 0) {
-    stop(sprintf("Unused argument(s) in %s(): %s",
-                 fn_name, paste(bad, collapse = ", ")), call. = FALSE)
+    .jst_stop("Unused argument(s): ", paste(bad, collapse = ", "), fn = fn_name)
   }
   invisible(NULL)
 }
@@ -3069,17 +3058,15 @@
 .jst_resolve_data <- function(envir = parent.frame()) {
   data_name <- getOption(".jst_default_data", default = NULL)
   if (is.null(data_name)) {
-    stop("No data frame specified and no default set. Use juse() to set a default.",
-         call. = FALSE)
+    .jst_stop("No data frame specified and no default set. Use juse() to set a default.")
   }
   if (!exists(data_name, envir = envir)) {
-    stop(paste0("Default data frame ", data_name,
-                " not found. It may have been removed or renamed."),
-         call. = FALSE)
+    .jst_stop(paste0("Default data frame ", data_name,
+                " not found. It may have been removed or renamed."))
   }
   data <- get(data_name, envir = envir)
   if (!is.data.frame(data)) {
-    stop(paste0(data_name, " is not a data frame."), call. = FALSE)
+    .jst_stop(paste0(data_name, " is not a data frame."))
   }
   list(data = data, name = data_name)
 }
@@ -3211,11 +3198,11 @@
   #            when accept_vector = FALSE). Treat as a variable name. -------
   if (is.null(default_name)) {
     data_str <- paste(deparse(data_sub), collapse = "")
-    stop(paste0(
+    .jst_stop(
       "'", data_str, "' not found. Did you mean to use it as a variable name?\n",
       "If so, provide the data frame: ", fn_name, "(MyData, ", data_str, ")\n",
-      "Or set a default first with juse(MyData), then: ", fn_name, "(", data_str, ")"
-    ), call. = FALSE)
+      "Or set a default first with juse(MyData), then: ", fn_name, "(", data_str, ")",
+    fn = fn_name)
   }
   resolved <- .jst_resolve_data(envir = envir)
   list(mode = "symbol_with_default",
@@ -4145,6 +4132,81 @@
   paste0("'", var_name, "' is a categorical (text) variable and cannot be used in ",
     fn_label, ", which needs a numeric variable.")
 }
+
+#' Internal helper: detect the user-facing function on the call stack
+#'
+#' Walks the call stack from the outermost frame inward and returns the name
+#' of the first exported jstats function (j-prefixed) found, reducing an S3
+#' method name to its generic (e.g. jplot.jst_lm -> jplot). Used so that
+#' shared validation helpers can name the function the user actually called,
+#' even though errors are signaled with call. = FALSE. Returns NULL when no
+#' jstats frame is on the stack.
+#' @return A function name string, or NULL.
+#' @keywords internal
+.jst_caller_fn <- function() {
+  calls <- sys.calls()
+  if (is.null(calls)) return(NULL)
+  for (cl in calls) {
+    if (!is.call(cl)) next
+    head <- cl[[1L]]
+    nm <- NULL
+    if (is.symbol(head)) {
+      nm <- as.character(head)
+    } else if (is.call(head) && length(head) == 3L &&
+               as.character(head[[1L]]) %in% c("::", ":::")) {
+      nm <- as.character(head[[3L]])
+    }
+    if (!is.null(nm) && grepl("^j[a-z]", nm)) {
+      return(sub("^(j[a-z]+)\\..*$", "\\1", nm))
+    }
+  }
+  NULL
+}
+
+#' Internal helper: signal an error in the package house voice
+#'
+#' Concatenates its ... arguments into a message and raises a stop() prefixed
+#' with the user-facing function name as "<fn>(): ". The function name is taken
+#' from fn when supplied, otherwise auto-detected from the call stack via
+#' .jst_caller_fn(); if detection fails the message is emitted without a prefix
+#' rather than erroring. Always signals with call. = FALSE.
+#' @param ... Message parts, concatenated with paste0().
+#' @param fn Optional function name (without parentheses); auto-detected when NULL.
+#' @return Never returns; always signals an error.
+#' @keywords internal
+.jst_stop <- function(..., fn = NULL) {
+  if (is.null(fn)) fn <- tryCatch(.jst_caller_fn(), error = function(e) NULL)
+  prefix <- if (is.null(fn) || !nzchar(fn)) "" else paste0(fn, "(): ")
+  stop(paste0(prefix, ...), call. = FALSE)
+}
+
+
+#' Internal helper: raise a standardized argument-validation error
+#'
+#' Builds and signals a stop() in the package house voice:
+#'   <fn>(): <arg> must be <requirement>
+#' The fn prefix names the user-facing function so the message identifies its
+#' origin even though the package signals errors with call. = FALSE (which
+#' suppresses R's automatic call context). Supply either a freeform
+#' requirement string, or a character vector of allowed values via choices to
+#' get a standardized "one of:" enumeration with consistent double-quoting.
+#'
+#' @param fn The user-facing function name, without parentheses (e.g. "jcorr").
+#' @param arg The offending argument's name (e.g. "method").
+#' @param requirement A string completing "<arg> must be ..."; include the
+#'   trailing period. Ignored when choices is supplied.
+#' @param choices Optional character vector of allowed values; renders as a
+#'   double-quoted comma-separated list introduced by "one of:".
+#' @return Never returns; always signals an error.
+#' @keywords internal
+.jst_stop_arg <- function(fn = NULL, arg, requirement = NULL, choices = NULL) {
+  if (!is.null(choices)) {
+    requirement <- paste0("one of: ",
+      paste(paste0("\"", choices, "\""), collapse = ", "), ".")
+  }
+  .jst_stop(arg, " must be ", requirement, fn = fn)
+}
+
 
 #' Internal helper: gate a variable for use in an analysis function
 #'
@@ -5176,10 +5238,10 @@ juse <- function(data) {
   # Check it exists and is a data frame
   calling_env <- parent.frame()
   if (!exists(data_name, envir = calling_env)) {
-    stop(paste0(data_name, " not found."), call. = FALSE)
+    .jst_stop(paste0(data_name, " not found."))
   }
   if (!is.data.frame(get(data_name, envir = calling_env))) {
-    stop(paste0(data_name, " is not a data frame."), call. = FALSE)
+    .jst_stop(paste0(data_name, " is not a data frame."))
   }
 
   options(.jst_default_data = data_name)
@@ -5357,8 +5419,8 @@ jsubset <- function(data, expr) {
   if (arg1$mode == "explicit") {
     # jsubset(SampleData, <expr>) — explicit data frame + expression slot
     if (missing(expr)) {
-      stop("jsubset(", target_name, ", ...) requires a logical expression. ",
-           "Example: jsubset(", target_name, ", Age < 40)", call. = FALSE)
+      .jst_stop("the condition must be a logical expression. ",
+           "Example: jsubset(", target_name, ", Age < 40)")
     }
     filter_raw <- raw_expr
   } else if (arg1$mode == "default") {
@@ -5452,7 +5514,7 @@ jfilter <- function(data, expr) {
   if (is.symbol(raw_expr)) {
     sym <- as.character(raw_expr)
     if (!sym %in% c("TRUE", "FALSE", "T", "F")) {
-      stop(
+      .jst_stop(
         "Subset expression `", sym, "` is just a variable name and ",
         "cannot be used as a subset expression on its own. A subset ",
         "expression must compare a variable to a value (or evaluate to ",
@@ -5460,8 +5522,7 @@ jfilter <- function(data, expr) {
         "  Examples:\n",
         "    jsubset(", sym, " == 1)         # keep rows where ", sym, " is 1\n",
         "    jsubset(!is.na(", sym, "))       # keep rows where ", sym, " is not missing\n",
-        "  You wrote: jsubset(", sym, ")",
-        call. = FALSE
+        "  You wrote: jsubset(", sym, ")"
       )
     }
   }
@@ -5479,7 +5540,7 @@ jfilter <- function(data, expr) {
                           OR  = "`|` (pipe symbol)",
                           NOT = "`!` (exclamation mark)",
                           XOR = "`xor()` (a function call)")
-    stop(
+    .jst_stop(
       "It looks like you used `", kw, "` in your subset expression, ",
       "which R treats as a variable name, not a logical operator.\n",
       "  In R, use ", replacement, " instead.\n",
@@ -5487,8 +5548,7 @@ jfilter <- function(data, expr) {
       "    jsubset(Age < 40 & Gender == 1)     # AND\n",
       "    jsubset(Age < 40 | Age > 60)        # OR\n",
       "    jsubset(!is.na(Age))                # NOT\n",
-      "  You wrote: ", expr_str,
-      call. = FALSE
+      "  You wrote: ", expr_str
     )
   }
 
@@ -5500,12 +5560,11 @@ jfilter <- function(data, expr) {
   # Most robust: check if the deparsed expression contains a lone `=` sign
   # that isn't part of `==`, `<=`, `>=`, or `!=`.
   if (grepl("(?<![=<>!])=(?!=)", expr_str, perl = TRUE)) {
-    stop(
+    .jst_stop(
       "It looks like you used `=` in your subset expression. In R, `=` is ",
       "assignment; equality comparison uses `==` (double equals).\n",
       "  Example: jsubset(Gender == 1)\n",
-      "  You wrote: ", expr_str,
-      call. = FALSE
+      "  You wrote: ", expr_str
     )
   }
 
@@ -5727,8 +5786,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   # number show that many dropped rows).
   if (is.numeric(console) && length(console) == 1L && !is.na(console) &&
       console < 0) {
-    stop("`console` must be TRUE or a positive number of rows to show ",
-         "(0 or FALSE turns it off); got ", console, ".", call. = FALSE)
+    .jst_stop("`console` must be TRUE or a positive number of rows to show ",
+         "(0 or FALSE turns it off); got ", console, ".")
   }
 
   # -- No arguments: print session-wide status ------------------------------
@@ -5919,8 +5978,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
   if (length(variable_names) == 0) {
-    stop("Provide at least one variable name, e.g. jcomplete(DV, IV1, IV2).",
-         call. = FALSE)
+    .jst_stop("Provide at least one variable name, e.g. jcomplete(DV, IV1, IV2).")
   }
 
   .jst_check_vars(data, variable_names, .jst_data_name)
@@ -6518,8 +6576,8 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("numeric", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
-    stop("Specify one or more variables to register, e.g. ",
-         "jnumeric(", data_name, ", <var1>, <var2>).", call. = FALSE)
+    .jst_stop("Specify one or more variables to register, e.g. ",
+         "jnumeric(", data_name, ", <var1>, <var2>).")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -6603,8 +6661,8 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("count", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
-    stop("Specify one or more variables to register, e.g. ",
-         "jcount(", data_name, ", <var1>, <var2>).", call. = FALSE)
+    .jst_stop("Specify one or more variables to register, e.g. ",
+         "jcount(", data_name, ", <var1>, <var2>).")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -6701,8 +6759,8 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("likert", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
-    stop("Specify one or more variables to register, e.g. ",
-         "jlikert(", data_name, ", <var1>, <var2>).", call. = FALSE)
+    .jst_stop("Specify one or more variables to register, e.g. ",
+         "jlikert(", data_name, ", <var1>, <var2>).")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -6870,24 +6928,21 @@ joutput <- function(level, effect.size = NULL,
     if (!is.character(case.processing.detail) ||
         length(case.processing.detail) != 1 ||
         !(case.processing.detail %in% c("none", "totals", "per_code"))) {
-      stop("case.processing.detail must be one of: \"none\", \"totals\", ",
-           "\"per_code\".", call. = FALSE)
+      .jst_stop_arg("joutput", "case.processing.detail", choices = c("none", "totals", "per_code"))
     }
     toggle_args$case.processing.detail <- case.processing.detail
   }
   if (!is.null(variable.id)) {
     if (!is.character(variable.id) || length(variable.id) != 1 ||
         !(variable.id %in% c("both", "names", "labels", "legend", "legend.bottom"))) {
-      stop("variable.id must be one of: \"both\", \"names\", \"labels\", ",
-           "\"legend\", \"legend.bottom\".", call. = FALSE)
+      .jst_stop_arg("joutput", "variable.id", choices = c("both", "names", "labels", "legend", "legend.bottom"))
     }
     toggle_args$variable.id <- variable.id
   }
   if (!is.null(value.id)) {
     if (!is.character(value.id) || length(value.id) != 1 ||
         !(value.id %in% c("both", "values", "labels", "legend", "legend.bottom"))) {
-      stop("value.id must be one of: \"both\", \"values\", \"labels\", ",
-           "\"legend\", \"legend.bottom\".", call. = FALSE)
+      .jst_stop_arg("joutput", "value.id", choices = c("both", "values", "labels", "legend", "legend.bottom"))
     }
     toggle_args$value.id <- value.id
   }
@@ -6897,8 +6952,7 @@ joutput <- function(level, effect.size = NULL,
     if (length(digits) != 1L || is.na(digits) ||
         !is.numeric(digits) || digits != as.integer(digits) ||
         digits < 0L || digits > 7L) {
-      stop("digits must be a single whole number between 0 and 7.",
-           call. = FALSE)
+      .jst_stop_arg("joutput", "digits", "a single whole number between 0 and 7.")
     }
     toggle_args$digits <- as.integer(digits)
   }
@@ -6921,8 +6975,7 @@ joutput <- function(level, effect.size = NULL,
 
   # Validate level
   if (!is.character(level) || length(level) != 1 || !(level %in% valid_levels)) {
-    stop("level must be one of: \"minimal\", \"standard\", \"full\".",
-         call. = FALSE)
+    .jst_stop_arg("joutput", "level", choices = c("minimal", "standard", "full"))
   }
 
   # Set level and toggles
@@ -7247,44 +7300,41 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     if (!is.character(missing.convention) ||
         length(missing.convention) != 1L ||
         !(missing.convention %in% c("none", "spss", "stata"))) {
-      stop("missing.convention must be one of: \"none\", \"spss\", \"stata\".",
-           call. = FALSE)
+      .jst_stop_arg("joptions", "missing.convention", choices = c("none", "spss", "stata"))
     }
   }
   if (cc_supplied && !is.null(udm.convention.codes)) {
     x <- udm.convention.codes
     if (!is.numeric(x))
-      stop("udm.convention.codes must be numeric.", call. = FALSE)
+      .jst_stop_arg("joptions", "udm.convention.codes", "numeric.")
     if (length(x) < 1L || length(x) > 4L)
-      stop("udm.convention.codes must have length 1 to 4.", call. = FALSE)
+      stop("joptions(): udm.convention.codes must have length 1 to 4.", call. = FALSE)
     if (anyNA(x) || !all(x == round(x)))
-      stop("udm.convention.codes must contain only whole numbers.", call. = FALSE)
+      .jst_stop("udm.convention.codes must contain only whole numbers.")
     if (anyDuplicated(x) > 0L)
-      stop("udm.convention.codes must contain no duplicates.", call. = FALSE)
+      .jst_stop("udm.convention.codes must contain no duplicates.")
   }
   if (dd_supplied && !is.null(data.dir)) {
     if (!is.character(data.dir) ||
         length(data.dir) != 1L ||
         is.na(data.dir)) {
-      stop('data.dir must be a single character string, NULL, or "". ',
-           '(Use "" to clear the folder, NULL to leave it unchanged.)',
-           call. = FALSE)
+      .jst_stop('data.dir must be a single character string, NULL, or "". ',
+           '(Use "" to clear the folder, NULL to leave it unchanged.)')
     }
     # Guard the literal "NULL" string -- almost always a typo for one of
     # the two real tokens. Case-sensitive, so a genuine folder named
     # "null" (lowercase) is still permitted.
     if (identical(trimws(data.dir), "NULL")) {
-      stop('data.dir = "NULL" looks like a typo. To clear the data folder ',
+      .jst_stop('data.dir = "NULL" looks like a typo. To clear the data folder ',
            'back to the working directory, use data.dir = "" (empty quotes); ',
-           'to leave it unchanged, use data.dir = NULL (no quotes).',
-           call. = FALSE)
+           'to leave it unchanged, use data.dir = NULL (no quotes).')
     }
   }
   if (cl_supplied && !is.null(corr.layout)) {
     if (!is.character(corr.layout) ||
         length(corr.layout) != 1L ||
         !(corr.layout %in% c("wide", "stacked"))) {
-      stop("corr.layout must be one of: \"wide\", \"stacked\".", call. = FALSE)
+      .jst_stop_arg("joptions", "corr.layout", choices = c("wide", "stacked"))
     }
   }
 
@@ -7580,18 +7630,17 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # Part 4), so rather than silently summarizing a variable the user asked to
   # treat categorically, jdesc stops and points to jfreq().
   if (!is.null(categorical)) {
-    stop("categorical = is not supported by jdesc() yet: jdesc() always ",
+    .jst_stop("categorical = is not supported yet: this function always ",
          "computes numeric descriptives. For a categorical summary use ",
-         "jfreq() instead.", call. = FALSE)
+         "jfreq() instead.")
   }
   for (.arg in c("numeric", "count")) {
     .val <- get(.arg)
     if (!is.null(.val)) {
       .bad <- setdiff(.val, variable_names)
       if (length(.bad) > 0) {
-        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the variables passed to jdesc(). Check for typos.",
-             call. = FALSE)
+        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the variables passed to jdesc(). Check for typos.")
       }
     }
   }
@@ -7617,11 +7666,11 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     reasons <- vapply(variable_names, function(v) desc_class[[v]]$refusal,
                       character(1))
     if (length(variable_names) == 1L) {
-      stop(reasons[[1L]], call. = FALSE)
+      .jst_stop(reasons[[1L]])
     }
-    stop(paste0("None of the requested variables can be summarized with ",
+    .jst_stop(paste0("None of the requested variables can be summarized with ",
                 "descriptive statistics:\n",
-                paste0("  - ", reasons, collapse = "\n")), call. = FALSE)
+                paste0("  - ", reasons, collapse = "\n")))
   }
 
   # Per-variable notes for a summarized variable: the categorical-like
@@ -8547,8 +8596,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   # "variable not found: <token>" that resulted when the token fell into the
   # dots and was mistaken for a variable name. (Session 62, Option A)
   if (!is.null(value.id)) {
-    stop("value.id is not supported by jscreen(); it does not display ",
-         "value labels.", call. = FALSE)
+    .jst_stop("value.id is not supported here; it does not display ",
+         "value labels.")
   }
 
   # Resolve stats= : hybrid logical-or-character. FALSE -> "none" (default),
@@ -9142,15 +9191,15 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                                                        paste0("jsubset (", fs$expr_str, ")"))
     }
     if (length(active_steps) > 0) {
-      stop(paste0("'", group_name, "' has ", n_levels,
+      .jst_stop(paste0("'", group_name, "' has ", n_levels,
                   " category(ies) after applying ", paste(active_steps, collapse = " and "),
                   ". A t-test requires exactly 2. ",
                   "Check whether your jsubset or jcomplete settings ",
-                  "are excluding one of the groups."), call. = FALSE)
+                  "are excluding one of the groups."))
     } else {
-      stop(paste0("'", group_name, "' has ", n_levels,
+      .jst_stop(paste0("'", group_name, "' has ", n_levels,
                   " categories. A t-test requires exactly 2. ",
-                  "Use jaov() for more than 2 categories."), call. = FALSE)
+                  "Use jaov() for more than 2 categories."))
     }
   }
 
@@ -9172,7 +9221,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   group2_data <- group2_data[!is.na(group2_data)]
 
   if (paired && length(group1_data) != length(group2_data)) {
-    stop("Paired t-test requires equal sample sizes in both groups.", call. = FALSE)
+    .jst_stop("Paired t-test requires equal sample sizes in both groups.")
   }
 
   # Variable label display mode. jt is a collapse layout: under "labels"
@@ -9540,15 +9589,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                                                        paste0("jsubset (", fs$expr_str, ")"))
     }
     if (length(active_steps) > 0) {
-      stop(paste0("'", group_name, "' has ", n_levels,
+      .jst_stop(paste0("'", group_name, "' has ", n_levels,
                   " category(ies) after applying ", paste(active_steps, collapse = " and "),
                   ". An ANOVA requires at least 2. ",
                   "Check whether your jsubset or jcomplete settings ",
-                  "are excluding one or more groups."), call. = FALSE)
+                  "are excluding one or more groups."))
     } else {
-      stop(paste0("'", group_name, "' has ", n_levels,
-                  " category(ies). An ANOVA requires at least 2 groups."),
-           call. = FALSE)
+      .jst_stop(paste0("'", group_name, "' has ", n_levels,
+                  " category(ies). An ANOVA requires at least 2 groups."))
     }
   }
 
@@ -10001,10 +10049,10 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
       context <- if (length(active_steps) > 0) {
         paste0(" after applying ", paste(active_steps, collapse = " and "))
       } else ""
-      stop(paste0("'", check_info$name, "' has ", length(check_info$lvls),
+      .jst_stop(paste0("'", check_info$name, "' has ", length(check_info$lvls),
                   " category(ies)", context,
                   ". A cross-tabulation requires at least 2 categories ",
-                  "for each variable."), call. = FALSE)
+                  "for each variable."))
     }
   }
 
@@ -10229,8 +10277,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   # joutput(value.id=) never arrives here as a per-call arg, so a non-NULL
   # value.id can only be an explicit per-call argument. (Session 62, Option A)
   if (!is.null(value.id)) {
-    stop("value.id is not supported by jcorr(); it does not display ",
-         "value labels.", call. = FALSE)
+    .jst_stop("value.id is not supported here; it does not display ",
+         "value labels.")
   }
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -10273,18 +10321,17 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   # variable the user asked to treat categorically, jcorr stops and points to
   # jcrosstab().
   if (!is.null(categorical)) {
-    stop("categorical = is not supported by jcorr() yet: correlation requires ",
+    .jst_stop("categorical = is not supported yet: correlation requires ",
          "numeric variables. For association between categorical variables use ",
-         "jcrosstab() instead.", call. = FALSE)
+         "jcrosstab() instead.")
   }
   for (.arg in c("numeric", "count")) {
     .val <- get(.arg)
     if (!is.null(.val)) {
       .bad <- setdiff(.val, variable_names)
       if (length(.bad) > 0) {
-        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the variables passed to jcorr(). Check for typos.",
-             call. = FALSE)
+        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the variables passed to jcorr(). Check for typos.")
       }
     }
   }
@@ -10297,12 +10344,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   for (.gv in variable_names) .jst_check_analysis_var(data[[.gv]], .gv, TRUE, "a correlation")
 
   if (length(variable_names) < 2) {
-    stop("jcorr() requires at least 2 variables. Only 1 was provided.", call. = FALSE)
+    .jst_stop("At least 2 variables are required. Only 1 was provided.")
   }
 
   method <- tolower(method)
   if (!method %in% c("pearson", "spearman", "kendall")) {
-    stop("method must be 'pearson', 'spearman', or 'kendall'.", call. = FALSE)
+    .jst_stop_arg("jcorr", "method", choices = c("pearson", "spearman", "kendall"))
   }
 
   method_label <- switch(method,
@@ -10341,15 +10388,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # Hard errors — variable types that cannot be coerced to numeric for
     # correlation regardless of structure.
     if (is.character(cor_data[[v]])) {
-      stop(paste0("'", v, "' is a character variable and cannot be used ",
-                  "in a correlation. Use a numeric variable instead."), call. = FALSE)
+      .jst_stop(paste0("'", v, "' is a character variable and cannot be used ",
+                  "in a correlation. Use a numeric variable instead."))
     }
     if (is.factor(cor_data[[v]])) {
       numeric_check <- suppressWarnings(as.numeric(as.character(cor_data[[v]])))
       if (all(is.na(numeric_check[!is.na(cor_data[[v]])]))) {
-        stop(paste0("'", v,
+        .jst_stop(paste0("'", v,
                     "' is a factor with text categories and cannot be used ",
-                    "in a correlation. Use a numeric variable instead."), call. = FALSE)
+                    "in a correlation. Use a numeric variable instead."))
       }
       cor_data[[v]] <- numeric_check
     }
@@ -11470,7 +11517,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # global-default path can reach the fold, since an explicit legend value is
   # rejected here. The variable.id legend block is unrelated (handled later).
   if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
-    stop("value.id '", value.id, "' is not supported by jlm().", call. = FALSE)
+    .jst_stop("value.id '", value.id, "' is not supported here.")
   }
   value_mode      <- .jst_resolve_value_id(value.id,
                                            allowed = c("both", "values", "labels"))
@@ -11783,12 +11830,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         )
       }
       if (length(bad_unknown) > 0) {
-        stop(
+        .jst_stop(
           "numeric argument: ",
           paste0("'", bad_unknown, "'", collapse = ", "),
           " not found among independent variables in ", .jst_data_name,
-          ". Check for typos.",
-          call. = FALSE
+          ". Check for typos."
         )
       }
       numeric <- intersect(numeric, iv_names)
@@ -11810,12 +11856,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         )
       }
       if (length(bad_unknown) > 0) {
-        stop(
+        .jst_stop(
           "categorical argument: ",
           paste0("'", bad_unknown, "'", collapse = ", "),
           " not found among independent variables in ", .jst_data_name,
-          ". Check for typos.",
-          call. = FALSE
+          ". Check for typos."
         )
       }
       categorical <- intersect(categorical, iv_names)
@@ -11840,12 +11885,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         )
       }
       if (length(bad_unknown) > 0) {
-        stop(
+        .jst_stop(
           "count argument: ",
           paste0("'", bad_unknown, "'", collapse = ", "),
           " not found among independent variables in ", .jst_data_name,
-          ". Check for typos.",
-          call. = FALSE
+          ". Check for typos."
         )
       }
       count <- intersect(count, iv_names)
@@ -11856,10 +11900,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   if (!is.null(numeric) && !is.null(categorical)) {
     conflict <- intersect(numeric, categorical)
     if (length(conflict) > 0) {
-      stop(
+      .jst_stop(
         paste0("'", conflict, "'", collapse = ", "),
-        " listed in both numeric and categorical arguments.",
-        call. = FALSE
+        " listed in both numeric and categorical arguments."
       )
     }
   }
@@ -11870,10 +11913,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   if (!is.null(count) && !is.null(categorical)) {
     conflict <- intersect(count, categorical)
     if (length(conflict) > 0) {
-      stop(
+      .jst_stop(
         paste0("'", conflict, "'", collapse = ", "),
-        " listed in both count and categorical arguments.",
-        call. = FALSE
+        " listed in both count and categorical arguments."
       )
     }
   }
@@ -12042,10 +12084,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # different underlying conditions for a clearer message.
 
   if (nrow(mf) == 0L) {
-    stop("All cases were excluded by the pipeline and/or listwise ",
+    .jst_stop("All cases were excluded by the pipeline and/or listwise ",
          "deletion; no model can be fit. See the Case Processing ",
-         "Summary above to identify which stage(s) excluded the cases.",
-         call. = FALSE)
+         "Summary above to identify which stage(s) excluded the cases.")
   }
 
   # Zero-variance predictor check: any IV with only one unique value in
@@ -12055,12 +12096,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
     constant_ivs <- names(n_unique)[n_unique < 2L]
     if (length(constant_ivs) > 0L) {
-      stop("The following predictor(s) have no variation in the ",
+      .jst_stop("The following predictor(s) have no variation in the ",
            "analysis sample (only one unique value); cannot fit slope: ",
            paste(constant_ivs, collapse = ", "), ". This often happens ",
            "when jsubset() restricts the sample to a single category of ",
-           "a variable that is then used as a predictor.",
-           call. = FALSE)
+           "a variable that is then used as a predictor.")
     }
   }
 
@@ -12592,8 +12632,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # global-default path can reach the fold, since an explicit legend value is
   # rejected here. The variable.id legend block is unrelated (handled later).
   if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
-    stop("value.id '", value.id, "' is not supported by jlogistic().",
-         call. = FALSE)
+    .jst_stop("value.id '", value.id, "' is not supported here.")
   }
   value_mode      <- .jst_resolve_value_id(value.id,
                                            allowed = c("both", "values", "labels"))
@@ -12880,10 +12919,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   if (identical(dv_kind$kind, "logical")) {
     # Logical: TRUE is the event. .jst_is_dichotomy() guards single-value input.
     if (!.jst_is_dichotomy(orig_dv)$is_dichotomy) {
-      stop(paste0(
+      .jst_stop(paste0(
         "'", dv_name, "' has only one value. Logistic regression requires a ",
         "binary variable with two categories."
-      ), call. = FALSE)
+      ))
     }
     data[[dv_name]] <- as.numeric(orig_dv)   # FALSE -> 0, TRUE -> 1
     dv_event_disp   <- "TRUE"
@@ -12903,14 +12942,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       # one category (no variation) or three or more.
       n_show <- unique(nonmiss)
       n_show <- n_show[seq_len(min(5L, length(n_show)))]
-      stop(paste0(
+      .jst_stop(paste0(
         "'", dv_name, "' has ", length(u_norm),
         if (length(u_norm) == 1L) " category" else " categories",
         " (", paste(n_show, collapse = ", "),
         if (length(unique(nonmiss)) > 5L) ", ..." else "", ").\n",
         "Logistic regression requires exactly two categories. Recode to a 0/1 ",
         "variable before running jlogistic()."
-      ), call. = FALSE)
+      ))
     }
 
     # Representative original-cased label for each normalized category.
@@ -12919,7 +12958,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     mb   <- .jst_match_binary_tokens(disp)
 
     if (!mb$recognized) {
-      stop(paste0(
+      .jst_stop(paste0(
         "'", dv_name, "' has the text categories: ",
         paste(disp, collapse = ", "),
         ". jlogistic() recognizes yes/no, y/n, true/false, t/f, present/absent, ",
@@ -12929,7 +12968,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         dv_name, ", map = \"", disp[1], "=0; ", disp[2], "=1\")\n",
         "Then use ", dv_name, "R as your dependent variable (the category mapped ",
         "to 1 is the one jlogistic models)."
-      ), call. = FALSE)
+      ))
     }
 
     event_norm      <- tolower(trimws(mb$event))
@@ -12973,7 +13012,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       } else {
         recode_labels <- ""
       }
-      stop(paste0(
+      .jst_stop(paste0(
         "'", dv_name, "' is coded 1/2. Logistic regression requires 0/1 coding.\n",
         "Recode before running jlogistic():\n",
         "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ", dv_name,
@@ -12981,7 +13020,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         "Then use ", dv_name, "R as your dependent variable.\n",
         "(jlogistic models the category coded 1; to model the other category ",
         "instead, reverse the map and labels.)"
-      ), call. = FALSE)
+      ))
 
     } else {
       # Not a valid 0/1 dichotomy: distinguish suspected coded missings from a
@@ -12998,7 +13037,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
       if (length(coded_miss) > 0) {
         miss_str <- paste(coded_miss, collapse = ", ")
-        stop(paste0(
+        .jst_stop(paste0(
           "'", dv_name, "' has ", n_unique, " unique values (",
           paste(unique_vals, collapse = ", "),
           "). The dependent variable must have exactly 2 categories coded 0/1.\n",
@@ -13007,14 +13046,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
           "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ", dv_name,
           ", map = \"", paste0(coded_miss, "=NA", collapse = "; "),
           "; else=copy\")"
-        ), call. = FALSE)
+        ))
       } else {
-        stop(paste0(
+        .jst_stop(paste0(
           "'", dv_name, "' has values: ",
           paste(unique_vals, collapse = ", "),
           ". Logistic regression requires a binary variable coded 0/1.\n",
           "Use jrecode() to create a 0/1 coded version before running jlogistic()."
-        ), call. = FALSE)
+        ))
       }
     }
   }
@@ -13485,8 +13524,8 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   # arg, so a non-NULL value.id can only be an explicit per-call argument.
   # (Session 62, Option A)
   if (!is.null(value.id)) {
-    stop("value.id is not supported by jalpha(); it does not display ",
-         "value labels.", call. = FALSE)
+    .jst_stop("value.id is not supported here; it does not display ",
+         "value labels.")
   }
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -13521,7 +13560,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   for (.gv in variable_names) .jst_check_analysis_var(data[[.gv]], .gv, TRUE, "Cronbach's alpha")
 
   if (length(variable_names) < 2) {
-    stop("jalpha() requires at least 2 items. Only 1 was provided.", call. = FALSE)
+    .jst_stop("At least 2 items are required. Only 1 was provided.")
   }
 
   # Red title
@@ -13759,26 +13798,23 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
       end_idx   <- match(end_name, all_cols)
 
       if (is.na(start_idx)) {
-        stop(
+        .jst_stop(
           "Variable '", start_name, "' not found in ", frame_ref, ".\n",
-          "Check spelling and capitalization.",
-          call. = FALSE
+          "Check spelling and capitalization."
         )
       }
       if (is.na(end_idx)) {
-        stop(
+        .jst_stop(
           "Variable '", end_name, "' not found in ", frame_ref, ".\n",
-          "Check spelling and capitalization.",
-          call. = FALSE
+          "Check spelling and capitalization."
         )
       }
 
       if (start_idx > end_idx) {
-        stop(
+        .jst_stop(
           "In ", start_name, ":", end_name, ", '", start_name,
           "' comes after '", end_name, "' in the column order of ", frame_ref, ".\n",
-          "Reverse the order: ", end_name, ":", start_name,
-          call. = FALSE
+          "Reverse the order: ", end_name, ":", start_name
         )
       }
 
@@ -13891,7 +13927,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   label_parts <- resolved$label_parts
 
   if (length(var_names) < 2) {
-    stop("jsum() requires at least 2 variables.", call. = FALSE)
+    .jst_stop("At least 2 variables are required.")
   }
 
   .jst_check_vars(data, var_names, .jst_data_name)
@@ -13926,13 +13962,12 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   } else {
     threshold <- as.integer(min.valid)
     if (is.na(threshold) || threshold < 1) {
-      stop("min.valid must be a positive integer.", call. = FALSE)
+      .jst_stop_arg("jsum", "min.valid", "a positive integer.")
     }
     if (threshold > n_vars) {
-      stop(
+      .jst_stop(
         "min.valid (", threshold, ") cannot exceed the number of variables (",
-        n_vars, ").",
-        call. = FALSE
+        n_vars, ")."
       )
     }
   }
@@ -14098,7 +14133,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   label_parts <- resolved$label_parts
 
   if (length(var_names) < 2) {
-    stop("javg() requires at least 2 variables.", call. = FALSE)
+    .jst_stop("At least 2 variables are required.")
   }
 
   .jst_check_vars(data, var_names, .jst_data_name)
@@ -14133,13 +14168,12 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   } else {
     threshold <- as.integer(min.valid)
     if (is.na(threshold) || threshold < 1) {
-      stop("min.valid must be a positive integer.", call. = FALSE)
+      .jst_stop_arg("javg", "min.valid", "a positive integer.")
     }
     if (threshold > n_vars) {
-      stop(
+      .jst_stop(
         "min.valid (", threshold, ") cannot exceed the number of variables (",
-        n_vars, ").",
-        call. = FALSE
+        n_vars, ")."
       )
     }
   }
@@ -14308,11 +14342,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
-    stop("The first argument must be a data frame.", call. = FALSE)
+    .jst_stop("The first argument must be a data frame.")
   }
   if (!var_name %in% names(data)) {
     frame_ref <- if (!is.null(arg1$name) && nzchar(arg1$name)) arg1$name else "the data frame"
-    stop(paste0("Variable '", var_name, "' not found in ", frame_ref, "."), call. = FALSE)
+    .jst_stop(paste0("Variable '", var_name, "' not found in ", frame_ref, "."))
   }
 
   x <- data[[var_name]]
@@ -14329,18 +14363,18 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   } else if (is.factor(x)) {
     num_vals <- suppressWarnings(as.numeric(as.character(x)))
     if (all(is.na(num_vals[!is.na(x)]))) {
-      stop(paste0(
+      .jst_stop(paste0(
         "'", var_name, "' is a factor with non-numeric levels. ",
         "Convert it to numeric values before using jrelabel()."
-      ), call. = FALSE)
+      ))
     }
   } else if (is.character(x)) {
     num_vals <- suppressWarnings(as.numeric(x))
     if (all(is.na(num_vals[!is.na(x)]))) {
-      stop(paste0(
+      .jst_stop(paste0(
         "'", var_name, "' contains non-numeric text values. ",
         "Convert it to numeric values before using jrelabel()."
-      ), call. = FALSE)
+      ))
     }
   } else {
     num_vals <- as.numeric(x)
@@ -14352,7 +14386,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # --- Apply variable label ---
   if (!is.null(var.label)) {
     if (!is.character(var.label) || length(var.label) != 1) {
-      stop("The var.label argument must be a single quoted string.", call. = FALSE)
+      .jst_stop("The var.label argument must be a single quoted string.")
     }
     labelled::var_label(result) <- var.label
   } else if (!is.null(existing_var_label) &&
@@ -14363,12 +14397,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # --- Apply value labels ---
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
-      stop("The labels argument must be a single quoted string, e.g. \"1=Yes; 0=No\".", call. = FALSE)
+      .jst_stop("The labels argument must be a single quoted string, e.g. \"1=Yes; 0=No\".")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
-      error = function(e) stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e)), call. = FALSE)
+      error = function(e) .jst_stop(paste0("Error in labels argument: ",
+                                      conditionMessage(e)))
     )
     labelled::val_labels(result) <- parsed_labels
   }
@@ -15108,13 +15142,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
-    stop("The first argument must be a data frame.", call. = FALSE)
+    .jst_stop("The first argument must be a data frame.")
   }
   if (!orig_name %in% names(data)) {
-    stop(paste0("Variable '", orig_name, "' not found in '", .jst_data_name, "'."), call. = FALSE)
+    .jst_stop(paste0("Variable '", orig_name, "' not found in '", .jst_data_name, "'."))
   }
   if (missing(map) || !is.character(map) || length(map) != 1) {
-    stop("The map argument must be a single quoted string, e.g. map = \"1=1; 2=0\".", call. = FALSE)
+    .jst_stop("The map argument must be a single quoted string, e.g. map = \"1=1; 2=0\".")
   }
 
   # Validate convention argument up front so an invalid value errors
@@ -15123,8 +15157,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   if (!is.null(convention)) {
     if (!is.character(convention) || length(convention) != 1L ||
         !convention %in% c("spss", "stata")) {
-      stop("The convention argument must be \"spss\" or \"stata\".",
-           call. = FALSE)
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
     }
   }
 
@@ -15136,7 +15169,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # --- Parse map string ---
   parsed_map <- tryCatch(
     .jst_parse_map(map),
-    error = function(e) stop(paste0("Error in map argument: ", conditionMessage(e)), call. = FALSE)
+    error = function(e) .jst_stop(paste0("Error in map argument: ", conditionMessage(e)))
   )
 
   # --- Parse labels string (if supplied) ---
@@ -15146,12 +15179,12 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   parsed_labels <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
-      stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
+      .jst_stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
-      error = function(e) stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e)), call. = FALSE)
+      error = function(e) .jst_stop(paste0("Error in labels argument: ",
+                                      conditionMessage(e)))
     )
   }
 
@@ -15177,7 +15210,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         data_name     = .jst_data_name,
         orig_name     = orig_name
       )
-      stop(paste0("Error in jrecode(): ", err_msg), call. = FALSE)
+      .jst_stop(err_msg)
     }
     # else: Stata convention — proceed; tagged-NA tokens are valid.
   }
@@ -15248,12 +15281,12 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       new_num[legit_mask] <- haven::tagged_na(parsed_map$else_tag)
     } else {
       # No else clause: stop so student can fix the map
-      stop(paste0(
+      .jst_stop(paste0(
         "Value(s) ", paste(legitimate_unspecified, collapse = ", "),
         " in '", orig_name, "' were not in the map. ",
         "Map these values and re-run. ",
         "To leave unmapped values unchanged, add 'else=copy' to the map."
-      ), call. = FALSE)
+      ))
     }
   }
 
@@ -15527,33 +15560,30 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 
   # --- Input checks ---------------------------------------------------------
   if (!is.data.frame(data)) {
-    stop("The first argument must be a data frame.", call. = FALSE)
+    .jst_stop("The first argument must be a data frame.")
   }
   if (!var_name %in% names(data)) {
-    stop(paste0("Variable '", var_name, "' not found in '",
-                data_name, "'."), call. = FALSE)
+    .jst_stop(paste0("Variable '", var_name, "' not found in '",
+                data_name, "'."))
   }
 
   if (missing(codes) || is.null(codes)) {
-    stop("jdeclare_udm() argument `codes` is required.", call. = FALSE)
+    .jst_stop("Argument `codes` is required.")
   }
   if (!is.numeric(codes) || length(codes) == 0L) {
-    stop("jdeclare_udm() argument `codes` must be a non-empty numeric ",
-         "vector (Stata-style missing values are accepted under Stata convention).",
-         call. = FALSE)
+    .jst_stop("Argument `codes` must be a non-empty numeric ",
+         "vector (Stata-style missing values are accepted under Stata convention).")
   }
   if (!is.logical(udm.notice) || length(udm.notice) != 1L ||
       is.na(udm.notice)) {
-    stop("jdeclare_udm() argument `udm.notice` must be TRUE or FALSE.",
-         call. = FALSE)
+    .jst_stop("Argument `udm.notice` must be TRUE or FALSE.")
   }
 
   # Validate convention argument up front.
   if (!is.null(convention)) {
     if (!is.character(convention) || length(convention) != 1L ||
         !convention %in% c("spss", "stata")) {
-      stop("The convention argument must be \"spss\" or \"stata\".",
-           call. = FALSE)
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
     }
   }
 
@@ -15580,15 +15610,13 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   parsed_labels <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1L) {
-      stop("The labels argument must be a single quoted string, e.g. ",
-           "labels = \"-99=Refused; -98=Don't know\".",
-           call. = FALSE)
+      .jst_stop("The labels argument must be a single quoted string, e.g. ",
+           "labels = \"-99=Refused; -98=Don't know\".")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
-      error = function(e) stop(paste0("Error in labels argument: ",
-                                       conditionMessage(e)),
-                               call. = FALSE)
+      error = function(e) .jst_stop(paste0("Error in labels argument: ",
+                                       conditionMessage(e)))
     )
   }
 
@@ -15671,8 +15699,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 
   # --- Sign-off 4: reject mixed tagged + numeric ---------------------------
   if (has_tagged && has_numeric) {
-    stop(.jst_jdeclare_udm_mixed_error(parsed_codes, data_name, var_name),
-         call. = FALSE)
+    .jst_stop(.jst_jdeclare_udm_mixed_error(parsed_codes, data_name, var_name))
   }
 
   # --- Read existing UDM info on the column --------------------------------
@@ -15685,10 +15712,10 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   if (!is.null(convention) && !is.null(existing_conv) &&
       existing_conv != convention) {
     other_form <- if (existing_conv == "spss") "SPSS-style" else "Stata-style"
-    stop("Column '", var_name, "' already carries ", other_form,
+    .jst_stop("Column '", var_name, "' already carries ", other_form,
          " UDMs; cannot use convention = \"", convention,
          "\" here. Use jconvert() to convert the column first, or ",
-         "omit the convention argument.", call. = FALSE)
+         "omit the convention argument.")
   }
 
   # --- Resolve convention ---------------------------------------------------
@@ -15704,7 +15731,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
       data_name    = data_name,
       var_name     = var_name
     )
-    stop(err_msg, call. = FALSE)
+    .jst_stop(err_msg)
   }
 
   # ==========================================================================
@@ -16267,18 +16294,17 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
     if (convention %in% c("spss", "stata")) {
       to <- convention
     } else {
-      stop(
-        "jconvert() needs a target format. Pass to = \"baseR\", \"spss\", ",
+      .jst_stop(
+        "A target format is required. Pass to = \"baseR\", \"spss\", ",
         "or \"stata\" explicitly, or set joptions(missing.convention = ",
-        "\"spss\") (or \"stata\") to enable auto-resolution.",
-        call. = FALSE
+        "\"spss\") (or \"stata\") to enable auto-resolution."
       )
     }
   }
   if (!is.character(to) || length(to) != 1L ||
       !to %in% c("baseR", "spss", "stata")) {
-    stop("jconvert() argument `to` must be one of \"baseR\", \"spss\", ",
-         "or \"stata\" (case-sensitive).", call. = FALSE)
+    .jst_stop("Argument `to` must be one of \"baseR\", \"spss\", ",
+         "or \"stata\" (case-sensitive).")
   }
 
   # --- Resolve variable list (... vs vars; mutually exclusive) ---------------
@@ -16299,13 +16325,12 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
   }
 
   if (length(dot_names) > 0 && !is.null(vars)) {
-    stop("jconvert() accepts either unquoted variable names (...) or a ",
-         "character vector via vars = c(...), but not both.",
-         call. = FALSE)
+    .jst_stop("Pass either unquoted variable names (...) or a ",
+         "character vector via vars = c(...), but not both.")
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
-    stop("jconvert() argument `vars` must be a non-empty character vector ",
-         "of variable names.", call. = FALSE)
+    .jst_stop("Argument `vars` must be a non-empty character vector ",
+         "of variable names.")
   }
 
   if (length(dot_names) > 0) {
@@ -16485,7 +16510,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
                      sprintf("       jconvert(%s, to = \"spss\", vars = c(...))",
                              data_name),
                      "  3. Recode the real-data values first via jrecode().")
-      stop(paste(msg_lines, collapse = "\n"), call. = FALSE)
+      .jst_stop(paste(msg_lines, collapse = "\n"))
     }
   }
 
@@ -16539,7 +16564,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
                      sprintf("       jconvert(%s, to = \"stata\", vars = c(...))",
                              data_name),
                      "  2. Recode the codes manually via jrecode().")
-      stop(paste(msg_lines, collapse = "\n"), call. = FALSE)
+      .jst_stop(paste(msg_lines, collapse = "\n"))
     }
   }
 
@@ -17106,7 +17131,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Validate file argument ------------------------------------------------
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
-    stop("Provide a filename, e.g. jload(\"mydata.sav\")", call. = FALSE)
+    .jst_stop("Provide a filename, e.g. jload(\"mydata.sav\")")
   }
 
   # --- Determine if file has a directory component ---------------------------
@@ -17121,10 +17146,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- Handle .RData/.rda redirect -------------------------------------------
   if (ext %in% c("rdata", "rda")) {
-    stop(
+    .jst_stop(
       ".RData files contain multiple named objects. ",
-      "Use load(\"", file, "\") to load these directly.",
-      call. = FALSE
+      "Use load(\"", file, "\") to load these directly."
     )
   }
 
@@ -17143,7 +17167,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         df <- pkg_df
       } else {
         search_dirs <- if (has_dir) character(0) else .jst_get_search_dirs()
-        stop(
+        .jst_stop(
           "No file found matching '", file, "' with any supported extension ",
           "(.sav, .dta, .csv, .rds, .sas7bdat, .xpt, .xlsx, .xls).\n",
           if (length(search_dirs) > 0)
@@ -17153,8 +17177,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                          collapse = " and "),
                    .jst_missing_data_dir_note())
           else
-            paste0("Searched in: ", .jst_norm_path(dirname(file))),
-          call. = FALSE
+            paste0("Searched in: ", .jst_norm_path(dirname(file)))
         )
       }
     } else if (length(found) == 1) {
@@ -17168,13 +17191,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         paste0("  ", found, collapse = "\n"), "\n",
         "Include the file extension to specify which one."
       )
-      stop(msg, call. = FALSE)
+      .jst_stop(msg)
     }
   }
 
   # --- Validate extension ----------------------------------------------------
   if (!from_package && !ext %in% supported_ext) {
-    stop(
+    .jst_stop(
       "Unsupported file extension '.", ext, "'. Supported formats:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
@@ -17183,8 +17206,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "  .xlsx      Excel\n",
       "  .xls       Excel (legacy)\n",
       "  .csv       Comma-separated values\n",
-      "  .rds       R native",
-      call. = FALSE
+      "  .rds       R native"
     )
   }
 
@@ -17196,7 +17218,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # Full or relative path provided — use directly
     resolved_path <- file
     if (!file.exists(resolved_path)) {
-      stop("File not found: ", .jst_norm_path(resolved_path), call. = FALSE)
+      .jst_stop("File not found: ", .jst_norm_path(resolved_path))
     }
   } else {
     # Bare filename — search Data/, data/, then working directory
@@ -17212,13 +17234,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # Check for leading digit
   if (grepl("^[0-9]", obj_name)) {
-    stop(
+    .jst_stop(
       "The filename '", basename(file), "' starts with a number. ",
       "R does not allow variable names to start with a digit.\n",
       "Provide a name, e.g.:\n",
       "  jload(\"", file, "\", name = \"",
-      gsub("^[0-9]+", "", obj_name), "\")",
-      call. = FALSE
+      gsub("^[0-9]+", "", obj_name), "\")"
     )
   }
 
@@ -17291,10 +17312,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # Ensure result is a data frame
   if (!is.data.frame(df)) {
     if (ext == "rds") {
-      stop(
+      .jst_stop(
         "The .rds file does not contain a data frame. ",
-        "jload() only loads data frames.",
-        call. = FALSE
+        "jload() only loads data frames."
       )
     }
     df <- as.data.frame(df)
@@ -18002,15 +18022,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       return(candidate)
     }
   }
-  stop(
+  .jst_stop(
     "File '", filename, "' not found.\n",
     "Searched in: ",
     paste(ifelse(search_dirs == ".", "working directory",
                  paste0(search_dirs, " folder")),
           collapse = " and "),
     .jst_missing_data_dir_note(), "\n",
-    "Check that the filename and extension are correct.",
-    call. = FALSE
+    "Check that the filename and extension are correct."
   )
 }
 
@@ -18990,9 +19009,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
     # Case 1: bare symbol that doesn't exist
     if (is.symbol(data_sub) &&
         !exists(as.character(data_sub), envir = parent.frame())) {
-      stop("'", as.character(data_sub), "' not found. ",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")",
-           call. = FALSE)
+      .jst_stop("'", as.character(data_sub), "' not found. ",
+           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
     }
 
     # Cases 2-4: evaluate the first argument and inspect the value
@@ -19003,24 +19021,21 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 
     if (eval_result$failed) {
       data_str <- paste(deparse(data_sub), collapse = "")
-      stop("'", data_str, "' could not be evaluated. ",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")",
-           call. = FALSE)
+      .jst_stop("'", data_str, "' could not be evaluated. ",
+           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
     }
 
     val <- eval_result$value
     if (is.null(val)) {
       data_str <- paste(deparse(data_sub), collapse = "")
-      stop("'", data_str, "' is NULL. ",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")",
-           call. = FALSE)
+      .jst_stop("'", data_str, "' is NULL. ",
+           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
     }
     if (!is.data.frame(val) && !is.character(val)) {
       data_str   <- paste(deparse(data_sub), collapse = "")
       class_desc <- paste(class(val), collapse = "/")
-      stop("'", data_str, "' is a ", class_desc, ", not a data frame. ",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")",
-           call. = FALSE)
+      .jst_stop("'", data_str, "' is a ", class_desc, ", not a data frame. ",
+           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
     }
   }
 
@@ -19046,9 +19061,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
         } else {
           "MyData"
         }
-        stop("'", file_str, "' is not quoted. Filenames must be in quotes, ",
-             "e.g. jsave(", ex_data, ", \"", file_str, "\")",
-             call. = FALSE)
+        .jst_stop("'", file_str, "' is not quoted. Filenames must be in quotes, ",
+             "e.g. jsave(", ex_data, ", \"", file_str, "\")")
       }
     }
   }
@@ -19078,17 +19092,16 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 
   # --- Validate data is a data frame -----------------------------------------
   if (!is.data.frame(data)) {
-    stop(
-      "jsave() saves data frames. '", data_name, "' is ",
-      paste0("a ", paste(class(data), collapse = "/"), ", not a data frame."),
-      call. = FALSE
+    .jst_stop(
+      "Only data frames can be saved. '", data_name, "' is ",
+      paste0("a ", paste(class(data), collapse = "/"), ", not a data frame.")
     )
   }
 
   # --- Validate file argument ------------------------------------------------
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
-    stop(
+    .jst_stop(
       "Provide a filename with extension, e.g. jsave(MyData, \"mydata.sav\")\n",
       "Supported formats:\n",
       "  .sav       SPSS\n",
@@ -19096,8 +19109,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
       "  .xpt       SAS transport\n",
       "  .xlsx      Excel\n",
       "  .csv       Comma-separated values\n",
-      "  .rds       R native",
-      call. = FALSE
+      "  .rds       R native"
     )
   }
 
@@ -19122,7 +19134,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
         "  jsave(", data_name, ", \"",
         tools::file_path_sans_ext(file), ".xlsx\")")
     }
-    stop(
+    .jst_stop(
       "Unsupported file extension '.", ext, "'. Supported formats for saving:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
@@ -19130,8 +19142,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
       "  .xlsx      Excel\n",
       "  .csv       Comma-separated values\n",
       "  .rds       R native",
-      xls_msg,
-      call. = FALSE
+      xls_msg
     )
   }
 
@@ -19143,7 +19154,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
     # Ensure directory exists
     out_dir <- dirname(out_path)
     if (!dir.exists(out_dir)) {
-      stop("Directory does not exist: ", .jst_norm_path(out_dir), call. = FALSE)
+      .jst_stop("Directory does not exist: ", .jst_norm_path(out_dir))
     }
   } else {
     # Bare filename — resolve via data.dir.
@@ -19188,10 +19199,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
         return(invisible(NULL))
       }
     } else {
-      stop(
+      .jst_stop(
         "File '", .jst_norm_path(out_path), "' already exists. ",
-        "Use overwrite = TRUE to replace it.",
-        call. = FALSE
+        "Use overwrite = TRUE to replace it."
       )
     }
   }
@@ -19272,8 +19282,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 
     # Report all blocking issues at once (single message when only one fired).
     if (length(sections) > 0) {
-      stop(.jst_jsave_combined_error_msg(sections, data_name, ext),
-           call. = FALSE)
+      .jst_stop(.jst_jsave_combined_error_msg(sections, data_name, ext))
     }
 
     # .dta only, once we know there are no blocking issues: lowercase any
@@ -19366,7 +19375,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
     )
   }, error = function(e) {
     unlink(temp_path)
-    stop(conditionMessage(e), call. = FALSE)
+    .jst_stop(conditionMessage(e))
   })
 
   # Move the completed temp into place. On Windows file.rename() fails if
@@ -19374,16 +19383,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   if (file.exists(out_path)) {
     if (!file.remove(out_path)) {
       unlink(temp_path)
-      stop("Could not remove existing target file: ",
-           .jst_norm_path(out_path),
-           call. = FALSE)
+      .jst_stop("Could not remove existing target file: ",
+           .jst_norm_path(out_path))
     }
   }
   if (!file.rename(temp_path, out_path)) {
     unlink(temp_path)
-    stop("Could not finalize save: rename of temporary file to ",
-         .jst_norm_path(out_path), " failed.",
-         call. = FALSE)
+    .jst_stop("Could not finalize save: rename of temporary file to ",
+         .jst_norm_path(out_path), " failed.")
   }
 
   # Format-specific notes (emitted after a confirmed successful write).
@@ -19478,17 +19485,15 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
     # source is the juse() default. `data` is the destination promise and must
     # not be forced.
     if (missing(data)) {
-      stop("Provide a destination name, e.g. jcopy(mydata, newdata).",
-           call. = FALSE)
+      .jst_stop("Provide a destination name, e.g. jcopy(mydata, newdata).")
     }
     dest_sub <- substitute(data)
     src <- tryCatch(
       .jst_resolve_data(envir = parent.frame()),
       error = function(e)
-        stop("No source given and no juse() default set. Either name the ",
+        .jst_stop("No source given and no juse() default set. Either name the ",
              "source -- jcopy(mydata, ", paste(deparse(dest_sub),
-             collapse = ""), ") -- or set a default with juse(mydata).",
-             call. = FALSE)
+             collapse = ""), ") -- or set a default with juse(mydata).")
     )
     src_data <- src$data
     src_name <- src$name
@@ -19504,8 +19509,8 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
       src_sub  <- substitute(data)
       src_data <- data
       if (!is.data.frame(src_data)) {
-        stop("The source must be a data frame. ",
-             "Provide one, e.g. jcopy(mydata, newdata).", call. = FALSE)
+        .jst_stop("The source must be a data frame. ",
+             "Provide one, e.g. jcopy(mydata, newdata).")
       }
       src_name <- paste(deparse(src_sub), collapse = "")
     }
@@ -19514,9 +19519,8 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
   # Validate and normalise the destination name (mirrors jload()).
   dest_name <- paste(deparse(dest_sub), collapse = "")
   if (grepl("^[0-9]", dest_name)) {
-    stop("The name '", dest_name, "' starts with a number. ",
-         "R does not allow variable names to start with a digit.",
-         call. = FALSE)
+    .jst_stop("The name '", dest_name, "' starts with a number. ",
+         "R does not allow variable names to start with a digit.")
   }
   dest_name <- make.names(dest_name)
 
@@ -19775,8 +19779,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   # Capture variable names
@@ -19825,9 +19829,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     if (!is.null(.val)) {
       .bad <- setdiff(.val, variable_names)
       if (length(.bad) > 0) {
-        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the variables passed to jplot(). Check for typos.",
-             call. = FALSE)
+        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the variables passed to jplot(). Check for typos.")
       }
     }
   }
@@ -19835,17 +19838,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # contradict). numeric and count are both numeric-like, so they do not clash.
   .cat_clash <- intersect(categorical, c(numeric, count))
   if (length(.cat_clash) > 0) {
-    stop(paste0("'", .cat_clash, "'", collapse = ", "),
-         " listed in both categorical and numeric/count arguments.",
-         call. = FALSE)
+    .jst_stop(paste0("'", .cat_clash, "'", collapse = ", "),
+         " listed in both categorical and numeric/count arguments.")
   }
 
   # Validate band argument
   valid_bands <- c("ci", "pi", "see", "none")
   if (!is.character(band) || length(band) != 1 || !band %in% valid_bands) {
-    stop("`band` must be one of: ", paste(sprintf("\"%s\"", valid_bands),
-                                          collapse = ", "), ".",
-         call. = FALSE)
+    .jst_stop("`band` must be one of: ", paste(sprintf("\"%s\"", valid_bands),
+                                          collapse = ", "), ".")
   }
 
   # Validate line argument
@@ -19853,8 +19854,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   valid_lines <- c(FALSE, "lm", "loess", "connect")
   if (!identical(line, FALSE) && !(is.character(line) && length(line) == 1 &&
                                    line %in% c("lm", "loess", "connect"))) {
-    stop("`line` must be FALSE, TRUE, or one of: ",
-         "\"lm\", \"loess\", \"connect\".", call. = FALSE)
+    .jst_stop("`line` must be FALSE, TRUE, or one of: ",
+         "\"lm\", \"loess\", \"connect\".")
   }
 
   # Apply data pipeline (jcomplete, jsubset, subset)
@@ -19912,17 +19913,16 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   valid_types <- c("histogram", "bar", "scatter", "box", "grouped_bar")
   if (!resolved_type %in% valid_types) {
-    stop("Invalid `type` value: \"", resolved_type, "\".\n",
+    .jst_stop("Invalid `type` value: \"", resolved_type, "\".\n",
          "Valid types: ", paste(sprintf("\"%s\"", valid_types),
-                                 collapse = ", "), ".",
-         call. = FALSE)
+                                 collapse = ", "), ".")
   }
 
   # -- Require formula syntax for scatter and box (relationship plots) ------
   # These plots distinguish DV from IV. Requiring formula syntax prevents
   # confusion about which variable goes on which axis and mirrors jlm/jaov.
   if (resolved_type == "scatter") {
-    stop("For two-numeric scatterplots, use formula syntax to make the DV ",
+    .jst_stop("For two-numeric scatterplots, use formula syntax to make the DV ",
          "and IV explicit (consistent with jlm):\n",
          "  jplot(", variable_names[2], " ~ ", variable_names[1],
          ", ", if (!is.null(.jst_data_name)) .jst_data_name else "SampleData",
@@ -19931,20 +19931,18 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                                              "\"") else "",
          ")\n",
          "(The DV on the left of ~ goes on the y-axis; the IV on the right ",
-         "goes on the x-axis.)",
-         call. = FALSE)
+         "goes on the x-axis.)")
   }
   if (resolved_type == "box") {
     # Numeric goes on y, categorical on x — i.e. numeric ~ categorical
     num_var <- variable_names[var_types == "numeric"][1]
     cat_var <- variable_names[var_types == "categorical"][1]
-    stop("For boxplots, use formula syntax to make the outcome and grouping ",
+    .jst_stop("For boxplots, use formula syntax to make the outcome and grouping ",
          "variable explicit (consistent with jaov):\n",
          "  jplot(", num_var, " ~ ", cat_var, ", ",
          if (!is.null(.jst_data_name)) .jst_data_name else "SampleData", ")\n",
          "(The numeric outcome on the left of ~ goes on the y-axis; the ",
-         "categorical grouping variable on the right goes on the x-axis.)",
-         call. = FALSE)
+         "categorical grouping variable on the right goes on the x-axis.)")
   }
 
   # -- Note about arguments ignored for this plot type ----------------------
@@ -20085,23 +20083,22 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # -- Parse formula ---------------------------------------------------------
   formula_vars <- all.vars(formula)
   if (length(formula) < 3) {
-    stop("jplot() requires a two-sided formula: DV ~ IV.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)", call. = FALSE)
+    .jst_stop("A two-sided formula is required: DV ~ IV.\n",
+         "  Example: jplot(Tattoos ~ Age, SampleData)")
   }
 
   y_name <- all.vars(formula[[2]])
   x_vars <- all.vars(formula[[3]])
 
   if (length(y_name) != 1) {
-    stop("jplot() supports only one variable on the left side of ~.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)", call. = FALSE)
+    .jst_stop("Only one variable is supported on the left side of ~.\n",
+         "  Example: jplot(Tattoos ~ Age, SampleData)")
   }
   if (length(x_vars) > 1) {
-    stop("jplot() supports only one independent variable in its formula.\n",
+    .jst_stop("Only one independent variable is supported in the formula.\n",
          "For multi-variable regression, fit with jlm() and plot the result:\n",
          "  m <- jlm(", deparse(formula), ", <data>)\n",
-         "  jplot(m)",
-         call. = FALSE)
+         "  jplot(m)")
   }
   x_name <- x_vars[1]
 
@@ -20124,9 +20121,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       .jst_data_name <- paste(deparse(mc_positional[[2]]), collapse = "")
     }
     if (length(positional_dots) > 1) {
-      stop("jplot(formula, data): only one data argument is expected after ",
-           "the formula. Extra positional arguments were supplied.",
-           call. = FALSE)
+      .jst_stop("Only one data argument is expected after ",
+           "the formula. Extra positional arguments were supplied.")
     }
   } else {
     resolved <- .jst_resolve_data(envir = parent_env)
@@ -20165,17 +20161,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     if (!is.null(.val)) {
       .bad <- setdiff(.val, .plot_vars)
       if (length(.bad) > 0) {
-        stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the formula variables in jplot(). Check for typos.",
-             call. = FALSE)
+        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
+             " not found among the formula variables in jplot(). Check for typos.")
       }
     }
   }
   .cat_clash <- intersect(categorical, c(numeric, count))
   if (length(.cat_clash) > 0) {
-    stop(paste0("'", .cat_clash, "'", collapse = ", "),
-         " listed in both categorical and numeric/count arguments.",
-         call. = FALSE)
+    .jst_stop(paste0("'", .cat_clash, "'", collapse = ", "),
+         " listed in both categorical and numeric/count arguments.")
   }
   # Per-variable override role for .jst_is_categorical (NULL when unasserted).
   .ov_for <- function(v) {
@@ -20188,20 +20182,19 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # -- Validate line / band arguments ----------------------------------------
   valid_bands <- c("ci", "pi", "see", "none")
   if (!is.character(band) || length(band) != 1 || !band %in% valid_bands) {
-    stop("`band` must be one of: ", paste(sprintf("\"%s\"", valid_bands),
-                                          collapse = ", "), ".",
-         call. = FALSE)
+    .jst_stop("`band` must be one of: ", paste(sprintf("\"%s\"", valid_bands),
+                                          collapse = ", "), ".")
   }
   if (isTRUE(line)) line <- "lm"
   if (!identical(line, FALSE) && !(is.character(line) && length(line) == 1 &&
                                    line %in% c("lm", "loess", "connect"))) {
-    stop("`line` must be FALSE, TRUE, or one of: ",
-         "\"lm\", \"loess\", \"connect\".", call. = FALSE)
+    .jst_stop("`line` must be FALSE, TRUE, or one of: ",
+         "\"lm\", \"loess\", \"connect\".")
   }
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   # -- Apply pipeline --------------------------------------------------------
@@ -20824,12 +20817,12 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
   bad <- setdiff(which, all_plots)
   if (length(bad) > 0) {
-    stop(sprintf(
+    .jst_stop(sprintf(
       "Invalid plot name(s) for class '%s': %s.\nValid names: %s, or use \"core\" / \"all\".",
       class_name,
       paste(sprintf("'%s'", bad), collapse = ", "),
       paste(sprintf("'%s'", all_plots), collapse = ", ")
-    ), call. = FALSE)
+    ))
   }
   which
 }
@@ -20907,7 +20900,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       if (classify(v) == "categorical") return(0)
       return(mean(x_num, na.rm = TRUE))
     }
-    stop("Unknown 'at' mode: ", mode, call. = FALSE)
+    .jst_stop("Unknown 'at' mode: ", mode)
   }
 
   if (is.list(at)) {
@@ -20920,8 +20913,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   if (!is.character(at) || length(at) != 1 ||
       !at %in% c("zero", "mean", "mixed")) {
-    stop("`at` must be one of \"zero\", \"mean\", \"mixed\", or a named list.",
-         call. = FALSE)
+    .jst_stop("`at` must be one of \"zero\", \"mean\", \"mixed\", or a named list.")
   }
 
   setNames(lapply(non_focal, hold_at, mode = at), non_focal)
@@ -20981,8 +20973,8 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   all_plots <- c("fit", "predicted", "effects", "coef", "vif",
@@ -21001,8 +20993,8 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
 
   if (is.null(focal_name)) focal_name <- iv_names[1]
   if (!focal_name %in% iv_names) {
-    stop("`focal` must be one of the independent variables in the model: ",
-         paste(iv_names, collapse = ", "), call. = FALSE)
+    .jst_stop("`focal` must be one of the independent variables in the model: ",
+         paste(iv_names, collapse = ", "))
   }
 
   plots <- list()
@@ -21239,8 +21231,8 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   all_plots <- c("probability", "roc", "calibration", "binned",
@@ -21259,8 +21251,8 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
 
   if (is.null(focal_name)) focal_name <- iv_names[1]
   if (!focal_name %in% iv_names) {
-    stop("`focal` must be one of the independent variables in the model: ",
-         paste(iv_names, collapse = ", "), call. = FALSE)
+    .jst_stop("`focal` must be one of the independent variables in the model: ",
+         paste(iv_names, collapse = ", "))
   }
 
   plots <- list()
@@ -21418,8 +21410,8 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   plot_set <- .jst_resolve_which(which, core = "box", all_plots = "box",
@@ -21427,9 +21419,8 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
 
   mf <- x$model_frame
   if (is.null(mf)) {
-    stop("jplot() requires model_frame on the jst_ttest object. ",
-         "Re-run jt() with the current version of the package.",
-         call. = FALSE)
+    .jst_stop("The jst_ttest object is missing model_frame. ",
+         "Re-run jt() with the current version of the package.")
   }
   terms <- all.vars(x$formula)
   dv_name    <- terms[1]
@@ -21476,8 +21467,8 @@ jplot.jst_anova <- function(x, which = "core", ...) {
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   plot_set <- .jst_resolve_which(which, core = "box", all_plots = "box",
@@ -21485,9 +21476,8 @@ jplot.jst_anova <- function(x, which = "core", ...) {
 
   mf <- x$model_frame
   if (is.null(mf)) {
-    stop("jplot() requires model_frame on the jst_anova object. ",
-         "Re-run jaov() with the current version of the package.",
-         call. = FALSE)
+    .jst_stop("The jst_anova object is missing model_frame. ",
+         "Re-run jaov() with the current version of the package.")
   }
   terms <- all.vars(x$formula)
   dv_name    <- terms[1]
@@ -21534,8 +21524,8 @@ jplot.jst_corr <- function(x, which = "core", ...) {
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   r_matrix <- x$r
@@ -21583,13 +21573,12 @@ jplot.jst_corr <- function(x, which = "core", ...) {
   if ("scatter" %in% plot_set) {
     mf <- x$model_frame
     if (is.null(mf)) {
-      stop("Scatter plot requires model_frame on the jst_corr object. ",
-           "Re-run jcorr() with the current version of the package.",
-           call. = FALSE)
+      .jst_stop("Scatter plot requires model_frame on the jst_corr object. ",
+           "Re-run jcorr() with the current version of the package.")
     }
     if (ncol(mf) != 2) {
-      stop("Scatter plot is only available when jcorr() was called with ",
-           "exactly 2 variables.", call. = FALSE)
+      .jst_stop("Scatter plot is only available when jcorr() was called with ",
+           "exactly 2 variables.")
     }
     var_names <- colnames(mf)
     r_val <- r_matrix[1, 2]
@@ -21625,8 +21614,8 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")", call. = FALSE)
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+         "Install with: install.packages(\"ggplot2\")")
   }
 
   plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
@@ -21675,22 +21664,20 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
 #' @rdname jplot
 #' @export
 jplot.jst_desc <- function(x, which = "core", ...) {
-  stop("Plotting jst_desc result objects is not supported. ",
+  .jst_stop("Plotting jst_desc result objects is not supported. ",
        "Instead, call jplot() with the data frame directly, e.g.:\n",
        "  jplot(SampleData, Age)        # histogram\n",
        "  jplot(SampleData, Gender)     # bar chart\n",
-       "  jplot(SampleData, Age, Gender) # boxplot",
-       call. = FALSE)
+       "  jplot(SampleData, Age, Gender) # boxplot")
 }
 
 #' @rdname jplot
 #' @export
 jplot.jst_freq <- function(x, which = "core", ...) {
-  stop("Plotting jst_freq result objects is not supported. ",
+  .jst_stop("Plotting jst_freq result objects is not supported. ",
        "Instead, call jplot() with the data frame directly, e.g.:\n",
        "  jplot(SampleData, Gender)              # bar chart\n",
-       "  jplot(SampleData, Gender, Employment)  # grouped bar chart",
-       call. = FALSE)
+       "  jplot(SampleData, Gender, Employment)  # grouped bar chart")
 }
 
 
