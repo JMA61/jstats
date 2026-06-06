@@ -41,7 +41,7 @@ small-range variable already plots as an ordered, labelled bar regardless of
 this registration.
 
 Like the other registration verbs, registrations are session-scoped and keyed
-by data-frame name; save the frame in R native format (.rds) with
+by data-frame name; save the frame in R format (.rds) with
 \code{\link{jsave}} to keep them across sessions.
 
 Clearing mirrors the other registration verbs:

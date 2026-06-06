@@ -932,7 +932,7 @@
   paste0(
     "Note: classification registrations (jnumeric/jcount/jdummy) are not ",
     "kept in ", .jst_format_label(ext), " (.", ext, "); they persist only ",
-    "in R native format (.rds).")
+    "in R format (.rds).")
 }
 
 #' Internal helper: human-readable label for a registered intent kind
@@ -1213,10 +1213,15 @@
     message("  Reclassified: ", paste(reclass, collapse = "; "), ".")
   }
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message("Registrations are stored for this session only. To keep them ",
-            "across sessions, save the data frame in R native format (.rds), ",
-            "e.g. jsave(", data_name, ", \"", data_name, ".rds\").")
+    message("Registrations are stored for this session only.\n",
+            "  To keep them across sessions, save the data frame in R format ",
+            "(.rds), e.g. jsave(", data_name, ", \"", data_name, ".rds\").")
   }
+
+  # Non-blocking declaration-plausibility heads-up for the just-registered
+  # variables (count/likert; numeric is a no-op). (Session 91)
+  .jst_declaration_note(data, var_names, kind)
+
   invisible(NULL)
 }
 
@@ -4466,6 +4471,138 @@
 }
 
 
+#' Internal helper: flag a registered classification that fights the data
+#'
+#' Given a variable and the analysis role the user declared for it
+#' ("count", "likert", or "dummy"), returns a short plain-language reason when
+#' the variable's structure is an implausible fit for that declaration, or ""
+#' when the declaration is a reasonable fit (or cannot be assessed). This drives
+#' the non-blocking "Unusual declaration" heads-up in jscreen() and the
+#' registration-time note in jcount(): the declaration always stands (a user
+#' assertion overrides structure by design), but a clear contradiction is
+#' surfaced in case it was a slip.
+#'
+#' The plausibility envelope per role:
+#' \itemize{
+#'   \item "count" -- non-negative whole numbers with more than two distinct
+#'     values. Flagged on a negative value, a non-whole value, or exactly two
+#'     distinct values (which reads as a dichotomy).
+#'   \item "likert" -- non-negative whole numbers within 0 to 10 and at most 11
+#'     distinct points. Flagged when a value falls outside that range, a value
+#'     is non-whole, or there are more than 11 distinct values.
+#'   \item "dummy" -- at most 11 categories, flagged only on the high end (more
+#'     than 11 categories). There is no lower floor: a two-category (dichotomy)
+#'     dummy is never flagged.
+#' }
+#' "numeric" is not a plausibility target -- declaring a variable Numeric is the
+#' maximally permissive assertion -- so it returns "".
+#'
+#' Declared-missing codes are removed before the structure is judged (through
+#' the central \code{.jst_missing_info()} reader, so SPSS-style na_values /
+#' na_range and Stata-/SAS-style tagged NAs are all handled). A Likert item
+#' carrying an out-of-range missing sentinel (e.g. 99 = "Refused") is therefore
+#' judged on its real scale points, not flagged for the sentinel. The count and
+#' Likert checks read the numeric codes; the dummy category count is taken on
+#' the surviving values with their type preserved, so a character/factor
+#' identifier is counted by its distinct labels.
+#'
+#' @param x A variable / data-frame column.
+#' @param kind The declared role: one of "count", "likert", "dummy". Any other
+#'   value (including "numeric") returns "".
+#' @return A character scalar: the reason tail (e.g.
+#'   "declared as a count, but negative values are present"), or "" when the
+#'   declaration is plausible or cannot be assessed.
+#' @keywords internal
+.jst_declaration_plausibility <- function(x, kind) {
+  if (!kind %in% c("count", "likert", "dummy")) return("")
+
+  # Surviving values: non-NA, with declared-missing codes removed. Type is
+  # preserved so the dummy category count sees character/factor levels.
+  present <- x[!is.na(x)]
+  if (length(present) == 0L) return("")
+  mi <- .jst_missing_info(x)
+  if (!is.null(mi)) {
+    codes_num <- suppressWarnings(as.numeric(present))
+    drop <- rep(FALSE, length(present))
+    if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
+      na_num <- mi$codes$numeric[!is.na(mi$codes$numeric)]
+      if (length(na_num) > 0L)
+        drop <- drop | (!is.na(codes_num) & codes_num %in% na_num)
+    }
+    if (!is.null(mi$na_range) && length(mi$na_range) == 2L) {
+      lo <- min(mi$na_range); hi <- max(mi$na_range)
+      drop <- drop | (!is.na(codes_num) & codes_num >= lo & codes_num <= hi)
+    }
+    present <- present[!drop]
+  }
+  if (length(present) == 0L) return("")
+
+  # Dummy: judge the category count on the surviving values as stored.
+  if (identical(kind, "dummy")) {
+    n_cat <- length(unique(present))
+    if (n_cat > 11L)
+      return(paste0("declared as a dummy, but it has ", n_cat, " categories"))
+    return("")
+  }
+
+  # Count / Likert judge the numeric codes.
+  num <- suppressWarnings(as.numeric(present))
+  num <- num[!is.na(num)]
+  if (length(num) == 0L) return("")
+
+  if (identical(kind, "count")) {
+    if (any(num < 0))
+      return("declared as a count, but negative values are present")
+    if (!all(num == floor(num)))
+      return("declared as a count, but it has non-whole values")
+    if (length(unique(num)) == 2L)
+      return("declared as a count, but it has only two distinct values")
+    return("")
+  }
+
+  # Likert
+  if (any(num < 0 | num > 10))
+    return("declared as Likert, but its values fall outside the usual 0 to 10 range")
+  if (!all(num == floor(num)))
+    return("declared as Likert, but it has non-whole values")
+  if (length(unique(num)) > 11L)
+    return("declared as Likert, but it has more than 11 distinct values")
+  ""
+}
+
+
+#' Internal helper: emit the registration-time declaration-plausibility note
+#'
+#' For each just-registered variable, checks whether its data is an implausible
+#' fit for the declared role (\code{.jst_declaration_plausibility()}) and, if any
+#' are, emits a single non-blocking "! Unusual declaration" note on the message
+#' channel, alongside the other registration advisories. Shared by jnumeric /
+#' jcount / jlikert (through \code{.jst_register_intent()}) and jdummy so the
+#' wording matches the jscreen() flag exactly. "numeric" is not a plausibility
+#' target, so a jnumeric registration emits nothing. The declaration always
+#' stands; this is advisory only.
+#'
+#' @param data The resolved data frame.
+#' @param var_names Character vector of the variables just registered.
+#' @param kind The declared role: "count", "likert", or "dummy" ("numeric" is a
+#'   no-op).
+#' @return invisible(NULL). Called for its message side effect.
+#' @keywords internal
+.jst_declaration_note <- function(data, var_names, kind) {
+  flagged <- character(0)
+  for (v in var_names) {
+    if (!v %in% names(data)) next
+    r <- .jst_declaration_plausibility(data[[v]], kind)
+    if (nzchar(r)) flagged <- c(flagged, paste0("  ", v, " ", r))
+  }
+  if (length(flagged) > 0L) {
+    message("! Unusual declaration for this variable's data:\n",
+            paste(flagged, collapse = "\n"))
+  }
+  invisible(NULL)
+}
+
+
 #' Internal helper: jstats analysis-role class for display
 #'
 #' Single display-layer resolver that reports how jstats treats a variable,
@@ -6226,10 +6363,14 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 
   # Persist reminder (standard-tier; suppressed at minimal output).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message("Registrations are stored for this session only. To keep them ",
-            "across sessions, save the data frame in R native format (.rds), ",
-            "e.g. jsave(", .jst_data_name, ", \"", .jst_data_name, ".rds\").")
+    message("Registrations are stored for this session only.\n",
+            "  To keep them across sessions, save the data frame in R format ",
+            "(.rds), e.g. jsave(", .jst_data_name, ", \"", .jst_data_name, ".rds\").")
   }
+
+  # Non-blocking declaration-plausibility heads-up for the just-registered
+  # dummy variables (flags a many-category declaration). (Session 91)
+  .jst_declaration_note(data, var_names, "dummy")
 
   for (w in deferred) warning(w, call. = FALSE)
 
@@ -6309,8 +6450,8 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 #' one registered intent at a time, so registering it as numeric clears any
 #' prior dummy or count registration. Registration changes no data and assigns
 #' nothing -- you do not write \code{df <- jnumeric(...)}. It is stored for the
-#' session, keyed by the data frame's name; save the data frame in R native
-#' format (.rds) to keep it across sessions.
+#' session, keyed by the data frame's name; save the data frame in R format
+#' (.rds) to keep it across sessions.
 #'
 #' The typical use is a small-range whole number that the structural classifier
 #' would treat as categorical (e.g. a 0-6 attitude item) but that you want
@@ -6401,7 +6542,7 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' A variable carries exactly one registered intent at a time, so registering
 #' it as a count clears any prior dummy or numeric registration. Registration
 #' changes no data and assigns nothing. It is stored for the session, keyed by
-#' the data frame's name; save the data frame in R native format (.rds) to keep
+#' the data frame's name; save the data frame in R format (.rds) to keep
 #' it across sessions.
 #'
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
@@ -6492,7 +6633,7 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' this registration.
 #'
 #' Like the other registration verbs, registrations are session-scoped and keyed
-#' by data-frame name; save the frame in R native format (.rds) with
+#' by data-frame name; save the frame in R format (.rds) with
 #' \code{\link{jsave}} to keep them across sessions.
 #'
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
@@ -8550,6 +8691,23 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     numeric_like <- jc$class == "Numeric" || is_num_dich
     star         <- is_num_dich && dich$coding %in% c("1/2", "other")
 
+    # Declaration-plausibility heads-up: when the resolved class came from a
+    # user registration, check whether the variable's structure is an
+    # implausible fit for what was declared (a count with negatives/non-whole/
+    # only-two-values, a Likert outside 0-10, a dummy with many categories).
+    # Non-blocking -- the declaration still stands; jscreen marks the row "!"
+    # and lists the reason below the table. Structural resolutions (the package
+    # guessed) are never second-guessed. The intent notebook (jnumeric/jcount/
+    # jlikert) carries the kind directly; a registered variable absent from it
+    # was registered via jdummy (the separate .jst_dummy registry). (Session 91)
+    plaus <- ""
+    if (identical(jc$source, "registered")) {
+      intent    <- .jst_get_intent(.jst_data_name, v)
+      decl_kind <- if (!is.null(intent) && !is.null(intent$kind)) intent$kind
+                   else "dummy"
+      plaus <- .jst_declaration_plausibility(col, decl_kind)
+    }
+
     mean_val   <- NA_real_
     median_val <- NA_real_
     if (numeric_like) {
@@ -8592,6 +8750,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       Mean        = mean_val,
       Median      = median_val,
       Star        = star,
+      Plausibility = plaus,
       stringsAsFactors = FALSE
     )
   })
@@ -8680,6 +8839,17 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       t1$Source[screen_table$Source == "registered"] <- "User-declared"
     }
 
+    # Non-blocking "!" marker on the Source cell of any row whose registered
+    # class is an implausible fit for its data; the reason is listed in the
+    # "Unusual declaration" note below the table. A flagged row is always
+    # registered, so the Source column is shown. Display-only -- the returned
+    # screen_table is untouched. (Session 91)
+    if ("Source" %in% cols) {
+      flagged_rows <- nzchar(screen_table$Plausibility)
+      if (any(flagged_rows))
+        t1$Source[flagged_rows] <- paste0(t1$Source[flagged_rows], " !")
+    }
+
     if (vlmode %in% c("labels", "both")) {
       t1$Variable <- vapply(t1$Variable,
                             function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
@@ -8694,6 +8864,18 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     # Conditional one-line legend, printed only when a "*" actually appeared.
     if (show_star) {
       cat("* coded other than 0/1; mean is not a proportion\n")
+    }
+
+    # Conditional "Unusual declaration" note: one line per variable whose
+    # registered class is an implausible fit for its data. The "!" in the
+    # Source column points to the row; this spells out the reason. The
+    # declaration still stands -- it is a non-blocking heads-up. (Session 91)
+    if (any(nzchar(screen_table$Plausibility))) {
+      cat("\n! Unusual declaration for this variable's data:\n")
+      for (i in which(nzchar(screen_table$Plausibility))) {
+        cat("  ", screen_table$Variable[i], " ",
+            screen_table$Plausibility[i], "\n", sep = "")
+      }
     }
   }
 
@@ -8753,9 +8935,11 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   }
 
   cat("\n")
-  # Star is an internal display flag (the "*" recode marker); it is not part of
-  # the returned screening results.
+  # Star and Plausibility are internal display flags (the "*" recode marker and
+  # the "!" implausible-declaration marker); they are not part of the returned
+  # screening results.
   screen_table$Star <- NULL
+  screen_table$Plausibility <- NULL
   invisible(screen_table)
 }
 

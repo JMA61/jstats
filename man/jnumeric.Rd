@@ -35,8 +35,8 @@ automatic structural guess. It is the counterpart to \code{\link{jdummy}}
 one registered intent at a time, so registering it as numeric clears any
 prior dummy or count registration. Registration changes no data and assigns
 nothing -- you do not write \code{df <- jnumeric(...)}. It is stored for the
-session, keyed by the data frame's name; save the data frame in R native
-format (.rds) to keep it across sessions.
+session, keyed by the data frame's name; save the data frame in R format
+(.rds) to keep it across sessions.
 }
 \details{
 The typical use is a small-range whole number that the structural classifier

@@ -40,7 +40,7 @@ automatic small-range detection (e.g. a 0-30 victimization count).
 A variable carries exactly one registered intent at a time, so registering
 it as a count clears any prior dummy or numeric registration. Registration
 changes no data and assigns nothing. It is stored for the session, keyed by
-the data frame's name; save the data frame in R native format (.rds) to keep
+the data frame's name; save the data frame in R format (.rds) to keep
 it across sessions.
 }
 \examples{
