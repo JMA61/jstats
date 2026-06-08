@@ -11,10 +11,6 @@ Resolution rules:
 \itemize{
 \item If \code{joptions("data.dir")} is set and that folder exists, it is
 searched first.
-\item Otherwise, during the transition window (until 2026-06 cleanup),
-any legacy \code{Data/} or \code{data/} folder in the working
-directory is searched. This is backwards-compat for users with
-folders created by earlier versions where jsave auto-created them.
 \item The working directory itself is always included as the final
 search location.
 }

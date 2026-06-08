@@ -2047,9 +2047,7 @@
 #                          searches the working directory. Setting a
 #                          value names a folder (relative to working
 #                          directory) used for both save target and
-#                          load search. See .jst_get_search_dirs() and
-#                          jsave for transition-period backwards-compat
-#                          handling of legacy Data/ or data/ folders.
+#                          load search.
 .jst_options_defaults <- list(
   missing.convention   = "none",
   udm.convention.codes = c(-99, -98, -97, -96),
@@ -5541,39 +5539,6 @@ jsubset <- function(data, expr) {
     message("jsubset activated for ", target_name, ": ", expr_str)
   }
   invisible(NULL)
-}
-
-
-# -- jfilter (deprecation alias) ----------------------------------------------
-
-#' Deprecated alias for \code{jsubset()}
-#'
-#' @description
-#' \code{jfilter()} was renamed to \code{\link{jsubset}()} to align with
-#' base R's \code{subset =} argument and the per-call \code{subset =}
-#' argument used by JeffsStatTools analysis functions. \code{jfilter()}
-#' continues to work as a thin alias that forwards every call directly
-#' to \code{jsubset()}; the alias issues an \code{\link{.Deprecated}}
-#' message on each call and will be removed in a future release.
-#'
-#' @param data See \code{\link{jsubset}()}.
-#' @param expr See \code{\link{jsubset}()}.
-#'
-#' @return Invisibly returns \code{NULL}. Called for its side effect.
-#'
-#' @seealso \code{\link{jsubset}}
-#'
-#' @keywords internal
-#' @export
-jfilter <- function(data, expr) {
-  .Deprecated("jsubset",
-              msg = "jfilter() has been renamed to jsubset(). Please use jsubset() in new code.")
-  # Forward the captured call to jsubset() so substitute()-based argument
-  # handling sees the original unevaluated arguments (off / on / NULL /
-  # bare-symbol / explicit-data forms all need to reach jsubset intact).
-  cl    <- sys.call()
-  cl[[1L]] <- as.name("jsubset")
-  eval.parent(cl)
 }
 
 
@@ -16966,10 +16931,10 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 #' \code{jload()} reads the extension (e.g. \code{.sav}, \code{.dta},
 #' \code{.xlsx}) and uses the appropriate reader automatically.
 #'
-#' By default, \code{jload()} looks for the file in a \code{Data/} (or
-#' \code{data/}) subfolder of the working directory first, then the
-#' working directory itself. If a full file path is provided, it is used
-#' directly.
+#' By default, \code{jload()} looks for the file in the working
+#' directory. If a data folder is configured with
+#' \code{joptions(data.dir = ...)}, that folder is searched first. If a
+#' full file path is provided, it is used directly.
 #'
 #' The data frame is automatically named after the file (without the
 #' extension). Use the \code{name} argument to specify a different name.
@@ -17024,10 +16989,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 #'     is used directly.
 #'   \item If the path is a bare filename, \code{jload()} checks:
 #'     (a) the folder named by \code{joptions("data.dir")} if it is set
-#'     and exists; (b) during the transition window following the May
-#'     2026 redesign, any legacy \code{Data/} or \code{data/} folder in
-#'     the working directory (compatibility with earlier versions);
-#'     (c) the working directory.
+#'     and exists; (b) the working directory.
 #' }
 #'
 #' \strong{Auto-naming:}
@@ -17201,7 +17163,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       .jst_stop("File not found: ", .jst_norm_path(resolved_path))
     }
   } else {
-    # Bare filename — search Data/, data/, then working directory
+    # Bare filename — search the data.dir folder (if set), then the working directory
     resolved_path <- .jst_find_file(file, quiet = quiet)
   }
 
@@ -17908,7 +17870,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (file.exists(candidate)) found <- c(found, candidate)
     }
   } else {
-    # Bare filename — search Data/, data/, working directory
+    # Bare filename — search the data.dir folder (if set), then the working directory
     search_dirs <- .jst_get_search_dirs()
     for (d in search_dirs) {
       for (e in search_ext) {
@@ -17926,10 +17888,6 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Resolution rules:
 #' - If \code{joptions("data.dir")} is set and that folder exists, it is
 #'   searched first.
-#' - Otherwise, during the transition window (until 2026-06 cleanup),
-#'   any legacy \code{Data/} or \code{data/} folder in the working
-#'   directory is searched. This is backwards-compat for users with
-#'   folders created by earlier versions where jsave auto-created them.
 #' - The working directory itself is always included as the final
 #'   search location.
 #'
@@ -17964,20 +17922,6 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # Explicit data.dir set — search there if it exists. No case-insensitive
     # fallback: an explicit "MyFolder" will not silently match "myfolder".
     if (dir.exists(data_dir)) dirs <- c(dirs, data_dir)
-  } else {
-    # >>> TRANSITION BLOCK — remove after 2026-06 course-end cleanup <<<
-    # Backwards-compat for users with Data/ or data/ folders created by
-    # earlier versions where jsave auto-created them. Once removed, the
-    # NULL-default case adds nothing to dirs and the working directory
-    # alone is searched.
-    has_Data <- dir.exists("Data")
-    has_data <- dir.exists("data")
-    same_folder <- has_Data && has_data &&
-                   identical(normalizePath("Data", mustWork = FALSE),
-                             normalizePath("data", mustWork = FALSE))
-    if (has_Data) dirs <- c(dirs, "Data")
-    if (has_data && !same_folder) dirs <- c(dirs, "data")
-    # >>> END TRANSITION BLOCK <<<
   }
 
   # Working directory is always searched last, matching base-R conventions.
@@ -17985,7 +17929,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   dirs
 }
 
-#' Internal: find a bare filename in Data/, data/, or working directory
+#' Internal: find a bare filename in the data.dir folder or the working directory
 #' @param quiet Logical; default FALSE. When TRUE, suppresses the
 #'   "Reading from <dir>" note (propagated from jload()'s quiet argument).
 #'   The not-found error is unaffected.
@@ -18914,10 +18858,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     doesn't yet exist).
 #'   \item If the path is a bare filename and \code{joptions("data.dir")}
 #'     is unset (the default), the file is saved to the working
-#'     directory. During the transition window following the May 2026
-#'     redesign, an existing \code{Data/} or \code{data/} folder in the
-#'     working directory will still be used if present, preserving
-#'     compatibility with earlier versions of the package.
+#'     directory.
 #' }
 #'
 #' \strong{Format notes:}
@@ -19141,22 +19082,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
                           .jst_options_defaults$data.dir)
 
     if (is.null(data_dir)) {
-      # data.dir unset.
-      #
-      # >>> TRANSITION BLOCK — remove after 2026-06 course-end cleanup <<<
-      # Backwards-compat: write to an existing Data/ or data/ folder if
-      # present (preserves prior behavior for users with folders
-      # auto-created by earlier versions). No auto-create — the
-      # post-cleanup behavior is "write to working directory" and we
-      # apply that whenever the legacy folders don't exist.
-      if (dir.exists("Data")) {
-        out_path <- file.path("Data", file)
-      } else if (dir.exists("data")) {
-        out_path <- file.path("data", file)
-      } else {
-        out_path <- file
-      }
-      # >>> END TRANSITION BLOCK (post-cleanup: out_path <- file) <<<
+      # data.dir unset; write to the working directory.
+      out_path <- file
     } else {
       # Explicit data.dir — write to that folder, creating it if needed.
       if (!dir.exists(data_dir)) {

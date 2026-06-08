@@ -2,7 +2,7 @@
 % Please edit documentation in R/7036Tools.R
 \name{.jst_find_file}
 \alias{.jst_find_file}
-\title{Internal: find a bare filename in Data/, data/, or working directory}
+\title{Internal: find a bare filename in the data.dir folder or the working directory}
 \usage{
 .jst_find_file(filename, quiet = FALSE)
 }
@@ -12,6 +12,6 @@
 The not-found error is unaffected.}
 }
 \description{
-Internal: find a bare filename in Data/, data/, or working directory
+Internal: find a bare filename in the data.dir folder or the working directory
 }
 \keyword{internal}

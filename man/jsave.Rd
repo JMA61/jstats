@@ -68,10 +68,7 @@ is set, the file is saved to that folder (auto-created if it
 doesn't yet exist).
 \item If the path is a bare filename and \code{joptions("data.dir")}
 is unset (the default), the file is saved to the working
-directory. During the transition window following the May 2026
-redesign, an existing \code{Data/} or \code{data/} folder in the
-working directory will still be used if present, preserving
-compatibility with earlier versions of the package.
+directory.
 }
 
 \strong{Format notes:}

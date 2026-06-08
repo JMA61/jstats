@@ -79,10 +79,10 @@ The file format is determined entirely by the file extension ---
 \code{jload()} reads the extension (e.g. \code{.sav}, \code{.dta},
 \code{.xlsx}) and uses the appropriate reader automatically.
 
-By default, \code{jload()} looks for the file in a \code{Data/} (or
-\code{data/}) subfolder of the working directory first, then the
-working directory itself. If a full file path is provided, it is used
-directly.
+By default, \code{jload()} looks for the file in the working
+directory. If a data folder is configured with
+\code{joptions(data.dir = ...)}, that folder is searched first. If a
+full file path is provided, it is used directly.
 
 The data frame is automatically named after the file (without the
 extension). Use the \code{name} argument to specify a different name.
@@ -99,10 +99,7 @@ R does not accept single backslashes in file paths.
 is used directly.
 \item If the path is a bare filename, \code{jload()} checks:
 (a) the folder named by \code{joptions("data.dir")} if it is set
-and exists; (b) during the transition window following the May
-2026 redesign, any legacy \code{Data/} or \code{data/} folder in
-the working directory (compatibility with earlier versions);
-(c) the working directory.
+and exists; (b) the working directory.
 }
 
 \strong{Auto-naming:}
