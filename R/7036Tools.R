@@ -12197,9 +12197,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   n_obs         <- stats::nobs(model)
   y             <- stats::model.response(mf)
-  ss_total      <- round(sum((y - mean(y))^2), digits_n)
-  ss_regression <- round(sum((stats::fitted(model) - mean(y))^2), digits_n)
-  ss_residual   <- round(sum(stats::residuals(model)^2), digits_n)
+  # Full precision, computed once; the _raw values are stored at the top level.
+  ss_total_raw      <- sum((y - mean(y))^2)
+  ss_regression_raw <- sum((stats::fitted(model) - mean(y))^2)
+  ss_residual_raw   <- sum(stats::residuals(model)^2)
+  # Display copies feed the existing sprintf below unchanged. The round() step is
+  # kept (NOT folded into sprintf on the _raw value) so R's round-half-to-even and
+  # sprintf's tie-breaking cannot diverge on half-way cases -- the printout stays
+  # byte-identical; only the stored top-level value moves to full precision.
+  # (Session 99 precision-flatten, Option C)
+  ss_total      <- round(ss_total_raw, digits_n)
+  ss_regression <- round(ss_regression_raw, digits_n)
+  ss_residual   <- round(ss_residual_raw, digits_n)
 
   if (any(is.na(stats::coef(model)))) {
     cat("\nWARNING: One or more variables have been removed from the model due to collinearity.\n")
@@ -12407,13 +12416,19 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     coefficients    = out_coefs,
     coefficients_raw = coefficients_raw,
     fit_raw         = fit_raw,
-    r_squared       = r_squared,
-    adj_r_squared   = adj_r_squared,
-    residual_se     = residual_se,
-    f_statistic     = c(value = f_value, df1 = df1, df2 = df2, p = f_p),
-    sums_of_squares = c(regression = ss_regression,
-                        residual   = ss_residual,
-                        total      = ss_total),
+    # Top-level scalar fit stats carry full precision; the digits feature still
+    # governs the printout via the rounded locals above. r_squared / adj_r_squared /
+    # residual_se / f_statistic derive from fit_raw (one computation, no drift); SS
+    # sources the full-precision _raw locals because SS is not mirrored in fit_raw.
+    # (Session 99 precision-flatten, Option C)
+    r_squared       = fit_raw$r_squared,
+    adj_r_squared   = fit_raw$adj_r_squared,
+    residual_se     = fit_raw$sigma,
+    f_statistic     = c(value = fit_raw$f_value, df1 = fit_raw$f_df1,
+                        df2 = fit_raw$f_df2, p = fit_raw$f_p),
+    sums_of_squares = c(regression = ss_regression_raw,
+                        residual   = ss_residual_raw,
+                        total      = ss_total_raw),
     n               = n_obs,
     dummy_coef_names = dummy_coef_names,
     ref_cats        = c(ref_cats, auto_ref_cats),
