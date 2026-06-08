@@ -11834,10 +11834,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       bad_unknown    <- setdiff(bad, expanded_originals)
       if (length(bad_registered) > 0) {
         warning(
-          "categorical argument ",
-          paste0("'", bad_registered, "'", collapse = ", "),
-          " is redundant: already registered as a dummy variable via ",
-          "jdummy(), so categorical treatment is automatic. Ignoring.",
+          "categorical = was ignored for ",
+          paste0(bad_registered, collapse = ", "),
+          " (already registered as a dummy via jdummy; categorical ",
+          "treatment is automatic).",
           call. = FALSE
         )
       }
