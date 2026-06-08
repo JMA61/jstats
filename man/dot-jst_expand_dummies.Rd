@@ -4,7 +4,7 @@
 \alias{.jst_expand_dummies}
 \title{Internal helper: expand registered dummy variables in a formula and data frame}
 \usage{
-.jst_expand_dummies(data, formula, data_name)
+.jst_expand_dummies(data, formula, data_name, numeric = NULL, count = NULL)
 }
 \arguments{
 \item{data}{The data frame.}
@@ -12,6 +12,15 @@
 \item{formula}{The model formula.}
 
 \item{data_name}{Character string name of the data frame (for looking up registrations).}
+
+\item{numeric}{Optional character vector of variable names given a per-call
+numeric = override by the calling analysis function. A registered dummy
+named here is skipped from expansion (Option B) and left as its original
+numeric column; the stored registration is not changed.}
+
+\item{count}{Optional character vector of variable names given a per-call
+count = override. Treated identically to \code{numeric} for expansion
+purposes (a count predictor enters a model as a numeric column).}
 }
 \value{
 A list with components:
@@ -19,6 +28,10 @@ A list with components:
 \item{data}{The data frame with dummy columns added.}
 \item{formula}{The updated formula with dummy names.}
 \item{ref_cats}{Character vector of "VarName = RefLabel" strings.}
+\item{expanded_originals}{Character vector of the original variable
+names actually expanded into dummy columns (registered, minus any
+skipped by a per-call numeric=/count= override, minus any not in the
+formula). Callers use this to identify which originals were replaced.}
 \item{dummy_coef_names}{Character vector of dummy column names (for blanking β).}
 }
 }
@@ -26,6 +39,13 @@ A list with components:
 Checks for jdummy registrations matching variables in the formula,
 creates temporary dummy columns in the data frame, rewrites the formula,
 and returns updated data, formula, reference category labels, and dummy
-coefficient names. Used by jlm and future regression functions.
+coefficient names. Used by jlm and jlogistic.
+}
+\details{
+A per-call numeric = or count = naming a registered dummy IV overrides the
+registration for that one call (Option B): the variable is skipped before
+expansion -- left intact as its original numeric column rather than expanded
+then reverted -- and a message (registered dichotomy) or warning (registered
+multi-category dummy) is emitted. The stored registration is never mutated.
 }
 \keyword{internal}

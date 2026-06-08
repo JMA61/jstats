@@ -1576,27 +1576,46 @@
 #' Checks for jdummy registrations matching variables in the formula,
 #' creates temporary dummy columns in the data frame, rewrites the formula,
 #' and returns updated data, formula, reference category labels, and dummy
-#' coefficient names. Used by jlm and future regression functions.
+#' coefficient names. Used by jlm and jlogistic.
+#'
+#' A per-call numeric = or count = naming a registered dummy IV overrides the
+#' registration for that one call (Option B): the variable is skipped before
+#' expansion -- left intact as its original numeric column rather than expanded
+#' then reverted -- and a message (registered dichotomy) or warning (registered
+#' multi-category dummy) is emitted. The stored registration is never mutated.
 #'
 #' @param data The data frame.
 #' @param formula The model formula.
 #' @param data_name Character string name of the data frame (for looking up registrations).
+#' @param numeric Optional character vector of variable names given a per-call
+#'   numeric = override by the calling analysis function. A registered dummy
+#'   named here is skipped from expansion (Option B) and left as its original
+#'   numeric column; the stored registration is not changed.
+#' @param count Optional character vector of variable names given a per-call
+#'   count = override. Treated identically to \code{numeric} for expansion
+#'   purposes (a count predictor enters a model as a numeric column).
 #'
 #' @return A list with components:
 #'   \describe{
 #'     \item{data}{The data frame with dummy columns added.}
 #'     \item{formula}{The updated formula with dummy names.}
 #'     \item{ref_cats}{Character vector of "VarName = RefLabel" strings.}
+#'     \item{expanded_originals}{Character vector of the original variable
+#'       names actually expanded into dummy columns (registered, minus any
+#'       skipped by a per-call numeric=/count= override, minus any not in the
+#'       formula). Callers use this to identify which originals were replaced.}
 #'     \item{dummy_coef_names}{Character vector of dummy column names (for blanking β).}
 #'   }
 #'
 #' @keywords internal
-.jst_expand_dummies <- function(data, formula, data_name) {
+.jst_expand_dummies <- function(data, formula, data_name,
+                                numeric = NULL, count = NULL) {
 
-  model_vars       <- all.vars(formula)
-  dummy_regs       <- .jst_get_dummy(data_name)
-  ref_cats         <- character(0)
-  dummy_coef_names <- character(0)
+  model_vars         <- all.vars(formula)
+  dummy_regs         <- .jst_get_dummy(data_name)
+  ref_cats           <- character(0)
+  dummy_coef_names   <- character(0)
+  expanded_originals <- character(0)
 
   if (!is.null(dummy_regs) && length(dummy_regs) > 0) {
     formula_str <- deparse(formula, width.cutoff = 500)
@@ -1604,10 +1623,45 @@
 
     for (reg in dummy_regs) {
       if (reg$var_name %in% model_vars && reg$var_name != dv_name) {
+
+        # Option B (skip-before-expand): a per-call numeric =/ count = naming
+        # a registered dummy IV wins over the registration for this one call.
+        # Consult the override BEFORE expanding -- leave the original column
+        # intact (no expand-then-revert) and skip it, so the variable flows on
+        # to the analysis function's numeric/count branch as a plain numeric
+        # predictor. The stored registration is never mutated (per-call only).
+        if (reg$var_name %in% c(numeric, count)) {
+          arg_label <- if (reg$var_name %in% numeric) "numeric" else "count"
+          # Subclass split uses the SAME dichotomy test .jst_class_from_role()
+          # uses for the registry Sub-class label, so the override message and
+          # jscreen always agree on a given variable.
+          if (.jst_is_dichotomy(data[[reg$var_name]])$is_dichotomy) {
+            # Registered dichotomy -> mild consequential note (always shown).
+            message(
+              arg_label, " = takes precedence for ", reg$var_name,
+              " (registered as a dummy via jdummy); entering it as numeric ",
+              "for this model. The registration is unchanged."
+            )
+          } else {
+            # Registered multi-category dummy -> real warning: collapsing its
+            # category codes into one slope is an interval-scale assumption.
+            warning(
+              arg_label, " = takes precedence for ", reg$var_name,
+              " (registered as a dummy via jdummy); entering it as numeric ",
+              "for this model, so its category codes enter as a single ",
+              "numeric predictor -- treating them as an interval scale. ",
+              "The registration is unchanged.",
+              call. = FALSE
+            )
+          }
+          next
+        }
+
         expanded <- .jst_expand_one_dummy(data, formula_str, reg)
-        data             <- expanded$data
-        formula_str      <- expanded$formula_str
-        dummy_coef_names <- c(dummy_coef_names, expanded$dummy_coef_names)
+        data               <- expanded$data
+        formula_str        <- expanded$formula_str
+        dummy_coef_names   <- c(dummy_coef_names, expanded$dummy_coef_names)
+        expanded_originals <- c(expanded_originals, reg$var_name)
 
         ref_cats <- c(ref_cats, paste0(reg$var_name, " = ", reg$ref_label))
       }
@@ -1617,7 +1671,8 @@
   }
 
   list(data = data, formula = formula, ref_cats = ref_cats,
-       dummy_coef_names = dummy_coef_names)
+       dummy_coef_names = dummy_coef_names,
+       expanded_originals = expanded_originals)
 }
 
 #' Internal helper: apply a logical mask expression to a data frame
@@ -11635,29 +11690,20 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   for (.gv in model_vars[-1L]) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a linear model")
 
   # -- Expand registered dummy variables ------------------------------------
-  expanded         <- .jst_expand_dummies(data, formula, .jst_data_name)
-  data             <- expanded$data
-  formula          <- expanded$formula
-  ref_cats         <- expanded$ref_cats
-  dummy_coef_names <- expanded$dummy_coef_names
-  model_vars       <- all.vars(formula)
+  expanded         <- .jst_expand_dummies(data, formula, .jst_data_name,
+                                          numeric = numeric, count = count)
+  data               <- expanded$data
+  formula            <- expanded$formula
+  ref_cats           <- expanded$ref_cats
+  dummy_coef_names   <- expanded$dummy_coef_names
+  expanded_originals <- expanded$expanded_originals
+  model_vars         <- all.vars(formula)
 
-  # Conflict guard: a per-call numeric = override cannot un-register a
-  # jdummy-registered variable, because registrations are expanded above before
-  # the override is applied. Warn rather than silently ignore the request.
-  if (!is.null(numeric)) {
-    .dummy_regs <- .jst_get_dummy(.jst_data_name)
-    if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
-      .reg_names <- vapply(.dummy_regs, function(r) r$var_name, character(1))
-      .clash     <- intersect(numeric, .reg_names)
-      if (length(.clash) > 0) {
-        warning("numeric = was ignored for ", paste(.clash, collapse = ", "),
-                " (registered as a dummy via jdummy). Clear the registration ",
-                "with jdummy(NULL) to treat it as numeric.",
-                call. = FALSE)
-      }
-    }
-  }
+  # (Option B) A per-call numeric =/ count = naming a registered dummy is
+  # consulted inside .jst_expand_dummies() above, which skips that variable's
+  # expansion and emits the precedence note/warning. The variable therefore
+  # arrives here as its original numeric column and is handled by the
+  # numeric/count branch of the IV loop below; the registration is unchanged.
 
   # -- Variable type conversion -------------------------------------------------
   # Priority order:
@@ -11746,13 +11792,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Validate override arguments against model variables
   iv_names <- setdiff(model_vars, c(dv_name, dummy_coef_names))
-  # Also exclude original variable names that were expanded by jdummy()
-  expanded_originals <- character(0)
+  # expanded_originals (the originals actually expanded into dummy columns)
+  # comes from .jst_expand_dummies() above -- registered minus any skipped by a
+  # numeric=/count= override (Option B) -- so a skip-overridden variable is NOT
+  # removed here and remains a (numeric) IV. dummy_regs (the full registration
+  # list) is still needed downstream by .jst_collect_multicat_regs().
   dummy_regs <- .jst_get_dummy(.jst_data_name)
-  if (!is.null(dummy_regs)) {
-    expanded_originals <- vapply(dummy_regs, function(r) r$var_name, character(1))
-  }
-  iv_names <- setdiff(iv_names, expanded_originals)
+  iv_names   <- setdiff(iv_names, expanded_originals)
 
   if (!is.null(numeric)) {
     # A numeric = naming the DV asserts a continuous DV for this call,
@@ -11801,30 +11847,19 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   #       user's stated intent.
 
   if (!is.null(numeric)) {
+    # Any unmatched numeric = name is a genuine typo: it is neither a model IV
+    # nor a registered dummy (a registered dummy named here was skipped from
+    # expansion upstream under Option B and so remains an IV).
     bad <- setdiff(numeric, iv_names)
     if (length(bad) > 0) {
-      bad_registered <- intersect(bad, expanded_originals)
-      bad_unknown    <- setdiff(bad, expanded_originals)
-      if (length(bad_registered) > 0) {
-        warning(
-          "numeric argument ",
-          paste0("'", bad_registered, "'", collapse = ", "),
-          " is ignored: already registered as a dummy variable via ",
-          "jdummy(), which takes precedence. To model as continuous, ",
-          "first clear the registration with: jdummy(NULL)",
-          call. = FALSE
-        )
-      }
-      if (length(bad_unknown) > 0) {
-        .jst_stop(
-          "numeric argument: ",
-          paste0("'", bad_unknown, "'", collapse = ", "),
-          " not found among independent variables in ", .jst_data_name,
-          ". Check for typos."
-        )
-      }
-      numeric <- intersect(numeric, iv_names)
+      .jst_stop(
+        "numeric argument: ",
+        paste0("'", bad, "'", collapse = ", "),
+        " not found among independent variables in ", .jst_data_name,
+        ". Check for typos."
+      )
     }
+    numeric <- intersect(numeric, iv_names)
   }
 
   if (!is.null(categorical)) {
@@ -11855,31 +11890,19 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   if (!is.null(count)) {
     # Remaining count = names (DV already consumed) are IV predictors; a count
-    # IV is just a numeric predictor, so validate exactly like numeric =.
+    # IV is just a numeric predictor, so validate exactly like numeric =. Any
+    # unmatched name is a typo (a registered dummy named here was skipped from
+    # expansion upstream under Option B and remains an IV).
     bad <- setdiff(count, iv_names)
     if (length(bad) > 0) {
-      bad_registered <- intersect(bad, expanded_originals)
-      bad_unknown    <- setdiff(bad, expanded_originals)
-      if (length(bad_registered) > 0) {
-        warning(
-          "count argument ",
-          paste0("'", bad_registered, "'", collapse = ", "),
-          " is ignored: already registered as a dummy variable via ",
-          "jdummy(), which takes precedence. To model as numeric, first ",
-          "clear the registration with: jdummy(NULL)",
-          call. = FALSE
-        )
-      }
-      if (length(bad_unknown) > 0) {
-        .jst_stop(
-          "count argument: ",
-          paste0("'", bad_unknown, "'", collapse = ", "),
-          " not found among independent variables in ", .jst_data_name,
-          ". Check for typos."
-        )
-      }
-      count <- intersect(count, iv_names)
+      .jst_stop(
+        "count argument: ",
+        paste0("'", bad, "'", collapse = ", "),
+        " not found among independent variables in ", .jst_data_name,
+        ". Check for typos."
+      )
     }
+    count <- intersect(count, iv_names)
   }
 
   # Check for conflicts between numeric and categorical
@@ -12701,43 +12724,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   lab_src <- data
 
   # -- Expand registered dummy variables ------------------------------------
-  expanded         <- .jst_expand_dummies(data, formula, .jst_data_name)
-  data             <- expanded$data
-  formula          <- expanded$formula
-  ref_cats         <- expanded$ref_cats
-  dummy_coef_names <- expanded$dummy_coef_names
-  model_vars       <- all.vars(formula)
+  expanded         <- .jst_expand_dummies(data, formula, .jst_data_name,
+                                          numeric = numeric, count = count)
+  data               <- expanded$data
+  formula            <- expanded$formula
+  ref_cats           <- expanded$ref_cats
+  dummy_coef_names   <- expanded$dummy_coef_names
+  expanded_originals <- expanded$expanded_originals
+  model_vars         <- all.vars(formula)
 
-  # Conflict guard: a per-call numeric = override cannot un-register a
-  # jdummy-registered variable, because registrations are expanded above before
-  # the override is applied. Warn rather than silently ignore the request.
-  if (!is.null(numeric)) {
-    .dummy_regs <- .jst_get_dummy(.jst_data_name)
-    if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
-      .reg_names <- vapply(.dummy_regs, function(r) r$var_name, character(1))
-      .clash     <- intersect(numeric, .reg_names)
-      if (length(.clash) > 0) {
-        warning("numeric = was ignored for ", paste(.clash, collapse = ", "),
-                " (registered as a dummy via jdummy). Clear the registration ",
-                "with jdummy(NULL) to treat it as numeric.",
-                call. = FALSE)
-      }
-    }
-  }
-  # count = is numeric-like, so it gets the same dummy-clash guard as numeric =.
-  if (!is.null(count)) {
-    .dummy_regs <- .jst_get_dummy(.jst_data_name)
-    if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
-      .reg_names <- vapply(.dummy_regs, function(r) r$var_name, character(1))
-      .clash     <- intersect(count, .reg_names)
-      if (length(.clash) > 0) {
-        warning("count = was ignored for ", paste(.clash, collapse = ", "),
-                " (registered as a dummy via jdummy). Clear the registration ",
-                "with jdummy(NULL) to treat it as numeric.",
-                call. = FALSE)
-      }
-    }
-  }
+  # (Option B) A per-call numeric =/ count = naming a registered dummy IV is
+  # consulted inside .jst_expand_dummies() above, which skips that variable's
+  # expansion and emits the precedence note/warning. The variable then arrives
+  # as its original numeric column and is handled by the numeric/count branch
+  # of the IV loop below; the stored registration is unchanged.
 
   # -- Variable type conversion (unified classifier) ------------------------
   # Priority order:
@@ -12755,13 +12755,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   auto_cat_regs  <- list()  # in-flight registrations for auto-cat / categorical = vars
   all_ref_cats   <- ref_cats
 
-  # Exclude original variable names that were expanded by jdummy()
-  expanded_originals <- character(0)
+  # Originals actually expanded into dummy columns come from
+  # .jst_expand_dummies() (captured above as expanded_originals): the set it
+  # expanded, i.e. registered minus any skipped by a numeric=/count= override
+  # (Option B). A skip-overridden variable is therefore NOT in this set and is
+  # handled by the numeric/count branch of the loop below. dummy_regs (the full
+  # registration list) is still needed downstream by .jst_collect_multicat_regs().
   dummy_regs <- .jst_get_dummy(.jst_data_name)
-  if (!is.null(dummy_regs)) {
-    expanded_originals <- vapply(dummy_regs, function(r) r$var_name,
-                                 character(1))
-  }
 
   for (v in iv_names) {
     if (v %in% dummy_coef_names)   next
