@@ -3023,12 +3023,12 @@
 
   for (nm in dot_names) {
     if (nzchar(nm) && nm %in% names(aliases)) {
-      .jst_stop("Argument '", nm, "' is not valid. Did you mean `", aliases[[nm]], "`?", fn = fn_name)
+      .jst_stop("'", nm, "' is not valid. Did you mean `", aliases[[nm]], "`?", fn = fn_name)
     }
   }
   bad <- dot_names[nzchar(dot_names)]
   if (length(bad) > 0) {
-    .jst_stop("Unused argument(s): ", paste(bad, collapse = ", "), fn = fn_name)
+    .jst_stop("unused input(s): ", paste(bad, collapse = ", "), fn = fn_name)
   }
   invisible(NULL)
 }
@@ -4025,21 +4025,21 @@
                                   "numerically.")),
 
     # Date/time types: not supported here (a dedicated function handles these).
-    datetime       = no(paste0("'", var_name, "' is a date/time variable; jdesc() does ",
-                               "not summarize dates or times.")),
+    datetime       = no(paste0("'", var_name, "' is a date/time variable; jdesc() ",
+                               "doesn't summarize dates or times. Skipping it.")),
 
     # Text factor / text character: refuse and redirect to jfreq().
     text_factor    = no(paste0("'", var_name, "' is a factor with text categories and ",
-                               "cannot be summarized with descriptive statistics. Use ",
-                               "jfreq() instead for categorical variables.")),
+                               "can't be summarized numerically - use jfreq() for ",
+                               "categorical variables. Skipping it.")),
     text_character = no(paste0("'", var_name, "' is a character (text) variable and ",
-                               "cannot be summarized with descriptive statistics. Use ",
-                               "jfreq() instead for categorical variables.")),
+                               "can't be summarized numerically - use jfreq() for ",
+                               "categorical variables. Skipping it.")),
 
     # complex / raw / list / other: refuse with a generic message. Keyed off
     # typeof(x) (not k$kind) so e.g. a closure column still reports "closure".
-    no(paste0("'", var_name, "' is of type ", typeof(x), " and cannot be ",
-              "summarized with descriptive statistics."))
+    no(paste0("'", var_name, "' is a ", typeof(x), " and can't be ",
+              "summarized numerically. Skipping it."))
   )
 }
 
@@ -4201,10 +4201,44 @@
 #' @keywords internal
 .jst_stop_arg <- function(fn = NULL, arg, requirement = NULL, choices = NULL) {
   if (!is.null(choices)) {
-    requirement <- paste0("one of: ",
-      paste(paste0("\"", choices, "\""), collapse = ", "), ".")
+    # Choice-error house form (Rule A): backtick the name, drop "one of:",
+    # natural list with Oxford comma on 3+ choices and none on exactly 2.
+    quoted <- paste0("\"", choices, "\"")
+    n <- length(quoted)
+    if (n >= 3L) {
+      lst <- paste0(paste(quoted[-n], collapse = ", "), ", or ", quoted[n])
+    } else if (n == 2L) {
+      lst <- paste0(quoted[1L], " or ", quoted[2L])
+    } else {
+      lst <- quoted
+    }
+    requirement <- paste0(lst, ".")
+    arg <- paste0("`", arg, "`")
   }
   .jst_stop(arg, " must be ", requirement, fn = fn)
+}
+
+
+#' Internal helper: emit a default-silent advisory note
+#'
+#' Advisory notes are pure FYI: the function did exactly what was asked, and
+#' the note just reports a benign detail (a no-op recode, a silent text-to-
+#' numeric coercion). They are shown only at \code{joutput("full")} and stay
+#' hidden at "standard" and "minimal". Consequential notes -- an overwrite, an
+#' override taking precedence, a skipped variable, a diagnostic that could not
+#' be computed -- use a plain \code{message()} instead and are always visible.
+#'
+#' This is the tier-gating primitive for the note layer; a broader joutput
+#' note-gating framework would build on it.
+#'
+#' @param ... Parts of the message, passed through to \code{message()}.
+#' @return Invisibly NULL.
+#' @keywords internal
+.jst_advisory_note <- function(...) {
+  if (identical(getOption(".jst_output_level", "standard"), "full")) {
+    message(...)
+  }
+  invisible(NULL)
 }
 
 
@@ -4844,21 +4878,19 @@
 #' @keywords internal
 .jst_assumption_clauses <- list(
   jdesc  = list(verb = "seems", connector = ". ",
-                clause = paste0("Descriptive statistics assume ",
-                                "continuous/interval data; the mean and SD ",
-                                "may not be meaningful.")),
+                clause = "Descriptive statistics may not be meaningful."),
   jcorr  = list(verb = "seems", connector = ". ",
                 clause = "Pearson correlations assume continuous/interval data."),
   jt     = list(verb = "seems", connector = ". ",
-                clause = "A t-test treats the outcome as continuous/interval data."),
+                clause = "A t-test expects an interval outcome."),
   jaov   = list(verb = "seems", connector = ". ",
-                clause = "ANOVA treats the outcome as continuous/interval data."),
+                clause = "ANOVA expects an interval outcome."),
   jsum   = list(verb = "is",    connector = "; ",
-                clause = "summing it may not be meaningful."),
+                clause = "summing may not be meaningful."),
   javg   = list(verb = "is",    connector = "; ",
-                clause = "averaging it may not be meaningful."),
+                clause = "averaging may not be meaningful."),
   jalpha = list(verb = "is",    connector = "; ",
-                clause = "reliability analysis assumes numeric scale items.")
+                clause = "reliability analysis expects numeric items.")
 )
 
 #' Internal helper: build an assumption-check warning string
@@ -7631,7 +7663,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # treat categorically, jdesc stops and points to jfreq().
   if (!is.null(categorical)) {
     .jst_stop("categorical = is not supported yet: this function always ",
-         "computes numeric descriptives. For a categorical summary use ",
+         "computes numeric descriptives.\nFor a categorical summary use ",
          "jfreq() instead.")
   }
   for (.arg in c("numeric", "count")) {
@@ -7684,12 +7716,14 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       warning(.jst_assumption_warning(v, "jdesc"), call. = FALSE)
     }
     if (!is.null(desc_class[[v]]$note)) {
-      warning(desc_class[[v]]$note, call. = FALSE)
+      # Numbers-as-text coercion is pure FYI -- the variable IS summarized as
+      # asked -- so it is a default-silent advisory note (full output only).
+      .jst_advisory_note(desc_class[[v]]$note)
     }
   }
-  # Mixed case: one warning per variable that could not be summarized.
+  # Mixed case: one consequential note per variable that was skipped.
   .emit_bad_refusals <- function() {
-    for (v in bad_vars) warning(desc_class[[v]]$refusal, call. = FALSE)
+    for (v in bad_vars) message(desc_class[[v]]$refusal)
   }
 
   # -- Grouped descriptives ---------------------------------------------------
@@ -10322,7 +10356,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   # jcrosstab().
   if (!is.null(categorical)) {
     .jst_stop("categorical = is not supported yet: correlation requires ",
-         "numeric variables. For association between categorical variables use ",
+         "numeric variables.\nFor association between categorical variables use ",
          "jcrosstab() instead.")
   }
   for (.arg in c("numeric", "count")) {
@@ -10913,8 +10947,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     names(vif_values) <- colnames(X)
     vif_values
   }, error = function(e) {
-    warning("VIF could not be computed (possible perfect collinearity).",
-            call. = FALSE)
+    message("VIF could not be computed (possible perfect collinearity).")
     NULL
   })
 }
@@ -11668,39 +11701,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                          !identical(dv_res$subclass, "Count")
   dv_dich <- .jst_is_dichotomy(data[[dv_name]])
   if (dv_dich$is_dichotomy) {
-    # Dichotomy-specific warning: jlogistic is the most likely intended
-    # alternative. Coding-specific recode hint when not 0/1.
-    base_msg <- paste0(
-      "'", dv_name, "' is a dichotomy (coded ", dv_dich$coding,
-      ") but is being used as the dependent variable in linear regression. ",
-      "Linear regression treats the DV as continuous, which may not be ",
-      "what you intended. Consider whether you meant: (a) reverse the ",
-      "variables in the formula, e.g. jlm(", all.vars(formula)[2], " ~ ",
-      dv_name
+    # Dichotomy used as a linear-regression DV: short, definitive caution.
+    warning(
+      "'", dv_name, "' is the outcome variable but looks categorical (a ",
+      dv_dich$coding, " dichotomy). Linear regression expects an interval outcome.",
+      call. = FALSE
     )
-    # Build full reversed-formula suggestion if more than one IV
-    other_ivs <- all.vars(formula)[-1]
-    if (length(other_ivs) > 1) {
-      base_msg <- paste0(base_msg, " + ", paste(other_ivs[-1], collapse = " + "))
-    }
-    base_msg <- paste0(base_msg, ", ", .jst_data_name, "); or ")
-    if (dv_dich$coding == "0/1") {
-      tail_msg <- paste0(
-        "(b) use jlogistic(", deparse(formula), ", ", .jst_data_name,
-        ") for binary outcomes."
-      )
-    } else if (dv_dich$coding == "1/2") {
-      tail_msg <- paste0(
-        "(b) recode 1/2 to 0/1 with jrecode() and use jlogistic() for ",
-        "binary outcomes."
-      )
-    } else {
-      tail_msg <- paste0(
-        "(b) recode to 0/1 with jrecode() and use jlogistic() for binary ",
-        "outcomes."
-      )
-    }
-    warning(base_msg, tail_msg, call. = FALSE)
   } else if (.jst_is_count(data[[dv_name]], dv_name, .jst_data_name,
                            override = dv_override)) {
     # Count DV. Three provenance cases (resolved above):
@@ -11711,23 +11717,15 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     #   structural       -> today's hedged "looks like a count" warning.
     if (dv_asserted_count) {
       warning(
-        "'", dv_name, "' is currently listed as a count variable. Linear ",
-        "regression assumes a continuous DV.",
+        "'", dv_name, "' is registered as a count variable. Linear ",
+        "regression expects an interval outcome.",
         call. = FALSE
       )
     } else if (!dv_asserted_numeric) {
-      n_unique <- length(unique(data[[dv_name]][!is.na(data[[dv_name]])]))
       warning(
-        "'", dv_name, "' looks like a count variable (non-negative integer ",
-        "in the 0-6 range, ", n_unique, " unique values). Linear regression ",
-        "assumes a continuous DV with at least 6-7 distinct values for ",
-        "reliable inference. With small-range counts, the linear-regression ",
-        "assumptions of normally distributed residuals and constant variance ",
-        "are usually violated. Consider whether to (a) collapse '", dv_name,
-        "' into broader categories and treat it as ordinal, or (b) wait ",
-        "for count-model functions in a future package version (Poisson or ",
-        "negative binomial regression). The model will run, but interpret ",
-        "with caution.",
+        "'", dv_name, "' is the outcome variable but looks like a count ",
+        "(small-range non-negative integers). Linear regression expects an ",
+        "interval outcome.",
         call. = FALSE
       )
     }
@@ -11737,23 +11735,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
              !dv_asserted_numeric) {
     # Non-dichotomous but categorical-like (e.g. a Likert item used as DV).
     # Suppressed when the DV's numeric role is user-asserted (jnumeric /
-    # per-call numeric=); otherwise three plausible alternatives: reverse
-    # formula, jlogistic (multinomial would apply but that's beyond current
-    # package scope), or jaov/jt.
-    other_ivs <- all.vars(formula)[-1]
-    reverse_formula <- paste0(other_ivs[1], " ~ ", dv_name)
-    if (length(other_ivs) > 1) {
-      reverse_formula <- paste0(reverse_formula, " + ",
-                                paste(other_ivs[-1], collapse = " + "))
-    }
+    # per-call numeric=).
     warning(
-      "'", dv_name, "' is the dependent variable but has categorical-like ",
-      "structure (small-range integer or labelled values). Linear ",
-      "regression treats this as continuous, which may not be what you ",
-      "intended. Consider whether you meant to: (a) reverse the variables ",
-      "in the formula, e.g. jlm(", reverse_formula, ", ", .jst_data_name,
-      "); (b) use jlogistic() if the DV is a binary outcome; or ",
-      "(c) use jaov() or jt() to compare the IV across DV groups.",
+      "'", dv_name, "' is the outcome variable but looks categorical (few ",
+      "distinct or labelled values). Linear regression expects an interval ",
+      "outcome.",
       call. = FALSE
     )
   }
@@ -12921,7 +12907,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     if (!.jst_is_dichotomy(orig_dv)$is_dichotomy) {
       .jst_stop(paste0(
         "'", dv_name, "' has only one value. Logistic regression requires a ",
-        "binary variable with two categories."
+        "binary outcome variable."
       ))
     }
     data[[dv_name]] <- as.numeric(orig_dv)   # FALSE -> 0, TRUE -> 1
@@ -12947,8 +12933,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         if (length(u_norm) == 1L) " category" else " categories",
         " (", paste(n_show, collapse = ", "),
         if (length(unique(nonmiss)) > 5L) ", ..." else "", ").\n",
-        "Logistic regression requires exactly two categories. Recode to a 0/1 ",
-        "variable before running jlogistic()."
+        "Logistic regression requires the outcome to have exactly two ",
+        "categories.\nRecode to a 0/1 variable before running jlogistic()."
       ))
     }
 
@@ -12959,11 +12945,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     if (!mb$recognized) {
       .jst_stop(paste0(
-        "'", dv_name, "' has the text categories: ",
-        paste(disp, collapse = ", "),
-        ". jlogistic() recognizes yes/no, y/n, true/false, t/f, present/absent, ",
-        "and success/failure (case-insensitive); for any other pair, recode to ",
-        "a 0/1 variable so the modeled category is explicit:\n",
+        "'", dv_name, "' has text categories ",
+        paste(disp, collapse = "/"),
+        ". Recode to a 0/1 variable so the modeled category is explicit:\n",
         "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ",
         dv_name, ", map = \"", disp[1], "=0; ", disp[2], "=1\")\n",
         "Then use ", dv_name, "R as your dependent variable (the category mapped ",
@@ -13305,8 +13289,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         names(vif_vals) <- colnames(X)
         vif_vals
       }, error = function(e) {
-        warning("VIF could not be computed (possible perfect collinearity).",
-                call. = FALSE)
+        message("VIF could not be computed (possible perfect collinearity).")
         NULL
       })
 
@@ -13706,16 +13689,15 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
       warning(paste0(
         "The following item(s) are negatively correlated with the rest ",
         "of the scale: ", paste(neg_items, collapse = ", "),
-        ". This may indicate that these items need to be reverse-coded, ",
-        "or that they do not belong in the scale. Examine the item-total ",
-        "statistics table and the item content to determine the appropriate action."),
+        ". They may need reverse-coding, or may not belong in the scale ",
+        "- check the item-total table and the item wording."),
         call. = FALSE)
     } else {
       warning(paste0(
-        "The majority of items are negatively correlated with the scale total. ",
-        "This usually means that one or more items are coded in the opposite ",
-        "direction or do not belong in the scale. Check the following item(s) ",
-        "which are positively correlated while most others are not: ",
+        "Most items are negatively correlated with the scale total - ",
+        "usually a sign the scale is keyed in the opposite direction, or ",
+        "some items don't belong. The item(s) that are positively ",
+        "correlated while most aren't: ",
         paste(pos_items, collapse = ", ")),
         call. = FALSE)
     }
@@ -15228,14 +15210,15 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     old_vals <- rule$old_vals
     all_specified_old <- c(all_specified_old, old_vals)
 
-    # Warn if a specified old value is not present in the data
+    # Map value(s) absent from the data: a no-op for those values, not a
+    # problem -- a default-silent advisory note (full output only).
     actual_vals       <- unique(orig_num[!is.na(orig_num)])
     missing_from_data <- setdiff(old_vals, actual_vals)
     if (length(missing_from_data) > 0) {
-      warning(paste0(
-        "Value(s) ", paste(missing_from_data, collapse = ", "),
-        " specified in the map argument were not found in '", orig_name, "'. ",
-        "Check for typos in your map string."
+      .jst_advisory_note(paste0(
+        "Note: '", orig_name, "' contained none of the map values ",
+        paste(missing_from_data, collapse = ", "),
+        " - nothing was recoded for them."
       ))
     }
 
@@ -15568,15 +15551,15 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   }
 
   if (missing(codes) || is.null(codes)) {
-    .jst_stop("Argument `codes` is required.")
+    .jst_stop("`codes` is required.")
   }
   if (!is.numeric(codes) || length(codes) == 0L) {
-    .jst_stop("Argument `codes` must be a non-empty numeric ",
-         "vector (Stata-style missing values are accepted under Stata convention).")
+    .jst_stop("`codes` must be one or more numbers, e.g. codes = c(-99, -98).\n",
+         "(Stata-style missing values are accepted under Stata convention.)")
   }
   if (!is.logical(udm.notice) || length(udm.notice) != 1L ||
       is.na(udm.notice)) {
-    .jst_stop("Argument `udm.notice` must be TRUE or FALSE.")
+    .jst_stop("`udm.notice` must be TRUE or FALSE.")
   }
 
   # Validate convention argument up front.
@@ -16295,16 +16278,13 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       to <- convention
     } else {
       .jst_stop(
-        "A target format is required. Pass to = \"baseR\", \"spss\", ",
-        "or \"stata\" explicitly, or set joptions(missing.convention = ",
-        "\"spss\") (or \"stata\") to enable auto-resolution."
+        "A target format is required. Set to = \"baseR\", \"spss\", or \"stata\"."
       )
     }
   }
   if (!is.character(to) || length(to) != 1L ||
       !to %in% c("baseR", "spss", "stata")) {
-    .jst_stop("Argument `to` must be one of \"baseR\", \"spss\", ",
-         "or \"stata\" (case-sensitive).")
+    .jst_stop("`to` must be \"baseR\", \"spss\", or \"stata\" (case-sensitive).")
   }
 
   # --- Resolve variable list (... vs vars; mutually exclusive) ---------------
@@ -16325,12 +16305,12 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
   }
 
   if (length(dot_names) > 0 && !is.null(vars)) {
-    .jst_stop("Pass either unquoted variable names (...) or a ",
-         "character vector via vars = c(...), but not both.")
+    .jst_stop("Use either unquoted variable names (...) or quoted names ",
+         "via vars = c(...), but not both.")
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
-    .jst_stop("Argument `vars` must be a non-empty character vector ",
-         "of variable names.")
+    .jst_stop("`vars` must be one or more variable names in quotes, ",
+         "e.g. vars = c(\"Age\", \"Income\").")
   }
 
   if (length(dot_names) > 0) {
@@ -17259,9 +17239,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         return(invisible(NULL))
       }
     } else {
-      warning(
-        "'", obj_name, "' already existed and has been replaced.",
-        call. = FALSE
+      message(
+        "'", obj_name, "' already existed and has been replaced."
       )
     }
   }
@@ -17269,8 +17248,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Validate sheet argument for non-Excel files ----------------------------
   if (!is.null(sheet) && !ext %in% c("xlsx", "xls")) {
     warning(
-      "The sheet argument is only used for Excel files (.xlsx, .xls). ",
-      "Ignoring for .", ext, " file.",
+      "`sheet` is only used for Excel format (.xlsx, .xls). ",
+      "Ignoring it for this .", ext, " file.",
       call. = FALSE
     )
   }
@@ -19536,8 +19515,7 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
         return(invisible(NULL))
       }
     } else {
-      warning("'", dest_name, "' already existed and has been replaced.",
-              call. = FALSE)
+      message("'", dest_name, "' already existed and has been replaced.")
     }
   }
 
