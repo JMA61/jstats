@@ -4,27 +4,37 @@
 \alias{.jst_jsave_xpt_error_msg}
 \title{Internal: build jsave's .xpt pre-flight error message}
 \usage{
-.jst_jsave_xpt_error_msg(vars, data_name)
+.jst_jsave_xpt_error_msg(vars, data_name, spss_vars = character(0))
 }
 \arguments{
 \item{vars}{Character vector of variable names containing
-tagged NAs.}
+tagged NAs. May be empty when only SPSS-form columns fired.}
 
 \item{data_name}{Character. Name of the data frame argument in
 the user's call to \code{jsave()}, used to construct the
 suggested \code{jconvert()} call.}
+
+\item{spss_vars}{Character vector of variable names carrying
+SPSS-form UDM declarations (\code{na_values} and/or
+\code{na_range}). The .xpt interchange format cannot represent
+these either; \code{haven::write_xpt} would strip them
+silently. Default \code{character(0)} keeps the pre-extension
+call signature working unchanged.}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.
 }
 \description{
-Produces the error message used by \code{jsave()} when tagged-NA
-values are encountered on a \code{.xpt} write. The .xpt format
-has no representation for tagged NAs; haven would otherwise emit
-a low-level error (\dQuote{Failed to insert value...}) and leave
-a partial file on disk. The user is directed to drop via
-\code{jconvert(to = "baseR")} or to save as \code{.dta} (which
-SAS PROC IMPORT can read) to preserve the codes. Verbosity is
+Produces the error message used by \code{jsave()} when missing-value
+forms the .xpt format cannot represent are encountered on a
+\code{.xpt} write: tagged-NA values (haven would otherwise emit a
+low-level error, \dQuote{Failed to insert value...}, and leave a
+partial file on disk) and/or SPSS-form UDM declarations (haven would
+otherwise strip the metadata silently, mirroring the
+.dta-with-SPSS-UDMs failure mode). The user is directed to drop via
+\code{jconvert(to = "baseR")}, or to preserve the codes by saving as
+\code{.dta} (tagged NAs; SAS PROC IMPORT can read it) or \code{.sav}
+(SPSS-form declarations). Verbosity is
 controlled by the active \code{joutput()} level.
 }
 \keyword{internal}

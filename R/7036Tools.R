@@ -617,7 +617,8 @@
 #'
 #' @keywords internal
 .jst_get_filter <- function(data_name) {
-  if (is.null(data_name)) return(NULL)
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(NULL)
   all_filters <- getOption(".jst_filter", default = list())
   all_filters[[data_name]]
 }
@@ -637,7 +638,8 @@
 #'
 #' @keywords internal
 .jst_get_complete <- function(data_name) {
-  if (is.null(data_name)) return(NULL)
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(NULL)
   all_complete <- getOption(".jst_complete", default = list())
   all_complete[[data_name]]
 }
@@ -656,7 +658,8 @@
 #'
 #' @keywords internal
 .jst_set_filter <- function(data_name, settings) {
-  if (is.null(data_name)) return(invisible(NULL))
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(invisible(NULL))
   all_filters <- getOption(".jst_filter", default = list())
   all_filters[[data_name]] <- settings
   options(.jst_filter = all_filters)
@@ -676,7 +679,8 @@
 #'
 #' @keywords internal
 .jst_set_complete <- function(data_name, settings) {
-  if (is.null(data_name)) return(invisible(NULL))
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(invisible(NULL))
   all_complete <- getOption(".jst_complete", default = list())
   all_complete[[data_name]] <- settings
   options(.jst_complete = all_complete)
@@ -738,6 +742,8 @@
 #'
 #' @keywords internal
 .jst_get_dummy <- function(data_name) {
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(NULL)
   all_dummy <- getOption(".jst_dummy", default = list())
   all_dummy[[data_name]]
 }
@@ -755,6 +761,8 @@
 #'
 #' @keywords internal
 .jst_set_dummy <- function(data_name, settings) {
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(invisible(NULL))
   all_dummy <- getOption(".jst_dummy", default = list())
   all_dummy[[data_name]] <- settings
   options(.jst_dummy = all_dummy)
@@ -775,6 +783,8 @@
 #' @return The stored intent records (a named list), or \code{NULL} if none.
 #' @keywords internal
 .jst_get_registry <- function(data_name) {
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(NULL)
   all_reg <- getOption(".jst_registry", default = list())
   all_reg[[data_name]]
 }
@@ -792,6 +802,8 @@
 #'   \code{.jst_registry} option.
 #' @keywords internal
 .jst_set_registry <- function(data_name, settings) {
+  if (is.null(data_name) || length(data_name) != 1L ||
+      is.na(data_name) || !nzchar(data_name)) return(invisible(NULL))
   all_reg <- getOption(".jst_registry", default = list())
   all_reg[[data_name]] <- settings
   options(.jst_registry = all_reg)
@@ -4311,6 +4323,31 @@
   invisible(NULL)
 }
 
+
+#' Internal: detect a variable appearing on both sides of an analysis formula
+#'
+#' Checks a two-sided analysis formula for a variable named on both the
+#' left- and right-hand sides (e.g. \code{MathScore ~ MathScore} or
+#' \code{MathScore ~ MathScore + Age}). Such formulas cannot be caught
+#' downstream via \code{all.vars(formula)}, which deduplicates names: the
+#' formula functions then either index a second variable that is not there
+#' (jt / jaov / jcrosstab fall through to raw base R errors) or hand the
+#' formula to \code{lm()} / \code{glm()}, which silently drops the response
+#' from the right-hand side and fits a different model than the user wrote
+#' (jlm / jlogistic). Callers stop with a clear, named message when this
+#' helper returns a name.
+#'
+#' @param formula The user's analysis formula.
+#' @return The first duplicated variable name (character scalar), or
+#'   \code{NULL} when the formula is one-sided, not a formula, or has no
+#'   variable in both roles.
+#' @keywords internal
+.jst_formula_dup_var <- function(formula) {
+  if (!inherits(formula, "formula") || length(formula) != 3L) return(NULL)
+  dup <- intersect(all.vars(formula[[2]]), all.vars(formula[[3]]))
+  if (length(dup) == 0) return(NULL)
+  dup[1]
+}
 
 #' Internal helper: gate a variable for use in an analysis function
 #'
@@ -9219,6 +9256,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   dv_name    <- terms[1]
   group_name <- terms[2]
 
+  dup_var <- .jst_formula_dup_var(formula)
+  if (!is.null(dup_var)) {
+    .jst_stop(paste0("'", dup_var, "' appears as both the outcome variable ",
+                     "and the grouping variable.\n",
+                     "A t-test requires two different variables."))
+  }
+
   .jst_check_vars(data, terms, .jst_data_name)
   # Type gate (Session 46): refuse a date DV (would coerce silently to a day
   # count) or a text/complex DV (would crash); grouping variable may be
@@ -9620,6 +9664,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   dv_name    <- terms[1]
   group_name <- terms[2]
 
+  dup_var <- .jst_formula_dup_var(formula)
+  if (!is.null(dup_var)) {
+    .jst_stop(paste0("'", dup_var, "' appears as both the outcome variable ",
+                     "and the grouping variable.\n",
+                     "An ANOVA requires two different variables."))
+  }
+
   .jst_check_vars(data, terms, .jst_data_name)
   # Type gate (Session 46): response must be numeric; grouping variable may be
   # categorical. Date/time and complex/list/raw refused. See .jst_check_analysis_var.
@@ -9683,6 +9734,22 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       .jst_stop(paste0("'", group_name, "' has ", n_levels,
                   " category(ies). An ANOVA requires at least 2 groups."))
     }
+  }
+
+  # Degenerate-grouping guard (Session 105): when every category contains
+  # exactly one analysis case, within-group variance is undefined and the
+  # computation falls through to a raw base R error ("non-numeric argument
+  # to mathematical function", with qt NaN warnings). The typical cause is
+  # a continuous variable supplied as the grouping variable. Counted on the
+  # analysis rows (mf), so listwise deletion is respected. A mix of
+  # singleton and larger cells is legitimate unbalanced data and passes.
+  grp_sizes <- table(as.character(mf[[group_name]]))
+  if (length(grp_sizes) > 0 && max(grp_sizes) == 1L) {
+    .jst_stop(paste0("'", group_name, "' has ", length(grp_sizes),
+                " categories with only 1 case in each.\n",
+                "An ANOVA requires at least one category with 2 or more ",
+                "cases - '", group_name, "' may be a continuous variable ",
+                "rather than a grouping variable."))
   }
 
   # Assumption-check warning (audit): the outcome looks categorical where a
@@ -10044,6 +10111,12 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   terms    <- all.vars(formula)
   row_name <- terms[1]
   col_name <- terms[2]
+
+  dup_var <- .jst_formula_dup_var(formula)
+  if (!is.null(dup_var)) {
+    .jst_stop(paste0("'", dup_var, "' appears on both sides of the formula.\n",
+                     "A cross-tabulation requires two different variables."))
+  }
 
   .jst_check_vars(data, terms, .jst_data_name)
   # Type gate (Session 46): both variables are categorical; refuse date/time
@@ -10429,7 +10502,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   for (.gv in variable_names) .jst_check_analysis_var(data[[.gv]], .gv, TRUE, "a correlation")
 
   if (length(variable_names) < 2) {
-    .jst_stop("At least 2 variables are required. Only 1 was provided.")
+    .jst_stop(paste0(
+      "At least 2 variables are required. ",
+      if (length(variable_names) == 0) "None were provided."
+      else "Only 1 was provided."
+    ))
   }
 
   method <- tolower(method)
@@ -11678,6 +11755,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # speak the user's language.
   original_formula_vars <- model_vars
 
+  # DV-as-IV guard (Session 105): all.vars() deduplicates, so a formula like
+  # MathScore ~ MathScore + Age is invisible downstream -- lm() would warn
+  # cryptically, drop the response from the right-hand side, and fit a
+  # different model than the user wrote. Checked on the raw formula, before
+  # dummy expansion can rewrite the right-hand side.
+  dup_var <- .jst_formula_dup_var(formula)
+  if (!is.null(dup_var)) {
+    .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
+                     "and an independent variable.\n",
+                     "Each variable can only play one role in a regression."))
+  }
+
   .jst_check_vars(data, model_vars, .jst_data_name)
   # Type gate (Session 46): the response must be numeric; predictors may be
   # numeric or categorical. Date/time and complex/list/raw refused in both
@@ -12718,6 +12807,15 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # the formula and the diagnostic should speak the user's language.
   original_formula_vars <- model_vars
 
+  # DV-as-IV guard (Session 105): see the matching block in jlm. Checked on
+  # the raw formula, before dummy expansion can rewrite the right-hand side.
+  dup_var <- .jst_formula_dup_var(formula)
+  if (!is.null(dup_var)) {
+    .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
+                     "and an independent variable.\n",
+                     "Each variable can only play one role in a regression."))
+  }
+
   .jst_check_vars(data, model_vars, .jst_data_name)
   # Type gate (Session 46): the response is binary and may be a recognized
   # text/factor pair (e.g. "Yes"/"No") or logical, so it passes as categorical
@@ -13560,7 +13658,11 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   for (.gv in variable_names) .jst_check_analysis_var(data[[.gv]], .gv, TRUE, "Cronbach's alpha")
 
   if (length(variable_names) < 2) {
-    .jst_stop("At least 2 items are required. Only 1 was provided.")
+    .jst_stop(paste0(
+      "At least 2 items are required. ",
+      if (length(variable_names) == 0) "None were provided."
+      else "Only 1 was provided."
+    ))
   }
 
   # Red title
@@ -15555,9 +15657,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' A single data frame may carry both SPSS-form and Stata-form UDM
 #' columns. In-memory analysis and display tolerate the mix without
 #' issue (each column renders in its native form). The constraint
-#' shows up at file-export time: \code{.sav} and \code{.xpt} cannot
+#' shows up at file-export time: \code{.sav} cannot
 #' represent Stata-style missing values; \code{.dta} cannot represent SPSS-form
-#' \code{na_values} declarations. \code{jsave()} pre-flights the DF
+#' \code{na_values} declarations; \code{.xpt} can represent neither
+#' form. \code{jsave()} pre-flights the DF
 #' against the destination format and errors with a pointer to
 #' \code{jconvert()} when the mix is incompatible. The
 #' post-declaration mismatch notice emitted at the bottom of this
@@ -17065,15 +17168,18 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 #'   name (character) or sheet number (integer). Defaults to the first sheet.
 #'   If the file has multiple sheets and \code{sheet} is not specified,
 #'   a message lists the available sheets.
-#' @param preserve.udm Logical. For SPSS \code{.sav} files only. If
-#'   \code{TRUE} (default), user-defined missing-value (UDM) codes such as
-#'   -99 are preserved as their original numeric values in the data frame,
-#'   with metadata attached so the package's analysis functions still treat
-#'   them as missing. If \code{FALSE}, UDM codes are converted to plain
-#'   \code{NA} on import and the metadata is stripped (matching haven's
-#'   default \code{user_na = FALSE} behavior). Has no effect on non-SPSS
-#'   formats. Corresponds to haven's \code{user_na} argument with the same
-#'   semantics when set to \code{TRUE}.
+#' @param preserve.udm Logical. If \code{TRUE} (default), user-defined
+#'   missing values arriving with the file are preserved: SPSS-style
+#'   codes such as -99 keep their original numeric values in the data
+#'   frame, with metadata attached so the package's analysis functions
+#'   still treat them as missing, and Stata-style tagged values
+#'   (\code{.a}, \code{.b}, ...) are kept as read. If \code{FALSE},
+#'   both forms are converted to plain \code{NA} on import and the
+#'   metadata is stripped. Applies to any loaded file whose columns
+#'   carry missing-value declarations --- typically \code{.sav},
+#'   \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
+#'   saved from such data. For \code{.sav} files, \code{TRUE}
+#'   corresponds to haven's \code{user_na = TRUE}.
 #' @param udm.notice Per-call override for the UDM notification frequency.
 #'   \code{NULL} (default) defers to the global setting from \code{joutput()}.
 #'   \code{TRUE} prints the notification on every load; \code{FALSE}
@@ -18360,14 +18466,6 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     cat("\nTo convert one variable:\n")
     cat(sprintf("  %s$%s <- jrecode(%s, %s,\n    map = \"%s\")\n",
                 obj_name, ex_var, obj_name, ex_var, map_str))
-
-    # The bulk-strip option only applies to .sav loads, where preserve.udm
-    # at jload time can convert all UDMs in one step. Skipped for .rds and
-    # other formats where the data is already in R without that pathway.
-    if (has_udm && ext == "sav") {
-      cat("\nFor .sav files with many UDMs, jload(file, preserve.udm = FALSE)\n")
-      cat("strips them all at load time.\n")
-    }
   }
 }
 
@@ -18453,51 +18551,89 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
 #' Internal: build jsave's .xpt pre-flight error message
 #'
-#' Produces the error message used by \code{jsave()} when tagged-NA
-#' values are encountered on a \code{.xpt} write. The .xpt format
-#' has no representation for tagged NAs; haven would otherwise emit
-#' a low-level error (\dQuote{Failed to insert value...}) and leave
-#' a partial file on disk. The user is directed to drop via
-#' \code{jconvert(to = "baseR")} or to save as \code{.dta} (which
-#' SAS PROC IMPORT can read) to preserve the codes. Verbosity is
+#' Produces the error message used by \code{jsave()} when missing-value
+#' forms the .xpt format cannot represent are encountered on a
+#' \code{.xpt} write: tagged-NA values (haven would otherwise emit a
+#' low-level error, \dQuote{Failed to insert value...}, and leave a
+#' partial file on disk) and/or SPSS-form UDM declarations (haven would
+#' otherwise strip the metadata silently, mirroring the
+#' .dta-with-SPSS-UDMs failure mode). The user is directed to drop via
+#' \code{jconvert(to = "baseR")}, or to preserve the codes by saving as
+#' \code{.dta} (tagged NAs; SAS PROC IMPORT can read it) or \code{.sav}
+#' (SPSS-form declarations). Verbosity is
 #' controlled by the active \code{joutput()} level.
 #'
 #' @param vars Character vector of variable names containing
-#'   tagged NAs.
+#'   tagged NAs. May be empty when only SPSS-form columns fired.
 #' @param data_name Character. Name of the data frame argument in
 #'   the user's call to \code{jsave()}, used to construct the
 #'   suggested \code{jconvert()} call.
+#' @param spss_vars Character vector of variable names carrying
+#'   SPSS-form UDM declarations (\code{na_values} and/or
+#'   \code{na_range}). The .xpt interchange format cannot represent
+#'   these either; \code{haven::write_xpt} would strip them
+#'   silently. Default \code{character(0)} keeps the pre-extension
+#'   call signature working unchanged.
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
-.jst_jsave_xpt_error_msg <- function(vars, data_name) {
+.jst_jsave_xpt_error_msg <- function(vars, data_name,
+                                     spss_vars = character(0)) {
 
   output_level <- getOption(".jst_output_level", "standard")
-  n            <- length(vars)
+  all_vars     <- unique(c(vars, spss_vars))
+  n            <- length(all_vars)
   is_sg        <- (n == 1)
   noun         <- if (is_sg) "variable" else "variables"
   verb_contain <- if (is_sg) "contains" else "contain"
 
-  # --- Minimal tier -------------------------------------------------------
+  has_tagged <- length(vars) > 0
+  has_spss   <- length(spss_vars) > 0
+
+  # The preserve-path advice depends on which missing-value form is
+  # present: tagged NAs round-trip via .dta, SPSS-form declarations via
+  # .sav, and a frame carrying both forms has no single ReadStat target
+  # until the forms are unified with jconvert(). The generic
+  # "missing-value codes" wording is the locked Session-36 carve-out for
+  # .xpt messages.
   if (identical(output_level, "minimal")) {
+    tail <- if (has_tagged && has_spss) {
+      paste0("to drop them, or convert them to one form with jconvert() ",
+             "and save as SPSS format (.sav) or Stata format (.dta) ",
+             "to preserve them.")
+    } else if (has_spss) {
+      "to drop them, or save as SPSS format (.sav) to preserve them."
+    } else {
+      "to drop them, or save as Stata format (.dta) to preserve them."
+    }
     return(paste0(
       n, " ", noun, " ", verb_contain,
       " missing-value codes, incompatible with the .xpt format. ",
       "Run ", data_name, " <- jconvert(", data_name, ", to = \"baseR\") ",
-      "to drop them, or save as Stata format (.dta) to preserve them."
+      tail
     ))
   }
 
   # --- Standard / full tier ----------------------------------------------
+  preserve_advice <- if (has_tagged && has_spss) {
+    paste0("To preserve these codes, convert them to one form with ",
+           "jconvert() first, then save as SPSS format (.sav) or ",
+           "Stata format (.dta) instead.")
+  } else if (has_spss) {
+    "To preserve these codes, save as SPSS format (.sav) instead."
+  } else {
+    paste0("To preserve these codes, save as Stata format (.dta) instead, ",
+           "which SAS PROC IMPORT can read.")
+  }
+
   paste0(
     n, " ", noun, " ", verb_contain,
     " missing-value codes, incompatible with the .xpt format:\n",
-    "  ", .jst_format_var_list(vars), "\n\n",
+    "  ", .jst_format_var_list(all_vars), "\n\n",
     "To save as .xpt, drop these by running:\n",
     "  ", data_name, " <- jconvert(", data_name, ", to = \"baseR\")\n\n",
-    "To preserve these codes, save as Stata format (.dta) instead, ",
-    "which SAS PROC IMPORT can read."
+    preserve_advice
   )
 }
 
@@ -19228,8 +19364,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   #       writers abort mid-write with a low-level message that does not name
   #       the offending column.
   #   (2) missing-value codes the format cannot represent -- tagged NAs for
-  #       .sav/.xpt, SPSS-style UDMs for .dta. haven would silently drop these
-  #       (or, for .xpt, error mid-write and leave a partial file).
+  #       .sav/.xpt, SPSS-style UDMs for .dta/.xpt. haven would silently drop
+  #       these (or, for tagged NAs on .xpt, error mid-write and leave a
+  #       partial file).
   # Both are detected up front and reported together, so the user fixes
   # everything in one pass and re-runs once instead of discovering the second
   # class only after fixing the first. Each class's message is built (and
@@ -19287,10 +19424,15 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
           .jst_jsave_dta_error_msg(enum_vars, range_vars, data_name)
       }
     } else if (ext == "xpt") {
+      # Both missing-value forms are unrepresentable in .xpt: tagged NAs
+      # (haven errors mid-write and leaves a partial file) and SPSS-style
+      # declarations (haven::write_xpt strips them silently). One message
+      # covers whichever forms are present.
       tagged_vars <- .jst_has_tagged_na(data)
-      if (length(tagged_vars) > 0) {
+      spss_vars   <- .jst_has_spss_udm(data)
+      if (length(tagged_vars) > 0 || length(spss_vars) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_xpt_error_msg(tagged_vars, data_name)
+          .jst_jsave_xpt_error_msg(tagged_vars, data_name, spss_vars)
       }
     }
 

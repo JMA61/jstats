@@ -96,9 +96,10 @@ Stata-style equivalent for future calls.
 A single data frame may carry both SPSS-form and Stata-form UDM
 columns. In-memory analysis and display tolerate the mix without
 issue (each column renders in its native form). The constraint
-shows up at file-export time: \code{.sav} and \code{.xpt} cannot
+shows up at file-export time: \code{.sav} cannot
 represent Stata-style missing values; \code{.dta} cannot represent SPSS-form
-\code{na_values} declarations. \code{jsave()} pre-flights the DF
+\code{na_values} declarations; \code{.xpt} can represent neither
+form. \code{jsave()} pre-flights the DF
 against the destination format and errors with a pointer to
 \code{jconvert()} when the mix is incompatible. The
 post-declaration mismatch notice emitted at the bottom of this

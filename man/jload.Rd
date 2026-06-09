@@ -43,15 +43,18 @@ name (character) or sheet number (integer). Defaults to the first sheet.
 If the file has multiple sheets and \code{sheet} is not specified,
 a message lists the available sheets.}
 
-\item{preserve.udm}{Logical. For SPSS \code{.sav} files only. If
-\code{TRUE} (default), user-defined missing-value (UDM) codes such as
--99 are preserved as their original numeric values in the data frame,
-with metadata attached so the package's analysis functions still treat
-them as missing. If \code{FALSE}, UDM codes are converted to plain
-\code{NA} on import and the metadata is stripped (matching haven's
-default \code{user_na = FALSE} behavior). Has no effect on non-SPSS
-formats. Corresponds to haven's \code{user_na} argument with the same
-semantics when set to \code{TRUE}.}
+\item{preserve.udm}{Logical. If \code{TRUE} (default), user-defined
+missing values arriving with the file are preserved: SPSS-style
+codes such as -99 keep their original numeric values in the data
+frame, with metadata attached so the package's analysis functions
+still treat them as missing, and Stata-style tagged values
+(\code{.a}, \code{.b}, ...) are kept as read. If \code{FALSE},
+both forms are converted to plain \code{NA} on import and the
+metadata is stripped. Applies to any loaded file whose columns
+carry missing-value declarations --- typically \code{.sav},
+\code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
+saved from such data. For \code{.sav} files, \code{TRUE}
+corresponds to haven's \code{user_na = TRUE}.}
 
 \item{udm.notice}{Per-call override for the UDM notification frequency.
 \code{NULL} (default) defers to the global setting from \code{joutput()}.
