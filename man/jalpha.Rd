@@ -17,7 +17,9 @@ jalpha(
 \arguments{
 \item{data}{A data frame.}
 
-\item{...}{Unquoted variable names (scale items) within \code{data}.}
+\item{...}{Unquoted variable names (scale items) within \code{data}. Use
+colon notation (e.g. \code{Item1:Item6}) to select a range of consecutive
+columns.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after

@@ -5328,21 +5328,35 @@ juse <- function(data) {
     return(invisible(NULL))
   }
 
-  # juse(NULL) — clear the default
-  if (is.null(data)) {
+  # Capture the supplied expression WITHOUT forcing the promise. A bare
+  # is.null(data) guard here would evaluate the argument first, so a
+  # nonexistent symbol would trip R's raw "object not found" error before
+  # the friendly exists() check below could run.
+  data_sub <- substitute(data)
+
+  # juse(NULL) — a literal NULL clears the default.
+  if (is.null(data_sub)) {
     options(.jst_default_data = NULL)
     message("Default data frame cleared.")
     return(invisible(NULL))
   }
 
-  data_name <- deparse(substitute(data))
+  data_name <- deparse(data_sub)
 
-  # Check it exists and is a data frame
+  # Check it exists and is a data frame.
   calling_env <- parent.frame()
   if (!exists(data_name, envir = calling_env)) {
     .jst_stop(paste0(data_name, " not found."))
   }
-  if (!is.data.frame(get(data_name, envir = calling_env))) {
+  data_val <- get(data_name, envir = calling_env)
+  # A variable that holds NULL also clears the default, preserving the prior
+  # behaviour where the is.null(data) guard caught this case.
+  if (is.null(data_val)) {
+    options(.jst_default_data = NULL)
+    message("Default data frame cleared.")
+    return(invisible(NULL))
+  }
+  if (!is.data.frame(data_val)) {
     .jst_stop(paste0(data_name, " is not a data frame."))
   }
 
@@ -13444,7 +13458,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 #' item-total statistics.
 #'
 #' @param data A data frame.
-#' @param ... Unquoted variable names (scale items) within \code{data}.
+#' @param ... Unquoted variable names (scale items) within \code{data}. Use
+#'   colon notation (e.g. \code{Item1:Item6}) to select a range of consecutive
+#'   columns.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
@@ -13532,7 +13548,11 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     class(variables) <- "quosures"
   }
 
-  variable_names <- vapply(variables, rlang::quo_name, character(1))
+  # Resolve variable names, expanding colon ranges (e.g. Item1:Item6) the same
+  # way jsum()/javg() do via .jst_resolve_varrange(); plain names pass through
+  # unchanged.
+  resolved       <- .jst_resolve_varrange(variables, data, "jalpha", .jst_data_name)
+  variable_names <- resolved$var_names
 
   .jst_check_vars(data, variable_names, .jst_data_name)
   # Type gate (Session 46): scale items must be numeric; refuse text, dates,
@@ -17230,7 +17250,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
       "  .sas7bdat  SAS\n",
-      "  .xpt       SAS transport\n",
+      "  .xpt       SAS interchange\n",
       "  .xlsx      Excel\n",
       "  .xls       Excel (legacy)\n",
       "  .csv       Comma-separated values\n",
@@ -17523,7 +17543,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
          sav      = "SPSS format",
          dta      = "Stata format",
          sas7bdat = "SAS format",
-         xpt      = "SAS transport format",
+         xpt      = "SAS interchange format",
          xlsx     = "Excel format",
          xls      = "Excel (legacy) format",
          csv      = "CSV format",
@@ -18856,18 +18876,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (has_spss && has_stata) {
     return(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
-      "missing-value metadata. Declared missing-value codes lose their ",
-      "missing status, which may result in them being written as ordinary ",
-      "numbers. Alternatively, use jsave(..., preserve.udm = FALSE) to blank ",
-      "them to empty cells instead."))
+      "missing-value metadata.\n",
+      "Declared missing-value codes lose their missing status, which may ",
+      "result in them being written as ordinary numbers.\n",
+      "Alternatively, use jsave(..., preserve.udm = FALSE) to blank them to ",
+      "empty cells instead."))
   }
 
   # SPSS-style only: literal-numbers warning + suggestion.
   if (has_spss) {
     return(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
-      "missing-value metadata. Any SPSS-style missing-value codes (e.g. -99) ",
-      "are written as literal numbers and will read back as ordinary values. ",
+      "missing-value metadata.\n",
+      "Any SPSS-style missing-value codes (e.g. -99) are written as literal ",
+      "numbers and will read back as ordinary values.\n",
       "Alternatively, use jsave(..., preserve.udm = FALSE) to blank them to ",
       "empty cells instead."))
   }
@@ -18889,7 +18911,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'
 #' @description
 #' \code{jsave()} writes a data frame to a file. Supports SPSS (\code{.sav}),
-#' Stata (\code{.dta}), SAS transport (\code{.xpt}), Excel (\code{.xlsx}),
+#' Stata (\code{.dta}), SAS interchange (\code{.xpt}), Excel (\code{.xlsx}),
 #' CSV (\code{.csv}), and R's native \code{.rds} format.
 #'
 #' The file format is determined entirely by the file extension you
@@ -18966,7 +18988,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' # the same data frame can be saved in any supported format
 #' jsave(MyData, "mydata.sav")         # SPSS
 #' jsave(MyData, "mydata.dta")         # Stata
-#' jsave(MyData, "mydata.xpt")         # SAS transport
+#' jsave(MyData, "mydata.xpt")         # SAS interchange
 #' jsave(MyData, "mydata.xlsx")        # Excel
 #' jsave(MyData, "mydata.csv")         # CSV
 #' jsave(MyData, "mydata.rds")         # R native
@@ -19112,7 +19134,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
       "Supported formats:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
-      "  .xpt       SAS transport\n",
+      "  .xpt       SAS interchange\n",
       "  .xlsx      Excel\n",
       "  .csv       Comma-separated values\n",
       "  .rds       R native"
@@ -19144,7 +19166,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
       "Unsupported file extension '.", ext, "'. Supported formats for saving:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
-      "  .xpt       SAS transport\n",
+      "  .xpt       SAS interchange\n",
       "  .xlsx      Excel\n",
       "  .csv       Comma-separated values\n",
       "  .rds       R native",
@@ -19385,25 +19407,31 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
          .jst_norm_path(out_path), " failed.")
   }
 
-  # Format-specific notes (emitted after a confirmed successful write).
+  # Format-specific loss-of-fidelity notes (emitted after a confirmed write).
+  # Collect them, then emit separated by a blank line so that when more than
+  # one fires they do not run together; a single note prints with no extra
+  # blank line. Not joutput-gated -- these are loss-of-fidelity warnings
+  # (Decision 6B), not verbosity-tier detail.
+  loss_notes <- character(0)
+
   # Excel and CSV cannot store labels or missing-value metadata; the note
   # describes the loss (and, when preserve.udm = FALSE blanked SPSS-style
-  # codes, confirms it). Not joutput-gated -- this is a loss-of-fidelity
-  # warning (Decision 6B), not a verbosity-tier detail.
+  # codes, confirms it).
   if (ext %in% c("xlsx", "csv")) {
     label_note <- .jst_jsave_label_loss_note(
       ext, spss_udm_vars, stata_udm_vars, preserve.udm, n_udm_blanked)
-    if (!is.null(label_note)) message(label_note)
+    if (!is.null(label_note)) loss_notes <- c(loss_notes, label_note)
   }
 
   # Classification registrations ride along only in .rds (baked above). Any
   # other format silently drops them, so note the loss -- but only when the
-  # frame actually has registrations to lose. Same loss-of-fidelity footing as
-  # the label note above; not joutput-gated.
+  # frame actually has registrations to lose.
   if (ext != "rds") {
     reg_loss_note <- .jst_jsave_registration_loss_note(ext, data_name)
-    if (!is.null(reg_loss_note)) message(reg_loss_note)
+    if (!is.null(reg_loss_note)) loss_notes <- c(loss_notes, reg_loss_note)
   }
+
+  if (length(loss_notes) > 0) message(paste(loss_notes, collapse = "\n\n"))
 
   # --- Confirmation message --------------------------------------------------
   message(

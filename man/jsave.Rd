@@ -35,7 +35,7 @@ writing a file to disk.
 }
 \description{
 \code{jsave()} writes a data frame to a file. Supports SPSS (\code{.sav}),
-Stata (\code{.dta}), SAS transport (\code{.xpt}), Excel (\code{.xlsx}),
+Stata (\code{.dta}), SAS interchange (\code{.xpt}), Excel (\code{.xlsx}),
 CSV (\code{.csv}), and R's native \code{.rds} format.
 
 The file format is determined entirely by the file extension you
@@ -90,7 +90,7 @@ Use \code{.xlsx} instead.
 # the same data frame can be saved in any supported format
 jsave(MyData, "mydata.sav")         # SPSS
 jsave(MyData, "mydata.dta")         # Stata
-jsave(MyData, "mydata.xpt")         # SAS transport
+jsave(MyData, "mydata.xpt")         # SAS interchange
 jsave(MyData, "mydata.xlsx")        # Excel
 jsave(MyData, "mydata.csv")         # CSV
 jsave(MyData, "mydata.rds")         # R native
