@@ -4,7 +4,20 @@
 \alias{.jst_check_vars}
 \title{Internal helper: check that variable names exist in a data frame}
 \usage{
-.jst_check_vars(data, var_names, data_name = NULL)
+.jst_check_vars(data, var_names, data_name = NULL, default_used = FALSE)
+}
+\arguments{
+\item{data}{The object passed as the data frame.}
+
+\item{var_names}{Character vector of variable names to check.}
+
+\item{data_name}{Optional name of the data frame, used in messages.}
+
+\item{default_used}{Logical. TRUE when the data frame came from the
+juse() default rather than being named in the call; adds a targeted
+hint to the not-found message that names the default and suggests the
+user may have meant a different loaded data frame. Defaults to FALSE,
+so callers that do not pass it get the unchanged message.}
 }
 \description{
 Produces clear error messages for several common user mistakes:

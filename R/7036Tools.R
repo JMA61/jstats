@@ -3030,8 +3030,18 @@
 #' misleading "Variable(s) not found" error pointing at the variables
 #' rather than at the real problem (the data argument itself).
 #'
+#' @param data The object passed as the data frame.
+#' @param var_names Character vector of variable names to check.
+#' @param data_name Optional name of the data frame, used in messages.
+#' @param default_used Logical. TRUE when the data frame came from the
+#'   juse() default rather than being named in the call; adds a targeted
+#'   hint to the not-found message that names the default and suggests the
+#'   user may have meant a different loaded data frame. Defaults to FALSE,
+#'   so callers that do not pass it get the unchanged message.
+#'
 #' @keywords internal
-.jst_check_vars <- function(data, var_names, data_name = NULL) {
+.jst_check_vars <- function(data, var_names, data_name = NULL,
+                            default_used = FALSE) {
 
   # -- First: confirm `data` is actually a data frame ----------------------
   if (!is.data.frame(data)) {
@@ -3062,6 +3072,21 @@
     )
   }
 
+  # -- Guard: blank variable name from an empty positional slot ------------
+  # A stray comma (e.g. jdesc(SampleData, , Age)) leaves an empty quosure,
+  # which quo_name() renders as "". Catch it here -- one consistent error
+  # across the data-first family -- before the not-found check turns it
+  # into an unhelpful blank-bullet "not found" message. The .jst_stop()
+  # prefix auto-detects the public function via the call stack, so the
+  # error names jdesc()/jfreq()/etc., not this helper. (Session 106;
+  # Session 23 to-do item, guard half of the scope split.)
+  if (any(!nzchar(var_names))) {
+    .jst_stop(
+      "Variable names cannot be blank.\n",
+      "Check for a stray comma or period in the call."
+    )
+  }
+
   # -- Then: confirm the requested variables exist in the data frame -------
   missing_vars <- var_names[!var_names %in% names(data)]
   if (length(missing_vars) > 0) {
@@ -3070,12 +3095,117 @@
     } else {
       "the data frame"
     }
+    # When the data frame came from the juse() default rather than being
+    # named in the call, the variable names may simply belong to a different
+    # loaded data frame. Add a targeted hint naming the default, but only on
+    # the default path - a call that named its data frame gets no extra line.
+    # (Session 106.) The hint needs a real name to point at, so it is also
+    # gated on data_name being available.
+    default_hint <- if (isTRUE(default_used) && !is.null(data_name)) {
+      paste0("\n", data_name, " is the juse() default - if you meant a ",
+             "different data frame, name it in the call.")
+    } else {
+      ""
+    }
     .jst_stop(
       "Variable(s) not found in ", df_label, ": ",
       paste(missing_vars, collapse = ", "), ".\n",
-      "Check spelling and make sure the variable exists."
+      "Check spelling and make sure the variable exists.",
+      default_hint
     )
   }
+}
+
+#' Internal helper: front-door check that formula functions got a formula
+#'
+#' Called at the top of the formula-interface functions (jt, jaov, jcrosstab,
+#' jlm, jlogistic) before any output. Verifies the first input is a formula
+#' and, when the data input was supplied, that it is a data frame. Without
+#' this check, a swapped call like jlm(df, Income ~ Age) or a misplaced
+#' leading-comma call like jlm(, Income ~ Age) sails past the opening steps
+#' and crashes deep inside the data pipeline with a raw seq_len() error.
+#' (Session 106.)
+#'
+#' Callers pass NULL for a missing formula/data input rather than the missing
+#' value itself, so this helper can inspect both safely. The non-data-frame
+#' data branch delegates to .jst_check_vars with an empty name list, reusing
+#' its existing data-frame validation messages (quoted-string, NULL, matrix,
+#' catch-all) so no wording is duplicated. All errors route through
+#' .jst_stop(fn = fn) so the public function is named in the prefix.
+#'
+#' @param formula The formula input's value, or NULL when it was missing.
+#' @param data The data input's value, or NULL when it was missing.
+#' @param first_name Deparsed name of the formula input (NULL when missing);
+#'   used in the swapped-order example when the user's data frame sits there.
+#' @param data_name Deparsed name of the data input (NULL when missing).
+#' @param example A per-function example formula string for the generic
+#'   message (e.g. "DV ~ Group").
+#' @param fn The public function's name, for the error prefix and examples.
+#' @return invisible(NULL) when the inputs pass; otherwise never returns.
+#' @keywords internal
+.jst_check_formula_data <- function(formula, data, first_name, data_name,
+                                    example, fn) {
+
+  if (inherits(formula, "formula")) {
+    # Formula slot is fine. If data was supplied but is not a data frame,
+    # fail fast with .jst_check_vars's existing data-frame messages instead
+    # of crashing later inside the pipeline.
+    if (!is.null(data) && !is.data.frame(data)) {
+      .jst_check_vars(data, character(0), data_name)
+    }
+    return(invisible(NULL))
+  }
+
+  data_is_formula <- inherits(data, "formula")
+  f_text <- if (data_is_formula) {
+    paste(deparse(data), collapse = " ")
+  } else {
+    example
+  }
+
+  if (data_is_formula && is.null(formula)) {
+    # Leading-comma habit carried over from the data-first functions:
+    # an empty first slot pushes the formula into the data position.
+    .jst_stop(
+      "The formula goes first - e.g. ", fn, "(", f_text, ", SampleData).\n",
+      "With a juse() default set, no comma is needed: ",
+      fn, "(", f_text, ").",
+      fn = fn
+    )
+  }
+
+  if (data_is_formula) {
+    # Swapped order: the data frame (or another object) sits in the formula
+    # slot and the formula sits in the data slot.
+    d_token <- if (is.data.frame(formula) && !is.null(first_name) &&
+                   nzchar(first_name)) {
+      first_name
+    } else {
+      "SampleData"
+    }
+    .jst_stop(
+      "The formula goes first, then the data - e.g. ",
+      fn, "(", f_text, ", ", d_token, ").",
+      fn = fn
+    )
+  }
+
+  if (is.character(formula) && length(formula) == 1 &&
+      grepl("~", formula, fixed = TRUE)) {
+    # A formula written in quotes is text, not a formula -- a likely habit
+    # for users arriving from syntax-as-strings environments.
+    .jst_stop(
+      "The formula should not be in quotes.\n",
+      "Remove them - e.g. ", fn, "(", formula, ", SampleData).",
+      fn = fn
+    )
+  }
+
+  .jst_stop(
+    "The first input must be a formula - e.g. ",
+    fn, "(", example, ", SampleData).",
+    fn = fn
+  )
 }
 
 #' Internal helper: validate named arguments captured via ...
@@ -6101,7 +6231,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     .jst_stop("Provide at least one variable name, e.g. jcomplete(DV, IV1, IV2).")
   }
 
-  .jst_check_vars(data, variable_names, .jst_data_name)
+  .jst_check_vars(data, variable_names, .jst_data_name, default_used = .jst_default_used)
 
   # Compute summary. Mask declared SPSS-form UDMs (na_values / na_range) to NA on
   # an analysis-only copy first, so this listwise diagnostic matches what the
@@ -6414,7 +6544,7 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
          call. = FALSE)
   }
 
-  .jst_check_vars(data, var_names, .jst_data_name)
+  .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
 
   # -- jdummy(var, show = ...) on an already-registered var: display only ----
   # Single-variable inspection convenience: naming one already-registered
@@ -7736,7 +7866,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   if (!rlang::quo_is_null(by_quo)) {
     check_names <- c(check_names, rlang::quo_name(by_quo))
   }
-  .jst_check_vars(data, check_names, .jst_data_name)
+  .jst_check_vars(data, check_names, .jst_data_name, default_used = .jst_default_used)
 
   # -- Per-call classification overrides -------------------------------------
   # jdesc is per-variable and numeric-coercing. numeric=/count= assert a
@@ -8239,7 +8369,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 
   # Check all variables exist before any processing
   var_names_check <- vapply(variables, rlang::quo_name, character(1))
-  .jst_check_vars(data, var_names_check, .jst_data_name)
+  .jst_check_vars(data, var_names_check, .jst_data_name, default_used = .jst_default_used)
 
   # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
   subset_expr <- substitute(subset)
@@ -8761,7 +8891,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
   if (length(variables) > 0) {
     var_names <- vapply(variables, rlang::quo_name, character(1))
-    .jst_check_vars(data, var_names, .jst_data_name)
+    .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
 
     # Auto-include variables from subset expression
     if (!is.null(subset_expr)) {
@@ -9213,6 +9343,20 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   digits_n <- .jst_resolve_digits(digits)
 
+  # Front-door check: the formula goes first, then the data. A swapped or
+  # misplaced formula otherwise crashes deep inside the data pipeline with
+  # a raw seq_len() error. (Session 106)
+  .jst_check_formula_data(
+    formula    = if (missing(formula)) NULL else formula,
+    data       = if (missing(data))    NULL else data,
+    first_name = if (missing(formula)) NULL else
+                   paste(deparse(substitute(formula)), collapse = ""),
+    data_name  = if (missing(data))    NULL else
+                   paste(deparse(substitute(data)), collapse = ""),
+    example    = "DV ~ Group",
+    fn         = "jt"
+  )
+
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
@@ -9263,7 +9407,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      "A t-test requires two different variables."))
   }
 
-  .jst_check_vars(data, terms, .jst_data_name)
+  .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
   # Type gate (Session 46): refuse a date DV (would coerce silently to a day
   # count) or a text/complex DV (would crash); grouping variable may be
   # categorical. See .jst_check_analysis_var.
@@ -9621,6 +9765,20 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
   digits_n <- .jst_resolve_digits(digits)
 
+  # Front-door check: the formula goes first, then the data. A swapped or
+  # misplaced formula otherwise crashes deep inside the data pipeline with
+  # a raw seq_len() error. (Session 106)
+  .jst_check_formula_data(
+    formula    = if (missing(formula)) NULL else formula,
+    data       = if (missing(data))    NULL else data,
+    first_name = if (missing(formula)) NULL else
+                   paste(deparse(substitute(formula)), collapse = ""),
+    data_name  = if (missing(data))    NULL else
+                   paste(deparse(substitute(data)), collapse = ""),
+    example    = "DV ~ Group",
+    fn         = "jaov"
+  )
+
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
@@ -9671,7 +9829,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      "An ANOVA requires two different variables."))
   }
 
-  .jst_check_vars(data, terms, .jst_data_name)
+  .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
   # Type gate (Session 46): response must be numeric; grouping variable may be
   # categorical. Date/time and complex/list/raw refused. See .jst_check_analysis_var.
   .jst_check_analysis_var(data[[terms[1L]]], terms[1L], TRUE, "an ANOVA")
@@ -10096,6 +10254,20 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   digits_n <- .jst_resolve_digits(digits)
 
+  # Front-door check: the formula goes first, then the data. A swapped or
+  # misplaced formula otherwise crashes deep inside the data pipeline with
+  # a raw seq_len() error. (Session 106)
+  .jst_check_formula_data(
+    formula    = if (missing(formula)) NULL else formula,
+    data       = if (missing(data))    NULL else data,
+    first_name = if (missing(formula)) NULL else
+                   paste(deparse(substitute(formula)), collapse = ""),
+    data_name  = if (missing(data))    NULL else
+                   paste(deparse(substitute(data)), collapse = ""),
+    example    = "RowVar ~ ColVar",
+    fn         = "jcrosstab"
+  )
+
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
@@ -10118,7 +10290,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                      "A cross-tabulation requires two different variables."))
   }
 
-  .jst_check_vars(data, terms, .jst_data_name)
+  .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
   # Type gate (Session 46): both variables are categorical; refuse date/time
   # and complex/list/raw. See .jst_check_analysis_var.
   for (.gv in terms) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a cross-tabulation")
@@ -10465,7 +10637,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
-  .jst_check_vars(data, variable_names, .jst_data_name)
+  .jst_check_vars(data, variable_names, .jst_data_name, default_used = .jst_default_used)
 
   # -- Per-call classification overrides -------------------------------------
   # jcorr is pairwise and numeric-coercing. numeric=/count= assert a numeric-
@@ -11695,6 +11867,20 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # "labels" relabels the coefficient-row terms (display only).
   vlmode          <- .jst_resolve_variable_id(variable.id)
 
+  # Front-door check: the formula goes first, then the data. A swapped or
+  # misplaced formula otherwise crashes deep inside the data pipeline with
+  # a raw seq_len() error. (Session 106)
+  .jst_check_formula_data(
+    formula    = if (missing(formula)) NULL else formula,
+    data       = if (missing(data))    NULL else data,
+    first_name = if (missing(formula)) NULL else
+                   paste(deparse(substitute(formula)), collapse = ""),
+    data_name  = if (missing(data))    NULL else
+                   paste(deparse(substitute(data)), collapse = ""),
+    example    = "DV ~ IV",
+    fn         = "jlm"
+  )
+
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
@@ -11767,7 +11953,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                      "Each variable can only play one role in a regression."))
   }
 
-  .jst_check_vars(data, model_vars, .jst_data_name)
+  .jst_check_vars(data, model_vars, .jst_data_name, default_used = .jst_default_used)
   # Type gate (Session 46): the response must be numeric; predictors may be
   # numeric or categorical. Date/time and complex/list/raw refused in both
   # roles. See .jst_check_analysis_var.
@@ -12758,6 +12944,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # very end, "labels" relabels the coefficient-row terms (display only).
   vlmode          <- .jst_resolve_variable_id(variable.id)
 
+  # Front-door check: the formula goes first, then the data. A swapped or
+  # misplaced formula otherwise crashes deep inside the data pipeline with
+  # a raw seq_len() error. (Session 106)
+  .jst_check_formula_data(
+    formula    = if (missing(formula)) NULL else formula,
+    data       = if (missing(data))    NULL else data,
+    first_name = if (missing(formula)) NULL else
+                   paste(deparse(substitute(formula)), collapse = ""),
+    data_name  = if (missing(data))    NULL else
+                   paste(deparse(substitute(data)), collapse = ""),
+    example    = "DV ~ IV",
+    fn         = "jlogistic"
+  )
+
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
@@ -12816,7 +13016,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                      "Each variable can only play one role in a regression."))
   }
 
-  .jst_check_vars(data, model_vars, .jst_data_name)
+  .jst_check_vars(data, model_vars, .jst_data_name, default_used = .jst_default_used)
   # Type gate (Session 46): the response is binary and may be a recognized
   # text/factor pair (e.g. "Yes"/"No") or logical, so it passes as categorical
   # here -- the DV-resolution block below classifies it via .jst_is_dichotomy(),
@@ -13652,7 +13852,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   resolved       <- .jst_resolve_varrange(variables, data, "jalpha", .jst_data_name)
   variable_names <- resolved$var_names
 
-  .jst_check_vars(data, variable_names, .jst_data_name)
+  .jst_check_vars(data, variable_names, .jst_data_name, default_used = .jst_default_used)
   # Type gate (Session 46): scale items must be numeric; refuse text, dates,
   # and complex/list/raw. See .jst_check_analysis_var.
   for (.gv in variable_names) .jst_check_analysis_var(data[[.gv]], .gv, TRUE, "Cronbach's alpha")
@@ -13888,6 +14088,17 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   }
 
   for (q in quos_list) {
+    # An empty positional slot (stray comma) arrives as a missing quosure;
+    # touching its expression via quo_get_expr() below would throw R's raw
+    # "argument is missing, with no default" error. Pass it through as ""
+    # so the caller's .jst_check_vars blank-name guard reports it in the
+    # one consistent voice. (Session 106; Session 23 to-do item.)
+    if (rlang::quo_is_missing(q)) {
+      var_names   <- c(var_names, "")
+      label_parts <- c(label_parts, "")
+      next
+    }
+
     expr <- rlang::quo_get_expr(q)
 
     if (is.call(expr) && identical(expr[[1]], as.name(":"))) {
@@ -14031,7 +14242,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     .jst_stop("At least 2 variables are required.")
   }
 
-  .jst_check_vars(data, var_names, .jst_data_name)
+  .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
 
   # Assumption-check warning (audit): nudge only on a declared contradiction --
   # a variable the user registered as categorical via jdummy() and is now
@@ -14264,7 +14475,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     .jst_stop("At least 2 variables are required.")
   }
 
-  .jst_check_vars(data, var_names, .jst_data_name)
+  .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
 
   # Assumption-check warning (audit): nudge only on a declared contradiction --
   # a variable the user registered as categorical via jdummy() and is now
@@ -19975,7 +20186,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # Check all variables exist
   check_names <- variable_names
   if (has_by) check_names <- c(check_names, by_name)
-  .jst_check_vars(data, check_names, .jst_data_name)
+  .jst_check_vars(data, check_names, .jst_data_name, default_used = .jst_default_used)
 
   # -- Per-call classification overrides -------------------------------------
   # In jplot a variable's class chooses the geometry (numeric -> histogram /
@@ -20309,7 +20520,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # -- Validate variables exist ---------------------------------------------
   check_names <- c(y_name, x_name)
   if (has_by) check_names <- c(check_names, by_name)
-  .jst_check_vars(data, check_names, .jst_data_name)
+  .jst_check_vars(data, check_names, .jst_data_name, default_used = .jst_default_used)
 
   # -- Per-call classification overrides (formula form) ---------------------
   # Same semantics as the variable-list form: numeric=/categorical=/count=
