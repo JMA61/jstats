@@ -2719,6 +2719,23 @@
          call. = FALSE)
   }
 
+  # Validate the per-call case.processing.detail value at this shared chokepoint
+  # (every analysis function routes its case.processing.detail through here as
+  # detail=). NULL means "defer to the joutput tier default"; any non-NULL value
+  # must be a real detail tier. Caught here -- rather than left to slip through
+  # to .jst_resolve_cps_render's internal "no bottom rule" stop() -- so an
+  # invalid value (e.g. the output-level name "full" passed by mistake) yields
+  # the same house-voice error every analysis function would give, attributed to
+  # the public caller via .jst_stop_arg's auto-detection. Mirrors the joutput()
+  # guard on the same argument; user-facing value, so it routes through
+  # .jst_stop_arg rather than the bare internal-invariant stop() above.
+  if (!is.null(detail) &&
+      (!is.character(detail) || length(detail) != 1L ||
+       !(detail %in% c("none", "totals", "per_code")))) {
+    .jst_stop_arg(arg = "case.processing.detail",
+                  choices = c("none", "totals", "per_code"))
+  }
+
   n_original <- sample_info$n_original
   n_analysis <- sample_info$n_analysis
   if (is.null(n_original) || n_original == 0) return(invisible(NULL))
