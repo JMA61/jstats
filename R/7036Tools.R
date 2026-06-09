@@ -13909,8 +13909,20 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     }
   }
 
-  # Extract columns and convert any haven-labelled to numeric
-  items <- data[, var_names, drop = FALSE]
+  # Extract columns. Mask declared SPSS-form UDM cells to NA on this
+  # analysis-only copy BEFORE stripping the haven class, so declared
+  # missing codes (e.g. -98) are excluded rather than summed as literal
+  # data. The user's data frame is unchanged (na_values / na_range stay
+  # attached for round-trip fidelity). Stata-form tagged NAs need no
+  # masking -- they satisfy is.na() natively and survive
+  # .jst_as_numeric() as NA, so the non-missing count already excludes
+  # them. Applies the SPSS-UDM auto-conversion helper directly rather
+  # than routing through .jst_apply_pipeline, whose jsubset/jcomplete
+  # filtering would drop rows and misalign this row-wise result with
+  # the data frame.
+  items     <- data[, var_names, drop = FALSE]
+  .udm_conv <- .jst_apply_declared_udms_as_na(items)
+  items     <- .udm_conv$data
   for (v in var_names) {
     items[[v]] <- .jst_as_numeric(items[[v]])
   }
@@ -13979,6 +13991,21 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     msg_parts <- paste0(msg_parts, ".")
   }
   message(msg_parts)
+
+  # Default-silent FYI (joutput "full" only): if declared SPSS-style
+  # missing values were masked above, report where, mirroring how the
+  # analysis pipeline surfaces its auto-conversions. SPSS is silent
+  # here too, so this stays off at standard/minimal.
+  if (length(.udm_conv$converted) > 0) {
+    conv_parts <- vapply(names(.udm_conv$converted), function(v) {
+      nc <- .udm_conv$converted[[v]]$n_cells
+      paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
+    }, character(1))
+    .jst_advisory_note(paste0(
+      "Note: declared SPSS-style missing values were treated as missing ",
+      "for this calculation - ", paste(conv_parts, collapse = ", "), "."
+    ))
+  }
 
   # Attach variable label
   if (!is.null(var.label)) {
@@ -14115,8 +14142,20 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     }
   }
 
-  # Extract columns and convert any haven-labelled to numeric
-  items <- data[, var_names, drop = FALSE]
+  # Extract columns. Mask declared SPSS-form UDM cells to NA on this
+  # analysis-only copy BEFORE stripping the haven class, so declared
+  # missing codes (e.g. -98) are excluded rather than summed as literal
+  # data. The user's data frame is unchanged (na_values / na_range stay
+  # attached for round-trip fidelity). Stata-form tagged NAs need no
+  # masking -- they satisfy is.na() natively and survive
+  # .jst_as_numeric() as NA, so the non-missing count already excludes
+  # them. Applies the SPSS-UDM auto-conversion helper directly rather
+  # than routing through .jst_apply_pipeline, whose jsubset/jcomplete
+  # filtering would drop rows and misalign this row-wise result with
+  # the data frame.
+  items     <- data[, var_names, drop = FALSE]
+  .udm_conv <- .jst_apply_declared_udms_as_na(items)
+  items     <- .udm_conv$data
   for (v in var_names) {
     items[[v]] <- .jst_as_numeric(items[[v]])
   }
@@ -14193,6 +14232,21 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     msg_parts <- paste0(msg_parts, ".")
   }
   message(msg_parts)
+
+  # Default-silent FYI (joutput "full" only): if declared SPSS-style
+  # missing values were masked above, report where, mirroring how the
+  # analysis pipeline surfaces its auto-conversions. SPSS is silent
+  # here too, so this stays off at standard/minimal.
+  if (length(.udm_conv$converted) > 0) {
+    conv_parts <- vapply(names(.udm_conv$converted), function(v) {
+      nc <- .udm_conv$converted[[v]]$n_cells
+      paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
+    }, character(1))
+    .jst_advisory_note(paste0(
+      "Note: declared SPSS-style missing values were treated as missing ",
+      "for this calculation - ", paste(conv_parts, collapse = ", "), "."
+    ))
+  }
 
   # Attach variable label
   if (!is.null(var.label)) {
@@ -17092,7 +17146,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- Determine if file has a directory component ---------------------------
-  has_dir <- grepl("/", file)
+  has_dir <- grepl("[/\\\\]", file)  # forward slash or Windows-native backslash
 
   # --- Determine file extension ----------------------------------------------
   ext <- tolower(tools::file_ext(file))
@@ -19082,7 +19136,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   }
 
   # --- Resolve output path ---------------------------------------------------
-  has_dir <- grepl("/", file)
+  has_dir <- grepl("[/\\\\]", file)  # forward slash or Windows-native backslash
 
   if (has_dir) {
     out_path <- file
