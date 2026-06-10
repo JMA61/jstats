@@ -14222,6 +14222,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 
   data           <- arg1$data
   .jst_data_name <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   # Resolve variable names (handles colon ranges)
   quos_list <- rlang::enquos(...)
@@ -14455,6 +14456,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
 
   data           <- arg1$data
   .jst_data_name <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   # Resolve variable names (handles colon ranges)
   quos_list <- rlang::enquos(...)
