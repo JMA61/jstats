@@ -94,7 +94,7 @@
 #' # With a vector directly
 #' jdesc(mtcars$mpg)
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -612,7 +612,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' # With a vector directly
 #' jfreq(mtcars$gear)
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -1126,7 +1126,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' jscreen(mpg, hp, wt)
 #' jscreen(mpg, hp, wt, subset = am == 1)
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export

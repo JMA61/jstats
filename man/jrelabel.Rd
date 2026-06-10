@@ -38,7 +38,7 @@ a recode, to fix missing labels, or to label any variable that needs them.
 
 The function accepts haven-labelled, plain numeric, factor, and character
 variables. The output is always a \code{haven_labelled} vector, which is
-compatible with all JeffsStatTools functions.
+compatible with all jstats functions.
 
 Both the \code{labels} and \code{var.label} arguments are optional. If
 neither is supplied, the function returns the variable unchanged as a
@@ -69,6 +69,6 @@ df$StatusR <- jrelabel(StatusR, labels = "1=Active; 0=Inactive")
 \code{\link{jrecode}} for recoding values with optional labels
 in a single step.
 
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

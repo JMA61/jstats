@@ -127,5 +127,5 @@ joptions(NULL)                                    # reset all to defaults
 }
 \seealso{
 \code{\link{joutput}} for output-verbosity settings;
-\code{\link{JeffsStatTools}} for the package overview.
+\code{\link{jstats}} for the package overview.
 }

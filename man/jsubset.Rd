@@ -26,7 +26,7 @@ Invisibly returns \code{NULL}. Called for its side effect.
 }
 \description{
 \code{jsubset()} sets a persistent case-selection expression that is
-applied automatically by JeffsStatTools analysis functions when the
+applied automatically by jstats analysis functions when the
 default data frame (set by \code{juse()}) is in use. This is analogous
 to the SPSS FILTER command.
 
@@ -59,6 +59,6 @@ jsubset(NULL)                 # Clear entirely
 
 }
 \seealso{
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

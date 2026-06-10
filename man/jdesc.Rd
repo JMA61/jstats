@@ -129,6 +129,6 @@ jdesc(mtcars$mpg)
 
 }
 \seealso{
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

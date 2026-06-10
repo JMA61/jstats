@@ -126,5 +126,5 @@ SampleData <- jdeclare_udm(SampleData, Income,
 }
 \seealso{
 \code{\link{jrecode}}, \code{\link{jconvert}},
-\code{\link{joptions}}, \code{\link{JeffsStatTools}}
+\code{\link{joptions}}, \code{\link{jstats}}
 }

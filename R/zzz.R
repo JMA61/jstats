@@ -1,9 +1,9 @@
 
 # -- Package lifecycle hooks ---------------------------------------------------
 #
-# All package-level hooks for JeffsStatTools live in this file:
+# All package-level hooks for jstats live in this file:
 #
-#   .onAttach()  — runs automatically on library(JeffsStatTools). Performs
+#   .onAttach()  — runs automatically on library(jstats). Performs
 #                  two independent checks: (1) compares the installed
 #                  version to the current version on GitHub, and (2) reads
 #                  a redirect-and-announce gist to pick up any
@@ -31,7 +31,7 @@
 # Schema:
 #   {
 #     "schema_version": 1,
-#     "current_package": "JeffsStatTools",
+#     "current_package": "jstats",
 #     "successor": null | { "package": "<name>", "install_hint": "<cmd>" },
 #     "message":   null | "<string>",
 #     "last_updated": "YYYY-MM-DD"
@@ -106,7 +106,7 @@
     on.exit(options(old_opts), add = TRUE)
 
     github_desc <- readLines(
-      "https://raw.githubusercontent.com/JMA61/JeffsStatTools/main/DESCRIPTION",
+      "https://raw.githubusercontent.com/JMA61/jstats/main/DESCRIPTION",
       warn = FALSE
     )
     ver_line   <- github_desc[grepl("^Version:", github_desc)]
@@ -115,20 +115,20 @@
     if (package_version(github_ver) > package_version(installed_ver)) {
       packageStartupMessage(
         "=======================================================\n",
-        " A new version of JeffsStatTools is available (", github_ver, ").\n",
+        " A new version of jstats is available (", github_ver, ").\n",
         " You have version ", installed_ver, ".\n",
         " To update, run:\n",
-        "   detach('package:JeffsStatTools', unload = TRUE)\n",
-        "   remotes::install_github('JMA61/JeffsStatTools', upgrade = 'never')\n",
-        "   library(JeffsStatTools)\n",
+        "   detach('package:jstats', unload = TRUE)\n",
+        "   remotes::install_github('JMA61/jstats', upgrade = 'never')\n",
+        "   library(jstats)\n",
         "======================================================="
       )
     } else {
-      packageStartupMessage("JeffsStatTools v", installed_ver, " is up to date.")
+      packageStartupMessage("jstats v", installed_ver, " is up to date.")
     }
   }, error = function(e) {
     packageStartupMessage(
-      "JeffsStatTools v", installed_ver, " loaded.",
+      "jstats v", installed_ver, " loaded.",
       " (Could not check for updates - no internet connection?)"
     )
   })
@@ -144,10 +144,15 @@
 .jst_show_migration <- function(successor, installed_ver) {
   pkg  <- successor$package
   hint <- successor$install_hint
+  # Name the retiring package from its own metadata rather than a literal,
+  # so this message carries no hardcoded source/target pair: the source is
+  # whatever package this hook ships in, the target comes from the gist.
+  this_pkg <- utils::packageName()
+  if (is.null(this_pkg) || !nzchar(this_pkg)) this_pkg <- "This package"
 
   body <- paste0(
     "=======================================================\n",
-    " JeffsStatTools has been renamed to `", pkg, "`.\n",
+    " ", this_pkg, " has been renamed to `", pkg, "`.\n",
     " This package (v", installed_ver, ") is no longer maintained."
   )
 
@@ -249,13 +254,13 @@
 
 # -- .onAttach -----------------------------------------------------------------
 #
-# Runs automatically on library(JeffsStatTools). Non-interactive sessions
+# Runs automatically on library(jstats). Non-interactive sessions
 # (e.g., R CMD check, knitr builds) are silent.
 
 .onAttach <- function(libname, pkgname) {
   if (!interactive()) return()
 
-  installed_ver <- as.character(utils::packageVersion("JeffsStatTools"))
+  installed_ver <- as.character(utils::packageVersion("jstats"))
   gist_info     <- .jst_read_gist()
 
   # If the gist says a successor exists, show migration message only.

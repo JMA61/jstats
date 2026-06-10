@@ -68,6 +68,6 @@ MyData$Total <- jsum(MyData, Score1, Score2, Score3)
 \seealso{
 \code{\link{javg}} for computing row-wise means.
 
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

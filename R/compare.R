@@ -77,7 +77,7 @@
 #' jt(mpg ~ am)
 #' jt(mpg ~ am, full = TRUE)
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -499,7 +499,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' jaov(mpg ~ cyl)
 #' jaov(mpg ~ cyl, full = TRUE)
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -988,7 +988,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' jcrosstab(cyl ~ am)
 #' jcrosstab(cyl ~ am, chisq = TRUE)
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @importFrom stats chisq.test

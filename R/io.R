@@ -29,7 +29,7 @@
 #' @param name Character string (optional). The name to assign the data frame
 #'   in your environment. If omitted, the name is derived from the filename.
 #' @param use Logical. If \code{TRUE}, automatically calls \code{juse()} on
-#'   the loaded data frame to set it as the default for JeffsStatTools
+#'   the loaded data frame to set it as the default for jstats
 #'   functions. Default is \code{FALSE}.
 #' @param overwrite Logical. If \code{TRUE}, overwrites an existing object
 #'   with the same name without prompting. If \code{FALSE} (default),
@@ -137,7 +137,7 @@
 #' jload("mydata.rds", name = "MyData", quiet = TRUE)
 #' }
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -1298,7 +1298,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
     cat("\n")
     if (has_udm) {
-      cat("[user-defined missing value]: already treated as NA by JeffsStatTools\n")
+      cat("[user-defined missing value]: already treated as NA by jstats\n")
       cat("  analysis functions. Conversion to plain NA is optional --- useful\n")
       cat("  if you'll use this dataset with base R or non-package functions where\n")
       cat("  the numeric values may be misinterpreted as real.\n")
@@ -2010,7 +2010,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' jsave(MyData, "C:/Output/mydata.sav")
 #' }
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export

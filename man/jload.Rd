@@ -26,7 +26,7 @@ searches for common data file types automatically.}
 in your environment. If omitted, the name is derived from the filename.}
 
 \item{use}{Logical. If \code{TRUE}, automatically calls \code{juse()} on
-the loaded data frame to set it as the default for JeffsStatTools
+the loaded data frame to set it as the default for jstats
 functions. Default is \code{FALSE}.}
 
 \item{overwrite}{Logical. If \code{TRUE}, overwrites an existing object
@@ -166,6 +166,6 @@ jload("mydata.rds", name = "MyData", quiet = TRUE)
 
 }
 \seealso{
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

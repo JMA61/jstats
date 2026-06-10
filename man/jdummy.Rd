@@ -72,6 +72,6 @@ jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 
 }
 \seealso{
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

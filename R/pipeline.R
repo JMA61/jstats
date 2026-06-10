@@ -7,11 +7,11 @@
 
 # -- juse ---------------------------------------------------------------------
 
-#' Set or display the default data frame for JeffsStatTools functions
+#' Set or display the default data frame for jstats functions
 #'
 #' @description
 #' \code{juse()} sets a default data frame that will be used automatically
-#' by all JeffsStatTools functions when the \code{data} argument is omitted.
+#' by all jstats functions when the \code{data} argument is omitted.
 #' This reduces typing and makes interactive use more convenient.
 #'
 #' The function stores the \emph{name} of the data frame, not a copy of
@@ -40,7 +40,7 @@
 #' juse(NULL)             # Clear the default
 #' }
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -101,7 +101,7 @@ juse <- function(data) {
 #'
 #' @description
 #' \code{jsubset()} sets a persistent case-selection expression that is
-#' applied automatically by JeffsStatTools analysis functions when the
+#' applied automatically by jstats analysis functions when the
 #' default data frame (set by \code{juse()}) is in use. This is analogous
 #' to the SPSS FILTER command.
 #'
@@ -147,7 +147,7 @@ juse <- function(data) {
 #' jsubset(NULL)                 # Clear entirely
 #' }
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -578,7 +578,7 @@ jsubset <- function(data, expr) {
 #' jcomplete(NULL)                # Clear entirely
 #' }
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -974,7 +974,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 #' }
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export

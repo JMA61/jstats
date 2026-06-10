@@ -1,8 +1,8 @@
 #<<<FILE: utils.R>>>
-#' JeffsStatTools: Simplified Statistical Analysis Tools for Social Science
+#' jstats: Simplified Statistical Analysis Tools for Social Science
 #'
 #' @description
-#' JeffsStatTools simplifies R for users who need to do social science
+#' jstats simplifies R for users who need to do social science
 #' analyses without being required to become experienced computer
 #' programmers first. The package provides consistent syntax, sensible
 #' defaults, and protection from confusing base R behaviors, while
@@ -76,7 +76,7 @@
 #' }
 #'
 #' For the full alphabetical listing of every exported function, run
-#' \code{library(help = "JeffsStatTools")} or browse the package index.
+#' \code{library(help = "jstats")} or browse the package index.
 #'
 #' @section Workflow conventions:
 #' \strong{The j-prefix.} Every user-facing function starts with
@@ -121,7 +121,7 @@
 #' @section Where to go next:
 #' \itemize{
 #'   \item For the full alphabetical listing of functions:
-#'     \code{library(help = "JeffsStatTools")}.
+#'     \code{library(help = "jstats")}.
 #'   \item For source, issue reports, and contribution guidelines:
 #'     the package's GitHub repository.
 #'   \item For statistics and R fundamentals (in preparation): Book 1

@@ -152,7 +152,7 @@
 #'   jplot(SampleData, Program, Employment)     # grouped bar chart
 #' }
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export

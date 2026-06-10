@@ -119,7 +119,7 @@
 #' joutput()                               # show current settings
 #' joutput(NULL)                           # reset to defaults
 #'
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -480,7 +480,7 @@ joutput <- function(level, effect.size = NULL,
 #' joptions(NULL)                                    # reset all to defaults
 #'
 #' @seealso \code{\link{joutput}} for output-verbosity settings;
-#'   \code{\link{JeffsStatTools}} for the package overview.
+#'   \code{\link{jstats}} for the package overview.
 #'
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, joptions() applies the

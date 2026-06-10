@@ -7,6 +7,6 @@
 
 ^demo_data$
 ^R_backup_
-^7036Tools\.R$
 ^tools/file_manifest\.txt$
 ^jstats_dev_tools\.R$
+^jstats_source\.R$

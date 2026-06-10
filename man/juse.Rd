@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{juse}
 \alias{juse}
-\title{Set or display the default data frame for JeffsStatTools functions}
+\title{Set or display the default data frame for jstats functions}
 \usage{
 juse(data)
 }
@@ -16,7 +16,7 @@ setting, displaying, or clearing the default data frame.
 }
 \description{
 \code{juse()} sets a default data frame that will be used automatically
-by all JeffsStatTools functions when the \code{data} argument is omitted.
+by all jstats functions when the \code{data} argument is omitted.
 This reduces typing and makes interactive use more convenient.
 
 The function stores the \emph{name} of the data frame, not a copy of
@@ -42,6 +42,6 @@ juse(NULL)             # Clear the default
 
 }
 \seealso{
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

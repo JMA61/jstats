@@ -154,7 +154,7 @@
 #' }
 #'
 #' @seealso \code{\link{javg}} for computing row-wise means.
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -388,7 +388,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 #' }
 #'
 #' @seealso \code{\link{jsum}} for computing row-wise sums.
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export

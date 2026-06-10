@@ -17,7 +17,7 @@
 #'
 #' The function accepts haven-labelled, plain numeric, factor, and character
 #' variables. The output is always a \code{haven_labelled} vector, which is
-#' compatible with all JeffsStatTools functions.
+#' compatible with all jstats functions.
 #'
 #' Both the \code{labels} and \code{var.label} arguments are optional. If
 #' neither is supplied, the function returns the variable unchanged as a
@@ -65,7 +65,7 @@
 #'
 #' @seealso \code{\link{jrecode}} for recoding values with optional labels
 #'   in a single step.
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -864,7 +864,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   after a recode.
 #' @seealso \code{\link{joptions}} for the session-level
 #'   \code{missing.convention} setting.
-#' @seealso \code{\link{JeffsStatTools}} for the package overview,
+#' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
@@ -1270,7 +1270,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' declaration ends up out of step with the rest of its DF.
 #'
 #' @seealso \code{\link{jrecode}}, \code{\link{jconvert}},
-#'   \code{\link{joptions}}, \code{\link{JeffsStatTools}}
+#'   \code{\link{joptions}}, \code{\link{jstats}}
 #'
 #' @examples
 #' \dontrun{

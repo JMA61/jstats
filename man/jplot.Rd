@@ -219,6 +219,6 @@ band illustrating the homoskedasticity assumption), \code{none} (no band).
 
 }
 \seealso{
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }

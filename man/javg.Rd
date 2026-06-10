@@ -79,6 +79,6 @@ MyData$Avg <- javg(MyData, Score1, Score2, Score3)
 \seealso{
 \code{\link{jsum}} for computing row-wise sums.
 
-\code{\link{JeffsStatTools}} for the package overview,
+\code{\link{jstats}} for the package overview,
 workflow conventions, and complete function listing.
 }
