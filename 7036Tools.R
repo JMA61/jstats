@@ -1,3 +1,4 @@
+#<<<FILE: utils.R>>>
 #' JeffsStatTools: Simplified Statistical Analysis Tools for Social Science
 #'
 #' @description
@@ -16,7 +17,7 @@
 #'
 #' @section Audience:
 #' The long-term primary audience is the broader social science
-#' quantitative research community — criminologists, sociologists,
+#' quantitative research community -- criminologists, sociologists,
 #' political scientists, psychologists, public health researchers,
 #' and others who routinely work with Likert scales, categorical
 #' variables, dichotomies, Cronbach's alpha, dummy-coded regression,
@@ -30,48 +31,48 @@
 #' @section Functions by purpose:
 #' \strong{Descriptive analysis}
 #' \itemize{
-#'   \item \code{\link{jdesc}} — univariate descriptives (mean, median, SD, range, etc.) with optional grouping
-#'   \item \code{\link{jfreq}} — frequency tables for one or more variables
-#'   \item \code{\link{jcorr}} — Pearson or Spearman correlations with significance tests
-#'   \item \code{\link{jalpha}} — Cronbach's alpha and item-total statistics for scale reliability
-#'   \item \code{\link{jscreen}} — data screening for outliers, ranges, and skew
+#'   \item \code{\link{jdesc}} -- univariate descriptives (mean, median, SD, range, etc.) with optional grouping
+#'   \item \code{\link{jfreq}} -- frequency tables for one or more variables
+#'   \item \code{\link{jcorr}} -- Pearson or Spearman correlations with significance tests
+#'   \item \code{\link{jalpha}} -- Cronbach's alpha and item-total statistics for scale reliability
+#'   \item \code{\link{jscreen}} -- data screening for outliers, ranges, and skew
 #' }
 #'
 #' \strong{Group comparisons and modeling}
 #' \itemize{
-#'   \item \code{\link{jt}} — independent or paired t-test
-#'   \item \code{\link{jaov}} — one-way analysis of variance with optional post-hoc tests
-#'   \item \code{\link{jcrosstab}} — cross-tabulation with chi-square and effect-size options
-#'   \item \code{\link{jlm}} — linear regression
-#'   \item \code{\link{jlogistic}} — logistic regression
+#'   \item \code{\link{jt}} -- independent or paired t-test
+#'   \item \code{\link{jaov}} -- one-way analysis of variance with optional post-hoc tests
+#'   \item \code{\link{jcrosstab}} -- cross-tabulation with chi-square and effect-size options
+#'   \item \code{\link{jlm}} -- linear regression
+#'   \item \code{\link{jlogistic}} -- logistic regression
 #' }
 #'
 #' \strong{Variable construction}
 #' \itemize{
-#'   \item \code{\link{jrecode}} — recode values, with optional new value labels
-#'   \item \code{\link{jrelabel}} — apply or replace value labels and variable label
-#'   \item \code{\link{jsum}} — row-wise sum across variables, with min-valid handling
-#'   \item \code{\link{javg}} — row-wise mean across variables, with min-valid handling
+#'   \item \code{\link{jrecode}} -- recode values, with optional new value labels
+#'   \item \code{\link{jrelabel}} -- apply or replace value labels and variable label
+#'   \item \code{\link{jsum}} -- row-wise sum across variables, with min-valid handling
+#'   \item \code{\link{javg}} -- row-wise mean across variables, with min-valid handling
 #' }
 #'
 #' \strong{Pipeline state management}
 #' \itemize{
-#'   \item \code{\link{juse}} — set the default data frame used implicitly by analysis functions
-#'   \item \code{\link{jsubset}} — activate a row-level case-selection expression applied to subsequent calls
-#'   \item \code{\link{jcomplete}} — activate listwise filtering on selected variables
-#'   \item \code{\link{jdummy}} — register categorical variables for dummy coding in regression
-#'   \item \code{\link{joutput}} — set session-level output verbosity (minimal / standard / full)
+#'   \item \code{\link{juse}} -- set the default data frame used implicitly by analysis functions
+#'   \item \code{\link{jsubset}} -- activate a row-level case-selection expression applied to subsequent calls
+#'   \item \code{\link{jcomplete}} -- activate listwise filtering on selected variables
+#'   \item \code{\link{jdummy}} -- register categorical variables for dummy coding in regression
+#'   \item \code{\link{joutput}} -- set session-level output verbosity (minimal / standard / full)
 #' }
 #'
 #' \strong{Data import and export}
 #' \itemize{
-#'   \item \code{\link{jload}} — load data from \code{.rds}, \code{.sav}, \code{.dta}, \code{.sas7bdat}, \code{.xlsx}, or \code{.csv}
-#'   \item \code{\link{jsave}} — save a data frame, with format inferred from the file extension
+#'   \item \code{\link{jload}} -- load data from \code{.rds}, \code{.sav}, \code{.dta}, \code{.sas7bdat}, \code{.xlsx}, or \code{.csv}
+#'   \item \code{\link{jsave}} -- save a data frame, with format inferred from the file extension
 #' }
 #'
 #' \strong{Visualisation}
 #' \itemize{
-#'   \item \code{\link{jplot}} — base histograms and bar plots for data, plus method dispatch on result objects from \code{jt()}, \code{jlm()}, etc.
+#'   \item \code{\link{jplot}} -- base histograms and bar plots for data, plus method dispatch on result objects from \code{jt()}, \code{jlm()}, etc.
 #' }
 #'
 #' For the full alphabetical listing of every exported function, run
@@ -101,14 +102,14 @@
 #'
 #' \strong{Pipeline stages.} \code{jsubset()}, \code{jcomplete()}, and
 #' \code{jdummy()} modify session state that subsequent analysis calls
-#' read automatically. State is explicit — calls can be inspected,
+#' read automatically. State is explicit -- calls can be inspected,
 #' inactivated, and cleared, and active state is reported in analysis
 #' output, so a script's behavior stays visible and reproducible
 #' rather than depending on hidden context.
 #'
 #' \strong{Output verbosity.} \code{joutput()} sets one of three
-#' preset levels — \code{minimal}, \code{standard} (default), or
-#' \code{full} — that modulate how much detail analysis functions
+#' preset levels -- \code{minimal}, \code{standard} (default), or
+#' \code{full} -- that modulate how much detail analysis functions
 #' print. Useful for stripping output in production scripts or
 #' expanding it during exploration. Per-call arguments always
 #' override session-level settings. The Case Processing Summary
@@ -596,6 +597,7 @@
     cat(prefix, paste(row_cells, collapse = gap), "\n", sep = "")
   }
 }
+#<<<FILE: registry-internals.R>>>
 
 
 # -----------------------------------------------------------------------------
@@ -1317,7 +1319,7 @@
 #'   \item haven_labelled with descriptive labels already containing the
 #'         variable name (e.g. Program labelled "Program 1", "Program 2"...).
 #'   \item haven_labelled with labels that equal the codes as strings
-#'         (i.e. uninformative — labels carry no extra information).
+#'         (i.e. uninformative -- labels carry no extra information).
 #'   \item Plain numeric with no labels.
 #'   \item Factor with character levels.
 #'   \item Character vector.
@@ -1341,12 +1343,12 @@
 #' }
 #'
 #' Permissive reference matching: when \code{ref} is a character string,
-#' three matching attempts are made — direct match against canonical labels,
+#' three matching attempts are made -- direct match against canonical labels,
 #' canonicalised user input matched against canonical labels (so
 #' \code{"Program 3"} or \code{"3"} both find \code{"Program_3"}), and
 #' string match against codes (so \code{"3"} also matches code 3).
 #'
-#' @param x A vector — haven_labelled, factor, character, or numeric.
+#' @param x A vector -- haven_labelled, factor, character, or numeric.
 #' @param var_name Character. The variable's name (used as the dummy
 #'   column prefix).
 #' @param ref Reference category specifier. May be \code{first} (default),
@@ -1616,7 +1618,7 @@
 #'       names actually expanded into dummy columns (registered, minus any
 #'       skipped by a per-call numeric=/count= override, minus any not in the
 #'       formula). Callers use this to identify which originals were replaced.}
-#'     \item{dummy_coef_names}{Character vector of dummy column names (for blanking β).}
+#'     \item{dummy_coef_names}{Character vector of dummy column names (for blanking beta).}
 #'   }
 #'
 #' @keywords internal
@@ -1686,6 +1688,7 @@
        dummy_coef_names = dummy_coef_names,
        expanded_originals = expanded_originals)
 }
+#<<<FILE: pipeline-internals.R>>>
 
 #' Internal helper: apply a logical mask expression to a data frame
 #'
@@ -1702,10 +1705,10 @@
 #' @param envir Environment to evaluate \code{expr} in. Data columns
 #'   take precedence; \code{envir} provides fallback bindings.
 #' @param on_error One of \code{"warn"} or \code{"stop"}. \code{"warn"}
-#'   emits a warning and returns the data unchanged — used for the
+#'   emits a warning and returns the data unchanged -- used for the
 #'   persistent jsubset state, where the expression was validated when
 #'   set and a runtime failure is unexpected. \code{"stop"} raises an
-#'   error — used for the per-call \code{subset =} argument, where a
+#'   error -- used for the per-call \code{subset =} argument, where a
 #'   broken expression is a user error at call time.
 #' @param stage_label Character. Prefix used in the error/warning
 #'   message (e.g. \code{"jsubset"} or \code{"Subset"}) so failures
@@ -2456,6 +2459,7 @@
                     NA),
   stringsAsFactors = FALSE
 )
+#<<<FILE: cps.R>>>
 
 #' Internal helper: first-match lookup against a CPS rule frame
 #'
@@ -3015,6 +3019,7 @@
 
   invisible(NULL)
 }
+#<<<FILE: checks.R>>>
 
 #' Internal helper: check that variable names exist in a data frame
 #'
@@ -3421,6 +3426,7 @@
        data = resolved$data, name = resolved$name,
        first_arg_sub = data_sub, first_arg_value = NULL)
 }
+#<<<FILE: missing-internals.R>>>
 
 #' Internal helper: detect values that look like coded missing markers
 #'
@@ -3428,11 +3434,11 @@
 #' (e.g. \code{99}, \code{999}, \code{-99}) rather than legitimate
 #' data. Two heuristics are applied:
 #' \enumerate{
-#'   \item Any negative value when all other values are positive —
+#'   \item Any negative value when all other values are positive --
 #'     catches conventions like \code{-99} or \code{-9} for missing in
 #'     otherwise non-negative categorical data.
 #'   \item Any value whose absolute magnitude is at least 5 times the
-#'     maximum of the other values — catches \code{99} in a 1-5 scale,
+#'     maximum of the other values -- catches \code{99} in a 1-5 scale,
 #'     \code{999} in a 1-10 scale, and so on.
 #' }
 #' Does not print messages; the calling function decides how to surface
@@ -3732,6 +3738,7 @@
 
   result
 }
+#<<<FILE: classify.R>>>
 
 
 # -- Variable classifier helpers ----------------------------------------------
@@ -3761,7 +3768,7 @@
 #'
 #' Returns TRUE only when the user has explicitly signalled that a variable
 #' should be treated as categorical. This helper answers the question
-#' "should this variable be behaviorally treated as categorical?" — for
+#' "should this variable be behaviorally treated as categorical?" -- for
 #' decisions like factoring in regression, expanding to dummies, or
 #' excluding from a correlation matrix.
 #'
@@ -3836,7 +3843,7 @@
 #' Used primarily as a *warning trigger*: callers that want to alert users
 #' to "this looks like it should probably have been jdummy-registered or
 #' passed via categorical=" check this helper. It does NOT license
-#' behavioral changes — analysis functions should only factor variables
+#' behavioral changes -- analysis functions should only factor variables
 #' based on the intent helper, not this one.
 #'
 #' Two structural rules, checked in order. First match wins.
@@ -4515,7 +4522,7 @@
 #' Returns information about whether a variable is a two-value (dichotomous)
 #' variable, and if so, what coding it uses. Designed to be the single
 #' source of truth across the package for "is this a dichotomy?" questions
-#' — used by jlm DV checks, by jlogistic DV validation, and (in the
+#' -- used by jlm DV checks, by jlogistic DV validation, and (in the
 #' future) by jcorr inclusion decisions for point-biserial correlations.
 #'
 #' Detects dichotomies in any of these forms:
@@ -4548,7 +4555,7 @@
 #' they're modified independently later.
 #'
 #' This helper makes no judgement about whether dichotomous treatment
-#' is appropriate — that's up to the caller. jlogistic uses it to
+#' is appropriate -- that's up to the caller. jlogistic uses it to
 #' validate the DV (and stops if not coded 0/1); the new jlm DV check
 #' uses it to warn that a different model might have been intended;
 #' future jcorr could use it to decide which correlation method to use.
@@ -4951,7 +4958,7 @@
 #' Class (the analysis role): one of "Numeric", "Categorical",
 #' "Numbers-as-text", "Date-time", "Unsupported". Storage facts (labelled
 #' vs plain, character backing) live in jscreen's separate "Base R Type"
-#' column, never here — a base-R numeric can resolve to Numeric, or to
+#' column, never here -- a base-R numeric can resolve to Numeric, or to
 #' Categorical (dichotomy), or to Categorical (N-category), depending only
 #' on the analysis-relevant structure.
 #'
@@ -5437,6 +5444,7 @@
 
   return(invisible(result))
 }
+#<<<FILE: pipeline.R>>>
 
 
 # =============================================================================
@@ -7017,6 +7025,7 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   .jst_register_intent("likert", data, data_name, default_used,
                        var_names, remove)
 }
+#<<<FILE: options.R>>>
 
 
 # -- joutput -------------------------------------------------------------------
@@ -7033,7 +7042,7 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'   If \code{NULL}, resets to defaults (standard with no toggle overrides).
 #'   \describe{
 #'     \item{minimal}{Stripped-down output for power users. Core results
-#'       only — no Case Processing Summary, no variable labels, no
+#'       only -- no Case Processing Summary, no variable labels, no
 #'       reference categories, no effect sizes, no CIs.}
 #'     \item{standard}{Default. Suitable for teaching and routine use.
 #'       Includes Case Processing Summary, reference categories, effect
@@ -7066,7 +7075,7 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'   Case Processing Summary to print on every call. \code{FALSE}
 #'   suppresses it on every call. \code{NULL} (the auto-suppress default
 #'   at the standard tier) prints only when the call had something to
-#'   report — pipeline state was active (\code{jsubset},
+#'   report -- pipeline state was active (\code{jsubset},
 #'   \code{jcomplete}, or per-call \code{subset}), listwise deletion
 #'   excluded at least one case (in listwise functions like \code{jlm},
 #'   \code{jt}), or a per-variable discrepancy notification fires (in
@@ -7705,6 +7714,7 @@ jdata_dir <- function(default = ".") {
   }
   invisible(NULL)
 }
+#<<<FILE: descriptives.R>>>
 
 
 # =============================================================================
@@ -8725,8 +8735,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' followed by up to three tables: a Variable Types table (Base R storage
 #' type, the jstats analysis-role class, an optional sub-class, an optional
 #' classification source, distinct-value counts, and optional central-
-#' tendency columns), a Missing Data & Outliers table, and — when variable
-#' labels are shown — a Variable Labels table last. Handles haven-labelled
+#' tendency columns), a Missing Data & Outliers table, and -- when variable
+#' labels are shown -- a Variable Labels table last. Handles haven-labelled
 #' and date/time variables gracefully.
 #'
 #' The jstats Class column reports how the package treats each variable in
@@ -9243,6 +9253,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   screen_table$Plausibility <- NULL
   invisible(screen_table)
 }
+#<<<FILE: compare.R>>>
 
 
 # =============================================================================
@@ -10499,6 +10510,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   class(ret) <- "jst_crosstab"
   invisible(ret)
 }
+#<<<FILE: models.R>>>
 
 
 # -- jcorr --------------------------------------------------------------------
@@ -11637,7 +11649,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'
 #' Fits a linear model using \code{stats::lm()} and prints SPSS-style output,
 #' including unstandardized coefficients, standard errors, t values, p values,
-#' and standardized coefficients (β). Standardized coefficients are left
+#' and standardized coefficients (beta). Standardized coefficients are left
 #' blank for the intercept and for dummy-coded categorical terms.
 #'
 #' Also prints key model summary information (R-squared, adjusted R-squared,
@@ -12442,7 +12454,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     }
   }
 
-  # Blank β for registered dummy variables
+  # Blank beta for registered dummy variables
   if (blank_dummy_beta && length(dummy_coef_names) > 0) {
     for (dname in dummy_coef_names) {
       if (dname %in% names(std_b)) std_b[dname] <- NA_real_
@@ -14049,6 +14061,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   class(ret) <- "jst_alpha"
   invisible(ret)
 }
+#<<<FILE: scales.R>>>
 
 
 # -- jsum / javg internal helper -----------------------------------------------
@@ -14610,6 +14623,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
 
   return(invisible(result))
 }
+#<<<FILE: recode.R>>>
 
 
 # =============================================================================
@@ -16527,7 +16541,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 #'   \code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
 #'   the slot is at its \code{"none"} default, \code{jconvert()} errors
 #'   with guidance naming the three concrete options. The destructive
-#'   \code{"baseR"} target is never auto-resolved — it must always be
+#'   \code{"baseR"} target is never auto-resolved -- it must always be
 #'   passed explicitly.
 #' @param ... Optional unquoted variable names. When supplied, only the
 #'   listed variables are scanned. Mutually exclusive with \code{vars}.
@@ -16564,12 +16578,12 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 #'     \code{-99}, \code{-98}, \code{-97}, \code{-96}):
 #'     \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
 #'     (uppercase) tags are case-corrected to Stata-style (lowercase)
-#'     before the numeric mapping — for round-trip purposes the package
+#'     before the numeric mapping -- for round-trip purposes the package
 #'     treats \code{.A} and \code{.a} as the same conceptual marker, and
 #'     mixed-case columns collapse to a single lowercase marker (SPSS has
 #'     no parallel uppercase convention). The notification's per-column
 #'     display shows the original (pre-correction) tag for SAS-corrected
-#'     columns — e.g. \code{.A "Refused" -> -99} — so the user-visible
+#'     columns -- e.g. \code{.A "Refused" -> -99} -- so the user-visible
 #'     mapping reflects what was actually in the data on input. Letter
 #'     tags beyond \code{.d} (after case correction) are refused with
 #'     guidance to use \code{jrecode()} for manual mapping.}
@@ -16600,10 +16614,10 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 #' \code{joptions(udm.convention.codes = ...)}, scope the call via
 #' \code{vars = c(...)} to exclude affected columns, or recode the real-
 #' data values via \code{jrecode()} first. Atomicity applies to every
-#' error mode — the entire \code{jconvert()} call either succeeds or
+#' error mode -- the entire \code{jconvert()} call either succeeds or
 #' errors before mutating the data frame.
 #'
-#' \strong{Pattern A — value labels suggest missingness but no formal
+#' \strong{Pattern A -- value labels suggest missingness but no formal
 #' declaration.} When a column has no formal UDM declaration but carries
 #' value labels matching the package's missing-label wordlist (e.g.
 #' \code{"Refused"}, \code{"Don't know"}, \code{"Not applicable"}),
@@ -17338,6 +17352,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
   out_lines <- c(out_lines, current)
   paste(out_lines, collapse = "\n")
 }
+#<<<FILE: io.R>>>
 
 # -- jload --------------------------------------------------------------------
 
@@ -17465,7 +17480,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 #' jload("mydata.csv")
 #' jload("mydata.rds")
 #'
-#' # Extension omitted — jload searches for a matching file automatically
+#' # Extension omitted -- jload searches for a matching file automatically
 #' jload("mydata")
 #'
 #' # Full file path
@@ -17883,7 +17898,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' specific knowledge in one place.
 #'
 #' Label-only detection (values with labels like "Refused" but no
-#' formal declaration) is NOT in scope here — that pattern is handled
+#' formal declaration) is NOT in scope here -- that pattern is handled
 #' by \code{.jst_scan_coded_missing}'s heuristic branch.
 #'
 #' @param col A column from a data frame, possibly with UDM attributes
@@ -18390,7 +18405,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{.sav} loads, to avoid duplicate output. The heuristic branch
 #'   always excludes values that are formally declared in
 #'   \code{na_values} or \code{na_range} on the variable, so passing
-#'   \code{scan_udm = FALSE} produces no UDM-related output — neither
+#'   \code{scan_udm = FALSE} produces no UDM-related output -- neither
 #'   tabular nor flagged-as-suspected.
 #'
 #' @keywords internal
@@ -19108,7 +19123,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \code{jsave()}'s .dta branch before \code{write_dta} is called.
 #'
 #' A column is counted in \code{n_changed} when any SAS-style marker
-#' was converted — in cells, in \code{val_labels}, or both. Columns
+#' was converted -- in cells, in \code{val_labels}, or both. Columns
 #' already in Stata-style form pass through unchanged and are not
 #' counted. Non-double columns are skipped (Stata-style missing
 #' values exist only on doubles).
@@ -19938,6 +19953,7 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
 
   invisible(NULL)
 }
+#<<<FILE: plot.R>>>
 
 
 # =============================================================================
@@ -21204,7 +21220,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' Internal helper: standardize the return value of jplot dispatch methods
 #'
 #' Strips \code{NULL} entries from a list of ggplot objects, then
-#' returns the list invisibly — or, if exactly one plot remains,
+#' returns the list invisibly -- or, if exactly one plot remains,
 #' returns that plot alone. Used so that \code{jplot()} returns a
 #' sensible value for the single-plot case (suitable for further
 #' piping or printing) without losing flexibility for the multi-plot
@@ -22053,6 +22069,7 @@ jplot.jst_freq <- function(x, which = "core", ...) {
        "  jplot(SampleData, Gender)              # bar chart\n",
        "  jplot(SampleData, Gender, Employment)  # grouped bar chart")
 }
+#<<<FILE: broom-apa.R>>>
 
 
 

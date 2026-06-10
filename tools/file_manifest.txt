@@ -1,0 +1,17 @@
+utils.R
+registry-internals.R
+pipeline-internals.R
+cps.R
+checks.R
+missing-internals.R
+classify.R
+pipeline.R
+options.R
+descriptives.R
+compare.R
+models.R
+scales.R
+recode.R
+io.R
+plot.R
+broom-apa.R
