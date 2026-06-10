@@ -266,7 +266,7 @@
   # If the gist says a successor exists, show migration message only.
   # Otherwise, run the standard GitHub version check.
   if (!is.null(gist_info) && !is.null(gist_info$successor) &&
-      !identical(gist_info$successor$package, pkgname)) {
+      !identical(gist_info$successor$package, "jstats")) {
     .jst_show_migration(gist_info$successor, installed_ver)
   } else {
     .jst_show_version_status(installed_ver)
