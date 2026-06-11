@@ -54,18 +54,17 @@ datasets preserves each dataset's registrations independently.
 }
 \examples{
 \donttest{
-juse(mtcars)
-jdummy(cyl)                          # Register, first category as reference
-jdummy(cyl, gear)                    # Register several at once
-jdummy(cyl, ref = "last")            # Last category as reference
-jdummy(cyl, ref = 6)                 # Reference by numeric code
-# For haven-labelled variables, use the label name:
-# jdummy(Employment, ref = "Part-Time")
-jdummy(cyl, show = TRUE)             # Show coding scheme
-jdummy(cyl, show = "all")            # Full scheme (for many categories)
+juse(community)
+jdummy(Region)                       # Register, first category as reference
+jdummy(Region, Education)            # Register several at once
+jdummy(Region, ref = "last")         # Last category as reference
+jdummy(Region, ref = 4)              # Reference by numeric code
+jdummy(Region, ref = "East")         # Reference by value label
+jdummy(Region, show = TRUE)          # Show coding scheme
+jdummy(Region, show = "all")         # Full scheme (for many categories)
 jdummy()                             # Show all registrations
-jdummy(cyl, remove = TRUE)           # Remove one registration
-jdummy(mtcars, NULL)                 # Clear mtcars' dummy registrations
+jdummy(Region, remove = TRUE)        # Remove one registration
+jdummy(community, NULL)              # Clear community's dummy registrations
 jdummy(NULL)                         # Clear the default frame's (or ask)
 jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 }

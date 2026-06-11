@@ -81,18 +81,18 @@
 #'
 #' @examples
 #' # With explicit data frame
-#' jdesc(mtcars, mpg)
-#' jdesc(mtcars, mpg, hp, wt)
-#' jdesc(mtcars, mpg, by = am)
+#' jdesc(community, Age)
+#' jdesc(community, Income, Age, WellbeingScore)
+#' jdesc(community, WellbeingScore, by = Volunteer)
 #'
 #' # Using juse() default
-#' juse(mtcars)
-#' jdesc(mpg)
-#' jdesc(mpg, hp, wt)
-#' jdesc(mpg, by = am)
+#' juse(community)
+#' jdesc(Age)
+#' jdesc(Income, Age, WellbeingScore)
+#' jdesc(WellbeingScore, by = Volunteer)
 #'
 #' # With a vector directly
-#' jdesc(mtcars$mpg)
+#' jdesc(community$Age)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -601,16 +601,16 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #'
 #' @examples
 #' # With explicit data frame
-#' jfreq(mtcars, cyl)
-#' jfreq(mtcars, cyl, gear)
+#' jfreq(community, Region)
+#' jfreq(community, Region, Education)
 #'
 #' # Using juse() default
-#' juse(mtcars)
-#' jfreq(cyl)
-#' jfreq(cyl, gear)
+#' juse(community)
+#' jfreq(Region)
+#' jfreq(Region, Education)
 #'
 #' # With a vector directly
-#' jfreq(mtcars$gear)
+#' jfreq(community$Region)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -1108,23 +1108,23 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'
 #' @examples
 #' # With explicit data frame
-#' jscreen(mtcars)
-#' jscreen(mtcars, outlier.sd = 2.5)
+#' jscreen(community)
+#' jscreen(community, outlier.sd = 2.5)
 #'
 #' # Show the Base R storage type column
-#' jscreen(mtcars, r.type = TRUE)
+#' jscreen(community, r.type = TRUE)
 #'
 #' # Add Mean and Median columns for numeric-like variables
-#' jscreen(mtcars, stats = TRUE)
+#' jscreen(community, stats = TRUE)
 #'
 #' # Suppress tables (header block only)
-#' jscreen(mtcars, types = FALSE, issues = FALSE)
+#' jscreen(community, types = FALSE, issues = FALSE)
 #'
 #' # Using juse() default
-#' juse(mtcars)
+#' juse(community)
 #' jscreen()
-#' jscreen(mpg, hp, wt)
-#' jscreen(mpg, hp, wt, subset = am == 1)
+#' jscreen(Income, Age, WellbeingScore)
+#' jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.

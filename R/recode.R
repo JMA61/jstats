@@ -790,10 +790,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' canonical pattern is:
 #'
 #' \preformatted{
-#' df$gearR <- jrecode(df, gear,
-#'                     map    = "3=1; 4=2; else=-99",
-#'                     labels = "1=Three gears; 2=Four gears")
-#' df <- jdeclare_udm(df, gearR, codes = c(Refused = -99))
+#' df$EducR <- jrecode(df, Education,
+#'                     map    = "1,2=1; 3=2; 4,5=3; -99,-98=-99",
+#'                     labels = "1=High school or less; 2=Some college; 3=Degree")
+#' df <- jdeclare_udm(df, EducR, codes = c(Refused = -99))
 #' }
 #'
 #' The \code{jrecode()} call assigns the numeric sentinel \code{-99}; the
@@ -806,9 +806,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' canonical pattern is:
 #'
 #' \preformatted{
-#' df$gearR <- jrecode(df, gear,
-#'                     map    = "3=1; 4=2; else=.a",
-#'                     labels = "1=Three gears; 2=Four gears; .a=Refused")
+#' df$EducR <- jrecode(df, Education,
+#'                     map    = "1,2=1; 3=2; 4,5=3; else=.a",
+#'                     labels = "1=High school or less; 2=Some college; 3=Degree; .a=Refused")
 #' }
 #'
 #' Under Stata convention, \code{jdeclare_udm()} is not needed for this
@@ -821,42 +821,42 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' \code{joptions(missing.convention = "stata")}.
 #'
 #' @examples
-#' # Recode with explicit labels
-#' df <- data.frame(gear = mtcars$gear)
-#' df$gearR <- jrecode(df, gear,
-#'                     map    = "3=1; 4=2; 5=3",
-#'                     labels = "1=Three; 2=Four; 3=Five")
+#' # Recode with explicit labels (a 1/2 dichotomy to 0/1)
+#' df <- community
+#' df$OwnsHome01 <- jrecode(df, OwnsHome,
+#'                          map    = "1=1; 2=0",
+#'                          labels = "0=No; 1=Yes")
 #'
 #' # Collapse categories (must supply labels)
-#' df$gearR2 <- jrecode(df, gear,
-#'                      map    = "3=1; 4,5=2",
-#'                      labels = "1=Three gears; 2=Four or five gears")
+#' df$RegionR <- jrecode(df, Region,
+#'                       map    = "1,2=1; 3,4=2",
+#'                       labels = "1=North or South; 2=East or West")
 #'
 #' # Use else=copy to carry unspecified values across unchanged
-#' df$gearR3 <- jrecode(df, gear,
-#'                      map    = "3=1; else=copy",
-#'                      labels = "1=Three gears")
+#' df$EducR <- jrecode(df, Education,
+#'                     map    = "5=4; else=copy",
+#'                     labels = "4=Bachelor's degree or higher")
 #'
 #' # Use else=NA to deliberately drop unspecified values to system NA
-#' df$gearR4 <- jrecode(df, gear,
-#'                      map    = "3=1; 4=2; else=NA",
-#'                      labels = "1=Three gears; 2=Four gears")
+#' df$EducR2 <- jrecode(df, Education,
+#'                      map    = "4=1; 5=1; else=NA",
+#'                      labels = "1=College degree")
 #'
 #' # Convert a specific coded missing value to system NA
-#' df$gearR5 <- jrecode(df, gear, map = "99=System; else=copy")
+#' df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
 #'
 #' # Stata convention: Stata-style missing-value tokens in map and labels (single call)
 #' \dontrun{
 #' joptions(missing.convention = "stata")
-#' df$gearR6 <- jrecode(df, gear,
-#'                      map    = "3=1; 4=2; else=.a",
-#'                      labels = "1=Three gears; 2=Four gears; .a=Refused")
+#' df$EducR4 <- jrecode(df, Education,
+#'                      map    = "1,2=1; 3,4,5=2; else=.a",
+#'                      labels = "1=No college; 2=College; .a=Refused")
 #' }
 #'
 #' # Using juse() default
 #' juse(df)
-#' df$gearR7 <- jrecode(gear, map = "3=1; 4=2; 5=3",
-#'                       labels = "1=Three; 2=Four; 3=Five")
+#' df$RegionR2 <- jrecode(Region, map = "1,2=1; 3,4=2",
+#'                        labels = "1=North or South; 2=East or West")
 #'
 #' @seealso \code{\link{jdeclare_udm}} for declaring user-defined missing
 #'   values on a column after a recode (the SPSS-style canonical pattern).

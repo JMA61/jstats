@@ -47,14 +47,14 @@ produce a helpful error suggesting the correct R syntax.
 }
 \examples{
 \donttest{
-juse(mtcars)
-jsubset(cyl == 4)             # Set using juse default
-jsubset(mtcars, cyl == 4)     # Explicit dataset
-jsubset(cyl == 4 & mpg > 20)  # Compound condition
-jsubset(off)                  # Deactivate
-jsubset(on)                   # Reactivate
-jsubset()                     # Check status
-jsubset(NULL)                 # Clear entirely
+juse(community)
+jsubset(Age < 40)                        # Set using juse default
+jsubset(community, Age < 40)             # Explicit dataset
+jsubset(Age < 40 & WellbeingScore > 50)  # Compound condition
+jsubset(off)                             # Deactivate
+jsubset(on)                              # Reactivate
+jsubset()                                # Check status
+jsubset(NULL)                            # Clear entirely
 }
 
 }

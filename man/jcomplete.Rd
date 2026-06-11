@@ -57,10 +57,10 @@ FILTER convention.
 }
 \examples{
 \donttest{
-juse(mtcars)
-jcomplete(mpg, hp, wt, am)
-jdesc(mpg)                     # Uses only complete cases on those 4 vars
-jcomplete(mpg, hp, wt, am, preview = TRUE)     # Set and preview together
+juse(community)
+jcomplete(Income, Education, Age)
+jdesc(Age)                     # Uses only complete cases on those 3 vars
+jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)
 jcomplete(preview = TRUE, non.deletes = TRUE)  # Viewer shows all cases
 jcomplete(console = 10)        # Console only -- first 10 dropped rows

@@ -106,14 +106,14 @@ variable labels (if present), then the results tables.
 }
 \examples{
 # With explicit data frame
-jaov(mpg ~ cyl, data = mtcars)
-jaov(mpg ~ cyl, data = mtcars, welch = TRUE)
-jaov(mpg ~ cyl, data = mtcars, full = TRUE)
+jaov(WellbeingScore ~ Region, data = community)
+jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
+jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 
 # Using juse() default
-juse(mtcars)
-jaov(mpg ~ cyl)
-jaov(mpg ~ cyl, full = TRUE)
+juse(community)
+jaov(WellbeingScore ~ Region)
+jaov(WellbeingScore ~ Region, full = TRUE)
 
 }
 \seealso{

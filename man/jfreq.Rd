@@ -79,16 +79,16 @@ variable types, not only haven-labelled ones.
 }
 \examples{
 # With explicit data frame
-jfreq(mtcars, cyl)
-jfreq(mtcars, cyl, gear)
+jfreq(community, Region)
+jfreq(community, Region, Education)
 
 # Using juse() default
-juse(mtcars)
-jfreq(cyl)
-jfreq(cyl, gear)
+juse(community)
+jfreq(Region)
+jfreq(Region, Education)
 
 # With a vector directly
-jfreq(mtcars$gear)
+jfreq(community$Region)
 
 }
 \seealso{

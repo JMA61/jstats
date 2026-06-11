@@ -114,18 +114,18 @@ in the type line; the uninformative \code{vctrs_vctr} class is suppressed.
 }
 \examples{
 # With explicit data frame
-jdesc(mtcars, mpg)
-jdesc(mtcars, mpg, hp, wt)
-jdesc(mtcars, mpg, by = am)
+jdesc(community, Age)
+jdesc(community, Income, Age, WellbeingScore)
+jdesc(community, WellbeingScore, by = Volunteer)
 
 # Using juse() default
-juse(mtcars)
-jdesc(mpg)
-jdesc(mpg, hp, wt)
-jdesc(mpg, by = am)
+juse(community)
+jdesc(Age)
+jdesc(Income, Age, WellbeingScore)
+jdesc(WellbeingScore, by = Volunteer)
 
 # With a vector directly
-jdesc(mtcars$mpg)
+jdesc(community$Age)
 
 }
 \seealso{

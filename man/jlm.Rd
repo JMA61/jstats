@@ -187,14 +187,14 @@ DV's role so the count / categorical-like note is silenced
 }
 \examples{
 # With explicit data frame (named argument)
-jlm(mpg ~ hp + wt, data = mtcars)
+jlm(WellbeingScore ~ Income + Age, data = community)
 
 # With explicit data frame (positional argument)
-jlm(mpg ~ hp + wt, mtcars)
+jlm(WellbeingScore ~ Income + Age, community)
 
 # Using juse() default
-juse(mtcars)
-jlm(mpg ~ hp + wt)
+juse(community)
+jlm(WellbeingScore ~ Income + Age)
 
 \dontrun{
 # CATEGORICAL PREDICTORS

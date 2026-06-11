@@ -105,14 +105,14 @@ variable labels (if present), then the results tables.
 }
 \examples{
 # With explicit data frame
-jt(mpg ~ am, data = mtcars)
-jt(mpg ~ am, data = mtcars, welch = TRUE)
-jt(mpg ~ am, data = mtcars, full = TRUE)
+jt(WellbeingScore ~ Volunteer, data = community)
+jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
+jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 
 # Using juse() default
-juse(mtcars)
-jt(mpg ~ am)
-jt(mpg ~ am, full = TRUE)
+juse(community)
+jt(WellbeingScore ~ Volunteer)
+jt(WellbeingScore ~ Volunteer, full = TRUE)
 
 }
 \seealso{

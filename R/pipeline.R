@@ -34,10 +34,10 @@
 #'
 #' @examples
 #' \donttest{
-#' juse(mtcars)           # Set mtcars as the default
-#' juse()                 # Display current default
-#' jdesc(mpg, hp)         # Uses mtcars automatically
-#' juse(NULL)             # Clear the default
+#' juse(community)              # Set community as the default
+#' juse()                       # Display current default
+#' jdesc(Age, WellbeingScore)   # Uses community automatically
+#' juse(NULL)                   # Clear the default
 #' }
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
@@ -137,14 +137,14 @@ juse <- function(data) {
 #'
 #' @examples
 #' \donttest{
-#' juse(mtcars)
-#' jsubset(cyl == 4)             # Set using juse default
-#' jsubset(mtcars, cyl == 4)     # Explicit dataset
-#' jsubset(cyl == 4 & mpg > 20)  # Compound condition
-#' jsubset(off)                  # Deactivate
-#' jsubset(on)                   # Reactivate
-#' jsubset()                     # Check status
-#' jsubset(NULL)                 # Clear entirely
+#' juse(community)
+#' jsubset(Age < 40)                        # Set using juse default
+#' jsubset(community, Age < 40)             # Explicit dataset
+#' jsubset(Age < 40 & WellbeingScore > 50)  # Compound condition
+#' jsubset(off)                             # Deactivate
+#' jsubset(on)                              # Reactivate
+#' jsubset()                                # Check status
+#' jsubset(NULL)                            # Clear entirely
 #' }
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
@@ -564,10 +564,10 @@ jsubset <- function(data, expr) {
 #'
 #' @examples
 #' \donttest{
-#' juse(mtcars)
-#' jcomplete(mpg, hp, wt, am)
-#' jdesc(mpg)                     # Uses only complete cases on those 4 vars
-#' jcomplete(mpg, hp, wt, am, preview = TRUE)     # Set and preview together
+#' juse(community)
+#' jcomplete(Income, Education, Age)
+#' jdesc(Age)                     # Uses only complete cases on those 3 vars
+#' jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #' jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)
 #' jcomplete(preview = TRUE, non.deletes = TRUE)  # Viewer shows all cases
 #' jcomplete(console = 10)        # Console only -- first 10 dropped rows
@@ -958,18 +958,17 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'
 #' @examples
 #' \donttest{
-#' juse(mtcars)
-#' jdummy(cyl)                          # Register, first category as reference
-#' jdummy(cyl, gear)                    # Register several at once
-#' jdummy(cyl, ref = "last")            # Last category as reference
-#' jdummy(cyl, ref = 6)                 # Reference by numeric code
-#' # For haven-labelled variables, use the label name:
-#' # jdummy(Employment, ref = "Part-Time")
-#' jdummy(cyl, show = TRUE)             # Show coding scheme
-#' jdummy(cyl, show = "all")            # Full scheme (for many categories)
+#' juse(community)
+#' jdummy(Region)                       # Register, first category as reference
+#' jdummy(Region, Education)            # Register several at once
+#' jdummy(Region, ref = "last")         # Last category as reference
+#' jdummy(Region, ref = 4)              # Reference by numeric code
+#' jdummy(Region, ref = "East")         # Reference by value label
+#' jdummy(Region, show = TRUE)          # Show coding scheme
+#' jdummy(Region, show = "all")         # Full scheme (for many categories)
 #' jdummy()                             # Show all registrations
-#' jdummy(cyl, remove = TRUE)           # Remove one registration
-#' jdummy(mtcars, NULL)                 # Clear mtcars' dummy registrations
+#' jdummy(Region, remove = TRUE)        # Remove one registration
+#' jdummy(community, NULL)              # Clear community's dummy registrations
 #' jdummy(NULL)                         # Clear the default frame's (or ask)
 #' jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 #' }

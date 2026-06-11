@@ -34,10 +34,10 @@ which creates a snapshot that can become stale after modifications.
 }
 \examples{
 \donttest{
-juse(mtcars)           # Set mtcars as the default
-juse()                 # Display current default
-jdesc(mpg, hp)         # Uses mtcars automatically
-juse(NULL)             # Clear the default
+juse(community)              # Set community as the default
+juse()                       # Display current default
+jdesc(Age, WellbeingScore)   # Uses community automatically
+juse(NULL)                   # Clear the default
 }
 
 }

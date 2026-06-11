@@ -68,14 +68,14 @@
 #'
 #' @examples
 #' # With explicit data frame
-#' jt(mpg ~ am, data = mtcars)
-#' jt(mpg ~ am, data = mtcars, welch = TRUE)
-#' jt(mpg ~ am, data = mtcars, full = TRUE)
+#' jt(WellbeingScore ~ Volunteer, data = community)
+#' jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
+#' jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 #'
 #' # Using juse() default
-#' juse(mtcars)
-#' jt(mpg ~ am)
-#' jt(mpg ~ am, full = TRUE)
+#' juse(community)
+#' jt(WellbeingScore ~ Volunteer)
+#' jt(WellbeingScore ~ Volunteer, full = TRUE)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -490,14 +490,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'
 #' @examples
 #' # With explicit data frame
-#' jaov(mpg ~ cyl, data = mtcars)
-#' jaov(mpg ~ cyl, data = mtcars, welch = TRUE)
-#' jaov(mpg ~ cyl, data = mtcars, full = TRUE)
+#' jaov(WellbeingScore ~ Region, data = community)
+#' jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
+#' jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #'
 #' # Using juse() default
-#' juse(mtcars)
-#' jaov(mpg ~ cyl)
-#' jaov(mpg ~ cyl, full = TRUE)
+#' juse(community)
+#' jaov(WellbeingScore ~ Region)
+#' jaov(WellbeingScore ~ Region, full = TRUE)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -975,18 +975,19 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'
 #' @examples
 #' # Cross-tabulation only
-#' jcrosstab(cyl ~ am, data = mtcars)
+#' jcrosstab(Education ~ Volunteer, data = community)
 #'
 #' # With chi-square test
-#' jcrosstab(cyl ~ am, data = mtcars, chisq = TRUE)
+#' jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 #'
 #' # With expected frequencies and column percentages
-#' jcrosstab(cyl ~ am, data = mtcars, expected = TRUE, col.pct = TRUE)
+#' jcrosstab(Education ~ Volunteer, data = community,
+#'           expected = TRUE, col.pct = TRUE)
 #'
 #' # Using juse() default
-#' juse(mtcars)
-#' jcrosstab(cyl ~ am)
-#' jcrosstab(cyl ~ am, chisq = TRUE)
+#' juse(community)
+#' jcrosstab(Education ~ Volunteer)
+#' jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.

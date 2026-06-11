@@ -104,12 +104,12 @@ followed by variable labels (if present), then the matrix.
 }
 \examples{
 # With explicit data frame
-jcorr(mtcars, mpg, hp, wt)
-jcorr(mtcars, mpg, hp, wt, method = "spearman")
+jcorr(community, Income, Age, WellbeingScore)
+jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 
 # Using juse() default
-juse(mtcars)
-jcorr(mpg, hp, wt)
+juse(community)
+jcorr(Income, Age, WellbeingScore)
 
 }
 \seealso{

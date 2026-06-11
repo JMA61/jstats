@@ -71,12 +71,12 @@
 #'
 #' @examples
 #' # With explicit data frame
-#' jcorr(mtcars, mpg, hp, wt)
-#' jcorr(mtcars, mpg, hp, wt, method = "spearman")
+#' jcorr(community, Income, Age, WellbeingScore)
+#' jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #'
 #' # Using juse() default
-#' juse(mtcars)
-#' jcorr(mpg, hp, wt)
+#' juse(community)
+#' jcorr(Income, Age, WellbeingScore)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -1266,14 +1266,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'
 #' @examples
 #' # With explicit data frame (named argument)
-#' jlm(mpg ~ hp + wt, data = mtcars)
+#' jlm(WellbeingScore ~ Income + Age, data = community)
 #'
 #' # With explicit data frame (positional argument)
-#' jlm(mpg ~ hp + wt, mtcars)
+#' jlm(WellbeingScore ~ Income + Age, community)
 #'
 #' # Using juse() default
-#' juse(mtcars)
-#' jlm(mpg ~ hp + wt)
+#' juse(community)
+#' jlm(WellbeingScore ~ Income + Age)
 #'
 #' \dontrun{
 #' # CATEGORICAL PREDICTORS
@@ -2351,14 +2351,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   }
 #'
 #' @examples
-#' # With explicit data frame
-#' df <- mtcars
-#' df$vs01 <- df$vs  # vs is already 0/1
-#' jlogistic(vs01 ~ hp + wt, data = df)
+#' # With explicit data frame -- Volunteer is already coded 0/1
+#' jlogistic(Volunteer ~ Income + Age, data = community)
+#'
+#' # A 1/2-coded dichotomy (Yes = 1, No = 2) must be recoded to 0/1 first
+#' df <- community
+#' df$OwnsHome01 <- jrecode(df, OwnsHome,
+#'                          map = "1=1; 2=0", labels = "0=No; 1=Yes")
+#' jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #'
 #' # Using juse() default
-#' juse(df)
-#' jlogistic(vs01 ~ hp + wt)
+#' juse(community)
+#' jlogistic(Volunteer ~ Income + Age)
 #'
 #' \dontrun{
 #' # CATEGORICAL PREDICTORS

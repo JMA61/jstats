@@ -127,23 +127,23 @@ are included automatically.
 }
 \examples{
 # With explicit data frame
-jscreen(mtcars)
-jscreen(mtcars, outlier.sd = 2.5)
+jscreen(community)
+jscreen(community, outlier.sd = 2.5)
 
 # Show the Base R storage type column
-jscreen(mtcars, r.type = TRUE)
+jscreen(community, r.type = TRUE)
 
 # Add Mean and Median columns for numeric-like variables
-jscreen(mtcars, stats = TRUE)
+jscreen(community, stats = TRUE)
 
 # Suppress tables (header block only)
-jscreen(mtcars, types = FALSE, issues = FALSE)
+jscreen(community, types = FALSE, issues = FALSE)
 
 # Using juse() default
-juse(mtcars)
+juse(community)
 jscreen()
-jscreen(mpg, hp, wt)
-jscreen(mpg, hp, wt, subset = am == 1)
+jscreen(Income, Age, WellbeingScore)
+jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 
 }
 \seealso{

@@ -158,14 +158,18 @@ Handles haven-labelled variables, registered dummy variables via
 in the same way as \code{jlm()}.
 }
 \examples{
-# With explicit data frame
-df <- mtcars
-df$vs01 <- df$vs  # vs is already 0/1
-jlogistic(vs01 ~ hp + wt, data = df)
+# With explicit data frame -- Volunteer is already coded 0/1
+jlogistic(Volunteer ~ Income + Age, data = community)
+
+# A 1/2-coded dichotomy (Yes = 1, No = 2) must be recoded to 0/1 first
+df <- community
+df$OwnsHome01 <- jrecode(df, OwnsHome,
+                         map = "1=1; 2=0", labels = "0=No; 1=Yes")
+jlogistic(OwnsHome01 ~ Income + Age, data = df)
 
 # Using juse() default
-juse(df)
-jlogistic(vs01 ~ hp + wt)
+juse(community)
+jlogistic(Volunteer ~ Income + Age)
 
 \dontrun{
 # CATEGORICAL PREDICTORS

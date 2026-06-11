@@ -2078,10 +2078,11 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   }
 
   # --- Pre-check: unquoted filename -----------------------------------------
-  # A bare filename like jsave(mtcars, mtcars.rds) parses mtcars.rds as a
-  # symbol, so forcing the file argument later yields the cryptic base-R
-  # message "object 'mtcars.rds' not found". Detect the forgot-the-quotes
-  # case up front and give a jsave-tailored message, mirroring the
+  # A bare filename like jsave(community, community.rds) parses
+  # community.rds as a symbol, so forcing the file argument later yields
+  # the cryptic base-R message "object 'community.rds' not found". Detect
+  # the forgot-the-quotes case up front and give a jsave-tailored message,
+  # mirroring the
   # data-argument interception above. Only fires when the bare symbol does
   # not resolve to any existing object (so a real variable passed by name is
   # left for the downstream "provide a filename" check) and deparses to a

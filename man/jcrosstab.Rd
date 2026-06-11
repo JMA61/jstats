@@ -92,18 +92,19 @@ variable labels (if present), then the table and optional test results.
 }
 \examples{
 # Cross-tabulation only
-jcrosstab(cyl ~ am, data = mtcars)
+jcrosstab(Education ~ Volunteer, data = community)
 
 # With chi-square test
-jcrosstab(cyl ~ am, data = mtcars, chisq = TRUE)
+jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 
 # With expected frequencies and column percentages
-jcrosstab(cyl ~ am, data = mtcars, expected = TRUE, col.pct = TRUE)
+jcrosstab(Education ~ Volunteer, data = community,
+          expected = TRUE, col.pct = TRUE)
 
 # Using juse() default
-juse(mtcars)
-jcrosstab(cyl ~ am)
-jcrosstab(cyl ~ am, chisq = TRUE)
+juse(community)
+jcrosstab(Education ~ Volunteer)
+jcrosstab(Education ~ Volunteer, chisq = TRUE)
 
 }
 \seealso{
