@@ -197,25 +197,27 @@ individual observations, wider), \code{see} (constant-width +/- t*SEE
 band illustrating the homoskedasticity assumption), \code{none} (no band).
 }
 \examples{
-\dontrun{
-  # Result-object form
-  m <- jlm(TotalCrime ~ Age + Tattoos, SampleData)
-  jplot(m)                            # core diagnostics + fit plot
-  jplot(m, which = "coef")            # coefficient forest plot
-  jplot(m, which = "fit", focal = Age, at = "mean")
+# Result-object form
+m <- jlm(WellbeingScore ~ Income + Age, community)
+jplot(m)                            # core diagnostics + fit plot
+jplot(m, which = "coef")            # coefficient forest plot
+jplot(m, which = "fit", focal = Age, at = "mean")
 
-  # Formula form (scatter and box)
-  jplot(Tattoos ~ Age, SampleData)                       # scatter
-  jplot(Tattoos ~ Age, SampleData, line = "lm")          # scatter + regression
-  jplot(Tattoos ~ Age, SampleData, line = "lm", band = "see")
-  jplot(Tattoos ~ Age, SampleData, by = Gender, line = "lm")
-  jplot(Age ~ Gender, SampleData)                        # boxplot
+# Formula form (scatter and box)
+jplot(WellbeingScore ~ Income, community)               # scatter
+jplot(WellbeingScore ~ Income, community, line = "lm")  # + regression line
+jplot(WellbeingScore ~ Income, community, line = "lm", band = "see")
+jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 
-  # Variable-list form (distributions and counts)
-  jplot(SampleData, Age)                     # histogram
-  jplot(SampleData, Gender)                  # bar chart
-  jplot(SampleData, Program, Employment)     # grouped bar chart
-}
+# Boxplot: assert the grouping variable as categorical (labelled
+# variables otherwise enter numerically; jdummy() registration also works)
+jplot(WellbeingScore ~ Region, community, categorical = "Region")
+
+# Variable-list form (distributions and counts)
+jplot(community, Age)                      # histogram
+jplot(community, Region)                   # bar chart
+jplot(community, Region, Volunteer,        # grouped bar chart
+      categorical = c("Region", "Volunteer"))
 
 }
 \seealso{

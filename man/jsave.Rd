@@ -85,21 +85,27 @@ Use \code{.xlsx} instead.
 }
 }
 \examples{
+# A runnable save into R's session temporary folder
+jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
+
 \dontrun{
 # The file extension determines the format ---
 # the same data frame can be saved in any supported format
-jsave(MyData, "mydata.sav")         # SPSS
-jsave(MyData, "mydata.dta")         # Stata
-jsave(MyData, "mydata.xpt")         # SAS interchange
-jsave(MyData, "mydata.xlsx")        # Excel
-jsave(MyData, "mydata.csv")         # CSV
-jsave(MyData, "mydata.rds")         # R native
+jsave(community, "community.sav")         # SPSS
+jsave(community, "community.xlsx")        # Excel
+jsave(community, "community.csv")         # CSV
+jsave(community, "community.rds")         # R native
+
+# Stata and SAS formats cannot carry community's SPSS-form missing-value
+# declarations -- convert first (jsave() pre-flights this and says so)
+jsave(jconvert(community, to = "stata"), "community.dta")   # Stata
+jsave(jconvert(community, to = "baseR"), "community.xpt")   # SAS interchange
 
 # Using juse() default
-jsave(, "mydata.sav")
+jsave(, "community.sav")
 
 # Full file path
-jsave(MyData, "C:/Output/mydata.sav")
+jsave(community, "C:/Output/community.sav")
 }
 
 }

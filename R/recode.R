@@ -845,13 +845,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' # Convert a specific coded missing value to system NA
 #' df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
 #'
-#' # Stata convention: Stata-style missing-value tokens in map and labels (single call)
-#' \dontrun{
-#' joptions(missing.convention = "stata")
+#' # Stata convention: Stata-style missing-value tokens in map and labels
+#' # (single call; convention = "stata" scopes the choice to this call only)
 #' df$EducR4 <- jrecode(df, Education,
 #'                      map    = "1,2=1; 3,4,5=2; else=.a",
-#'                      labels = "1=No college; 2=College; .a=Refused")
-#' }
+#'                      labels = "1=No college; 2=College; .a=Refused",
+#'                      convention = "stata")
 #'
 #' # Using juse() default
 #' juse(df)
@@ -1273,20 +1272,31 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   \code{\link{joptions}}, \code{\link{jstats}}
 #'
 #' @examples
-#' \dontrun{
+#' # community$JobSatisfaction arrives "dirty": -99/-98 sit in the data as
+#' # ordinary numbers (the state after a CSV or Excel import), so summary
+#' # statistics are poisoned until the codes are declared missing.
+#' df <- community
+#' jdesc(df, JobSatisfaction)        # mean dragged far down by -99/-98
+#'
 #' # SPSS form: declare -99 and -98 as UDMs with labels
-#' SampleData <- jdeclare_udm(SampleData, Income,
-#'                            codes  = c(-99, -98),
-#'                            labels = "-99=Refused; -98=DontKnow")
+#' df <- jdeclare_udm(df, JobSatisfaction,
+#'                    codes  = c(-99, -98),
+#'                    labels = "-99=Refused; -98=Don't know")
+#' jdesc(df, JobSatisfaction)        # codes now excluded as missing
 #'
-#' # Equivalent using Option C (named codes)
-#' SampleData <- jdeclare_udm(SampleData, Income,
-#'                            codes = c(Refused = -99, DontKnow = -98))
+#' # Equivalent using named codes (one step instead of codes + labels)
+#' df2 <- jdeclare_udm(community, JobSatisfaction,
+#'                     codes = c("Refused" = -99, "Don't know" = -98))
 #'
-#' # Stata-style: label existing Stata-style missing-value cells
-#' SampleData <- jdeclare_udm(SampleData, Income,
-#'                            codes = c(Refused = tagged_na("a")))
-#' }
+#' # Stata-style: label Stata-style missing-value cells. The jrecode() call
+#' # turns the literal codes into tagged cells; jdeclare_udm() labels them.
+#' df3 <- community
+#' df3$JobSat2 <- jrecode(df3, JobSatisfaction,
+#'                        map = "-99=.a; -98=.b; else=copy",
+#'                        convention = "stata")
+#' df3 <- jdeclare_udm(df3, JobSat2,
+#'                     codes = c("Refused"    = haven::tagged_na("a"),
+#'                               "Don't know" = haven::tagged_na("b")))
 #'
 #' @export
 jdeclare_udm <- function(data, var, codes, labels = NULL,
@@ -2002,25 +2012,28 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 #' action is needed.
 #'
 #' @examples
-#' \dontrun{
+#' # community ships with SPSS-form UDMs (Income, Education, Smoker,
+#' # Environment1, Environment3), so the conversions run on it directly.
+#'
 #' # Strip UDMs from every applicable variable:
-#' MyData <- jconvert(MyData, to = "baseR")
+#' df <- jconvert(community, to = "baseR")
 #'
 #' # Convert SPSS-form UDMs to Stata-style missing values:
-#' MyData <- jconvert(MyData, to = "stata")
-#'
-#' # Convert with target inferred from joptions:
-#' joptions(missing.convention = "spss")
-#' MyData <- jconvert(MyData)   # converts any Stata-form columns to SPSS
+#' df <- jconvert(community, to = "stata")
 #'
 #' # Scope by unquoted names:
-#' MyData <- jconvert(MyData, to = "baseR", Income, Age)
+#' df <- jconvert(community, to = "baseR", Income, Education)
 #'
 #' # Scope by character vector (alternative form):
-#' MyData <- jconvert(MyData, to = "baseR", vars = c("Income", "Age"))
+#' df <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 #'
 #' # Suppress the notification (e.g. inside a script):
-#' MyData <- jconvert(MyData, to = "baseR", udm.notice = FALSE)
+#' df <- jconvert(community, to = "baseR", udm.notice = FALSE)
+#'
+#' \dontrun{
+#' # Convert with target inferred from joptions:
+#' joptions(missing.convention = "spss")
+#' df <- jconvert(df)   # converts any Stata-form columns to SPSS
 #' }
 #'
 #' @seealso \code{\link{jload}} for the load-time strip alternative

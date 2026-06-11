@@ -133,35 +133,35 @@ to convert them to \code{NA} if needed.
 \examples{
 \dontrun{
 # SPSS
-jload("mydata.sav")
-jload("mydata.sav", use = TRUE)
-jload("mydata.sav", name = "MySurvey")
+jload("community.sav")
+jload("community.sav", use = TRUE)
+jload("community.sav", name = "MySurvey")
 
 # Stata
-jload("mydata.dta")
+jload("community.dta")
 
 # SAS
-jload("mydata.sas7bdat")
-jload("mydata.xpt")
+jload("community.sas7bdat")
+jload("community.xpt")
 
 # Excel
-jload("mydata.xlsx")
-jload("mydata.xlsx", sheet = "Wave2")
-jload("mydata.xlsx", sheet = 2)
+jload("community.xlsx")
+jload("community.xlsx", sheet = "Wave2")
+jload("community.xlsx", sheet = 2)
 
 # CSV and R native
-jload("mydata.csv")
-jload("mydata.rds")
+jload("community.csv")
+jload("community.rds")
 
 # Extension omitted -- jload searches for a matching file automatically
-jload("mydata")
+jload("community")
 
 # Full file path
-jload("C:/Projects/Data/mydata.dta")
+jload("C:/Projects/Data/community.dta")
 
 # Quiet load (e.g. in a .Rprofile or startup script): suppresses the
 # informational messages while still loading. Errors and warnings still show.
-jload("mydata.rds", name = "MyData", quiet = TRUE)
+jload("community.rds", name = "MyData", quiet = TRUE)
 }
 
 }

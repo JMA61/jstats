@@ -171,26 +171,29 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 juse(community)
 jlogistic(Volunteer ~ Income + Age)
 
-\dontrun{
+\donttest{
 # CATEGORICAL PREDICTORS
 #
-# The recommended approach: register the variable with jdummy()
-# before running jlogistic(). This sets categorical treatment
-# persistently across subsequent analyses.
-jdummy(SampleData, Program)
-jlogistic(Outcome ~ Program + ReadingScore)
+# Per-call: categorical = ... applies for one call only and does not
+# persist.
+jlogistic(Volunteer ~ Region + Age, categorical = "Region")
+
+# The recommended approach for repeated analyses: register the variable
+# with jdummy() before running jlogistic(). This sets categorical
+# treatment persistently across subsequent analyses.
+jdummy(community, Region)
+jlogistic(Volunteer ~ Region + Age)
 
 # To choose a non-default reference category:
-jdummy(SampleData, Program, ref = "Standard")
-jlogistic(Outcome ~ Program + ReadingScore)
-
-# Per-call alternative: categorical = ... applies for one call only.
-jlogistic(Outcome ~ Program + ReadingScore, categorical = "Program")
+jdummy(community, Region, ref = "West")
+jlogistic(Volunteer ~ Region + Age)
 
 # FORCING NUMERIC TREATMENT
 #
 # Use numeric = ... when a labelled variable should enter as a score.
-jlogistic(Outcome ~ Age + Employment, numeric = "Age")
+jlogistic(Volunteer ~ Age + Education, numeric = "Education")
+
+jdummy(community, NULL)   # clear the registration when done
 }
 
 }

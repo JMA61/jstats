@@ -1527,10 +1527,11 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'
 #' @return Invisibly NULL. Called for its side effect on the session registry.
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'   jlikert(community, Environment1, Environment2)  # declare two Likert items
 #'   jscreen(community)                              # Sub-class shows "Likert"
 #'   jlikert(community, Environment1, remove = TRUE) # undo one
+#'   jlikert(community, NULL)                        # clear the registrations
 #' }
 #' @seealso \code{\link{jnumeric}}, \code{\link{jcount}}, \code{\link{jdummy}},
 #'   \code{\link{jscreen}}

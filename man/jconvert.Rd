@@ -115,25 +115,28 @@ as UDMs use \code{jdeclare_udm()}; to leave them as ordinary data, no
 action is needed.
 }
 \examples{
-\dontrun{
+# community ships with SPSS-form UDMs (Income, Education, Smoker,
+# Environment1, Environment3), so the conversions run on it directly.
+
 # Strip UDMs from every applicable variable:
-MyData <- jconvert(MyData, to = "baseR")
+df <- jconvert(community, to = "baseR")
 
 # Convert SPSS-form UDMs to Stata-style missing values:
-MyData <- jconvert(MyData, to = "stata")
-
-# Convert with target inferred from joptions:
-joptions(missing.convention = "spss")
-MyData <- jconvert(MyData)   # converts any Stata-form columns to SPSS
+df <- jconvert(community, to = "stata")
 
 # Scope by unquoted names:
-MyData <- jconvert(MyData, to = "baseR", Income, Age)
+df <- jconvert(community, to = "baseR", Income, Education)
 
 # Scope by character vector (alternative form):
-MyData <- jconvert(MyData, to = "baseR", vars = c("Income", "Age"))
+df <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 
 # Suppress the notification (e.g. inside a script):
-MyData <- jconvert(MyData, to = "baseR", udm.notice = FALSE)
+df <- jconvert(community, to = "baseR", udm.notice = FALSE)
+
+\dontrun{
+# Convert with target inferred from joptions:
+joptions(missing.convention = "spss")
+df <- jconvert(df)   # converts any Stata-form columns to SPSS
 }
 
 }

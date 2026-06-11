@@ -48,31 +48,39 @@ Variables can be listed individually or using colon notation to select a
 range of consecutive columns (e.g. \code{Attitude1:Attitude6}).
 }
 \examples{
-\dontrun{
+\donttest{
 # Set the default data frame (so you can omit it in function calls)
-juse(MyData)
+juse(community)
 
 # Mean of three variables (all must be non-missing)
-MyData$Avg <- javg(Score1, Score2, Score3)
+community$EnvAvg <- javg(Environment1, Environment3, Environment4)
 
-# Mean with partial data allowed (at least 1 non-missing)
-MyData$Avg <- javg(Score1, Score2, Score3, min.valid = 1)
+# Mean with partial data allowed (at least 2 non-missing)
+community$EnvAvg <- javg(Environment1, Environment3, Environment4,
+                         min.valid = 2)
 
 # Mean using colon range for consecutive columns
-MyData$ScaleMean <- javg(Attitude1:Attitude6)
+community$ScaleMean <- javg(Environment1:Environment5)
 
 # Mix colon ranges and explicit names (e.g. after reverse-coding an item)
-MyData$ScaleMean <- javg(Attitude1:Attitude3, Attitude4R, Attitude5:Attitude6)
+community$Environment2R <- jrecode(community, Environment2,
+                                   map = "1=5; 2=4; 3=3; 4=2; 5=1")
+community$ScaleMean <- javg(Environment1, Environment2R,
+                            Environment3:Environment5)
 
 # Fixed denominator (always divide by total number of variables)
-MyData$Avg <- javg(Score1, Score2, Score3, min.valid = 1, fixed = TRUE)
+community$EnvAvg <- javg(Environment1, Environment3, Environment4,
+                         min.valid = 2, fixed = TRUE)
 
 # With a custom variable label
-MyData$ScaleMean <- javg(Attitude1:Attitude6,
-                         var.label = "Scale Mean Score")
+community$ScaleMean <- javg(Environment1:Environment5,
+                            var.label = "Environment Scale Mean")
 
 # With an explicit data frame (instead of using juse default)
-MyData$Avg <- javg(MyData, Score1, Score2, Score3)
+community$EnvAvg <- javg(community, Environment1, Environment3,
+                         Environment4)
+
+juse(NULL)   # clear the default when done
 }
 
 }

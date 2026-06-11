@@ -196,35 +196,36 @@ jlm(WellbeingScore ~ Income + Age, community)
 juse(community)
 jlm(WellbeingScore ~ Income + Age)
 
-\dontrun{
+\donttest{
 # CATEGORICAL PREDICTORS
 #
-# The recommended approach: register the variable with jdummy()
-# before running jlm(). This sets the categorical treatment
-# persistently, so subsequent jlm() calls (and other analyses)
-# use the same coding without re-specifying.
-jdummy(SampleData, Program)
-jlm(Outcome ~ Program + ReadingScore)
+# Per-call: categorical = ... applies for one call only and does not
+# persist. Useful for a quick one-off analysis.
+jlm(WellbeingScore ~ Region + Age, categorical = "Region")
+
+# The recommended approach for repeated analyses: register the variable
+# with jdummy() before running jlm(). This sets the categorical
+# treatment persistently, so subsequent jlm() calls (and other
+# analyses) use the same coding without re-specifying.
+jdummy(community, Region)
+jlm(WellbeingScore ~ Region + Age)
 
 # To choose a non-default reference category:
-jdummy(SampleData, Program, ref = "Standard")
-jlm(Outcome ~ Program + ReadingScore)
-
-# Per-call alternative: categorical = ... applies for one call only
-# and does not persist. Useful when you want categorical treatment
-# without registering, or when overriding a registration just once.
-jlm(Outcome ~ Program + ReadingScore, categorical = "Program")
+jdummy(community, Region, ref = "West")
+jlm(WellbeingScore ~ Region + Age)
 
 # FORCING NUMERIC TREATMENT
 #
 # Use numeric = ... when a variable has value labels (haven_labelled)
 # but you want it treated as a continuous score (e.g., a Likert
 # scale you want the slope-per-unit interpretation for).
-jlm(Outcome ~ Age + Employment, numeric = "Age")
+jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 
 # Multiple overrides at once
-jlm(Outcome ~ Age + Education + Program,
-    numeric = c("Age", "Education"), categorical = "Program")
+jlm(WellbeingScore ~ Education + Environment4 + Smoker,
+    numeric = c("Education", "Environment4"), categorical = "Smoker")
+
+jdummy(community, NULL)   # clear the registration when done
 }
 
 }

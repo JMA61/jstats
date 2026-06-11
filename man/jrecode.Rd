@@ -188,13 +188,12 @@ df$EducR2 <- jrecode(df, Education,
 # Convert a specific coded missing value to system NA
 df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
 
-# Stata convention: Stata-style missing-value tokens in map and labels (single call)
-\dontrun{
-joptions(missing.convention = "stata")
+# Stata convention: Stata-style missing-value tokens in map and labels
+# (single call; convention = "stata" scopes the choice to this call only)
 df$EducR4 <- jrecode(df, Education,
                      map    = "1,2=1; 3,4,5=2; else=.a",
-                     labels = "1=No college; 2=College; .a=Refused")
-}
+                     labels = "1=No college; 2=College; .a=Refused",
+                     convention = "stata")
 
 # Using juse() default
 juse(df)

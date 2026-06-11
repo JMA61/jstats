@@ -5,7 +5,7 @@
 \alias{community}
 \title{Community survey example dataset}
 \format{
-A data frame with 100 rows and 15 variables:
+A data frame with 100 rows and 16 variables:
 \describe{
 \item{RespondentID}{Respondent ID, character ("R001", "R002", ...).}
 \item{Income}{Annual income (USD). Carries SPSS-style missing values
@@ -41,6 +41,12 @@ products." 5-point Likert.}
 \item{Environment5}{"Pollution is a major cause of public health
 problems." 5-point Likert; weakly loaded (a Cronbach's-alpha drop
 candidate when scoring the scale).}
+\item{JobSatisfaction}{Job satisfaction (integer, 1-10). Arrives
+"dirty": literal -99 (Refused) and -98 (Don't know) codes are present
+in the data with NO missing-value declaration, the state of play after
+a CSV or Excel import. The package's jdeclare_udm() demonstration
+variable: summary statistics are poisoned until the codes are
+declared.}
 }
 }
 \source{
@@ -54,7 +60,7 @@ community
 A small synthetic survey dataset used throughout the package as a runnable
 example. It backs the function examples, serves as a teaching dataset for
 new users, and demonstrates cross-platform save and load behavior. The 100
-respondents and 15 variables are chosen to exercise the kinds of data
+respondents and 16 variables are chosen to exercise the kinds of data
 social-science users actually have: Likert scales, dichotomies, a
 multi-category variable, continuous measures, and SPSS-style user-defined
 missing values. The data are synthetic, but the relationships among the
@@ -66,6 +72,8 @@ reverse-keyed, and item 5 is the weak item that scale-reliability output
 flags for dropping. Income, Education, Smoker, Environment1, and
 Environment3 carry SPSS-style missing values, with the codes placed on
 partly non-overlapping cases so that listwise deletion visibly reduces the
-analysis sample below the per-variable counts.
+analysis sample below the per-variable counts. JobSatisfaction is the one
+deliberately "dirty" column: its -99/-98 codes are ordinary numbers with no
+declaration attached, awaiting \code{jdeclare_udm()}.
 }
 \keyword{datasets}

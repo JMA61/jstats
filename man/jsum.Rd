@@ -40,28 +40,35 @@ Variables can be listed individually or using colon notation to select a
 range of consecutive columns (e.g. \code{Attitude1:Attitude6}).
 }
 \examples{
-\dontrun{
+\donttest{
 # Set the default data frame (so you can omit it in function calls)
-juse(MyData)
+juse(community)
 
 # Sum three variables (all must be non-missing)
-MyData$Total <- jsum(Score1, Score2, Score3)
+community$EnvTotal <- jsum(Environment1, Environment3, Environment4)
 
-# Sum with partial data allowed (at least 1 non-missing)
-MyData$Total <- jsum(Score1, Score2, Score3, min.valid = 1)
+# Sum with partial data allowed (at least 2 non-missing)
+community$EnvTotal <- jsum(Environment1, Environment3, Environment4,
+                           min.valid = 2)
 
 # Sum using colon range for consecutive columns
-MyData$ScaleTotal <- jsum(Attitude1:Attitude6)
+community$EnvTotal <- jsum(Environment1:Environment5)
 
 # Mix colon ranges and explicit names (e.g. after reverse-coding an item)
-MyData$ScaleTotal <- jsum(Attitude1:Attitude3, Attitude4R, Attitude5:Attitude6)
+community$Environment2R <- jrecode(community, Environment2,
+                                   map = "1=5; 2=4; 3=3; 4=2; 5=1")
+community$ScaleTotal <- jsum(Environment1, Environment2R,
+                             Environment3:Environment5)
 
 # With a custom variable label
-MyData$Total <- jsum(Score1, Score2, Score3,
-                     var.label = "Total Score")
+community$ScaleTotal <- jsum(Environment1:Environment5,
+                             var.label = "Environment Scale Total")
 
 # With an explicit data frame (instead of using juse default)
-MyData$Total <- jsum(MyData, Score1, Score2, Score3)
+community$EnvTotal <- jsum(community, Environment1, Environment3,
+                           Environment4)
+
+juse(NULL)   # clear the default when done
 }
 
 }

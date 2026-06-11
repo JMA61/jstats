@@ -106,35 +106,35 @@
 #' @examples
 #' \dontrun{
 #' # SPSS
-#' jload("mydata.sav")
-#' jload("mydata.sav", use = TRUE)
-#' jload("mydata.sav", name = "MySurvey")
+#' jload("community.sav")
+#' jload("community.sav", use = TRUE)
+#' jload("community.sav", name = "MySurvey")
 #'
 #' # Stata
-#' jload("mydata.dta")
+#' jload("community.dta")
 #'
 #' # SAS
-#' jload("mydata.sas7bdat")
-#' jload("mydata.xpt")
+#' jload("community.sas7bdat")
+#' jload("community.xpt")
 #'
 #' # Excel
-#' jload("mydata.xlsx")
-#' jload("mydata.xlsx", sheet = "Wave2")
-#' jload("mydata.xlsx", sheet = 2)
+#' jload("community.xlsx")
+#' jload("community.xlsx", sheet = "Wave2")
+#' jload("community.xlsx", sheet = 2)
 #'
 #' # CSV and R native
-#' jload("mydata.csv")
-#' jload("mydata.rds")
+#' jload("community.csv")
+#' jload("community.rds")
 #'
 #' # Extension omitted -- jload searches for a matching file automatically
-#' jload("mydata")
+#' jload("community")
 #'
 #' # Full file path
-#' jload("C:/Projects/Data/mydata.dta")
+#' jload("C:/Projects/Data/community.dta")
 #'
 #' # Quiet load (e.g. in a .Rprofile or startup script): suppresses the
 #' # informational messages while still loading. Errors and warnings still show.
-#' jload("mydata.rds", name = "MyData", quiet = TRUE)
+#' jload("community.rds", name = "MyData", quiet = TRUE)
 #' }
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
@@ -1993,21 +1993,27 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' }
 #'
 #' @examples
+#' # A runnable save into R's session temporary folder
+#' jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
+#'
 #' \dontrun{
 #' # The file extension determines the format ---
 #' # the same data frame can be saved in any supported format
-#' jsave(MyData, "mydata.sav")         # SPSS
-#' jsave(MyData, "mydata.dta")         # Stata
-#' jsave(MyData, "mydata.xpt")         # SAS interchange
-#' jsave(MyData, "mydata.xlsx")        # Excel
-#' jsave(MyData, "mydata.csv")         # CSV
-#' jsave(MyData, "mydata.rds")         # R native
+#' jsave(community, "community.sav")         # SPSS
+#' jsave(community, "community.xlsx")        # Excel
+#' jsave(community, "community.csv")         # CSV
+#' jsave(community, "community.rds")         # R native
+#'
+#' # Stata and SAS formats cannot carry community's SPSS-form missing-value
+#' # declarations -- convert first (jsave() pre-flights this and says so)
+#' jsave(jconvert(community, to = "stata"), "community.dta")   # Stata
+#' jsave(jconvert(community, to = "baseR"), "community.xpt")   # SAS interchange
 #'
 #' # Using juse() default
-#' jsave(, "mydata.sav")
+#' jsave(, "community.sav")
 #'
 #' # Full file path
-#' jsave(MyData, "C:/Output/mydata.sav")
+#' jsave(community, "C:/Output/community.sav")
 #' }
 #'
 #' @seealso \code{\link{jstats}} for the package overview,

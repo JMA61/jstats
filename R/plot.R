@@ -132,25 +132,27 @@
 #'   the data-first form.
 #'
 #' @examples
-#' \dontrun{
-#'   # Result-object form
-#'   m <- jlm(TotalCrime ~ Age + Tattoos, SampleData)
-#'   jplot(m)                            # core diagnostics + fit plot
-#'   jplot(m, which = "coef")            # coefficient forest plot
-#'   jplot(m, which = "fit", focal = Age, at = "mean")
+#' # Result-object form
+#' m <- jlm(WellbeingScore ~ Income + Age, community)
+#' jplot(m)                            # core diagnostics + fit plot
+#' jplot(m, which = "coef")            # coefficient forest plot
+#' jplot(m, which = "fit", focal = Age, at = "mean")
 #'
-#'   # Formula form (scatter and box)
-#'   jplot(Tattoos ~ Age, SampleData)                       # scatter
-#'   jplot(Tattoos ~ Age, SampleData, line = "lm")          # scatter + regression
-#'   jplot(Tattoos ~ Age, SampleData, line = "lm", band = "see")
-#'   jplot(Tattoos ~ Age, SampleData, by = Gender, line = "lm")
-#'   jplot(Age ~ Gender, SampleData)                        # boxplot
+#' # Formula form (scatter and box)
+#' jplot(WellbeingScore ~ Income, community)               # scatter
+#' jplot(WellbeingScore ~ Income, community, line = "lm")  # + regression line
+#' jplot(WellbeingScore ~ Income, community, line = "lm", band = "see")
+#' jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 #'
-#'   # Variable-list form (distributions and counts)
-#'   jplot(SampleData, Age)                     # histogram
-#'   jplot(SampleData, Gender)                  # bar chart
-#'   jplot(SampleData, Program, Employment)     # grouped bar chart
-#' }
+#' # Boxplot: assert the grouping variable as categorical (labelled
+#' # variables otherwise enter numerically; jdummy() registration also works)
+#' jplot(WellbeingScore ~ Region, community, categorical = "Region")
+#'
+#' # Variable-list form (distributions and counts)
+#' jplot(community, Age)                      # histogram
+#' jplot(community, Region)                   # bar chart
+#' jplot(community, Region, Volunteer,        # grouped bar chart
+#'       categorical = c("Region", "Volunteer"))
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -360,7 +362,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     .jst_stop("For two-numeric scatterplots, use formula syntax to make the DV ",
          "and IV explicit (consistent with jlm):\n",
          "  jplot(", variable_names[2], " ~ ", variable_names[1],
-         ", ", if (!is.null(.jst_data_name)) .jst_data_name else "SampleData",
+         ", ", if (!is.null(.jst_data_name)) .jst_data_name else "MyData",
          if (!identical(line, FALSE)) paste0(", line = \"",
                                              if (isTRUE(line)) "lm" else line,
                                              "\"") else "",
@@ -375,7 +377,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     .jst_stop("For boxplots, use formula syntax to make the outcome and grouping ",
          "variable explicit (consistent with jaov):\n",
          "  jplot(", num_var, " ~ ", cat_var, ", ",
-         if (!is.null(.jst_data_name)) .jst_data_name else "SampleData", ")\n",
+         if (!is.null(.jst_data_name)) .jst_data_name else "MyData", ")\n",
          "(The numeric outcome on the left of ~ goes on the y-axis; the ",
          "categorical grouping variable on the right goes on the x-axis.)")
   }
@@ -2101,9 +2103,9 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
 jplot.jst_desc <- function(x, which = "core", ...) {
   .jst_stop("Plotting jst_desc result objects is not supported. ",
        "Instead, call jplot() with the data frame directly, e.g.:\n",
-       "  jplot(SampleData, Age)        # histogram\n",
-       "  jplot(SampleData, Gender)     # bar chart\n",
-       "  jplot(SampleData, Age, Gender) # boxplot")
+       "  jplot(community, Age)       # histogram\n",
+       "  jplot(community, Region)    # bar chart\n",
+       "  jplot(WellbeingScore ~ Region, community, categorical = \"Region\")  # boxplot")
 }
 
 #' @rdname jplot
@@ -2111,6 +2113,7 @@ jplot.jst_desc <- function(x, which = "core", ...) {
 jplot.jst_freq <- function(x, which = "core", ...) {
   .jst_stop("Plotting jst_freq result objects is not supported. ",
        "Instead, call jplot() with the data frame directly, e.g.:\n",
-       "  jplot(SampleData, Gender)              # bar chart\n",
-       "  jplot(SampleData, Gender, Employment)  # grouped bar chart")
+       "  jplot(community, Region)    # bar chart\n",
+       "  jplot(community, Region, Volunteer, ",
+       "categorical = c(\"Region\", \"Volunteer\"))  # grouped bar chart")
 }

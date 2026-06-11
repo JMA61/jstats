@@ -1,6 +1,57 @@
 
 ########## NEW UPDATE INSTRUCTIONS #################
 
+## The "Master" file (jstats_source.R) has the 17 current jstats R files in it with the #<<<FILE: dividers (sentinels)
+## My computer keeps the package as 17 separate R files,
+## the master is the receive-transfer copy; data.R and zzz.R transfer separately by hand when they change."
+## To install on my computer:
+
+## Download the jstats_source.R file from Claude and over-write the existing file of that name in the root of jstats
+## This file is listed in .gitignore and .Rbuildignore so it won't become part of the package
+## Then run:
+
+source("jstats_dev_tools.R")
+receive_package("jstats_source.R")
+
+## That's a function that's inside jstats_dev_tools.R
+
+## That function will:
+# back up the current files in R/
+# split the master into the 17 files that go into the R folder
+# does a byte-identical self-check
+# runs devtools::document()
+# runs a full devtools::check()
+
+
+### Getting:   Non-standard file/directory found at top level:'jstats.Rproj' That will be handled later at CRAN Submission
+
+## the R/data.R file is the roxygen documentation for the community dataset
+## Running document() generates community.Rd, which is the help page seen by typing ?community
+## R/data.R needs to be edited and re-delivered when the dataset's documentation needs to change (even if the dataset doesn't change)
+## This file is not within the jstats_source.R file.
+## Also not in the jstats_source.R master file is zzz.R, so those two files will need to be transferred separately if they change
+
+# "If source("jstats_dev_tools.R") runs but receive_package still isn't found, suspect a file mix-up —
+# the master's content saved into the dev-tools filename.
+# Check readLines("jstats_dev_tools.R", n=1); if line 1 is a #<<<FILE: sentinel,
+# that's the master in the wrong filename, not a code problem.
+# The dev script must never contain sentinels; the master must never contain the dev functions."
+
+
+### When going in reverse : assemble_package() would take the 17 files and place them into the jstats_source.R file that I would upload to Claude
+## but I would only need to run assemble_package() if any of the 17 files were hand edited on my machine. Otherwise, the jstats_source.R file is
+## simply uploaded to Claude when necessary.
+
+assemble_package()   ## No argument is necessary - - the output defaults to jstats_source.R; reads the 17 R/ files automatically
+
+## again, only if any of the 17 files are edited on my machine.
+
+
+
+
+
+
+
 ## Remember to change version number below, and in Description file
 ## ...can also update what was changed in this version in the git commit -m code below
 
