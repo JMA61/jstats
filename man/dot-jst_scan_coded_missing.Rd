@@ -4,7 +4,7 @@
 \alias{.jst_scan_coded_missing}
 \title{Internal: scan for coded missing values and report findings}
 \usage{
-.jst_scan_coded_missing(df, obj_name, ext, scan_udm = TRUE)
+.jst_scan_coded_missing(df, obj_name, scan_udm = TRUE)
 }
 \arguments{
 \item{scan_udm}{Logical. When \code{FALSE}, the haven \code{na_values}

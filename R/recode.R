@@ -1173,7 +1173,19 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         }
       }
     } else {
-      message("Note: No value labels assigned. To add labels, use jrelabel().")
+      # The labels hint fires only when the map mints at least one
+      # non-NA category there could be a label for. Pure missing-
+      # conversion / value-dropping maps (every rule targets NA, e.g.
+      # "-99=NA; else=copy") create nothing new to label, so the note is
+      # suppressed -- mirroring the collapse-note guard's non-NA filter
+      # above. The note stays for recodes that mint genuinely new
+      # unlabelled categories (e.g. an unlabelled 1/2 -> 0/1).
+      mints_non_na <- any(vapply(parsed_map$mappings,
+                                 function(r) !is.na(r$new_val),
+                                 logical(1)))
+      if (mints_non_na) {
+        message("Note: No value labels assigned. To add labels, use jrelabel().")
+      }
     }
   }
 
@@ -1334,6 +1346,22 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   if (!var_name %in% names(data)) {
     .jst_stop(paste0("Variable '", var_name, "' not found in '",
                 data_name, "'."))
+  }
+
+  # Type guard: declaring numeric codes on a text or factor column is
+  # destructive (text coerces to all-NA; a factor is silently replaced
+  # by its internal integer codes), so both are refused with a fix.
+  guard_col <- data[[var_name]]
+  if (is.character(guard_col) ||
+      (haven::is.labelled(guard_col) && typeof(guard_col) == "character")) {
+    .jst_stop("'", var_name, "' is a character (text) variable; missing-value ",
+         "codes can only be declared on numeric variables.\n",
+         "If the values are numbers stored as text, convert with as.numeric() first.")
+  }
+  if (is.factor(guard_col)) {
+    .jst_stop("'", var_name, "' is a factor; missing-value codes can only be ",
+         "declared on numeric variables.\n",
+         "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
   }
 
   if (missing(codes) || is.null(codes)) {
@@ -1631,16 +1659,22 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   existing_labs <- if (haven::is.labelled(col)) labelled::val_labels(col)
                    else NULL
 
-  # Strip any existing labels that point at codes being newly declared
-  # (we'll re-add them with possibly different labels below). Existing
-  # labels pointing at non-UDM codes (real-data labels) are preserved.
-  if (!is.null(existing_labs) && length(existing_labs) > 0L) {
-    keep_mask <- !(unname(existing_labs) %in% code_vals)
+  # Strip existing labels only for codes that are being given a NEW
+  # label in this call (the new label replaces the old one below). A
+  # code declared bare keeps whatever label it already carries --
+  # declaring a value as missing does not touch its label (SPSS
+  # parallel: MISSING VALUES never alters VALUE LABELS). Labels on
+  # non-declared codes (real-data labels) are always preserved.
+  label_names <- names(parsed_codes)
+  if (is.null(label_names)) label_names <- rep("", length(parsed_codes))
+  relabelled <- as.numeric(parsed_codes[nzchar(label_names)])
+  if (!is.null(existing_labs) && length(existing_labs) > 0L &&
+      length(relabelled) > 0L) {
+    keep_mask <- !(unname(existing_labs) %in% relabelled)
     existing_labs <- existing_labs[keep_mask]
   }
 
   # Build new labels for codes that have a label.
-  label_names <- names(parsed_codes)
   new_labs <- numeric(0)
   for (i in seq_along(parsed_codes)) {
     if (nzchar(label_names[i])) {
@@ -1682,16 +1716,21 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   existing_labs <- if (haven::is.labelled(col)) labelled::val_labels(col)
                    else NULL
 
-  # Strip any existing tagged-NA labels for the tags being newly
-  # declared. Plain-numeric labels are preserved.
-  if (!is.null(existing_labs) && length(existing_labs) > 0L) {
+  # Strip existing tagged-NA labels only for tags that are being given a
+  # NEW label in this call; a tag declared bare keeps its existing
+  # label (parallel to the SPSS branch's bare-codes preservation).
+  # Plain-numeric labels are preserved.
+  label_names <- names(parsed_codes)
+  if (is.null(label_names)) label_names <- rep("", length(parsed_codes))
+  relabelled_tags <- tags[nzchar(label_names)]
+  if (!is.null(existing_labs) && length(existing_labs) > 0L &&
+      length(relabelled_tags) > 0L) {
     existing_tags <- haven::na_tag(existing_labs)
-    keep_mask <- is.na(existing_tags) | !(existing_tags %in% tags)
+    keep_mask <- is.na(existing_tags) | !(existing_tags %in% relabelled_tags)
     existing_labs <- existing_labs[keep_mask]
   }
 
   # Build new tagged-NA labels.
-  label_names <- names(parsed_codes)
   new_labs <- numeric(0)
   for (i in seq_along(parsed_codes)) {
     if (nzchar(label_names[i])) {
@@ -1763,6 +1802,20 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   # Build val_labels with tagged_na as the value, label as the name.
   existing_labs <- if (haven::is.labelled(col)) labelled::val_labels(col)
                    else NULL
+
+  # Carry an existing label across the conversion when the call supplies
+  # no new label for that code: the numeric code's cells become
+  # tagged-NA cells, and the label moves with them (parallel to the
+  # SPSS branch's bare-codes preservation). A new label in the call
+  # still wins.
+  if (!is.null(existing_labs) && length(existing_labs) > 0L) {
+    for (i in seq_along(sorted_codes)) {
+      if (!nzchar(sorted_labels[i])) {
+        hit <- which(unname(existing_labs) == sorted_codes[i])
+        if (length(hit) > 0L) sorted_labels[i] <- names(existing_labs)[hit[1]]
+      }
+    }
+  }
 
   # Strip any existing labels pointing at the codes being converted
   # (they're now tagged-NA values, not the numeric codes any more).

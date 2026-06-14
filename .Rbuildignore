@@ -10,3 +10,4 @@
 ^tools/file_manifest\.txt$
 ^jstats_dev_tools\.R$
 ^jstats_source\.R$
+^jstats\.Rproj$

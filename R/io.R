@@ -156,6 +156,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # overwrite prompt are never muted.
   say <- function(...) if (!quiet) message(...)
 
+  # Rule F: consecutive load-time notes are separated by a blank line so
+  # they do not run together. The "Loaded ..." summary is a status line,
+  # not a note, and is not spaced this way. say_note() wraps say() with
+  # the tracking; the UDM narrative (emitted directly via message())
+  # participates through the same .jst_note_fired flag.
+  .jst_note_fired <- FALSE
+  say_note <- function(...) {
+    if (.jst_note_fired) say("")
+    say(...)
+    .jst_note_fired <<- TRUE
+  }
+
   # --- Validate file argument ------------------------------------------------
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
@@ -392,12 +404,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # it was saved under. Restores baked registrations (replacing any differing
   # in-session ones), or clears stale ones when the loaded data carries none.
   reg_note <- .jst_refresh_registrations(obj_name, baked_regs)
-  if (!is.null(reg_note)) say(reg_note)
+  if (!is.null(reg_note)) say_note(reg_note)
 
   # --- Set as default with juse() if requested -------------------------------
   if (use) {
     options(.jst_default_data = obj_name)
-    say("Default data frame set to: ", obj_name)
+    say_note("Default data frame set to: ", obj_name)
   }
 
   # --- UDM narrative notification --------------------------------------------
@@ -415,7 +427,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       !isTRUE(getOption(".jst_udm_notice_shown", FALSE))
     }
     if (show_notice && !quiet) {
+      if (.jst_note_fired) message("")
       message(.jst_format_udm_narrative(udm_info, preserve.udm, data_name = obj_name))
+      .jst_note_fired <- TRUE
       options(.jst_udm_notice_shown = TRUE)
     }
   }
@@ -430,7 +444,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # trip or R-side construction (currently na_values-only; tagged_na
   # reading via the abstraction is a future refactor step).
   if (check.missing) {
-    .jst_scan_coded_missing(df, obj_name, ext, scan_udm = (length(udm_info) == 0))
+    .jst_scan_coded_missing(df, obj_name, scan_udm = (length(udm_info) == 0))
   }
 
   invisible(df)
@@ -844,18 +858,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   if (preserve.udm) {
     paste0(
-      sprintf("%d variables have user-defined missing values:\n", n_vars),
+      sprintf("%d %s user-defined missing values:\n", n_vars,
+              if (n_vars == 1) "variable has" else "variables have"),
       list_str,
       "\nThese codes are excluded as missing in jstats analyses. ",
       "For better base R compatibility, convert them:\n",
-      sprintf("  jconvert(%s, to = \"stata\")  \u2014 retains missing-value codes, ", call_name),
+      sprintf("  jconvert(%s, to = \"stata\")  - retains missing-value codes, ", call_name),
       "base R compatible (recommended)\n",
-      sprintf("  jconvert(%s, to = \"baseR\")  \u2014 converts to plain NA and ", call_name),
+      sprintf("  jconvert(%s, to = \"baseR\")  - converts to plain NA and ", call_name),
       "removes missing-value codes"
     )
   } else {
     paste0(
-      sprintf("%d variables had user-defined missing values, ", n_vars),
+      sprintf("%d %s user-defined missing values, ", n_vars,
+              if (n_vars == 1) "variable had" else "variables had"),
       "converted to plain NA per preserve.udm = FALSE:\n",
       list_str,
       "\nTo keep the declarations instead, reload with preserve.udm = TRUE."
@@ -1055,7 +1071,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   tabular nor flagged-as-suspected.
 #'
 #' @keywords internal
-.jst_scan_coded_missing <- function(df, obj_name, ext, scan_udm = TRUE) {
+.jst_scan_coded_missing <- function(df, obj_name, scan_udm = TRUE) {
 
   max_report <- 10L  # Maximum number of rows to display (harmonized with
                      # the narrative cap in .jst_format_udm_narrative)
@@ -1096,7 +1112,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           if (n_cases > 0) {
             findings[[length(findings) + 1]] <- list(
               var = vname, value = sv, count = n_cases,
-              source = "user-defined missing value"
+              source = "udm"
             )
           }
         }
@@ -1117,7 +1133,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
               n_cases <- sum(num_vals == rv, na.rm = TRUE)
               findings[[length(findings) + 1]] <- list(
                 var = vname, value = rv, count = n_cases,
-                source = "user-defined missing value"
+                source = "udm"
               )
             }
           }
@@ -1135,7 +1151,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         # runs whether or not scan_udm = TRUE: when scan_udm = FALSE the
         # formal branch was gated off (because the .sav narrative covered
         # the UDMs), and without this filter the heuristic would mislabel
-        # those same values as "suspected — not formally defined".
+        # those same values as suspected ("not formally defined").
         is_formal_udm <-
           (!is.null(spss_na_vals) && sv %in% spss_na_vals) ||
           (!is.null(spss_na_range) && length(spss_na_range) == 2 &&
@@ -1175,12 +1191,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           findings[[length(findings) + 1]] <- list(
             var = vname, value = sv, count = n_cases,
             label = val_label_text,
-            source = "label-only \u2014 not formally declared"
+            source = "label_only"
           )
         } else {
           findings[[length(findings) + 1]] <- list(
             var = vname, value = sv, count = n_cases,
-            source = "suspected \u2014 not formally defined"
+            source = "suspected"
           )
         }
       }
@@ -1190,13 +1206,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Report findings -------------------------------------------------------
   if (length(findings) > 0) {
 
-    # Determine which sources are present so we can pick the heading,
-    # render only the relevant legend lines, and fix the per-variable
-    # jrecode example.
+    # Internal source keys ("udm", "label_only", "suspected") are kept
+    # separate from the user-facing tag text below, so display wording
+    # can change without touching comparison logic. (The former em-dash
+    # tag strings doubled as comparison keys; this split removes that
+    # hazard, and the tag text itself is now ASCII-only per the
+    # runtime-string punctuation convention.)
+    src_display <- c(
+      udm        = "user-defined missing value",
+      label_only = "label-only - not formally declared",
+      suspected  = "suspected - not formally defined"
+    )
+
     sources_present <- unique(vapply(findings, function(f) f$source, character(1)))
-    has_udm        <- "user-defined missing value"            %in% sources_present
-    has_label_only <- "label-only \u2014 not formally declared" %in% sources_present
-    has_heur       <- "suspected \u2014 not formally defined"   %in% sources_present
+    has_udm        <- "udm"        %in% sources_present
+    has_label_only <- "label_only" %in% sources_present
+    has_heur       <- "suspected"  %in% sources_present
+
+    # Single-source rendering: when exactly ONE source type is present,
+    # the per-row [source] tags would repeat one fact on every row, so
+    # the rows drop the brackets and the legend reads as plain prose.
+    # When two or more sources mix, the tags disambiguate the rows (the
+    # tag-system carve-out) and the bracketed per-source legends stay.
+    single_source <- length(sources_present) == 1L
 
     # Heading: telegraph "Suspected" only when ALL findings are pure
     # heuristic (no formal UDMs and no label-only). Both formal UDMs and
@@ -1212,7 +1244,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # Group findings by (variable, source). One row per group lists every
     # value flagged for that combination. This collapses the typical UDM
     # case (Cont_udm with codes -99 and -98) from two lines to one. Mixed
-    # sources on the same variable (rare — e.g. a UDM-bearing variable
+    # sources on the same variable (rare -- e.g. a UDM-bearing variable
     # with an additional sentinel value caught only by the heuristic)
     # produce two rows for that variable, one per source. Group order
     # preserves the scan order of first appearance.
@@ -1243,14 +1275,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
     # Two-pass print: first build all the value-count strings so we can
     # compute the max width, then print with both name and vc columns
-    # padded so the [source] brackets align vertically across rows.
-    # Label-only findings inline the label after the value, like
+    # padded so the [source] brackets align vertically across rows (the
+    # vc padding is skipped in single-source mode, where no bracket
+    # column follows). Label-only findings inline the label after the
+    # value, like
     #   -99 "Refused" (3), -98 "Don't know" (3)
     # Other source types use the compact form without labels.
     vc_parts <- character(n_show)
     for (i in seq_len(n_show)) {
       g <- groups[[group_keys[i]]]
-      if (g$source == "label-only \u2014 not formally declared") {
+      if (g$source == "label_only") {
         vc_strs <- sprintf('%g "%s" (%d)', g$values, g$labels, g$counts)
       } else {
         vc_strs <- sprintf("%g (%d)", g$values, g$counts)
@@ -1261,10 +1295,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
     for (i in seq_len(n_show)) {
       g <- groups[[group_keys[i]]]
-      cat(sprintf("  %-*s  %-*s  [%s]\n",
-                  max_name_len, paste0(g$var, ":"),
-                  max_vc_len, vc_parts[i],
-                  g$source))
+      if (single_source) {
+        cat(sprintf("  %-*s  %s\n",
+                    max_name_len, paste0(g$var, ":"),
+                    vc_parts[i]))
+      } else {
+        cat(sprintf("  %-*s  %-*s  [%s]\n",
+                    max_name_len, paste0(g$var, ":"),
+                    max_vc_len, vc_parts[i],
+                    src_display[[g$source]]))
+      }
     }
     if (n_groups > max_report) {
       # When the hidden rows span multiple source types, break down the
@@ -1273,23 +1313,23 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # already covers the interpretation and the simple count suffices.
       hidden_sources <- vapply(groups[group_keys[(max_report + 1):n_groups]],
                                function(g) g$source, character(1))
-      hidden_udm        <- sum(hidden_sources == "user-defined missing value")
-      hidden_label_only <- sum(hidden_sources == "label-only \u2014 not formally declared")
-      hidden_heur       <- sum(hidden_sources == "suspected \u2014 not formally defined")
+      hidden_udm        <- sum(hidden_sources == "udm")
+      hidden_label_only <- sum(hidden_sources == "label_only")
+      hidden_heur       <- sum(hidden_sources == "suspected")
 
       mixed <- (hidden_udm > 0) + (hidden_label_only > 0) + (hidden_heur > 0) > 1
       if (mixed) {
         cat(sprintf("  ... and %d more:\n", n_groups - max_report))
         if (hidden_udm > 0) {
-          cat(sprintf("    %d with [user-defined missing value]\n", hidden_udm))
+          cat(sprintf("    %d with [%s]\n", hidden_udm, src_display[["udm"]]))
         }
         if (hidden_label_only > 0) {
-          cat(sprintf("    %d with [label-only \u2014 not formally declared]\n",
-                      hidden_label_only))
+          cat(sprintf("    %d with [%s]\n", hidden_label_only,
+                      src_display[["label_only"]]))
         }
         if (hidden_heur > 0) {
-          cat(sprintf("    %d with [suspected \u2014 not formally defined]\n",
-                      hidden_heur))
+          cat(sprintf("    %d with [%s]\n", hidden_heur,
+                      src_display[["suspected"]]))
         }
       } else {
         cat(sprintf("  ... and %d more.\n", n_groups - max_report))
@@ -1297,49 +1337,73 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
 
     cat("\n")
-    if (has_udm) {
-      cat("[user-defined missing value]: already treated as NA by jstats\n")
-      cat("  analysis functions. Conversion to plain NA is optional --- useful\n")
-      cat("  if you'll use this dataset with base R or non-package functions where\n")
-      cat("  the numeric values may be misinterpreted as real.\n")
-    }
-    if (has_label_only) {
-      cat("[label-only \u2014 not formally declared]: not automatically treated as NA, but\n")
-      cat("  value labels look UDM-like (often after .dta or .xpt round-trip, which\n")
-      cat("  preserve labels but not the formal declaration). Convert if these are\n")
-      cat("  missing-value codes; leave as-is if real.\n")
-    }
-    if (has_heur) {
-      cat("[suspected \u2014 not formally defined]: not automatically treated as NA.\n")
-      cat("  Convert if these are missing-value codes; leave as-is if real.\n")
-    }
-
-    # Build a per-variable jrecode example. Preference order:
-    # UDM > label-only > suspected. Both UDM and label-only typically
-    # have multiple coded values (-99, -98, ...) which makes for a
-    # more informative map; pure heuristic findings often have just
-    # one code, so they fall through to the first finding.
-    if (has_udm) {
-      ex_var <- findings[[which(vapply(findings,
-                                       function(f) f$source == "user-defined missing value",
-                                       logical(1)))[1]]]$var
-    } else if (has_label_only) {
-      ex_var <- findings[[which(vapply(findings,
-                                       function(f) f$source == "label-only \u2014 not formally declared",
-                                       logical(1)))[1]]]$var
+    if (single_source) {
+      # One source type present: the legend reads as plain prose with no
+      # bracket tag, since there is nothing to disambiguate.
+      if (has_udm) {
+        cat("These codes are declared as user-defined missing values and are already\n")
+        cat("treated as NA by jstats analysis functions.\n")
+        cat("Conversion to plain NA is optional --- useful if you'll use this dataset\n")
+        cat("with base R or non-package functions where the numeric values may be\n")
+        cat("misinterpreted as real.\n")
+      } else if (has_label_only) {
+        cat("These codes are not formally declared, so they are not treated as missing,\n")
+        cat("but their value labels look UDM-like.\n")
+        cat("Declare them as missing if they are; leave as-is if real.\n")
+      } else {
+        cat("These codes are not formally defined, so they are not treated as missing.\n")
+        cat("Declare them as missing if they are; leave as-is if real.\n")
+      }
     } else {
-      ex_var <- findings[[1]]$var
+      if (has_udm) {
+        cat("[", src_display[["udm"]], "]: already treated as NA by jstats\n", sep = "")
+        cat("  analysis functions. Conversion to plain NA is optional --- useful\n")
+        cat("  if you'll use this dataset with base R or non-package functions where\n")
+        cat("  the numeric values may be misinterpreted as real.\n")
+      }
+      if (has_label_only) {
+        cat("[", src_display[["label_only"]], "]: not automatically treated as NA, but\n", sep = "")
+        cat("  value labels look UDM-like.\n")
+        cat("  Declare them as missing if they are; leave as-is if real.\n")
+      }
+      if (has_heur) {
+        cat("[", src_display[["suspected"]], "]: not automatically treated as NA.\n", sep = "")
+        cat("  Declare them as missing if they are; leave as-is if real.\n")
+      }
     }
-    ex_codes <- sort(unique(vapply(findings,
-                                   function(f) if (f$var == ex_var) f$value else NA_real_,
-                                   numeric(1))))
-    ex_codes <- ex_codes[!is.na(ex_codes)]
-    map_str  <- paste0(paste0(format(ex_codes), "=NA"), collapse = "; ")
-    map_str  <- paste0(map_str, "; else=copy")
 
-    cat("\nTo convert one variable:\n")
-    cat(sprintf("  %s$%s <- jrecode(%s, %s,\n    map = \"%s\")\n",
-                obj_name, ex_var, obj_name, ex_var, map_str))
+    # Suggestion example: lead with the non-destructive declaration
+    # (jdeclare_udm) rather than a destructive recode-to-NA, per the
+    # message-suggestion convention (Session-113 addendum in the missing-
+    # values reference). Omitted entirely on pure-UDM reports -- the load
+    # narrative and the legend above already carry the jconvert guidance
+    # there. Target preference: label-only first (it typically has
+    # several labelled codes, the most informative example), then
+    # suspected; UDM rows are never the target, and a mixed-source
+    # variable's UDM codes are excluded from the example's codes= set
+    # because they are already declared.
+    ex_var <- NULL
+    for (src in c("label_only", "suspected")) {
+      idx <- which(vapply(findings, function(f) f$source == src, logical(1)))
+      if (length(idx) > 0) {
+        ex_var <- findings[[idx[1]]]$var
+        break
+      }
+    }
+    if (!is.null(ex_var)) {
+      ex_codes <- sort(unique(vapply(findings, function(f) {
+        if (f$var == ex_var && f$source != "udm") f$value else NA_real_
+      }, numeric(1))))
+      ex_codes <- ex_codes[!is.na(ex_codes)]
+      codes_str <- if (length(ex_codes) == 1L) {
+        format(ex_codes)
+      } else {
+        paste0("c(", paste(format(ex_codes, trim = TRUE), collapse = ", "), ")")
+      }
+      cat("\n# To declare one variable's codes as missing:\n")
+      cat(sprintf("  %s <- jdeclare_udm(%s, %s, codes = %s)\n",
+                  obj_name, obj_name, ex_var, codes_str))
+    }
   }
 }
 
