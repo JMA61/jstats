@@ -195,6 +195,81 @@
   if (extra_newline) cat("\n")
 }
 
+#' Internal helper: build a persistence/durability note
+#'
+#' Returns the standardized "where does this state live, and how do you make
+#' it last" note shared by every state-setting verb. The note states which
+#' durability rung the just-applied state reached and the action to climb to
+#' the next rung. The mechanics deliberately differ by verb -- the registry
+#' verbs (jnumeric, jcount, jlikert, jdummy) annotate the session through a
+#' notebook, while jdeclare_udm writes a missing-value declaration onto the
+#' data frame -- so the rung argument selects the wording rather than the
+#' helper inferring it.
+#'
+#' Returns the note as a single string with the embedded "Note:" level prefix
+#' and NO trailing newline. Callers emit it however they already do: the
+#' registry verbs message() it; jdeclare_udm appends it to its larger
+#' notification string. Visibility (standard and full, suppressed at minimal)
+#' is the caller's gate, not this helper's.
+#'
+#' One deliberate divergence between the two rungs: the "session" rung names
+#' "R format (.rds)" because registry registrations bake only into .rds, while
+#' the "frame" rung says generic "save the data frame" because UDM codes also
+#' survive .sav and .dta, so naming .rds there would be a false constraint.
+#'
+#' @param rung One of \code{"session"} (registry registrations -- jnumeric,
+#'   jcount, jlikert, jdummy) or \code{"frame"} (a UDM declaration --
+#'   jdeclare_udm).
+#' @param data_name Character string name of the data frame, used to build the
+#'   jsave() example and, for the "frame" rung, the reassignment line.
+#' @param count Integer number of registrations just set ("session" rung
+#'   only); controls singular/plural agreement. Unspecified or not equal to 1
+#'   yields the plural form.
+#' @param verb Character string name of the calling verb ("frame" rung only),
+#'   used to build the reassignment line.
+#' @param var_name Character string variable name ("frame" rung only), used to
+#'   build the reassignment line.
+#' @param codes_str Character string of the rendered \code{codes =} argument
+#'   value ("frame" rung only). When supplied, the reassignment line shows the
+#'   actual call (e.g. \code{codes = c(-99, -98)}); when NULL it shows the
+#'   generic \code{...} template.
+#' @keywords internal
+.jst_durability_note <- function(rung, data_name, count = NULL,
+                                 verb = NULL, var_name = NULL,
+                                 codes_str = NULL) {
+  save_call <- paste0("jsave(", data_name, ", \"", data_name, ".rds\")")
+  if (identical(rung, "session")) {
+    if (isTRUE(count == 1L)) {
+      paste0(
+        "Note: this registration is stored for this session only.\n",
+        "To keep it across sessions, save the data frame in R format (.rds): ",
+        save_call, "."
+      )
+    } else {
+      paste0(
+        "Note: registrations are stored for this session only.\n",
+        "To keep them across sessions, save the data frame in R format (.rds): ",
+        save_call, "."
+      )
+    }
+  } else if (identical(rung, "frame")) {
+    args_tail <- if (!is.null(codes_str) && nzchar(codes_str)) {
+      paste0("codes = ", codes_str)
+    } else {
+      "..."
+    }
+    paste0(
+      "Note: assign the result to store the declaration on the data frame: ",
+      data_name, " <- ", verb, "(", data_name, ", ", var_name, ", ",
+      args_tail, ").\n",
+      "To keep it across sessions, save the data frame: ", save_call, "."
+    )
+  } else {
+    stop("Internal error: .jst_durability_note() rung must be ",
+         "\"session\" or \"frame\".", call. = FALSE)
+  }
+}
+
 #' Internal helper: retrieve a variable label as a string
 #'
 #' Returns the label if present, otherwise the string "None".

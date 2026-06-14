@@ -1232,9 +1232,8 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 
   # Persist reminder (standard-tier; suppressed at minimal output).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message("Registrations are stored for this session only.\n",
-            "  To keep them across sessions, save the data frame in R format ",
-            "(.rds), e.g. jsave(", .jst_data_name, ", \"", .jst_data_name, ".rds\").")
+    message(.jst_durability_note("session", .jst_data_name,
+                                 count = length(var_names)))
   }
 
   # Non-blocking declaration-plausibility heads-up for the just-registered

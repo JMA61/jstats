@@ -1383,10 +1383,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # variable's UDM codes are excluded from the example's codes= set
     # because they are already declared.
     ex_var <- NULL
+    ex_src <- NULL
     for (src in c("label_only", "suspected")) {
       idx <- which(vapply(findings, function(f) f$source == src, logical(1)))
       if (length(idx) > 0) {
         ex_var <- findings[[idx[1]]]$var
+        ex_src <- src
         break
       }
     }
@@ -1403,6 +1405,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       cat("\n# To declare one variable's codes as missing:\n")
       cat(sprintf("  %s <- jdeclare_udm(%s, %s, codes = %s)\n",
                   obj_name, obj_name, ex_var, codes_str))
+      # For a suspected (unlabelled) target, offer a commented example that
+      # also attaches labels in the same call. Placeholder label strings, not
+      # guessed meanings -- the scan does not know what the codes signify
+      # (Session 115). Omitted for a label-only target, where the codes already
+      # carry labels and bare codes preserve them.
+      if (identical(ex_src, "suspected")) {
+        lbl_parts <- paste0("\"label", seq_along(ex_codes), "\" = ",
+                            format(ex_codes, trim = TRUE))
+        lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
+        cat("# To label them at the same time (example only):\n")
+        cat(sprintf("#   %s <- jdeclare_udm(%s, %s, codes = %s)\n",
+                    obj_name, obj_name, ex_var, lbl_str))
+      }
     }
   }
 }

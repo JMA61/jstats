@@ -45,7 +45,7 @@ receive_package("jstats_source.R")
 assemble_package()   ## No argument is necessary - - the output defaults to jstats_source.R; reads the 17 R/ files automatically
 
 ## again, only if any of the 17 files are edited on my machine.
-
+### if no local edits are done, the jstats_source can be re-uploaded to the KB from the last delivered, but running assemble_package() does an extra check
 
 
 

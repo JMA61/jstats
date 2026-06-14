@@ -1920,13 +1920,32 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
     paste(body_lines, collapse = "\n"), "\n"
   )
 
-  # Standard / full tier: assignment-syntax reminder.
+  # Standard / full tier: durability note (assign to the frame + save to keep).
+  # The reassignment line mirrors the user's actual codes= argument (Option B,
+  # Session 115) for the SPSS-canonical branch -- the common path -- so it
+  # matches the just-echoed command; the rarer Stata branches keep the generic
+  # template (the Stata-conversion branch prints its own equivalent call at the
+  # full tier below).
   if (!identical(output_level, "minimal")) {
-    reminder <- paste0(
-      "Note: jdeclare_udm() returns the modified data frame; remember the assignment: ",
-      data_name, " <- jdeclare_udm(", data_name, ", ", var_name, ", ...).\n"
-    )
-    msg <- paste0(msg, reminder)
+    codes_str <- NULL
+    if (branch == "spss_canonical") {
+      parts   <- character(0)
+      any_lbl <- any(nzchar(names(parsed_codes)))
+      for (i in seq_along(parsed_codes)) {
+        v   <- format(as.numeric(parsed_codes[i]), trim = TRUE)
+        lbl <- names(parsed_codes)[i]
+        parts <- c(parts,
+                   if (nzchar(lbl)) paste0("\"", lbl, "\" = ", v) else v)
+      }
+      codes_str <- if (length(parts) == 1L && !any_lbl) parts
+                   else paste0("c(", paste(parts, collapse = ", "), ")")
+    }
+    msg <- paste0(msg,
+                  .jst_durability_note("frame", data_name,
+                                       verb = "jdeclare_udm",
+                                       var_name = var_name,
+                                       codes_str = codes_str),
+                  "\n")
   }
 
   # Full tier: conversion equivalent for Stata-conversion branch.

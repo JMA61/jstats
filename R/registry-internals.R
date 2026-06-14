@@ -627,9 +627,7 @@
     message("  Reclassified: ", paste(reclass, collapse = "; "), ".")
   }
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message("Registrations are stored for this session only.\n",
-            "  To keep them across sessions, save the data frame in R format ",
-            "(.rds), e.g. jsave(", data_name, ", \"", data_name, ".rds\").")
+    message(.jst_durability_note("session", data_name, count = length(var_names)))
   }
 
   # Non-blocking declaration-plausibility heads-up for the just-registered
