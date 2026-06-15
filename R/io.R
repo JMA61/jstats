@@ -35,6 +35,13 @@
 #'   with the same name without prompting. If \code{FALSE} (default),
 #'   prompts for confirmation in interactive sessions. In non-interactive
 #'   sessions, overwrites with a warning message.
+#' @param package Logical. If \code{TRUE}, loads a jstats example dataset
+#'   shipped in the package (e.g. \code{community}, \code{clinic}) by bare
+#'   name, bypassing the disk search. Use this when a same-named file in the
+#'   working directory or data folder would otherwise shadow the shipped
+#'   dataset. If \code{FALSE} (default), a matching disk file takes precedence
+#'   and the shipped dataset is used only when no file matches. \code{file}
+#'   must be a bare name with no path or extension when \code{package = TRUE}.
 #' @param check.missing Logical. If \code{TRUE} (default), scans numeric
 #'   variables for values that look like coded missing values (e.g. -99, 999)
 #'   and reports them. Set to \code{FALSE} to skip this check.
@@ -147,13 +154,13 @@
 #'   udm.notice). Errors, warnings, the multi-sheet advisory, and the
 #'   overwrite prompt are still shown.
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
-                  check.missing = TRUE, sheet = NULL,
+                  package = FALSE, check.missing = TRUE, sheet = NULL,
                   preserve.udm = TRUE, udm.notice = NULL, quiet = FALSE) {
 
   # quiet = TRUE mutes informational messages (the directory-resolution
   # note, file found, load summary, default-data note, and the UDM
-  # narrative). Errors, warnings, the multi-sheet advisory, and the
-  # overwrite prompt are never muted.
+  # narrative). Errors, warnings, the multi-sheet advisory, the
+  # shadowed-dataset note, and the overwrite prompt are never muted.
   say <- function(...) if (!quiet) message(...)
 
   # Rule F: consecutive load-time notes are separated by a blank line so
@@ -192,11 +199,35 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     )
   }
 
-  # --- No extension: search for matching files -------------------------------
-  # from_package flags a fall-through to a package-shipped dataset (set in
-  # the search block below when nothing matches on disk).
+  # --- Forced package dataset (package = TRUE) -------------------------------
+  # from_package flags a package-shipped dataset rather than a disk file. It is
+  # set here when package = TRUE forces the shipped copy, or in the no-extension
+  # search below when nothing matches on disk.
   from_package <- FALSE
-  if (ext == "") {
+  if (isTRUE(package)) {
+    if (has_dir || ext != "") {
+      .jst_stop(
+        "package = TRUE loads a shipped jstats dataset by bare name.\n",
+        "Drop the path and extension:\n",
+        "  jload(\"", tools::file_path_sans_ext(basename(file)),
+        "\", package = TRUE)"
+      )
+    }
+    pkg_df <- .jst_get_package_dataset(file)
+    if (is.null(pkg_df)) {
+      .jst_stop(
+        "No jstats example dataset named '", file, "'.\n",
+        "Shipped datasets: ",
+        paste(.jst_package_datasets(), collapse = ", "), "."
+      )
+    }
+    from_package <- TRUE
+    df           <- pkg_df
+  }
+
+  # --- No extension: search for matching files -------------------------------
+  if (!from_package && ext == "") {
+    requested_name <- file
     found <- .jst_search_no_extension(file, has_dir)
     if (length(found) == 0) {
       # Disk files win: only when nothing matches on disk do we fall back to
@@ -222,6 +253,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       }
     } else if (length(found) == 1) {
       say("Found ", basename(found), " in ", .jst_norm_path(dirname(found)))
+      # A disk file matched. If a shipped jstats dataset shares this bare
+      # name, the file shadowed it (disk wins) -- say so, and how to force the
+      # dataset. Consequential and never muted, like the multi-sheet advisory.
+      if (.jst_is_package_dataset(requested_name)) {
+        message(
+          "A local file and a jstats example dataset are both named '",
+          requested_name, "'.\n",
+          "The local file was loaded.\n",
+          "To load the example dataset instead, use:\n",
+          "  jload(\"", requested_name, "\", package = TRUE)"
+        )
+      }
       file    <- found
       ext     <- tolower(tools::file_ext(file))
       has_dir <- TRUE
@@ -453,6 +496,49 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
 # -- jload internal helpers ---------------------------------------------------
 
+#' Internal: names of datasets shipped in the package
+#'
+#' @description
+#' Returns the bare names of every dataset shipped in the package's
+#' \code{data/} directory (e.g. \code{community}, \code{clinic}), resolved
+#' through the package's own namespace so a later package rename is followed
+#' automatically. Returns \code{character(0)} when the package is not installed
+#' as a namespace (e.g. when the source is merely \code{source()}d during
+#' development).
+#'
+#' @return A character vector of dataset names, possibly empty.
+#'
+#' @keywords internal
+.jst_package_datasets <- function() {
+  pkg <- utils::packageName(environment())
+  if (is.null(pkg)) return(character(0))
+
+  avail <- tryCatch(
+    utils::data(package = pkg)$results[, "Item"],
+    error = function(e) character(0)
+  )
+  # data() item names can carry a parenthetical alias (e.g. "x (y)"); keep the
+  # leading token only.
+  sub("\\s.*$", "", avail)
+}
+
+#' Internal: is a bare name a package-shipped dataset?
+#'
+#' @description
+#' TRUE when \code{name} matches a dataset shipped in the package (see
+#' \code{.jst_package_datasets}). Backs jload's shadowed-dataset note (a disk
+#' file sharing a name with a shipped dataset) and the package = TRUE guard,
+#' both of which need a name-only test without materialising the data.
+#'
+#' @param name Character(1). The bare name to test.
+#'
+#' @return A length-one logical.
+#'
+#' @keywords internal
+.jst_is_package_dataset <- function(name) {
+  name %in% .jst_package_datasets()
+}
+
 #' Internal: materialise a package-shipped dataset by name
 #'
 #' @description
@@ -481,14 +567,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   pkg <- utils::packageName(environment())
   if (is.null(pkg)) return(NULL)
 
-  avail <- tryCatch(
-    utils::data(package = pkg)$results[, "Item"],
-    error = function(e) character(0)
-  )
-  # data() item names can carry a parenthetical alias (e.g. "x (y)"); match
-  # on the leading token only.
-  items <- sub("\\s.*$", "", avail)
-  if (!name %in% items) return(NULL)
+  if (!.jst_is_package_dataset(name)) return(NULL)
 
   tmp <- new.env()
   tryCatch(

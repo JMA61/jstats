@@ -1341,13 +1341,12 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 #'   registration notebook.
 #' @seealso \code{\link{jdummy}}, \code{\link{jcount}}
 #' @examples
-#' df <- data.frame(attitude = c(1, 2, 3, 4, 5, 2, 3),
-#'                  score    = c(10, 22, 31, 44, 55, 28, 33))
-#' jnumeric(df, attitude)              # treat the 1-5 item as continuous
-#' jnumeric(df, attitude, score)       # multiple variables at once
-#' jnumeric(df, attitude, remove = TRUE)
+#' # Treat a labelled Likert item as a continuous score (slope-per-unit)
+#' jnumeric(community, Environment2)             # one labelled 1-5 item
+#' jnumeric(community, Environment2, Environment4)  # several at once
+#' jnumeric(community, Environment2, remove = TRUE) # unregister one
 #' jnumeric()                          # list all registrations
-#' jnumeric(df, NULL)                  # clear df's numeric registrations
+#' jnumeric(community, NULL)           # clear community's numeric registrations
 #' jnumeric(clear.all = TRUE)          # clear every frame's numeric registrations
 #' @export
 jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {

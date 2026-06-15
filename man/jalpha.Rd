@@ -75,11 +75,13 @@ item-total statistics.
 }
 \examples{
 # With explicit data frame
-jalpha(attitude, rating, complaints, privileges, learning, raises)
+jalpha(community, Environment1, Environment2, Environment3,
+       Environment4, Environment5)
 
 # Using juse() default
-juse(attitude)
-jalpha(rating, complaints, privileges, learning, raises)
+juse(community)
+jalpha(Environment1, Environment2, Environment3, Environment4,
+       Environment5)
 
 }
 \seealso{

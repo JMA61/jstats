@@ -24,7 +24,7 @@
 #'     5 Graduate degree). Carries SPSS-style missing values (-99 Refused,
 #'     -98 Don't know).}
 #'   \item{Age}{Age in years (integer, 18-80).}
-#'   \item{WellbeingScore}{Wellbeing score (integer, 0-100); built with an
+#'   \item{WellbeingScore}{Flourishing score (integer, 0-100); built with an
 #'     Income-by-Age interaction.}
 #'   \item{Volunteer}{Volunteered in past year, dichotomy coded 0/1 (0 No,
 #'     1 Yes).}
@@ -91,12 +91,12 @@
 #'     values (-99 Refused, -98 Don't know).}
 #'   \item{SocialSupport}{Perceived social support (integer, 0-24); the
 #'     buffering partner in the Stress-by-SocialSupport interaction on
-#'     Wellbeing.}
+#'     Flourishing.}
 #'   \item{SleepHours}{Average nightly sleep in hours. Carries SPSS-style
 #'     missing values (-99 Refused, -98 Don't know), placed on cases that do
 #'     not overlap the Stress codes, so a model using both predictors drops
 #'     more cases than either alone.}
-#'   \item{Wellbeing}{Wellbeing score (integer, 0-100); built with a
+#'   \item{Flourishing}{Flourishing score (integer, 0-100); built with a
 #'     Stress-by-SocialSupport interaction (the buffering hypothesis).}
 #'   \item{ScreenTime}{Daily screen time in hours; deliberately near-independent
 #'     of the other variables.}
@@ -108,7 +108,7 @@
 #'   \item{Medication}{Currently taking medication, dichotomy coded 0/1 (0 No,
 #'     1 Yes). Carries an SPSS-style missing value (-99 Refused).}
 #'   \item{Condition}{Treatment condition, 4 categories (1 Control, 2 CBT,
-#'     3 Mindfulness, 4 Support group); has a modest effect on Wellbeing.}
+#'     3 Mindfulness, 4 Support group); has a modest effect on Flourishing.}
 #'   \item{MoodRating}{Mood rating (integer, 1-10). Arrives "dirty": literal
 #'     -99 (Refused) and -98 (Don't know) codes are present in the data with NO
 #'     missing-value declaration, the state of play after a CSV or Excel import.
@@ -140,10 +140,10 @@
 #' values on non-overlapping cases, so listwise deletion across both reduces the
 #' analysis sample below the per-variable counts. MoodRating and Anxiety2 are
 #' the two columns whose -99/-98 codes arrive undeclared, awaiting
-#' \code{jdeclare_udm()}. The Stress-by-SocialSupport interaction on Wellbeing
+#' \code{jdeclare_udm()}. The Stress-by-SocialSupport interaction on Flourishing
 #' is the buffering hypothesis (higher social support weakens the negative
-#' association between stress and wellbeing), and treatment Condition has a
-#' modest effect on Wellbeing.
+#' association between stress and flourishing), and treatment Condition has a
+#' modest effect on Flourishing.
 #'
 #' @seealso \code{\link{community}}, the clean default example dataset.
 #'

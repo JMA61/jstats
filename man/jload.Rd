@@ -9,6 +9,7 @@ jload(
   name = NULL,
   use = FALSE,
   overwrite = FALSE,
+  package = FALSE,
   check.missing = TRUE,
   sheet = NULL,
   preserve.udm = TRUE,
@@ -33,6 +34,14 @@ functions. Default is \code{FALSE}.}
 with the same name without prompting. If \code{FALSE} (default),
 prompts for confirmation in interactive sessions. In non-interactive
 sessions, overwrites with a warning message.}
+
+\item{package}{Logical. If \code{TRUE}, loads a jstats example dataset
+shipped in the package (e.g. \code{community}, \code{clinic}) by bare
+name, bypassing the disk search. Use this when a same-named file in the
+working directory or data folder would otherwise shadow the shipped
+dataset. If \code{FALSE} (default), a matching disk file takes precedence
+and the shipped dataset is used only when no file matches. \code{file}
+must be a bare name with no path or extension when \code{package = TRUE}.}
 
 \item{check.missing}{Logical. If \code{TRUE} (default), scans numeric
 variables for values that look like coded missing values (e.g. -99, 999)

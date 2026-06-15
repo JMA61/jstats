@@ -219,6 +219,11 @@ jplot(community, Region)                   # bar chart
 jplot(community, Region, Volunteer,        # grouped bar chart
       categorical = c("Region", "Volunteer"))
 
+# Using juse() default (formula form; omit the data frame)
+juse(community)
+jplot(WellbeingScore ~ Income)               # scatter
+jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
+
 }
 \seealso{
 \code{\link{jstats}} for the package overview,

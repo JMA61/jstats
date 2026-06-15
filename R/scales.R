@@ -319,7 +319,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
       paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
     }, character(1))
     .jst_advisory_note(paste0(
-      "Note: declared SPSS-style missing values were treated as missing ",
+      "\nNote: declared SPSS-style missing values were treated as missing ",
       "for this calculation - ", paste(conv_parts, collapse = ", "), "."
     ))
   }
@@ -589,7 +589,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
       paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
     }, character(1))
     .jst_advisory_note(paste0(
-      "Note: declared SPSS-style missing values were treated as missing ",
+      "\nNote: declared SPSS-style missing values were treated as missing ",
       "for this calculation - ", paste(conv_parts, collapse = ", "), "."
     ))
   }

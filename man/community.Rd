@@ -15,7 +15,7 @@ school, 2 High school graduate, 3 Some college, 4 Bachelor's degree,
 5 Graduate degree). Carries SPSS-style missing values (-99 Refused,
 -98 Don't know).}
 \item{Age}{Age in years (integer, 18-80).}
-\item{WellbeingScore}{Wellbeing score (integer, 0-100); built with an
+\item{WellbeingScore}{Flourishing score (integer, 0-100); built with an
 Income-by-Age interaction.}
 \item{Volunteer}{Volunteered in past year, dichotomy coded 0/1 (0 No,
 1 Yes).}

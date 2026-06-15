@@ -1189,6 +1189,17 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     }
   }
 
+  # Assign-or-lose reminder (standard + full): jrecode() returns the recoded
+  # values invisibly, so an unassigned top-level call silently drops them. The
+  # leading blank line keeps it clear of any label note above (Rule F).
+  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    message(
+      "\nNote: jrecode() returns the recoded values; assign them to a column to keep them:\n",
+      "  ", .jst_data_name, "$<name> <- jrecode(...)\n",
+      "To check the recode landed correctly, compare jfreq() on the original and the new column."
+    )
+  }
+
   return(invisible(result))
 }
 
