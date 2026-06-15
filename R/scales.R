@@ -298,6 +298,15 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   } else {
     msg_parts <- paste0(msg_parts, ".")
   }
+
+  # Headline: mean of the resulting values (joutput digits; suppressed when
+  # every case came out NA, so the message never shows "Mean: NaN").
+  if (n_valid > 0L) {
+    digits_n <- .jst_resolve_digits(NULL)
+    headline_mean <- sprintf(paste0("%.", digits_n, "f"), mean(result, na.rm = TRUE))
+    msg_parts <- paste0(msg_parts,
+                        "\nMean of the new variable: ", headline_mean, ".")
+  }
   message(msg_parts)
 
   # Default-silent FYI (joutput "full" only): if declared SPSS-style
@@ -313,6 +322,17 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
       "Note: declared SPSS-style missing values were treated as missing ",
       "for this calculation - ", paste(conv_parts, collapse = ", "), "."
     ))
+  }
+
+  # Assign-or-lose reminder (standard + full): jsum() returns the totals
+  # invisibly, so an unassigned top-level call silently drops them. The
+  # leading blank line keeps it clear of any advisory note above (Rule F).
+  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    message(
+      "\nNote: jsum() returns the totals; assign them to a column to keep them:\n",
+      "  ", .jst_data_name, "$<name> <- jsum(...)\n",
+      "For the full distribution (min, max, SD), run jdesc() on the new column."
+    )
   }
 
   # Attach variable label
@@ -548,6 +568,15 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   } else {
     msg_parts <- paste0(msg_parts, ".")
   }
+
+  # Headline: mean of the resulting values (joutput digits; suppressed when
+  # every case came out NA, so the message never shows "Mean: NaN").
+  if (n_valid > 0L) {
+    digits_n <- .jst_resolve_digits(NULL)
+    headline_mean <- sprintf(paste0("%.", digits_n, "f"), mean(result, na.rm = TRUE))
+    msg_parts <- paste0(msg_parts,
+                        "\nMean of the new variable: ", headline_mean, ".")
+  }
   message(msg_parts)
 
   # Default-silent FYI (joutput "full" only): if declared SPSS-style
@@ -563,6 +592,17 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
       "Note: declared SPSS-style missing values were treated as missing ",
       "for this calculation - ", paste(conv_parts, collapse = ", "), "."
     ))
+  }
+
+  # Assign-or-lose reminder (standard + full): javg() returns the scores
+  # invisibly, so an unassigned top-level call silently drops them. The
+  # leading blank line keeps it clear of any advisory note above (Rule F).
+  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    message(
+      "\nNote: javg() returns the scores; assign them to a column to keep them:\n",
+      "  ", .jst_data_name, "$<name> <- javg(...)\n",
+      "For the full distribution (min, max, SD), run jdesc() on the new column."
+    )
   }
 
   # Attach variable label

@@ -2152,7 +2152,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
             plot_labels[plot_which[1]], ")\n", sep = "")
       } else {
         cat("\n(", length(plot_which), " diagnostic plots produced",
-            " \u2014 use the back arrow in the Plots pane to view all)\n",
+            " - use the back arrow in the Plots pane to view all)\n",
             sep = "")
         for (i in seq_along(plot_which)) {
           cat("  ", i, ": ", plot_labels[plot_which[i]], "\n", sep = "")
@@ -3516,14 +3516,14 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
       warning(paste0(
         "The following item(s) are negatively correlated with the rest ",
         "of the scale: ", paste(neg_items, collapse = ", "),
-        ". They may need reverse-coding, or may not belong in the scale ",
+        ".\nThey may need reverse-coding, or may not belong in the scale ",
         "- check the item-total table and the item wording."),
         call. = FALSE)
     } else {
       warning(paste0(
         "Most items are negatively correlated with the scale total - ",
         "usually a sign the scale is keyed in the opposite direction, or ",
-        "some items don't belong. The item(s) that are positively ",
+        "some items don't belong.\nThe item(s) that are positively ",
         "correlated while most aren't: ",
         paste(pos_items, collapse = ", ")),
         call. = FALSE)

@@ -108,29 +108,29 @@ declaration ends up out of step with the rest of its DF.
 }
 
 \examples{
-# community$JobSatisfaction arrives "dirty": -99/-98 sit in the data as
+# clinic$MoodRating arrives "dirty": -99/-98 sit in the data as
 # ordinary numbers (the state after a CSV or Excel import), so summary
 # statistics are poisoned until the codes are declared missing.
-df <- community
-jdesc(df, JobSatisfaction)        # mean dragged far down by -99/-98
+df <- clinic
+jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 
 # SPSS form: declare -99 and -98 as UDMs with labels
-df <- jdeclare_udm(df, JobSatisfaction,
+df <- jdeclare_udm(df, MoodRating,
                    codes  = c(-99, -98),
                    labels = "-99=Refused; -98=Don't know")
-jdesc(df, JobSatisfaction)        # codes now excluded as missing
+jdesc(df, MoodRating)        # codes now excluded as missing
 
 # Equivalent using named codes (one step instead of codes + labels)
-df2 <- jdeclare_udm(community, JobSatisfaction,
+df2 <- jdeclare_udm(clinic, MoodRating,
                     codes = c("Refused" = -99, "Don't know" = -98))
 
 # Stata-style: label Stata-style missing-value cells. The jrecode() call
 # turns the literal codes into tagged cells; jdeclare_udm() labels them.
-df3 <- community
-df3$JobSat2 <- jrecode(df3, JobSatisfaction,
-                       map = "-99=.a; -98=.b; else=copy",
-                       convention = "stata")
-df3 <- jdeclare_udm(df3, JobSat2,
+df3 <- clinic
+df3$Mood2 <- jrecode(df3, MoodRating,
+                     map = "-99=.a; -98=.b; else=copy",
+                     convention = "stata")
+df3 <- jdeclare_udm(df3, Mood2,
                     codes = c("Refused"    = haven::tagged_na("a"),
                               "Don't know" = haven::tagged_na("b")))
 

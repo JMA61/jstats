@@ -9,8 +9,7 @@
   data_name,
   count = NULL,
   verb = NULL,
-  var_name = NULL,
-  codes_str = NULL
+  var_name = NULL
 )
 }
 \arguments{
@@ -30,11 +29,6 @@ used to build the reassignment line.}
 
 \item{var_name}{Character string variable name ("frame" rung only), used to
 build the reassignment line.}
-
-\item{codes_str}{Character string of the rendered \code{codes =} argument
-value ("frame" rung only). When supplied, the reassignment line shows the
-actual call (e.g. \code{codes = c(-99, -98)}); when NULL it shows the
-generic \code{...} template.}
 }
 \description{
 Returns the standardized "where does this state live, and how do you make
@@ -47,8 +41,9 @@ data frame -- so the rung argument selects the wording rather than the
 helper inferring it.
 }
 \details{
-Returns the note as a single string with the embedded "Note:" level prefix
-and NO trailing newline. Callers emit it however they already do: the
+Returns the note as a single string with NO trailing newline. The "session"
+rung carries a "Note:" prefix; the "frame" rung follows jdeclare_udm's
+declaration block, so it has none. Callers emit it however they already do: the
 registry verbs message() it; jdeclare_udm appends it to its larger
 notification string. Visibility (standard and full, suppressed at minimal)
 is the caller's gate, not this helper's.

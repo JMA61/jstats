@@ -1284,29 +1284,29 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   \code{\link{joptions}}, \code{\link{jstats}}
 #'
 #' @examples
-#' # community$JobSatisfaction arrives "dirty": -99/-98 sit in the data as
+#' # clinic$MoodRating arrives "dirty": -99/-98 sit in the data as
 #' # ordinary numbers (the state after a CSV or Excel import), so summary
 #' # statistics are poisoned until the codes are declared missing.
-#' df <- community
-#' jdesc(df, JobSatisfaction)        # mean dragged far down by -99/-98
+#' df <- clinic
+#' jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 #'
 #' # SPSS form: declare -99 and -98 as UDMs with labels
-#' df <- jdeclare_udm(df, JobSatisfaction,
+#' df <- jdeclare_udm(df, MoodRating,
 #'                    codes  = c(-99, -98),
 #'                    labels = "-99=Refused; -98=Don't know")
-#' jdesc(df, JobSatisfaction)        # codes now excluded as missing
+#' jdesc(df, MoodRating)        # codes now excluded as missing
 #'
 #' # Equivalent using named codes (one step instead of codes + labels)
-#' df2 <- jdeclare_udm(community, JobSatisfaction,
+#' df2 <- jdeclare_udm(clinic, MoodRating,
 #'                     codes = c("Refused" = -99, "Don't know" = -98))
 #'
 #' # Stata-style: label Stata-style missing-value cells. The jrecode() call
 #' # turns the literal codes into tagged cells; jdeclare_udm() labels them.
-#' df3 <- community
-#' df3$JobSat2 <- jrecode(df3, JobSatisfaction,
-#'                        map = "-99=.a; -98=.b; else=copy",
-#'                        convention = "stata")
-#' df3 <- jdeclare_udm(df3, JobSat2,
+#' df3 <- clinic
+#' df3$Mood2 <- jrecode(df3, MoodRating,
+#'                      map = "-99=.a; -98=.b; else=copy",
+#'                      convention = "stata")
+#' df3 <- jdeclare_udm(df3, Mood2,
 #'                     codes = c("Refused"    = haven::tagged_na("a"),
 #'                               "Don't know" = haven::tagged_na("b")))
 #'
@@ -1921,30 +1921,15 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   )
 
   # Standard / full tier: durability note (assign to the frame + save to keep).
-  # The reassignment line mirrors the user's actual codes= argument (Option B,
-  # Session 115) for the SPSS-canonical branch -- the common path -- so it
-  # matches the just-echoed command; the rarer Stata branches keep the generic
-  # template (the Stata-conversion branch prints its own equivalent call at the
-  # full tier below).
+  # The reassignment line uses the generic ... template (Session 116, reverting
+  # the Session-115 Option-B real-codes echo): the codes are already listed in
+  # the block just above and the user has already run the call, so the reminder
+  # only needs to show the assignment scaffold.
   if (!identical(output_level, "minimal")) {
-    codes_str <- NULL
-    if (branch == "spss_canonical") {
-      parts   <- character(0)
-      any_lbl <- any(nzchar(names(parsed_codes)))
-      for (i in seq_along(parsed_codes)) {
-        v   <- format(as.numeric(parsed_codes[i]), trim = TRUE)
-        lbl <- names(parsed_codes)[i]
-        parts <- c(parts,
-                   if (nzchar(lbl)) paste0("\"", lbl, "\" = ", v) else v)
-      }
-      codes_str <- if (length(parts) == 1L && !any_lbl) parts
-                   else paste0("c(", paste(parts, collapse = ", "), ")")
-    }
     msg <- paste0(msg,
                   .jst_durability_note("frame", data_name,
                                        verb = "jdeclare_udm",
-                                       var_name = var_name,
-                                       codes_str = codes_str),
+                                       var_name = var_name),
                   "\n")
   }
 

@@ -206,8 +206,9 @@
 #' data frame -- so the rung argument selects the wording rather than the
 #' helper inferring it.
 #'
-#' Returns the note as a single string with the embedded "Note:" level prefix
-#' and NO trailing newline. Callers emit it however they already do: the
+#' Returns the note as a single string with NO trailing newline. The "session"
+#' rung carries a "Note:" prefix; the "frame" rung follows jdeclare_udm's
+#' declaration block, so it has none. Callers emit it however they already do: the
 #' registry verbs message() it; jdeclare_udm appends it to its larger
 #' notification string. Visibility (standard and full, suppressed at minimal)
 #' is the caller's gate, not this helper's.
@@ -229,40 +230,30 @@
 #'   used to build the reassignment line.
 #' @param var_name Character string variable name ("frame" rung only), used to
 #'   build the reassignment line.
-#' @param codes_str Character string of the rendered \code{codes =} argument
-#'   value ("frame" rung only). When supplied, the reassignment line shows the
-#'   actual call (e.g. \code{codes = c(-99, -98)}); when NULL it shows the
-#'   generic \code{...} template.
 #' @keywords internal
 .jst_durability_note <- function(rung, data_name, count = NULL,
-                                 verb = NULL, var_name = NULL,
-                                 codes_str = NULL) {
+                                 verb = NULL, var_name = NULL) {
   save_call <- paste0("jsave(", data_name, ", \"", data_name, ".rds\")")
   if (identical(rung, "session")) {
     if (isTRUE(count == 1L)) {
       paste0(
         "Note: this registration is stored for this session only.\n",
-        "To keep it across sessions, save the data frame in R format (.rds): ",
-        save_call, "."
+        "To keep it across sessions, save the data frame in R format (.rds):\n",
+        "  ", save_call
       )
     } else {
       paste0(
         "Note: registrations are stored for this session only.\n",
-        "To keep them across sessions, save the data frame in R format (.rds): ",
-        save_call, "."
+        "To keep them across sessions, save the data frame in R format (.rds):\n",
+        "  ", save_call
       )
     }
   } else if (identical(rung, "frame")) {
-    args_tail <- if (!is.null(codes_str) && nzchar(codes_str)) {
-      paste0("codes = ", codes_str)
-    } else {
-      "..."
-    }
     paste0(
-      "Note: assign the result to store the declaration on the data frame: ",
-      data_name, " <- ", verb, "(", data_name, ", ", var_name, ", ",
-      args_tail, ").\n",
-      "To keep it across sessions, save the data frame: ", save_call, "."
+      "Assign the result to keep the declaration:\n",
+      "  ", data_name, " <- ", verb, "(", data_name, ", ", var_name, ", ...)\n",
+      "To keep it across sessions, save the data frame:\n",
+      "  ", save_call
     )
   } else {
     stop("Internal error: .jst_durability_note() rung must be ",
@@ -293,17 +284,25 @@
 #'
 #' @keywords internal
 .print_var_labels <- function(data, var_names) {
-  label_lines <- c()
+  shown_names  <- character(0)
+  shown_labels <- character(0)
   for (v in var_names) {
     if (v %in% names(data)) {
       vl <- labelled::var_label(data[[v]])
       if (!is.null(vl) && !is.na(vl) && nzchar(vl) &&
           !identical(as.character(vl), v)) {
-        label_lines <- c(label_lines, paste0("  ", v, " = ", vl))
+        shown_names  <- c(shown_names, v)
+        shown_labels <- c(shown_labels, as.character(vl))
       }
     }
   }
-  if (length(label_lines) > 0) {
+  if (length(shown_names) > 0) {
+    # Pad names to the widest so the "=" signs line up; with similar-length
+    # names (e.g. a Likert battery) the column is tight, and it degrades
+    # gracefully when names differ a lot.
+    w <- max(nchar(shown_names))
+    label_lines <- paste0("  ", formatC(shown_names, width = w, flag = "-"),
+                          " = ", shown_labels)
     cat("Variable Labels:\n")
     cat(paste(label_lines, collapse = "\n"))
     cat("\n\n")
@@ -331,14 +330,24 @@
 #'
 #' @keywords internal
 .print_model_var_labels <- function(data, dv_name, iv_names) {
-  fmt_line <- function(v) {
+  has_label <- function(v) {
     vl <- labelled::var_label(data[[v]])
+    !is.null(vl) && length(vl) > 0 && !is.na(vl[1]) && nzchar(vl[1]) &&
+      !identical(as.character(vl[1]), v)
+  }
+  # Width for the "=" column: the widest name that actually shows a label,
+  # taken across BOTH roles so the outcome and predictors align as one column.
+  shown   <- c(if (length(dv_name) == 1L && dv_name %in% names(data)) dv_name,
+               iv_names[iv_names %in% names(data)])
+  labeled <- shown[vapply(shown, has_label, logical(1))]
+  w <- if (length(labeled) > 0L) max(nchar(labeled)) else 0L
+  fmt_line <- function(v) {
     # Show "name = label" only when a label exists and differs from the name;
     # a label equal to the name (or no label at all) shows the bare name,
     # avoiding a redundant "X = X" line.
-    if (!is.null(vl) && length(vl) > 0 && !is.na(vl[1]) && nzchar(vl[1]) &&
-        !identical(as.character(vl[1]), v)) {
-      paste0("  ", v, " = ", as.character(vl[1]))
+    if (has_label(v)) {
+      paste0("  ", formatC(v, width = w, flag = "-"), " = ",
+             as.character(labelled::var_label(data[[v]])[1]))
     } else {
       paste0("  ", v)
     }
