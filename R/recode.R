@@ -1664,6 +1664,12 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
     stop("jdeclare_udm(): codes contains duplicate values.",
          call. = FALSE)
   }
+  if (length(code_vals) > 3L) {
+    stop("jdeclare_udm(): SPSS-style missing values are limited to 3 codes ",
+         "per variable; you supplied ", length(code_vals), ".\n",
+         "To declare more than 3, use Stata convention (convention = \"stata\").",
+         call. = FALSE)
+  }
 
   # Build the new value-labels set. Merge any existing labels with the
   # newly supplied ones (new labels win for the codes being declared).
@@ -1790,8 +1796,8 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   }
   if (length(code_vals) > 4L) {
     stop("jdeclare_udm(): under Stata convention with numeric codes, at ",
-         "most 4 codes can be converted (mapped to .a, .b, .c, .d). Use ",
-         "jrecode() with explicit .a-.z mappings for more.",
+         "most 4 codes can be converted (mapped to .a, .b, .c, .d).\n",
+         "Use jrecode() with explicit .a-.z mappings for more.",
          call. = FALSE)
   }
 
@@ -2028,7 +2034,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 #'   \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
 #'     values to SPSS-form numeric codes. Letter tags map to numeric
 #'     codes via \code{joptions("udm.convention.codes")} (default
-#'     \code{-99}, \code{-98}, \code{-97}, \code{-96}):
+#'     \code{-99}, \code{-98}, \code{-97}):
 #'     \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
 #'     (uppercase) tags are case-corrected to Stata-style (lowercase)
 #'     before the numeric mapping -- for round-trip purposes the package
@@ -2045,7 +2051,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
 #'     rather than by convention: each column's own declared
 #'     \code{na_values} codes are sorted by absolute value descending
 #'     (ties broken with more-negative-first), then mapped
-#'     \code{.a, .b, .c, .d} in that order. Convention codes are NOT
+#'     \code{.a, .b, .c} in that order. Convention codes are NOT
 #'     consulted for this direction;
 #'     they only govern the reverse (Stata to SPSS) mapping. Round-trip
 #'     conversions are not guaranteed to preserve the original numeric
@@ -2323,7 +2329,10 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       msg_lines <- "jconvert() cannot proceed with to = \"spss\":"
       if (length(beyond_d_vars) > 0L) {
         msg_lines <- c(msg_lines, "",
-                       "  Letter tags beyond .d (jconvert supports .a-.d):")
+                       sprintf(
+                         "  Letter tags beyond .%s (jconvert supports .a-.%s):",
+                         letter_codes[length(letter_codes)],
+                         letter_codes[length(letter_codes)]))
         for (e in beyond_d_vars) {
           msg_lines <- c(msg_lines,
                          sprintf("    %s: %s", e$var,
@@ -2366,7 +2375,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       if (!is.null(info$na_range) && length(info$na_range) == 2L) {
         range_vars <- c(range_vars, vname)
       }
-      if (!is.null(info$codes) && nrow(info$codes) > 4L) {
+      if (!is.null(info$codes) && nrow(info$codes) > 3L) {
         over_cap_vars[[length(over_cap_vars) + 1L]] <- list(
           var = vname, n_codes = nrow(info$codes))
       }
@@ -2388,8 +2397,8 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       }
       if (length(over_cap_vars) > 0L) {
         msg_lines <- c(msg_lines, "",
-                       "  More than 4 distinct na_values codes (jconvert",
-                       "  supports up to 4 distinct tags .a-.d):")
+                       "  More than 3 distinct na_values codes (jconvert",
+                       "  supports up to 3 distinct tags .a-.c):")
         for (e in over_cap_vars) {
           msg_lines <- c(msg_lines,
                          sprintf("    %s: %d codes", e$var, e$n_codes))

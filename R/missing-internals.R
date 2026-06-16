@@ -242,7 +242,7 @@
 #
 # Translates Stata-style tagged-NA letter tags (.a, .b, ...) into the
 # equivalent numeric UDM codes drawn from joptions("udm.convention.codes")
-# (default c(-99, -98, -97, -96)). Mapping is positional: .a -> codes[1],
+# (default c(-99, -98, -97)). Mapping is positional: .a -> codes[1],
 # .b -> codes[2], etc. Per Decision 4 of
 # JStats_Missing_Values_Reference.txt Part 4 (Session 25 walk-through
 # lock), this is the convention-based direction shared between

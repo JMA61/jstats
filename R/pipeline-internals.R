@@ -361,7 +361,7 @@
 #                          load time). "spss" / "stata" opts into
 #                          load-time auto-conversion and supplies the
 #                          target convention for fresh UDM declarations.
-#   udm.convention.codes - numeric vector, length 1-4, whole numbers,
+#   udm.convention.codes - numeric vector, length 1-3, whole numbers,
 #                          no duplicates. Recommended UDM code set used
 #                          by jconvert for Stata-tag -> SPSS-code mapping
 #                          and by .jst_scan_coded_missing for
@@ -375,7 +375,7 @@
 #                          load search.
 .jst_options_defaults <- list(
   missing.convention   = "none",
-  udm.convention.codes = c(-99, -98, -97, -96),
+  udm.convention.codes = c(-99, -98, -97),
   data.dir             = NULL,
   corr.layout          = "wide"
 )

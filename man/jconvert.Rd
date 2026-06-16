@@ -63,7 +63,7 @@ convert them to plain \code{NA}s.}
 \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
 values to SPSS-form numeric codes. Letter tags map to numeric
 codes via \code{joptions("udm.convention.codes")} (default
-\code{-99}, \code{-98}, \code{-97}, \code{-96}):
+\code{-99}, \code{-98}, \code{-97}):
 \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
 (uppercase) tags are case-corrected to Stata-style (lowercase)
 before the numeric mapping -- for round-trip purposes the package
@@ -80,7 +80,7 @@ Stata-style missing values. Letter tags are assigned by ordering
 rather than by convention: each column's own declared
 \code{na_values} codes are sorted by absolute value descending
 (ties broken with more-negative-first), then mapped
-\code{.a, .b, .c, .d} in that order. Convention codes are NOT
+\code{.a, .b, .c} in that order. Convention codes are NOT
 consulted for this direction;
 they only govern the reverse (Stata to SPSS) mapping. Round-trip
 conversions are not guaranteed to preserve the original numeric

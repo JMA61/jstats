@@ -16,7 +16,7 @@ joptions(
 \item{missing.convention}{One of \code{"none"}, \code{"spss"}, or
 \code{"stata"}. See Slots.}
 
-\item{udm.convention.codes}{Numeric vector, length 1 to 4. See Slots.}
+\item{udm.convention.codes}{Numeric vector, length 1 to 3. See Slots.}
 
 \item{data.dir}{Character string (length 1), or \code{NULL}. See Slots.}
 
@@ -52,9 +52,9 @@ between UDM representations at load time). \code{"spss"} or
 \code{"stata"} opts into load-time auto-conversion via
 \code{\link{jload}}, and also supplies the target convention for
 fresh UDM declarations on columns with no existing convention.}
-\item{udm.convention.codes}{Numeric vector, length 1 to 4, whole
+\item{udm.convention.codes}{Numeric vector, length 1 to 3, whole
 numbers, no duplicates. Sign unconstrained. Default:
-\code{c(-99, -98, -97, -96)}. The recommended UDM code set used
+\code{c(-99, -98, -97)}. The recommended UDM code set used
 by \code{\link{jconvert}} when translating Stata-style missing values
 (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-form
 numeric codes, and by the load-time diagnostic for
