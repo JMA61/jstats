@@ -526,6 +526,41 @@
   var
 }
 
+#' Internal helper: decimal places needed to display a numeric column
+#'
+#' Values reaching the table renderer are already rounded at their source
+#' (round(x, digits_n)). This returns the number of decimal places needed to
+#' show such a column faithfully: each finite value is written to \code{cap}
+#' decimal places with \code{formatC(format = "f")} and its trailing zeros are
+#' removed; the count of decimals that remain is that value's requirement, and
+#' the column-wise maximum is returned so the whole column shares one decimal
+#' width (the decimal-point alignment the renderer relies on). The fixed-format
+#' write avoids the magnitude-scaled tolerance of a round()/all.equal test,
+#' which under-resolves trailing decimals for larger-magnitude values (e.g.
+#' 40.0599999 collapsing to 40.06). The cap (default 7, the joutput digits
+#' maximum) bounds an unrounded full-precision value reaching the renderer. An
+#' all-NA / non-finite column returns 0.
+#'
+#' @param x A numeric vector (one already-rounded table column).
+#' @param cap Integer. Maximum number of decimal places to consider
+#'   (default 7, the joutput digits ceiling).
+#'
+#' @return Integer scalar: the number of decimal places needed to display
+#'   \code{x} faithfully, capped at \code{cap}. Returns 0 for an all-NA or
+#'   non-finite column.
+#'
+#' @keywords internal
+.jst_col_dp <- function(x, cap = 7L) {
+  x <- x[is.finite(x)]
+  if (length(x) == 0L) return(0L)
+  s   <- formatC(x, format = "f", digits = cap)
+  s   <- sub("\\.?0+$", "", s)
+  dec <- ifelse(grepl(".", s, fixed = TRUE),
+                nchar(sub("^[^.]*\\.", "", s)),
+                0L)
+  max(dec)
+}
+
 #' Internal helper: print a formatted table with precise column alignment
 #'
 #' Purpose-built table printer that replaces knitr::kable() for console output.
@@ -562,11 +597,20 @@
   display_cols <- lapply(seq_len(ncol(df)), function(j) {
     col <- df[[j]]
     if (is.numeric(col)) {
-      # scientific = FALSE keeps round/large values in plain decimal form
-      # (e.g. 200000, not "2e+05"; 70, not "7e+01"). format() still gives a
-      # column uniform decimal places, so right-justified numeric columns
-      # align on the decimal point. (Session 50)
-      ifelse(is.na(col), "", format(col, trim = TRUE, scientific = FALSE))
+      # Values reaching the renderer are already rounded at their source
+      # (round(x, digits_n)). format()'s default is getOption("digits") = 7
+      # SIGNIFICANT figures, which silently drops decimals once a value's
+      # integer part is large -- a chi-square / F / large mean/SD whose
+      # integer part has k digits keeps only (7 - k) decimals, fewer than
+      # digits requested. Instead detect the column's intended decimal places
+      # from the already-rounded values and format to that fixed count with
+      # formatC(format = "f"): large-magnitude statistics keep their
+      # decimals, counts / percentages keep the precision set at their
+      # source, scientific notation stays off (e.g. 200000, not "2e+05"),
+      # and the whole column shares one decimal width so right-justified
+      # columns still align on the decimal point. (Sessions 50, 119)
+      dp <- .jst_col_dp(col)
+      ifelse(is.na(col), "", formatC(col, format = "f", digits = dp))
     } else {
       as.character(ifelse(is.na(col), "", col))
     }
