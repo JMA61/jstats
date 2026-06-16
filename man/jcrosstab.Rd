@@ -11,6 +11,7 @@ jcrosstab(
   expected = FALSE,
   row.pct = TRUE,
   col.pct = FALSE,
+  residuals = "none",
   subset = NULL,
   variable.id = NULL,
   value.id = NULL,
@@ -32,6 +33,19 @@ observed. Default is FALSE.}
 \item{row.pct}{Logical. If TRUE (default), shows row percentages.}
 
 \item{col.pct}{Logical. If TRUE, shows column percentages. Default is FALSE.}
+
+\item{residuals}{Character. Cell residuals to display: \code{"none"}
+(default) or \code{"adjusted"}. \code{"adjusted"} adds an
+\code{(Adj.Res.)} line to each cell showing the adjusted standardized
+(Haberman) residual: (observed - expected) divided by its standard
+error. Under independence these are approximately standard normal, so a
+value beyond +/-1.96 flags a cell whose count departs from expected at
+the .05 level. This localizes a significant chi-square to individual
+cells, and matches the "Adjusted standardized" residual in SPSS
+CROSSTABS. At \code{joutput("full")} the residual cells are flagged
+(\code{*} past +/-1.96, \code{**} past the Bonferroni cutoff) and an
+interpretation note is printed below the table naming both thresholds.
+Not a logical.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after
@@ -73,16 +87,17 @@ which keep their own fixed conventions. NULL (default) defers to
 \value{
 Invisibly returns a list of class \code{jst_crosstab} containing:
 \code{observed} (observed frequency table), \code{expected} (expected
-frequency table), \code{n} (total N), \code{model_frame} (the analysis
-data frame used for plotting), \code{sample_info} (pipeline and
+frequency table), \code{adjusted_residuals} (matrix of adjusted
+standardized residuals), \code{n} (total N), \code{model_frame} (the
+analysis data frame used for plotting), \code{sample_info} (pipeline and
 missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
 \code{df}, and \code{p}.
 }
 \description{
 Produces a cross-tabulation of two categorical variables, showing
 observed frequencies and row percentages by default. Column
-percentages, expected frequencies, and a chi-square test of
-independence are available via arguments. Handles haven-labelled,
+percentages, expected frequencies, adjusted standardized residuals,
+and a chi-square test of independence are available via arguments. Handles haven-labelled,
 numeric, factor, and character variables. For haven-labelled
 variables, numeric codes are displayed alongside labels.
 }
@@ -100,6 +115,9 @@ jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 # With expected frequencies and column percentages
 jcrosstab(Education ~ Volunteer, data = community,
           expected = TRUE, col.pct = TRUE)
+
+# With adjusted standardized residuals (interpretation note at full output)
+jcrosstab(Education ~ Volunteer, data = community, residuals = "adjusted")
 
 # Using juse() default
 juse(community)

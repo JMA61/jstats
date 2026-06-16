@@ -927,8 +927,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'
 #' Produces a cross-tabulation of two categorical variables, showing
 #' observed frequencies and row percentages by default. Column
-#' percentages, expected frequencies, and a chi-square test of
-#' independence are available via arguments. Handles haven-labelled,
+#' percentages, expected frequencies, adjusted standardized residuals,
+#' and a chi-square test of independence are available via arguments. Handles haven-labelled,
 #' numeric, factor, and character variables. For haven-labelled
 #' variables, numeric codes are displayed alongside labels.
 #'
@@ -943,6 +943,18 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   observed. Default is FALSE.
 #' @param row.pct Logical. If TRUE (default), shows row percentages.
 #' @param col.pct Logical. If TRUE, shows column percentages. Default is FALSE.
+#' @param residuals Character. Cell residuals to display: \code{"none"}
+#'   (default) or \code{"adjusted"}. \code{"adjusted"} adds an
+#'   \code{(Adj.Res.)} line to each cell showing the adjusted standardized
+#'   (Haberman) residual: (observed - expected) divided by its standard
+#'   error. Under independence these are approximately standard normal, so a
+#'   value beyond +/-1.96 flags a cell whose count departs from expected at
+#'   the .05 level. This localizes a significant chi-square to individual
+#'   cells, and matches the "Adjusted standardized" residual in SPSS
+#'   CROSSTABS. At \code{joutput("full")} the residual cells are flagged
+#'   (\code{*} past +/-1.96, \code{**} past the Bonferroni cutoff) and an
+#'   interpretation note is printed below the table naming both thresholds.
+#'   Not a logical.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
@@ -968,8 +980,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'
 #' @return Invisibly returns a list of class \code{jst_crosstab} containing:
 #'   \code{observed} (observed frequency table), \code{expected} (expected
-#'   frequency table), \code{n} (total N), \code{model_frame} (the analysis
-#'   data frame used for plotting), \code{sample_info} (pipeline and
+#'   frequency table), \code{adjusted_residuals} (matrix of adjusted
+#'   standardized residuals), \code{n} (total N), \code{model_frame} (the
+#'   analysis data frame used for plotting), \code{sample_info} (pipeline and
 #'   missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
 #'   \code{df}, and \code{p}.
 #'
@@ -984,6 +997,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' jcrosstab(Education ~ Volunteer, data = community,
 #'           expected = TRUE, col.pct = TRUE)
 #'
+#' # With adjusted standardized residuals (interpretation note at full output)
+#' jcrosstab(Education ~ Volunteer, data = community, residuals = "adjusted")
+#'
 #' # Using juse() default
 #' juse(community)
 #' jcrosstab(Education ~ Volunteer)
@@ -992,7 +1008,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
 #'
-#' @importFrom stats chisq.test
+#' @importFrom stats chisq.test qnorm
 #' @export
 #' @param digits Integer or NULL. Number of decimal places for continuous
 #'   statistics in the output tables (range 0-7; \code{digits = 0} prints
@@ -1005,7 +1021,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
 #'   uses the active \code{joutput()} level default.
 jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
-                      row.pct = TRUE, col.pct = FALSE, subset = NULL,
+                      row.pct = TRUE, col.pct = FALSE, residuals = "none",
+                      subset = NULL,
                       variable.id = NULL, value.id = NULL,
                       case.processing.detail = NULL, digits = NULL) {
 
@@ -1024,6 +1041,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     example    = "RowVar ~ ColVar",
     fn         = "jcrosstab"
   )
+
+  # Validate the residuals display mode (choice-error house form, Rule A).
+  if (length(residuals) != 1L || !is.character(residuals) ||
+      !residuals %in% c("none", "adjusted")) {
+    .jst_stop_arg(fn = "jcrosstab", arg = "residuals",
+                  choices = c("none", "adjusted"))
+  }
+  show_adj_res <- identical(residuals, "adjusted")
 
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
@@ -1155,6 +1180,15 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   n_rows <- length(row_levels)
   n_cols <- length(col_levels)
+
+  # Adjusted-residual significance markers (full output only): * past the
+  # +/-1.96 reference, ** past the per-table Bonferroni cutoff. The two
+  # thresholds nest, so ** implies *. bonf is reused by the note below.
+  n_cells      <- n_rows * n_cols
+  bonf         <- stats::qnorm(1 - 0.05 / (2 * n_cells))
+  mark_adj_res <- show_adj_res &&
+                  identical(getOption(".jst_output_level", "standard"), "full")
+
   header <- c(.jst_truncate_ellipsis(row_disp), col_labels, "Total")
 
   display_rows <- list()
@@ -1188,6 +1222,19 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                          list(c("  (Col %)", sprintf("%.1f%%", col_pcts),
                                 sprintf("%.1f%%", col_pct_total))))
     }
+
+    if (show_adj_res) {
+      adj_vals <- chi_result$stdres[i, ]
+      adj_str  <- sprintf("%.*f", digits_n, adj_vals)
+      if (mark_adj_res) {
+        abs_d   <- abs(adj_vals)
+        marks   <- ifelse(abs_d > bonf, " **",
+                          ifelse(abs_d > 1.96, " *", ""))
+        adj_str <- paste0(adj_str, marks)
+      }
+      display_rows <- c(display_rows,
+                        list(c("  (Adj.Res.)", adj_str, "")))
+    }
   }
 
   col_totals  <- colSums(obs_table)
@@ -1213,7 +1260,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # Chi-square test (only if requested)
   if (chisq) {
     chi_table <- data.frame(
-      Chi_Square = round(chi_result$statistic, digits_n),
+      Chi_Square = sprintf("%.*f", digits_n, chi_result$statistic),
       df         = chi_result$parameter,
       p          = p_fmt,
       N          = grand_total,
@@ -1236,17 +1283,31 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     }
   }
 
+  # Adjusted-residual interpretation note (advisory: shown at joutput("full")
+  # only). States the z-reference rule, names the cell markers, and gives a
+  # Bonferroni-adjusted cutoff -- the familywise correction SPSS CROSSTABS
+  # omits. n_cells / bonf are computed once above.
+  if (show_adj_res) {
+    .jst_advisory_note(
+      "Note: Adjusted residuals are approximately normal under independence.\n",
+      "A value beyond +/-1.96 (marked *) departs from expected at p < .05.\n",
+      "With ", n_cells, " cells, a Bonferroni-adjusted cutoff is +/-",
+      sprintf("%.2f", bonf), " (marked **)."
+    )
+  }
+
   .jst_print_legends(lab_src, c(row_name, col_name), c(row_name, col_name),
                      vlmode, value_mode)
 
   cat("\n")
 
   ret <- list(
-    observed    = obs_table,
-    expected    = exp_table,
-    n           = grand_total,
-    model_frame = mf,
-    sample_info = sample_info
+    observed           = obs_table,
+    expected           = exp_table,
+    adjusted_residuals = chi_result$stdres,
+    n                  = grand_total,
+    model_frame        = mf,
+    sample_info        = sample_info
   )
   if (chisq) {
     ret$chi_square <- chi_result$statistic

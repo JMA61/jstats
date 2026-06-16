@@ -166,6 +166,21 @@
 #' @importFrom stats setNames
 #' @importFrom utils tail
 jplot <- function(x, which = "core", ...) {
+  # S3 dispatch evaluates `x` to pick a method, which kills a bare-symbol
+  # variable name under a juse() default -- jplot(Age) errors with "object
+  # 'Age' not found" before jplot.default's resolver can treat Age as a
+  # variable. Guard the dispatch: if forcing `x` fails, route the original
+  # (still unevaluated) call to jplot.default, whose .jst_resolve_first_arg
+  # then handles the symbol_with_default case. Result objects, data frames,
+  # and formulas all force successfully and dispatch as normal.
+  if (!missing(x)) {
+    ok <- tryCatch({ force(x); TRUE }, error = function(e) FALSE)
+    if (!ok) {
+      mc <- match.call()
+      mc[[1L]] <- quote(jplot.default)
+      return(eval(mc, parent.frame()))
+    }
+  }
   UseMethod("jplot")
 }
 
@@ -186,7 +201,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # distinction is meaningful.  Detected BEFORE the data-frame branch because
   # `x` in this case is a formula, not a data frame.
   # ---------------------------------------------------------------------------
-  if (!missing(x) && inherits(x, "formula")) {
+  # inherits() forces x; a bare-symbol variable name routed here from the
+  # generic (jplot(Age) under a juse() default) is not evaluable, so guard the
+  # force -- an unevaluable x is not a formula, and falls through to the
+  # resolver below, which treats it as a variable name.
+  if (!missing(x) && tryCatch(inherits(x, "formula"), error = function(e) FALSE)) {
     by_sub <- substitute(by)
     return(.jst_jplot_formula(x, jplot_call, ...,
                               by_expr = by_sub, type = type, line = line,
