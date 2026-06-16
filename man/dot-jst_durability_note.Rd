@@ -14,8 +14,9 @@
 }
 \arguments{
 \item{rung}{One of \code{"session"} (registry registrations -- jnumeric,
-jcount, jlikert, jdummy) or \code{"frame"} (a UDM declaration --
-jdeclare_udm).}
+jcount, jlikert, jdummy), \code{"frame"} (a UDM declaration --
+jdeclare_udm), or \code{"convert"} (a missing-value conversion --
+jconvert).}
 
 \item{data_name}{Character string name of the data frame, used to build the
 jsave() example and, for the "frame" rung, the reassignment line.}

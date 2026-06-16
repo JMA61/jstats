@@ -219,8 +219,9 @@
 #' survive .sav and .dta, so naming .rds there would be a false constraint.
 #'
 #' @param rung One of \code{"session"} (registry registrations -- jnumeric,
-#'   jcount, jlikert, jdummy) or \code{"frame"} (a UDM declaration --
-#'   jdeclare_udm).
+#'   jcount, jlikert, jdummy), \code{"frame"} (a UDM declaration --
+#'   jdeclare_udm), or \code{"convert"} (a missing-value conversion --
+#'   jconvert).
 #' @param data_name Character string name of the data frame, used to build the
 #'   jsave() example and, for the "frame" rung, the reassignment line.
 #' @param count Integer number of registrations just set ("session" rung
@@ -252,12 +253,21 @@
     paste0(
       "Assign the result to keep the declaration:\n",
       "  ", data_name, " <- ", verb, "(", data_name, ", ", var_name, ", ...)\n",
+      "\n",
+      "To keep it across sessions, save the data frame:\n",
+      "  ", save_call
+    )
+  } else if (identical(rung, "convert")) {
+    paste0(
+      "Assign the result to keep the conversion:\n",
+      "  ", data_name, " <- jconvert(", data_name, ", ...)\n",
+      "\n",
       "To keep it across sessions, save the data frame:\n",
       "  ", save_call
     )
   } else {
     stop("Internal error: .jst_durability_note() rung must be ",
-         "\"session\" or \"frame\".", call. = FALSE)
+         "\"session\", \"frame\", or \"convert\".", call. = FALSE)
   }
 }
 

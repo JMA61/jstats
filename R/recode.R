@@ -1942,7 +1942,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
   # the block just above and the user has already run the call, so the reminder
   # only needs to show the assignment scaffold.
   if (!identical(output_level, "minimal")) {
-    msg <- paste0(msg,
+    msg <- paste0(msg, "\n",
                   .jst_durability_note("frame", data_name,
                                        verb = "jdeclare_udm",
                                        var_name = var_name),
@@ -2334,10 +2334,18 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
         function(e) sprintf("    %s: %s", e$var,
                             paste(e$codes, collapse = ", ")), character(1)))
 
+      n_over <- length(beyond_d_vars)
+      n_coll <- length(collision_vars)
+      over_lead <- if (n_over == 1L) "This variable" else "These variables"
+      over_verb <- if (n_over == 1L) "has" else "have"
+      coll_lead <- if (n_coll == 1L) "This variable" else "These variables"
+      coll_verb <- if (n_coll == 1L) "is" else "are"
+
       if (has_over && !has_coll) {
         msg_lines <- c(
           "SPSS does not support more than 3 UDM codes per variable.",
-          sprintf("These variables in %s have more:", data_name),
+          "",
+          sprintf("%s in %s %s more:", over_lead, data_name, over_verb),
           over_lines,
           "",
           "Resolution options:",
@@ -2346,9 +2354,11 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
           "  2. Reduce each variable to 3 or fewer UDM codes first with jrecode().")
       } else if (has_coll && !has_over) {
         msg_lines <- c(
-          sprintf("the UDM convention codes overlap with real data values in %s:",
-                  data_name),
+          "the UDM convention codes overlap with real data values.",
+          "",
+          sprintf("%s in %s %s affected:", coll_lead, data_name, coll_verb),
           coll_lines,
+          "",
           "Suggested resolution:",
           "  Change the UDM convention codes:",
           "       joptions(udm.convention.codes = c(...))")
@@ -2357,12 +2367,12 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
           sprintf("cannot convert %s to SPSS -- two problems:", data_name),
           "",
           "SPSS does not support more than 3 UDM codes per variable.",
-          "These variables have more:",
+          sprintf("%s %s more:", over_lead, over_verb),
           over_lines,
           "To fix, reduce each to 3 or fewer UDM codes with jrecode().",
           "",
           "The UDM convention codes overlap with real data values.",
-          "These variables are affected:",
+          sprintf("%s %s affected:", coll_lead, coll_verb),
           coll_lines,
           "To fix, change the UDM convention codes:",
           "    joptions(udm.convention.codes = c(...))",
@@ -2404,18 +2414,29 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       over_lines <- .jst_cap_var_lines(vapply(over_cap_vars,
         function(e) sprintf("    %s: %d codes", e$var, e$n_codes), character(1)))
 
+      n_rng  <- length(range_vars)
+      n_over <- length(over_cap_vars)
+      rng_lead  <- if (n_rng == 1L) "This variable" else "These variables"
+      rng_verb  <- if (n_rng == 1L) "is" else "are"
+      over_lead <- if (n_over == 1L) "This variable" else "These variables"
+      over_verb <- if (n_over == 1L) "has" else "have"
+      rng_obj   <- if (n_rng == 1L) "the variable above" else "the variables above"
+
       if (has_rng && !has_over) {
         msg_lines <- c(
           "Stata does not support range-based UDM codes.",
-          sprintf("These variables in %s are affected:", data_name),
+          "",
+          sprintf("%s in %s %s affected:", rng_lead, data_name, rng_verb),
           rng_lines,
+          "",
           "Suggested resolution:",
-          "  Convert a narrower set, leaving out the variables above:",
+          sprintf("  Convert a narrower set, leaving out %s:", rng_obj),
           sprintf("       jconvert(%s, to = \"stata\", vars = c(...))", data_name))
       } else if (has_over && !has_rng) {
         msg_lines <- c(
           "Stata supports at most 26 UDM codes per variable (mapped to .a-.z).",
-          sprintf("These variables in %s have more:", data_name),
+          "",
+          sprintf("%s in %s %s more:", over_lead, data_name, over_verb),
           over_lines,
           "",
           "Resolution options:",
@@ -2427,11 +2448,11 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
           sprintf("cannot convert %s to Stata -- two problems:", data_name),
           "",
           "Stata does not support range-based UDM codes.",
-          "These variables are affected:",
+          sprintf("%s %s affected:", rng_lead, rng_verb),
           rng_lines,
           "",
           "Stata supports at most 26 UDM codes per variable (mapped to .a-.z).",
-          "These variables have more:",
+          sprintf("%s %s more:", over_lead, over_verb),
           over_lines,
           "To fix, reduce each to 26 or fewer UDM codes with jrecode().",
           "",
@@ -2756,13 +2777,8 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       out_level <- getOption(".jst_output_level", "standard")
       if (out_level != "minimal") {
         if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
-        example_call <- .jst_build_jconvert_example(
-          data_name = data_name, to = to,
-          var_scope = var_scope,
-          dot_names = dot_names, vars = vars)
         msg_lines <- c(msg_lines,
-                       "Reminder: Changes are retained only when assigning the result back to your data frame,",
-                       paste0("e.g., ", example_call))
+                       .jst_durability_note("convert", data_name))
       }
     }
 

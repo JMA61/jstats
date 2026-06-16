@@ -1799,7 +1799,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (identical(output_level, "minimal")) {
     return(paste0(
       n, " ", noun, " ", verb, " more UDM codes than SPSS format (.sav) ",
-      "allows (at most 3, or a range plus one). Save as R format (.rds) or ",
+      "allows (at most 3, or a range plus one).\n",
+      "Save as R format (.rds) or ",
       "convert to Stata format (.dta) to keep all the codes, or reduce them ",
       "with jrecode()."
     ))
@@ -1811,9 +1812,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     else                 sprintf("    %s: %d codes", e$var, e$n)
   }, character(1)))
 
+  lead <- sprintf("%s %s in %s %s more:",
+                  if (is_sg) "This" else "These", noun, data_name, verb)
+
   paste(c(
     "SPSS format (.sav) allows at most 3 UDM codes per variable, or a range plus one code.",
-    sprintf("These variables in %s have more:", data_name),
+    "",
+    lead,
     var_lines,
     "",
     "Resolution options:",
@@ -1822,7 +1827,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "  2. Convert to Stata and save as Stata format (.dta), which also keeps all the codes:",
     sprintf("       %s <- jconvert(%s, to = \"stata\")", data_name, data_name),
     sprintf("       jsave(%s, \"%s.dta\")", data_name, data_name),
-    "  3. Reduce each variable's UDM codes to fit, with jrecode()."
+    "  3. Reduce each variable's UDM codes to fit with jrecode()."
   ), collapse = "\n")
 }
 
