@@ -1794,10 +1794,9 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
     stop("jdeclare_udm(): codes contains duplicate values.",
          call. = FALSE)
   }
-  if (length(code_vals) > 4L) {
+  if (length(code_vals) > length(letters)) {
     stop("jdeclare_udm(): under Stata convention with numeric codes, at ",
-         "most 4 codes can be converted (mapped to .a, .b, .c, .d).\n",
-         "Use jrecode() with explicit .a-.z mappings for more.",
+         "most 26 can be converted (mapped to .a-.z).",
          call. = FALSE)
   }
 
@@ -2306,7 +2305,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       bad_tags <- unique_tags[!unique_tags %in% letter_codes]
       if (length(bad_tags) > 0L) {
         beyond_d_vars[[length(beyond_d_vars) + 1L]] <- list(
-          var = vname, tags = paste0(".", bad_tags))
+          var = vname, n = length(unique_tags))
       }
       good_tags <- intersect(unique_tags, letter_codes)
       if (length(good_tags) > 0L) {
@@ -2326,45 +2325,61 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
     }
 
     if (length(beyond_d_vars) > 0L || length(collision_vars) > 0L) {
-      msg_lines <- "jconvert() cannot proceed with to = \"spss\":"
-      if (length(beyond_d_vars) > 0L) {
-        msg_lines <- c(msg_lines, "",
-                       sprintf(
-                         "  Letter tags beyond .%s (jconvert supports .a-.%s):",
-                         letter_codes[length(letter_codes)],
-                         letter_codes[length(letter_codes)]))
-        for (e in beyond_d_vars) {
-          msg_lines <- c(msg_lines,
-                         sprintf("    %s: %s", e$var,
-                                 paste(e$tags, collapse = ", ")))
-        }
+      has_over <- length(beyond_d_vars) > 0L
+      has_coll <- length(collision_vars) > 0L
+
+      over_lines <- .jst_cap_var_lines(vapply(beyond_d_vars,
+        function(e) sprintf("    %s: %d codes", e$var, e$n), character(1)))
+      coll_lines <- .jst_cap_var_lines(vapply(collision_vars,
+        function(e) sprintf("    %s: %s", e$var,
+                            paste(e$codes, collapse = ", ")), character(1)))
+
+      if (has_over && !has_coll) {
+        msg_lines <- c(
+          "SPSS does not support more than 3 UDM codes per variable.",
+          sprintf("These variables in %s have more:", data_name),
+          over_lines,
+          "",
+          "Resolution options:",
+          "  1. Convert a narrower set of variables, leaving out those above:",
+          sprintf("       jconvert(%s, to = \"spss\", vars = c(...))", data_name),
+          "  2. Reduce each variable to 3 or fewer UDM codes first with jrecode().")
+      } else if (has_coll && !has_over) {
+        msg_lines <- c(
+          sprintf("the UDM convention codes overlap with real data values in %s:",
+                  data_name),
+          coll_lines,
+          "Suggested resolution:",
+          "  Change the UDM convention codes:",
+          "       joptions(udm.convention.codes = c(...))")
+      } else {
+        msg_lines <- c(
+          sprintf("cannot convert %s to SPSS -- two problems:", data_name),
+          "",
+          "SPSS does not support more than 3 UDM codes per variable.",
+          "These variables have more:",
+          over_lines,
+          "To fix, reduce each to 3 or fewer UDM codes with jrecode().",
+          "",
+          "The UDM convention codes overlap with real data values.",
+          "These variables are affected:",
+          coll_lines,
+          "To fix, change the UDM convention codes:",
+          "    joptions(udm.convention.codes = c(...))",
+          "",
+          "Or convert a narrower set, leaving out all the variables above:",
+          sprintf("    jconvert(%s, to = \"spss\", vars = c(...))", data_name))
       }
-      if (length(collision_vars) > 0L) {
-        msg_lines <- c(msg_lines, "",
-                       "  Target numeric codes collide with real data values:")
-        for (e in collision_vars) {
-          msg_lines <- c(msg_lines,
-                         sprintf("    %s: %s", e$var,
-                                 paste(e$codes, collapse = ", ")))
-        }
-      }
-      msg_lines <- c(msg_lines, "",
-                     "Resolution options:",
-                     "  1. Change the convention codes:",
-                     "       joptions(udm.convention.codes = c(...))",
-                     "  2. Scope the call to exclude affected columns:",
-                     sprintf("       jconvert(%s, to = \"spss\", vars = c(...))",
-                             data_name),
-                     "  3. Recode the real-data values first via jrecode().")
       .jst_stop(paste(msg_lines, collapse = "\n"))
     }
   }
 
   if (to == "stata") {
-    # SPSS-to-Stata: check for na_range (out of scope) and >4 codes. The
-    # codes themselves are mapped to letter tags by descending |code|
-    # within each column (per Q6 of the Session 29 design lock); the
-    # convention codes are NOT consulted for this direction.
+    # SPSS-to-Stata: na_range is out of cross-format scope (Stata has no range
+    # missings). Discrete na_values map to letter tags by descending |code|
+    # (Decision 4 Q6), so a column can carry up to 26 (.a-.z); more than 26 has
+    # no tag to map to and is refused. The convention codes are NOT consulted
+    # for this direction.
     range_vars     <- character(0)
     over_cap_vars  <- list()
 
@@ -2375,41 +2390,54 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       if (!is.null(info$na_range) && length(info$na_range) == 2L) {
         range_vars <- c(range_vars, vname)
       }
-      if (!is.null(info$codes) && nrow(info$codes) > 3L) {
+      if (!is.null(info$codes) && nrow(info$codes) > length(letters)) {
         over_cap_vars[[length(over_cap_vars) + 1L]] <- list(
           var = vname, n_codes = nrow(info$codes))
       }
     }
 
     if (length(range_vars) > 0L || length(over_cap_vars) > 0L) {
-      msg_lines <- "jconvert() cannot proceed with to = \"stata\":"
-      if (length(range_vars) > 0L) {
-        msg_lines <- c(msg_lines, "",
-                       "  Range-based SPSS missings (na_range) are out of",
-                       "  cross-format scope:")
-        for (v in range_vars) {
-          msg_lines <- c(msg_lines, sprintf("    %s", v))
-        }
-        msg_lines <- c(msg_lines,
-                       "  Enumerate the range as individual na_values codes",
-                       "  in SPSS before converting, or scope the call to",
-                       "  exclude these columns.")
+      has_rng  <- length(range_vars) > 0L
+      has_over <- length(over_cap_vars) > 0L
+
+      rng_lines  <- .jst_cap_var_lines(sprintf("    %s", range_vars))
+      over_lines <- .jst_cap_var_lines(vapply(over_cap_vars,
+        function(e) sprintf("    %s: %d codes", e$var, e$n_codes), character(1)))
+
+      if (has_rng && !has_over) {
+        msg_lines <- c(
+          "Stata does not support range-based UDM codes.",
+          sprintf("These variables in %s are affected:", data_name),
+          rng_lines,
+          "Suggested resolution:",
+          "  Convert a narrower set, leaving out the variables above:",
+          sprintf("       jconvert(%s, to = \"stata\", vars = c(...))", data_name))
+      } else if (has_over && !has_rng) {
+        msg_lines <- c(
+          "Stata supports at most 26 UDM codes per variable (mapped to .a-.z).",
+          sprintf("These variables in %s have more:", data_name),
+          over_lines,
+          "",
+          "Resolution options:",
+          "  1. Convert a narrower set of variables, leaving out those above:",
+          sprintf("       jconvert(%s, to = \"stata\", vars = c(...))", data_name),
+          "  2. Reduce each variable to 26 or fewer UDM codes first with jrecode().")
+      } else {
+        msg_lines <- c(
+          sprintf("cannot convert %s to Stata -- two problems:", data_name),
+          "",
+          "Stata does not support range-based UDM codes.",
+          "These variables are affected:",
+          rng_lines,
+          "",
+          "Stata supports at most 26 UDM codes per variable (mapped to .a-.z).",
+          "These variables have more:",
+          over_lines,
+          "To fix, reduce each to 26 or fewer UDM codes with jrecode().",
+          "",
+          "Or convert a narrower set, leaving out all the variables above:",
+          sprintf("    jconvert(%s, to = \"stata\", vars = c(...))", data_name))
       }
-      if (length(over_cap_vars) > 0L) {
-        msg_lines <- c(msg_lines, "",
-                       "  More than 3 distinct na_values codes (jconvert",
-                       "  supports up to 3 distinct tags .a-.c):")
-        for (e in over_cap_vars) {
-          msg_lines <- c(msg_lines,
-                         sprintf("    %s: %d codes", e$var, e$n_codes))
-        }
-      }
-      msg_lines <- c(msg_lines, "",
-                     "Resolution options:",
-                     "  1. Scope the call to exclude affected columns:",
-                     sprintf("       jconvert(%s, to = \"stata\", vars = c(...))",
-                             data_name),
-                     "  2. Recode the codes manually via jrecode().")
       .jst_stop(paste(msg_lines, collapse = "\n"))
     }
   }

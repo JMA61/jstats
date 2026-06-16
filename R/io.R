@@ -984,6 +984,23 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   out
 }
 
+#' Internal: cap an own-line variable list at max_show, with "...and N more"
+#'
+#' Takes already-built per-variable display lines (e.g. "    Income: 4 codes")
+#' and returns them unchanged when there are at most \code{max_show}, otherwise
+#' the first \code{max_show} followed by a "    ...and N more" tail. The
+#' four-space indent matches the per-variable lines jconvert and jsave build.
+#' @param var_lines Character vector of pre-built, indented per-variable lines.
+#' @param max_show Integer. Maximum lines to show before truncating (default 10).
+#' @return Character vector, possibly truncated with a tail line.
+#' @keywords internal
+.jst_cap_var_lines <- function(var_lines, max_show = 10L) {
+  n <- length(var_lines)
+  if (n <= max_show) return(var_lines)
+  c(var_lines[seq_len(max_show)],
+    paste0("    ...and ", n - max_show, " more"))
+}
+
 #' Internal: detect tagged-NA-bearing columns in a data frame
 #'
 #' @description
@@ -1751,6 +1768,65 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 }
 
 
+#' Internal: build jsave's error message for SPSS-form UDM columns that exceed
+#' the .sav missing-value limit
+#'
+#' SPSS .sav files allow at most three discrete user-defined-missing codes per
+#' variable, or a range plus one discrete code. haven::write_sav() enforces
+#' SPSS's own rule and errors mid-write (leaving a partial file) on a column
+#' carrying more, so jsave()'s .sav pre-flight catches these first. Because the
+#' Stata-side cap is 26 (Decision 4, Session 121), converting to Stata and
+#' saving as .dta is a keep-all route alongside .rds, so both non-lossy options
+#' are offered before the lossy jrecode() reduction.
+#'
+#' @param overcap_info List of per-variable entries, each a list with
+#'   \code{var} (name), \code{n} (count of discrete na_values codes), and
+#'   \code{range} (logical: does the column also carry an na_range?).
+#' @param data_name The data frame's name, used in the suggested fix code.
+#'
+#' @return Character scalar suitable as a \code{.jst_jsave_combined_error_msg}
+#'   section (no \code{jsave():} prefix; that is added on emission).
+#' @keywords internal
+.jst_jsave_sav_overcap_error_msg <- function(overcap_info, data_name) {
+
+  output_level <- getOption(".jst_output_level", "standard")
+  n     <- length(overcap_info)
+  is_sg <- (n == 1)
+  noun  <- if (is_sg) "variable" else "variables"
+  verb  <- if (is_sg) "has"      else "have"
+
+  # --- Minimal tier -------------------------------------------------------
+  if (identical(output_level, "minimal")) {
+    return(paste0(
+      n, " ", noun, " ", verb, " more UDM codes than SPSS format (.sav) ",
+      "allows (at most 3, or a range plus one). Save as R format (.rds) or ",
+      "convert to Stata format (.dta) to keep all the codes, or reduce them ",
+      "with jrecode()."
+    ))
+  }
+
+  # --- Standard / full tier ----------------------------------------------
+  var_lines <- .jst_cap_var_lines(vapply(overcap_info, function(e) {
+    if (isTRUE(e$range)) sprintf("    %s: range + %d codes", e$var, e$n)
+    else                 sprintf("    %s: %d codes", e$var, e$n)
+  }, character(1)))
+
+  paste(c(
+    "SPSS format (.sav) allows at most 3 UDM codes per variable, or a range plus one code.",
+    sprintf("These variables in %s have more:", data_name),
+    var_lines,
+    "",
+    "Resolution options:",
+    "  1. Save in R format (.rds) instead, which keeps all the codes:",
+    sprintf("       jsave(%s, \"%s.rds\")", data_name, data_name),
+    "  2. Convert to Stata and save as Stata format (.dta), which also keeps all the codes:",
+    sprintf("       %s <- jconvert(%s, to = \"stata\")", data_name, data_name),
+    sprintf("       jsave(%s, \"%s.dta\")", data_name, data_name),
+    "  3. Reduce each variable's UDM codes to fit, with jrecode()."
+  ), collapse = "\n")
+}
+
+
 #' Internal: build jsave's error message for unsupported column types
 #'
 #' The statistical interchange formats (.sav, .dta, .xpt) cannot store
@@ -2442,6 +2518,24 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
       if (length(tagged_vars) > 0) {
         sections[[length(sections) + 1L]] <-
           .jst_jsave_sav_error_msg(tagged_vars, data, data_name)
+      }
+      # SPSS-form columns exceeding the .sav missing-value limit (at most 3
+      # discrete codes, or a range plus 1). haven::write_sav() enforces SPSS's
+      # own rule and errors mid-write (leaving a partial file) on a column
+      # carrying more, so the pre-flight catches these with a fixable message.
+      overcap_info <- list()
+      for (vname in .jst_has_spss_udm(data)) {
+        info    <- .jst_missing_info(data[[vname]])
+        n_disc  <- if (!is.null(info$codes)) nrow(info$codes) else 0L
+        has_rng <- !is.null(info$na_range)
+        if ((!has_rng && n_disc > 3L) || (has_rng && n_disc > 1L)) {
+          overcap_info[[length(overcap_info) + 1L]] <-
+            list(var = vname, n = n_disc, range = has_rng)
+        }
+      }
+      if (length(overcap_info) > 0) {
+        sections[[length(sections) + 1L]] <-
+          .jst_jsave_sav_overcap_error_msg(overcap_info, data_name)
       }
     } else if (ext == "dta") {
       spss_vars <- .jst_has_spss_udm(data)
