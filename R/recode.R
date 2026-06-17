@@ -360,14 +360,27 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     n_codes <- length(letter_to_code)
     unmapped_render <- paste0("'.", unmapped, "'", collapse = ", ")
     were_was <- if (length(unmapped) == 1L) "was" else "were"
-    msg_parts <- c(msg_parts, "",
-      paste0("Note: your map uses ", n_tags, " Stata-style markers (",
-             paste0(".", all_tags, collapse = ", "), ") but"),
-      paste0("joptions(\"udm.convention.codes\") currently holds only ",
-             n_codes, " values; ", unmapped_render, " ", were_was),
-      "not substituted in the example above. To add another code, run",
-      "something like joptions(udm.convention.codes = c(-99, -98, -97))."
-    )
+    # SPSS-side cap on udm.convention.codes (joptions enforces length 1-3).
+    # Above the cap, adding a code cannot cover the markers, so steer to
+    # Stata convention (the switch line below) rather than advising a code.
+    if (n_tags > 3L) {
+      msg_parts <- c(msg_parts, "",
+        paste0("Note: `map` uses ", n_tags, " Stata-style markers (",
+               paste0(".", all_tags, collapse = ", "), ") but SPSS"),
+        "convention supports at most 3 user-defined missing values;",
+        paste0(unmapped_render, " ", were_was,
+               " not substituted in the example above.")
+      )
+    } else {
+      msg_parts <- c(msg_parts, "",
+        paste0("Note: `map` uses ", n_tags, " Stata-style markers (",
+               paste0(".", all_tags, collapse = ", "), ") but"),
+        paste0("joptions(\"udm.convention.codes\") currently holds only ",
+               n_codes, " values; ", unmapped_render, " ", were_was),
+        "not substituted in the example above. To add another code, run",
+        "something like joptions(udm.convention.codes = c(-99, -98, -97))."
+      )
+    }
   }
 
   msg_parts <- c(msg_parts, "",
@@ -524,14 +537,27 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     n_codes <- length(letter_to_code)
     unmapped_render <- paste0("'.", unmapped, "'", collapse = ", ")
     were_was <- if (length(unmapped) == 1L) "was" else "were"
-    msg_parts <- c(msg_parts, "",
-      paste0("Note: codes uses ", n_tags, " Stata-style markers (",
-             paste0(".", all_tags, collapse = ", "), ") but"),
-      paste0("joptions(\"udm.convention.codes\") currently holds only ",
-             n_codes, " values; ", unmapped_render, " ", were_was),
-      "not substituted in the example above. To add another code, run",
-      "something like joptions(udm.convention.codes = c(-99, -98, -97))."
-    )
+    # SPSS-side cap on udm.convention.codes (joptions enforces length 1-3).
+    # Above the cap, adding a code cannot cover the markers, so steer to
+    # Stata convention (the switch line below) rather than advising a code.
+    if (n_tags > 3L) {
+      msg_parts <- c(msg_parts, "",
+        paste0("Note: `codes` uses ", n_tags, " Stata-style markers (",
+               paste0(".", all_tags, collapse = ", "), ") but SPSS"),
+        "convention supports at most 3 user-defined missing values;",
+        paste0(unmapped_render, " ", were_was,
+               " not substituted in the example above.")
+      )
+    } else {
+      msg_parts <- c(msg_parts, "",
+        paste0("Note: `codes` uses ", n_tags, " Stata-style markers (",
+               paste0(".", all_tags, collapse = ", "), ") but"),
+        paste0("joptions(\"udm.convention.codes\") currently holds only ",
+               n_codes, " values; ", unmapped_render, " ", were_was),
+        "not substituted in the example above. To add another code, run",
+        "something like joptions(udm.convention.codes = c(-99, -98, -97))."
+      )
+    }
   }
 
   msg_parts <- c(msg_parts, "",
