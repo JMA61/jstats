@@ -642,7 +642,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   if (identical(output_level, "minimal")) {
     dropped_render <- paste(dropped_df$code, collapse = ", ")
-    return(paste0("Note: jdeclare_udm replaced existing UDMs on ",
+    return(paste0("Note: jdeclare_udm replaced existing user-defined missing values on ",
                   var_name, ". Dropped: ", dropped_render, "."))
   }
 
@@ -657,7 +657,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       parts <- c(parts, code)
     }
   }
-  paste0("Note: jdeclare_udm replaced the existing UDM set for ", var_name,
+  paste0("Note: jdeclare_udm replaced the existing user-defined missing values for ", var_name,
          ". Previously declared codes dropped: ", paste(parts, collapse = ", "),
          ". Use `?jdeclare_udm` to review the replace-semantics behavior.")
 }
@@ -1521,7 +1521,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
       existing_conv != convention) {
     other_form <- if (existing_conv == "spss") "SPSS-style" else "Stata-style"
     .jst_stop("Column '", var_name, "' already carries ", other_form,
-         " UDMs; cannot use convention = \"", convention,
+         " missing values; cannot use convention = \"", convention,
          "\" here. Use jconvert() to convert the column first, or ",
          "omit the convention argument.")
   }
@@ -2343,7 +2343,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 
       if (has_over && !has_coll) {
         msg_lines <- c(
-          "SPSS does not support more than 3 UDM codes per variable.",
+          "SPSS does not support more than 3 user-defined missing values (UDMs) per variable.",
           "",
           sprintf("%s in %s %s more:", over_lead, data_name, over_verb),
           over_lines,
@@ -2351,10 +2351,10 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
           "Resolution options:",
           "  1. Convert a narrower set of variables, leaving out those above:",
           sprintf("       jconvert(%s, to = \"spss\", vars = c(...))", data_name),
-          "  2. Reduce each variable to 3 or fewer UDM codes first with jrecode().")
+          "  2. Reduce each variable to 3 or fewer UDMs first with jrecode().")
       } else if (has_coll && !has_over) {
         msg_lines <- c(
-          "the UDM convention codes overlap with real data values.",
+          "the user-defined missing value (UDM) convention codes overlap with real data values.",
           "",
           sprintf("%s in %s %s affected:", coll_lead, data_name, coll_verb),
           coll_lines,
@@ -2366,10 +2366,10 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
         msg_lines <- c(
           sprintf("cannot convert %s to SPSS -- two problems:", data_name),
           "",
-          "SPSS does not support more than 3 UDM codes per variable.",
+          "SPSS does not support more than 3 user-defined missing values (UDMs) per variable.",
           sprintf("%s %s more:", over_lead, over_verb),
           over_lines,
-          "To fix, reduce each to 3 or fewer UDM codes with jrecode().",
+          "To fix, reduce each to 3 or fewer UDMs with jrecode().",
           "",
           "The UDM convention codes overlap with real data values.",
           sprintf("%s %s affected:", coll_lead, coll_verb),
@@ -2424,7 +2424,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 
       if (has_rng && !has_over) {
         msg_lines <- c(
-          "Stata does not support range-based UDM codes.",
+          "Stata does not support range-based user-defined missing values.",
           "",
           sprintf("%s in %s %s affected:", rng_lead, data_name, rng_verb),
           rng_lines,
@@ -2434,7 +2434,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
           sprintf("       jconvert(%s, to = \"stata\", vars = c(...))", data_name))
       } else if (has_over && !has_rng) {
         msg_lines <- c(
-          "Stata supports at most 26 UDM codes per variable (mapped to .a-.z).",
+          "Stata supports at most 26 user-defined missing values (UDMs) per variable (mapped to .a-.z).",
           "",
           sprintf("%s in %s %s more:", over_lead, data_name, over_verb),
           over_lines,
@@ -2442,19 +2442,19 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
           "Resolution options:",
           "  1. Convert a narrower set of variables, leaving out those above:",
           sprintf("       jconvert(%s, to = \"stata\", vars = c(...))", data_name),
-          "  2. Reduce each variable to 26 or fewer UDM codes first with jrecode().")
+          "  2. Reduce each variable to 26 or fewer UDMs first with jrecode().")
       } else {
         msg_lines <- c(
           sprintf("cannot convert %s to Stata -- two problems:", data_name),
           "",
-          "Stata does not support range-based UDM codes.",
+          "Stata does not support range-based user-defined missing values (UDMs).",
           sprintf("%s %s affected:", rng_lead, rng_verb),
           rng_lines,
           "",
-          "Stata supports at most 26 UDM codes per variable (mapped to .a-.z).",
+          "Stata supports at most 26 UDMs per variable (mapped to .a-.z).",
           sprintf("%s %s more:", over_lead, over_verb),
           over_lines,
-          "To fix, reduce each to 26 or fewer UDM codes with jrecode().",
+          "To fix, reduce each to 26 or fewer UDMs with jrecode().",
           "",
           "Or convert a narrower set, leaving out all the variables above:",
           sprintf("    jconvert(%s, to = \"stata\", vars = c(...))", data_name))
@@ -2699,7 +2699,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
 
     if (all_already_in_target && !user_specified) {
       message(sprintf(
-        "All UDM-bearing variables in '%s' are already in %s-form representation.",
+        "All variables with user-defined missing values in '%s' are already in %s-form representation.",
         data_name, to))
       return(invisible(data))
     }
@@ -2744,7 +2744,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
     if (n_skipped_nodes > 0L) {
       if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
       msg_lines <- c(msg_lines,
-                     "Skipped (no UDMs found):",
+                     "Skipped (no user-defined missing values found):",
                      paste0("  ", paste(skipped_no_udms, collapse = ", ")))
     }
 
@@ -2763,7 +2763,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       }
       msg_lines <- c(msg_lines,
                      "",
-                     "  To formalise these as UDMs, see jdeclare_udm().",
+                     "  To formalise these as user-defined missing values, see jdeclare_udm().",
                      "  To leave them as ordinary data, no action is needed.")
     }
 

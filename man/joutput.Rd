@@ -79,7 +79,7 @@ tier sets it to \code{NULL}.}
 \item{case.processing.detail}{Detail tier for the Case Processing
 Summary's missing-data breakdown: \code{"none"} (no bottom
 table), \code{"totals"} (one summed missing row per variable),
-or \code{"per_code"} (per UDM code plus system-missing). The
+or \code{"per_code"} (per user-defined missing value code plus system-missing). The
 minimal tier defaults to \code{"none"}, standard to
 \code{"totals"}, full to \code{"per_code"}.}
 

@@ -1,6 +1,6 @@
 Package: jstats
 Title: Simplified Statistical Analysis Tools for Social Science
-Version: 0.9.74
+Version: 0.9.75
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
 Description: Provides simplified tools for common statistical analyses

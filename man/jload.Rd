@@ -65,7 +65,7 @@ carry missing-value declarations --- typically \code{.sav},
 saved from such data. For \code{.sav} files, \code{TRUE}
 corresponds to haven's \code{user_na = TRUE}.}
 
-\item{udm.notice}{Per-call override for the UDM notification frequency.
+\item{udm.notice}{Per-call override for the user-defined missing value (UDM) notification frequency.
 \code{NULL} (default) defers to the global setting from \code{joutput()}.
 \code{TRUE} prints the notification on every load; \code{FALSE}
 suppresses it; \code{NULL} at the global level shows once per session.

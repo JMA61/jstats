@@ -58,7 +58,7 @@
 #' @param case.processing.detail Detail tier for the Case Processing
 #'   Summary's missing-data breakdown: \code{"none"} (no bottom
 #'   table), \code{"totals"} (one summed missing row per variable),
-#'   or \code{"per_code"} (per UDM code plus system-missing). The
+#'   or \code{"per_code"} (per user-defined missing value code plus system-missing). The
 #'   minimal tier defaults to \code{"none"}, standard to
 #'   \code{"totals"}, full to \code{"per_code"}.
 #' @param variable.id Character or NULL. Variable label display mode, one
@@ -371,7 +371,7 @@ joutput <- function(level, effect.size = NULL,
   if (length(mismatched) > 0L) {
     other_conv <- if (target_convention == "spss") "Stata" else "SPSS"
     verb       <- if (length(mismatched) == 1L) "uses" else "use"
-    cat(sprintf("Note: %s predominantly %s %s-form UDMs. Use jconvert() to align.\n",
+    cat(sprintf("Note: %s predominantly %s %s-form user-defined missing values. Use jconvert() to align.\n",
                 paste(mismatched, collapse = ", "),
                 verb,
                 other_conv))
@@ -398,7 +398,7 @@ joutput <- function(level, effect.size = NULL,
 #'   \item{missing.convention}{Character, length 1. One of \code{"none"},
 #'     \code{"spss"}, or \code{"stata"}. Default: \code{"none"}.
 #'     \code{"none"} preserves loaded data as-is (no automatic conversion
-#'     between UDM representations at load time). \code{"spss"} or
+#'     between user-defined missing value (UDM) representations at load time). \code{"spss"} or
 #'     \code{"stata"} opts into load-time auto-conversion via
 #'     \code{\link{jload}}, and also supplies the target convention for
 #'     fresh UDM declarations on columns with no existing convention.}

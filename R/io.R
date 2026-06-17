@@ -61,7 +61,7 @@
 #'   \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
 #'   saved from such data. For \code{.sav} files, \code{TRUE}
 #'   corresponds to haven's \code{user_na = TRUE}.
-#' @param udm.notice Per-call override for the UDM notification frequency.
+#' @param udm.notice Per-call override for the user-defined missing value (UDM) notification frequency.
 #'   \code{NULL} (default) defers to the global setting from \code{joutput()}.
 #'   \code{TRUE} prints the notification on every load; \code{FALSE}
 #'   suppresses it; \code{NULL} at the global level shows once per session.
@@ -1444,7 +1444,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         cat("misinterpreted as real.\n")
       } else if (has_label_only) {
         cat("These codes are not formally declared, so they are not treated as missing,\n")
-        cat("but their value labels look UDM-like.\n")
+        cat("but their value labels look like user-defined missing values.\n")
         cat("Declare them as missing if they are; leave as-is if real.\n")
       } else {
         cat("These codes are not formally defined, so they are not treated as missing.\n")
@@ -1459,7 +1459,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       }
       if (has_label_only) {
         cat("[", src_display[["label_only"]], "]: not automatically treated as NA, but\n", sep = "")
-        cat("  value labels look UDM-like.\n")
+        cat("  value labels look like user-defined missing values.\n")
         cat("  Declare them as missing if they are; leave as-is if real.\n")
       }
       if (has_heur) {
@@ -1563,7 +1563,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       n_total, " ", noun, " ", verb_carry,
       " SPSS-style missing values, incompatible with the .dta format. ",
       "Run ", data_name, " <- jconvert(", data_name, ", to = \"stata\") ",
-      "for enumerated codes; range-based UDMs need recoding or ",
+      "for enumerated codes; range-based user-defined missing values need recoding or ",
       data_name, " <- jconvert(", data_name, ", to = \"baseR\") ",
       "to drop the metadata."
     ))
@@ -1798,7 +1798,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      n, " ", noun, " ", verb, " more UDM codes than SPSS format (.sav) ",
+      n, " ", noun, " ", verb, " more user-defined missing values than SPSS format (.sav) ",
       "allows (at most 3, or a range plus one).\n",
       "Save as R format (.rds) or ",
       "convert to Stata format (.dta) to keep all the codes, or reduce them ",
@@ -1816,7 +1816,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   if (is_sg) "This" else "These", noun, data_name, verb)
 
   paste(c(
-    "SPSS format (.sav) allows at most 3 UDM codes per variable, or a range plus one code.",
+    "SPSS format (.sav) allows at most 3 user-defined missing values (UDMs) per variable, or a range plus one code.",
     "",
     lead,
     var_lines,
@@ -1827,7 +1827,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "  2. Convert to Stata and save as Stata format (.dta), which also keeps all the codes:",
     sprintf("       %s <- jconvert(%s, to = \"stata\")", data_name, data_name),
     sprintf("       jsave(%s, \"%s.dta\")", data_name, data_name),
-    "  3. Reduce each variable's UDM codes to fit with jrecode()."
+    "  3. Reduce each variable's UDMs to fit with jrecode()."
   ), collapse = "\n")
 }
 

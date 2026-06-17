@@ -48,7 +48,7 @@ explicit transform path for data already in the workspace.
 \item{missing.convention}{Character, length 1. One of \code{"none"},
 \code{"spss"}, or \code{"stata"}. Default: \code{"none"}.
 \code{"none"} preserves loaded data as-is (no automatic conversion
-between UDM representations at load time). \code{"spss"} or
+between user-defined missing value (UDM) representations at load time). \code{"spss"} or
 \code{"stata"} opts into load-time auto-conversion via
 \code{\link{jload}}, and also supplies the target convention for
 fresh UDM declarations on columns with no existing convention.}
