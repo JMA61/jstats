@@ -235,18 +235,25 @@
 .jst_durability_note <- function(rung, data_name, count = NULL,
                                  verb = NULL, var_name = NULL) {
   save_call <- paste0("jsave(", data_name, ", \"", data_name, ".rds\")")
+  load_call <- paste0(data_name, " <- jload(\"", data_name, ".rds\")")
   if (identical(rung, "session")) {
     if (isTRUE(count == 1L)) {
       paste0(
         "Note: this registration is stored for this session only.\n",
         "To keep it across sessions, save the data frame in R format (.rds):\n",
-        "  ", save_call
+        "  ", save_call, "\n",
+        "\n",
+        "Next session, load that file to restore the registration:\n",
+        "  ", load_call
       )
     } else {
       paste0(
         "Note: registrations are stored for this session only.\n",
         "To keep them across sessions, save the data frame in R format (.rds):\n",
-        "  ", save_call
+        "  ", save_call, "\n",
+        "\n",
+        "Next session, load that file to restore the registrations:\n",
+        "  ", load_call
       )
     }
   } else if (identical(rung, "frame")) {

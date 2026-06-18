@@ -385,6 +385,53 @@
   invisible(TRUE)
 }
 
+#' Internal helper: block a dummy-registered variable from being an outcome
+#'
+#' LHS-scoped guard for the model functions (jlm / jlogistic / jaov / jt, and
+#' future jpoisson / jnegbin). A variable the user registered with jdummy()
+#' has been declared categorical-with-a-reference; using it as the response
+#' is a category error, so this raises a stop() at DV resolution -- before any
+#' IV/group handling. Scoped to the outcome only: a registered dummy is a
+#' legitimate predictor (jlm / jlogistic) or grouping variable (jaov / jt),
+#' so those uses are never touched. The remedy differs by family: jlogistic
+#' points to 0/1 recoding (it needs a binary outcome); the others point to
+#' clearing the registration (the variable is then read in its native form).
+#'
+#' @param data_name Character data-frame name (may be NULL for a bare frame).
+#' @param dv_name Character name of the outcome (response) variable.
+#' @param fn The calling user-facing function name, e.g. "jlm".
+#'
+#' @return \code{invisible(NULL)} when the outcome is not a registered dummy;
+#'   otherwise signals an error and does not return.
+#'
+#' @keywords internal
+.jst_check_dummy_outcome <- function(data_name, dv_name, fn) {
+  ds <- .jst_get_dummy(data_name)
+  if (is.null(ds) || length(ds) == 0L) return(invisible(NULL))
+  is_dummy <- any(vapply(ds, function(r) identical(r$var_name, dv_name),
+                         logical(1)))
+  if (!is_dummy) return(invisible(NULL))
+  dn <- if (is.null(data_name) || !nzchar(data_name)) "data" else data_name
+  if (identical(fn, "jlogistic")) {
+    .jst_stop(
+      "'", dv_name, "' is registered as a dummy, and can't be an outcome ",
+      "variable.\n",
+      "To use it as the outcome, ensure 0/1 coding, for example:\n",
+      "  ", dn, "$", dv_name, "R <- jrecode(", dn, ", ", dv_name,
+        ", map = \"<oldval1>=0; <oldval2>=1\")",
+      fn = fn
+    )
+  } else {
+    .jst_stop(
+      "'", dv_name, "' is registered as a dummy, and can't be an outcome ",
+      "variable.\n",
+      "Clear the registration to use the variable directly:\n",
+      "  jdummy(", dn, ", ", dv_name, ", remove = TRUE)",
+      fn = fn
+    )
+  }
+}
+
 #' Internal helper: clear one variable's intent-registry record
 #'
 #' Removes the \code{.jst_registry} record for a single variable in a named
@@ -755,6 +802,12 @@
 #'   canonical label.
 #' @param name.length.warn Integer. Warn if any final dummy name exceeds
 #'   this many characters. Default 30.
+#' @param max.categories Integer. Maximum number of input categories allowed;
+#'   a variable with more raises an error rather than building the dummy set.
+#'   Default \code{20L}.
+#' @param data_name Character. Name of the source data frame, used only to
+#'   build the suggested-fix call shown in the over-the-limit error. May be
+#'   \code{NULL}.
 #'
 #' @return A list with components: \code{codes}, \code{labels}
 #'   (canonical, used for display), \code{dummy_names} (canonical, for
@@ -765,7 +818,9 @@
 #'
 #' @keywords internal
 .jst_make_dummy_names <- function(x, var_name, ref = "first",
-                                  name.length.warn = 30L) {
+                                  name.length.warn = 30L,
+                                  max.categories = 20L,
+                                  data_name = NULL) {
 
   notes        <- character(0)
   warnings_msg <- character(0)
@@ -809,6 +864,29 @@
   if (n_cats < 2) {
     .jst_stop("'", var_name, "' has fewer than 2 categories. ",
          "Cannot create dummy variables.")
+  }
+  if (n_cats > max.categories) {
+    raise_to   <- (n_cats %/% 10L + 1L) * 10L
+    dn         <- if (is.null(data_name) || !nzchar(data_name)) "data" else data_name
+    raise_line <- paste0("  jdummy(", dn, ", ", var_name,
+                         ", max.categories = ", raise_to, ")")
+    via_dummy  <- identical(tryCatch(.jst_caller_fn(), error = function(e) NULL),
+                            "jdummy")
+    if (via_dummy) {
+      .jst_stop(
+        "'", var_name, "' has ", n_cats, " categories, the default limit is ",
+        max.categories, ".\n",
+        "You can raise the limit with:\n",
+        raise_line
+      )
+    } else {
+      .jst_stop(
+        "'", var_name, "' has ", n_cats, " categories, more than the ",
+        max.categories, "-category limit for dummy coding.\n",
+        "To dummy-code this many, register it with jdummy and raise the limit:\n",
+        raise_line
+      )
+    }
   }
 
   # -- Step 2: choose suffix source per category ----------------------------

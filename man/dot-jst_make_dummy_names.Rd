@@ -4,7 +4,14 @@
 \alias{.jst_make_dummy_names}
 \title{Internal helper: build canonical dummy variable naming for a categorical variable}
 \usage{
-.jst_make_dummy_names(x, var_name, ref = "first", name.length.warn = 30L)
+.jst_make_dummy_names(
+  x,
+  var_name,
+  ref = "first",
+  name.length.warn = 30L,
+  max.categories = 20L,
+  data_name = NULL
+)
 }
 \arguments{
 \item{x}{A vector -- haven_labelled, factor, character, or numeric.}
@@ -18,6 +25,14 @@ canonical label.}
 
 \item{name.length.warn}{Integer. Warn if any final dummy name exceeds
 this many characters. Default 30.}
+
+\item{max.categories}{Integer. Maximum number of input categories allowed;
+a variable with more raises an error rather than building the dummy set.
+Default \code{20L}.}
+
+\item{data_name}{Character. Name of the source data frame, used only to
+build the suggested-fix call shown in the over-the-limit error. May be
+\code{NULL}.}
 }
 \value{
 A list with components: \code{codes}, \code{labels}

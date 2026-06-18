@@ -164,6 +164,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   }
 
   .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
+  .jst_check_dummy_outcome(.jst_data_name, dv_name, "jt")
   # Type gate (Session 46): refuse a date DV (would coerce silently to a day
   # count) or a text/complex DV (would crash); grouping variable may be
   # categorical. See .jst_check_analysis_var.
@@ -586,6 +587,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   }
 
   .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
+  .jst_check_dummy_outcome(.jst_data_name, dv_name, "jaov")
   # Type gate (Session 46): response must be numeric; grouping variable may be
   # categorical. Date/time and complex/list/raw refused. See .jst_check_analysis_var.
   .jst_check_analysis_var(data[[terms[1L]]], terms[1L], TRUE, "an ANOVA")

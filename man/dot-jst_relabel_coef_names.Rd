@@ -13,8 +13,9 @@
 
 \item{iv_names}{Character vector of IV names from the model formula.}
 
-\item{sep}{Character separator used by \code{.jst_clean_coef_names()}.
-Default \code{"-"}.}
+\item{sep}{Character separator for grouped / jdummy term keys
+(\code{"<var><sep><level>"}). Default \code{"-"}; the grouped-dummy
+call sites pass \code{"_"}.}
 }
 \value{
 Character vector the same length as \code{coef_names}.
@@ -22,10 +23,12 @@ Character vector the same length as \code{coef_names}.
 \description{
 For the \code{"labels"} variable.id display mode (jlm / jlogistic). Given
 the cleaned names from \code{.jst_clean_coef_names()} -- numeric
-predictors as the bare variable name, factor terms as
-\code{"<var><sep><level>"}, intercept as \code{"(Intercept)"} -- replaces
-the variable-name portion of each term with the variable's label,
-preserving the \code{"<sep><level>"} decoration on factor terms. The
+predictors as the bare variable name, factor terms and numeric
+dichotomies as \code{"<var> (<level>)"}, intercept as \code{"(Intercept)"}
+-- replaces the variable-name portion of each term with the variable's
+label, preserving the parenthetical decoration. Grouped / jdummy term
+keys in \code{"<var><sep><level>"} form (e.g. \code{sep = "_"}) are
+relabelled the same way, keeping the \code{"<sep><level>"} suffix. The
 intercept, and any term not attributable to a labelled IV (e.g. a
 clearly-named jdummy column carrying no variable label), are left
 unchanged. Display only: the returned coefficient table keeps the cleaned

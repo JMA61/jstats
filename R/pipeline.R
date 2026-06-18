@@ -953,6 +953,9 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'   the specified variable(s). Default is \code{FALSE}.
 #' @param clear.all Logical. If \code{TRUE}, clears dummy registrations on
 #'   every data frame that carries them. Default is \code{FALSE}.
+#' @param max.categories Integer. Maximum number of categories a variable may
+#'   have to be dummy-coded; a variable with more raises an error. Raise it to
+#'   dummy-code a higher-cardinality variable. Default \code{20L}.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
@@ -978,7 +981,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'
 #' @export
 jdummy <- function(data, ..., ref = "first", show = FALSE,
-                   remove = FALSE, clear.all = FALSE) {
+                   remove = FALSE, clear.all = FALSE,
+                   max.categories = 20L) {
 
   default_name <- getOption(".jst_default_data", default = NULL)
 
@@ -1174,7 +1178,9 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
   deferred <- character(0)
   for (var_name in var_names) {
     col   <- data[[var_name]]
-    built <- .jst_make_dummy_names(col, var_name, ref = ref)
+    built <- .jst_make_dummy_names(col, var_name, ref = ref,
+                                   max.categories = max.categories,
+                                   data_name = .jst_data_name)
 
     n_total   <- length(col)
     n_missing <- sum(is.na(col))

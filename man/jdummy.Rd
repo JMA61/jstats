@@ -10,7 +10,8 @@ jdummy(
   ref = "first",
   show = FALSE,
   remove = FALSE,
-  clear.all = FALSE
+  clear.all = FALSE,
+  max.categories = 20L
 )
 }
 \arguments{
@@ -38,6 +39,10 @@ the specified variable(s). Default is \code{FALSE}.}
 
 \item{clear.all}{Logical. If \code{TRUE}, clears dummy registrations on
 every data frame that carries them. Default is \code{FALSE}.}
+
+\item{max.categories}{Integer. Maximum number of categories a variable may
+have to be dummy-coded; a variable with more raises an error. Raise it to
+dummy-code a higher-cardinality variable. Default \code{20L}.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect.

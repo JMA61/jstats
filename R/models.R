@@ -669,13 +669,32 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   cleaned <- coef_names
   for (v in iv_names) {
     if (!v %in% names(data)) next
-    if (!is.factor(data[[v]])) next
-    lvls <- levels(data[[v]])
-    if (length(lvls) < 2) next
-    for (lvl in lvls[-1]) {
-      old_name <- paste0(v, lvl)
-      new_name <- paste0(v, sep, lvl)
-      cleaned[cleaned == old_name] <- new_name
+    col <- data[[v]]
+    if (is.factor(col)) {
+      lvls <- levels(col)
+      if (length(lvls) < 2) next
+      for (lvl in lvls[-1]) {
+        old_name <- paste0(v, lvl)
+        new_name <- paste0(v, " (", lvl, ")")
+        cleaned[cleaned == old_name] <- new_name
+      }
+    } else if (is.numeric(col) || haven::is.labelled(col)) {
+      vals <- .jst_as_numeric(col)
+      u    <- sort(unique(vals[!is.na(vals)]))
+      # Annotate only a two-level predictor whose codes differ by exactly 1,
+      # where the numeric slope equals the higher-vs-lower category contrast.
+      # Wider-spaced codes carry a genuine per-unit slope, so the bare name
+      # (no category parenthetical) is the honest label in that case.
+      if (length(u) == 2L && (u[2L] - u[1L]) == 1) {
+        hi       <- u[2L]
+        hi_label <- as.character(hi)
+        if (haven::is.labelled(col)) {
+          vl <- labelled::val_labels(col)
+          m  <- which(vl == hi)
+          if (length(m) > 0L) hi_label <- names(vl)[m[1L]]
+        }
+        cleaned[cleaned == v] <- paste0(v, " (", hi_label, ")")
+      }
     }
   }
   cleaned
@@ -685,10 +704,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'
 #' For the \code{"labels"} variable.id display mode (jlm / jlogistic). Given
 #' the cleaned names from \code{.jst_clean_coef_names()} -- numeric
-#' predictors as the bare variable name, factor terms as
-#' \code{"<var><sep><level>"}, intercept as \code{"(Intercept)"} -- replaces
-#' the variable-name portion of each term with the variable's label,
-#' preserving the \code{"<sep><level>"} decoration on factor terms. The
+#' predictors as the bare variable name, factor terms and numeric
+#' dichotomies as \code{"<var> (<level>)"}, intercept as \code{"(Intercept)"}
+#' -- replaces the variable-name portion of each term with the variable's
+#' label, preserving the parenthetical decoration. Grouped / jdummy term
+#' keys in \code{"<var><sep><level>"} form (e.g. \code{sep = "_"}) are
+#' relabelled the same way, keeping the \code{"<sep><level>"} suffix. The
 #' intercept, and any term not attributable to a labelled IV (e.g. a
 #' clearly-named jdummy column carrying no variable label), are left
 #' unchanged. Display only: the returned coefficient table keeps the cleaned
@@ -697,8 +718,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' @param coef_names Character vector of cleaned coefficient names.
 #' @param data Data frame used to fit the model (carries variable labels).
 #' @param iv_names Character vector of IV names from the model formula.
-#' @param sep Character separator used by \code{.jst_clean_coef_names()}.
-#'   Default \code{"-"}.
+#' @param sep Character separator for grouped / jdummy term keys
+#'   (\code{"<var><sep><level>"}). Default \code{"-"}; the grouped-dummy
+#'   call sites pass \code{"_"}.
 #'
 #' @return Character vector the same length as \code{coef_names}.
 #'
@@ -715,7 +737,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
         out[i] <- lab
         break
       }
-      prefix <- paste0(v, sep)                   # factor "<var><sep><level>"
+      # Parenthetical decoration "<var> (<level>)": factor terms and numeric
+      # dichotomies cleaned by .jst_clean_coef_names(). Swap the leading
+      # variable name for its label, keeping the " (<level>)" intact.
+      if (startsWith(nm, paste0(v, " ("))) {
+        out[i] <- paste0(lab, substring(nm, nchar(v) + 1L))
+        break
+      }
+      # Separator decoration "<var><sep><level>": grouped / jdummy term keys.
+      prefix <- paste0(v, sep)
       if (startsWith(nm, prefix)) {
         out[i] <- paste0(lab, sep, substring(nm, nchar(prefix) + 1L))
         break
@@ -1487,6 +1517,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   auto_ref_cats <- character(0)
   auto_cat_regs <- list()  # in-flight registrations for auto-cat / categorical = vars
   dv_name <- all.vars(formula)[1]
+  .jst_check_dummy_outcome(.jst_data_name, dv_name, "jlm")
 
   # --- DV sanity check: warn if the DV looks categorical or dichotomous ----
   #
@@ -1732,7 +1763,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Override: categorical = "Var" forces categorical ---
     if (v %in% categorical) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first")
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+                                   data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
       for (w in reg$warnings_msg) warning(w, call. = FALSE)
@@ -1755,7 +1787,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     # data, or small-range whole-number numeric), the user may have meant
     # to register with jdummy() or pass categorical = instead.
     if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first")
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+                                   data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
       for (w in reg$warnings_msg) warning(w, call. = FALSE)
@@ -1768,40 +1801,34 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       }
       # Check for dichotomy first: dichotomies are valid as numeric IVs
       # in linear regression (the slope is the mean difference). They do
-      # not need dummy-coding. The discrete-integer warning would be
-      # misleading for them. Soft coding-specific warnings only:
-      #   - 0/1, factor, character, logical: no warning, clean run.
-      #   - 1/2: model runs correctly, but recoding to 0/1 makes the
-      #     intercept easier to interpret.
-      #   - other (e.g., 5/10): non-standard coding; slope represents
-      #     per-unit change, recoding to 0/1 advised.
+      # not need dummy-coding, and the discrete-integer hedge below would
+      # be misleading for them. Coding-specific notes only (off-minimal;
+      # the fitted result is identical either way -- Rule Q: the steer is
+      # data-shape, not a different model):
+      #   - 0/1, factor, character, logical: no note, clean run.
+      #   - 1/2: registering as a dummy clarifies the intercept.
+      #   - other (e.g., 5/10): non-0/1 codes; same dummy/recode steer.
       iv_dich <- .jst_is_dichotomy(data[[v]])
       if (iv_dich$is_dichotomy) {
-        if (iv_dich$coding == "1/2") {
-          warning(
-            v, " is a 1/2 dichotomy. The model runs correctly, but ",
-            "recoding to 0/1 makes the intercept easier to interpret. ",
-            "To recode:\n\n",
-            "  ", .jst_data_name, "$", v, "R <- jrecode(",
-              .jst_data_name, ", ", v, ", map = \"1=0; 2=1\")\n",
-            "  jlm(", deparse(formula[[2]]), " ~ ", v, "R)\n\n",
-            "For other approaches (jdummy, categorical = ...) see ?jlm.",
-            call. = FALSE
-          )
-        } else if (iv_dich$coding == "other") {
-          warning(
-            v, " is a dichotomy with non-standard coding. The slope ",
-            "represents per-unit change rather than the contrast between ",
-            "categories. Consider recoding to 0/1 for clearer interpretation. ",
-            "Adapt the values below to match this variable's actual codes:\n\n",
-            "  ", .jst_data_name, "$", v, "R <- jrecode(",
-              .jst_data_name, ", ", v, ", map = \"<oldval1>=0; <oldval2>=1\")\n",
-            "  jlm(", deparse(formula[[2]]), " ~ ", v, "R)\n\n",
-            "For other approaches (jdummy, categorical = ...) see ?jlm.",
-            call. = FALSE
-          )
+        if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+          if (iv_dich$coding == "1/2") {
+            message(
+              "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
+              "registering ", v, " as a dummy can help interpret the intercept:\n",
+              "  jdummy(", .jst_data_name, ", ", v, ")\n",
+              "Or recode to a permanent 0/1 variable with jrecode()."
+            )
+          } else if (iv_dich$coding == "other") {
+            message(
+              "Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
+              "correctly, but registering ", v, " as a dummy can help interpret ",
+              "the intercept:\n",
+              "  jdummy(", .jst_data_name, ", ", v, ")\n",
+              "Or recode to a permanent 0/1 variable with jrecode()."
+            )
+          }
         }
-        # 0/1, factor, character, logical: no warning.
+        # 0/1, factor, character, logical: no note.
       } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
                  !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
         # Non-dichotomous but categorical-like structure: emit the
@@ -2565,6 +2592,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # naming the DV is a no-op here -- the DV is excluded from iv_names below and
   # the binary response is fixed regardless of any role assertion.)
   dv_name  <- all.vars(formula)[1]
+  .jst_check_dummy_outcome(.jst_data_name, dv_name, "jlogistic")
   iv_names <- setdiff(model_vars, c(dv_name, dummy_coef_names))
 
   auto_detected  <- character(0)
@@ -2605,7 +2633,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Override: categorical = "Var" forces categorical ---
     if (!is.null(categorical) && v %in% categorical) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first")
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+                                   data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
       for (w in reg$warnings_msg) warning(w, call. = FALSE)
@@ -2616,7 +2645,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Auto-detection via unified classifier ---
     if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first")
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+                                   data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
       for (w in reg$warnings_msg) warning(w, call. = FALSE)
@@ -2631,41 +2661,34 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       }
       # Check for dichotomy first: dichotomies are valid as numeric IVs
       # in logistic regression (the slope on the log-odds is the
-      # contrast). They do not need dummy-coding. The discrete-integer
-      # warning would be misleading for them. Soft coding-specific
-      # warnings only:
-      #   - 0/1, factor, character, logical: no warning, clean run.
-      #   - 1/2: model runs correctly, but recoding to 0/1 makes the
-      #     intercept easier to interpret.
-      #   - other (e.g., 5/10): non-standard coding; slope represents
-      #     per-unit change, recoding to 0/1 advised.
+      # contrast). They do not need dummy-coding, and the discrete-integer
+      # hedge below would be misleading for them. Coding-specific notes
+      # only (off-minimal; the fitted result is identical either way --
+      # Rule Q: the steer is data-shape, not a different model):
+      #   - 0/1, factor, character, logical: no note, clean run.
+      #   - 1/2: registering as a dummy clarifies the intercept.
+      #   - other (e.g., 5/10): non-0/1 codes; same dummy/recode steer.
       iv_dich <- .jst_is_dichotomy(data[[v]])
       if (iv_dich$is_dichotomy) {
-        if (iv_dich$coding == "1/2") {
-          warning(
-            v, " is a 1/2 dichotomy. The model runs correctly, but ",
-            "recoding to 0/1 makes the intercept easier to interpret. ",
-            "To recode:\n\n",
-            "  ", .jst_data_name, "$", v, "R <- jrecode(",
-              .jst_data_name, ", ", v, ", map = \"1=0; 2=1\")\n",
-            "  jlogistic(", deparse(formula[[2]]), " ~ ", v, "R)\n\n",
-            "For other approaches (jdummy, categorical = ...) see ?jlogistic.",
-            call. = FALSE
-          )
-        } else if (iv_dich$coding == "other") {
-          warning(
-            v, " is a dichotomy with non-standard coding. The slope ",
-            "represents per-unit change rather than the contrast between ",
-            "categories. Consider recoding to 0/1 for clearer interpretation. ",
-            "Adapt the values below to match this variable's actual codes:\n\n",
-            "  ", .jst_data_name, "$", v, "R <- jrecode(",
-              .jst_data_name, ", ", v, ", map = \"<oldval1>=0; <oldval2>=1\")\n",
-            "  jlogistic(", deparse(formula[[2]]), " ~ ", v, "R)\n\n",
-            "For other approaches (jdummy, categorical = ...) see ?jlogistic.",
-            call. = FALSE
-          )
+        if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+          if (iv_dich$coding == "1/2") {
+            message(
+              "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
+              "registering ", v, " as a dummy can help interpret the intercept:\n",
+              "  jdummy(", .jst_data_name, ", ", v, ")\n",
+              "Or recode to a permanent 0/1 variable with jrecode()."
+            )
+          } else if (iv_dich$coding == "other") {
+            message(
+              "Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
+              "correctly, but registering ", v, " as a dummy can help interpret ",
+              "the intercept:\n",
+              "  jdummy(", .jst_data_name, ", ", v, ")\n",
+              "Or recode to a permanent 0/1 variable with jrecode()."
+            )
+          }
         }
-        # 0/1, factor, character, logical: no warning.
+        # 0/1, factor, character, logical: no note.
       } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
                  !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
         # Non-dichotomous but categorical-like structure: emit the
