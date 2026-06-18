@@ -1622,6 +1622,52 @@
 }
 
 
+#' Internal helper: convert a character \code{codes} vector to canonical form
+#'
+#' Converts a character \code{codes} vector (as accepted by
+#' \code{jdeclare_udm}) into the canonical numeric / tagged-NA form, so a
+#' caller can write \code{codes = c("Refused" = ".a")} or
+#' \code{c(".a", ".b")} without \code{haven::tagged_na()}. A token \code{".a"}
+#' becomes \code{haven::tagged_na("a")}; a numeric string such as \code{"-99"}
+#' becomes \code{-99}. Names (label text, when present) are preserved.
+#'
+#' @param codes Character vector of codes; each element is a Stata-style
+#'   missing-value token (\code{.a} through \code{.z}) or a numeric string.
+#'
+#' @return A numeric vector (with tagged-NA values for token entries),
+#'   carrying the names of \code{codes}.
+#'
+#' @keywords internal
+.jst_parse_code_tokens <- function(codes) {
+  # Convert a character `codes` vector into the canonical numeric / tagged-NA
+  # form, so callers can write codes = c("Refused" = ".a") or c(".a", ".b")
+  # without haven::tagged_na(). ".a" -> tagged_na("a"); "-99" -> -99. Names
+  # (labels, when present) are preserved.
+  nm  <- names(codes)
+  out <- rep(NA_real_, length(codes))
+  for (i in seq_along(codes)) {
+    tok <- trimws(as.character(codes[[i]]))
+    low <- tolower(tok)
+    if (grepl("^\\.[a-z]$", low)) {
+      out[i] <- haven::tagged_na(substr(low, 2L, 2L))
+    } else if (grepl("^\\.", low) || grepl("^na\\(", low)) {
+      stop(paste0("Invalid code '", tok, "'. Stata-style missing-value ",
+                  "tokens must be '.a' through '.z' (a single lowercase ",
+                  "letter after the period)."), call. = FALSE)
+    } else {
+      v <- suppressWarnings(as.numeric(tok))
+      if (is.na(v)) {
+        stop(paste0("Invalid code '", tok, "'. Codes must be numbers (for ",
+                    "example -99) or Stata-style tokens (.a through .z)."),
+             call. = FALSE)
+      }
+      out[i] <- v
+    }
+  }
+  names(out) <- nm
+  out
+}
+
 #' Internal helper: parse a label-spec string into a named numeric vector
 #'
 #' Parses a labels string of the form
@@ -1631,7 +1677,7 @@
 #' sign in each rule, so label text may itself contain equals signs.
 #'
 #' The left-hand side of each rule may be a numeric value or a Stata-
-#' style Stata-style missing-value token (\code{.a} through \code{.z}). Tagged-NA
+#' style missing-value token (\code{.a} through \code{.z}). Tagged-NA
 #' entries are stored as \code{haven::tagged_na(<letter>)} values in
 #' the returned vector; callers can detect them via
 #' \code{haven::na_tag()}.

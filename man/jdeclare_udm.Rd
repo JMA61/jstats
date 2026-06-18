@@ -7,7 +7,7 @@
 jdeclare_udm(
   data,
   var,
-  codes,
+  codes = NULL,
   labels = NULL,
   convention = NULL,
   udm.notice = TRUE

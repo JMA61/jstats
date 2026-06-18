@@ -446,7 +446,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (identical(output_level, "minimal")) {
     return(paste0(
       "codes for ", var_name, " contains '.", first_tag,
-      "', a Stata-style missing-value marker. ",
+      "', a Stata-style missing-value marker.\n",
       "The package is currently set to SPSS convention.\n",
       "See ?jdeclare_udm for examples, or run\n",
       "joptions(missing.convention = \"stata\") to switch."
@@ -518,10 +518,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # Assemble the message.
   msg_parts <- c(
     paste0("codes for ", var_name, " contains '.", first_tag,
-           "', a Stata-style missing-value marker. ",
-           "The package is currently set to SPSS"),
-    "convention, which uses numeric codes. Here is the equivalent",
-    "declaration in SPSS style:",
+           "', a Stata-style missing-value marker."),
+    "The package is currently set to SPSS convention, which uses numeric codes.",
+    "Here is the equivalent declaration in SPSS style:",
     "",
     jdeclare_line,
     "",
@@ -543,19 +542,19 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     if (n_tags > 3L) {
       msg_parts <- c(msg_parts, "",
         paste0("Note: `codes` uses ", n_tags, " Stata-style markers (",
-               paste0(".", all_tags, collapse = ", "), ") but SPSS"),
-        "convention supports at most 3 user-defined missing values;",
-        paste0(unmapped_render, " ", were_was,
+               paste0(".", all_tags, collapse = ", "),
+               ") but SPSS convention supports at most 3 user-defined missing ",
+               "values; ", unmapped_render, " ", were_was,
                " not substituted in the example above.")
       )
     } else {
       msg_parts <- c(msg_parts, "",
         paste0("Note: `codes` uses ", n_tags, " Stata-style markers (",
-               paste0(".", all_tags, collapse = ", "), ") but"),
-        paste0("joptions(\"udm.convention.codes\") currently holds only ",
-               n_codes, " values; ", unmapped_render, " ", were_was),
-        "not substituted in the example above. To add another code, run",
-        "something like joptions(udm.convention.codes = c(-99, -98, -97))."
+               paste0(".", all_tags, collapse = ", "),
+               ") but joptions(\"udm.convention.codes\") currently holds only ",
+               n_codes, " values; ", unmapped_render, " ", were_was,
+               " not substituted in the example above."),
+        "To add another code, run something like joptions(udm.convention.codes = c(-99, -98, -97))."
       )
     }
   }
@@ -1033,91 +1032,165 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   }
 
   # --- Handle unspecified non-NA values ---
-  # Exclude values that were explicitly mapped (including mapped to NA)
+  # Classify each unmapped, non-NA value into one of three kinds and act per
+  # the locked jrecode missing-value policy: preserve declared codes, never
+  # let a heuristic guess override, and obey explicit instructions.
+  #   - declared SPSS-form UDM (value present in na_values): preserved
+  #     unchanged -- the code value, its declaration, and its label are
+  #     carried onto the recoded variable regardless of the else setting.
+  #     (Stata-form tagged NAs are handled separately, below, since they are
+  #     already NA and never reach this non-NA classification.)
+  #   - heuristic-suspected but NOT declared: a guess, so jrecode never acts
+  #     on it on its own. No else clause -> error (jointly with any
+  #     legitimate unmapped value); else=copy -> carried through with a
+  #     full-tier advisory note; else=NA/tagged -> handled like any unmapped
+  #     value.
+  #   - legitimate (not suspected): no else -> error; else=copy -> carried;
+  #     else=NA -> NA; else=tagged -> tagged NA.
   unspecified_mask <- !is.na(orig_num) & is.na(new_num) &
                       !(orig_num %in% all_specified_old)
   unspecified_vals <- sort(unique(orig_num[unspecified_mask]))
 
-  # Separate suspicious from legitimate unspecified values
-  suspicious_unspecified <- unspecified_vals[unspecified_vals %in% suspicious_vals]
-  legitimate_unspecified <- unspecified_vals[!unspecified_vals %in% suspicious_vals]
+  udm_codes <- attr(orig, "na_values", exact = TRUE)
+  if (is.null(udm_codes)) udm_codes <- numeric(0)
 
-  # Force suspicious values to NA regardless of else setting
-  if (length(suspicious_unspecified) > 0) {
-    suspicious_mask <- !is.na(orig_num) & orig_num %in% suspicious_unspecified
-    new_num[suspicious_mask] <- NA_real_
+  declared_unspecified <- unspecified_vals[unspecified_vals %in% udm_codes]
+  heur_unspecified     <- unspecified_vals[unspecified_vals %in% suspicious_vals &
+                                           !(unspecified_vals %in% udm_codes)]
+  legit_unspecified    <- unspecified_vals[!(unspecified_vals %in% suspicious_vals) &
+                                           !(unspecified_vals %in% udm_codes)]
+
+  # Declared SPSS-form UDM codes: carry the code value through unchanged. The
+  # na_values declaration and labels are re-attached at result construction.
+  preserved_udm_codes <- numeric(0)
+  if (length(declared_unspecified) > 0) {
+    pres_mask <- !is.na(orig_num) & orig_num %in% declared_unspecified
+    new_num[pres_mask] <- orig_num[pres_mask]
+    preserved_udm_codes <- declared_unspecified
   }
 
-  # Handle legitimate unspecified values based on else setting
-  if (length(legitimate_unspecified) > 0) {
-    if (parsed_map$else_explicit && parsed_map$else_action == "copy") {
-      # else=copy: carry legitimate values through
-      legit_mask <- !is.na(orig_num) & orig_num %in% legitimate_unspecified
+  # Heuristic-suspected (undeclared) values: governed by the else setting.
+  if (length(heur_unspecified) > 0 && parsed_map$else_explicit) {
+    h_mask <- !is.na(orig_num) & orig_num %in% heur_unspecified
+    if (parsed_map$else_action == "copy") {
+      new_num[h_mask] <- orig_num[h_mask]
+    } else if (parsed_map$else_action == "tagged") {
+      new_num[h_mask] <- haven::tagged_na(parsed_map$else_tag)
+    }
+    # else=NA: already NA, nothing to do.
+  }
+
+  # Legitimate (not suspected) unmapped values: governed by the else setting.
+  if (length(legit_unspecified) > 0 && parsed_map$else_explicit) {
+    legit_mask <- !is.na(orig_num) & orig_num %in% legit_unspecified
+    if (parsed_map$else_action == "copy") {
       new_num[legit_mask] <- orig_num[legit_mask]
-    } else if (parsed_map$else_explicit && parsed_map$else_action == "na") {
-      # Explicit else=NA: set to NA silently (student is being deliberate)
-      # Values are already NA, nothing to do
-    } else if (parsed_map$else_explicit && parsed_map$else_action == "tagged") {
-      # Stata-style tagged-NA else: assign haven::tagged_na(<letter>)
-      # to all legitimate unspecified cells.
-      legit_mask <- !is.na(orig_num) & orig_num %in% legitimate_unspecified
+    } else if (parsed_map$else_action == "tagged") {
       new_num[legit_mask] <- haven::tagged_na(parsed_map$else_tag)
+    }
+    # else=NA: already NA, nothing to do.
+  }
+
+  # No else clause: stop on any non-declared unmapped value (heuristic or
+  # legitimate). Declared codes never reach here -- they were preserved above.
+  if (!parsed_map$else_explicit) {
+    error_vals <- sort(unique(c(heur_unspecified, legit_unspecified)))
+    if (length(error_vals) > 0) {
+      msg <- if (length(error_vals) == 1L) {
+        paste0("Value ", error_vals, " in '", orig_name,
+               "' was not in the map.")
+      } else {
+        paste0("Values ", paste(error_vals, collapse = ", "), " in '",
+               orig_name, "' were not in the map.")
+      }
+      if (length(heur_unspecified) > 0) {
+        msg <- paste0(msg, "\n", if (length(heur_unspecified) == 1L) {
+          paste0(heur_unspecified,
+                 " looks like a coded missing value; declare it with ",
+                 "jdeclare_udm() so analyses exclude it, or map it ",
+                 "(for example ", heur_unspecified[1], "=NA).")
+        } else {
+          paste0(paste(heur_unspecified, collapse = ", "),
+                 " look like coded missing values; declare them with ",
+                 "jdeclare_udm() so analyses exclude them, or map them.")
+        })
+      }
+      if (length(legit_unspecified) > 0) {
+        msg <- paste0(msg, "\nMap these values and re-run.")
+      }
+      msg <- paste0(msg,
+        "\nTo leave unmapped values unchanged, add else=copy to the map.")
+      .jst_stop(msg)
+    }
+  }
+
+  # --- Notes for preserved declared codes and carried-through heuristics ---
+  # Declared SPSS-form UDM codes that were preserved (M1): a standard-tier
+  # note, since it states a fact about a declared thing. Heuristic-suspected
+  # values carried through under else=copy (M3): a full-tier advisory note,
+  # since "looks like a coded missing value" is a guess. See the message-
+  # voice reference and JStats_Missing_Values_Reference.txt Part 4.
+  orig_val_labels_for_note <-
+    if (inherits(orig, "haven_labelled")) labelled::val_labels(orig) else NULL
+
+  .code_with_label <- function(code) {
+    if (!is.null(orig_val_labels_for_note) &&
+        length(orig_val_labels_for_note) > 0) {
+      lab <- names(orig_val_labels_for_note)[
+        as.numeric(orig_val_labels_for_note) == code]
+      lab <- lab[!is.na(lab) & nzchar(lab)]
+      if (length(lab) >= 1L) return(paste0(code, " (\"", lab[1], "\")"))
+    }
+    as.character(code)
+  }
+
+  if (length(preserved_udm_codes) > 0) {
+    rendered <- paste(vapply(preserved_udm_codes, .code_with_label,
+                             character(1)), collapse = ", ")
+    if (length(preserved_udm_codes) == 1L) {
+      message(paste0(
+        "Note: ", rendered, " is a declared missing value and was kept on ",
+        "the recoded variable.\n",
+        "To convert it to a plain NA instead, add ", preserved_udm_codes[1],
+        "=NA to the map."))
     } else {
-      # No else clause: stop so student can fix the map
-      .jst_stop(paste0(
-        "Value(s) ", paste(legitimate_unspecified, collapse = ", "),
-        " in '", orig_name, "' were not in the map. ",
-        "Map these values and re-run. ",
-        "To leave unmapped values unchanged, add 'else=copy' to the map."
-      ))
+      message(paste0(
+        "Note: ", rendered, " are declared missing values and were kept on ",
+        "the recoded variable.\n",
+        "To convert them to plain NA instead, map them to NA ",
+        "(for example ", preserved_udm_codes[1], "=NA)."))
     }
   }
 
-  # Print note about suspicious values that were forced to NA.
-  # Partition by source so the wording matches what we actually know:
-  #   - Values present in the variable's na_values metadata are UDM-
-  #     confirmed and get definitive "is a user-defined missing value"
-  #     wording.
-  #   - Values flagged only by the heuristic get tentative "looks like
-  #     a coded missing value" wording.
-  # This avoids underspeaking when the user has already seen the UDM
-  # noted at jload time. See Session 22 changelog ("Problem A") for the
-  # design discussion.
-  if (length(suspicious_unspecified) > 0) {
-    udm_codes <- attr(orig, "na_values", exact = TRUE)
-    if (is.null(udm_codes)) udm_codes <- numeric(0)
-
-    udm_unspecified  <- suspicious_unspecified[suspicious_unspecified %in% udm_codes]
-    heur_unspecified <- suspicious_unspecified[!suspicious_unspecified %in% udm_codes]
-
-    .verb_phrase <- function(n, singular, plural) if (n == 1L) singular else plural
-
-    if (length(udm_unspecified) > 0) {
-      vp <- .verb_phrase(
-        length(udm_unspecified),
-        "is a user-defined missing value and was set to NA",
-        "are user-defined missing values and were set to NA"
-      )
-      message(paste0(
-        "Note: ", paste(udm_unspecified, collapse = ", "),
-        " in '", orig_name, "' ", vp, "."
-      ))
-    }
-    if (length(heur_unspecified) > 0) {
-      vp <- .verb_phrase(
-        length(heur_unspecified),
-        "looks like a coded missing value and was set to NA",
-        "look like coded missing values and were set to NA"
-      )
-      message(paste0(
-        "Note: ", paste(heur_unspecified, collapse = ", "),
-        " in '", orig_name, "' ", vp, "."
-      ))
+  if (length(heur_unspecified) > 0 && parsed_map$else_explicit &&
+      parsed_map$else_action == "copy") {
+    if (length(heur_unspecified) == 1L) {
+      .jst_advisory_note(paste0(
+        "Note: ", heur_unspecified, " in '", orig_name, "' looks like a ",
+        "coded missing value and was carried through unchanged.\n",
+        "If it represents missing data, declare it with jdeclare_udm() so ",
+        "analyses exclude it."))
+    } else {
+      .jst_advisory_note(paste0(
+        "Note: ", paste(heur_unspecified, collapse = ", "), " in '",
+        orig_name, "' look like coded missing values and were carried ",
+        "through unchanged.\n",
+        "If they represent missing data, declare them with jdeclare_udm() ",
+        "so analyses exclude them."))
     }
   }
 
-  # NAs in original are always NA in output
+  # NAs in original are NA in output. Preserve Stata-form tagged NAs by
+  # re-applying their tags afterward (the flatten collapses tagged NAs, which
+  # satisfy is.na(), to plain NA). Tagged cells are never targeted by a
+  # numeric map rule, so all of them are preserved under the declared-code
+  # policy regardless of the else setting.
   new_num[is.na(orig_num)] <- NA_real_
+  orig_tags  <- haven::na_tag(orig_num)
+  tagged_pos <- which(!is.na(orig_tags))
+  if (length(tagged_pos) > 0) {
+    new_num[tagged_pos] <- haven::tagged_na(orig_tags[tagged_pos])
+  }
 
   # --- Variable label ---
   is_haven       <- inherits(orig, "haven_labelled")
@@ -1131,7 +1204,16 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   }
 
   # --- Build output as haven_labelled vector ---
-  result <- labelled::labelled(new_num)
+  # If declared SPSS-form UDM codes were preserved, the result carries an
+  # na_values declaration so those codes stay typed missings (excluded in
+  # analyses, shown by jfreq, written back out by jsave). Otherwise a plain
+  # labelled vector; any preserved Stata-form tagged NAs already sit in the
+  # double payload.
+  if (length(preserved_udm_codes) > 0) {
+    result <- haven::labelled_spss(new_num, na_values = preserved_udm_codes)
+  } else {
+    result <- labelled::labelled(new_num)
+  }
   labelled::var_label(result) <- new_var_label
 
   # --- Value labels ---
@@ -1164,8 +1246,26 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       }
 
       if (is_collapsing) {
-        message("Note: Categories were collapsed. Use labels argument or jrelabel() ",
-                "to assign new value labels.")
+        message("Note: Categories were collapsed.\n",
+                "Use labels argument or jrelabel() to assign new value labels.")
+        # The collapse note covers the recoded categories only. Preserved
+        # declared UDM codes are never part of a collapse, so carry their
+        # labels through here; otherwise a kept code would show as
+        # "(no label)" even though its declaration survived.
+        if (length(preserved_udm_codes) > 0) {
+          udm_labels <- c()
+          for (i in seq_along(orig_val_labels)) {
+            old_code <- unname(orig_val_labels[i])
+            if (old_code %in% preserved_udm_codes) {
+              entry        <- old_code
+              names(entry) <- names(orig_val_labels)[i]
+              udm_labels   <- c(udm_labels, entry)
+            }
+          }
+          if (length(udm_labels) > 0) {
+            labelled::val_labels(result) <- udm_labels
+          }
+        }
       } else {
         # One-to-one mapping — transfer labels to new codes
         old_to_new <- list()
@@ -1184,6 +1284,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
             entry <- old_to_new[[as.character(old_code)]]
             if (is.na(entry)) next
             names(entry)   <- label_name
+            new_val_labels <- c(new_val_labels, entry)
+          } else if (old_code %in% preserved_udm_codes) {
+            # Declared SPSS-form UDM code preserved unchanged -- keep its
+            # label at the same code value (so the kept code stays labelled
+            # and the result reads as a proper declared missing).
+            entry        <- old_code
+            names(entry) <- label_name
             new_val_labels <- c(new_val_labels, entry)
           } else if (parsed_map$else_action == "copy") {
             # Unmapped but carried across unchanged
@@ -1348,7 +1455,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'                               "Don't know" = haven::tagged_na("b")))
 #'
 #' @export
-jdeclare_udm <- function(data, var, codes, labels = NULL,
+jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
                          convention = NULL, udm.notice = TRUE) {
 
   # --- Resolve first argument -----------------------------------------------
@@ -1401,12 +1508,31 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
          "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
   }
 
-  if (missing(codes) || is.null(codes)) {
-    .jst_stop("`codes` is required.")
+  # Labels-only form: `codes` omitted; `labels` carries both the code values
+  # and their names (for example labels = "-99=Refused; -98=Don't know", or
+  # labels = ".a=Refused; .b=Don't know"). Detect it before `codes` is
+  # touched so missing() reads correctly.
+  labels_only <- (missing(codes) || is.null(codes)) && !is.null(labels)
+
+  if ((missing(codes) || is.null(codes)) && is.null(labels)) {
+    .jst_stop("Provide `codes` (for example codes = c(-99, -98)), or use the ",
+         "labels-only form, for example labels = \"-99=Refused; -98=Don't know\" ",
+         "or labels = \".a=Refused; .b=Don't know\".")
   }
-  if (!is.numeric(codes) || length(codes) == 0L) {
-    .jst_stop("`codes` must be one or more numbers, e.g. codes = c(-99, -98).\n",
-         "(Stata-style missing values are accepted under Stata convention.)")
+
+  if (!labels_only) {
+    # Accept Stata-style tokens and numeric strings in `codes` so callers
+    # need not write haven::tagged_na(): ".a" -> tagged_na("a"); "-99" -> -99.
+    if (is.character(codes)) {
+      codes <- tryCatch(
+        .jst_parse_code_tokens(codes),
+        error = function(e) .jst_stop(conditionMessage(e)))
+    }
+    if (!is.numeric(codes) || length(codes) == 0L) {
+      .jst_stop("`codes` must be one or more numbers (for example ",
+           "codes = c(-99, -98)) or Stata-style tokens (for example ",
+           "codes = c(\".a\", \".b\")).")
+    }
   }
   if (!is.logical(udm.notice) || length(udm.notice) != 1L ||
       is.na(udm.notice)) {
@@ -1421,26 +1547,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
     }
   }
 
-  # --- Argument disambiguation (Option A vs Option C) ----------------------
-  codes_names <- names(codes)
-  has_all_names <- !is.null(codes_names) && all(nzchar(codes_names))
-  has_any_names <- !is.null(codes_names) && any(nzchar(codes_names))
-  partial_names <- has_any_names && !has_all_names
-
-  if (partial_names) {
-    stop("jdeclare_udm(): `codes` is partially named. Either name every ",
-         "element (Option C) or none (Option A with separate labels=).",
-         call. = FALSE)
-  }
-
-  if (has_all_names && !is.null(labels)) {
-    stop("jdeclare_udm(): pick one labeling form. Either name every ",
-         "element of `codes` (Option C) OR supply `labels = ...` ",
-         "separately (Option A), not both.",
-         call. = FALSE)
-  }
-
-  # --- Parse labels (Option A path) -----------------------------------------
+  # --- Parse labels (Option A path and the labels-only form) ---------------
   parsed_labels <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1L) {
@@ -1454,13 +1561,42 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
     )
   }
 
+  # --- Argument disambiguation (Option A vs Option C) ----------------------
+  # Skipped for the labels-only form, where the parsed labels are themselves
+  # the codes (resolved at parsed_codes construction, below).
+  if (!labels_only) {
+    codes_names <- names(codes)
+    has_all_names <- !is.null(codes_names) && all(nzchar(codes_names))
+    has_any_names <- !is.null(codes_names) && any(nzchar(codes_names))
+    partial_names <- has_any_names && !has_all_names
+
+    if (partial_names) {
+      stop("jdeclare_udm(): `codes` is partially named. Either name every ",
+           "element (Option C) or none (Option A with separate labels=).",
+           call. = FALSE)
+    }
+
+    if (has_all_names && !is.null(labels)) {
+      stop("jdeclare_udm(): pick one labeling form. Either name every ",
+           "element of `codes` (Option C) OR supply `labels = ...` ",
+           "separately (Option A), not both.",
+           call. = FALSE)
+    }
+  } else {
+    has_all_names <- FALSE
+  }
+
   # --- Build the canonical parsed_codes (named numeric, names = labels) ----
   #
   # parsed_codes is the internal canonical form: a named numeric vector
   # where names are the labels (empty string where none) and values are
   # the code values (numeric or tagged-NA). All branches below consume
   # this form.
-  if (has_all_names) {
+  if (labels_only) {
+    # Labels-only form: the parsed labels ARE the codes -- a named vector
+    # whose names are the labels and whose values are numeric or tagged-NA.
+    parsed_codes <- parsed_labels
+  } else if (has_all_names) {
     # Option C: names are labels directly.
     parsed_codes <- codes
   } else {
@@ -1558,8 +1694,19 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
     column_convention = existing_conv
   )
 
-  # --- Sign-off 3 / Branch D2: SPSS convention + tagged-NA input -----------
+  # --- Sign-off 3 / Branch D2: SPSS-resolved convention + tagged-NA input --
   if (resolved_convention == "spss" && has_tagged) {
+    if (is.null(existing_conv)) {
+      # Plain column with no existing convention: Stata-style tokens have no
+      # tagged cells to label (jdeclare_udm labels existing tagged missings,
+      # it does not create them). Point at the tools that do.
+      .jst_stop("'", var_name, "' has no tagged missing values to label, so ",
+           "Stata-style tokens (.a-.z) cannot be applied here.\n",
+           "To turn numeric codes into tagged missings, use jrecode() (for ",
+           "example -99=.a); or declare the numbers directly with ",
+           "codes = c(-99).")
+    }
+    # Column already carries SPSS-style missing values: keep the guard.
     err_msg <- .jst_jdeclare_udm_convention_error(
       parsed_codes = parsed_codes,
       data_name    = data_name,
@@ -1657,7 +1804,7 @@ jdeclare_udm <- function(data, var, codes, labels = NULL,
       this_form  <- if (resolved_convention == "spss") "SPSS-style" else "Stata-style"
       other_form <- if (df_predominant       == "spss") "SPSS-style" else "Stata-style"
       cat(sprintf(
-        "Note: variable %s is %s, but other columns in %s are predominantly %s. Use jconvert() to align if desired.\n",
+        "Note: variable %s is %s, but other columns in %s are predominantly %s.\nUse jconvert() to align if desired.\n",
         var_name, this_form, data_name, other_form))
     }
   }
