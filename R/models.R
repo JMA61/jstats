@@ -1252,6 +1252,17 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   If NULL (default), defers to \code{joutput()}'s regression.ci setting
 #'   (off at minimal and standard, on at full). Computed as the closed form
 #'   b +/- t(.975, residual df) * SE.
+#' @param std Character. Controls the standardized-coefficient column. One of
+#'   \code{"regular"} (default) -- standardized betas with the prevalence-scaled
+#'   betas of dummy and dichotomous predictors suppressed, since a fully
+#'   standardized beta on a 0/1 indicator is not comparable to the continuous
+#'   betas; \code{"all"} -- the same standardized betas with nothing suppressed;
+#'   \code{"gelman"} -- Gelman (2008) scaling, where continuous predictors are
+#'   placed on a divide-by-two-standard-deviations scale and binary predictors
+#'   keep their raw 0/1 contrast (shown for all predictors, and headed
+#'   "Gelman beta"); or \code{"none"} -- omit the column. The returned object
+#'   always carries both the full regular betas (\code{beta}) and the full
+#'   Gelman betas (\code{beta_gelman}) regardless of this display choice.
 #' @param diagnostics Logical, character vector, or NULL. If TRUE, prints VIF
 #'   table and diagnostic plots. If a character vector, specifies which
 #'   diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
@@ -1359,7 +1370,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   dummy-coded coefficient tables.
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL, count = NULL,
-                ci = NULL,
+                ci = NULL, std = "regular",
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...,
                 value.id = NULL) {
@@ -1370,6 +1381,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 show = "diagnostics"),
     fn_name = "jlm"
   )
+
+  if (!std %in% c("regular", "all", "gelman", "none")) {
+    .jst_stop_arg(arg = "std", choices = c("regular", "all", "gelman", "none"))
+  }
 
   # value.id is validated before any output, so an unsupported value fails
   # fast (no title or data note printed first). It governs the dummy
@@ -1951,31 +1966,75 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   if ("(Intercept)" %in% names(std_b)) std_b["(Intercept)"] <- NA_real_
 
-  # Whether to blank the standardized beta on dummy / factor coefficient rows.
-  # A naive fully-standardized beta on a 0/1 indicator is scaled by the
-  # category's prevalence rather than by a meaningful unit, so it is not
-  # comparable to the continuous betas and is suppressed. This is the regular
-  # (SPSS-style) standardization regime, which is the only one currently
-  # offered. SEAM: when the planned none / regular / Gelman standardization
-  # switch lands, it sets this flag -- e.g. under Gelman, binary indicators are
-  # left on their 0/1 scale, where the standardized beta equals the raw b and
-  # would be shown. Display-only; the returned object is unaffected either way.
-  blank_dummy_beta <- TRUE
+  # `std_b` now holds the FULL regular standardized beta for every coefficient
+  # (intercept excepted). It is no longer blanked in place: the returned object
+  # carries these full values (coefficients_raw$beta), and suppression of the
+  # prevalence-scaled dummy/dichotomy betas is a display-only step applied to a
+  # separate `disp_beta` copy below. (Session 128 -- replaces the v0.9.33
+  # blank_dummy_beta in-place mechanism, whose comment claimed display-only but
+  # in fact wrote the NA into the returned value.)
 
-  factor_terms <- names(mf)[vapply(mf, is.factor, logical(1))]
-  if (blank_dummy_beta && length(factor_terms) > 0) {
-    for (term in factor_terms) {
-      dummy_rows        <- grep(paste0("^", term), rownames(coefs), value = TRUE)
-      std_b[dummy_rows] <- NA_real_
-    }
+  # Gelman (2008) standardized betas, computed alongside the regular ones and
+  # carried on the return regardless of which regime is displayed. Continuous
+  # predictors are placed on a divide-by-2-SD scale; binary predictors (0/1
+  # indicators, including each factor dummy column) keep their raw 0/1 contrast;
+  # the outcome is left in its natural units (arm::standardize's standardize.y =
+  # FALSE default -- built here, not depended on). Because the outcome is
+  # unscaled, a Gelman beta is just the raw coefficient rescaled per predictor --
+  # b * 2 * SD(x) for a continuous column, b unchanged for a binary column -- so
+  # it is read off the fitted model with no refit. Centering shifts only the
+  # intercept, not the slopes, so it does not affect this column.
+  gelman_b        <- rep(NA_real_, nrow(coefs))
+  names(gelman_b) <- rownames(coefs)
+  b_named         <- stats::setNames(coefs$b, rownames(coefs))
+  mm              <- stats::model.matrix(model)
+  for (nm in rownames(coefs)) {
+    if (identical(nm, "(Intercept)")) next
+    if (!nm %in% colnames(mm)) next
+    col   <- mm[, nm]
+    n_uni <- length(unique(col))
+    gelman_b[nm] <- if (n_uni <= 2L) b_named[[nm]]
+                    else b_named[[nm]] * 2 * stats::sd(col)
   }
 
-  # Blank beta for registered dummy variables
-  if (blank_dummy_beta && length(dummy_coef_names) > 0) {
-    for (dname in dummy_coef_names) {
-      if (dname %in% names(std_b)) std_b[dname] <- NA_real_
+  # Display-suppression set for the default "regular" regime: every 0/1
+  # indicator, whose fully-standardized beta is scaled by category prevalence
+  # rather than a meaningful unit and so is not comparable to the continuous
+  # betas. Three sources -- (1) factor terms (each expands to one or more 0/1
+  # dummy columns), (2) jdummy-registered variables, and (3) flat numeric
+  # dichotomies (a single 0/1 contrast row; the Session-128 A-lock that brings
+  # the standalone dichotomy into line with the grouped/factor rows). Display
+  # only -- the full values stay on the return.
+  factor_terms  <- names(mf)[vapply(mf, is.factor, logical(1))]
+  regular_blank <- character(0)
+  for (term in factor_terms) {
+    regular_blank <- c(regular_blank,
+                       grep(paste0("^", term), rownames(coefs), value = TRUE))
+  }
+  if (length(dummy_coef_names) > 0) {
+    regular_blank <- c(regular_blank, intersect(dummy_coef_names, rownames(coefs)))
+  }
+  resp_col <- names(mf)[1L]
+  for (nm in names(mf)) {
+    if (identical(nm, resp_col)) next
+    col <- mf[[nm]]
+    if (is.numeric(col) && length(unique(stats::na.omit(col))) == 2L &&
+        nm %in% rownames(coefs)) {
+      regular_blank <- c(regular_blank, nm)
     }
   }
+  regular_blank <- unique(regular_blank)
+
+  # The standardized-beta vector actually printed, per the `std` regime:
+  #   "regular" (default) -- regular betas, every 0/1 indicator suppressed
+  #   "all"               -- regular betas, nothing suppressed
+  #   "gelman"            -- Gelman betas (all shown; not prevalence-distorted)
+  #   "none"              -- the column is omitted entirely (handled at render)
+  disp_beta <- if (identical(std, "gelman")) gelman_b else std_b
+  if (identical(std, "regular")) {
+    disp_beta[names(disp_beta) %in% regular_blank] <- NA_real_
+  }
+  show_beta_col <- !identical(std, "none")
 
   p_num <- suppressWarnings(as.numeric(coefs$P))
   p_fmt <- .jst_fmt_p(p_num)
@@ -1997,20 +2056,23 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     b       = fmt3(coefs$b),
     StdErr  = fmt3(coefs$StdErr),
     t       = fmt3(coefs$t),
-    Beta    = ifelse(is.na(std_b), "",
-                     sprintf(paste0("%.", digits_n, "f"), as.numeric(std_b))),
+    Beta    = ifelse(is.na(disp_beta), "",
+                     sprintf(paste0("%.", digits_n, "f"), as.numeric(disp_beta))),
     P       = p_fmt,
     stringsAsFactors = FALSE,
     row.names = rownames(coefs)
   )
+  # std = "none": drop the standardized-beta column entirely (the header and
+  # alignment vectors built below mirror this absence).
+  if (!show_beta_col) out_coefs$Beta <- NULL
 
   # When `ci` is on, append the 95% CI bounds at the right end of the table
   # (after p -- the jlogistic append pattern). fmt3 applies the digits option and
   # the negative-zero / leading-zero normalisation, same as the b column. On
   # grouped multi-category dummy rows these columns ride through
   # .jst_group_dummy_coefs() per category untouched (the CI tracks the raw b);
-  # blank_dummy_beta governs only the Beta column, decoupling the CI from the
-  # future none/regular/Gelman standardization switch. (Session 69)
+  # the `std` regime governs only the Beta column, leaving the CI independent of
+  # which standardization is displayed. (Session 69; std switch Session 128)
   if (ci) {
     out_coefs$CI_Lower <- fmt3(ci_lower_raw)
     out_coefs$CI_Upper <- fmt3(ci_upper_raw)
@@ -2090,8 +2152,21 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
                                       value_mode_coef, vlmode, lab_src,
                                       show_ref_categories)
-  coef_col_names <- c("b", "SE", "t", "\u03b2", "p")
-  coef_align     <- c("d", "d", "d", "d", "d")
+  # The standardized-beta header carries the regime: bare "\u03b2" for the
+  # regular betas (default and "all"), "Gelman \u03b2" for the Gelman regime so
+  # the value is not misread as a classic beta. Under std = "none" the column is
+  # absent (out_coefs$Beta was dropped above), so it is left out of both the name
+  # and alignment vectors. .jst_print_table sizes each column to the wider of
+  # header and contents, so the longer Gelman header simply widens that one
+  # column while keeping the header centered and the numbers decimal-aligned.
+  if (show_beta_col) {
+    beta_header    <- if (identical(std, "gelman")) "Gelman \u03b2" else "\u03b2"
+    coef_col_names <- c("b", "SE", "t", beta_header, "p")
+    coef_align     <- c("d", "d", "d", "d", "d")
+  } else {
+    coef_col_names <- c("b", "SE", "t", "p")
+    coef_align     <- c("d", "d", "d", "d")
+  }
   if (ci) {
     coef_col_names <- c(coef_col_names, "95% CI Lower", "95% CI Upper")
     coef_align     <- c(coef_align, "d", "d")
@@ -2199,8 +2274,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # full-precision numbers (the printed `coefficients` frame above rounds for the
   # eye; this keeps the values intact so a later collector rounds to APA spec
   # itself). `term` is the machine alignment key; `df` is the shared residual df;
-  # `beta` is the raw standardized coefficient (NA where blanked on dummy rows);
-  # the CI bounds are present regardless of the `ci` display toggle. First
+  # `beta` is the FULL regular standardized coefficient (every predictor, never
+  # blanked -- the console suppresses prevalence-scaled dummy/dichotomy betas at
+  # print time only, so a later collector receives full values and applies its
+  # own policy); `beta_gelman` is the full Gelman-scaled coefficient (Session
+  # 128); the CI bounds are present regardless of the `ci` display toggle. First
   # down-payment on the cross-function return-shape audit -- the accessor
   # contract and final key form remain that item's keystones. (Session 69)
   coefficients_raw <- data.frame(
@@ -2210,13 +2288,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     t        = unname(coefs$t),
     df       = res_df,
     p        = suppressWarnings(as.numeric(coefs$P)),
-    beta     = unname(std_b[term_keys]),
+    beta        = unname(std_b[term_keys]),
+    beta_gelman = unname(gelman_b[term_keys]),
     ci_lower = unname(ci_lower_raw),
     ci_upper = unname(ci_upper_raw),
     stringsAsFactors = FALSE,
     row.names = NULL
   )
+  # `beta` holds regular standardization; `beta_gelman` holds the Gelman regime;
+  # both are always present. `std_displayed` records which regime the console
+  # showed -- a display choice, not a property of the stored values.
   attr(coefficients_raw, "beta_standardization") <- "regular"
+  attr(coefficients_raw, "std_displayed") <- std
   attr(coefficients_raw, "outcome") <- c(
     name  = original_formula_vars[1],
     label = .jst_label_or_name(lab_src, original_formula_vars[1]))

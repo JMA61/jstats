@@ -13,6 +13,7 @@ jlm(
   categorical = NULL,
   count = NULL,
   ci = NULL,
+  std = "regular",
   diagnostics = NULL,
   ref.categories = NULL,
   full = FALSE,
@@ -65,6 +66,18 @@ each unstandardized coefficient (b) at the right of the coefficient table.
 If NULL (default), defers to \code{joutput()}'s regression.ci setting
 (off at minimal and standard, on at full). Computed as the closed form
 b +/- t(.975, residual df) * SE.}
+
+\item{std}{Character. Controls the standardized-coefficient column. One of
+\code{"regular"} (default) -- standardized betas with the prevalence-scaled
+betas of dummy and dichotomous predictors suppressed, since a fully
+standardized beta on a 0/1 indicator is not comparable to the continuous
+betas; \code{"all"} -- the same standardized betas with nothing suppressed;
+\code{"gelman"} -- Gelman (2008) scaling, where continuous predictors are
+placed on a divide-by-two-standard-deviations scale and binary predictors
+keep their raw 0/1 contrast (shown for all predictors, and headed
+"Gelman beta"); or \code{"none"} -- omit the column. The returned object
+always carries both the full regular betas (\code{beta}) and the full
+Gelman betas (\code{beta_gelman}) regardless of this display choice.}
 
 \item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints VIF
 table and diagnostic plots. If a character vector, specifies which
