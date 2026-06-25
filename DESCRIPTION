@@ -35,3 +35,4 @@ Imports:
     writexl
 Suggests: generics
 LazyData: true
+URL: https://jma61.github.io/jstats/

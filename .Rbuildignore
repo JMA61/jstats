@@ -11,3 +11,7 @@
 ^jstats_dev_tools\.R$
 ^jstats_source\.R$
 ^jstats\.Rproj$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$

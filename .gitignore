@@ -60,3 +60,4 @@ dev/
 # Dev-tool working files (receive/assemble + timestamped backups)
 R_backup_*/
 jstats_source.R
+docs

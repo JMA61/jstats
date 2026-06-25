@@ -1,0 +1,79 @@
+# _pkgdown.yml  —  jstats package documentation site
+# Lives in the PACKAGE repo root (not the jstats-guides repo).
+# The reference section below mirrors the grouping on the guides Reference page,
+# so the two stay visually consistent. pkgdown builds one page per function and
+# per dataset straight from the roxygen, so these pages never drift from the code.
+
+# Set by use_pkgdown_github_pages() (also recorded in DESCRIPTION). Keep in sync:
+url: https://jma61.github.io/jstats/
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: Describe and explore
+    desc: First look at variables and at the dataset as a whole.
+    contents:
+      - jdesc
+      - jfreq
+      - jscreen
+
+  - title: Tests and models
+    desc: Group comparisons, association, and regression.
+    contents:
+      - jt
+      - jaov
+      - jcrosstab
+      - jcorr
+      - jlm
+      - jlogistic
+
+  - title: Scales and reliability
+    desc: Build scale scores and check internal consistency.
+    contents:
+      - jalpha
+      - jsum
+      - javg
+
+  - title: Prepare and manage your data
+    desc: Recode, relabel, declare missing values, and select cases.
+    contents:
+      - jrecode
+      - jrelabel
+      - jdeclare_udm
+      - jsubset
+      - jcomplete
+      - jcopy
+
+  - title: Open, save, and convert files
+    desc: Read and write SPSS, Stata, SAS, Excel, and CSV data.
+    contents:
+      - jload
+      - jsave
+      - jconvert
+      - jdata_dir
+
+  - title: Set up your session
+    desc: Defaults and options for a working session.
+    contents:
+      - juse
+      - joptions
+      - joutput
+
+  - title: Plots
+    contents:
+      - jplot
+
+  - title: "Fine-tuning: tell jstats how to treat a variable"
+    desc: Override how a variable is classified for analysis. Most users will not need these.
+    contents:
+      - jnumeric
+      - jdummy
+      - jcount
+      - jlikert
+
+  - title: Datasets
+    desc: The practice datasets that ship with the package.
+    contents:
+      - community
+      - clinic
