@@ -1,0 +1,93 @@
+# Internal helper: does a variable look like a Likert (ordered scale) item?
+
+The single detector for the "Likert" Categorical sub-class. Detection is
+in two stages: a NECESSARY structural gate, then a SUFFICIENT
+discriminator that separates a real ordered scale from a labelled
+nominal that happens to share the same shape (the hard case the v1
+consecutive-only detector could not tell apart).
+
+## Usage
+
+``` r
+.jst_is_likert(x, var_name = NULL, data_name = NULL)
+```
+
+## Arguments
+
+- x:
+
+  A variable / data-frame column.
+
+- var_name:
+
+  Optional variable name; with `data_name`, lets the battery branch
+  locate the column among its siblings.
+
+- data_name:
+
+  Optional data-frame name; with `var_name`, names the frame the battery
+  branch fetches to read adjacent columns.
+
+## Value
+
+TRUE if the variable is detected as a Likert (ordered labelled scale)
+item, FALSE otherwise.
+
+## Details
+
+Necessary structure (all must hold):
+
+1.  The variable is haven-labelled with at least one value label.
+
+2.  Its SURVIVING value labels – the labelled codes left after declared
+    missing values are removed (SPSS-style `na_values` / `na_range`,
+    Stata-/SAS-style tagged NAs), read through
+    [`.jst_missing_info()`](https://jma61.github.io/jstats/reference/dot-jst_missing_info.md)
+    – are whole numbers forming a consecutive run (no gaps) of length 3
+    to 7. Removing the missing sentinels first is what lets a 1-to-5
+    item carrying a Refused code of -99 and a Don't-know code of -98
+    read as a clean 5-point scale rather than seven codes with a gap. A
+    two-code variable is a dichotomy (handled earlier); 8 or more
+    surviving codes is treated as continuous.
+
+3.  Every value present in the data (declared missings excluded, which
+    [`is.na()`](https://rdrr.io/r/base/NA.html) already flags on
+    `labelled_spss` and tagged-NA columns) is one of the surviving scale
+    points. An UNDECLARED sentinel (e.g. a literal -99 never declared
+    missing) is therefore NOT silently absorbed: its presence fails the
+    test, leaving the load-time coded- missing scan to nudge the user to
+    declare it.
+
+Sufficient discriminator (Likert if EITHER fires):
+
+- ANCHORS – the surviving labels contain both pole words of a recognised
+  ordered family (see `.jst_likert_anchor_families`), matched on whole
+  tokens. Column-local, so it catches a lone item;
+  reverse-coding-agnostic; English-centric.
+
+- BATTERY – the column sits in a contiguous run of adjacent columns
+  sharing the same normalized non-missing label set (see
+  [`.jst_in_likert_battery()`](https://jma61.github.io/jstats/reference/dot-jst_in_likert_battery.md)).
+  Language-agnostic; needs the resolver to carry the variable and frame
+  identity.
+
+Category count plays no role in either branch – matching on count would
+re- admit the very property a nominal shares with a battery.
+
+This is display/reporting scoped: a TRUE result refines the Categorical
+sub- class to "Likert" but never changes a variable's analysis class or
+how analyses treat it. The detector does not have to be perfect: a
+non-English lone scale with no recognised anchor, or a scattered
+(non-adjacent) battery, is not auto-detected and is declared with
+[`jlikert()`](https://jma61.github.io/jstats/reference/jlikert.md); a
+labelled nominal whose labels happen to carry an anchor pair could still
+read "Likert", a tolerated cosmetic call given the sub-class carries no
+analysis consequence.
+
+Because this is called only from the Categorical branch of
+[`.jst_class_from_role()`](https://jma61.github.io/jstats/reference/dot-jst_class_from_role.md),
+it is reached structurally only for variables already routed to
+Categorical (\<= 6 categories), so the auto-detected range is 3 to 6 in
+practice. A 7-point labelled scale resolves to Numeric structurally (the
+Numeric/Categorical boundary is unchanged) and must be declared with
+[`jlikert()`](https://jma61.github.io/jstats/reference/jlikert.md).

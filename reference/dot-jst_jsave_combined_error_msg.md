@@ -1,0 +1,35 @@
+# Internal: assemble jsave's combined pre-flight error
+
+jsave runs two independent pre-flight checks for the ReadStat formats
+(.sav/.dta/.xpt): one for column types the format cannot store, one for
+missing-value codes it cannot represent. When more than one fires on a
+single save, this helper frames the individual messages (each already
+built and tier-formatted by its own `.jst_jsave_*_error_msg()` helper)
+into one numbered error, so the user fixes everything and re-runs once
+rather than discovering the second problem only after fixing the first.
+A single firing is returned unchanged, so single-issue saves are
+byte-for- byte identical to the pre-accumulation behavior.
+
+## Usage
+
+``` r
+.jst_jsave_combined_error_msg(sections, data_name, ext)
+```
+
+## Arguments
+
+- sections:
+
+  List of pre-built section messages, one per fired check.
+
+- data_name:
+
+  Character. The data frame's name, for the header.
+
+- ext:
+
+  Lowercase target extension ("sav", "dta", "xpt").
+
+## Value
+
+Character scalar suitable for `stop(call. = FALSE)`.

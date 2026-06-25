@@ -1,0 +1,16 @@
+Provides simplified tools for common statistical analyses used in social
+science research and teaching, with output formatted in the style of
+SPSS and Stata. Analysis functions include descriptive statistics,
+frequency tables, t-tests, ANOVA, correlations, chi-square tests,
+cross-tabulations, linear regression, logistic regression, and
+Cronbach's alpha, with built-in model diagnostics and
+publication-oriented plotting. Supporting tools handle data management
+(recoding, labelling, filtering, dummy coding, scale construction),
+automatic detection and handling of coded missing values, and unified
+data import and export for SPSS, Stata, SAS, Excel, CSV, and R formats.
+Functions accept unquoted variable names and formula syntax for ease of
+use, handle haven-labelled variables automatically, and return results
+invisibly while printing user-friendly tables. The package stays close
+enough to base R conventions that users learn transferable skills rather
+than a private dialect, supporting a smooth transition from SPSS, Stata,
+or SAS into the broader R ecosystem.

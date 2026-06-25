@@ -1,0 +1,129 @@
+Provides simplified tools for common statistical analyses used in social
+science research and teaching, with output formatted in the style of
+SPSS and Stata. Analysis functions include descriptive statistics,
+frequency tables, t-tests, ANOVA, correlations, chi-square tests,
+cross-tabulations, linear regression, logistic regression, and
+Cronbach's alpha, with built-in model diagnostics and
+publication-oriented plotting. Supporting tools handle data management
+(recoding, labelling, filtering, dummy coding, scale construction),
+automatic detection and handling of coded missing values, and unified
+data import and export for SPSS, Stata, SAS, Excel, CSV, and R formats.
+Functions accept unquoted variable names and formula syntax for ease of
+use, handle haven-labelled variables automatically, and return results
+invisibly while printing user-friendly tables. The package stays close
+enough to base R conventions that users learn transferable skills rather
+than a private dialect, supporting a smooth transition from SPSS, Stata,
+or SAS into the broader R ecosystem.
+
+# Package index
+
+## Describe and explore
+
+First look at variables and at the dataset as a whole.
+
+- [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) :
+  Descriptive statistics for one or more variables
+- [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) :
+  SPSS-like frequency tables for categorical variables
+- [`jscreen()`](https://jma61.github.io/jstats/reference/jscreen.md) :
+  Data screening overview
+
+## Tests and models
+
+Group comparisons, association, and regression.
+
+- [`jt()`](https://jma61.github.io/jstats/reference/jt.md) : Independent
+  samples or paired samples t-test
+- [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md) : One-way
+  ANOVA (traditional or Welch method)
+- [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md)
+  : Cross-tabulation with optional chi-square test of independence
+- [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) :
+  Bivariate correlation matrix with p values and pairwise N
+- [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) : SPSS-like
+  linear regression output with standardized coefficients
+- [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
+  : Logistic regression with SPSS-style output
+
+## Scales and reliability
+
+Build scale scores and check internal consistency.
+
+- [`jalpha()`](https://jma61.github.io/jstats/reference/jalpha.md) :
+  Cronbach's Alpha Reliability Analysis
+- [`jsum()`](https://jma61.github.io/jstats/reference/jsum.md) : Compute
+  a row-wise sum across multiple variables
+- [`javg()`](https://jma61.github.io/jstats/reference/javg.md) : Compute
+  a row-wise mean across multiple variables
+
+## Prepare and manage your data
+
+Recode, relabel, declare missing values, and select cases.
+
+- [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) :
+  Recode a variable with explicit value mapping and optional labels
+- [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) :
+  Apply variable and value labels to a variable
+- [`jdeclare_udm()`](https://jma61.github.io/jstats/reference/jdeclare_udm.md)
+  : Declare user-defined missing values on a variable
+- [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) :
+  Set, activate, deactivate, or clear a per-dataset case-selection
+  expression
+- [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+  : Set a listwise complete-case filter for matching N across analyses
+- [`jcopy()`](https://jma61.github.io/jstats/reference/jcopy.md) : Copy
+  a data frame, carrying its classification registrations
+
+## Open, save, and convert files
+
+Read and write SPSS, Stata, SAS, Excel, and CSV data.
+
+- [`jload()`](https://jma61.github.io/jstats/reference/jload.md) : Load
+  a data file into R
+- [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) : Save
+  a data frame to a file
+- [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md) :
+  Convert user-defined missing value (UDM) declarations between formats
+- [`jdata_dir()`](https://jma61.github.io/jstats/reference/jdata_dir.md)
+  : Return the configured data folder
+
+## Set up your session
+
+Defaults and options for a working session.
+
+- [`juse()`](https://jma61.github.io/jstats/reference/juse.md) : Set or
+  display the default data frame for jstats functions
+- [`joptions()`](https://jma61.github.io/jstats/reference/joptions.md) :
+  Set or display session-level package options
+- [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md) :
+  Set session-level output verbosity
+
+## Plots
+
+- [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) :
+  Visualise jst\_\* result objects or plot variables directly from a
+  data frame
+
+## Fine-tuning: tell jstats how to treat a variable
+
+Override how a variable is classified for analysis. Most users will not
+need these.
+
+- [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md) :
+  Register variables as numeric for analysis
+- [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md) :
+  Register categorical variables for dummy coding in regression
+- [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md) :
+  Register variables as counts for analysis
+- [`jlikert()`](https://jma61.github.io/jstats/reference/jlikert.md) :
+  Register variables as Likert (ordered response) items
+
+## Datasets
+
+The practice datasets that ship with the package.
+
+- [`community`](https://jma61.github.io/jstats/reference/community.md) :
+  Community survey example dataset
+- [`clinic`](https://jma61.github.io/jstats/reference/clinic.md) :
+  Clinic intervention example dataset
+
