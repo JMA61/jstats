@@ -184,7 +184,7 @@ jplot <- function(x, which = "core", ...) {
   UseMethod("jplot")
 }
 
-#' @rdname jplot
+#' @describeIn jplot the default method: a scatter or box plot from a formula (\code{DV ~ IV}), or a histogram or bar chart from a data frame and one or more variables.
 #' @export
 #' @importFrom rlang .data
 jplot.default <- function(x, ..., by = NULL, type = NULL,
@@ -1420,7 +1420,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
 # -- jplot.jst_lm --------------------------------------------------------------
 
-#' @rdname jplot
+#' @describeIn jplot diagnostic, coefficient (forest), and fitted-effect plots for a \code{jlm()} linear-regression result.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
@@ -1678,7 +1678,7 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
 
 # -- jplot.jst_logistic --------------------------------------------------------
 
-#' @rdname jplot
+#' @describeIn jplot predicted-probability (S-curve) and coefficient plots for a \code{jlogistic()} result.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
@@ -1858,7 +1858,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
 
 # -- jplot.jst_ttest -----------------------------------------------------------
 
-#' @rdname jplot
+#' @describeIn jplot a group-comparison box plot for a \code{jt()} result, with the group means marked.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_ttest <- function(x, which = "core", ...) {
@@ -1915,7 +1915,7 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
 
 # -- jplot.jst_anova -----------------------------------------------------------
 
-#' @rdname jplot
+#' @describeIn jplot a group-comparison box plot for a \code{jaov()} result, with the group means marked.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_anova <- function(x, which = "core", ...) {
@@ -1972,7 +1972,7 @@ jplot.jst_anova <- function(x, which = "core", ...) {
 
 # -- jplot.jst_corr ------------------------------------------------------------
 
-#' @rdname jplot
+#' @describeIn jplot a heat-map of the correlation matrix for a \code{jcorr()} result, or a scatter plot for a single pair.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_corr <- function(x, which = "core", ...) {
@@ -2062,7 +2062,7 @@ jplot.jst_corr <- function(x, which = "core", ...) {
 
 # -- jplot.jst_crosstab --------------------------------------------------------
 
-#' @rdname jplot
+#' @describeIn jplot a grouped bar chart of cell counts for a \code{jcrosstab()} result.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_crosstab <- function(x, which = "core", ...) {
@@ -2122,7 +2122,7 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
 
 # -- jplot.jst_desc / jplot.jst_freq (deferred to v2) --------------------------
 
-#' @rdname jplot
+#' @describeIn jplot (planned) direct plotting of a \code{jdesc()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_desc <- function(x, which = "core", ...) {
   .jst_stop("Plotting jst_desc result objects is not supported. ",
@@ -2132,7 +2132,7 @@ jplot.jst_desc <- function(x, which = "core", ...) {
        "  jplot(WellbeingScore ~ Region, community, categorical = \"Region\")  # boxplot")
 }
 
-#' @rdname jplot
+#' @describeIn jplot (planned) direct plotting of a \code{jfreq()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_freq <- function(x, which = "core", ...) {
   .jst_stop("Plotting jst_freq result objects is not supported. ",

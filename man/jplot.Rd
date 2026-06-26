@@ -196,6 +196,27 @@ regression line, flares at the ends), \code{pi} (prediction interval for
 individual observations, wider), \code{see} (constant-width +/- t*SEE
 band illustrating the homoskedasticity assumption), \code{none} (no band).
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{jplot(default)}: the default method: a scatter or box plot from a formula (\code{DV ~ IV}), or a histogram or bar chart from a data frame and one or more variables.
+
+\item \code{jplot(jst_lm)}: diagnostic, coefficient (forest), and fitted-effect plots for a \code{jlm()} linear-regression result.
+
+\item \code{jplot(jst_logistic)}: predicted-probability (S-curve) and coefficient plots for a \code{jlogistic()} result.
+
+\item \code{jplot(jst_ttest)}: a group-comparison box plot for a \code{jt()} result, with the group means marked.
+
+\item \code{jplot(jst_anova)}: a group-comparison box plot for a \code{jaov()} result, with the group means marked.
+
+\item \code{jplot(jst_corr)}: a heat-map of the correlation matrix for a \code{jcorr()} result, or a scatter plot for a single pair.
+
+\item \code{jplot(jst_crosstab)}: a grouped bar chart of cell counts for a \code{jcrosstab()} result.
+
+\item \code{jplot(jst_desc)}: (planned) direct plotting of a \code{jdesc()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
+
+\item \code{jplot(jst_freq)}: (planned) direct plotting of a \code{jfreq()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
+
+}}
 \examples{
 # Result-object form
 m <- jlm(WellbeingScore ~ Income + Age, community)

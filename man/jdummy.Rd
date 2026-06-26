@@ -58,7 +58,6 @@ Registrations are stored per dataset, so switching \code{juse()} between
 datasets preserves each dataset's registrations independently.
 }
 \examples{
-\donttest{
 juse(community)
 jdummy(Region)                       # Register, first category as reference
 jdummy(Region, Education)            # Register several at once
@@ -72,7 +71,9 @@ jdummy(Region, remove = TRUE)        # Remove one registration
 jdummy(community, NULL)              # Clear community's dummy registrations
 jdummy(NULL)                         # Clear the default frame's (or ask)
 jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
-}
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
 
 }
 \seealso{

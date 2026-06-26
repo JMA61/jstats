@@ -33,12 +33,10 @@
 #'   \code{juse()} is the recommended approach for this package.
 #'
 #' @examples
-#' \donttest{
 #' juse(community)              # Set community as the default
 #' juse()                       # Display current default
 #' jdesc(Age, WellbeingScore)   # Uses community automatically
 #' juse(NULL)                   # Clear the default
-#' }
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -136,7 +134,6 @@ juse <- function(data) {
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
 #' @examples
-#' \donttest{
 #' juse(community)
 #' jsubset(Age < 40)                        # Set using juse default
 #' jsubset(community, Age < 40)             # Explicit dataset
@@ -145,7 +142,9 @@ juse <- function(data) {
 #' jsubset(on)                              # Reactivate
 #' jsubset()                                # Check status
 #' jsubset(NULL)                            # Clear entirely
-#' }
+#' # Not normally needed. You'd clear a default or registration only to
+#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -563,7 +562,6 @@ jsubset <- function(data, expr) {
 #'   captured (e.g. \code{jcomplete_rows <- jcomplete(preview = TRUE)}).
 #'
 #' @examples
-#' \donttest{
 #' juse(community)
 #' jcomplete(Income, Education, Age)
 #' jdesc(Age)                     # Uses only complete cases on those 3 vars
@@ -576,7 +574,9 @@ jsubset <- function(data, expr) {
 #' jcomplete(on)                  # Reactivate
 #' jcomplete()                    # Check status
 #' jcomplete(NULL)                # Clear entirely
-#' }
+#' # Not normally needed. You'd clear a default or registration only to
+#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -960,7 +960,6 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
 #' @examples
-#' \donttest{
 #' juse(community)
 #' jdummy(Region)                       # Register, first category as reference
 #' jdummy(Region, Education)            # Register several at once
@@ -974,7 +973,9 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' jdummy(community, NULL)              # Clear community's dummy registrations
 #' jdummy(NULL)                         # Clear the default frame's (or ask)
 #' jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
-#' }
+#' # Not normally needed. You'd clear a default or registration only to
+#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -1531,12 +1532,10 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'
 #' @return Invisibly NULL. Called for its side effect on the session registry.
 #' @examples
-#' \donttest{
 #'   jlikert(community, Environment1, Environment2)  # declare two Likert items
 #'   jscreen(community)                              # Sub-class shows "Likert"
 #'   jlikert(community, Environment1, remove = TRUE) # undo one
 #'   jlikert(community, NULL)                        # clear the registrations
-#' }
 #' @seealso \code{\link{jnumeric}}, \code{\link{jcount}}, \code{\link{jdummy}},
 #'   \code{\link{jscreen}}
 #' @export

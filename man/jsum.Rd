@@ -40,7 +40,6 @@ Variables can be listed individually or using colon notation to select a
 range of consecutive columns (e.g. \code{Attitude1:Attitude6}).
 }
 \examples{
-\donttest{
 # Set the default data frame (so you can omit it in function calls)
 juse(community)
 
@@ -68,8 +67,9 @@ community$ScaleTotal <- jsum(Environment1:Environment5,
 community$EnvTotal <- jsum(community, Environment1, Environment3,
                            Environment4)
 
-juse(NULL)   # clear the default when done
-}
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
 
 }
 \seealso{

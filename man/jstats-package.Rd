@@ -143,6 +143,13 @@ deeper guide to the package's design and use in real research
 }
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://jma61.github.io/jstats/}
+}
+
+}
 \author{
 \strong{Maintainer}: Jeff Ackerman \email{SurveyCentre@griffith.edu.au}
 

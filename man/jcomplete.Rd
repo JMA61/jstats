@@ -56,7 +56,6 @@ the setting, use \code{jcomplete(off)} before the analysis and
 FILTER convention.
 }
 \examples{
-\donttest{
 juse(community)
 jcomplete(Income, Education, Age)
 jdesc(Age)                     # Uses only complete cases on those 3 vars
@@ -69,7 +68,9 @@ jcomplete(off)                 # Deactivate
 jcomplete(on)                  # Reactivate
 jcomplete()                    # Check status
 jcomplete(NULL)                # Clear entirely
-}
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
 
 }
 \seealso{

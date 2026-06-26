@@ -33,12 +33,10 @@ which creates a snapshot that can become stale after modifications.
 \code{juse()} is the recommended approach for this package.
 }
 \examples{
-\donttest{
 juse(community)              # Set community as the default
 juse()                       # Display current default
 jdesc(Age, WellbeingScore)   # Uses community automatically
 juse(NULL)                   # Clear the default
-}
 
 }
 \seealso{

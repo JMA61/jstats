@@ -129,7 +129,6 @@
 #'   \code{MyData$Total <- jsum(Var1, Var2, Var3)}.
 #'
 #' @examples
-#' \donttest{
 #' # Set the default data frame (so you can omit it in function calls)
 #' juse(community)
 #'
@@ -157,8 +156,9 @@
 #' community$EnvTotal <- jsum(community, Environment1, Environment3,
 #'                            Environment4)
 #'
-#' juse(NULL)   # clear the default when done
-#' }
+#' # Not normally needed. You'd clear a default or registration only to
+#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' juse(NULL)
 #'
 #' @seealso \code{\link{javg}} for computing row-wise means.
 #' @seealso \code{\link{jstats}} for the package overview,
@@ -387,7 +387,6 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 #'   \code{MyData$ScaleMean <- javg(Var1, Var2, Var3)}.
 #'
 #' @examples
-#' \donttest{
 #' # Set the default data frame (so you can omit it in function calls)
 #' juse(community)
 #'
@@ -419,8 +418,9 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 #' community$EnvAvg <- javg(community, Environment1, Environment3,
 #'                          Environment4)
 #'
-#' juse(NULL)   # clear the default when done
-#' }
+#' # Not normally needed. You'd clear a default or registration only to
+#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' juse(NULL)
 #'
 #' @seealso \code{\link{jsum}} for computing row-wise sums.
 #' @seealso \code{\link{jstats}} for the package overview,

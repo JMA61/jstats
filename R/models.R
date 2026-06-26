@@ -1316,7 +1316,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' juse(community)
 #' jlm(WellbeingScore ~ Income + Age)
 #'
-#' \donttest{
 #' # CATEGORICAL PREDICTORS
 #' #
 #' # Per-call: categorical = ... applies for one call only and does not
@@ -1345,8 +1344,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #'     numeric = c("Education", "Environment4"), categorical = "Smoker")
 #'
-#' jdummy(community, NULL)   # clear the registration when done
-#' }
+#' # Not normally needed. You'd clear a default or registration only to
+#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' jdummy(community, NULL)
+#' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -2475,7 +2476,6 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' juse(community)
 #' jlogistic(Volunteer ~ Income + Age)
 #'
-#' \donttest{
 #' # CATEGORICAL PREDICTORS
 #' #
 #' # Per-call: categorical = ... applies for one call only and does not
@@ -2497,8 +2497,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' # Use numeric = ... when a labelled variable should enter as a score.
 #' jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #'
-#' jdummy(community, NULL)   # clear the registration when done
-#' }
+#' # Not normally needed. You'd clear a default or registration only to
+#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' jdummy(community, NULL)
+#' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.

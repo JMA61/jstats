@@ -171,7 +171,6 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 juse(community)
 jlogistic(Volunteer ~ Income + Age)
 
-\donttest{
 # CATEGORICAL PREDICTORS
 #
 # Per-call: categorical = ... applies for one call only and does not
@@ -193,8 +192,10 @@ jlogistic(Volunteer ~ Region + Age)
 # Use numeric = ... when a labelled variable should enter as a score.
 jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 
-jdummy(community, NULL)   # clear the registration when done
-}
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+jdummy(community, NULL)
+juse(NULL)
 
 }
 \seealso{

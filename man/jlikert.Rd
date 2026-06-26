@@ -56,12 +56,10 @@ than clearing them all).
 \code{jlikert()} with no arguments prints the current registration status.
 }
 \examples{
-\donttest{
   jlikert(community, Environment1, Environment2)  # declare two Likert items
   jscreen(community)                              # Sub-class shows "Likert"
   jlikert(community, Environment1, remove = TRUE) # undo one
   jlikert(community, NULL)                        # clear the registrations
-}
 }
 \seealso{
 \code{\link{jnumeric}}, \code{\link{jcount}}, \code{\link{jdummy}},

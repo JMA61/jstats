@@ -46,7 +46,6 @@ equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
 produce a helpful error suggesting the correct R syntax.
 }
 \examples{
-\donttest{
 juse(community)
 jsubset(Age < 40)                        # Set using juse default
 jsubset(community, Age < 40)             # Explicit dataset
@@ -55,7 +54,9 @@ jsubset(off)                             # Deactivate
 jsubset(on)                              # Reactivate
 jsubset()                                # Check status
 jsubset(NULL)                            # Clear entirely
-}
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
 
 }
 \seealso{
