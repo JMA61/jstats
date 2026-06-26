@@ -174,6 +174,12 @@ the full toggle behavior.
   the package's design and use in real research (in preparation): Book
   2, the adopter's guide.
 
+## See also
+
+Useful links:
+
+- <https://jma61.github.io/jstats/>
+
 ## Author
 
 **Maintainer**: Jeff Ackerman <SurveyCentre@griffith.edu.au>

@@ -84,7 +84,6 @@ listing.
 ## Examples
 
 ``` r
-# \donttest{
 juse(community)
 #> Default data frame set to: community
 jdummy(Region)                       # Register, first category as reference
@@ -229,5 +228,8 @@ jdummy(NULL)                         # Clear the default frame's (or ask)
 #> No dummy registrations to clear for community (the default data frame).
 jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 #> No dummy registrations to clear.
-# }
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
+#> Default data frame cleared.
 ```

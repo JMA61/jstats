@@ -31,7 +31,7 @@ FILTER convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.80</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.81</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -130,8 +130,7 @@ workflow conventions, and complete function listing.</p></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: community</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Education</span>, <span class="va">Age</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Listwise Case Filter</span></span>
@@ -263,7 +262,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete active for community: Income, Education, Age (88 of 100 complete cases)</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                <span class="co"># Clear entirely</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete cleared for community (had: Income, Education, Age).</span>
-<span class="r-in"><span><span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="co"># Not normally needed. You'd clear a default or registration only to</span></span></span>
+<span class="r-in"><span><span class="co"># undo a mistake, or -- as in this example -- to reset state for testing.</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame cleared.</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

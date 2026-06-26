@@ -418,7 +418,6 @@ jlm(WellbeingScore ~ Income + Age)
 #>   Total:      11821.745
 #> 
 
-# \donttest{
 # CATEGORICAL PREDICTORS
 #
 # Per-call: categorical = ... applies for one call only and does not
@@ -609,7 +608,10 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #>   Total:      11631.506
 #> 
 
-jdummy(community, NULL)   # clear the registration when done
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+jdummy(community, NULL)
 #> Dummy registrations cleared for community: Region.
-# }
+juse(NULL)
+#> Default data frame cleared.
 ```

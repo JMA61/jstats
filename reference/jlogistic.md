@@ -388,7 +388,6 @@ jlogistic(Volunteer ~ Income + Age)
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 
-# \donttest{
 # CATEGORICAL PREDICTORS
 #
 # Per-call: categorical = ... applies for one call only and does not
@@ -552,7 +551,10 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 
-jdummy(community, NULL)   # clear the registration when done
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+jdummy(community, NULL)
 #> Dummy registrations cleared for community: Region.
-# }
+juse(NULL)
+#> Default data frame cleared.
 ```

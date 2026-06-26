@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.80</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.81</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -253,6 +253,19 @@ regression line, flares at the ends), <code>pi</code> (prediction interval for
 individual observations, wider), <code>see</code> (constant-width +/- t*SEE
 band illustrating the homoskedasticity assumption), <code>none</code> (no band).</p>
     </div>
+    <div class="section level2">
+    <h2 id="methods-by-class-">Methods (by class)<a class="anchor" aria-label="anchor" href="#methods-by-class-"></a></h2>
+
+<ul><li><p><code>jplot(default)</code>: the default method: a scatter or box plot from a formula (<code>DV ~ IV</code>), or a histogram or bar chart from a data frame and one or more variables.</p></li>
+<li><p><code>jplot(jst_lm)</code>: diagnostic, coefficient (forest), and fitted-effect plots for a <code><a href="jlm.html">jlm()</a></code> linear-regression result.</p></li>
+<li><p><code>jplot(jst_logistic)</code>: predicted-probability (S-curve) and coefficient plots for a <code><a href="jlogistic.html">jlogistic()</a></code> result.</p></li>
+<li><p><code>jplot(jst_ttest)</code>: a group-comparison box plot for a <code><a href="jt.html">jt()</a></code> result, with the group means marked.</p></li>
+<li><p><code>jplot(jst_anova)</code>: a group-comparison box plot for a <code><a href="jaov.html">jaov()</a></code> result, with the group means marked.</p></li>
+<li><p><code>jplot(jst_corr)</code>: a heat-map of the correlation matrix for a <code><a href="jcorr.html">jcorr()</a></code> result, or a scatter plot for a single pair.</p></li>
+<li><p><code>jplot(jst_crosstab)</code>: a grouped bar chart of cell counts for a <code><a href="jcrosstab.html">jcrosstab()</a></code> result.</p></li>
+<li><p><code>jplot(jst_desc)</code>: (planned) direct plotting of a <code><a href="jdesc.html">jdesc()</a></code> result is not yet available; this method points you to the data-first form, for example <code>jplot(data, Variable)</code>.</p></li>
+<li><p><code>jplot(jst_freq)</code>: (planned) direct plotting of a <code><a href="jfreq.html">jfreq()</a></code> result is not yet available; this method points you to the data-first form, for example <code>jplot(data, Variable)</code>.</p></li>
+</ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="jstats-package.html">jstats</a></code> for the package overview,

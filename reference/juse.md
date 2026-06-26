@@ -46,7 +46,6 @@ listing.
 ## Examples
 
 ``` r
-# \donttest{
 juse(community)              # Set community as the default
 #> Default data frame set to: community
 juse()                       # Display current default
@@ -62,5 +61,4 @@ jdesc(Age, WellbeingScore)   # Uses community automatically
 #> 
 juse(NULL)                   # Clear the default
 #> Default data frame cleared.
-# }
 ```

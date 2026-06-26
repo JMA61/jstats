@@ -231,6 +231,47 @@ line, flares at the ends), `pi` (prediction interval for individual
 observations, wider), `see` (constant-width +/- t\*SEE band illustrating
 the homoskedasticity assumption), `none` (no band).
 
+## Methods (by class)
+
+- `jplot(default)`: the default method: a scatter or box plot from a
+  formula (`DV ~ IV`), or a histogram or bar chart from a data frame and
+  one or more variables.
+
+- `jplot(jst_lm)`: diagnostic, coefficient (forest), and fitted-effect
+  plots for a [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md)
+  linear-regression result.
+
+- `jplot(jst_logistic)`: predicted-probability (S-curve) and coefficient
+  plots for a
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
+  result.
+
+- `jplot(jst_ttest)`: a group-comparison box plot for a
+  [`jt()`](https://jma61.github.io/jstats/reference/jt.md) result, with
+  the group means marked.
+
+- `jplot(jst_anova)`: a group-comparison box plot for a
+  [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md) result,
+  with the group means marked.
+
+- `jplot(jst_corr)`: a heat-map of the correlation matrix for a
+  [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) result,
+  or a scatter plot for a single pair.
+
+- `jplot(jst_crosstab)`: a grouped bar chart of cell counts for a
+  [`jcrosstab()`](https://jma61.github.io/jstats/reference/jcrosstab.md)
+  result.
+
+- `jplot(jst_desc)`: (planned) direct plotting of a
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) result
+  is not yet available; this method points you to the data-first form,
+  for example `jplot(data, Variable)`.
+
+- `jplot(jst_freq)`: (planned) direct plotting of a
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) result
+  is not yet available; this method points you to the data-first form,
+  for example `jplot(data, Variable)`.
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)

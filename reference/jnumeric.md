@@ -87,7 +87,7 @@ jnumeric(community, Environment2, remove = TRUE) # unregister one
 #> Numeric registration removed for 'Environment2' in community.
 jnumeric()                          # list all registrations
 #> Variable Registrations
-#> Using default data frame: community
+#> Data frame: community
 #> 
 #>   Environment4: numeric
 #> 

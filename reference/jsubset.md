@@ -70,7 +70,6 @@ listing.
 ## Examples
 
 ``` r
-# \donttest{
 juse(community)
 #> Default data frame set to: community
 jsubset(Age < 40)                        # Set using juse default
@@ -87,5 +86,8 @@ jsubset()                                # Check status
 #> jsubset active for community: Age < 40 & WellbeingScore > 50
 jsubset(NULL)                            # Clear entirely
 #> jsubset cleared for community (had: Age < 40 & WellbeingScore > 50).
-# }
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
+#> Default data frame cleared.
 ```

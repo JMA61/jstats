@@ -70,7 +70,6 @@ listing.
 ## Examples
 
 ``` r
-# \donttest{
 # Set the default data frame (so you can omit it in function calls)
 juse(community)
 #> Default data frame set to: community
@@ -149,7 +148,8 @@ community$EnvAvg <- javg(community, Environment1, Environment3,
 #>   community$<name> <- javg(...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
-juse(NULL)   # clear the default when done
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
 #> Default data frame cleared.
-# }
 ```

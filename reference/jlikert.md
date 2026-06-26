@@ -84,7 +84,6 @@ Clearing mirrors the other registration verbs:
 ## Examples
 
 ``` r
-# \donttest{
   jlikert(community, Environment1, Environment2)  # declare two Likert items
 #> Likert registration set for 'Environment1', 'Environment2' in community.
 #> Note: registrations are stored for this session only.
@@ -133,5 +132,4 @@ Clearing mirrors the other registration verbs:
 #> Likert registration removed for 'Environment1' in community.
   jlikert(community, NULL)                        # clear the registrations
 #> Likert registrations cleared for community: Environment2.
-# }
 ```

@@ -78,7 +78,6 @@ listing.
 ## Examples
 
 ``` r
-# \donttest{
 juse(community)
 #> Default data frame set to: community
 jcomplete(Income, Education, Age)
@@ -211,5 +210,8 @@ jcomplete()                    # Check status
 #> jcomplete active for community: Income, Education, Age (88 of 100 complete cases)
 jcomplete(NULL)                # Clear entirely
 #> jcomplete cleared for community (had: Income, Education, Age).
-# }
+# Not normally needed. You'd clear a default or registration only to
+# undo a mistake, or -- as in this example -- to reset state for testing.
+juse(NULL)
+#> Default data frame cleared.
 ```
