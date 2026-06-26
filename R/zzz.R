@@ -3,12 +3,17 @@
 #
 # All package-level hooks for jstats live in this file:
 #
-#   .onAttach()  — runs automatically on library(jstats). Performs
-#                  two independent checks: (1) compares the installed
-#                  version to the current version on GitHub, and (2) reads
-#                  a redirect-and-announce gist to pick up any
-#                  successor-package migration or one-off broadcast
-#                  message. Both checks fail silently on network errors.
+#   .onAttach()  — runs automatically on library(jstats). When the
+#                  jstats.check_updates option is TRUE (the default), it
+#                  performs up to two network reads: (1) a redirect-and-
+#                  announce gist (successor-package migration or one-off
+#                  broadcast), and (2) a GitHub DESCRIPTION version check.
+#                  Both fail silently on network errors, and the gist read
+#                  doubles as a connectivity probe: if it cannot reach the
+#                  network, the version check is skipped rather than left to
+#                  time out as well. Setting options(jstats.check_updates =
+#                  FALSE) skips both reads entirely (for networked-but-no-
+#                  internet machines) and just confirms the load.
 #
 #   .onUnload()  — runs automatically when the package is unloaded or
 #                  the R session ends. Clears all session-state options
@@ -73,23 +78,40 @@
 
 # -- Internal: fetch and parse the gist ----------------------------------------
 #
-# Fetches the gist with a short timeout and returns a list with two
-# fields: successor (list or NULL) and message (string or NULL). Returns
-# NULL overall if the fetch or parse fails for any reason.
+# Fetches the gist with a short timeout and returns a list with three
+# fields: network_ok (logical), successor (list or NULL), and message
+# (string or NULL).
+#
+# The network read here doubles as a connectivity probe for .onAttach(): the
+# readLines() call is the ONLY part that touches the network, so its success
+# or failure is a reliable signal for whether a second network read (the
+# GitHub version check) is worth attempting. A connection failure throws and
+# is caught -> network_ok = FALSE, and the caller skips the second read. A
+# PARSE failure is different: it can only occur AFTER readLines() has already
+# succeeded, so the network was fine and network_ok stays TRUE -- a transient
+# parse glitch must not suppress a version check that would have worked.
 
 .jst_read_gist <- function() {
-  tryCatch({
-    old_opts <- options(timeout = 5)
-    on.exit(options(old_opts), add = TRUE)
+  old_opts <- options(timeout = 3)
+  on.exit(options(old_opts), add = TRUE)
 
-    lines <- readLines(.jst_gist_url, warn = FALSE)
-    json  <- paste(lines, collapse = " ")
+  lines <- tryCatch(
+    readLines(.jst_gist_url, warn = FALSE),
+    error = function(e) NULL
+  )
+  if (is.null(lines)) {
+    return(list(network_ok = FALSE, successor = NULL, message = NULL))
+  }
 
+  json <- paste(lines, collapse = " ")
+  tryCatch(
     list(
-      successor = .jst_parse_successor(json),
-      message   = .jst_parse_string_field(json, "message")
-    )
-  }, error = function(e) NULL)
+      network_ok = TRUE,
+      successor  = .jst_parse_successor(json),
+      message    = .jst_parse_string_field(json, "message")
+    ),
+    error = function(e) list(network_ok = TRUE, successor = NULL, message = NULL)
+  )
 }
 
 
@@ -102,7 +124,7 @@
 
 .jst_show_version_status <- function(installed_ver) {
   tryCatch({
-    old_opts <- options(timeout = 5)
+    old_opts <- options(timeout = 3)
     on.exit(options(old_opts), add = TRUE)
 
     github_desc <- readLines(
@@ -261,21 +283,42 @@
   if (!interactive()) return()
 
   installed_ver <- as.character(utils::packageVersion("jstats"))
-  gist_info     <- .jst_read_gist()
+
+  # Opt-out for networked-but-no-internet machines (e.g., locked-down lab or
+  # server installs where a route exists but the internet does not). Setting
+  # options(jstats.check_updates = FALSE) skips BOTH network reads and just
+  # confirms the load -- no startup freeze waiting out timeouts. Default TRUE
+  # preserves the update check for everyone else.
+  if (!isTRUE(getOption("jstats.check_updates", TRUE))) {
+    packageStartupMessage("jstats v", installed_ver, " loaded.")
+    return(invisible())
+  }
+
+  gist_info <- .jst_read_gist()
 
   # If the gist says a successor exists, show migration message only.
-  # Otherwise, run the standard GitHub version check.
-  if (!is.null(gist_info) && !is.null(gist_info$successor) &&
+  # Otherwise run the standard GitHub version check -- but bail (skip it) when
+  # the gist read could not reach the network, since the GitHub read would
+  # only time out as well. The direct fallback line below matches the one
+  # .jst_show_version_status() prints on its own failure, so the user sees the
+  # same notice without waiting out a second timeout.
+  if (!is.null(gist_info$successor) &&
       !identical(gist_info$successor$package, "jstats")) {
     .jst_show_migration(gist_info$successor, installed_ver)
-  } else {
+  } else if (isTRUE(gist_info$network_ok)) {
     .jst_show_version_status(installed_ver)
+  } else {
+    packageStartupMessage(
+      "jstats v", installed_ver, " loaded.",
+      " (Could not check for updates - no internet connection?)"
+    )
   }
 
   # Append any one-off broadcast message. Fires whether or not a
   # successor is set, so it works for announcements before, during, or
-  # after a migration.
-  if (!is.null(gist_info) && !is.null(gist_info$message)) {
+  # after a migration. Skipped implicitly when the network is unreachable
+  # (message is NULL in that case).
+  if (!is.null(gist_info$message)) {
     packageStartupMessage(gist_info$message)
   }
 }
