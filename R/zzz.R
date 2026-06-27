@@ -115,45 +115,60 @@
 }
 
 
-# -- Internal: show the standard version-check message -------------------------
+# -- Internal: fetch the latest jstats version from GitHub ---------------------
 #
-# Reads the DESCRIPTION file from the main branch on GitHub and compares
-# the Version field to the installed version. Prints either an "up to
-# date" line or a multi-line upgrade notice. Falls back to a "loaded"
-# line if the GitHub check fails.
+# Reads the Version field from the DESCRIPTION on the main branch and returns
+# it as a character string, or NA_character_ if the read or parse fails (no
+# network, GitHub unreachable, or a malformed file). Factored out so the GitHub
+# version read lives in exactly one place: both the load-time check
+# (.jst_show_version_status) and jupdate() call it.
 
-.jst_show_version_status <- function(installed_ver) {
+.jst_latest_github_version <- function() {
+  old_opts <- options(timeout = 3)
+  on.exit(options(old_opts), add = TRUE)
+
   tryCatch({
-    old_opts <- options(timeout = 3)
-    on.exit(options(old_opts), add = TRUE)
-
     github_desc <- readLines(
       "https://raw.githubusercontent.com/JMA61/jstats/main/DESCRIPTION",
       warn = FALSE
     )
-    ver_line   <- github_desc[grepl("^Version:", github_desc)]
-    github_ver <- trimws(sub("^Version:", "", ver_line))
+    ver_line <- github_desc[grepl("^Version:", github_desc)]
+    if (length(ver_line) == 0) return(NA_character_)
+    trimws(sub("^Version:", "", ver_line))
+  }, error = function(e) NA_character_)
+}
 
-    if (package_version(github_ver) > package_version(installed_ver)) {
-      packageStartupMessage(
-        "=======================================================\n",
-        " A new version of jstats is available (", github_ver, ").\n",
-        " You have version ", installed_ver, ".\n",
-        " To update, run:\n",
-        "   detach('package:jstats', unload = TRUE)\n",
-        "   remotes::install_github('JMA61/jstats', upgrade = 'never')\n",
-        "   library(jstats)\n",
-        "======================================================="
-      )
-    } else {
-      packageStartupMessage("jstats v", installed_ver, " is up to date.")
-    }
-  }, error = function(e) {
+
+# -- Internal: show the standard version-check message -------------------------
+#
+# Compares the latest GitHub version (via .jst_latest_github_version()) to the
+# installed version and prints either an "up to date" line or a short upgrade
+# notice that points at jupdate(). Falls back to a "loaded" line if the GitHub
+# read fails (typically no internet).
+
+.jst_show_version_status <- function(installed_ver) {
+  github_ver <- .jst_latest_github_version()
+
+  if (is.na(github_ver)) {
     packageStartupMessage(
       "jstats v", installed_ver, " loaded.",
       " (Could not check for updates - no internet connection?)"
     )
-  })
+    return(invisible())
+  }
+
+  if (package_version(github_ver) > package_version(installed_ver)) {
+    packageStartupMessage(
+      "=======================================================\n",
+      " A new version of jstats is available (", github_ver, ").\n",
+      " You have version ", installed_ver, ".\n",
+      " To update, run:\n",
+      "   jupdate()\n",
+      "======================================================="
+    )
+  } else {
+    packageStartupMessage("jstats v", installed_ver, " is up to date.")
+  }
 }
 
 

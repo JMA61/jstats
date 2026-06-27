@@ -135,6 +135,127 @@
 "_PACKAGE"
 
 
+#' Update jstats to the latest version
+#'
+#' \code{jupdate()} installs the most recent version of jstats. While the
+#' package is distributed from GitHub (its current pre-release phase), this
+#' downloads and installs the latest build from there; once jstats reaches
+#' CRAN, the same command will update it the ordinary way. Either way, you run
+#' one command instead of having to remember an install line.
+#'
+#' Because jstats is loaded in your session when you call this, the new version
+#' is installed but does not take effect until you restart R (Session menu,
+#' Restart R). On Windows, an update can occasionally fail because the loaded
+#' package files are in use; if that happens, restart R first and run
+#' \code{jupdate()} again.
+#'
+#' The function checks for an internet connection before attempting anything.
+#' If jstats is already up to date it says so and stops; if an update is
+#' available it shows the versions and asks you to confirm before installing.
+#'
+#' @return Invisibly \code{NULL}. Called for its side effect of installing the
+#'   update, and for the messages it prints.
+#'
+#' @examples
+#' \dontrun{
+#' jupdate()
+#' }
+#'
+#' @export
+jupdate <- function() {
+  if (!interactive()) {
+    .jst_stop(
+      "jupdate() installs a package and is meant to be run interactively, ",
+      "not from a script or a non-interactive session."
+    )
+  }
+
+  # The GitHub-phase install needs the remotes package. Users who installed
+  # jstats from GitHub already have it; this guards the rare case (a built-file
+  # install, or a package cleanup) where it is missing.
+  if (!requireNamespace("remotes", quietly = TRUE)) {
+    .jst_stop(
+      'updating needs the "remotes" package, which is not installed. ',
+      'Run install.packages("remotes"), then run jupdate() again.'
+    )
+  }
+
+  # One network read doubles as a connectivity probe and a migration check.
+  gist <- .jst_read_gist()
+  if (!isTRUE(gist$network_ok)) {
+    .jst_stop(
+      "no internet connection was detected. Updating downloads jstats from ",
+      "GitHub, which needs a connection. Connect and run jupdate() again."
+    )
+  }
+
+  # If the package has been renamed, point the user at the successor rather
+  # than reinstalling a retired package.
+  if (!is.null(gist$successor)) {
+    hint <- gist$successor$install_hint
+    msg  <- paste0(
+      "jstats has been renamed to '", gist$successor$package, "'. ",
+      "Install that package instead of updating jstats."
+    )
+    if (!is.null(hint) && nzchar(hint)) {
+      msg <- paste0(msg, "\nTo switch, run:\n  ", hint)
+    }
+    message(msg)
+    return(invisible(NULL))
+  }
+
+  installed_ver <- as.character(utils::packageVersion("jstats"))
+  latest_ver    <- .jst_latest_github_version()
+
+  if (!is.na(latest_ver) &&
+      package_version(latest_ver) <= package_version(installed_ver)) {
+    message("jstats v", installed_ver, " is already up to date.")
+    return(invisible(NULL))
+  }
+
+  # An update appears to be available (or the latest version could not be
+  # confirmed). Ask before installing. interactive() is guaranteed here by the
+  # guard at the top, so menu() can read a response.
+  prompt <- if (is.na(latest_ver)) {
+    paste0(
+      "Could not confirm the latest version, but a connection is available. ",
+      "Install the latest jstats from GitHub anyway?"
+    )
+  } else {
+    paste0(
+      "jstats v", latest_ver, " is available - you have v", installed_ver,
+      ". Update now?"
+    )
+  }
+
+  if (utils::menu(c("Yes", "No"), title = prompt) != 1L) {
+    message("Update canceled.")
+    return(invisible(NULL))
+  }
+
+  message("Updating jstats from GitHub ...")
+  outcome <- tryCatch({
+    remotes::install_github("JMA61/jstats", upgrade = "never")
+    TRUE
+  }, error = function(e) conditionMessage(e))
+
+  if (isTRUE(outcome)) {
+    message(
+      "jstats has been updated. Restart R (Session menu, Restart R) to load ",
+      "the new version."
+    )
+  } else {
+    .jst_stop(
+      "the update did not complete. On Windows this usually means jstats was ",
+      "in use during the install; restart R (Session menu, Restart R) and run ",
+      "jupdate() again. If it keeps failing, the original error was: ", outcome
+    )
+  }
+
+  invisible(NULL)
+}
+
+
 # =============================================================================
 #  INTERNAL HELPERS
 # =============================================================================
