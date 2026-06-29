@@ -253,12 +253,13 @@ jupdate <- function(ask = FALSE) {
 
   message(
     "jstats has been updated.\n",
-    "Restart R to load it:\n",
-    "in RStudio, open the Session menu (along the top of the window) and ",
-    "choose Restart R,\n",
-    "or press Ctrl+Shift+F10.\n",
-    "The Console will clear and return to a blank prompt; then load jstats ",
-    "with library(jstats) (unless it loads automatically on startup)."
+    "\n",
+    "Restart R to load it in RStudio:\n",
+    "  - open the Session menu > choose Restart R\n",
+    "  - or press Ctrl+Shift+F10\n",
+    "\n",
+    "The Console will return to a blank prompt.\n",
+    "Reload jstats with library(jstats) (unless loaded automatically on startup)."
   )
 
   invisible(NULL)
