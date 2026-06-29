@@ -54,11 +54,12 @@ reference:
       - jdata_dir
 
   - title: Set up your session
-    desc: Defaults and options for a working session.
+    desc: Defaults and options for a working session, plus keeping your installed copy current.
     contents:
       - juse
       - joptions
       - joutput
+      - jupdate
 
   - title: Plots
     contents:
