@@ -141,36 +141,34 @@
 #' package is distributed from GitHub (its current pre-release phase), this
 #' downloads and installs the latest build from there; once jstats reaches
 #' CRAN, the same command will update it the ordinary way. Either way, you run
-#' one command instead of having to remember an install line.
+#' one command instead of having to remember an install line. It is safe to
+#' call from the console, a script, or a Quarto document.
 #'
-#' Because jstats is loaded in your session when you call this, the new version
-#' is installed but does not take effect until you restart R (Session menu,
-#' Restart R). On Windows, an update can occasionally fail because the loaded
-#' package files are in use; if that happens, restart R first and run
-#' \code{jupdate()} again.
+#' The function checks for an internet connection first; if jstats is already
+#' up to date it says so and stops. When the callr package is available, the
+#' install runs in a separate R process so the copy of jstats loaded in your
+#' session does not lock its own files during the install (the usual cause of a
+#' failed update on Windows). After a successful update you restart R once to
+#' load the new version.
 #'
-#' The function checks for an internet connection before attempting anything.
-#' If jstats is already up to date it says so and stops; if an update is
-#' available it shows the versions and asks you to confirm before installing.
+#' @param ask Logical. When \code{TRUE} and the session is interactive,
+#'   jupdate() shows the available and installed versions and asks for
+#'   confirmation before installing. Defaults to \code{FALSE} (update without
+#'   prompting), which is also what happens in any non-interactive session, such
+#'   as a Quarto render.
 #'
 #' @return Invisibly \code{NULL}. Called for its side effect of installing the
 #'   update, and for the messages it prints.
 #'
 #' @examples
 #' \dontrun{
-#' jupdate()
+#' jupdate()            # update without prompting
+#' jupdate(ask = TRUE)  # confirm before updating
 #' }
 #'
 #' @export
-jupdate <- function() {
-  if (!interactive()) {
-    .jst_stop(
-      "jupdate() installs a package and is meant to be run interactively, ",
-      "not from a script or a non-interactive session."
-    )
-  }
-
-  # The GitHub-phase install needs the remotes package. Users who installed
+jupdate <- function(ask = FALSE) {
+  # The install needs the remotes package. Users who installed
   # jstats from GitHub already have it; this guards the rare case (a built-file
   # install, or a package cleanup) where it is missing.
   if (!requireNamespace("remotes", quietly = TRUE)) {
@@ -216,43 +214,80 @@ jupdate <- function() {
     return(invisible(NULL))
   }
 
-  # An update appears to be available (or the latest version could not be
-  # confirmed). Ask before installing. interactive() is guaranteed here by the
-  # guard at the top, so menu() can read a response.
-  prompt <- if (is.na(latest_ver)) {
-    paste0(
-      "Could not confirm the latest version, but a connection is available. ",
-      "Install the latest jstats from GitHub anyway?"
-    )
-  } else {
-    paste0(
-      "jstats v", latest_ver, " is available - you have v", installed_ver,
-      ". Update now?"
-    )
+  # Optional confirmation. Only prompts when the caller asked for it AND the
+  # session can read a response; otherwise it just proceeds, which keeps
+  # jupdate() safe in scripts and Quarto renders.
+  if (isTRUE(ask) && interactive()) {
+    prompt <- if (is.na(latest_ver)) {
+      paste0(
+        "Could not confirm the latest version, but a connection is available. ",
+        "Install the latest jstats from GitHub anyway?"
+      )
+    } else {
+      paste0(
+        "jstats v", latest_ver, " is available - you have v", installed_ver,
+        ". Update now?"
+      )
+    }
+    if (utils::menu(c("Yes", "No"), title = prompt) != 1L) {
+      message("Update canceled.")
+      return(invisible(NULL))
+    }
   }
 
-  if (utils::menu(c("Yes", "No"), title = prompt) != 1L) {
-    message("Update canceled.")
-    return(invisible(NULL))
-  }
+  message("Updating jstats from GitHub ... (this may take a moment)")
 
-  message("Updating jstats from GitHub ...")
-  outcome <- tryCatch({
-    remotes::install_github("JMA61/jstats", upgrade = "never")
-    TRUE
-  }, error = function(e) conditionMessage(e))
+  restart_hint <- paste0(
+    "Restart R to load it: in RStudio, open the Session menu (along the top of ",
+    "the window) and choose Restart R, or press Ctrl+Shift+F10."
+  )
 
-  if (isTRUE(outcome)) {
-    message(
-      "jstats has been updated. Restart R (Session menu, Restart R) to load ",
-      "the new version."
-    )
+  if (requireNamespace("callr", quietly = TRUE)) {
+    # Install in a clean, separate R process. Because that process never loads
+    # jstats, the package files are not locked, so the install completes even on
+    # Windows. A genuine build failure makes the child error, which is surfaced.
+    err <- tryCatch({
+      callr::r(
+        function() remotes::install_github("JMA61/jstats", upgrade = "never")
+      )
+      NULL
+    }, error = function(e) conditionMessage(e))
+
+    if (is.null(err)) {
+      message("jstats has been updated. ", restart_hint)
+    } else {
+      .jst_stop("the update did not complete. The error was: ", err)
+    }
   } else {
-    .jst_stop(
-      "the update did not complete. On Windows this usually means jstats was ",
-      "in use during the install; restart R (Session menu, Restart R) and run ",
-      "jupdate() again. If it keeps failing, the original error was: ", outcome
+    # Fallback when callr is not installed: install in this session. On Windows
+    # the loaded package files can block the install, leaving jstats unchanged,
+    # and that block surfaces as a warning rather than an error. Re-read the
+    # installed version to report honestly -- packageVersion() reads the on-disk
+    # DESCRIPTION, so it reflects whether the files were actually replaced.
+    err <- tryCatch({
+      suppressWarnings(
+        remotes::install_github("JMA61/jstats", upgrade = "never")
+      )
+      NULL
+    }, error = function(e) conditionMessage(e))
+
+    installed_after <- tryCatch(
+      as.character(utils::packageVersion("jstats")),
+      error = function(e) installed_ver
     )
+
+    if (!is.null(err)) {
+      .jst_stop("the update did not complete. The error was: ", err)
+    } else if (identical(installed_after, installed_ver)) {
+      .jst_stop(
+        "jstats could not be replaced while it is loaded (this is common on ",
+        "Windows). Restart R first - in RStudio, open the Session menu (along ",
+        "the top of the window) and choose Restart R, or press Ctrl+Shift+F10 ",
+        "- then run jupdate() again."
+      )
+    } else {
+      message("jstats has been updated. ", restart_hint)
+    }
   }
 
   invisible(NULL)

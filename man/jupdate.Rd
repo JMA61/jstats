@@ -4,7 +4,14 @@
 \alias{jupdate}
 \title{Update jstats to the latest version}
 \usage{
-jupdate()
+jupdate(ask = FALSE)
+}
+\arguments{
+\item{ask}{Logical. When \code{TRUE} and the session is interactive,
+jupdate() shows the available and installed versions and asks for
+confirmation before installing. Defaults to \code{FALSE} (update without
+prompting), which is also what happens in any non-interactive session, such
+as a Quarto render.}
 }
 \value{
 Invisibly \code{NULL}. Called for its side effect of installing the
@@ -15,22 +22,21 @@ update, and for the messages it prints.
 package is distributed from GitHub (its current pre-release phase), this
 downloads and installs the latest build from there; once jstats reaches
 CRAN, the same command will update it the ordinary way. Either way, you run
-one command instead of having to remember an install line.
+one command instead of having to remember an install line. It is safe to
+call from the console, a script, or a Quarto document.
 }
 \details{
-Because jstats is loaded in your session when you call this, the new version
-is installed but does not take effect until you restart R (Session menu,
-Restart R). On Windows, an update can occasionally fail because the loaded
-package files are in use; if that happens, restart R first and run
-\code{jupdate()} again.
-
-The function checks for an internet connection before attempting anything.
-If jstats is already up to date it says so and stops; if an update is
-available it shows the versions and asks you to confirm before installing.
+The function checks for an internet connection first; if jstats is already
+up to date it says so and stops. When the callr package is available, the
+install runs in a separate R process so the copy of jstats loaded in your
+session does not lock its own files during the install (the usual cause of a
+failed update on Windows). After a successful update you restart R once to
+load the new version.
 }
 \examples{
 \dontrun{
-jupdate()
+jupdate()            # update without prompting
+jupdate(ask = TRUE)  # confirm before updating
 }
 
 }

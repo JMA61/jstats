@@ -1,6 +1,6 @@
 Package: jstats
 Title: Simplified Statistical Analysis Tools for Social Science
-Version: 0.9.85
+Version: 0.9.86
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
 Description: Provides simplified tools for common statistical analyses
@@ -33,6 +33,6 @@ Imports:
     rlang,
     readxl,
     writexl
-Suggests: generics, remotes
+Suggests: callr, generics, remotes
 LazyData: true
 URL: https://jma61.github.io/jstats/
