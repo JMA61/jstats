@@ -190,8 +190,11 @@ jupdate <- function() {
   }
 
   # If the package has been renamed, point the user at the successor rather
-  # than reinstalling a retired package.
-  if (!is.null(gist$successor)) {
+  # than reinstalling a retired package. A successor whose name matches this
+  # package is not a rename -- it is the gist's normal "no migration" state, so
+  # it is ignored here, matching the guard in .onAttach().
+  if (!is.null(gist$successor) &&
+      !identical(gist$successor$package, "jstats")) {
     hint <- gist$successor$install_hint
     msg  <- paste0(
       "jstats has been renamed to '", gist$successor$package, "'. ",
