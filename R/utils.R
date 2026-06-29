@@ -145,11 +145,10 @@
 #' call from the console, a script, or a Quarto document.
 #'
 #' The function checks for an internet connection first; if jstats is already
-#' up to date it says so and stops. When the callr package is available, the
-#' install runs in a separate R process so the copy of jstats loaded in your
-#' session does not lock its own files during the install (the usual cause of a
-#' failed update on Windows). After a successful update you restart R once to
-#' load the new version.
+#' up to date it says so and stops. The install runs in a separate R process so
+#' the copy of jstats loaded in your session does not lock its own files during
+#' the install (the usual cause of a failed update on Windows). After a
+#' successful update you restart R once to load the new version.
 #'
 #' @param ask Logical. When \code{TRUE} and the session is interactive,
 #'   jupdate() shows the available and installed versions and asks for
@@ -237,58 +236,28 @@ jupdate <- function(ask = FALSE) {
 
   message("Updating jstats from GitHub ... (this may take a moment)")
 
-  restart_hint <- paste0(
-    "Restart R to load it: in RStudio, open the Session menu (along the top of ",
-    "the window) and choose Restart R, or press Ctrl+Shift+F10."
-  )
-
-  if (requireNamespace("callr", quietly = TRUE)) {
-    # Install in a clean, separate R process. Because that process never loads
-    # jstats, the package files are not locked, so the install completes even on
-    # Windows. A genuine build failure makes the child error, which is surfaced.
-    err <- tryCatch({
-      callr::r(
-        function() remotes::install_github("JMA61/jstats", upgrade = "never")
-      )
-      NULL
-    }, error = function(e) conditionMessage(e))
-
-    if (is.null(err)) {
-      message("jstats has been updated. ", restart_hint)
-    } else {
-      .jst_stop("the update did not complete. The error was: ", err)
-    }
-  } else {
-    # Fallback when callr is not installed: install in this session. On Windows
-    # the loaded package files can block the install, leaving jstats unchanged,
-    # and that block surfaces as a warning rather than an error. Re-read the
-    # installed version to report honestly -- packageVersion() reads the on-disk
-    # DESCRIPTION, so it reflects whether the files were actually replaced.
-    err <- tryCatch({
-      suppressWarnings(
-        remotes::install_github("JMA61/jstats", upgrade = "never")
-      )
-      NULL
-    }, error = function(e) conditionMessage(e))
-
-    installed_after <- tryCatch(
-      as.character(utils::packageVersion("jstats")),
-      error = function(e) installed_ver
+  # Install in a clean, separate R process (via callr, an Imports dependency, so
+  # always available). Because that process never loads jstats, the package
+  # files are not locked, and the install completes even on Windows. A genuine
+  # build failure makes the child error, which is surfaced honestly.
+  err <- tryCatch({
+    callr::r(
+      function() remotes::install_github("JMA61/jstats", upgrade = "never")
     )
+    NULL
+  }, error = function(e) conditionMessage(e))
 
-    if (!is.null(err)) {
-      .jst_stop("the update did not complete. The error was: ", err)
-    } else if (identical(installed_after, installed_ver)) {
-      .jst_stop(
-        "jstats could not be replaced while it is loaded (this is common on ",
-        "Windows). Restart R first - in RStudio, open the Session menu (along ",
-        "the top of the window) and choose Restart R, or press Ctrl+Shift+F10 ",
-        "- then run jupdate() again."
-      )
-    } else {
-      message("jstats has been updated. ", restart_hint)
-    }
+  if (!is.null(err)) {
+    .jst_stop("the update did not complete. The error was: ", err)
   }
+
+  message(
+    "jstats has been updated. Restart R to load it: in RStudio, open the ",
+    "Session menu (along the top of the window) and choose Restart R, or press ",
+    "Ctrl+Shift+F10. The Console will clear and return to a blank prompt; then ",
+    "load jstats with library(jstats) (unless it loads automatically on ",
+    "startup)."
+  )
 
   invisible(NULL)
 }

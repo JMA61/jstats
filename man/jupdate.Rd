@@ -27,11 +27,10 @@ call from the console, a script, or a Quarto document.
 }
 \details{
 The function checks for an internet connection first; if jstats is already
-up to date it says so and stops. When the callr package is available, the
-install runs in a separate R process so the copy of jstats loaded in your
-session does not lock its own files during the install (the usual cause of a
-failed update on Windows). After a successful update you restart R once to
-load the new version.
+up to date it says so and stops. The install runs in a separate R process so
+the copy of jstats loaded in your session does not lock its own files during
+the install (the usual cause of a failed update on Windows). After a
+successful update you restart R once to load the new version.
 }
 \examples{
 \dontrun{
