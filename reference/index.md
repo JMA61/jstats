@@ -72,7 +72,8 @@ Read and write SPSS, Stata, SAS, Excel, and CSV data.
 
 ## Set up your session
 
-Defaults and options for a working session.
+Defaults and options for a working session, plus keeping your installed
+copy current.
 
 - [`juse()`](https://jma61.github.io/jstats/reference/juse.md) : Set or
   display the default data frame for jstats functions
@@ -80,6 +81,8 @@ Defaults and options for a working session.
   Set or display session-level package options
 - [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md) :
   Set session-level output verbosity
+- [`jupdate()`](https://jma61.github.io/jstats/reference/jupdate.md) :
+  Update jstats to the latest version
 
 ## Plots
 
