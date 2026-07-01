@@ -107,7 +107,7 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpxPNq63/community.sav (SPSS format; 100 cases, 15 variables)
+#> Saved community to /tmp/RtmpA6o6xT/community.sav (SPSS format; 100 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
 # The file extension determines the format ---

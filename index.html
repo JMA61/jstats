@@ -44,8 +44,100 @@
   </div>
 </nav><div class="container template-home">
 <div class="row">
-  <main id="main" class="col-md-9">
-Provides simplified tools for common statistical analyses used in social science research and teaching, with output formatted in the style of SPSS and Stata. Analysis functions include descriptive statistics, frequency tables, t-tests, ANOVA, correlations, chi-square tests, cross-tabulations, linear regression, logistic regression, and Cronbach's alpha, with built-in model diagnostics and publication-oriented plotting. Supporting tools handle data management (recoding, labelling, filtering, dummy coding, scale construction), automatic detection and handling of coded missing values, and unified data import and export for SPSS, Stata, SAS, Excel, CSV, and R formats. Functions accept unquoted variable names and formula syntax for ease of use, handle haven-labelled variables automatically, and return results invisibly while printing user-friendly tables. The package stays close enough to base R conventions that users learn transferable skills rather than a private dialect, supporting a smooth transition from SPSS, Stata, or SAS into the broader R ecosystem.
+  <main id="main" class="col-md-9"><div class="section level1">
+<div class="page-header"><h1 id="jstats">jstats<a class="anchor" aria-label="anchor" href="#jstats"></a>
+</h1></div>
+<p><a href="https://jma61.r-universe.dev/jstats" class="external-link"><img src="https://jma61.r-universe.dev/jstats/badges/version" alt="r-universe version"></a> <a href="https://jma61.r-universe.dev/jstats" class="external-link"><img src="https://jma61.r-universe.dev/jstats/badges/checks" alt="R-CMD-check"></a></p>
+<blockquote>
+<p>Simplified statistical-analysis tools for social-science researchers and teachers, with output styled after commercial statistical software.</p>
+</blockquote>
+<p><strong>jstats</strong> provides a small, consistent set of functions for the analyses social scientists run most often — frequencies and descriptives, <em>t</em>-tests, ANOVA, cross-tabulations, correlation, linear and logistic regression, and scale reliability — with sensible defaults and clean, recognizable output. It reads data exported from commercial statistical software such as SPSS, Stata, and SAS (via <a href="https://haven.tidyverse.org/" class="external-link"><code>haven</code></a>) directly, value and variable labels included, and stays close enough to base R that the skills you build transfer.</p>
+<p>It is designed for researchers moving into R from SPSS, Stata, or SAS who want to get their analyses done without first learning a new dialect — and it doubles as teaching infrastructure for students meeting statistics and R at the same time.</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<p>jstats installs as a pre-built binary from its R-universe repository, so there is no compiler or build toolchain to set up:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"jstats"</span>,</span>
+<span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"https://jma61.r-universe.dev"</span>, <span class="st">"https://cloud.r-project.org"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Then load it as usual:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jma61.github.io/jstats/">jstats</a></span><span class="op">)</span></span></code></pre></div>
+<p>Requires R &gt;= 4.2.0.</p>
+</div>
+<div class="section level2">
+<h2 id="a-quick-taste">A quick taste<a class="anchor" aria-label="anchor" href="#a-quick-taste"></a>
+</h2>
+<p>Every install bundles <code>community</code>, a small synthetic dataset, so these examples run as-is:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jma61.github.io/jstats/">jstats</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Frequency table for a categorical variable</span></span>
+<span><span class="fu"><a href="reference/jfreq.html">jfreq</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Descriptive statistics</span></span>
+<span><span class="fu"><a href="reference/jdesc.html">jdesc</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span>, <span class="va">CommuteTime</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Independent-samples t-test (formula interface)</span></span>
+<span><span class="fu"><a href="reference/jt.html">jt</a></span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Volunteer</span>, <span class="va">community</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Linear regression -- categorical predictors are dummy-coded for you</span></span>
+<span><span class="fu"><a href="reference/jlm.html">jlm</a></span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Age</span> <span class="op">+</span> <span class="va">CommuteTime</span> <span class="op">+</span> <span class="va">Region</span>, <span class="va">community</span><span class="op">)</span></span></code></pre></div>
+<p>Two patterns cover the whole package: descriptive functions take the data first, then unquoted variable names — <code>jfreq(community, Region)</code>; group-comparison and modeling functions take a formula, then the data — <code>jt(y ~ group, community)</code>, just as in base R.</p>
+</div>
+<div class="section level2">
+<h2 id="whats-included">What’s included<a class="anchor" aria-label="anchor" href="#whats-included"></a>
+</h2>
+<p>Every user-facing function is prefixed <code>j</code>:</p>
+<ul>
+<li>
+<strong>Describe</strong> — <code>jdesc</code>, <code>jfreq</code>
+</li>
+<li>
+<strong>Compare groups</strong> — <code>jt</code> (<em>t</em>-test), <code>jaov</code> (ANOVA), <code>jcrosstab</code> (cross-tabulation)</li>
+<li>
+<strong>Relate &amp; model</strong> — <code>jcorr</code> (correlation), <code>jlm</code> (linear regression), <code>jlogistic</code> (logistic regression)</li>
+<li>
+<strong>Scale reliability</strong> — <code>jalpha</code> (Cronbach’s alpha)</li>
+<li>
+<strong>Prepare &amp; screen</strong> — <code>jscreen</code>, <code>jrecode</code>, <code>jrelabel</code>, <code>jsubset</code>
+</li>
+<li>
+<strong>Import &amp; export</strong> — <code>jload</code>, <code>jsave</code>, <code>jconvert</code> (round-trip between SPSS, Stata, SAS, Excel, and CSV)</li>
+<li>
+<strong>Plot</strong> — <code>jplot</code>
+</li>
+</ul>
+<p>Functions accept <code>haven</code>-labelled or plain numeric variables directly — there is normally no need to convert anything to factors yourself. (A second bundled dataset, <code>clinic</code>, offers messier data for practicing cleaning and missing-value handling.)</p>
+</div>
+<div class="section level2">
+<h2 id="staying-up-to-date">Staying up to date<a class="anchor" aria-label="anchor" href="#staying-up-to-date"></a>
+</h2>
+<p>jstats is under active development, and new versions appear regularly. To update, run:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/jupdate.html">jupdate</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>It fetches and installs the latest version in one step; restart R afterward to load it.</p>
+</div>
+<div class="section level2">
+<h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
+</h2>
+<ul>
+<li>
+<strong>Function reference</strong> — <a href="https://jma61.github.io/jstats/" class="uri">https://jma61.github.io/jstats/</a>
+</li>
+<li>
+<strong>Getting-started guides</strong> (no prior R assumed) — <a href="https://jma61.github.io/jstats-guides/" class="uri">https://jma61.github.io/jstats-guides/</a>
+</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
+</h2>
+<p>jstats is free, open-source software, released under the <a href="LICENSE">MIT License</a>.</p>
+<hr>
+<p>Created and maintained by Jeff Ackerman.</p>
+</div>
+</div>
   </main><aside class="col-md-3"><div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
