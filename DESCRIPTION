@@ -34,6 +34,6 @@ Imports:
     readxl,
     writexl,
     callr
-Suggests: generics, remotes
+Suggests: generics
 LazyData: true
 URL: https://jma61.github.io/jstats/
