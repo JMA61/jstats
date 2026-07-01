@@ -18,12 +18,12 @@ Invisibly \code{NULL}. Called for its side effect of installing the
 update, and for the messages it prints.
 }
 \description{
-\code{jupdate()} installs the most recent version of jstats. While the
-package is distributed from GitHub (its current pre-release phase), this
-downloads and installs the latest build from there; once jstats reaches
-CRAN, the same command will update it the ordinary way. Either way, you run
-one command instead of having to remember an install line. It is safe to
-call from the console, a script, or a Quarto document.
+\code{jupdate()} installs the most recent version of jstats. While jstats is
+in its pre-release phase this downloads and installs the latest pre-built
+version; once jstats reaches CRAN, the same command will update it the
+ordinary way. Either way, you run one command instead of having to remember
+an install line. It is safe to call from the console, a script, or a Quarto
+document.
 }
 \details{
 The function checks for an internet connection first; if jstats is already

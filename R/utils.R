@@ -137,12 +137,12 @@
 
 #' Update jstats to the latest version
 #'
-#' \code{jupdate()} installs the most recent version of jstats. While the
-#' package is distributed from GitHub (its current pre-release phase), this
-#' downloads and installs the latest build from there; once jstats reaches
-#' CRAN, the same command will update it the ordinary way. Either way, you run
-#' one command instead of having to remember an install line. It is safe to
-#' call from the console, a script, or a Quarto document.
+#' \code{jupdate()} installs the most recent version of jstats. While jstats is
+#' in its pre-release phase this downloads and installs the latest pre-built
+#' version; once jstats reaches CRAN, the same command will update it the
+#' ordinary way. Either way, you run one command instead of having to remember
+#' an install line. It is safe to call from the console, a script, or a Quarto
+#' document.
 #'
 #' The function checks for an internet connection first; if jstats is already
 #' up to date it says so and stops. The install runs in a separate R process so
@@ -167,22 +167,12 @@
 #'
 #' @export
 jupdate <- function(ask = FALSE) {
-  # The install needs the remotes package. Users who installed
-  # jstats from GitHub already have it; this guards the rare case (a built-file
-  # install, or a package cleanup) where it is missing.
-  if (!requireNamespace("remotes", quietly = TRUE)) {
-    .jst_stop(
-      'updating needs the "remotes" package, which is not installed. ',
-      'Run install.packages("remotes"), then run jupdate() again.'
-    )
-  }
-
   # One network read doubles as a connectivity probe and a migration check.
   gist <- .jst_read_gist()
   if (!isTRUE(gist$network_ok)) {
     .jst_stop(
-      "no internet connection was detected. Updating downloads jstats from ",
-      "GitHub, which needs a connection. Connect and run jupdate() again."
+      "no internet connection was detected. Updating jstats needs an ",
+      "internet connection. Connect and run jupdate() again."
     )
   }
 
@@ -205,7 +195,7 @@ jupdate <- function(ask = FALSE) {
   }
 
   installed_ver <- as.character(utils::packageVersion("jstats"))
-  latest_ver    <- .jst_latest_github_version()
+  latest_ver    <- .jst_latest_universe_version()
 
   if (!is.na(latest_ver) &&
       package_version(latest_ver) <= package_version(installed_ver)) {
@@ -220,7 +210,7 @@ jupdate <- function(ask = FALSE) {
     prompt <- if (is.na(latest_ver)) {
       paste0(
         "Could not confirm the latest version, but a connection is available. ",
-        "Install the latest jstats from GitHub anyway?"
+        "Install the latest jstats anyway?"
       )
     } else {
       paste0(
@@ -234,15 +224,20 @@ jupdate <- function(ask = FALSE) {
     }
   }
 
-  message("Updating jstats from GitHub ... (this may take a moment)")
+  message("Updating jstats ... (this may take a moment)")
 
   # Install in a clean, separate R process (via callr, an Imports dependency, so
   # always available). Because that process never loads jstats, the package
   # files are not locked, and the install completes even on Windows. A genuine
-  # build failure makes the child error, which is surfaced honestly.
+  # install failure makes the child error, which is surfaced honestly.
   err <- tryCatch({
     callr::r(
-      function() remotes::install_github("JMA61/jstats", upgrade = "never")
+      function() {
+        install.packages(
+          "jstats",
+          repos = c("https://jma61.r-universe.dev", "https://cloud.r-project.org")
+        )
+      }
     )
     NULL
   }, error = function(e) conditionMessage(e))

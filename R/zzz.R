@@ -7,7 +7,7 @@
 #                  jstats.check_updates option is TRUE (the default), it
 #                  performs up to two network reads: (1) a redirect-and-
 #                  announce gist (successor-package migration or one-off
-#                  broadcast), and (2) a GitHub DESCRIPTION version check.
+#                  broadcast), and (2) an r-universe version check.
 #                  Both fail silently on network errors, and the gist read
 #                  doubles as a connectivity probe: if it cannot reach the
 #                  network, the version check is skipped rather than left to
@@ -85,7 +85,7 @@
 # The network read here doubles as a connectivity probe for .onAttach(): the
 # readLines() call is the ONLY part that touches the network, so its success
 # or failure is a reliable signal for whether a second network read (the
-# GitHub version check) is worth attempting. A connection failure throws and
+# r-universe version check) is worth attempting. A connection failure throws and
 # is caught -> network_ok = FALSE, and the caller skips the second read. A
 # PARSE failure is different: it can only occur AFTER readLines() has already
 # succeeded, so the network was fine and network_ok stays TRUE -- a transient
@@ -115,41 +115,45 @@
 }
 
 
-# -- Internal: fetch the latest jstats version from GitHub ---------------------
+# -- Internal: fetch the latest jstats version from r-universe -----------------
 #
-# Reads the Version field from the DESCRIPTION on the main branch and returns
-# it as a character string, or NA_character_ if the read or parse fails (no
-# network, GitHub unreachable, or a malformed file). Factored out so the GitHub
-# version read lives in exactly one place: both the load-time check
-# (.jst_show_version_status) and jupdate() call it.
+# Reads the published Version from the jstats r-universe package index and
+# returns it as a character string, or NA_character_ if the read fails (no
+# network, the repository unreachable, or jstats not listed). Reads the source
+# index (type = "source") so the version comes back regardless of the running R
+# version or platform. Factored out so the version read lives in exactly one
+# place: both the load-time check (.jst_show_version_status) and jupdate() call
+# it.
 
-.jst_latest_github_version <- function() {
+.jst_latest_universe_version <- function() {
   old_opts <- options(timeout = 3)
   on.exit(options(old_opts), add = TRUE)
 
   tryCatch({
-    github_desc <- readLines(
-      "https://raw.githubusercontent.com/JMA61/jstats/main/DESCRIPTION",
-      warn = FALSE
-    )
-    ver_line <- github_desc[grepl("^Version:", github_desc)]
-    if (length(ver_line) == 0) return(NA_character_)
-    trimws(sub("^Version:", "", ver_line))
+    ap <- suppressWarnings(available.packages(
+      repos = "https://jma61.r-universe.dev",
+      type  = "source"
+    ))
+    if ("jstats" %in% rownames(ap)) {
+      as.character(ap["jstats", "Version"])
+    } else {
+      NA_character_
+    }
   }, error = function(e) NA_character_)
 }
 
 
 # -- Internal: show the standard version-check message -------------------------
 #
-# Compares the latest GitHub version (via .jst_latest_github_version()) to the
-# installed version and prints either an "up to date" line or a short upgrade
-# notice that points at jupdate(). Falls back to a "loaded" line if the GitHub
-# read fails (typically no internet).
+# Compares the latest r-universe version (via .jst_latest_universe_version()) to
+# the installed version and prints either an "up to date" line or a short
+# upgrade notice that points at jupdate(). Falls back to a "loaded" line if the
+# version read fails (typically no internet).
 
 .jst_show_version_status <- function(installed_ver) {
-  github_ver <- .jst_latest_github_version()
+  universe_ver <- .jst_latest_universe_version()
 
-  if (is.na(github_ver)) {
+  if (is.na(universe_ver)) {
     packageStartupMessage(
       "jstats v", installed_ver, " loaded.",
       " (Could not check for updates - no internet connection?)"
@@ -157,10 +161,10 @@
     return(invisible())
   }
 
-  if (package_version(github_ver) > package_version(installed_ver)) {
+  if (package_version(universe_ver) > package_version(installed_ver)) {
     packageStartupMessage(
       "=======================================================\n",
-      " A new version of jstats is available (", github_ver, ").\n",
+      " A new version of jstats is available (", universe_ver, ").\n",
       " You have version ", installed_ver, ".\n",
       " To update, run:\n",
       "   jupdate()\n",
@@ -312,9 +316,9 @@
   gist_info <- .jst_read_gist()
 
   # If the gist says a successor exists, show migration message only.
-  # Otherwise run the standard GitHub version check -- but bail (skip it) when
-  # the gist read could not reach the network, since the GitHub read would
-  # only time out as well. The direct fallback line below matches the one
+  # Otherwise run the standard r-universe version check -- but bail (skip it)
+  # when the gist read could not reach the network, since the version read
+  # would only time out as well. The direct fallback line below matches the one
   # .jst_show_version_status() prints on its own failure, so the user sees the
   # same notice without waiting out a second timeout.
   if (!is.null(gist_info$successor) &&
