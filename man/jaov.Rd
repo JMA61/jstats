@@ -21,7 +21,9 @@ jaov(
 )
 }
 \arguments{
-\item{formula}{A formula of the form \code{DV ~ Group}.}
+\item{formula}{A formula of the form \code{DV ~ Group}. A transformed
+term such as \code{log(DV)} is computed automatically: the tests and
+the descriptive output all use the transformed values.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 

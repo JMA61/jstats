@@ -19,11 +19,14 @@ untouched for downstream handling.
 \description{
 Detects a function call among the formula's variables -- log(x), I(x^2),
 sqrt(x), and the like, on either side -- and stops with a clear message
-(AUDIT-005). Without this front-door check, jlm/jlogistic build the model
-frame from the data (which yields a column literally named "log(x)") and
-then refit against that frame, where the term goes looking for a plain x
-that no longer exists; the user gets base R's raw, unattributed
-"object 'x' not found". Interaction terms (x * z, x:z) are unaffected:
+(AUDIT-005). Used where transformed terms stay unsupported: jcrosstab,
+whose row and column variables must be plain names (a numeric transform
+of a categorical variable has no cross-tabulation meaning, and the
+pre-check era silently tabulated the raw column instead). The analysis
+functions that DO support transformed terms (jt, jaov, jlm, jlogistic)
+route through .jst_resolve_formula_transforms instead, which computes
+the term and rewrites the formula rather than refusing (AUDIT-021).
+Interaction terms (x * z, x:z) are unaffected:
 terms() lists their component variables as plain names, not calls.
 When the offending call is a single function applied to one bare
 variable, the message includes a runnable make-the-variable example

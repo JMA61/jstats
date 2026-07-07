@@ -20,7 +20,9 @@
 #' A red title identifying the test type is printed first, followed by
 #' variable labels (if present), then the results tables.
 #'
-#' @param formula A formula of the form \code{DV ~ Group}.
+#' @param formula A formula of the form \code{DV ~ Group}. A transformed
+#'   term such as \code{log(DV)} is computed automatically: the test and
+#'   the descriptive output both use the transformed values.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param paired Logical. If TRUE, runs a paired samples t-test. Cases are
 #'   paired by position: the i-th case in one group is matched with the
@@ -157,6 +159,20 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
+  # Raw-name existence check first, so the transform resolver below can
+  # assume every plain variable in the formula exists.
+  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+                  default_used = .jst_default_used)
+
+  # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
+  # the like once on the analysis copy and rewrite the formula to reference
+  # the computed column, so the t-test (both the independent formula path
+  # and the paired by-name path) and the Group Descriptives table describe
+  # the same values under the name the user typed.
+  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
+  formula  <- resolved$formula
+  data     <- resolved$data
+
   terms      <- all.vars(formula)
   dv_name    <- terms[1]
   group_name <- terms[2]
@@ -168,7 +184,6 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      "A t-test requires two different variables."))
   }
 
-  .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
   .jst_check_dummy_outcome(.jst_data_name, dv_name, "jt")
   # Type gate (Session 46): refuse a date DV (would coerce silently to a day
   # count) or a text/complex DV (would crash); grouping variable may be
@@ -496,7 +511,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' A red title identifying the test type is printed first, followed by
 #' variable labels (if present), then the results tables.
 #'
-#' @param formula A formula of the form \code{DV ~ Group}.
+#' @param formula A formula of the form \code{DV ~ Group}. A transformed
+#'   term such as \code{log(DV)} is computed automatically: the tests and
+#'   the descriptive output all use the transformed values.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param welch Logical. If FALSE (default), runs traditional ANOVA.
 #'   If TRUE, runs Welch's ANOVA (does not assume equal variances).
@@ -628,6 +645,20 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
+  # Raw-name existence check first, so the transform resolver below can
+  # assume every plain variable in the formula exists.
+  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+                  default_used = .jst_default_used)
+
+  # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
+  # the like once on the analysis copy and rewrite the formula to reference
+  # the computed column, so the F test, Levene's test, the post hoc
+  # comparisons, and the descriptives all describe the same values under
+  # the name the user typed.
+  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
+  formula  <- resolved$formula
+  data     <- resolved$data
+
   terms      <- all.vars(formula)
   dv_name    <- terms[1]
   group_name <- terms[2]
@@ -639,7 +670,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      "An ANOVA requires two different variables."))
   }
 
-  .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
   .jst_check_dummy_outcome(.jst_data_name, dv_name, "jaov")
   # Type gate (Session 46): response must be numeric; grouping variable may be
   # categorical. Date/time and complex/list/raw refused. See .jst_check_analysis_var.
@@ -990,7 +1020,10 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' A red "Cross-Tabulation" title is printed first, followed by
 #' variable labels (if present), then the table and optional test results.
 #'
-#' @param formula A formula of the form \code{Row ~ Column}.
+#' @param formula A formula of the form \code{Row ~ Column}, naming plain
+#'   variables. Transformed terms such as \code{log(x)} are not supported
+#'   here -- create the variable first (e.g. with \code{cut()} for
+#'   binning), then cross-tabulate it.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param chisq Logical. If TRUE, prints the chi-square test of independence
 #'   below the cross-tabulation. For a 2x2 table, two rows are shown --
@@ -1136,6 +1169,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   }
 
   .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
+  # Transformed-term front door (AUDIT-021): a cross-tabulation needs plain
+  # variables. Pre-check, a term like log(x) was silently ignored -- table()
+  # pulls columns by name, so the raw column was tabulated as if the
+  # transform had not been written. Refuse it clearly instead. (The analysis
+  # functions with a numeric response resolve such terms via
+  # .jst_resolve_formula_transforms; here a numeric transform of a
+  # categorical variable has no cross-tabulation meaning.)
+  .jst_check_formula_transforms(formula, .jst_data_name)
   # Type gate (Session 46): both variables are categorical; refuse date/time
   # and complex/list/raw. See .jst_check_analysis_var.
   for (.gv in terms) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a cross-tabulation")

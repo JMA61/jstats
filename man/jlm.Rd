@@ -24,7 +24,9 @@ jlm(
 )
 }
 \arguments{
-\item{formula}{A model formula, e.g. \code{y ~ x1 + x2}.}
+\item{formula}{A model formula, e.g. \code{y ~ x1 + x2}. Transformed
+terms such as \code{log(y)} or \code{I(x1^2)} are computed
+automatically and used throughout the output.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 

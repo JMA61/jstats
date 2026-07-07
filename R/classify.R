@@ -750,11 +750,14 @@
 #'
 #' Detects a function call among the formula's variables -- log(x), I(x^2),
 #' sqrt(x), and the like, on either side -- and stops with a clear message
-#' (AUDIT-005). Without this front-door check, jlm/jlogistic build the model
-#' frame from the data (which yields a column literally named "log(x)") and
-#' then refit against that frame, where the term goes looking for a plain x
-#' that no longer exists; the user gets base R's raw, unattributed
-#' "object 'x' not found". Interaction terms (x * z, x:z) are unaffected:
+#' (AUDIT-005). Used where transformed terms stay unsupported: jcrosstab,
+#' whose row and column variables must be plain names (a numeric transform
+#' of a categorical variable has no cross-tabulation meaning, and the
+#' pre-check era silently tabulated the raw column instead). The analysis
+#' functions that DO support transformed terms (jt, jaov, jlm, jlogistic)
+#' route through .jst_resolve_formula_transforms instead, which computes
+#' the term and rewrites the formula rather than refusing (AUDIT-021).
+#' Interaction terms (x * z, x:z) are unaffected:
 #' terms() lists their component variables as plain names, not calls.
 #' When the offending call is a single function applied to one bare
 #' variable, the message includes a runnable make-the-variable example
@@ -792,6 +795,180 @@
               "then use that column in the formula.")
   }
   invisible(NULL)
+}
+
+#' Internal helper: strip backticks from design-matrix term names
+#'
+#' A resolved transformed term is a column whose name is non-syntactic
+#' ("log(x)"), which the rewritten formula references as a backticked name.
+#' Design-matrix machinery (lm/glm coefficient rownames, model.matrix and
+#' VIF column names, a standardized refit's coefficient names) deparses
+#' that symbol WITH its backticks. Stripping them at each capture point
+#' keeps every downstream key -- display rownames, the japa-ready term
+#' keys, the standardized-beta and Gelman-beta name matches, the VIF
+#' Variable column -- in the same clean form as the data frame's own
+#' column names. A no-op for ordinary syntactic names. (A factor level
+#' containing a literal backtick would also lose it in these display
+#' keys; accepted as vanishingly rare.)
+#'
+#' @param x Character vector of term names.
+#' @return x with all backtick characters removed.
+#' @keywords internal
+.jst_unbacktick <- function(x) gsub("`", "", x, fixed = TRUE)
+
+#' Internal helper: resolve transformed formula terms into computed columns
+#'
+#' Walks the formula's variables for function-call terms -- log(x), I(x^2),
+#' sqrt(x), and the like, on either side -- and, for each supported term,
+#' computes the transformed values once on the analysis copy and stores them
+#' as a column whose name is the term's own text (a column literally named
+#' "log(x)"), rewriting the formula to reference that column as a plain
+#' name. Everything downstream -- the descriptives, the Case Processing
+#' Summary, the model fit, the standardized-beta refit -- then sees an
+#' ordinary variable whose printed name is the expression the user typed,
+#' so the test statistic and the descriptive output describe the same
+#' values (AUDIT-021) and the model-frame refit that motivated the former
+#' front-door refusal (AUDIT-005) finds the column by name instead of
+#' re-evaluating the term. Interaction terms (x * z, x:z) are untouched:
+#' terms() lists their component variables as plain names, not calls. A
+#' transformed term nested inside an interaction (log(x):z) is listed as
+#' its own variable by terms(), so it is computed and substituted inside
+#' the interaction. Supersedes the AUDIT-005 refusal in jlm and jlogistic;
+#' .jst_check_formula_transforms remains in use where transformed terms
+#' stay unsupported (jcrosstab).
+#'
+#' A term is supported when it evaluates against the analysis copy to a
+#' single numeric or logical column with one value per case. Terms that
+#' produce several columns (poly(x, 2), spline bases), a categorical
+#' result (cut(x, 3)), a single summary value (mean(x)), or an evaluation
+#' error are refused in house voice with a make-the-variable message.
+#' Evaluation happens on the pipeline-masked analysis copy, so declared
+#' SPSS-style missing values are already NA before any arithmetic touches
+#' them; haven-labelled inputs are unclassed to plain numeric for the
+#' computation, the same coercion the analysis functions apply themselves.
+#' Objects that are not columns (a threshold constant in I(x > cutoff))
+#' resolve in the formula's own environment, matching model.frame().
+#'
+#' @param formula The user's analysis formula.
+#' @param data The analysis data frame (the post-pipeline copy).
+#' @param data_name Character; the data frame's name (for messages).
+#' @return A list: formula (rewritten when any term was computed, otherwise
+#'   the input), data (with any computed columns appended), and computed
+#'   (character vector of the computed columns' names, possibly empty). A
+#'   formula that terms() cannot process (e.g. a bare dot) passes through
+#'   untouched for downstream handling.
+#' @keywords internal
+.jst_resolve_formula_transforms <- function(formula, data, data_name) {
+  out  <- list(formula = formula, data = data, computed = character(0))
+  vars <- tryCatch(attr(stats::terms(formula), "variables"),
+                   error = function(e) NULL)
+  if (is.null(vars)) return(out)
+
+  term_list <- as.list(vars)[-1L]
+  call_terms <- term_list[vapply(term_list, is.call, logical(1))]
+  if (length(call_terms) == 0L) return(out)
+
+  # Evaluation environment: the analysis copy, with haven-labelled columns
+  # unclassed to plain numeric (the coercion the analysis functions apply
+  # themselves). Declared SPSS-style missing values are already NA here --
+  # the pipeline's masking pass runs before this helper. Functions and any
+  # non-column objects resolve in the formula's own environment, matching
+  # base R's model.frame() lookup.
+  eval_data <- data
+  for (v in names(eval_data)) {
+    if (haven::is.labelled(eval_data[[v]])) {
+      eval_data[[v]] <- .jst_as_numeric(eval_data[[v]])
+    }
+  }
+  enclos <- environment(formula)
+  if (is.null(enclos)) enclos <- parent.frame()
+
+  computed <- character(0)
+  for (v in call_terms) {
+    term_txt <- paste(deparse(v), collapse = "")
+    if (term_txt %in% computed) next
+
+    if (term_txt %in% names(data)) {
+      .jst_stop("The formula term ", term_txt, " matches the name of an ",
+                "existing column in ", data_name, ".\n",
+                "Rename that column, or create the transformed variable ",
+                "under a new name and use that name in the formula.")
+    }
+
+    res <- tryCatch(eval(v, eval_data, enclos), error = function(e) e)
+    if (inherits(res, "error")) {
+      .jst_stop("The formula term ", term_txt, " could not be computed (",
+                conditionMessage(res), ").\n",
+                "Create the transformed variable as a new column first, ",
+                "then use that column in the formula.")
+    }
+
+    n_col <- NCOL(res)
+    if ((is.matrix(res) || is.data.frame(res)) && n_col > 1L) {
+      .jst_stop("The formula term ", term_txt, " produces ", n_col,
+                " columns, not a single variable.\n",
+                "Create each column as its own variable first, then use ",
+                "those variables in the formula.")
+    }
+    if (is.matrix(res) || is.data.frame(res)) res <- res[, 1L]
+
+    if (is.factor(res) || is.character(res)) {
+      .jst_stop("The formula term ", term_txt, " produces a categorical ",
+                "variable, not a numeric one.\n",
+                "Create it as a new column first, then use that column ",
+                "in the formula.")
+    }
+    if (!is.numeric(res) && !is.logical(res)) {
+      .jst_stop("The formula term ", term_txt, " does not produce a ",
+                "numeric variable.\n",
+                "Create the transformed variable as a new column first, ",
+                "then use that column in the formula.")
+    }
+
+    res <- as.vector(res)
+    if (length(res) == 1L && nrow(data) != 1L) {
+      .jst_stop("The formula term ", term_txt, " produces a single value, ",
+                "not a variable with one value per case.\n",
+                "Create the transformed variable as a new column first, ",
+                "then use that column in the formula.")
+    }
+    if (length(res) != nrow(data)) {
+      .jst_stop("The formula term ", term_txt, " produces ", length(res),
+                " values for ", nrow(data), " cases.\n",
+                "Create the transformed variable as a new column first, ",
+                "then use that column in the formula.")
+    }
+
+    data[[term_txt]] <- res
+    computed <- c(computed, term_txt)
+  }
+
+  # Substitute each computed call in the formula with the plain (backticked)
+  # name of its computed column, descending into interactions and other
+  # containing calls. Editing the formula object in place preserves its
+  # class and environment. The empty-symbol guard skips a missing argument
+  # (as in x[, 1]) that indexing would otherwise choke on.
+  sub_term <- function(e) {
+    if (is.call(e)) {
+      txt <- paste(deparse(e), collapse = "")
+      if (txt %in% computed) return(as.name(txt))
+      for (k in seq_along(e)) {
+        if (k == 1L) next
+        if (identical(as.list(e)[[k]], substitute())) next
+        e[[k]] <- sub_term(e[[k]])
+      }
+    }
+    e
+  }
+  new_formula <- formula
+  for (k in 2:length(new_formula)) {
+    new_formula[[k]] <- sub_term(new_formula[[k]])
+  }
+
+  out$formula  <- new_formula
+  out$data     <- data
+  out$computed <- computed
+  out
 }
 
 #' Internal helper: gate a variable for use in an analysis function

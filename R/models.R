@@ -774,7 +774,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   tryCatch({
     R <- stats::cor(X)
     vif_values <- diag(solve(R))
-    names(vif_values) <- colnames(X)
+    names(vif_values) <- .jst_unbacktick(colnames(X))
     vif_values
   }, error = function(e) {
     message("VIF could not be computed (possible perfect collinearity).")
@@ -1201,7 +1201,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     (\code{numeric}) or stated definitively (\code{count}).
 #' }
 #'
-#' @param formula A model formula, e.g. \code{y ~ x1 + x2}.
+#' @param formula A model formula, e.g. \code{y ~ x1 + x2}. Transformed
+#'   terms such as \code{log(y)} or \code{I(x1^2)} are computed
+#'   automatically and used throughout the output.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
@@ -1480,19 +1482,37 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     }
   }
 
+  # Raw-name existence check first, so the transform resolver below can
+  # assume every plain variable in the formula exists.
+  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+                  default_used = .jst_default_used)
+
+  # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
+  # refusal): compute log(x), I(x^2), and the like once on the analysis
+  # copy and rewrite the formula to reference the computed column, so the
+  # model, the descriptives, and the standardized-beta refit all see the
+  # same values under the name the user typed.
+  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
+  formula  <- resolved$formula
+  data     <- resolved$data
+
   model_vars            <- all.vars(formula)
   # Preserve the original (pre-expansion) variable names for use in
   # missing-by-variable reporting. After dummy expansion, model_vars
   # holds the dummy column names (e.g. ProgramApprenticeship); the
   # user wrote "Program" in the formula and the diagnostic should
-  # speak the user's language.
+  # speak the user's language. (A resolved transform keeps the user's
+  # language automatically: its column is named with the term's own
+  # text, e.g. "log(Age)".)
   original_formula_vars <- model_vars
 
   # DV-as-IV guard (Session 105): all.vars() deduplicates, so a formula like
   # MathScore ~ MathScore + Age is invisible downstream -- lm() would warn
   # cryptically, drop the response from the right-hand side, and fit a
-  # different model than the user wrote. Checked on the raw formula, before
-  # dummy expansion can rewrite the right-hand side.
+  # different model than the user wrote. Checked on the resolved formula
+  # (so log(y) ~ y, a different DV and IV, passes; log(y) ~ log(y), the
+  # same computed column twice, is caught) and before dummy expansion can
+  # rewrite the right-hand side.
   dup_var <- .jst_formula_dup_var(formula)
   if (!is.null(dup_var)) {
     .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
@@ -1500,11 +1520,6 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                      "Each variable can only play one role in a regression."))
   }
 
-  .jst_check_vars(data, model_vars, .jst_data_name, default_used = .jst_default_used)
-  # Transformed-term front door (AUDIT-005): refuse log(x), I(x^2), and the
-  # like before any model work; downstream, the mf refit would otherwise die
-  # with base R's raw "object 'x' not found".
-  .jst_check_formula_transforms(formula, .jst_data_name)
   # Type gate (Session 46): the response must be numeric; predictors may be
   # numeric or categorical. Date/time and complex/list/raw refused in both
   # roles. See .jst_check_analysis_var.
@@ -1937,6 +1952,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   coefs <- as.data.frame(model_summary$coefficients, stringsAsFactors = FALSE)
   colnames(coefs)[1:4] <- c("b", "StdErr", "t", "P")
+  # Resolved-transform columns fit under backticked names; normalize the
+  # design-matrix keys once here so every downstream match (std/Gelman
+  # betas, model.matrix lookup, display cleaning, japa term keys) sees the
+  # clean column-name form. No-op for ordinary names.
+  rownames(coefs) <- .jst_unbacktick(rownames(coefs))
 
   # Machine term keys (design-matrix coefficient names: "(Intercept)",
   # "ProgramApprenticeship", "Age", ...), captured BEFORE the display rownames
@@ -1964,6 +1984,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   std_model        <- stats::lm(formula, data = mf_std)
   std_coefs        <- stats::coef(std_model)
+  names(std_coefs) <- .jst_unbacktick(names(std_coefs))
   std_b            <- rep(NA_real_, nrow(coefs))
   names(std_b)     <- rownames(coefs)
   common           <- intersect(names(std_coefs), names(std_b))
@@ -1993,6 +2014,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   names(gelman_b) <- rownames(coefs)
   b_named         <- stats::setNames(coefs$b, rownames(coefs))
   mm              <- stats::model.matrix(model)
+  colnames(mm)    <- .jst_unbacktick(colnames(mm))
   for (nm in rownames(coefs)) {
     if (identical(nm, "(Intercept)")) next
     if (!nm %in% colnames(mm)) next
@@ -2381,7 +2403,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' in the same way as \code{jlm()}.
 #'
 #' @param formula A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
-#'   must be a binary variable coded 0/1.
+#'   must be a binary variable coded 0/1. Transformed predictor terms such
+#'   as \code{log(IV1)} are computed automatically and used throughout the
+#'   output.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only.
@@ -2622,17 +2646,33 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
+  # Raw-name existence check first, so the transform resolver below can
+  # assume every plain variable in the formula exists.
+  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+                  default_used = .jst_default_used)
+
+  # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
+  # refusal): compute log(x), I(x^2), and the like once on the analysis
+  # copy and rewrite the formula to reference the computed column. See the
+  # matching block in jlm.
+  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
+  formula  <- resolved$formula
+  data     <- resolved$data
+
   model_vars            <- all.vars(formula)
   dv_name               <- model_vars[1]
 
   # Preserve the original (pre-expansion) variable names for use in
   # missing-by-variable reporting. After dummy expansion, model_vars
   # holds the dummy column names; the user wrote the originals in
-  # the formula and the diagnostic should speak the user's language.
+  # the formula and the diagnostic should speak the user's language. (A
+  # resolved transform keeps the user's language automatically: its column
+  # is named with the term's own text.)
   original_formula_vars <- model_vars
 
   # DV-as-IV guard (Session 105): see the matching block in jlm. Checked on
-  # the raw formula, before dummy expansion can rewrite the right-hand side.
+  # the resolved formula, before dummy expansion can rewrite the
+  # right-hand side.
   dup_var <- .jst_formula_dup_var(formula)
   if (!is.null(dup_var)) {
     .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
@@ -2640,11 +2680,6 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                      "Each variable can only play one role in a regression."))
   }
 
-  .jst_check_vars(data, model_vars, .jst_data_name, default_used = .jst_default_used)
-  # Transformed-term front door (AUDIT-005): refuse log(x), I(x^2), and the
-  # like before any model work; downstream, the mf refit would otherwise die
-  # with base R's raw "object 'x' not found".
-  .jst_check_formula_transforms(formula, .jst_data_name)
   # Type gate (Session 46): the response is binary and may be a recognized
   # text/factor pair (e.g. "Yes"/"No") or logical, so it passes as categorical
   # here -- the DV-resolution block below classifies it via .jst_is_dichotomy(),
@@ -3057,6 +3092,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # -- Coefficients table ----------------------------------------------------
   coefs    <- as.data.frame(model_summary$coefficients, stringsAsFactors = FALSE)
   colnames(coefs) <- c("b", "SE", "z", "P")
+  # Resolved-transform columns fit under backticked names; normalize the
+  # design-matrix keys once here (see the matching line in jlm).
+  rownames(coefs) <- .jst_unbacktick(rownames(coefs))
 
   # Wald chi-square = z^2
   wald <- coefs$z^2
@@ -3219,7 +3257,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       vif_values <- tryCatch({
         R <- stats::cor(X)
         vif_vals <- diag(solve(R))
-        names(vif_vals) <- colnames(X)
+        names(vif_vals) <- .jst_unbacktick(colnames(X))
         vif_vals
       }, error = function(e) {
         message("VIF could not be computed (possible perfect collinearity).")
@@ -3260,7 +3298,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       vif_values <- tryCatch({
         R <- stats::cor(X)
         vif_vals <- diag(solve(R))
-        names(vif_vals) <- colnames(X)
+        names(vif_vals) <- .jst_unbacktick(colnames(X))
         vif_vals
       }, error = function(e) NULL)
     }

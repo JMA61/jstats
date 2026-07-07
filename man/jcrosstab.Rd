@@ -20,7 +20,10 @@ jcrosstab(
 )
 }
 \arguments{
-\item{formula}{A formula of the form \code{Row ~ Column}.}
+\item{formula}{A formula of the form \code{Row ~ Column}, naming plain
+variables. Transformed terms such as \code{log(x)} are not supported
+here -- create the variable first (e.g. with \code{cut()} for
+binning), then cross-tabulate it.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 

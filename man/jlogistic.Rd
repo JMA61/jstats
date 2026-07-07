@@ -25,7 +25,9 @@ jlogistic(
 }
 \arguments{
 \item{formula}{A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
-must be a binary variable coded 0/1.}
+must be a binary variable coded 0/1. Transformed predictor terms such
+as \code{log(IV1)} are computed automatically and used throughout the
+output.}
 
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 
