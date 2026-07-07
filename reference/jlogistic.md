@@ -34,7 +34,8 @@ jlogistic(
 - formula:
 
   A model formula, e.g. `DV ~ IV1 + IV2`. The DV must be a binary
-  variable coded 0/1.
+  variable coded 0/1. Transformed predictor terms such as `log(IV1)` are
+  computed automatically and used throughout the output.
 
 - data:
 

@@ -33,7 +33,9 @@ jt(
 
 - formula:
 
-  A formula of the form `DV ~ Group`.
+  A formula of the form `DV ~ Group`. A transformed term such as
+  `log(DV)` is computed automatically: the test and the descriptive
+  output both use the transformed values.
 
 - data:
 

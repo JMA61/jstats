@@ -17,7 +17,7 @@ variables, numeric codes are displayed alongside labels."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.97</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.98</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,7 +73,10 @@ variables, numeric codes are displayed alongside labels.</p>
 
 
 <dl><dt id="arg-formula">formula<a class="anchor" aria-label="anchor" href="#arg-formula"></a></dt>
-<dd><p>A formula of the form <code>Row ~ Column</code>.</p></dd>
+<dd><p>A formula of the form <code>Row ~ Column</code>, naming plain
+variables. Transformed terms such as <code>log(x)</code> are not supported
+here – create the variable first (e.g. with <code><a href="https://rdrr.io/r/base/cut.html" class="external-link">cut()</a></code> for
+binning), then cross-tabulate it.</p></dd>
 
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>

@@ -34,7 +34,9 @@ jlm(
 
 - formula:
 
-  A model formula, e.g. `y ~ x1 + x2`.
+  A model formula, e.g. `y ~ x1 + x2`. Transformed terms such as
+  `log(y)` or `I(x1^2)` are computed automatically and used throughout
+  the output.
 
 - data:
 

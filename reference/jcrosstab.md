@@ -30,7 +30,10 @@ jcrosstab(
 
 - formula:
 
-  A formula of the form `Row ~ Column`.
+  A formula of the form `Row ~ Column`, naming plain variables.
+  Transformed terms such as `log(x)` are not supported here – create the
+  variable first (e.g. with [`cut()`](https://rdrr.io/r/base/cut.html)
+  for binning), then cross-tabulate it.
 
 - data:
 
