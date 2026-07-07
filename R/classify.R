@@ -842,7 +842,16 @@
 #' produce several columns (poly(x, 2), spline bases), a categorical
 #' result (cut(x, 3)), a single summary value (mean(x)), or an evaluation
 #' error are refused in house voice with a make-the-variable message.
-#' Evaluation happens on the pipeline-masked analysis copy, so declared
+#' A term is also refused, before evaluation, when its argument is a
+#' variable the package classifies as Categorical -- most importantly a
+#' value-labelled categorical, whose numeric codes would otherwise be
+#' transformed silently into a meaningless predictor (log() of a 1/2/3/4
+#' category code fits with no error). The check uses the same classification
+#' stack the analysis path uses, so a jnumeric/jcount registration moves the
+#' variable to Numeric and lifts the refusal -- the identical escape hatch,
+#' and the exact path the message names -- while factor/character arguments
+#' are caught here too (a typed message in place of base R's raw non-numeric
+#' error). Evaluation happens on the pipeline-masked analysis copy, so declared
 #' SPSS-style missing values are already NA before any arithmetic touches
 #' them; haven-labelled inputs are unclassed to plain numeric for the
 #' computation, the same coercion the analysis functions apply themselves.
@@ -893,6 +902,35 @@
                 "existing column in ", data_name, ".\n",
                 "Rename that column, or create the transformed variable ",
                 "under a new name and use that name in the formula.")
+    }
+
+    # Categorical-argument guard: a numeric transform applied to a variable
+    # the package classifies as Categorical is refused before evaluation.
+    # This closes the silent path where a haven-labelled categorical unclasses
+    # to its integer codes and log()/I(x^2) computes a meaningless number from
+    # them (a value-labelled var whose codes are 1,2,3,4 would otherwise fit
+    # with no error). The check runs on the raw column via the same
+    # classification stack the analysis path uses, so a jnumeric/jcount
+    # registration moves the variable to the Numeric class and lifts the
+    # refusal -- identical to the escape hatch for the bare variable, and the
+    # exact path the message points to. (A per-call numeric= cannot serve here:
+    # the analysis functions require numeric= to name a bare independent
+    # variable, which a transformed term is not.) Non-column symbols inside a
+    # term (a threshold constant in I(x > cutoff)) are skipped and resolve in
+    # the formula's environment, matching model.frame(). Factor / character
+    # categoricals are caught here too, upgrading base R's raw "non-numeric
+    # argument" to a typed message; date-time / numbers-as-text fall through to
+    # the evaluation-error branch below.
+    for (vn in all.vars(v)) {
+      if (!vn %in% names(data)) next
+      if (identical(.jst_jstats_class(data[[vn]], vn, data_name)$class,
+                    "Categorical")) {
+        .jst_stop(vn, " is a categorical variable, so the formula term ",
+                  term_txt, " cannot be computed.\n",
+                  "If ", vn, " should be treated as numeric, register it ",
+                  "first:\n",
+                  "  jnumeric(", data_name, ", ", vn, ")")
+      }
     }
 
     res <- tryCatch(eval(v, eval_data, enclos), error = function(e) e)

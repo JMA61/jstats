@@ -46,7 +46,16 @@ single numeric or logical column with one value per case. Terms that
 produce several columns (poly(x, 2), spline bases), a categorical
 result (cut(x, 3)), a single summary value (mean(x)), or an evaluation
 error are refused in house voice with a make-the-variable message.
-Evaluation happens on the pipeline-masked analysis copy, so declared
+A term is also refused, before evaluation, when its argument is a
+variable the package classifies as Categorical -- most importantly a
+value-labelled categorical, whose numeric codes would otherwise be
+transformed silently into a meaningless predictor (log() of a 1/2/3/4
+category code fits with no error). The check uses the same classification
+stack the analysis path uses, so a jnumeric/jcount registration moves the
+variable to Numeric and lifts the refusal -- the identical escape hatch,
+and the exact path the message names -- while factor/character arguments
+are caught here too (a typed message in place of base R's raw non-numeric
+error). Evaluation happens on the pipeline-masked analysis copy, so declared
 SPSS-style missing values are already NA before any arithmetic touches
 them; haven-labelled inputs are unclassed to plain numeric for the
 computation, the same coercion the analysis functions apply themselves.

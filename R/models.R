@@ -1201,6 +1201,20 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     (\code{numeric}) or stated definitively (\code{count}).
 #' }
 #'
+#' @details
+#' Transformed terms in \code{formula} are computed automatically. A term
+#' that applies a function to a variable -- \code{log(x)}, \code{sqrt(x)},
+#' \code{exp(x)}, \code{I(x^2)}, \code{scale(x)}, an arithmetic expression,
+#' or a logical condition such as \code{I(x > 10)} -- is evaluated once on
+#' the analysis data and enters the model as a single derived column named
+#' for the expression, so the coefficient table, the group descriptives, and
+#' the standardized-beta refit all report the term as written. This follows
+#' the base R formula convention; the terms supported inline are those that
+#' evaluate to one numeric or logical column. Terms that produce several
+#' columns (\code{poly(x, 2)}, spline bases) or a categorical result
+#' (\code{cut(x, 3)}) are not supported inline: create the derived variable
+#' as a column of the data first, then name that column in the formula.
+#'
 #' @param formula A model formula, e.g. \code{y ~ x1 + x2}. Transformed
 #'   terms such as \code{log(y)} or \code{I(x1^2)} are computed
 #'   automatically and used throughout the output.
@@ -1484,7 +1498,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Raw-name existence check first, so the transform resolver below can
   # assume every plain variable in the formula exists.
-  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+  # Underlying variable names (pre-transform). Drives the existence check
+  # and, below, the case-processing breakdown -- so a transformed term is
+  # reported against its source column, which the pre-pipeline snapshot
+  # contains (the computed column is not in that snapshot).
+  raw_vars <- all.vars(formula)
+  .jst_check_vars(data, raw_vars, .jst_data_name,
                   default_used = .jst_default_used)
 
   # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
@@ -1910,7 +1929,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
-    analysis_vars   = original_formula_vars,
+    analysis_vars   = raw_vars,
     n_analysis      = nrow(mf)
   )
 
@@ -2402,6 +2421,22 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' \code{jdummy()}, and the \code{numeric}/\code{categorical} overrides
 #' in the same way as \code{jlm()}.
 #'
+#' @details
+#' Transformed predictor terms in \code{formula} are computed
+#' automatically. A term that applies a function to a variable --
+#' \code{log(x)}, \code{sqrt(x)}, \code{exp(x)}, \code{I(x^2)},
+#' \code{scale(x)}, an arithmetic expression, or a logical condition such
+#' as \code{I(x > 10)} -- is evaluated once on the analysis data and enters
+#' the model as a single derived column named for the expression, so the
+#' coefficient table and the diagnostics report the term as written. This
+#' follows the base R formula convention; the terms supported inline are
+#' those that evaluate to one numeric or logical column. Terms that produce
+#' several columns (\code{poly(x, 2)}, spline bases) or a categorical
+#' result (\code{cut(x, 3)}) are not supported inline: create the derived
+#' variable as a column of the data first, then name that column in the
+#' formula. (The dependent variable must be a plain 0/1 dichotomy, so a
+#' transform applies to predictors, not the response.)
+#'
 #' @param formula A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
 #'   must be a binary variable coded 0/1. Transformed predictor terms such
 #'   as \code{log(IV1)} are computed automatically and used throughout the
@@ -2648,7 +2683,12 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Raw-name existence check first, so the transform resolver below can
   # assume every plain variable in the formula exists.
-  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+  # Underlying variable names (pre-transform). Drives the existence check
+  # and, below, the case-processing breakdown -- so a transformed term is
+  # reported against its source column, which the pre-pipeline snapshot
+  # contains (the computed column is not in that snapshot).
+  raw_vars <- all.vars(formula)
+  .jst_check_vars(data, raw_vars, .jst_data_name,
                   default_used = .jst_default_used)
 
   # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
@@ -3018,7 +3058,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
-    analysis_vars   = original_formula_vars,
+    analysis_vars   = raw_vars,
     n_analysis      = nrow(mf)
   )
 

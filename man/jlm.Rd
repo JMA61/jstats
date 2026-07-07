@@ -199,6 +199,19 @@ labels (or plain numeric variables) to be treated as categorical
 DV's role so the count / categorical-like note is silenced
 (\code{numeric}) or stated definitively (\code{count}).
 }
+
+Transformed terms in \code{formula} are computed automatically. A term
+that applies a function to a variable -- \code{log(x)}, \code{sqrt(x)},
+\code{exp(x)}, \code{I(x^2)}, \code{scale(x)}, an arithmetic expression,
+or a logical condition such as \code{I(x > 10)} -- is evaluated once on
+the analysis data and enters the model as a single derived column named
+for the expression, so the coefficient table, the group descriptives, and
+the standardized-beta refit all report the term as written. This follows
+the base R formula convention; the terms supported inline are those that
+evaluate to one numeric or logical column. Terms that produce several
+columns (\code{poly(x, 2)}, spline bases) or a categorical result
+(\code{cut(x, 3)}) are not supported inline: create the derived variable
+as a column of the data first, then name that column in the formula.
 }
 \examples{
 # With explicit data frame (named argument)

@@ -158,6 +158,21 @@ stops with a clear error message and suggests the appropriate
 Handles haven-labelled variables, registered dummy variables via
 \code{jdummy()}, and the \code{numeric}/\code{categorical} overrides
 in the same way as \code{jlm()}.
+
+Transformed predictor terms in \code{formula} are computed
+automatically. A term that applies a function to a variable --
+\code{log(x)}, \code{sqrt(x)}, \code{exp(x)}, \code{I(x^2)},
+\code{scale(x)}, an arithmetic expression, or a logical condition such
+as \code{I(x > 10)} -- is evaluated once on the analysis data and enters
+the model as a single derived column named for the expression, so the
+coefficient table and the diagnostics report the term as written. This
+follows the base R formula convention; the terms supported inline are
+those that evaluate to one numeric or logical column. Terms that produce
+several columns (\code{poly(x, 2)}, spline bases) or a categorical
+result (\code{cut(x, 3)}) are not supported inline: create the derived
+variable as a column of the data first, then name that column in the
+formula. (The dependent variable must be a plain 0/1 dichotomy, so a
+transform applies to predictors, not the response.)
 }
 \examples{
 # With explicit data frame -- Volunteer is already coded 0/1

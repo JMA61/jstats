@@ -20,6 +20,13 @@
 #' A red title identifying the test type is printed first, followed by
 #' variable labels (if present), then the results tables.
 #'
+#' @details
+#' A transformed outcome or grouping term in \code{formula} -- \code{log(x)}
+#' and the like -- is computed once on the analysis data and used by both the
+#' t-test and the group descriptives, so the two describe the same values.
+#' The transforms supported inline, and those that must be created as a
+#' column first, are as documented for \code{\link{jlm}}.
+#'
 #' @param formula A formula of the form \code{DV ~ Group}. A transformed
 #'   term such as \code{log(DV)} is computed automatically: the test and
 #'   the descriptive output both use the transformed values.
@@ -161,7 +168,12 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   # Raw-name existence check first, so the transform resolver below can
   # assume every plain variable in the formula exists.
-  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+  # Underlying variable names (pre-transform). Drives the existence check
+  # and, below, the case-processing breakdown -- so a transformed term is
+  # reported against its source column, which the pre-pipeline snapshot
+  # contains (the computed column is not in that snapshot).
+  raw_vars <- all.vars(formula)
+  .jst_check_vars(data, raw_vars, .jst_data_name,
                   default_used = .jst_default_used)
 
   # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
@@ -205,7 +217,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
-    analysis_vars   = terms,
+    analysis_vars   = raw_vars,
     n_analysis      = nrow(mf)
   )
 
@@ -511,6 +523,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' A red title identifying the test type is printed first, followed by
 #' variable labels (if present), then the results tables.
 #'
+#' @details
+#' A transformed outcome or grouping term in \code{formula} -- \code{log(x)}
+#' and the like -- is computed once on the analysis data and used by the F
+#' test, Levene's test, the post hoc comparisons, and the descriptives, so
+#' they all describe the same values. The transforms supported inline, and
+#' those that must be created as a column first, are as documented for
+#' \code{\link{jlm}}.
+#'
 #' @param formula A formula of the form \code{DV ~ Group}. A transformed
 #'   term such as \code{log(DV)} is computed automatically: the tests and
 #'   the descriptive output all use the transformed values.
@@ -647,7 +667,12 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
   # Raw-name existence check first, so the transform resolver below can
   # assume every plain variable in the formula exists.
-  .jst_check_vars(data, all.vars(formula), .jst_data_name,
+  # Underlying variable names (pre-transform). Drives the existence check
+  # and, below, the case-processing breakdown -- so a transformed term is
+  # reported against its source column, which the pre-pipeline snapshot
+  # contains (the computed column is not in that snapshot).
+  raw_vars <- all.vars(formula)
+  .jst_check_vars(data, raw_vars, .jst_data_name,
                   default_used = .jst_default_used)
 
   # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
@@ -689,7 +714,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   sample_info <- .jst_build_sample_info(
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
-    analysis_vars   = terms,
+    analysis_vars   = raw_vars,
     n_analysis      = nrow(mf)
   )
 
