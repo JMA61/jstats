@@ -241,9 +241,23 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # -- Grouped descriptives ---------------------------------------------------
   if (!rlang::quo_is_null(by_quo)) {
     by_name <- rlang::quo_name(by_quo)
+
+    # Apply the data pipeline (jcomplete, jsubset, subset) BEFORE converting
+    # the grouping variable, mirroring jt (compare.R). The pipeline's Step 0
+    # masks SPSS-style declared-missing cells to NA, so declared-missing
+    # respondents cannot survive as their own group; and the pipeline receives
+    # the still-labelled grouping column, so its pre-masking snapshot keeps the
+    # intact codes the CPS per-code detail needs.
+    subset_expr <- substitute(subset)
+    pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
+                                    subset_expr = subset_expr, envir = parent.frame())
+    data     <- pipeline$data
+
     by_var  <- data[[by_name]]
 
-    # Capture original class and label BEFORE any conversion
+    # Capture original class and label BEFORE any conversion. Taken from the
+    # post-pipeline (masked, filtered) column so codes and levels describe the
+    # same data the tables summarize.
     original_by_class <- class(by_var)
     original_by_label <- .get_var_label_str(by_var)
     original_dv_info  <- stats::setNames(
@@ -262,14 +276,13 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     } else if (!is.factor(data[[by_name]])) {
       data[[by_name]] <- factor(data[[by_name]])
     }
+    # Drop factor levels with no surviving cases -- a declared-missing level
+    # masked to NA by the pipeline, or a level filtered out -- so group_levels
+    # and original_codes describe the same masked column (this is what removes
+    # the blank-labeled mystery group).
+    data[[by_name]] <- droplevels(data[[by_name]])
 
     group_levels <- levels(data[[by_name]])
-
-    # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
-    subset_expr <- substitute(subset)
-    pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                    subset_expr = subset_expr, envir = parent.frame())
-    data     <- pipeline$data
 
     # Build sample_info once for the entire by-group output. Only the
     # summarizable (good) analysis variables contribute. Per-variable Ns are
@@ -376,14 +389,6 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     }
 
     cat("\n")
-
-    # Build sample_info for grouped descriptives
-    sample_info <- .jst_build_sample_info(
-      pipeline_counts = pipeline$pipeline_counts,
-      data            = pipeline$data,
-      analysis_vars   = c(good_vars, by_name),
-      n_analysis      = nrow(data)
-    )
 
     ret <- list(
       descriptives = NULL,

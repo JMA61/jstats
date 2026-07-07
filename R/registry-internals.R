@@ -851,6 +851,17 @@
     uniq       <- sort(unique(x[!is.na(x) & nzchar(x)]))
     codes      <- seq_along(uniq)
     raw_labels <- uniq
+  } else if (is.logical(x)) {
+    # Logical (TRUE/FALSE) predictors (AUDIT-004): treat as a two-category
+    # variable so a saved comparison (over40 <- Age > 40) models like any
+    # other dichotomy. Codes are the OBSERVED 0/1 values, so a constant
+    # logical still hits the fewer-than-2-categories stop below; with both
+    # values present the reference is FALSE (ref = "first"), so the dummy
+    # reads as the effect of being TRUE (Var_TRUE), matching how base R's
+    # lm()/glm() name a logical predictor's coefficient.
+    var_type   <- "logical"
+    codes      <- sort(unique(as.numeric(x[!is.na(x)])))
+    raw_labels <- ifelse(codes == 1, "TRUE", "FALSE")
   } else if (is.numeric(x)) {
     var_type   <- "numeric"
     codes      <- sort(unique(x[!is.na(x)]))
@@ -1022,6 +1033,23 @@
 }
 
 
+#' Internal helper: escape regex metacharacters in a literal string
+#'
+#' Backslash-escapes every extended-regular-expression metacharacter so a
+#' user-supplied name can be interpolated into a pattern and matched
+#' literally. Used when rewriting a model formula string: a variable name
+#' containing a dot (common from make.names()) would otherwise act as a
+#' wildcard and could corrupt an unrelated predictor (see
+#' .jst_expand_one_dummy).
+#'
+#' @param x Character vector to escape.
+#' @return \code{x} with regex metacharacters backslash-escaped.
+#' @keywords internal
+.jst_escape_regex <- function(x) {
+  gsub("([][{}()^$.|*+?\\\\])", "\\\\\\1", x)
+}
+
+
 #' Internal helper: expand a single registration into dummy columns
 #'
 #' Given a registration-shaped object (from jdummy storage or built
@@ -1042,6 +1070,20 @@
   orig_col         <- .jst_as_numeric(data[[reg$var_name]])
   dummy_coef_names <- character(0)
 
+  # Collision guard (AUDIT-013): if a generated dummy name already matches an
+  # existing column, the write below would silently overwrite it and fit the
+  # wrong model. Checked before any write, so names(data) still reflects only
+  # pre-existing columns (working copy only; the user's data frame is
+  # untouched either way).
+  collision <- reg$dummy_names[reg$dummy_names %in% names(data)]
+  if (length(collision) > 0) {
+    .jst_stop(
+      "Expanding '", reg$var_name, "' would create the dummy column '",
+      collision[1], "', but a column with that name already exists.\n",
+      "Rename the category with jrelabel() so the dummy gets a different name."
+    )
+  }
+
   for (j in seq_along(reg$non_ref_idx)) {
     idx   <- reg$non_ref_idx[j]
     dname <- reg$dummy_names[j]
@@ -1054,7 +1096,7 @@
   # ensures correct behavior when the variable appears inside an
   # interaction term (e.g. y ~ x * Religion).
   dummy_plus  <- paste0("(", paste(reg$dummy_names, collapse = " + "), ")")
-  formula_str <- gsub(paste0("\\b", reg$var_name, "\\b"),
+  formula_str <- gsub(paste0("\\b", .jst_escape_regex(reg$var_name), "\\b"),
                       dummy_plus, formula_str)
 
   list(data = data, formula_str = formula_str,

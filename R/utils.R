@@ -166,6 +166,7 @@
 #' }
 #'
 #' @export
+#' @importFrom utils available.packages install.packages
 jupdate <- function(ask = FALSE) {
   # One network read doubles as a connectivity probe and a migration check.
   gist <- .jst_read_gist()

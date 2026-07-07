@@ -1501,6 +1501,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   }
 
   .jst_check_vars(data, model_vars, .jst_data_name, default_used = .jst_default_used)
+  # Transformed-term front door (AUDIT-005): refuse log(x), I(x^2), and the
+  # like before any model work; downstream, the mf refit would otherwise die
+  # with base R's raw "object 'x' not found".
+  .jst_check_formula_transforms(formula, .jst_data_name)
   # Type gate (Session 46): the response must be numeric; predictors may be
   # numeric or categorical. Date/time and complex/list/raw refused in both
   # roles. See .jst_check_analysis_var.
@@ -2637,6 +2641,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   }
 
   .jst_check_vars(data, model_vars, .jst_data_name, default_used = .jst_default_used)
+  # Transformed-term front door (AUDIT-005): refuse log(x), I(x^2), and the
+  # like before any model work; downstream, the mf refit would otherwise die
+  # with base R's raw "object 'x' not found".
+  .jst_check_formula_transforms(formula, .jst_data_name)
   # Type gate (Session 46): the response is binary and may be a recognized
   # text/factor pair (e.g. "Yes"/"No") or logical, so it passes as categorical
   # here -- the DV-resolution block below classifies it via .jst_is_dichotomy(),

@@ -25,7 +25,12 @@ jcrosstab(
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 
 \item{chisq}{Logical. If TRUE, prints the chi-square test of independence
-below the cross-tabulation. Default is FALSE.}
+below the cross-tabulation. For a 2x2 table, two rows are shown --
+the Pearson chi-square and the Yates continuity-corrected chi-square --
+matching the rows commercial statistical software reports; the Pearson
+row is the headline result and is what the returned object carries.
+Larger tables show the single Pearson result (the correction applies
+only to 2x2 tables). Default is FALSE.}
 
 \item{expected}{Logical. If TRUE, prints expected frequencies alongside
 observed. Default is FALSE.}
@@ -91,7 +96,10 @@ frequency table), \code{adjusted_residuals} (matrix of adjusted
 standardized residuals), \code{n} (total N), \code{model_frame} (the
 analysis data frame used for plotting), \code{sample_info} (pipeline and
 missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
-\code{df}, and \code{p}.
+\code{df}, and \code{p} (the Pearson chi-square), \code{chi_method}
+(the test's method string), and for 2x2 tables
+\code{chi_square_corrected} and \code{p_corrected} (the Yates
+continuity-corrected values).
 }
 \description{
 Produces a cross-tabulation of two categorical variables, showing

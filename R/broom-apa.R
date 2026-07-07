@@ -305,7 +305,8 @@ tidy.jst_crosstab <- function(x, ...) {
     statistic = unname(x$chi_square),
     parameter = unname(x$df),
     p.value   = unname(x$p),
-    method    = "Pearson's Chi-squared test",
+    method    = if (!is.null(x$chi_method)) x$chi_method
+                else "Pearson's Chi-squared test",
     n         = x$n,
     stringsAsFactors = FALSE, row.names = NULL)
 }

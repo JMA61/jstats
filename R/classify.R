@@ -746,6 +746,54 @@
   dup[1]
 }
 
+#' Internal: refuse a transformed term in a model formula, in house voice
+#'
+#' Detects a function call among the formula's variables -- log(x), I(x^2),
+#' sqrt(x), and the like, on either side -- and stops with a clear message
+#' (AUDIT-005). Without this front-door check, jlm/jlogistic build the model
+#' frame from the data (which yields a column literally named "log(x)") and
+#' then refit against that frame, where the term goes looking for a plain x
+#' that no longer exists; the user gets base R's raw, unattributed
+#' "object 'x' not found". Interaction terms (x * z, x:z) are unaffected:
+#' terms() lists their component variables as plain names, not calls.
+#' When the offending call is a single function applied to one bare
+#' variable, the message includes a runnable make-the-variable example
+#' built from the user's own term and data-frame name.
+#'
+#' @param formula The user's analysis formula.
+#' @param data_name Character; the data frame's name (for the example line).
+#' @return Invisibly NULL; stops when a transformed term is found. A
+#'   formula that terms() cannot process (e.g. a bare dot) passes through
+#'   untouched for downstream handling.
+#' @keywords internal
+.jst_check_formula_transforms <- function(formula, data_name) {
+  vars <- tryCatch(attr(stats::terms(formula), "variables"),
+                   error = function(e) NULL)
+  if (is.null(vars)) return(invisible(NULL))
+  for (i in seq_along(vars)[-1L]) {
+    v <- vars[[i]]
+    if (!is.call(v)) next
+    term_txt <- paste(deparse(v), collapse = "")
+    # Runnable example only for the simple shape: one function, one bare
+    # variable (log(x), sqrt(x)). Anything else (I(x^2), poly(x, 2),
+    # log(x + 1)) keeps the two-sentence form without an example.
+    if (length(v) == 2L && is.symbol(v[[2L]]) && is.symbol(v[[1L]])) {
+      fn_txt   <- as.character(v[[1L]])
+      var_txt  <- as.character(v[[2L]])
+      new_col  <- paste0(var_txt, "_", fn_txt)
+      .jst_stop("The formula applies a function to a variable: ", term_txt,
+                ".\nCreate the transformed variable as a new column first, ",
+                "then use that column in the formula:\n  ",
+                data_name, "$", new_col, " <- ", fn_txt, "(",
+                data_name, "$", var_txt, ")")
+    }
+    .jst_stop("The formula applies a function to a variable: ", term_txt,
+              ".\nCreate the transformed variable as a new column first, ",
+              "then use that column in the formula.")
+  }
+  invisible(NULL)
+}
+
 #' Internal helper: gate a variable for use in an analysis function
 #'
 #' Stops with a clean, variable-naming error when the variable's type cannot

@@ -22,8 +22,13 @@
 #'
 #' @param formula A formula of the form \code{DV ~ Group}.
 #' @param data A data frame containing variables referenced in \code{formula}.
-#' @param paired Logical. If TRUE, runs a paired samples t-test. The two
-#'   groups must have equal sample sizes. Default is FALSE.
+#' @param paired Logical. If TRUE, runs a paired samples t-test. Cases are
+#'   paired by position: the i-th case in one group is matched with the
+#'   i-th case in the other, so the two groups must have equal sample
+#'   sizes. A pair is dropped from the analysis when either member is
+#'   missing (matching how commercial statistical software handles paired
+#'   comparisons), and a note reports how many pairs were dropped. Default
+#'   is FALSE.
 #' @param welch Logical. If FALSE (default), runs Student's t-test
 #'   (equal variances assumed). If TRUE, runs Welch's t-test. Ignored
 #'   when paired = TRUE.
@@ -245,13 +250,48 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   }
 
   levels      <- levels(data[[group_name]])
-  group1_data <- data[[dv_name]][data[[group_name]] == levels[1]]
-  group2_data <- data[[dv_name]][data[[group_name]] == levels[2]]
-  group1_data <- group1_data[!is.na(group1_data)]
-  group2_data <- group2_data[!is.na(group2_data)]
+  # which() (rather than direct logical indexing) keeps rows with a missing
+  # grouping value out of the extraction entirely -- a logical index of NA
+  # would insert a phantom NA element into BOTH group vectors, corrupting
+  # positional pairing in the paired branch below.
+  group1_data <- data[[dv_name]][which(data[[group_name]] == levels[1])]
+  group2_data <- data[[dv_name]][which(data[[group_name]] == levels[2])]
 
-  if (paired && length(group1_data) != length(group2_data)) {
-    .jst_stop("Paired t-test requires equal sample sizes in both groups.")
+  if (paired) {
+    # Pair-before-filter (AUDIT-001). Pairing is positional: the i-th case
+    # of each group forms pair i. Pairs must be formed on the raw group
+    # vectors and THEN dropped when either member is missing; filtering
+    # each group's NAs separately (the pre-fix behavior) silently re-paired
+    # the survivors by position, matching values across the wrong cases.
+    # This matches t.test(x, y, paired = TRUE)'s own complete-pairs
+    # handling and the SPSS T-TEST PAIRS convention. Cohen's dz and the
+    # Group Descriptives table use the same paired-complete vectors, so
+    # both reflect the pairs actually analyzed.
+    if (length(group1_data) != length(group2_data)) {
+      .jst_stop("A paired t-test requires the same number of cases in each group.\n",
+                "\"", levels[1], "\" has ", length(group1_data), " cases; \"",
+                levels[2], "\" has ", length(group2_data), ".")
+    }
+    pair_complete   <- !is.na(group1_data) & !is.na(group2_data)
+    n_pairs_dropped <- sum(!pair_complete)
+    group1_data     <- group1_data[pair_complete]
+    group2_data     <- group2_data[pair_complete]
+
+    if (length(group1_data) < 2) {
+      .jst_stop("A paired t-test requires at least 2 complete pairs; only ",
+                length(group1_data),
+                if (length(group1_data) == 1) " remains" else " remain",
+                " after removing pairs with a missing value.")
+    }
+
+    if (n_pairs_dropped > 0) {
+      message("Note: ", n_pairs_dropped,
+              if (n_pairs_dropped == 1) " pair" else " pairs",
+              " removed because a measurement was missing.")
+    }
+  } else {
+    group1_data <- group1_data[!is.na(group1_data)]
+    group2_data <- group2_data[!is.na(group2_data)]
   }
 
   # Variable label display mode. jt is a collapse layout: under "labels"
@@ -335,6 +375,19 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   # Run t-test
   if (paired) {
+    # Degenerate-differences guard (AUDIT-001): with zero variation in the
+    # paired differences the t statistic is undefined. Base R's t.test()
+    # stops with a raw "data are essentially constant" error for constant
+    # nonzero differences and silently returns NaN for all-zero
+    # differences; both routes land here instead, in house voice. The
+    # near-constant arm mirrors base R's own threshold so its raw error
+    # can never surface.
+    diffs  <- group1_data - group2_data
+    d_mean <- mean(diffs)
+    d_se   <- stats::sd(diffs) / sqrt(length(diffs))
+    if (d_se == 0 || d_se < 10 * .Machine$double.eps * abs(d_mean)) {
+      .jst_stop("Every pair has the same difference, so a paired t-test cannot be computed.")
+    }
     result <- t.test(group1_data, group2_data, paired = TRUE)
   } else {
     result <- t.test(formula, data = data, var.equal = !welch)
@@ -940,7 +993,12 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param formula A formula of the form \code{Row ~ Column}.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param chisq Logical. If TRUE, prints the chi-square test of independence
-#'   below the cross-tabulation. Default is FALSE.
+#'   below the cross-tabulation. For a 2x2 table, two rows are shown --
+#'   the Pearson chi-square and the Yates continuity-corrected chi-square --
+#'   matching the rows commercial statistical software reports; the Pearson
+#'   row is the headline result and is what the returned object carries.
+#'   Larger tables show the single Pearson result (the correction applies
+#'   only to 2x2 tables). Default is FALSE.
 #' @param expected Logical. If TRUE, prints expected frequencies alongside
 #'   observed. Default is FALSE.
 #' @param row.pct Logical. If TRUE (default), shows row percentages.
@@ -986,7 +1044,10 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   standardized residuals), \code{n} (total N), \code{model_frame} (the
 #'   analysis data frame used for plotting), \code{sample_info} (pipeline and
 #'   missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
-#'   \code{df}, and \code{p}.
+#'   \code{df}, and \code{p} (the Pearson chi-square), \code{chi_method}
+#'   (the test's method string), and for 2x2 tables
+#'   \code{chi_square_corrected} and \code{p_corrected} (the Yates
+#'   continuity-corrected values).
 #'
 #' @examples
 #' # Cross-tabulation only
@@ -1174,7 +1235,20 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   col_labels <- if (col_labelled) .jst_format_value_labels(col_codes, col_vl, value_mode) else col_levels
 
   obs_table  <- table(row_var, col_var)
-  chi_result <- suppressWarnings(stats::chisq.test(obs_table))
+  # Headline test is the uncorrected Pearson chi-square (AUDIT-006): base R's
+  # chisq.test() default silently applies the Yates continuity correction to
+  # 2x2 tables, which diverges from the headline number SPSS, Stata, and SAS
+  # report. For a 2x2 table the Yates-corrected companion is computed too and
+  # printed as a second row, SPSS-style; correct= has no effect on larger
+  # tables, so it is computed only there. Expected counts and adjusted
+  # residuals do not depend on the correction.
+  chi_result <- suppressWarnings(stats::chisq.test(obs_table, correct = FALSE))
+  is_2x2     <- all(dim(obs_table) == 2L)
+  chi_corrected <- if (is_2x2) {
+    suppressWarnings(stats::chisq.test(obs_table, correct = TRUE))
+  } else {
+    NULL
+  }
   exp_table  <- chi_result$expected
 
   p_val <- chi_result$p.value
@@ -1261,20 +1335,41 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   # Chi-square test (only if requested)
   if (chisq) {
-    chi_table <- data.frame(
-      Chi_Square = sprintf("%.*f", digits_n, chi_result$statistic),
-      df         = chi_result$parameter,
-      p          = p_fmt,
-      N          = grand_total,
-      stringsAsFactors = FALSE,
-      row.names  = NULL
-    )
+    if (is_2x2) {
+      # 2x2: two rows, SPSS-style -- Pearson is the headline, the Yates
+      # continuity-corrected value beneath it.
+      chi_table <- data.frame(
+        Test       = c("Pearson", "Continuity Correction"),
+        Chi_Square = sprintf("%.*f", digits_n,
+                             c(chi_result$statistic, chi_corrected$statistic)),
+        df         = c(chi_result$parameter, chi_corrected$parameter),
+        p          = c(p_fmt, .jst_fmt_p(chi_corrected$p.value)),
+        N          = c(grand_total, grand_total),
+        stringsAsFactors = FALSE,
+        row.names  = NULL
+      )
 
-    .jst_print_table(chi_table,
-                     caption   = "Chi-Square Test of Independence",
-                     col.names = c("Chi-Square", "df", "p", "N"),
-                     align     = c("c", "c", "c", "c"),
-                     row.names = FALSE)
+      .jst_print_table(chi_table,
+                       caption   = "Chi-Square Test of Independence",
+                       col.names = c("Test", "Chi-Square", "df", "p", "N"),
+                       align     = c("l", "c", "c", "c", "c"),
+                       row.names = FALSE)
+    } else {
+      chi_table <- data.frame(
+        Chi_Square = sprintf("%.*f", digits_n, chi_result$statistic),
+        df         = chi_result$parameter,
+        p          = p_fmt,
+        N          = grand_total,
+        stringsAsFactors = FALSE,
+        row.names  = NULL
+      )
+
+      .jst_print_table(chi_table,
+                       caption   = "Chi-Square Test of Independence",
+                       col.names = c("Chi-Square", "df", "p", "N"),
+                       align     = c("c", "c", "c", "c"),
+                       row.names = FALSE)
+    }
 
     min_expected <- min(exp_table)
     n_below_5    <- sum(exp_table < 5)
@@ -1315,6 +1410,11 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     ret$chi_square <- chi_result$statistic
     ret$df         <- chi_result$parameter
     ret$p          <- chi_result$p.value
+    ret$chi_method <- chi_result$method
+    if (is_2x2) {
+      ret$chi_square_corrected <- chi_corrected$statistic
+      ret$p_corrected          <- chi_corrected$p.value
+    }
   }
   class(ret) <- "jst_crosstab"
   invisible(ret)
