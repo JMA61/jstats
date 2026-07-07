@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.96</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.97</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,8 +85,13 @@ are displayed alongside labels in the group descriptives table.</p>
 
 
 <dt id="arg-paired">paired<a class="anchor" aria-label="anchor" href="#arg-paired"></a></dt>
-<dd><p>Logical. If TRUE, runs a paired samples t-test. The two
-groups must have equal sample sizes. Default is FALSE.</p></dd>
+<dd><p>Logical. If TRUE, runs a paired samples t-test. Cases are
+paired by position: the i-th case in one group is matched with the
+i-th case in the other, so the two groups must have equal sample
+sizes. A pair is dropped from the analysis when either member is
+missing (matching how commercial statistical software handles paired
+comparisons), and a note reports how many pairs were dropped. Default
+is FALSE.</p></dd>
 
 
 <dt id="arg-welch">welch<a class="anchor" aria-label="anchor" href="#arg-welch"></a></dt>

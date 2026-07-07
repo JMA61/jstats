@@ -39,7 +39,12 @@ jcrosstab(
 - chisq:
 
   Logical. If TRUE, prints the chi-square test of independence below the
-  cross-tabulation. Default is FALSE.
+  cross-tabulation. For a 2x2 table, two rows are shown – the Pearson
+  chi-square and the Yates continuity-corrected chi-square – matching
+  the rows commercial statistical software reports; the Pearson row is
+  the headline result and is what the returned object carries. Larger
+  tables show the single Pearson result (the correction applies only to
+  2x2 tables). Default is FALSE.
 
 - expected:
 
@@ -123,7 +128,9 @@ Invisibly returns a list of class `jst_crosstab` containing: `observed`
 `adjusted_residuals` (matrix of adjusted standardized residuals), `n`
 (total N), `model_frame` (the analysis data frame used for plotting),
 `sample_info` (pipeline and missing data counts), and if `chisq = TRUE`:
-`chi_square`, `df`, and `p`.
+`chi_square`, `df`, and `p` (the Pearson chi-square), `chi_method` (the
+test's method string), and for 2x2 tables `chi_square_corrected` and
+`p_corrected` (the Yates continuity-corrected values).
 
 ## Details
 

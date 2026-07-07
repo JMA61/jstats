@@ -17,7 +17,7 @@ variables, numeric codes are displayed alongside labels."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.96</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.97</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,7 +82,12 @@ variables, numeric codes are displayed alongside labels.</p>
 
 <dt id="arg-chisq">chisq<a class="anchor" aria-label="anchor" href="#arg-chisq"></a></dt>
 <dd><p>Logical. If TRUE, prints the chi-square test of independence
-below the cross-tabulation. Default is FALSE.</p></dd>
+below the cross-tabulation. For a 2x2 table, two rows are shown –
+the Pearson chi-square and the Yates continuity-corrected chi-square –
+matching the rows commercial statistical software reports; the Pearson
+row is the headline result and is what the returned object carries.
+Larger tables show the single Pearson result (the correction applies
+only to 2x2 tables). Default is FALSE.</p></dd>
 
 
 <dt id="arg-expected">expected<a class="anchor" aria-label="anchor" href="#arg-expected"></a></dt>
@@ -168,7 +173,10 @@ frequency table), <code>adjusted_residuals</code> (matrix of adjusted
 standardized residuals), <code>n</code> (total N), <code>model_frame</code> (the
 analysis data frame used for plotting), <code>sample_info</code> (pipeline and
 missing data counts), and if <code>chisq = TRUE</code>: <code>chi_square</code>,
-<code>df</code>, and <code>p</code>.</p>
+<code>df</code>, and <code>p</code> (the Pearson chi-square), <code>chi_method</code>
+(the test's method string), and for 2x2 tables
+<code>chi_square_corrected</code> and <code>p_corrected</code> (the Yates
+continuity-corrected values).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

@@ -41,8 +41,12 @@ jt(
 
 - paired:
 
-  Logical. If TRUE, runs a paired samples t-test. The two groups must
-  have equal sample sizes. Default is FALSE.
+  Logical. If TRUE, runs a paired samples t-test. Cases are paired by
+  position: the i-th case in one group is matched with the i-th case in
+  the other, so the two groups must have equal sample sizes. A pair is
+  dropped from the analysis when either member is missing (matching how
+  commercial statistical software handles paired comparisons), and a
+  note reports how many pairs were dropped. Default is FALSE.
 
 - welch:
 

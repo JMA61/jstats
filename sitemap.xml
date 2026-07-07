@@ -36,6 +36,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_dummy_outcome.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_filter_syntax.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_formula_data.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_formula_transforms.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_vars.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_class_from_role.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_classify_desc_var.html</loc></url>
@@ -59,6 +60,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_detect_suspicious_values.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_durability_note.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_escape_regex.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_dummies.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_one_dummy.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_find_file.html</loc></url>
