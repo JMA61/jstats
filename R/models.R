@@ -651,23 +651,38 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'
 #' By default, R concatenates factor variable names with level names when
 #' producing regression coefficient labels (e.g. "GenderRFemale"). This
-#' helper inserts a separator between the variable name and level name for
-#' readability (e.g. "GenderR-Female"). Only applies to factor IVs; numeric
-#' dummy columns created by jdummy() are left unchanged since they are
-#' already named clearly.
+#' helper rewrites factor terms to the parenthetical "Var (Level)" form
+#' (e.g. "GenderR (Female)"), and gives a numeric dichotomy whose two codes
+#' differ by exactly 1 the matching "Var (Level)" form, showing the HIGHER
+#' code's value label (haven) or its value (Session 127) -- there the slope
+#' equals the higher-vs-lower category contrast. Wider-spaced codes stay
+#' bare so the label cannot misrepresent a genuine per-unit slope. Columns
+#' named in skip are left entirely untouched: the jlm()/jlogistic() call
+#' sites pass their machine-generated dummy column names, so generated 0/1
+#' dummies keep bare names -- they are already named clearly (e.g.
+#' "Education_Some_college"), a trailing "(1)" adds nothing on a column
+#' that can only be 0/1, and the grouped multi-category display
+#' (.jst_group_dummy_coefs) matches rows by those bare names, so decorating
+#' them silently defeats the grouped layout (Session 176).
 #'
 #' @param coef_names Character vector of coefficient names from a fitted model.
 #' @param data Data frame used to fit the model (post-conversion).
 #' @param iv_names Character vector of IV names from the model formula.
 #' @param sep Character. Separator to insert. Default is "-".
+#' @param skip Character vector of column names to leave untouched (no
+#'   factor separation, no dichotomy parenthetical). The jlm()/jlogistic()
+#'   call sites pass their machine-generated dummy column names here.
+#'   Default character(0).
 #'
 #' @return Character vector of the same length as coef_names, with factor
 #'   coefficient names separated.
 #'
 #' @keywords internal
-.jst_clean_coef_names <- function(coef_names, data, iv_names, sep = "-") {
+.jst_clean_coef_names <- function(coef_names, data, iv_names, sep = "-",
+                                  skip = character(0)) {
   cleaned <- coef_names
   for (v in iv_names) {
+    if (v %in% skip) next
     if (!v %in% names(data)) next
     col <- data[[v]]
     if (is.factor(col)) {
@@ -2101,7 +2116,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Clean up factor coefficient names for readability
   rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
-                                            all.vars(formula)[-1])
+                                            all.vars(formula)[-1],
+                                            skip = dummy_coef_names)
 
   out_coefs <- data.frame(
     b       = fmt3(coefs$b),
@@ -3170,7 +3186,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # Clean up factor coefficient names for readability
   rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
-                                            all.vars(formula)[-1])
+                                            all.vars(formula)[-1],
+                                            skip = dummy_coef_names)
 
   out_coefs <- data.frame(
     b      = fmt3(coefs$b),
