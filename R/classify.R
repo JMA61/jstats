@@ -816,6 +816,27 @@
 #' @keywords internal
 .jst_unbacktick <- function(x) gsub("`", "", x, fixed = TRUE)
 
+#' Internal helper: canonical single-line text of a formula term
+#'
+#' Deparses a language object into one line and collapses any whitespace
+#' run to a single space. deparse() breaks a long call across indented
+#' continuation lines, and pasting those pieces back with collapse = ""
+#' kept the indent as embedded padding inside the term text (AUDIT-031) --
+#' padding that then appeared verbatim in the computed column's name and
+#' every display of it. The transform resolver builds a term's text in two
+#' places -- once to name the computed column, once inside the formula
+#' substitution pass to find that column again -- and the two MUST produce
+#' identical text or the substitution silently stops matching long terms;
+#' both route through this one helper so they cannot drift.
+#'
+#' @param e A language object (a call or symbol from a formula).
+#' @return Single string: the deparsed term with normalized spacing.
+#' @keywords internal
+.jst_term_text <- function(e) {
+  gsub("[[:space:]]+", " ",
+       paste(deparse(e, width.cutoff = 500L), collapse = " "))
+}
+
 #' Internal helper: resolve transformed formula terms into computed columns
 #'
 #' Walks the formula's variables for function-call terms -- log(x), I(x^2),
@@ -851,7 +872,13 @@
 #' variable to Numeric and lifts the refusal -- the identical escape hatch,
 #' and the exact path the message names -- while factor/character arguments
 #' are caught here too (a typed message in place of base R's raw non-numeric
-#' error). Evaluation happens on the pipeline-masked analysis copy, so declared
+#' error). A term that evaluates but yields non-finite values for some
+#' cases -- log() of a zero (-Inf) or of a negative (NaN) -- is NOT
+#' refused: those cells are set to NA, counted per term, and reported in a
+#' consequential note, with base R's raw "NaNs produced" warning muffled in
+#' favor of that note; the counts travel out as introduced_na so the Case
+#' Processing Summary can attribute the exclusions (AUDIT-024, AUDIT-025).
+#' Evaluation happens on the pipeline-masked analysis copy, so declared
 #' SPSS-style missing values are already NA before any arithmetic touches
 #' them; haven-labelled inputs are unclassed to plain numeric for the
 #' computation, the same coercion the analysis functions apply themselves.
@@ -862,13 +889,16 @@
 #' @param data The analysis data frame (the post-pipeline copy).
 #' @param data_name Character; the data frame's name (for messages).
 #' @return A list: formula (rewritten when any term was computed, otherwise
-#'   the input), data (with any computed columns appended), and computed
-#'   (character vector of the computed columns' names, possibly empty). A
-#'   formula that terms() cannot process (e.g. a bare dot) passes through
-#'   untouched for downstream handling.
+#'   the input), data (with any computed columns appended), computed
+#'   (character vector of the computed columns' names, possibly empty), and
+#'   introduced_na (named integer vector keyed by term text: per computed
+#'   term, the count of non-finite results converted to NA; empty when no
+#'   term introduced any). A formula that terms() cannot process (e.g. a
+#'   bare dot) passes through untouched for downstream handling.
 #' @keywords internal
 .jst_resolve_formula_transforms <- function(formula, data, data_name) {
-  out  <- list(formula = formula, data = data, computed = character(0))
+  out  <- list(formula = formula, data = data, computed = character(0),
+               introduced_na = integer(0))
   vars <- tryCatch(attr(stats::terms(formula), "variables"),
                    error = function(e) NULL)
   if (is.null(vars)) return(out)
@@ -892,9 +922,22 @@
   enclos <- environment(formula)
   if (is.null(enclos)) enclos <- parent.frame()
 
-  computed <- character(0)
+  # Muffle base R's raw "NaNs produced" warning during term evaluation:
+  # the non-finite guard below converts those NaNs to NA and reports them
+  # in an attributed note, so the bare base warning would only duplicate
+  # it without naming the term (AUDIT-024). Matched against the current
+  # locale's translation as well as the English string; any other warning
+  # passes through untouched.
+  nan_msgs <- unique(c("NaNs produced",
+                       gettext("NaNs produced", domain = "R")))
+  muffle_nan <- function(w) {
+    if (conditionMessage(w) %in% nan_msgs) invokeRestart("muffleWarning")
+  }
+
+  computed      <- character(0)
+  introduced_na <- integer(0)
   for (v in call_terms) {
-    term_txt <- paste(deparse(v), collapse = "")
+    term_txt <- .jst_term_text(v)
     if (term_txt %in% computed) next
 
     if (term_txt %in% names(data)) {
@@ -933,7 +976,9 @@
       }
     }
 
-    res <- tryCatch(eval(v, eval_data, enclos), error = function(e) e)
+    res <- tryCatch(withCallingHandlers(eval(v, eval_data, enclos),
+                                        warning = muffle_nan),
+                    error = function(e) e)
     if (inherits(res, "error")) {
       .jst_stop("The formula term ", term_txt, " could not be computed (",
                 conditionMessage(res), ").\n",
@@ -977,6 +1022,32 @@
                 "then use that column in the formula.")
     }
 
+    # Non-finite guard (AUDIT-024): log(0) evaluates to -Inf, which base R
+    # does NOT treat as missing -- it sails into the model and crashes with
+    # a raw "NA/NaN/Inf in 'x'" error, or prints -Inf group statistics.
+    # log() of a negative evaluates to NaN, which listwise-drops silently
+    # behind base R's unattributed "NaNs produced" warning. Convert both
+    # to NA -- the commercial-software behavior (SPSS's COMPUTE sets the
+    # case to system-missing and logs "argument out of range") -- count
+    # the conversions, and report them in one consequential note per term
+    # (Rule R: the note names the data condition; the muffled base warning
+    # above is replaced by it). An input already NA evaluates to NA, which
+    # is neither infinite nor NaN, so the count is exactly the cases that
+    # were present going in and non-finite coming out; pre-existing
+    # missingness stays a listwise matter. The per-term counts travel out
+    # as introduced_na so the Case Processing Summary can attribute the
+    # exclusions (AUDIT-025).
+    non_finite <- is.infinite(res) | is.nan(res)
+    n_nf <- sum(non_finite)
+    if (n_nf > 0L) {
+      res[non_finite] <- NA
+      introduced_na[[term_txt]] <- n_nf
+      message("Note: ", term_txt, ": ", n_nf,
+              if (n_nf == 1L) " value became infinite or undefined and was"
+              else            " values became infinite or undefined and were",
+              " set to missing.")
+    }
+
     data[[term_txt]] <- res
     computed <- c(computed, term_txt)
   }
@@ -988,7 +1059,9 @@
   # (as in x[, 1]) that indexing would otherwise choke on.
   sub_term <- function(e) {
     if (is.call(e)) {
-      txt <- paste(deparse(e), collapse = "")
+      # MUST match the column-naming pass exactly; both route through
+      # .jst_term_text so the two constructions cannot drift (AUDIT-031).
+      txt <- .jst_term_text(e)
       if (txt %in% computed) return(as.name(txt))
       for (k in seq_along(e)) {
         if (k == 1L) next
@@ -1003,9 +1076,10 @@
     new_formula[[k]] <- sub_term(new_formula[[k]])
   }
 
-  out$formula  <- new_formula
-  out$data     <- data
-  out$computed <- computed
+  out$formula       <- new_formula
+  out$data          <- data
+  out$computed      <- computed
+  out$introduced_na <- introduced_na
   out
 }
 

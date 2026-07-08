@@ -15,10 +15,12 @@
 }
 \value{
 A list: formula (rewritten when any term was computed, otherwise
-the input), data (with any computed columns appended), and computed
-(character vector of the computed columns' names, possibly empty). A
-formula that terms() cannot process (e.g. a bare dot) passes through
-untouched for downstream handling.
+the input), data (with any computed columns appended), computed
+(character vector of the computed columns' names, possibly empty), and
+introduced_na (named integer vector keyed by term text: per computed
+term, the count of non-finite results converted to NA; empty when no
+term introduced any). A formula that terms() cannot process (e.g. a
+bare dot) passes through untouched for downstream handling.
 }
 \description{
 Walks the formula's variables for function-call terms -- log(x), I(x^2),
@@ -55,7 +57,13 @@ stack the analysis path uses, so a jnumeric/jcount registration moves the
 variable to Numeric and lifts the refusal -- the identical escape hatch,
 and the exact path the message names -- while factor/character arguments
 are caught here too (a typed message in place of base R's raw non-numeric
-error). Evaluation happens on the pipeline-masked analysis copy, so declared
+error). A term that evaluates but yields non-finite values for some
+cases -- log() of a zero (-Inf) or of a negative (NaN) -- is NOT
+refused: those cells are set to NA, counted per term, and reported in a
+consequential note, with base R's raw "NaNs produced" warning muffled in
+favor of that note; the counts travel out as introduced_na so the Case
+Processing Summary can attribute the exclusions (AUDIT-024, AUDIT-025).
+Evaluation happens on the pipeline-masked analysis copy, so declared
 SPSS-style missing values are already NA before any arithmetic touches
 them; haven-labelled inputs are unclassed to plain numeric for the
 computation, the same coercion the analysis functions apply themselves.

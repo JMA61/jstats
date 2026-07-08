@@ -271,6 +271,11 @@
 #' @param analysis_vars Character vector of variable names used in the analysis.
 #' @param n_analysis Integer. Final N used in the analysis after listwise
 #'   deletion on analysis variables.
+#' @param transform_na Named integer vector from
+#'   \code{.jst_resolve_formula_transforms()$introduced_na}: per computed
+#'   term, the count of non-finite results the resolver converted to NA
+#'   (AUDIT-025). NULL (the default) for callers without formula
+#'   transforms; carried through for the Case Processing Summary.
 #'
 #' @return A list with elements: n_original, n_after_complete, n_after_filter,
 #'   n_after_subset, n_analysis, n_excluded_missing, missing_by_var,
@@ -278,7 +283,7 @@
 #'
 #' @keywords internal
 .jst_build_sample_info <- function(pipeline_counts, data, analysis_vars,
-                                   n_analysis) {
+                                   n_analysis, transform_na = NULL) {
 
   # Count missing values per analysis variable in the post-pipeline data
   missing_by_var <- vapply(analysis_vars, function(v) {
@@ -306,7 +311,8 @@
     udm_active         = pipeline_counts$udm_active,
     udm_masked_vars    = pipeline_counts$udm_masked_vars,
     pre_pipeline_data  = pipeline_counts$pre_pipeline_data,
-    surviving_ids      = pipeline_counts$surviving_ids
+    surviving_ids      = pipeline_counts$surviving_ids,
+    transform_na       = transform_na
   )
 }
 

@@ -1891,12 +1891,16 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         # asserted a numeric/count role (jnumeric/jcount) -- the hedge is a
         # guess they have already answered. (A per-call numeric=/count= IV
         # short-circuits earlier, so only registration reaches this gate.)
+        # The formula deparses in its post-resolve form, where a computed
+        # transform is a backticked column name; strip the backticks so
+        # the suggested rerun reads as what the user typed (AUDIT-030).
         warning(
           v, " seems categorical. To treat it that way, register it with ",
           "jdummy() and rerun:\n\n",
           "  jdummy(", .jst_data_name, ", ", v, ")\n",
-          "  jlm(", deparse(formula), ")\n\n",
-          "Or: jlm(", deparse(formula), ", categorical = \"", v, "\")",
+          "  jlm(", .jst_unbacktick(deparse(formula)), ")\n\n",
+          "Or: jlm(", .jst_unbacktick(deparse(formula)),
+          ", categorical = \"", v, "\")",
           call. = FALSE
         )
       }
@@ -1930,7 +1934,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
     analysis_vars   = raw_vars,
-    n_analysis      = nrow(mf)
+    n_analysis      = nrow(mf),
+    transform_na    = resolved$introduced_na
   )
 
   # Case Processing Summary
@@ -2863,12 +2868,16 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         # informational warning so the user can confirm continuous
         # treatment or switch to categorical. Suppressed when the user has
         # asserted a numeric/count role (jnumeric/jcount).
+        # The formula deparses in its post-resolve form, where a computed
+        # transform is a backticked column name; strip the backticks so
+        # the suggested rerun reads as what the user typed (AUDIT-030).
         warning(
           v, " seems categorical. To treat it that way, register it with ",
           "jdummy() and rerun:\n\n",
           "  jdummy(", .jst_data_name, ", ", v, ")\n",
-          "  jlogistic(", deparse(formula), ")\n\n",
-          "Or: jlogistic(", deparse(formula), ", categorical = \"", v, "\")",
+          "  jlogistic(", .jst_unbacktick(deparse(formula)), ")\n\n",
+          "Or: jlogistic(", .jst_unbacktick(deparse(formula)),
+          ", categorical = \"", v, "\")",
           call. = FALSE
         )
       }
@@ -3059,7 +3068,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
     analysis_vars   = raw_vars,
-    n_analysis      = nrow(mf)
+    n_analysis      = nrow(mf),
+    transform_na    = resolved$introduced_na
   )
 
   # Case Processing Summary

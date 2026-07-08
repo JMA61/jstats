@@ -218,7 +218,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
     analysis_vars   = raw_vars,
-    n_analysis      = nrow(mf)
+    n_analysis      = nrow(mf),
+    transform_na    = resolved$introduced_na
   )
 
   # Case Processing Summary
@@ -715,7 +716,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     pipeline_counts = pipeline$pipeline_counts,
     data            = pipeline$data,
     analysis_vars   = raw_vars,
-    n_analysis      = nrow(mf)
+    n_analysis      = nrow(mf),
+    transform_na    = resolved$introduced_na
   )
 
   # Case Processing Summary

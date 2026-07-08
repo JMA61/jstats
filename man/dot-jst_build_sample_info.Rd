@@ -4,7 +4,13 @@
 \alias{.jst_build_sample_info}
 \title{Internal helper: build standardized sample_info block}
 \usage{
-.jst_build_sample_info(pipeline_counts, data, analysis_vars, n_analysis)
+.jst_build_sample_info(
+  pipeline_counts,
+  data,
+  analysis_vars,
+  n_analysis,
+  transform_na = NULL
+)
 }
 \arguments{
 \item{pipeline_counts}{List returned by .jst_apply_pipeline()$pipeline_counts.}
@@ -16,6 +22,12 @@ exclusion).}
 
 \item{n_analysis}{Integer. Final N used in the analysis after listwise
 deletion on analysis variables.}
+
+\item{transform_na}{Named integer vector from
+\code{.jst_resolve_formula_transforms()$introduced_na}: per computed
+term, the count of non-finite results the resolver converted to NA
+(AUDIT-025). NULL (the default) for callers without formula
+transforms; carried through for the Case Processing Summary.}
 }
 \value{
 A list with elements: n_original, n_after_complete, n_after_filter,

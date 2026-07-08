@@ -11,7 +11,8 @@
   has_sysna,
   output_level,
   detail_tier,
-  cps_toggle = NULL
+  cps_toggle = NULL,
+  has_transform_na = FALSE
 )
 }
 \arguments{
@@ -32,6 +33,15 @@ missingness (in source or pool).}
 
 \item{cps_toggle}{Resolved case.processing toggle: \code{TRUE} (always),
 \code{FALSE} (never), or \code{NULL} (auto -> use output_level).}
+
+\item{has_transform_na}{Logical. At least one resolved formula-transform
+term produced non-finite values that the resolver converted to NA
+(transform-introduced missingness; the per-term counts travel in
+sample_info$transform_na). Folded into the visibility layer's missing
+coordinate and into the bottom lookup's has_sysna coordinate -- by the
+time the model sees them these cells are ordinary case-level NAs, just
+introduced by a computed term rather than present in a source column --
+so the rule frames gain a new INPUT but no new rows (AUDIT-025).}
 }
 \value{
 A list: render, render_top, render_bottom, endpoint_label,

@@ -38,18 +38,27 @@
 #' @param detail_tier One of \code{"none"}, \code{"totals"}, \code{"per_code"}.
 #' @param cps_toggle Resolved case.processing toggle: \code{TRUE} (always),
 #'   \code{FALSE} (never), or \code{NULL} (auto -> use output_level).
+#' @param has_transform_na Logical. At least one resolved formula-transform
+#'   term produced non-finite values that the resolver converted to NA
+#'   (transform-introduced missingness; the per-term counts travel in
+#'   sample_info$transform_na). Folded into the visibility layer's missing
+#'   coordinate and into the bottom lookup's has_sysna coordinate -- by the
+#'   time the model sees them these cells are ordinary case-level NAs, just
+#'   introduced by a computed term rather than present in a source column --
+#'   so the rule frames gain a new INPUT but no new rows (AUDIT-025).
 #' @return A list: render, render_top, render_bottom, endpoint_label,
 #'   show_auto_listwise, resolved_tier, hide_second_col_pair.
 #' @keywords internal
 .jst_resolve_cps_render <- function(layout, pipeline_active,
                                     has_udms, has_sysna,
                                     output_level, detail_tier,
-                                    cps_toggle = NULL) {
+                                    cps_toggle = NULL,
+                                    has_transform_na = FALSE) {
 
   eff_level <- if (isTRUE(cps_toggle)) "full"
                else if (identical(cps_toggle, FALSE)) "minimal"
                else output_level
-  any_missing <- has_udms || has_sysna
+  any_missing <- has_udms || has_sysna || has_transform_na
 
   vi <- .jst_cps_match(
     .jst_cps_visibility_rules,
@@ -70,15 +79,20 @@
   }
   base <- .jst_cps_layout_rules[li, ]
 
+  # Transform-introduced missingness enters the bottom lookup through the
+  # has_sysna coordinate (see @param has_transform_na): it has no per-code
+  # structure of its own, so the existing has_sysna rows already resolve
+  # its tier correctly and the rule frame needs no new rows (AUDIT-025).
+  bottom_sysna <- has_sysna || has_transform_na
   bi <- .jst_cps_match(
     .jst_cps_bottom_rules,
     list(layout    = layout,
          has_udms  = if (has_udms) "yes" else "no",
-         has_sysna = if (has_sysna) "yes" else "no",
+         has_sysna = if (bottom_sysna) "yes" else "no",
          tier      = detail_tier))
   if (is.na(bi)) {
     stop(".jst_resolve_cps_render(): no bottom rule for layout='", layout,
-         "', has_udms=", has_udms, ", has_sysna=", has_sysna,
+         "', has_udms=", has_udms, ", has_sysna=", bottom_sysna,
          ", tier='", detail_tier, "'", call. = FALSE)
   }
   ref <- .jst_cps_bottom_rules[bi, ]
@@ -341,6 +355,17 @@
   has_sysna <- any(vapply(cps_vars, function(v) sum(is.na(pre[[v]])) > 0L,
                           logical(1)))
 
+  # Transform-introduced missingness (AUDIT-025): non-finite results the
+  # transform resolver converted to NA, carried per computed term in
+  # sample_info$transform_na (a named integer vector keyed by the term's
+  # text). These NAs live only in the COMPUTED columns of the analysis
+  # copy -- never in the pre-pipeline source columns this block inspects --
+  # so has_sysna cannot see them; without this input, an exclusion driven
+  # solely by a transform would render no CPS at the standard tier.
+  transform_na <- sample_info$transform_na
+  if (!is.null(transform_na)) transform_na <- transform_na[transform_na > 0L]
+  has_transform_na <- !is.null(transform_na) && length(transform_na) > 0L
+
   pipeline_active <- isTRUE(sample_info$complete_active) ||
                      isTRUE(sample_info$filter_active) ||
                      !is.null(sample_info$n_after_subset)
@@ -350,13 +375,14 @@
   out_level   <- getOption(".jst_output_level", "standard")
 
   spec <- .jst_resolve_cps_render(
-    layout          = analysis_type,
-    pipeline_active = pipeline_active,
-    has_udms        = isTRUE(has_udms),
-    has_sysna       = isTRUE(has_sysna),
-    output_level    = out_level,
-    detail_tier     = detail_tier,
-    cps_toggle      = cps_toggle)
+    layout           = analysis_type,
+    pipeline_active  = pipeline_active,
+    has_udms         = isTRUE(has_udms),
+    has_sysna        = isTRUE(has_sysna),
+    output_level     = out_level,
+    detail_tier      = detail_tier,
+    cps_toggle       = cps_toggle,
+    has_transform_na = has_transform_na)
 
   fmt1 <- function(x) sprintf("%.1f", x)
   dash <- "\u2014"
@@ -477,14 +503,42 @@
         disp[[length(disp) + 1L]] <- list(var = v, rows = rows)
       }
 
+      # Transform rows (AUDIT-025): one row per computed term that
+      # introduced missingness, under the term's own text and labeled as
+      # its own row kind -- these cases were present in the source columns
+      # and became missing in computation, so "Missing" would misdescribe
+      # them. The count is exact out of the pool the resolver ran on (the
+      # post-pipeline rows); out of the original N it is unknowable once a
+      # pipeline step dropped rows (the term was never evaluated on them),
+      # so the source column renders a dash. With no pipeline the two row
+      # sets coincide and the count is exact in both. The row is the same
+      # single line at either detail tier: a failed computation is one
+      # bucket with no code structure to break out.
+      if (has_transform_na) {
+        for (tt in names(transform_na)) {
+          cnt <- as.integer(transform_na[[tt]])
+          disp[[length(disp) + 1L]] <- list(
+            var  = tt,
+            rows = data.frame(
+              code_label = "Could not be computed",
+              src        = if (n_pool == n_original) cnt else NA_integer_,
+              pool       = cnt,
+              stringsAsFactors = FALSE))
+        }
+      }
+
       if (length(disp) > 0L) {
         src_hdr  <- paste0("From ", n_original)
         pool_hdr <- paste0("From ", n_pool)
         all_lab  <- unlist(lapply(disp, function(d) d$rows$code_label))
         all_src  <- unlist(lapply(disp, function(d) d$rows$src))
         all_pool <- unlist(lapply(disp, function(d) d$rows$pool))
-        all_srcp <- fmt1(all_src  / n_original * 100)
-        all_plp  <- fmt1(all_pool / n_pool     * 100)
+        # An NA source count (a transform row under an active pipeline)
+        # renders as a dash in both its count and percent cells (AUDIT-025).
+        all_srcs <- ifelse(is.na(all_src), dash, as.character(all_src))
+        all_srcp <- ifelse(is.na(all_src), dash,
+                           fmt1(all_src / n_original * 100))
+        all_plp  <- fmt1(all_pool / n_pool * 100)
 
         h_ind <- 0L; c_ind <- 6L
         lab_end <- max(h_ind + dw("Missing-data breakdown"),
@@ -493,7 +547,7 @@
         # value-block is sized to the widest count in that column and centred
         # within the column (counts right-justified within the block). Percent
         # columns keep their right-justified rendering. (Session 52.)
-        src_count_w  <- max(dw(all_src))
+        src_count_w  <- max(dw(all_srcs))
         pool_count_w <- max(dw(all_pool))
         srcn_w  <- max(dw(src_hdr),  src_count_w)
         pooln_w <- max(dw(pool_hdr), pool_count_w)
@@ -534,8 +588,10 @@
           cat(strrep(" ", 4L), d$var, "\n", sep = "")
           for (j in seq_len(nrow(d$rows))) {
             sc <- d$rows$src[j]; pl <- d$rows$pool[j]
+            sc_str <- if (is.na(sc)) dash else as.character(sc)
+            sp_str <- if (is.na(sc)) dash else fmt1(sc / n_original * 100)
             emit(c_ind, d$rows$code_label[j], lab_end - c_ind,
-                 as.character(sc), fmt1(sc / n_original * 100),
+                 sc_str, sp_str,
                  as.character(pl), fmt1(pl / n_pool * 100))
           }
         }
