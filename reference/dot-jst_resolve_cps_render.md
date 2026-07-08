@@ -14,7 +14,8 @@ its own. Errors loudly on a coordinate that matches no row.
   has_sysna,
   output_level,
   detail_tier,
-  cps_toggle = NULL
+  cps_toggle = NULL,
+  has_transform_na = FALSE
 )
 ```
 
@@ -49,6 +50,17 @@ its own. Errors loudly on a coordinate that matches no row.
 
   Resolved case.processing toggle: `TRUE` (always), `FALSE` (never), or
   `NULL` (auto -\> use output_level).
+
+- has_transform_na:
+
+  Logical. At least one resolved formula-transform term produced
+  non-finite values that the resolver converted to NA
+  (transform-introduced missingness; the per-term counts travel in
+  sample_info\$transform_na). Folded into the visibility layer's missing
+  coordinate and into the bottom lookup's has_sysna coordinate – by the
+  time the model sees them these cells are ordinary case-level NAs, just
+  introduced by a computed term rather than present in a source column –
+  so the rule frames gain a new INPUT but no new rows (AUDIT-025).
 
 ## Value
 

@@ -253,6 +253,20 @@ Handles haven-labelled variables, registered dummy variables via
 the `numeric`/`categorical` overrides in the same way as
 [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md).
 
+Transformed predictor terms in `formula` are computed automatically. A
+term that applies a function to a variable – `log(x)`, `sqrt(x)`,
+`exp(x)`, `I(x^2)`, `scale(x)`, an arithmetic expression, or a logical
+condition such as `I(x > 10)` – is evaluated once on the analysis data
+and enters the model as a single derived column named for the
+expression, so the coefficient table and the diagnostics report the term
+as written. This follows the base R formula convention; the terms
+supported inline are those that evaluate to one numeric or logical
+column. Terms that produce several columns (`poly(x, 2)`, spline bases)
+or a categorical result (`cut(x, 3)`) are not supported inline: create
+the derived variable as a column of the data first, then name that
+column in the formula. (The dependent variable must be a plain 0/1
+dichotomy, so a transform applies to predictors, not the response.)
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)

@@ -11,7 +11,7 @@ its own. Errors loudly on a coordinate that matches no row."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.98</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.100</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,7 +50,8 @@ its own. Errors loudly on a coordinate that matches no row.</p>
 <span>  <span class="va">has_sysna</span>,</span>
 <span>  <span class="va">output_level</span>,</span>
 <span>  <span class="va">detail_tier</span>,</span>
-<span>  cps_toggle <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  cps_toggle <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  has_transform_na <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -88,6 +89,17 @@ missingness (in source or pool).</p></dd>
 <dt id="arg-cps-toggle">cps_toggle<a class="anchor" aria-label="anchor" href="#arg-cps-toggle"></a></dt>
 <dd><p>Resolved case.processing toggle: <code>TRUE</code> (always),
 <code>FALSE</code> (never), or <code>NULL</code> (auto -&gt; use output_level).</p></dd>
+
+
+<dt id="arg-has-transform-na">has_transform_na<a class="anchor" aria-label="anchor" href="#arg-has-transform-na"></a></dt>
+<dd><p>Logical. At least one resolved formula-transform
+term produced non-finite values that the resolver converted to NA
+(transform-introduced missingness; the per-term counts travel in
+sample_info$transform_na). Folded into the visibility layer's missing
+coordinate and into the bottom lookup's has_sysna coordinate – by the
+time the model sees them these cells are ordinary case-level NAs, just
+introduced by a computed term rather than present in a source column –
+so the rule frames gain a new INPUT but no new rows (AUDIT-025).</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -13,7 +13,7 @@ odds ratios (Exp(B))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.98</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.100</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -265,6 +265,20 @@ stops with a clear error message and suggests the appropriate
 <p>Handles haven-labelled variables, registered dummy variables via
 <code><a href="jdummy.html">jdummy()</a></code>, and the <code>numeric</code>/<code>categorical</code> overrides
 in the same way as <code><a href="jlm.html">jlm()</a></code>.</p>
+<p>Transformed predictor terms in <code>formula</code> are computed
+automatically. A term that applies a function to a variable –
+<code>log(x)</code>, <code>sqrt(x)</code>, <code>exp(x)</code>, <code>I(x^2)</code>,
+<code>scale(x)</code>, an arithmetic expression, or a logical condition such
+as <code>I(x &gt; 10)</code> – is evaluated once on the analysis data and enters
+the model as a single derived column named for the expression, so the
+coefficient table and the diagnostics report the term as written. This
+follows the base R formula convention; the terms supported inline are
+those that evaluate to one numeric or logical column. Terms that produce
+several columns (<code>poly(x, 2)</code>, spline bases) or a categorical
+result (<code>cut(x, 3)</code>) are not supported inline: create the derived
+variable as a column of the data first, then name that column in the
+formula. (The dependent variable must be a plain 0/1 dichotomy, so a
+transform applies to predictors, not the response.)</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

@@ -7,7 +7,13 @@ every analysis function's return value.
 ## Usage
 
 ``` r
-.jst_build_sample_info(pipeline_counts, data, analysis_vars, n_analysis)
+.jst_build_sample_info(
+  pipeline_counts,
+  data,
+  analysis_vars,
+  n_analysis,
+  transform_na = NULL
+)
 ```
 
 ## Arguments
@@ -29,6 +35,14 @@ every analysis function's return value.
 
   Integer. Final N used in the analysis after listwise deletion on
   analysis variables.
+
+- transform_na:
+
+  Named integer vector from
+  `.jst_resolve_formula_transforms()$introduced_na`: per computed term,
+  the count of non-finite results the resolver converted to NA
+  (AUDIT-025). NULL (the default) for callers without formula
+  transforms; carried through for the Case Processing Summary.
 
 ## Value
 

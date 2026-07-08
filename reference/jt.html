@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.98</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.100</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -183,6 +183,11 @@ data frame used for plotting), <code>test_type</code>, <code>formula</code>,
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>A red title identifying the test type is printed first, followed by
 variable labels (if present), then the results tables.</p>
+<p>A transformed outcome or grouping term in <code>formula</code> – <code>log(x)</code>
+and the like – is computed once on the analysis data and used by both the
+t-test and the group descriptives, so the two describe the same values.
+The transforms supported inline, and those that must be created as a
+column first, are as documented for <code><a href="jlm.html">jlm</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

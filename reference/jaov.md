@@ -138,6 +138,13 @@ data counts).
 A red title identifying the test type is printed first, followed by
 variable labels (if present), then the results tables.
 
+A transformed outcome or grouping term in `formula` – `log(x)` and the
+like – is computed once on the analysis data and used by the F test,
+Levene's test, the post hoc comparisons, and the descriptives, so they
+all describe the same values. The transforms supported inline, and those
+that must be created as a column first, are as documented for
+[`jlm`](https://jma61.github.io/jstats/reference/jlm.md).
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)

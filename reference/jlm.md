@@ -303,6 +303,19 @@ statistics.
   role so the count / categorical-like note is silenced (`numeric`) or
   stated definitively (`count`).
 
+Transformed terms in `formula` are computed automatically. A term that
+applies a function to a variable – `log(x)`, `sqrt(x)`, `exp(x)`,
+`I(x^2)`, `scale(x)`, an arithmetic expression, or a logical condition
+such as `I(x > 10)` – is evaluated once on the analysis data and enters
+the model as a single derived column named for the expression, so the
+coefficient table, the group descriptives, and the standardized-beta
+refit all report the term as written. This follows the base R formula
+convention; the terms supported inline are those that evaluate to one
+numeric or logical column. Terms that produce several columns
+(`poly(x, 2)`, spline bases) or a categorical result (`cut(x, 3)`) are
+not supported inline: create the derived variable as a column of the
+data first, then name that column in the formula.
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)

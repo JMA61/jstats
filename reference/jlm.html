@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.98</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.100</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -300,7 +300,19 @@ labels (or plain numeric variables) to be treated as categorical
 <code>numeric</code> or <code>count</code> does not change that; it only asserts the
 DV's role so the count / categorical-like note is silenced
 (<code>numeric</code>) or stated definitively (<code>count</code>).</p></li>
-</ul></div>
+</ul><p>Transformed terms in <code>formula</code> are computed automatically. A term
+that applies a function to a variable – <code>log(x)</code>, <code>sqrt(x)</code>,
+<code>exp(x)</code>, <code>I(x^2)</code>, <code>scale(x)</code>, an arithmetic expression,
+or a logical condition such as <code>I(x &gt; 10)</code> – is evaluated once on
+the analysis data and enters the model as a single derived column named
+for the expression, so the coefficient table, the group descriptives, and
+the standardized-beta refit all report the term as written. This follows
+the base R formula convention; the terms supported inline are those that
+evaluate to one numeric or logical column. Terms that produce several
+columns (<code>poly(x, 2)</code>, spline bases) or a categorical result
+(<code>cut(x, 3)</code>) are not supported inline: create the derived variable
+as a column of the data first, then name that column in the formula.</p>
+    </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="jstats-package.html">jstats</a></code> for the package overview,

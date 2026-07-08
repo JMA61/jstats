@@ -140,6 +140,13 @@ plotting), `test_type`, `formula`, `descriptives`, `t`, `df`, `p`,
 A red title identifying the test type is printed first, followed by
 variable labels (if present), then the results tables.
 
+A transformed outcome or grouping term in `formula` – `log(x)` and the
+like – is computed once on the analysis data and used by both the t-test
+and the group descriptives, so the two describe the same values. The
+transforms supported inline, and those that must be created as a column
+first, are as documented for
+[`jlm`](https://jma61.github.io/jstats/reference/jlm.md).
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)
