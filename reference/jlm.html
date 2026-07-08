@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.100</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -438,13 +438,14 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                     b      SE      t       β      p  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------  ------  -----  ------  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)       37.016  4.326   8.557         &lt;.001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_South (1)  -0.370  3.243  -0.114          .909</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_East (1)   -0.388  2.903  -0.133          .894</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_West (1)   -5.692  2.940  -1.936          .056</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age                0.376  0.095   3.962  0.385  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                            b      SE      t       β      p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  ------  -----  ------  -----  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)              37.016  4.326   8.557         &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region (ref = 1: North)                                     </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2: South               -0.370  3.243  -0.114          .909</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3: East                -0.388  2.903  -0.133          .894</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   4: West                -5.692  2.940  -1.936          .056</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                       0.376  0.095   3.962  0.385  &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -480,13 +481,14 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                     b      SE      t       β      p  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------  ------  -----  ------  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)       37.016  4.326   8.557         &lt;.001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_South (1)  -0.370  3.243  -0.114          .909</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_East (1)   -0.388  2.903  -0.133          .894</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_West (1)   -5.692  2.940  -1.936          .056</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age                0.376  0.095   3.962  0.385  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                            b      SE      t       β      p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  ------  -----  ------  -----  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)              37.016  4.326   8.557         &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region (ref = 1: North)                                     </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2: South               -0.370  3.243  -0.114          .909</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3: East                -0.388  2.903  -0.133          .894</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   4: West                -5.692  2.940  -1.936          .056</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                       0.376  0.095   3.962  0.385  &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -519,13 +521,14 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                     b      SE      t      β      p  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------  ------  -----  -----  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)       31.324  4.620  6.780         &lt;.001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_North (1)   5.692  2.940  1.936          .056</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_South (1)   5.322  3.290  1.618          .109</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region_East (1)    5.305  2.867  1.850          .067</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age                0.376  0.095  3.962  0.385  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                           b      SE      t      β      p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------  ------  -----  -----  -----  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)             31.324  4.620  6.780         &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region (ref = 4: West)                                    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1: North               5.692  2.940  1.936          .056</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2: South               5.322  3.290  1.618          .109</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3: East                5.305  2.867  1.850          .067</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                      0.376  0.095  3.962  0.385  &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -600,12 +603,12 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                   b      SE      t       β       p  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------  -----  ------  ------  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)     41.893  3.729  11.234          &lt;.001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education        3.777  0.864   4.371   0.468  &lt;.001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4    -0.261  1.001  -0.261  -0.027   .795</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker_Yes (1)  -2.055  2.314  -0.888           .377</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 b      SE      t       β       p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------------  ------  -----  ------  ------  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)   41.893  3.729  11.234          &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education      3.777  0.864   4.371   0.468  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4  -0.261  1.001  -0.261  -0.027   .795</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker_Yes    -2.055  2.314  -0.888           .377</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

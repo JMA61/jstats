@@ -442,13 +442,14 @@ jlm(WellbeingScore ~ Region + Age, categorical = "Region")
 #> Using default data frame: community
 #> 
 #> Coefficients
-#>                     b      SE      t       β      p  
-#> ----------------  ------  -----  ------  -----  -----
-#> (Intercept)       37.016  4.326   8.557         <.001
-#> Region_South (1)  -0.370  3.243  -0.114          .909
-#> Region_East (1)   -0.388  2.903  -0.133          .894
-#> Region_West (1)   -5.692  2.940  -1.936          .056
-#> Age                0.376  0.095   3.962  0.385  <.001
+#>                            b      SE      t       β      p  
+#> -----------------------  ------  -----  ------  -----  -----
+#> (Intercept)              37.016  4.326   8.557         <.001
+#> Region (ref = 1: North)                                     
+#>   2: South               -0.370  3.243  -0.114          .909
+#>   3: East                -0.388  2.903  -0.133          .894
+#>   4: West                -5.692  2.940  -1.936          .056
+#> Age                       0.376  0.095   3.962  0.385  <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
@@ -484,13 +485,14 @@ jlm(WellbeingScore ~ Region + Age)
 #> Using default data frame: community
 #> 
 #> Coefficients
-#>                     b      SE      t       β      p  
-#> ----------------  ------  -----  ------  -----  -----
-#> (Intercept)       37.016  4.326   8.557         <.001
-#> Region_South (1)  -0.370  3.243  -0.114          .909
-#> Region_East (1)   -0.388  2.903  -0.133          .894
-#> Region_West (1)   -5.692  2.940  -1.936          .056
-#> Age                0.376  0.095   3.962  0.385  <.001
+#>                            b      SE      t       β      p  
+#> -----------------------  ------  -----  ------  -----  -----
+#> (Intercept)              37.016  4.326   8.557         <.001
+#> Region (ref = 1: North)                                     
+#>   2: South               -0.370  3.243  -0.114          .909
+#>   3: East                -0.388  2.903  -0.133          .894
+#>   4: West                -5.692  2.940  -1.936          .056
+#> Age                       0.376  0.095   3.962  0.385  <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
@@ -523,13 +525,14 @@ jlm(WellbeingScore ~ Region + Age)
 #> Using default data frame: community
 #> 
 #> Coefficients
-#>                     b      SE      t      β      p  
-#> ----------------  ------  -----  -----  -----  -----
-#> (Intercept)       31.324  4.620  6.780         <.001
-#> Region_North (1)   5.692  2.940  1.936          .056
-#> Region_South (1)   5.322  3.290  1.618          .109
-#> Region_East (1)    5.305  2.867  1.850          .067
-#> Age                0.376  0.095  3.962  0.385  <.001
+#>                           b      SE      t      β      p  
+#> ----------------------  ------  -----  -----  -----  -----
+#> (Intercept)             31.324  4.620  6.780         <.001
+#> Region (ref = 4: West)                                    
+#>   1: North               5.692  2.940  1.936          .056
+#>   2: South               5.322  3.290  1.618          .109
+#>   3: East                5.305  2.867  1.850          .067
+#> Age                      0.376  0.095  3.962  0.385  <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
@@ -604,12 +607,12 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #> 
 #> 
 #> Coefficients
-#>                   b      SE      t       β       p  
-#> --------------  ------  -----  ------  ------  -----
-#> (Intercept)     41.893  3.729  11.234          <.001
-#> Education        3.777  0.864   4.371   0.468  <.001
-#> Environment4    -0.261  1.001  -0.261  -0.027   .795
-#> Smoker_Yes (1)  -2.055  2.314  -0.888           .377
+#>                 b      SE      t       β       p  
+#> ------------  ------  -----  ------  ------  -----
+#> (Intercept)   41.893  3.729  11.234          <.001
+#> Education      3.777  0.864   4.371   0.468  <.001
+#> Environment4  -0.261  1.001  -0.261  -0.027   .795
+#> Smoker_Yes    -2.055  2.314  -0.888           .377
 #> 
 #> Outcome: WellbeingScore
 #> 

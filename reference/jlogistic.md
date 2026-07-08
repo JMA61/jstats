@@ -412,13 +412,14 @@ jlogistic(Volunteer ~ Region + Age, categorical = "Region")
 #> Using default data frame: community
 #> 
 #> Coefficients
-#>                     b      SE    Wald   df   p    Exp(B)
-#> ----------------  ------  -----  -----  --  ----  ------
-#> (Intercept)       -2.144  0.901  5.662   1  .017   0.117
-#> Region_South (1)   0.155  0.642  0.058   1  .809   1.168
-#> Region_East (1)    0.692  0.570  1.474   1  .225   1.998
-#> Region_West (1)   -0.396  0.596  0.441   1  .507   0.673
-#> Age                0.041  0.020  4.474   1  .034   1.042
+#>                            b      SE    Wald   df   p    Exp(B)
+#> -----------------------  ------  -----  -----  --  ----  ------
+#> (Intercept)              -2.144  0.901  5.662   1  .017   0.117
+#> Region (ref = 1: North)                                        
+#>   2: South                0.155  0.642  0.058   1  .809   1.168
+#>   3: East                 0.692  0.570  1.474   1  .225   1.998
+#>   4: West                -0.396  0.596  0.441   1  .507   0.673
+#> Age                       0.041  0.020  4.474   1  .034   1.042
 #> 
 #> Outcome: Volunteer
 #> 
@@ -457,13 +458,14 @@ jlogistic(Volunteer ~ Region + Age)
 #> Using default data frame: community
 #> 
 #> Coefficients
-#>                     b      SE    Wald   df   p    Exp(B)
-#> ----------------  ------  -----  -----  --  ----  ------
-#> (Intercept)       -2.144  0.901  5.662   1  .017   0.117
-#> Region_South (1)   0.155  0.642  0.058   1  .809   1.168
-#> Region_East (1)    0.692  0.570  1.474   1  .225   1.998
-#> Region_West (1)   -0.396  0.596  0.441   1  .507   0.673
-#> Age                0.041  0.020  4.474   1  .034   1.042
+#>                            b      SE    Wald   df   p    Exp(B)
+#> -----------------------  ------  -----  -----  --  ----  ------
+#> (Intercept)              -2.144  0.901  5.662   1  .017   0.117
+#> Region (ref = 1: North)                                        
+#>   2: South                0.155  0.642  0.058   1  .809   1.168
+#>   3: East                 0.692  0.570  1.474   1  .225   1.998
+#>   4: West                -0.396  0.596  0.441   1  .507   0.673
+#> Age                       0.041  0.020  4.474   1  .034   1.042
 #> 
 #> Outcome: Volunteer
 #> 
@@ -500,13 +502,14 @@ jlogistic(Volunteer ~ Region + Age)
 #> Using default data frame: community
 #> 
 #> Coefficients
-#>                     b      SE    Wald   df   p    Exp(B)
-#> ----------------  ------  -----  -----  --  ----  ------
-#> (Intercept)       -2.540  0.984  6.656   1  .010   0.079
-#> Region_North (1)   0.396  0.596  0.441   1  .507   1.485
-#> Region_South (1)   0.551  0.669  0.677   1  .410   1.734
-#> Region_East (1)    1.088  0.581  3.504   1  .061   2.967
-#> Age                0.041  0.020  4.474   1  .034   1.042
+#>                           b      SE    Wald   df   p    Exp(B)
+#> ----------------------  ------  -----  -----  --  ----  ------
+#> (Intercept)             -2.540  0.984  6.656   1  .010   0.079
+#> Region (ref = 4: West)                                        
+#>   1: North               0.396  0.596  0.441   1  .507   1.485
+#>   2: South               0.551  0.669  0.677   1  .410   1.734
+#>   3: East                1.088  0.581  3.504   1  .061   2.967
+#> Age                      0.041  0.020  4.474   1  .034   1.042
 #> 
 #> Outcome: Volunteer
 #> 
