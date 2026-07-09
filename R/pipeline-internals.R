@@ -325,11 +325,14 @@
 #           state active, or for listwise=TRUE callers, listwise excluded
 #           at least one case)
 #
-# udm.notice supports three states:
+# udm.notice supports three states. Standard and full both use TRUE (always
+# show); minimal uses FALSE. The NULL/auto state is retained internally but
+# no preset level selects it and joutput() cannot set it, so the narrative
+# now shows on every UDM-bearing load unless minimal output is active:
 #   FALSE - never print the UDM narrative on jload
-#   TRUE  - always print the narrative (every .sav load with UDMs)
-#   NULL  - "auto": print once per session, then suppress (tracked via
-#           the .jst_udm_notice_shown option)
+#   TRUE  - always print the narrative (every load with UDM-bearing variables)
+#   NULL  - "auto": print once per session, then suppress (tracked via the
+#           .jst_udm_notice_shown option); no preset level uses this
 .jst_output_defaults <- list(
   minimal  = list(effect.size = FALSE,
                   regression.ci = FALSE, means.ci = FALSE, levene = FALSE,
@@ -344,7 +347,7 @@
                   case.processing = NULL,  case.processing.detail = "totals",
                   variable.id = "names", value.id = "both",
                   ref.categories = TRUE, digits = 3,
-                  udm.notice = NULL),
+                  udm.notice = TRUE),
   full     = list(effect.size = TRUE,
                   regression.ci = TRUE,  means.ci = TRUE,  levene = TRUE,
                   posthoc = TRUE,  diagnostics = TRUE,

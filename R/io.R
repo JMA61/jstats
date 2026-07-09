@@ -61,11 +61,12 @@
 #'   \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
 #'   saved from such data. For \code{.sav} files, \code{TRUE}
 #'   corresponds to haven's \code{user_na = TRUE}.
-#' @param udm.notice Per-call override for the user-defined missing value (UDM) notification frequency.
-#'   \code{NULL} (default) defers to the global setting from \code{joutput()}.
-#'   \code{TRUE} prints the notification on every load; \code{FALSE}
-#'   suppresses it; \code{NULL} at the global level shows once per session.
-#'   See \code{?joutput} for the full toggle behavior.
+#' @param udm.notice Per-call override for the user-defined missing value (UDM) notification.
+#'   \code{NULL} (default) defers to the setting from \code{joutput()}.
+#'   \code{TRUE} prints the notification on every load with UDM-bearing
+#'   variables; \code{FALSE} suppresses it. Under the default (standard)
+#'   and full output levels it prints on every such load; minimal
+#'   suppresses it. See \code{?joutput} for the full toggle behavior.
 #'
 #' @return Invisibly returns the loaded data frame. The primary effect is
 #'   assigning the data frame in the calling environment.
@@ -457,8 +458,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- UDM narrative notification --------------------------------------------
   # Toggle resolution: per-call udm.notice arg > joutput global toggle >
-  # joutput level default. NULL at the resolved level means "auto" = show
-  # once per session (tracked via .jst_udm_notice_shown option).
+  # joutput level default. Standard and full both default to TRUE (show on
+  # every UDM-bearing load); minimal is FALSE. The NULL/"auto" branch below
+  # (show once per session, tracked via .jst_udm_notice_shown) is retained
+  # but no preset level now selects it.
   if (length(udm_info) > 0) {
     notice_setting <- .jst_resolve_toggle("udm.notice", udm.notice)
     show_notice <- if (isTRUE(notice_setting)) {

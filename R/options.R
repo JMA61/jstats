@@ -95,13 +95,12 @@
 #'   label. Not a logical.
 #' @param ref.categories Logical or NULL. Override the level's default
 #'   for the reference categories block (registered dummies).
-#' @param udm.notice Three-state toggle controlling the user-defined
+#' @param udm.notice Logical or NULL. Controls the user-defined
 #'   missing-value (UDM) notification emitted by \code{jload()} for
-#'   \code{.sav} files. \code{TRUE} prints the notification on every
-#'   load that involves UDM-bearing variables; \code{FALSE} suppresses
-#'   it entirely; \code{NULL} ("auto") prints it only the first time
-#'   in a session, then suppresses it. Standard level uses \code{NULL}
-#'   (auto), minimal uses \code{FALSE}, full uses \code{TRUE}.
+#'   files with UDM-bearing variables. \code{TRUE} prints it on every
+#'   such load; \code{FALSE} suppresses it; \code{NULL} (the default)
+#'   leaves the level's setting in place. The standard and full levels
+#'   print it; the minimal level suppresses it.
 #' @param digits Integer or NULL. Number of decimal places shown for
 #'   continuous statistics in the analysis-function output tables
 #'   (range 0-7; \code{digits = 0} prints whole numbers with no
