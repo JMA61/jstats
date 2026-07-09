@@ -66,8 +66,8 @@ juse(community)
 
 # Sum three variables (all must be non-missing)
 community$EnvTotal <- jsum(Environment1, Environment3, Environment4)
-#> Sum of 3 variables computed for 100 cases (18 set to NA due to missing values).
-#> Mean of the new variable: 9.220.
+#> Sum of 3 variables computed for 103 cases (19 set to NA due to missing values).
+#> Mean of the new variable: 9.524.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
 #>   community$<name> <- jsum(...)
@@ -76,8 +76,8 @@ community$EnvTotal <- jsum(Environment1, Environment3, Environment4)
 # Sum with partial data allowed (at least 2 non-missing)
 community$EnvTotal <- jsum(Environment1, Environment3, Environment4,
                            min.valid = 2)
-#> Sum of 3 variables computed for 100 cases (min.valid = 2: 12 cases used partial data, 6 set to NA due to missing values).
-#> Mean of the new variable: 8.904.
+#> Sum of 3 variables computed for 103 cases (min.valid = 2: 14 cases used partial data, 5 set to NA due to missing values).
+#> Mean of the new variable: 9.082.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
 #>   community$<name> <- jsum(...)
@@ -85,8 +85,8 @@ community$EnvTotal <- jsum(Environment1, Environment3, Environment4,
 
 # Sum using colon range for consecutive columns
 community$EnvTotal <- jsum(Environment1:Environment5)
-#> Sum of 5 variables computed for 100 cases (18 set to NA due to missing values).
-#> Mean of the new variable: 14.976.
+#> Sum of 5 variables computed for 103 cases (19 set to NA due to missing values).
+#> Mean of the new variable: 15.155.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
 #>   community$<name> <- jsum(...)
@@ -101,8 +101,8 @@ community$Environment2R <- jrecode(community, Environment2,
 #> To check the recode landed correctly, compare jfreq() on the original and the new column.
 community$ScaleTotal <- jsum(Environment1, Environment2R,
                              Environment3:Environment5)
-#> Sum of 5 variables computed for 100 cases (18 set to NA due to missing values).
-#> Mean of the new variable: 15.415.
+#> Sum of 5 variables computed for 103 cases (19 set to NA due to missing values).
+#> Mean of the new variable: 15.417.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
 #>   community$<name> <- jsum(...)
@@ -111,8 +111,8 @@ community$ScaleTotal <- jsum(Environment1, Environment2R,
 # With a custom variable label
 community$ScaleTotal <- jsum(Environment1:Environment5,
                              var.label = "Environment Scale Total")
-#> Sum of 5 variables computed for 100 cases (18 set to NA due to missing values).
-#> Mean of the new variable: 14.976.
+#> Sum of 5 variables computed for 103 cases (19 set to NA due to missing values).
+#> Mean of the new variable: 15.155.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
 #>   community$<name> <- jsum(...)
@@ -121,8 +121,8 @@ community$ScaleTotal <- jsum(Environment1:Environment5,
 # With an explicit data frame (instead of using juse default)
 community$EnvTotal <- jsum(community, Environment1, Environment3,
                            Environment4)
-#> Sum of 3 variables computed for 100 cases (18 set to NA due to missing values).
-#> Mean of the new variable: 9.220.
+#> Sum of 3 variables computed for 103 cases (19 set to NA due to missing values).
+#> Mean of the new variable: 9.524.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
 #>   community$<name> <- jsum(...)

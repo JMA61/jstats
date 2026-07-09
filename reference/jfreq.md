@@ -108,20 +108,20 @@ jfreq(community, Region)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    26    26.00    26.00   26.00
-#> 2: South    19    19.00    19.00   45.00
-#> 3: East     28    28.00    28.00   73.00
-#> 4: West     27    27.00    27.00  100.00
+#> 1: North    27    26.21    26.21   26.21
+#> 2: South    20    19.42    19.42   45.63
+#> 3: East     31    30.10    30.10   75.73
+#> 4: West     25    24.27    24.27  100.00
 #>                                         
-#> Total      100   100.00                 
+#> Total      103   100.00                 
 #> 
 #> 
 jfreq(community, Region, Education)
 #> Frequencies
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        100
-#>     Remaining N         —        100
+#>     Original            —        103
+#>     Remaining N         —        103
 #> 
 #> ────────────────────────────────────
 #> 
@@ -129,29 +129,29 @@ jfreq(community, Region, Education)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    26    26.00    26.00   26.00
-#> 2: South    19    19.00    19.00   45.00
-#> 3: East     28    28.00    28.00   73.00
-#> 4: West     27    27.00    27.00  100.00
+#> 1: North    27    26.21    26.21   26.21
+#> 2: South    20    19.42    19.42   45.63
+#> 3: East     31    30.10    30.10   75.73
+#> 4: West     25    24.27    24.27  100.00
 #>                                         
-#> Total      100   100.00                 
+#> Total      103   100.00                 
 #> 
 #> Education
 #> 
 #>                          Freq  Total %  Valid %  Cum. %
 #> -----------------------  ----  -------  -------  ------
 #> Valid                                                  
-#> 1: Some high school        23    23.00    24.47   24.47
-#> 2: High school graduate    19    19.00    20.21   44.68
-#> 3: Some college            23    23.00    24.47   69.15
-#> 4: Bachelor's degree       13    13.00    13.83   82.98
-#> 5: Graduate degree         16    16.00    17.02  100.00
+#> 1: Some high school        23    22.33    23.71   23.71
+#> 2: High school graduate    18    17.48    18.56   42.27
+#> 3: Some college            25    24.27    25.77   68.04
+#> 4: Bachelor's degree       13    12.62    13.40   81.44
+#> 5: Graduate degree         18    17.48    18.56  100.00
 #>                                                        
 #> Missing                                                
-#> -99 ["Refused"]             3     3.00       --      --
-#> -98 ["Don't know"]          3     3.00       --      --
+#> -99 ["Refused"]             3     2.91       --      --
+#> -98 ["Don't know"]          3     2.91       --      --
 #>                                                        
-#> Total                     100   100.00                 
+#> Total                     103   100.00                 
 #> 
 #> 
 
@@ -165,12 +165,12 @@ jfreq(Region)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    26    26.00    26.00   26.00
-#> 2: South    19    19.00    19.00   45.00
-#> 3: East     28    28.00    28.00   73.00
-#> 4: West     27    27.00    27.00  100.00
+#> 1: North    27    26.21    26.21   26.21
+#> 2: South    20    19.42    19.42   45.63
+#> 3: East     31    30.10    30.10   75.73
+#> 4: West     25    24.27    24.27  100.00
 #>                                         
-#> Total      100   100.00                 
+#> Total      103   100.00                 
 #> 
 #> 
 jfreq(Region, Education)
@@ -178,8 +178,8 @@ jfreq(Region, Education)
 #> Using default data frame: community
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        100
-#>     Remaining N         —        100
+#>     Original            —        103
+#>     Remaining N         —        103
 #> 
 #> ────────────────────────────────────
 #> 
@@ -187,29 +187,29 @@ jfreq(Region, Education)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    26    26.00    26.00   26.00
-#> 2: South    19    19.00    19.00   45.00
-#> 3: East     28    28.00    28.00   73.00
-#> 4: West     27    27.00    27.00  100.00
+#> 1: North    27    26.21    26.21   26.21
+#> 2: South    20    19.42    19.42   45.63
+#> 3: East     31    30.10    30.10   75.73
+#> 4: West     25    24.27    24.27  100.00
 #>                                         
-#> Total      100   100.00                 
+#> Total      103   100.00                 
 #> 
 #> Education
 #> 
 #>                          Freq  Total %  Valid %  Cum. %
 #> -----------------------  ----  -------  -------  ------
 #> Valid                                                  
-#> 1: Some high school        23    23.00    24.47   24.47
-#> 2: High school graduate    19    19.00    20.21   44.68
-#> 3: Some college            23    23.00    24.47   69.15
-#> 4: Bachelor's degree       13    13.00    13.83   82.98
-#> 5: Graduate degree         16    16.00    17.02  100.00
+#> 1: Some high school        23    22.33    23.71   23.71
+#> 2: High school graduate    18    17.48    18.56   42.27
+#> 3: Some college            25    24.27    25.77   68.04
+#> 4: Bachelor's degree       13    12.62    13.40   81.44
+#> 5: Graduate degree         18    17.48    18.56  100.00
 #>                                                        
 #> Missing                                                
-#> -99 ["Refused"]             3     3.00       --      --
-#> -98 ["Don't know"]          3     3.00       --      --
+#> -99 ["Refused"]             3     2.91       --      --
+#> -98 ["Don't know"]          3     2.91       --      --
 #>                                                        
-#> Total                     100   100.00                 
+#> Total                     103   100.00                 
 #> 
 #> 
 
@@ -220,12 +220,12 @@ jfreq(community$Region)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    26    26.00    26.00   26.00
-#> 2: South    19    19.00    19.00   45.00
-#> 3: East     28    28.00    28.00   73.00
-#> 4: West     27    27.00    27.00  100.00
+#> 1: North    27    26.21    26.21   26.21
+#> 2: South    20    19.42    19.42   45.63
+#> 3: East     31    30.10    30.10   75.73
+#> 4: West     25    24.27    24.27  100.00
 #>                                         
-#> Total      100   100.00                 
+#> Total      103   100.00                 
 #> 
 #> 
 ```

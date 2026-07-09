@@ -94,23 +94,23 @@ Clearing mirrors the other registration verbs:
 #>   community <- jload("community.rds")
   jscreen(community)                              # Sub-class shows "Likert"
 #> Data Screening
-#>   Cases: 100 
+#>   Cases: 103 
 #>   Variables: 15 
-#>   Cases with missing data: 30 
+#>   Cases with missing data: 34 
 #>   Variables with outliers: 0 
 #> 
 #> Variable Types
 #> Variable        jstats Class  Sub-class   Source         Unique Values
 #> --------------  ------------  ----------  -------------  -------------
-#> RespondentID    Categorical   identifier                           100
-#> Income          Numeric                                             52
+#> RespondentID    Categorical   identifier                           103
+#> Income          Numeric                                             49
 #> Education       Categorical   5-category                             5
 #> Age             Numeric                                             41
-#> WellbeingScore  Numeric                                             43
+#> WellbeingScore  Numeric                                             41
 #> Volunteer       Categorical   dichotomy                              2
 #> OwnsHome        Categorical   dichotomy*                             2
 #> Smoker          Categorical   dichotomy                              2
-#> CommuteTime     Numeric                                             46
+#> CommuteTime     Numeric                                             42
 #> Region          Categorical   4-category                             4
 #> Environment1    Categorical   Likert      User-declared              5
 #> Environment2    Categorical   Likert      User-declared              5
@@ -122,11 +122,11 @@ Clearing mirrors the other registration verbs:
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable      Missing  % Missing
 #> ------------  -------  ---------
-#> Income              6        6.0
-#> Education           6        6.0
-#> Smoker              5        5.0
-#> Environment1       12       12.0
-#> Environment3       12       12.0
+#> Income              6        5.8
+#> Education           6        5.8
+#> Smoker              5        4.9
+#> Environment1       12       11.7
+#> Environment3       12       11.7
 #> 
   jlikert(community, Environment1, remove = TRUE) # undo one
 #> Likert registration removed for 'Environment1' in community.

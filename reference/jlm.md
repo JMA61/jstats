@@ -330,13 +330,13 @@ jlm(WellbeingScore ~ Income + Age, data = community)
 #> Linear Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise         6         94
-#>     Analysis N            —         94
+#>     Original              —        103
+#>     Auto-listwise         6         97
+#>     Analysis N            —         97
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Income
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ──────────────────────────────────────
 #> 
@@ -344,20 +344,20 @@ jlm(WellbeingScore ~ Income + Age, data = community)
 #> Coefficients
 #>                b      SE      t      β      p  
 #> -----------  ------  -----  -----  -----  -----
-#> (Intercept)  29.287  3.610  8.113         <.001
-#> Income        0.000  0.000  6.416  0.549  <.001
-#> Age           0.170  0.083  2.060  0.176   .042
+#> (Intercept)  24.815  3.749  6.620         <.001
+#> Income        0.000  0.000  6.813  0.564  <.001
+#> Age           0.181  0.082  2.208  0.183   .030
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.387    Adjusted R-squared: 0.373
-#> Residual Standard Error: 8.925
+#> R-squared: 0.411    Adjusted R-squared: 0.398
+#> Residual Standard Error: 9.013
 #> 
-#> F-statistic: 28.707 on 2 and 91 DF, p-value: <.001
+#> F-statistic: 32.729 on 2 and 94 DF, p-value: <.001
 #> Sum of Squares:
-#>   Regression: 4573.217
-#>   Residual:   7248.527
-#>   Total:      11821.745
+#>   Regression: 5317.416
+#>   Residual:   7635.945
+#>   Total:      12953.361
 #> 
 
 # With explicit data frame (positional argument)
@@ -365,13 +365,13 @@ jlm(WellbeingScore ~ Income + Age, community)
 #> Linear Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise         6         94
-#>     Analysis N            —         94
+#>     Original              —        103
+#>     Auto-listwise         6         97
+#>     Analysis N            —         97
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Income
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ──────────────────────────────────────
 #> 
@@ -379,20 +379,20 @@ jlm(WellbeingScore ~ Income + Age, community)
 #> Coefficients
 #>                b      SE      t      β      p  
 #> -----------  ------  -----  -----  -----  -----
-#> (Intercept)  29.287  3.610  8.113         <.001
-#> Income        0.000  0.000  6.416  0.549  <.001
-#> Age           0.170  0.083  2.060  0.176   .042
+#> (Intercept)  24.815  3.749  6.620         <.001
+#> Income        0.000  0.000  6.813  0.564  <.001
+#> Age           0.181  0.082  2.208  0.183   .030
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.387    Adjusted R-squared: 0.373
-#> Residual Standard Error: 8.925
+#> R-squared: 0.411    Adjusted R-squared: 0.398
+#> Residual Standard Error: 9.013
 #> 
-#> F-statistic: 28.707 on 2 and 91 DF, p-value: <.001
+#> F-statistic: 32.729 on 2 and 94 DF, p-value: <.001
 #> Sum of Squares:
-#>   Regression: 4573.217
-#>   Residual:   7248.527
-#>   Total:      11821.745
+#>   Regression: 5317.416
+#>   Residual:   7635.945
+#>   Total:      12953.361
 #> 
 
 # Using juse() default
@@ -403,13 +403,13 @@ jlm(WellbeingScore ~ Income + Age)
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise         6         94
-#>     Analysis N            —         94
+#>     Original              —        103
+#>     Auto-listwise         6         97
+#>     Analysis N            —         97
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Income
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ──────────────────────────────────────
 #> 
@@ -417,20 +417,20 @@ jlm(WellbeingScore ~ Income + Age)
 #> Coefficients
 #>                b      SE      t      β      p  
 #> -----------  ------  -----  -----  -----  -----
-#> (Intercept)  29.287  3.610  8.113         <.001
-#> Income        0.000  0.000  6.416  0.549  <.001
-#> Age           0.170  0.083  2.060  0.176   .042
+#> (Intercept)  24.815  3.749  6.620         <.001
+#> Income        0.000  0.000  6.813  0.564  <.001
+#> Age           0.181  0.082  2.208  0.183   .030
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.387    Adjusted R-squared: 0.373
-#> Residual Standard Error: 8.925
+#> R-squared: 0.411    Adjusted R-squared: 0.398
+#> Residual Standard Error: 9.013
 #> 
-#> F-statistic: 28.707 on 2 and 91 DF, p-value: <.001
+#> F-statistic: 32.729 on 2 and 94 DF, p-value: <.001
 #> Sum of Squares:
-#>   Regression: 4573.217
-#>   Residual:   7248.527
-#>   Total:      11821.745
+#>   Regression: 5317.416
+#>   Residual:   7635.945
+#>   Total:      12953.361
 #> 
 
 # CATEGORICAL PREDICTORS
@@ -444,23 +444,23 @@ jlm(WellbeingScore ~ Region + Age, categorical = "Region")
 #> Coefficients
 #>                            b      SE      t       β      p  
 #> -----------------------  ------  -----  ------  -----  -----
-#> (Intercept)              37.016  4.326   8.557         <.001
+#> (Intercept)              38.910  4.227   9.204         <.001
 #> Region (ref = 1: North)                                     
-#>   2: South               -0.370  3.243  -0.114          .909
-#>   3: East                -0.388  2.903  -0.133          .894
-#>   4: West                -5.692  2.940  -1.936          .056
-#> Age                       0.376  0.095   3.962  0.385  <.001
+#>   2: South               -5.502  3.197  -1.721          .088
+#>   3: East                -1.872  2.848  -0.657          .513
+#>   4: West                -3.687  3.029  -1.217          .226
+#> Age                       0.357  0.093   3.820  0.361  <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.169    Adjusted R-squared: 0.134
-#> Residual Standard Error: 10.622
+#> R-squared: 0.147    Adjusted R-squared: 0.112
+#> Residual Standard Error: 10.819
 #> 
-#> F-statistic: 4.814 on 4 and 95 DF, p-value: .001
+#> F-statistic: 4.216 on 4 and 98 DF, p-value: .003
 #> Sum of Squares:
-#>   Regression: 2172.440
-#>   Residual:   10717.560
-#>   Total:      12890.000
+#>   Regression: 1974.261
+#>   Residual:   11471.564
+#>   Total:      13445.825
 #> 
 
 # The recommended approach for repeated analyses: register the variable
@@ -472,7 +472,7 @@ jdummy(community, Region)
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_North
 #>   Dummy variables: Region_South, Region_East, Region_West
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #> Note: this registration is stored for this session only.
 #> To keep it across sessions, save the data frame in R format (.rds):
@@ -487,23 +487,23 @@ jlm(WellbeingScore ~ Region + Age)
 #> Coefficients
 #>                            b      SE      t       β      p  
 #> -----------------------  ------  -----  ------  -----  -----
-#> (Intercept)              37.016  4.326   8.557         <.001
+#> (Intercept)              38.910  4.227   9.204         <.001
 #> Region (ref = 1: North)                                     
-#>   2: South               -0.370  3.243  -0.114          .909
-#>   3: East                -0.388  2.903  -0.133          .894
-#>   4: West                -5.692  2.940  -1.936          .056
-#> Age                       0.376  0.095   3.962  0.385  <.001
+#>   2: South               -5.502  3.197  -1.721          .088
+#>   3: East                -1.872  2.848  -0.657          .513
+#>   4: West                -3.687  3.029  -1.217          .226
+#> Age                       0.357  0.093   3.820  0.361  <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.169    Adjusted R-squared: 0.134
-#> Residual Standard Error: 10.622
+#> R-squared: 0.147    Adjusted R-squared: 0.112
+#> Residual Standard Error: 10.819
 #> 
-#> F-statistic: 4.814 on 4 and 95 DF, p-value: .001
+#> F-statistic: 4.216 on 4 and 98 DF, p-value: .003
 #> Sum of Squares:
-#>   Regression: 2172.440
-#>   Residual:   10717.560
-#>   Total:      12890.000
+#>   Regression: 1974.261
+#>   Residual:   11471.564
+#>   Total:      13445.825
 #> 
 
 # To choose a non-default reference category:
@@ -512,7 +512,7 @@ jdummy(community, Region, ref = "West")
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_West
 #>   Dummy variables: Region_North, Region_South, Region_East
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #> Note: this registration is stored for this session only.
 #> To keep it across sessions, save the data frame in R format (.rds):
@@ -525,25 +525,25 @@ jlm(WellbeingScore ~ Region + Age)
 #> Using default data frame: community
 #> 
 #> Coefficients
-#>                           b      SE      t      β      p  
-#> ----------------------  ------  -----  -----  -----  -----
-#> (Intercept)             31.324  4.620  6.780         <.001
-#> Region (ref = 4: West)                                    
-#>   1: North               5.692  2.940  1.936          .056
-#>   2: South               5.322  3.290  1.618          .109
-#>   3: East                5.305  2.867  1.850          .067
-#> Age                      0.376  0.095  3.962  0.385  <.001
+#>                           b      SE      t       β      p  
+#> ----------------------  ------  -----  ------  -----  -----
+#> (Intercept)             35.223  4.617   7.630         <.001
+#> Region (ref = 4: West)                                     
+#>   1: North               3.687  3.029   1.217          .226
+#>   2: South              -1.815  3.253  -0.558          .578
+#>   3: East                1.815  2.941   0.617          .539
+#> Age                      0.357  0.093   3.820  0.361  <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.169    Adjusted R-squared: 0.134
-#> Residual Standard Error: 10.622
+#> R-squared: 0.147    Adjusted R-squared: 0.112
+#> Residual Standard Error: 10.819
 #> 
-#> F-statistic: 4.814 on 4 and 95 DF, p-value: .001
+#> F-statistic: 4.216 on 4 and 98 DF, p-value: .003
 #> Sum of Squares:
-#>   Regression: 2172.440
-#>   Residual:   10717.560
-#>   Total:      12890.000
+#>   Regression: 1974.261
+#>   Residual:   11471.564
+#>   Total:      13445.825
 #> 
 
 # FORCING NUMERIC TREATMENT
@@ -556,13 +556,13 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise         6         94
-#>     Analysis N            —         94
+#>     Original              —        103
+#>     Auto-listwise         6         97
+#>     Analysis N            —         97
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Education
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ──────────────────────────────────────
 #> 
@@ -570,20 +570,20 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 #> Coefficients
 #>                b      SE      t      β      p  
 #> -----------  ------  -----  -----  -----  -----
-#> (Intercept)  27.970  3.860  7.245         <.001
-#> Age           0.312  0.082  3.793  0.324  <.001
-#> Education     3.700  0.689  5.373  0.459  <.001
+#> (Intercept)  25.688  3.789  6.780         <.001
+#> Age           0.343  0.078  4.376  0.354  <.001
+#> Education     4.087  0.653  6.262  0.506  <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.339    Adjusted R-squared: 0.325
-#> Residual Standard Error: 9.305
+#> R-squared: 0.386    Adjusted R-squared: 0.373
+#> Residual Standard Error: 9.058
 #> 
-#> F-statistic: 23.386 on 2 and 91 DF, p-value: <.001
+#> F-statistic: 29.602 on 2 and 94 DF, p-value: <.001
 #> Sum of Squares:
-#>   Regression: 4050.000
-#>   Residual:   7879.829
-#>   Total:      11929.830
+#>   Regression: 4857.995
+#>   Residual:   7713.097
+#>   Total:      12571.093
 #> 
 
 # Multiple overrides at once
@@ -593,15 +593,15 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise        11         89
-#>     Analysis N            —         89
+#>     Original              —        103
+#>     Auto-listwise        11         92
+#>     Analysis N            —         92
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Education
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #>     Smoker
-#>       Missing              5      5.0
+#>       Missing              5      4.9
 #> 
 #> ──────────────────────────────────────
 #> 
@@ -609,21 +609,21 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #> Coefficients
 #>                 b      SE      t       β       p  
 #> ------------  ------  -----  ------  ------  -----
-#> (Intercept)   41.893  3.729  11.234          <.001
-#> Education      3.777  0.864   4.371   0.468  <.001
-#> Environment4  -0.261  1.001  -0.261  -0.027   .795
-#> Smoker_Yes    -2.055  2.314  -0.888           .377
+#> (Intercept)   37.934  3.455  10.979          <.001
+#> Education      4.637  0.791   5.860   0.560  <.001
+#> Environment4  -0.365  0.910  -0.401  -0.038   .690
+#> Smoker_Yes     3.116  2.201   1.416           .160
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.241    Adjusted R-squared: 0.215
-#> Residual Standard Error: 10.189
+#> R-squared: 0.296    Adjusted R-squared: 0.272
+#> Residual Standard Error: 9.934
 #> 
-#> F-statistic: 9.016 on 3 and 85 DF, p-value: <.001
+#> F-statistic: 12.352 on 3 and 88 DF, p-value: <.001
 #> Sum of Squares:
-#>   Regression: 2807.688
-#>   Residual:   8823.817
-#>   Total:      11631.506
+#>   Regression: 3656.493
+#>   Residual:   8683.365
+#>   Total:      12339.859
 #> 
 
 # Not normally needed. You'd clear a default or registration only to

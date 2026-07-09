@@ -23,7 +23,7 @@ and date/time variables gracefully.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.102</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -208,23 +208,23 @@ workflow conventions, and complete function listing.</p></div>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># With explicit data frame</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Unique Values</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              49</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Education       Categorical   5-category              5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              41</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   dichotomy               2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> OwnsHome        Categorical   dichotomy*              2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Smoker          Categorical   dichotomy               2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              42</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region          Categorical   4-category              4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    Categorical   Likert                  5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    Categorical   Likert                  5</span>
@@ -236,31 +236,31 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable      Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ------------  -------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        5.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       12.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       12.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        4.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, outlier.sd <span class="op">=</span> <span class="fl">2.5</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 2 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Unique Values</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              49</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Education       Categorical   5-category              5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              41</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   dichotomy               2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> OwnsHome        Categorical   dichotomy*              2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Smoker          Categorical   dichotomy               2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              42</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region          Categorical   4-category              4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    Categorical   Likert                  5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    Categorical   Likert                  5</span>
@@ -270,37 +270,37 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> * coded other than 0/1; mean is not a proportion</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 2.5 SD from mean)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable      Missing  % Missing  Outliers</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ------------  -------  ---------  --------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        6.0          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        6.0          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age                                      1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        5.0          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime                              1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       12.0          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       12.0          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Missing  % Missing  Outliers</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------  -------  ---------  --------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income                6        5.8          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education             6        5.8          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                                        1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore                             1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker                5        4.9          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1         12       11.7          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3         12       11.7          </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Show the Base R storage type column</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, r.type <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Base R Type     jstats Class  Sub-class   Unique Values</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  --------------  ------------  ----------  -------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    character       Categorical   identifier            100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          haven_labelled  Numeric                              52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    character       Categorical   identifier            103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          haven_labelled  Numeric                              49</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Education       haven_labelled  Categorical   5-category              5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age             numeric         Numeric                              41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  numeric         Numeric                              43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  numeric         Numeric                              41</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       haven_labelled  Categorical   dichotomy               2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> OwnsHome        haven_labelled  Categorical   dichotomy*              2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Smoker          haven_labelled  Categorical   dichotomy               2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     numeric         Numeric                              46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     numeric         Numeric                              42</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region          haven_labelled  Categorical   4-category              4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    haven_labelled  Categorical   Likert                  5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    haven_labelled  Categorical   Likert                  5</span>
@@ -312,57 +312,57 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable      Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ------------  -------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        5.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       12.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       12.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        4.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add Mean and Median columns for numeric-like variables</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, stats <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Unique Values       Mean   Median</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------  ---------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            100                    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              52  47414.894  48000.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education       Categorical   5-category              5                    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              41     40.660     40.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              43     50.600     51.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   dichotomy               2      0.420         </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> OwnsHome        Categorical   dichotomy*              2      1.540         </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker          Categorical   dichotomy               2      0.421         </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              46     31.340     30.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region          Categorical   4-category              4                    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    Categorical   Likert                  5                    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    Categorical   Likert                  5                    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3    Categorical   Likert                  5                    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4    Categorical   Likert                  5                    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment5    Categorical   Likert                  5                    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Unique Values       Mean  Median</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------  ---------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            103                   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              49  49855.670   49000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education       Categorical   5-category              5                   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              41     40.650      40</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              41     50.893      50</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   dichotomy               2      0.476        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> OwnsHome        Categorical   dichotomy*              2      1.534        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker          Categorical   dichotomy               2      0.337        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              42     30.738      30</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region          Categorical   4-category              4                   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    Categorical   Likert                  5                   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    Categorical   Likert                  5                   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3    Categorical   Likert                  5                   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment4    Categorical   Likert                  5                   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment5    Categorical   Likert                  5                   </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> * coded other than 0/1; mean is not a proportion</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable      Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ------------  -------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        5.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       12.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       12.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        4.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Suppress tables (header block only)</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, types <span class="op">=</span> <span class="cn">FALSE</span>, issues <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
@@ -372,23 +372,23 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Unique Values</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier            103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              49</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Education       Categorical   5-category              5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              41</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   dichotomy               2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> OwnsHome        Categorical   dichotomy*              2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Smoker          Categorical   dichotomy               2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                              42</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region          Categorical   4-category              4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    Categorical   Likert                  5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    Categorical   Likert                  5</span>
@@ -400,16 +400,16 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable      Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ------------  -------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        5.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       12.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       12.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        4.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 3 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 6 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
@@ -417,35 +417,35 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Unique Values</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  -------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                  52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                  49</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                  41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                  43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                  41</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          6        6.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          6        5.8</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span>, subset <span class="op">=</span> <span class="va">Volunteer</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 42 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 49 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 4 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 3 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Unique Values</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              27</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              31</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              25</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   1-category              1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          3        7.1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          4        8.2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
@@ -459,7 +459,7 @@ workflow conventions, and complete function listing.</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

@@ -162,50 +162,50 @@ jt(WellbeingScore ~ Volunteer, data = community)
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
-#> 0: No   58  46.431  10.318
-#> 1: Yes  42  56.357  10.385
+#> 0: No   54  47.463  11.699
+#> 1: Yes  49  54.673  10.059
 #> 
 #> Independent Samples T-Test Results (equal variances assumed)
-#>      t  df  p      Mean Difference  95% CI Lower  95% CI Upper
-#> ------  --  -----  ---------------  ------------  ------------
-#> -4.735  98  <.001           -9.926       -14.086        -5.766
+#>      t   df  p     Mean Difference  95% CI Lower  95% CI Upper
+#> ------  ---  ----  ---------------  ------------  ------------
+#> -3.338  101  .001           -7.211       -11.496        -2.925
 #> 
-#> Cohen's d: -0.959
+#> Cohen's d: -0.658
 #> 
 jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
 #> Welch's Independent Samples T-Test
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
-#> 0: No   58  46.431  10.318
-#> 1: Yes  42  56.357  10.385
+#> 0: No   54  47.463  11.699
+#> 1: Yes  49  54.673  10.059
 #> 
 #> Welch's T-Test Results (equal variances not assumed)
-#>     t    df  p      Mean Difference  95% CI Lower  95% CI Upper
-#> -----  ----  -----  ---------------  ------------  ------------
-#> -4.73  88.2  <.001           -9.926       -14.096        -5.756
+#>      t     df  p     Mean Difference  95% CI Lower  95% CI Upper
+#> ------  -----  ----  ---------------  ------------  ------------
+#> -3.362  100.7  .001           -7.211       -11.465        -2.956
 #> 
-#> Cohen's d: -0.959
+#> Cohen's d: -0.658
 #> 
 jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 #> Independent Samples T-Test
 #> Levene's Test for Homogeneity of Variance
-#> F  df1  df2  p   
-#> -  ---  ---  ----
-#> 0    1   98  .996
+#>     F  df1  df2  p   
+#> -----  ---  ---  ----
+#> 0.719    1  101  .399
 #> 
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
-#> 0: No   58  46.431  10.318
-#> 1: Yes  42  56.357  10.385
+#> 0: No   54  47.463  11.699
+#> 1: Yes  49  54.673  10.059
 #> 
 #> Independent Samples T-Test Results (equal variances assumed)
-#>      t  df  p      Mean Difference  95% CI Lower  95% CI Upper
-#> ------  --  -----  ---------------  ------------  ------------
-#> -4.735  98  <.001           -9.926       -14.086        -5.766
+#>      t   df  p     Mean Difference  95% CI Lower  95% CI Upper
+#> ------  ---  ----  ---------------  ------------  ------------
+#> -3.338  101  .001           -7.211       -11.496        -2.925
 #> 
-#> Cohen's d: -0.959
+#> Cohen's d: -0.658
 #> 
 
 # Using juse() default
@@ -217,35 +217,35 @@ jt(WellbeingScore ~ Volunteer)
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
-#> 0: No   58  46.431  10.318
-#> 1: Yes  42  56.357  10.385
+#> 0: No   54  47.463  11.699
+#> 1: Yes  49  54.673  10.059
 #> 
 #> Independent Samples T-Test Results (equal variances assumed)
-#>      t  df  p      Mean Difference  95% CI Lower  95% CI Upper
-#> ------  --  -----  ---------------  ------------  ------------
-#> -4.735  98  <.001           -9.926       -14.086        -5.766
+#>      t   df  p     Mean Difference  95% CI Lower  95% CI Upper
+#> ------  ---  ----  ---------------  ------------  ------------
+#> -3.338  101  .001           -7.211       -11.496        -2.925
 #> 
-#> Cohen's d: -0.959
+#> Cohen's d: -0.658
 #> 
 jt(WellbeingScore ~ Volunteer, full = TRUE)
 #> Independent Samples T-Test
 #> Using default data frame: community
 #> Levene's Test for Homogeneity of Variance
-#> F  df1  df2  p   
-#> -  ---  ---  ----
-#> 0    1   98  .996
+#>     F  df1  df2  p   
+#> -----  ---  ---  ----
+#> 0.719    1  101  .399
 #> 
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
-#> 0: No   58  46.431  10.318
-#> 1: Yes  42  56.357  10.385
+#> 0: No   54  47.463  11.699
+#> 1: Yes  49  54.673  10.059
 #> 
 #> Independent Samples T-Test Results (equal variances assumed)
-#>      t  df  p      Mean Difference  95% CI Lower  95% CI Upper
-#> ------  --  -----  ---------------  ------------  ------------
-#> -4.735  98  <.001           -9.926       -14.086        -5.766
+#>      t   df  p     Mean Difference  95% CI Lower  95% CI Upper
+#> ------  ---  ----  ---------------  ------------  ------------
+#> -3.338  101  .001           -7.211       -11.496        -2.925
 #> 
-#> Cohen's d: -0.959
+#> Cohen's d: -0.658
 #> 
 ```

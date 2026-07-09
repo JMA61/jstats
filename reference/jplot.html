@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.102</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -279,13 +279,13 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original              —        100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         6         94</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N            —         94</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original              —        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         6         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N            —         97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-data breakdown  From 100    %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-data breakdown  From 103    %</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Income</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              6      6.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              6      5.8</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ──────────────────────────────────────</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -293,20 +293,20 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                b      SE      t      β      p  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------  ------  -----  -----  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  29.287  3.610  8.113         &lt;.001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income        0.000  0.000  6.416  0.549  &lt;.001</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age           0.170  0.083  2.060  0.176   .042</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  24.815  3.749  6.620         &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income        0.000  0.000  6.813  0.564  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age           0.181  0.082  2.208  0.183   .030</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.387    Adjusted R-squared: 0.373</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 8.925</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.411    Adjusted R-squared: 0.398</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 9.013</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 28.707 on 2 and 91 DF, p-value: &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 32.729 on 2 and 94 DF, p-value: &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Sum of Squares:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 4573.217</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   7248.527</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      11821.745</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 5317.416</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   7635.945</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      12953.361</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">m</span><span class="op">)</span>                            <span class="co"># core diagnostics + fit plot</span></span></span>
 <span class="r-plt img"><img src="jplot-1.png" alt="" width="700" height="433"></span>
@@ -386,7 +386,7 @@ workflow conventions, and complete function listing.</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

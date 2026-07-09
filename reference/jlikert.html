@@ -19,7 +19,7 @@ count, or dummy registration on it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.102</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -124,23 +124,23 @@ than clearing them all).</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
 <span class="r-in"><span>  <span class="fu"><a href="jscreen.html">jscreen</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span>                              <span class="co"># Sub-class shows "Likert"</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 100 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 30 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Source         Unique Values</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------  -------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier                           100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                                             52</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> RespondentID    Categorical   identifier                           103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                                             49</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Education       Categorical   5-category                             5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                                             41</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                                             43</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                                             41</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   dichotomy                              2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> OwnsHome        Categorical   dichotomy*                             2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Smoker          Categorical   dichotomy                              2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                                             46</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CommuteTime     Numeric                                             42</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region          Categorical   4-category                             4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1    Categorical   Likert      User-declared              5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment2    Categorical   Likert      User-declared              5</span>
@@ -152,11 +152,11 @@ than clearing them all).</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable      Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ------------  -------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        6.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        5.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       12.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       12.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income              6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education           6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker              5        4.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span>  <span class="fu">jlikert</span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment1</span>, remove <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># undo one</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Likert registration removed for 'Environment1' in community.</span>
@@ -173,7 +173,7 @@ than clearing them all).</p></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

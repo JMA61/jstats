@@ -286,13 +286,13 @@ m <- jlm(WellbeingScore ~ Income + Age, community)
 #> Linear Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise         6         94
-#>     Analysis N            —         94
+#>     Original              —        103
+#>     Auto-listwise         6         97
+#>     Analysis N            —         97
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Income
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ──────────────────────────────────────
 #> 
@@ -300,20 +300,20 @@ m <- jlm(WellbeingScore ~ Income + Age, community)
 #> Coefficients
 #>                b      SE      t      β      p  
 #> -----------  ------  -----  -----  -----  -----
-#> (Intercept)  29.287  3.610  8.113         <.001
-#> Income        0.000  0.000  6.416  0.549  <.001
-#> Age           0.170  0.083  2.060  0.176   .042
+#> (Intercept)  24.815  3.749  6.620         <.001
+#> Income        0.000  0.000  6.813  0.564  <.001
+#> Age           0.181  0.082  2.208  0.183   .030
 #> 
 #> Outcome: WellbeingScore
 #> 
-#> R-squared: 0.387    Adjusted R-squared: 0.373
-#> Residual Standard Error: 8.925
+#> R-squared: 0.411    Adjusted R-squared: 0.398
+#> Residual Standard Error: 9.013
 #> 
-#> F-statistic: 28.707 on 2 and 91 DF, p-value: <.001
+#> F-statistic: 32.729 on 2 and 94 DF, p-value: <.001
 #> Sum of Squares:
-#>   Regression: 4573.217
-#>   Residual:   7248.527
-#>   Total:      11821.745
+#>   Regression: 5317.416
+#>   Residual:   7635.945
+#>   Total:      12953.361
 #> 
 jplot(m)                            # core diagnostics + fit plot
 

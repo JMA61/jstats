@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.102</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -196,13 +196,12 @@ for the reference categories block (registered dummies).</p></dd>
 
 
 <dt id="arg-udm-notice">udm.notice<a class="anchor" aria-label="anchor" href="#arg-udm-notice"></a></dt>
-<dd><p>Three-state toggle controlling the user-defined
+<dd><p>Logical or NULL. Controls the user-defined
 missing-value (UDM) notification emitted by <code><a href="jload.html">jload()</a></code> for
-<code>.sav</code> files. <code>TRUE</code> prints the notification on every
-load that involves UDM-bearing variables; <code>FALSE</code> suppresses
-it entirely; <code>NULL</code> ("auto") prints it only the first time
-in a session, then suppresses it. Standard level uses <code>NULL</code>
-(auto), minimal uses <code>FALSE</code>, full uses <code>TRUE</code>.</p></dd>
+files with UDM-bearing variables. <code>TRUE</code> prints it on every
+such load; <code>FALSE</code> suppresses it; <code>NULL</code> (the default)
+leaves the level's setting in place. The standard and full levels
+print it; the minimal level suppresses it.</p></dd>
 
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
@@ -247,7 +246,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: AUTO</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="st">"standard"</span>, regression.ci <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># also show jlm/jlogistic coefficient CIs</span></span></span>
@@ -264,7 +263,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: AUTO</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="st">"full"</span><span class="op">)</span>                         <span class="co"># everything</span></span></span>
@@ -317,7 +316,7 @@ workflow conventions, and complete function listing.</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

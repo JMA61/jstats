@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.102</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -155,11 +155,12 @@ corresponds to haven's <code>user_na = TRUE</code>.</p></dd>
 
 
 <dt id="arg-udm-notice">udm.notice<a class="anchor" aria-label="anchor" href="#arg-udm-notice"></a></dt>
-<dd><p>Per-call override for the user-defined missing value (UDM) notification frequency.
-<code>NULL</code> (default) defers to the global setting from <code><a href="joutput.html">joutput()</a></code>.
-<code>TRUE</code> prints the notification on every load; <code>FALSE</code>
-suppresses it; <code>NULL</code> at the global level shows once per session.
-See <code><a href="joutput.html">?joutput</a></code> for the full toggle behavior.</p></dd>
+<dd><p>Per-call override for the user-defined missing value (UDM) notification.
+<code>NULL</code> (default) defers to the setting from <code><a href="joutput.html">joutput()</a></code>.
+<code>TRUE</code> prints the notification on every load with UDM-bearing
+variables; <code>FALSE</code> suppresses it. Under the default (standard)
+and full output levels it prints on every such load; minimal
+suppresses it. See <code><a href="joutput.html">?joutput</a></code> for the full toggle behavior.</p></dd>
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
@@ -258,7 +259,7 @@ workflow conventions, and complete function listing.</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

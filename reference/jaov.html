@@ -21,7 +21,7 @@ labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.102</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -202,39 +202,39 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group      N    Mean      SD  95% CI Lower  95% CI Upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  26  52.038  12.379        47.038        57.038</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  19  49.737  12.922        43.509        55.965</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   28  52.607   9.437        48.948        56.267</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   27  47.741  11.175        43.320        52.162</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147        48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741        41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936        47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923        45.878        55.722</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ANOVA: WellbeingScore by Region</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Source    df  Sum of Squares  Mean Square      F  p   </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  --------------  -----------  -----  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region     3          401.49      133.830  1.029  .383</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Residual  96        12488.51      130.089             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total     99        12890.00                          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Source     df  Sum of Squares  Mean Square      F  p   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ---  --------------  -----------  -----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region      3         266.441       88.814  0.667  .574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual   99       13179.384      133.125             </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total     102       13445.825                          </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.031 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.02 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, welch <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Welch's One-Way ANOVA</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group      N    Mean      SD  95% CI Lower  95% CI Upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  26  52.038  12.379        47.038        57.038</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  19  49.737  12.922        43.509        55.965</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   28  52.607   9.437        48.948        56.267</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   27  47.741  11.175        43.320        52.162</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147        48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741        41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936        47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923        45.878        55.722</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Welch's ANOVA: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     F  df1   df2  p   </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ----  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.116    3  49.6  .351</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.559    3  50.3  .645</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: Sum of Squares and Mean Squares are not available for Welch's ANOVA.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> To obtain these, run jaov() without welch = TRUE.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.031 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.02 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> (Note: Eta-squared is calculated from the traditional SS decomposition.)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, full <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
@@ -242,34 +242,34 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Levene's Test for Homogeneity of Variance</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     F  df1  df2  p   </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ---  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.107    3   96  .350</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.751    3   99  .162</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group      N    Mean      SD  95% CI Lower  95% CI Upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  26  52.038  12.379        47.038        57.038</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  19  49.737  12.922        43.509        55.965</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   28  52.607   9.437        48.948        56.267</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   27  47.741  11.175        43.320        52.162</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147        48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741        41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936        47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923        45.878        55.722</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ANOVA: WellbeingScore by Region</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Source    df  Sum of Squares  Mean Square      F  p   </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  --------------  -----------  -----  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region     3          401.49      133.830  1.029  .383</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Residual  96        12488.51      130.089             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total     99        12890.00                          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Source     df  Sum of Squares  Mean Square      F  p   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ---  --------------  -----------  -----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region      3         266.441       88.814  0.667  .574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual   99       13179.384      133.125             </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total     102       13445.825                          </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.031 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.02 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Tukey HSD Post-Hoc Comparisons</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------  ---------------  ------------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> South-North           -2.302       -11.302         6.699  .909        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> East-North             0.569        -7.553         8.691  .998        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> West-North            -4.298       -12.492         3.896  .520        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> East-South             2.870        -5.993        11.734  .832        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> West-South            -1.996       -10.926         6.934  .937        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> West-East             -4.866       -12.910         3.177  .394        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> South-North           -4.813       -13.708         4.082  .494        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-North            -2.027        -9.964         5.910  .909        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-North            -2.163       -10.532         6.206  .906        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-South             2.785        -5.862        11.433  .834        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-South             2.650        -6.395        11.695  .870        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-East             -0.135        -8.240         7.969  1.000       </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
@@ -281,19 +281,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group      N    Mean      SD  95% CI Lower  95% CI Upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  26  52.038  12.379        47.038        57.038</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  19  49.737  12.922        43.509        55.965</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   28  52.607   9.437        48.948        56.267</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   27  47.741  11.175        43.320        52.162</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147        48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741        41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936        47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923        45.878        55.722</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ANOVA: WellbeingScore by Region</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Source    df  Sum of Squares  Mean Square      F  p   </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  --------------  -----------  -----  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region     3          401.49      133.830  1.029  .383</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Residual  96        12488.51      130.089             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total     99        12890.00                          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Source     df  Sum of Squares  Mean Square      F  p   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ---  --------------  -----------  -----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region      3         266.441       88.814  0.667  .574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual   99       13179.384      133.125             </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total     102       13445.825                          </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.031 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.02 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, full <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">One-Way ANOVA</span></span>
@@ -301,34 +301,34 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Levene's Test for Homogeneity of Variance</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     F  df1  df2  p   </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ---  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.107    3   96  .350</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.751    3   99  .162</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group      N    Mean      SD  95% CI Lower  95% CI Upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  26  52.038  12.379        47.038        57.038</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  19  49.737  12.922        43.509        55.965</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   28  52.607   9.437        48.948        56.267</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   27  47.741  11.175        43.320        52.162</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147        48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741        41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936        47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923        45.878        55.722</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ANOVA: WellbeingScore by Region</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Source    df  Sum of Squares  Mean Square      F  p   </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  --------------  -----------  -----  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Region     3          401.49      133.830  1.029  .383</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Residual  96        12488.51      130.089             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total     99        12890.00                          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Source     df  Sum of Squares  Mean Square      F  p   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ---  --------------  -----------  -----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region      3         266.441       88.814  0.667  .574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual   99       13179.384      133.125             </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total     102       13445.825                          </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.031 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.02 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Tukey HSD Post-Hoc Comparisons</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------  ---------------  ------------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> South-North           -2.302       -11.302         6.699  .909        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> East-North             0.569        -7.553         8.691  .998        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> West-North            -4.298       -12.492         3.896  .520        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> East-South             2.870        -5.993        11.734  .832        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> West-South            -1.996       -10.926         6.934  .937        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> West-East             -4.866       -12.910         3.177  .394        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> South-North           -4.813       -13.708         4.082  .494        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-North            -2.027        -9.964         5.910  .909        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-North            -2.163       -10.532         6.206  .906        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-South             2.785        -5.862        11.433  .834        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-South             2.650        -6.395        11.695  .870        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-East             -0.135        -8.240         7.969  1.000       </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
@@ -342,7 +342,7 @@ workflow conventions, and complete function listing.</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

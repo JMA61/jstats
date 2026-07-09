@@ -106,31 +106,31 @@ jalpha(community, Environment1, Environment2, Environment3,
 #> Reliability Analysis
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise        18         82
-#>     Analysis N            —         82
+#>     Original              —        103
+#>     Auto-listwise        19         84
+#>     Analysis N            —         84
 #> 
-#> Missing-data breakdown  From 100     %
+#> Missing-data breakdown  From 103     %
 #>     Environment1
-#>       Missing              12     12.0
+#>       Missing              12     11.7
 #>     Environment3
-#>       Missing              12     12.0
+#>       Missing              12     11.7
 #> 
 #> ──────────────────────────────────────
 #> 
 #> Reliability Statistics
 #> Cronbach's Alpha  N of Items
 #> ----------------  ----------
-#>            0.297           5
+#>            0.348           5
 #> 
 #> Item Statistics
 #> Item           Mean     SD   N
 #> ------------  -----  -----  --
-#> Environment1  2.988  1.212  82
-#> Environment2  2.780  1.228  82
-#> Environment3  3.134  1.163  82
-#> Environment4  3.098  1.203  82
-#> Environment5  2.976  1.474  82
+#> Environment1  3.131  1.180  84
+#> Environment2  2.869  1.180  84
+#> Environment3  3.060  1.226  84
+#> Environment4  3.333  1.186  84
+#> Environment5  2.762  1.470  84
 #> 
 #> Warning: The following item(s) are negatively correlated with the rest of the scale: Environment2.
 #> They may need reverse-coding, or may not belong in the scale - check the item-total table and the item wording.
@@ -138,11 +138,11 @@ jalpha(community, Environment1, Environment2, Environment3,
 #> Item-Total Statistics
 #> Item          Corrected Item-Total r  Alpha if Item Deleted
 #> ------------  ----------------------  ---------------------
-#> Environment1                   0.505                 -0.115
-#> Environment2                  -0.615                  0.749
-#> Environment3                   0.536                 -0.129
-#> Environment4                   0.365                  0.040
-#> Environment5                   0.340                  0.012
+#> Environment1                   0.510                 -0.006
+#> Environment2                  -0.660                  0.783
+#> Environment3                   0.539                 -0.052
+#> Environment4                   0.447                  0.056
+#> Environment5                   0.455                 -0.030
 #> 
 
 # Using juse() default
@@ -154,31 +154,31 @@ jalpha(Environment1, Environment2, Environment3, Environment4,
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        100
-#>     Auto-listwise        18         82
-#>     Analysis N            —         82
+#>     Original              —        103
+#>     Auto-listwise        19         84
+#>     Analysis N            —         84
 #> 
-#> Missing-data breakdown  From 100     %
+#> Missing-data breakdown  From 103     %
 #>     Environment1
-#>       Missing              12     12.0
+#>       Missing              12     11.7
 #>     Environment3
-#>       Missing              12     12.0
+#>       Missing              12     11.7
 #> 
 #> ──────────────────────────────────────
 #> 
 #> Reliability Statistics
 #> Cronbach's Alpha  N of Items
 #> ----------------  ----------
-#>            0.297           5
+#>            0.348           5
 #> 
 #> Item Statistics
 #> Item           Mean     SD   N
 #> ------------  -----  -----  --
-#> Environment1  2.988  1.212  82
-#> Environment2  2.780  1.228  82
-#> Environment3  3.134  1.163  82
-#> Environment4  3.098  1.203  82
-#> Environment5  2.976  1.474  82
+#> Environment1  3.131  1.180  84
+#> Environment2  2.869  1.180  84
+#> Environment3  3.060  1.226  84
+#> Environment4  3.333  1.186  84
+#> Environment5  2.762  1.470  84
 #> 
 #> Warning: The following item(s) are negatively correlated with the rest of the scale: Environment2.
 #> They may need reverse-coding, or may not belong in the scale - check the item-total table and the item wording.
@@ -186,10 +186,10 @@ jalpha(Environment1, Environment2, Environment3, Environment4,
 #> Item-Total Statistics
 #> Item          Corrected Item-Total r  Alpha if Item Deleted
 #> ------------  ----------------------  ---------------------
-#> Environment1                   0.505                 -0.115
-#> Environment2                  -0.615                  0.749
-#> Environment3                   0.536                 -0.129
-#> Environment4                   0.365                  0.040
-#> Environment5                   0.340                  0.012
+#> Environment1                   0.510                 -0.006
+#> Environment2                  -0.660                  0.783
+#> Environment3                   0.539                 -0.052
+#> Environment4                   0.447                  0.056
+#> Environment5                   0.455                 -0.030
 #> 
 ```

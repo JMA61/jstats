@@ -93,7 +93,7 @@ jdummy(Region)                       # Register, first category as reference
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_North
 #>   Dummy variables: Region_South, Region_East, Region_West
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #> Note: this registration is stored for this session only.
 #> To keep it across sessions, save the data frame in R format (.rds):
@@ -108,12 +108,12 @@ jdummy(Region, Education)            # Register several at once
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_North
 #>   Dummy variables: Region_South, Region_East, Region_West
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #>   Variable: Education (haven_labelled)
 #>   Reference category: Education_Some_high_school
 #>   Dummy variables: Education_High_school_graduate, Education_Some_college, Education_Bachelor_s_degree, Education_Graduate_degree
-#>   Cases: 100 (6 missing)
+#>   Cases: 103 (6 missing)
 #> 
 #> Note: registrations are stored for this session only.
 #> To keep them across sessions, save the data frame in R format (.rds):
@@ -128,7 +128,7 @@ jdummy(Region, ref = "last")         # Last category as reference
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_West
 #>   Dummy variables: Region_North, Region_South, Region_East
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #> Note: this registration is stored for this session only.
 #> To keep it across sessions, save the data frame in R format (.rds):
@@ -143,7 +143,7 @@ jdummy(Region, ref = 4)              # Reference by numeric code
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_West
 #>   Dummy variables: Region_North, Region_South, Region_East
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #> Note: this registration is stored for this session only.
 #> To keep it across sessions, save the data frame in R format (.rds):
@@ -158,7 +158,7 @@ jdummy(Region, ref = "East")         # Reference by value label
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #> Note: this registration is stored for this session only.
 #> To keep it across sessions, save the data frame in R format (.rds):
@@ -173,7 +173,7 @@ jdummy(Region, show = TRUE)          # Show coding scheme
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #>   Dummy Coding Scheme:
 #> 
@@ -193,7 +193,7 @@ jdummy(Region, show = "all")         # Full scheme (for many categories)
 #>   Variable: Region (haven_labelled)
 #>   Reference category: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #>   Dummy Coding Scheme:
 #> 
@@ -213,12 +213,12 @@ jdummy()                             # Show all registrations
 #>   Variable: Region (haven_labelled)
 #>   Reference category: 3: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
-#>   Cases: 100 (0 missing)
+#>   Cases: 103 (0 missing)
 #> 
 #>   Variable: Education (haven_labelled)
 #>   Reference category: 1: Education_Some_high_school
 #>   Dummy variables: Education_High_school_graduate, Education_Some_college, Education_Bachelor_s_degree, Education_Graduate_degree
-#>   Cases: 100 (6 missing)
+#>   Cases: 103 (6 missing)
 #> 
 jdummy(Region, remove = TRUE)        # Remove one registration
 #> Dummy registration removed for 'Region' in community.

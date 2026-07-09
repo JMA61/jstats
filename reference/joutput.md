@@ -151,14 +151,13 @@ joutput(
 
 - udm.notice:
 
-  Three-state toggle controlling the user-defined missing-value (UDM)
+  Logical or NULL. Controls the user-defined missing-value (UDM)
   notification emitted by
   [`jload()`](https://jma61.github.io/jstats/reference/jload.md) for
-  `.sav` files. `TRUE` prints the notification on every load that
-  involves UDM-bearing variables; `FALSE` suppresses it entirely; `NULL`
-  ("auto") prints it only the first time in a session, then suppresses
-  it. Standard level uses `NULL` (auto), minimal uses `FALSE`, full uses
-  `TRUE`.
+  files with UDM-bearing variables. `TRUE` prints it on every such load;
+  `FALSE` suppresses it; `NULL` (the default) leaves the level's setting
+  in place. The standard and full levels print it; the minimal level
+  suppresses it.
 
 - digits:
 
@@ -203,7 +202,7 @@ joutput("standard")                       # effect sizes + means/diff CIs (jt, j
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
-#>   udm.notice: AUTO
+#>   udm.notice: ON
 #>   digits: 3
 #> 
 joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
@@ -220,7 +219,7 @@ joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient 
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
-#>   udm.notice: AUTO
+#>   udm.notice: ON
 #>   digits: 3
 #> 
 joutput("full")                         # everything

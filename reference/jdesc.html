@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.101</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.102</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -186,23 +186,23 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age         100          100   18   71  40.66  11.68</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age         103          103   18   71  40.65  11.62</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original            —        100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N         —        100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original            —        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N         —        103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Total  Non_missing    Min    Max       Mean         SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  -----  -----------  -----  -----  ---------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income            100           94  14000  91000  47414.894  20145.391</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age               100          100     18     71     40.660     11.680</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore    100          100     27     77     50.600     11.411</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income            103           97  14000  93000  49855.670  17427.223</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age               103          103     18     71     40.650     11.620</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore    103          103     25     81     50.893     11.481</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">community</span>, <span class="va">WellbeingScore</span>, by <span class="op">=</span> <span class="va">Volunteer</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics by Volunteer (2 levels)</span></span>
@@ -211,8 +211,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer   N  Min  Max    Mean      SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------  --  ---  ---  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No      58   27   70  46.431  10.318</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes     42   32   77  56.357  10.385</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No      54   25   76  47.463  11.699</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes     49   29   81  54.673  10.059</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
@@ -225,24 +225,24 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age         100          100   18   71  40.66  11.68</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age         103          103   18   71  40.65  11.62</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original            —        100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N         —        100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original            —        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N         —        103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Total  Non_missing    Min    Max       Mean         SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  -----  -----------  -----  -----  ---------  ---------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income            100           94  14000  91000  47414.894  20145.391</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age               100          100     18     71     40.660     11.680</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore    100          100     27     77     50.600     11.411</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income            103           97  14000  93000  49855.670  17427.223</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age               103          103     18     71     40.650     11.620</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore    103          103     25     81     50.893     11.481</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">WellbeingScore</span>, by <span class="op">=</span> <span class="va">Volunteer</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics by Volunteer (2 levels)</span></span>
@@ -252,8 +252,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer   N  Min  Max    Mean      SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------  --  ---  ---  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No      58   27   70  46.431  10.318</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes     42   32   77  56.357  10.385</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No      54   25   76  47.463  11.699</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes     49   29   81  54.673  10.059</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
@@ -263,7 +263,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age         100          100   18   71  40.66  11.68</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age         103          103   18   71  40.65  11.62</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
@@ -277,7 +277,7 @@ workflow conventions, and complete function listing.</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

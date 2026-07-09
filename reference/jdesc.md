@@ -157,23 +157,23 @@ jdesc(community, Age)
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  -----  -----
-#> Age         100          100   18   71  40.66  11.68
+#> Age         103          103   18   71  40.65  11.62
 #> 
 jdesc(community, Income, Age, WellbeingScore)
 #> Descriptive Statistics
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        100
-#>     Remaining N         —        100
+#>     Original            —        103
+#>     Remaining N         —        103
 #> 
 #> ────────────────────────────────────
 #> 
 #> 
 #> Variable        Total  Non_missing    Min    Max       Mean         SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
-#> Income            100           94  14000  91000  47414.894  20145.391
-#> Age               100          100     18     71     40.660     11.680
-#> WellbeingScore    100          100     27     77     50.600     11.411
+#> Income            103           97  14000  93000  49855.670  17427.223
+#> Age               103          103     18     71     40.650     11.620
+#> WellbeingScore    103          103     25     81     50.893     11.481
 #> 
 jdesc(community, WellbeingScore, by = Volunteer)
 #> Descriptive Statistics by Volunteer (2 levels)
@@ -182,8 +182,8 @@ jdesc(community, WellbeingScore, by = Volunteer)
 #> 
 #> Volunteer   N  Min  Max    Mean      SD
 #> ---------  --  ---  ---  ------  ------
-#> 0: No      58   27   70  46.431  10.318
-#> 1: Yes     42   32   77  56.357  10.385
+#> 0: No      54   25   76  47.463  11.699
+#> 1: Yes     49   29   81  54.673  10.059
 #> 
 #> 
 
@@ -196,24 +196,24 @@ jdesc(Age)
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  -----  -----
-#> Age         100          100   18   71  40.66  11.68
+#> Age         103          103   18   71  40.65  11.62
 #> 
 jdesc(Income, Age, WellbeingScore)
 #> Descriptive Statistics
 #> Using default data frame: community
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        100
-#>     Remaining N         —        100
+#>     Original            —        103
+#>     Remaining N         —        103
 #> 
 #> ────────────────────────────────────
 #> 
 #> 
 #> Variable        Total  Non_missing    Min    Max       Mean         SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
-#> Income            100           94  14000  91000  47414.894  20145.391
-#> Age               100          100     18     71     40.660     11.680
-#> WellbeingScore    100          100     27     77     50.600     11.411
+#> Income            103           97  14000  93000  49855.670  17427.223
+#> Age               103          103     18     71     40.650     11.620
+#> WellbeingScore    103          103     25     81     50.893     11.481
 #> 
 jdesc(WellbeingScore, by = Volunteer)
 #> Descriptive Statistics by Volunteer (2 levels)
@@ -223,8 +223,8 @@ jdesc(WellbeingScore, by = Volunteer)
 #> 
 #> Volunteer   N  Min  Max    Mean      SD
 #> ---------  --  ---  ---  ------  ------
-#> 0: No      58   27   70  46.431  10.318
-#> 1: Yes     42   32   77  56.357  10.385
+#> 0: No      54   25   76  47.463  11.699
+#> 1: Yes     49   29   81  54.673  10.059
 #> 
 #> 
 
@@ -234,6 +234,6 @@ jdesc(community$Age)
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  -----  -----
-#> Age         100          100   18   71  40.66  11.68
+#> Age         103          103   18   71  40.65  11.62
 #> 
 ```

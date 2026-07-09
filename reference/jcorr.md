@@ -147,12 +147,12 @@ jcorr(community, Income, Age, WellbeingScore)
 #> Pearson Bivariate Correlations
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        100
-#>     Remaining N         —        100
+#>     Original            —        103
+#>     Remaining N         —        103
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Income
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ─────────────────────────────────────
 #> 
@@ -161,22 +161,22 @@ jcorr(community, Income, Age, WellbeingScore)
 #> --------------  --------------  --------------  --------------
 #> Income           1                                            
 #>                                                               
-#> Age              .282 (p=.006)   1                            
-#>                 N=94                                          
+#> Age              .289 (p=.004)   1                            
+#>                 N=97                                          
 #>                                                               
-#> WellbeingScore   .599 (p<.001)   .352 (p<.001)   1            
-#>                 N=94            N=100                         
+#> WellbeingScore   .616 (p<.001)   .343 (p<.001)   1            
+#>                 N=97            N=103                         
 #> 
 jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #> Spearman Bivariate Correlations
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        100
-#>     Remaining N         —        100
+#>     Original            —        103
+#>     Remaining N         —        103
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Income
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ─────────────────────────────────────
 #> 
@@ -185,11 +185,11 @@ jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #> --------------  --------------  --------------  --------------
 #> Income           1                                            
 #>                                                               
-#> Age              .301 (p=.003)   1                            
-#>                 N=94                                          
+#> Age              .305 (p=.002)   1                            
+#>                 N=97                                          
 #>                                                               
-#> WellbeingScore   .597 (p<.001)   .366 (p<.001)   1            
-#>                 N=94            N=100                         
+#> WellbeingScore   .606 (p<.001)   .378 (p<.001)   1            
+#>                 N=97            N=103                         
 #> 
 #> Note: Spearman p-values are approximate due to tied values in the data.
 #> 
@@ -202,12 +202,12 @@ jcorr(Income, Age, WellbeingScore)
 #> Using default data frame: community
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        100
-#>     Remaining N         —        100
+#>     Original            —        103
+#>     Remaining N         —        103
 #> 
-#> Missing-data breakdown  From 100    %
+#> Missing-data breakdown  From 103    %
 #>     Income
-#>       Missing              6      6.0
+#>       Missing              6      5.8
 #> 
 #> ─────────────────────────────────────
 #> 
@@ -216,10 +216,10 @@ jcorr(Income, Age, WellbeingScore)
 #> --------------  --------------  --------------  --------------
 #> Income           1                                            
 #>                                                               
-#> Age              .282 (p=.006)   1                            
-#>                 N=94                                          
+#> Age              .289 (p=.004)   1                            
+#>                 N=97                                          
 #>                                                               
-#> WellbeingScore   .599 (p<.001)   .352 (p<.001)   1            
-#>                 N=94            N=100                         
+#> WellbeingScore   .616 (p<.001)   .343 (p<.001)   1            
+#>                 N=97            N=103                         
 #> 
 ```

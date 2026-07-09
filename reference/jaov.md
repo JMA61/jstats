@@ -160,39 +160,39 @@ jaov(WellbeingScore ~ Region, data = community)
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
-#> 1: North  26  52.038  12.379        47.038        57.038
-#> 2: South  19  49.737  12.922        43.509        55.965
-#> 3: East   28  52.607   9.437        48.948        56.267
-#> 4: West   27  47.741  11.175        43.320        52.162
+#> 1: North  27  52.963  10.147        48.949        56.977
+#> 2: South  20  48.150  14.741        41.251        55.049
+#> 3: East   31  50.935   9.936        47.291        54.580
+#> 4: West   25  50.800  11.923        45.878        55.722
 #> 
 #> ANOVA: WellbeingScore by Region
-#> Source    df  Sum of Squares  Mean Square      F  p   
-#> --------  --  --------------  -----------  -----  ----
-#> Region     3          401.49      133.830  1.029  .383
-#> Residual  96        12488.51      130.089             
-#> Total     99        12890.00                          
+#> Source     df  Sum of Squares  Mean Square      F  p   
+#> --------  ---  --------------  -----------  -----  ----
+#> Region      3         266.441       88.814  0.667  .574
+#> Residual   99       13179.384      133.125             
+#> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.031 
+#> Eta-squared: 0.02 
 #> 
 jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
 #> Welch's One-Way ANOVA
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
-#> 1: North  26  52.038  12.379        47.038        57.038
-#> 2: South  19  49.737  12.922        43.509        55.965
-#> 3: East   28  52.607   9.437        48.948        56.267
-#> 4: West   27  47.741  11.175        43.320        52.162
+#> 1: North  27  52.963  10.147        48.949        56.977
+#> 2: South  20  48.150  14.741        41.251        55.049
+#> 3: East   31  50.935   9.936        47.291        54.580
+#> 4: West   25  50.800  11.923        45.878        55.722
 #> 
 #> Welch's ANOVA: WellbeingScore by Region
 #>     F  df1   df2  p   
 #> -----  ---  ----  ----
-#> 1.116    3  49.6  .351
+#> 0.559    3  50.3  .645
 #> 
 #> Note: Sum of Squares and Mean Squares are not available for Welch's ANOVA.
 #> To obtain these, run jaov() without welch = TRUE.
 #> 
-#> Eta-squared: 0.031 
+#> Eta-squared: 0.02 
 #> (Note: Eta-squared is calculated from the traditional SS decomposition.)
 #> 
 jaov(WellbeingScore ~ Region, data = community, full = TRUE)
@@ -200,34 +200,34 @@ jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> Levene's Test for Homogeneity of Variance
 #>     F  df1  df2  p   
 #> -----  ---  ---  ----
-#> 1.107    3   96  .350
+#> 1.751    3   99  .162
 #> 
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
-#> 1: North  26  52.038  12.379        47.038        57.038
-#> 2: South  19  49.737  12.922        43.509        55.965
-#> 3: East   28  52.607   9.437        48.948        56.267
-#> 4: West   27  47.741  11.175        43.320        52.162
+#> 1: North  27  52.963  10.147        48.949        56.977
+#> 2: South  20  48.150  14.741        41.251        55.049
+#> 3: East   31  50.935   9.936        47.291        54.580
+#> 4: West   25  50.800  11.923        45.878        55.722
 #> 
 #> ANOVA: WellbeingScore by Region
-#> Source    df  Sum of Squares  Mean Square      F  p   
-#> --------  --  --------------  -----------  -----  ----
-#> Region     3          401.49      133.830  1.029  .383
-#> Residual  96        12488.51      130.089             
-#> Total     99        12890.00                          
+#> Source     df  Sum of Squares  Mean Square      F  p   
+#> --------  ---  --------------  -----------  -----  ----
+#> Region      3         266.441       88.814  0.667  .574
+#> Residual   99       13179.384      133.125             
+#> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.031 
+#> Eta-squared: 0.02 
 #> 
 #> Tukey HSD Post-Hoc Comparisons
 #> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)
 #> -----------  ---------------  ------------  ------------  ------------
-#> South-North           -2.302       -11.302         6.699  .909        
-#> East-North             0.569        -7.553         8.691  .998        
-#> West-North            -4.298       -12.492         3.896  .520        
-#> East-South             2.870        -5.993        11.734  .832        
-#> West-South            -1.996       -10.926         6.934  .937        
-#> West-East             -4.866       -12.910         3.177  .394        
+#> South-North           -4.813       -13.708         4.082  .494        
+#> East-North            -2.027        -9.964         5.910  .909        
+#> West-North            -2.163       -10.532         6.206  .906        
+#> East-South             2.785        -5.862        11.433  .834        
+#> West-South             2.650        -6.395        11.695  .870        
+#> West-East             -0.135        -8.240         7.969  1.000       
 #> 
 
 # Using juse() default
@@ -239,19 +239,19 @@ jaov(WellbeingScore ~ Region)
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
-#> 1: North  26  52.038  12.379        47.038        57.038
-#> 2: South  19  49.737  12.922        43.509        55.965
-#> 3: East   28  52.607   9.437        48.948        56.267
-#> 4: West   27  47.741  11.175        43.320        52.162
+#> 1: North  27  52.963  10.147        48.949        56.977
+#> 2: South  20  48.150  14.741        41.251        55.049
+#> 3: East   31  50.935   9.936        47.291        54.580
+#> 4: West   25  50.800  11.923        45.878        55.722
 #> 
 #> ANOVA: WellbeingScore by Region
-#> Source    df  Sum of Squares  Mean Square      F  p   
-#> --------  --  --------------  -----------  -----  ----
-#> Region     3          401.49      133.830  1.029  .383
-#> Residual  96        12488.51      130.089             
-#> Total     99        12890.00                          
+#> Source     df  Sum of Squares  Mean Square      F  p   
+#> --------  ---  --------------  -----------  -----  ----
+#> Region      3         266.441       88.814  0.667  .574
+#> Residual   99       13179.384      133.125             
+#> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.031 
+#> Eta-squared: 0.02 
 #> 
 jaov(WellbeingScore ~ Region, full = TRUE)
 #> One-Way ANOVA
@@ -259,33 +259,33 @@ jaov(WellbeingScore ~ Region, full = TRUE)
 #> Levene's Test for Homogeneity of Variance
 #>     F  df1  df2  p   
 #> -----  ---  ---  ----
-#> 1.107    3   96  .350
+#> 1.751    3   99  .162
 #> 
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
-#> 1: North  26  52.038  12.379        47.038        57.038
-#> 2: South  19  49.737  12.922        43.509        55.965
-#> 3: East   28  52.607   9.437        48.948        56.267
-#> 4: West   27  47.741  11.175        43.320        52.162
+#> 1: North  27  52.963  10.147        48.949        56.977
+#> 2: South  20  48.150  14.741        41.251        55.049
+#> 3: East   31  50.935   9.936        47.291        54.580
+#> 4: West   25  50.800  11.923        45.878        55.722
 #> 
 #> ANOVA: WellbeingScore by Region
-#> Source    df  Sum of Squares  Mean Square      F  p   
-#> --------  --  --------------  -----------  -----  ----
-#> Region     3          401.49      133.830  1.029  .383
-#> Residual  96        12488.51      130.089             
-#> Total     99        12890.00                          
+#> Source     df  Sum of Squares  Mean Square      F  p   
+#> --------  ---  --------------  -----------  -----  ----
+#> Region      3         266.441       88.814  0.667  .574
+#> Residual   99       13179.384      133.125             
+#> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.031 
+#> Eta-squared: 0.02 
 #> 
 #> Tukey HSD Post-Hoc Comparisons
 #> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)
 #> -----------  ---------------  ------------  ------------  ------------
-#> South-North           -2.302       -11.302         6.699  .909        
-#> East-North             0.569        -7.553         8.691  .998        
-#> West-North            -4.298       -12.492         3.896  .520        
-#> East-South             2.870        -5.993        11.734  .832        
-#> West-South            -1.996       -10.926         6.934  .937        
-#> West-East             -4.866       -12.910         3.177  .394        
+#> South-North           -4.813       -13.708         4.082  .494        
+#> East-North            -2.027        -9.964         5.910  .909        
+#> West-North            -2.163       -10.532         6.206  .906        
+#> East-South             2.785        -5.862        11.433  .834        
+#> West-South             2.650        -6.395        11.695  .870        
+#> West-East             -0.135        -8.240         7.969  1.000       
 #> 
 ```

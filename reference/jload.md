@@ -100,11 +100,12 @@ jload(
 - udm.notice:
 
   Per-call override for the user-defined missing value (UDM)
-  notification frequency. `NULL` (default) defers to the global setting
-  from
+  notification. `NULL` (default) defers to the setting from
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
-  `TRUE` prints the notification on every load; `FALSE` suppresses it;
-  `NULL` at the global level shows once per session. See
+  `TRUE` prints the notification on every load with UDM-bearing
+  variables; `FALSE` suppresses it. Under the default (standard) and
+  full output levels it prints on every such load; minimal suppresses
+  it. See
   [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md) for
   the full toggle behavior.
 
