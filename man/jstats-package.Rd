@@ -153,5 +153,10 @@ Useful links:
 \author{
 \strong{Maintainer}: Jeff Ackerman \email{SurveyCentre@griffith.edu.au}
 
+Authors:
+\itemize{
+  \item Jeff Ackerman \email{SurveyCentre@griffith.edu.au}
+}
+
 }
 \keyword{internal}

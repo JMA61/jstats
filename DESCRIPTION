@@ -25,7 +25,6 @@ Encoding: UTF-8
 Depends:
     R (>= 4.2.0)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
     ggplot2,
     haven (>= 2.3.0),
@@ -37,3 +36,4 @@ Imports:
 Suggests: generics
 LazyData: true
 URL: https://jma61.github.io/jstats/
+Config/roxygen2/version: 8.0.0
