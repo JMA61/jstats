@@ -241,9 +241,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (identical(output_level, "minimal")) {
     return(paste0(
       "the map uses '.", first_tag, "', a Stata-style missing-value ",
-      "marker. The package is currently set to SPSS convention.\n",
-      "See ?jrecode for examples, or run\n",
-      "joptions(missing.convention = \"stata\") to switch."
+      "marker.\nThe package is currently set to SPSS convention.\n",
+      "Run joptions(missing.convention = \"stata\") to switch."
     ))
   }
 
@@ -448,8 +447,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       "codes for ", var_name, " contains '.", first_tag,
       "', a Stata-style missing-value marker.\n",
       "The package is currently set to SPSS convention.\n",
-      "See ?jdeclare_udm for examples, or run\n",
-      "joptions(missing.convention = \"stata\") to switch."
+      "Run joptions(missing.convention = \"stata\") to switch."
     ))
   }
 
@@ -683,8 +681,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     }
   }
   paste0("Note: jdeclare_udm replaced the existing user-defined missing values for ", var_name,
-         ". Previously declared codes dropped: ", paste(parts, collapse = ", "),
-         ". Use `?jdeclare_udm` to review the replace-semantics behavior.")
+         ". Previously declared codes dropped: ", paste(parts, collapse = ", "), ".")
 }
 
 
@@ -1385,11 +1382,25 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   \code{joptions("missing.convention")}, then from the SPSS-form
 #'   default.
 #' @param udm.notice Logical. When \code{TRUE} (the default), the
-#'   function prints a notification summarizing what was declared.
+#'   function prints a notification summarizing what was declared,
+#'   plus a reminder of how to keep the result.
 #'   Set \code{FALSE} to suppress.
+#' @param modify Logical. When \code{TRUE}, the declaration is written
+#'   back onto the data frame named in the call (or onto the
+#'   \code{juse()} default when the data argument is omitted), so no
+#'   assignment is needed -- the recommended workflow, since a
+#'   declaration lost to a forgotten assignment silently poisons later
+#'   statistics. Requires the data frame to be given as a plain name.
+#'   When \code{FALSE} (the default), the caller's data frame is
+#'   untouched; assign the returned data frame to keep the
+#'   declaration.
 #'
 #' @return The data frame, with the specified variable updated to
-#'   carry the declared UDMs.
+#'   carry the declared UDMs, returned invisibly. With the default
+#'   \code{modify = FALSE}, the caller's data frame is unchanged until
+#'   the result is assigned back. With \code{modify = TRUE}, the
+#'   change is also written back onto the caller's data frame, and the
+#'   returned copy can be ignored.
 #'
 #' @section Missing-Values Convention:
 #' Under SPSS convention, codes are declared as numeric values via the
@@ -1434,33 +1445,48 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' df <- clinic
 #' jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 #'
-#' # SPSS form: declare -99 and -98 as UDMs with labels
-#' df <- jdeclare_udm(df, MoodRating,
-#'                    codes  = c(-99, -98),
-#'                    labels = "-99=Refused; -98=Don't know")
+#' # SPSS form: declare -99 and -98 as UDMs with labels. modify = TRUE
+#' # writes the declaration back onto df in one step -- the recommended
+#' # workflow.
+#' jdeclare_udm(df, MoodRating,
+#'              codes  = c(-99, -98),
+#'              labels = "-99=Refused; -98=Don't know",
+#'              modify = TRUE)
 #' jdesc(df, MoodRating)        # codes now excluded as missing
 #'
+#' # Equivalent without modify: assign the returned data frame back
+#' df2 <- clinic
+#' df2 <- jdeclare_udm(df2, MoodRating,
+#'                     codes  = c(-99, -98),
+#'                     labels = "-99=Refused; -98=Don't know")
+#'
 #' # Equivalent using named codes (one step instead of codes + labels)
-#' df2 <- jdeclare_udm(clinic, MoodRating,
+#' df3 <- jdeclare_udm(clinic, MoodRating,
 #'                     codes = c("Refused" = -99, "Don't know" = -98))
 #'
 #' # Stata-style: label Stata-style missing-value cells. The jrecode() call
 #' # turns the literal codes into tagged cells; jdeclare_udm() labels them.
-#' df3 <- clinic
-#' df3$Mood2 <- jrecode(df3, MoodRating,
+#' df4 <- clinic
+#' df4$Mood2 <- jrecode(df4, MoodRating,
 #'                      map = "-99=.a; -98=.b; else=copy",
 #'                      convention = "stata")
-#' df3 <- jdeclare_udm(df3, Mood2,
-#'                     codes = c("Refused"    = haven::tagged_na("a"),
-#'                               "Don't know" = haven::tagged_na("b")))
+#' jdeclare_udm(df4, Mood2,
+#'              codes = c("Refused"    = haven::tagged_na("a"),
+#'                        "Don't know" = haven::tagged_na("b")),
+#'              modify = TRUE)
 #'
 #' @export
 jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
-                         convention = NULL, udm.notice = TRUE) {
+                         convention = NULL, udm.notice = TRUE,
+                         modify = FALSE) {
+
+  # Captured before `data` is reassigned below: substitute() on the
+  # rebound variable would return the value, not the caller's expression.
+  data_sub_expr <- substitute(data)
 
   # --- Resolve first argument -----------------------------------------------
   arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
+    data_sub      = data_sub_expr,
     data_missing  = missing(data),
     fn_name       = "jdeclare_udm",
     envir         = parent.frame(),
@@ -1537,6 +1563,20 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   if (!is.logical(udm.notice) || length(udm.notice) != 1L ||
       is.na(udm.notice)) {
     .jst_stop("`udm.notice` must be TRUE or FALSE.")
+  }
+  if (!is.logical(modify) || length(modify) != 1L || is.na(modify)) {
+    .jst_stop("`modify` must be TRUE or FALSE.")
+  }
+  # modify = TRUE writes the result back onto the caller's variable, so the
+  # data must arrive as a bare name -- an expression has no name to write to.
+  # The juse()-default paths (modes "default" / "symbol_with_default") are
+  # fine: the default name is the write-back target there.
+  if (isTRUE(modify) && arg1$mode == "explicit" &&
+      !is.symbol(data_sub_expr)) {
+    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
+         "Name the data first, then rerun with modify = TRUE:\n",
+         "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "), "\n",
+         "  jdeclare_udm(mydata, ..., modify = TRUE)")
   }
 
   # Validate convention argument up front.
@@ -1777,6 +1817,17 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     }
   }
 
+  # --- modify = TRUE write-back --------------------------------------------
+  # Writes the modified frame back onto the caller's variable (bare-symbol
+  # calls; guarded above) or onto the juse() default name. Same caller-
+  # environment assign as jcopy(). The frame is still returned invisibly
+  # below, so every call shape composes.
+  if (isTRUE(modify)) {
+    modify_target <- if (arg1$mode == "explicit") as.character(data_sub_expr)
+                     else arg1$name
+    assign(modify_target, data, envir = parent.frame())
+  }
+
   # --- Build and emit notification -----------------------------------------
   if (isTRUE(udm.notice)) {
     notif <- .jst_jdeclare_udm_notification(
@@ -1785,7 +1836,8 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
       parsed_codes        = parsed_codes,
       branch              = branch,
       conversion_info     = if (branch == "stata_conversion") conversion_info
-                            else NULL
+                            else NULL,
+      modify              = modify
     )
     cat(notif, sep = "")
   }
@@ -2047,16 +2099,26 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #' @keywords internal
 .jst_jdeclare_udm_notification <- function(data_name, var_name,
                                            parsed_codes, branch,
-                                           conversion_info = NULL) {
+                                           conversion_info = NULL,
+                                           modify = FALSE) {
 
   output_level <- getOption(".jst_output_level", "standard")
 
+  # Two-branch header (assignment-accuracy rule): the frame name appears
+  # only in the modify branch, where the claim that the frame changed is
+  # true. The default branch names just the variable -- the declaration is
+  # true of the returned column regardless of assignment.
   header <- switch(
     branch,
-    spss_canonical    = paste0("Declared SPSS-style missing values in:"),
-    stata_canonical   = paste0("Labelled Stata-style missing values in:"),
-    stata_conversion  = paste0("Declared and converted to Stata-style missing values in:")
+    spss_canonical    = paste0("Declared SPSS-style missing values on "),
+    stata_canonical   = paste0("Labeled Stata-style missing values on "),
+    stata_conversion  = paste0("Declared and converted to Stata-style missing values on ")
   )
+  header <- if (isTRUE(modify)) {
+    paste0(header, var_name, " in ", data_name, ":")
+  } else {
+    paste0(header, var_name, ":")
+  }
 
   # Build body lines: code [label] format per jfreq's v0.9.5 Missing-section
   # display.
@@ -2105,20 +2167,23 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 
   msg <- paste0(
     header, "\n",
-    "  ", data_name, "$", var_name, "\n",
     paste(body_lines, collapse = "\n"), "\n"
   )
 
-  # Standard / full tier: durability note (assign to the frame + save to keep).
-  # The reassignment line uses the generic ... template (Session 116, reverting
-  # the Session-115 Option-B real-codes echo): the codes are already listed in
-  # the block just above and the user has already run the call, so the reminder
-  # only needs to show the assignment scaffold.
+  # Standard / full tier: durability note. Default branch: the conditional
+  # assignment scaffold plus the modify = TRUE pointer (each the next step
+  # on the in-session rung). Modify branch: the cross-session jsave tip --
+  # the change has already landed on the frame, so saving is the next step.
+  # Scaffolds use the generic ... template (Session 116, reverting the
+  # Session-115 Option-B real-codes echo): the codes are already listed in
+  # the block just above and the user has already run the call, so the
+  # reminder only needs to show the corrective scaffold.
   if (!identical(output_level, "minimal")) {
     msg <- paste0(msg, "\n",
                   .jst_durability_note("frame", data_name,
                                        verb = "jdeclare_udm",
-                                       var_name = var_name),
+                                       var_name = var_name,
+                                       modify = modify),
                   "\n")
   }
 
@@ -2137,11 +2202,20 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
         tag_parts <- c(tag_parts, rhs)
       }
     }
-    eq_call <- paste0(
-      "Equivalent Stata-style call for future use:\n",
-      "    ", data_name, " <- jdeclare_udm(", data_name, ", ", var_name,
-      ", codes = c(", paste(tag_parts, collapse = ", "), "))\n"
-    )
+    eq_call <- if (isTRUE(modify)) {
+      paste0(
+        "Equivalent Stata-style call for future use:\n",
+        "    jdeclare_udm(", data_name, ", ", var_name,
+        ", codes = c(", paste(tag_parts, collapse = ", "),
+        "), modify = TRUE)\n"
+      )
+    } else {
+      paste0(
+        "Equivalent Stata-style call for future use:\n",
+        "    ", data_name, " <- jdeclare_udm(", data_name, ", ", var_name,
+        ", codes = c(", paste(tag_parts, collapse = ", "), "))\n"
+      )
+    }
     msg <- paste0(msg, eq_call)
   }
 
@@ -2181,15 +2255,26 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #'   \code{...} and \code{vars} are empty, \code{jconvert()} operates on
 #'   the whole data frame.
 #' @param udm.notice Logical; \code{TRUE} (default) prints a notification
-#'   summarizing what was converted (and what was skipped) along with an
-#'   assignment-syntax reminder. \code{FALSE} suppresses the message.
-#'   Always-on by default; does not consult \code{joutput()} because the
-#'   function reports an action it just performed rather than explaining
-#'   system behavior.
+#'   summarizing what was converted (and what was skipped) along with a
+#'   reminder of how to keep the result. \code{FALSE} suppresses the
+#'   message. Always-on by default; does not consult \code{joutput()}
+#'   because the function reports an action it just performed rather than
+#'   explaining system behavior.
+#' @param modify Logical. When \code{TRUE}, the converted data frame is
+#'   written back onto the data frame named in the call (or onto the
+#'   \code{juse()} default when the data argument is omitted), so no
+#'   assignment is needed -- the recommended workflow, since conversions
+#'   lost to a forgotten assignment silently change how later analyses
+#'   treat the affected values. Requires the data frame to be given as a
+#'   plain name. When \code{FALSE} (the default), the caller's data frame
+#'   is untouched; assign the returned data frame to keep the
+#'   conversions.
 #'
 #' @return The data frame with the requested conversions applied, returned
-#'   invisibly. As with \code{jrelabel()} and \code{jrecode()}, the user
-#'   must assign the return value back to retain the changes.
+#'   invisibly. With the default \code{modify = FALSE}, the caller's data
+#'   frame is unchanged until the result is assigned back. With
+#'   \code{modify = TRUE}, the conversions are also written back onto the
+#'   caller's data frame, and the returned copy can be ignored.
 #'
 #' @details
 #' The three target formats:
@@ -2261,20 +2346,26 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #' # community ships with SPSS-form UDMs (Income, Education, Smoker,
 #' # Environment1, Environment3), so the conversions run on it directly.
 #'
-#' # Strip UDMs from every applicable variable:
-#' df <- jconvert(community, to = "baseR")
+#' # Convert SPSS-form UDMs to Stata-style missing values. modify = TRUE
+#' # writes the result back onto df in one step -- the recommended
+#' # workflow.
+#' df <- community
+#' jconvert(df, to = "stata", modify = TRUE)
 #'
-#' # Convert SPSS-form UDMs to Stata-style missing values:
-#' df <- jconvert(community, to = "stata")
+#' # Equivalent without modify: assign the returned data frame back
+#' df2 <- jconvert(community, to = "stata")
+#'
+#' # Strip UDMs from every applicable variable:
+#' df3 <- jconvert(community, to = "baseR")
 #'
 #' # Scope by unquoted names:
-#' df <- jconvert(community, to = "baseR", Income, Education)
+#' df4 <- jconvert(community, to = "baseR", Income, Education)
 #'
 #' # Scope by character vector (alternative form):
-#' df <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
+#' df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 #'
 #' # Suppress the notification (e.g. inside a script):
-#' df <- jconvert(community, to = "baseR", udm.notice = FALSE)
+#' df6 <- jconvert(community, to = "baseR", udm.notice = FALSE)
 #'
 #' \dontrun{
 #' # Convert with target inferred from joptions:
@@ -2287,11 +2378,16 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #'   the default convention and convention codes session-wide.
 #'
 #' @export
-jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
+jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
+                     modify = FALSE) {
+
+  # Captured before `data` is reassigned below: substitute() on the
+  # rebound variable would return the value, not the caller's expression.
+  data_sub_expr <- substitute(data)
 
   # --- Resolve first argument -------------------------------------------------
   arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
+    data_sub      = data_sub_expr,
     data_missing  = missing(data),
     fn_name       = "jconvert",
     envir         = parent.frame(),
@@ -2320,6 +2416,24 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
   if (!is.character(to) || length(to) != 1L ||
       !to %in% c("baseR", "spss", "stata")) {
     .jst_stop("`to` must be \"baseR\", \"spss\", or \"stata\" (case-sensitive).")
+  }
+  if (!is.logical(modify) || length(modify) != 1L || is.na(modify)) {
+    .jst_stop("`modify` must be TRUE or FALSE.")
+  }
+  if (!is.logical(udm.notice) || length(udm.notice) != 1L ||
+      is.na(udm.notice)) {
+    .jst_stop("`udm.notice` must be TRUE or FALSE.")
+  }
+  # modify = TRUE writes the result back onto the caller's variable, so the
+  # data must arrive as a bare name -- an expression has no name to write to.
+  # The juse()-default paths (modes "default" / "symbol_with_default") are
+  # fine: the default name is the write-back target there.
+  if (isTRUE(modify) && arg1$mode == "explicit" &&
+      !is.symbol(data_sub_expr)) {
+    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
+         "Name the data first, then rerun with modify = TRUE:\n",
+         "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "), "\n",
+         "  jconvert(mydata, ..., modify = TRUE)")
   }
 
   # --- Resolve variable list (... vs vars; mutually exclusive) ---------------
@@ -2840,6 +2954,18 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
     }
   }
 
+  # --- modify = TRUE write-back ---------------------------------------------
+  # Only when at least one column converted -- the no-op paths return the
+  # frame unchanged, so there is nothing to write back. Writes onto the
+  # caller's bare-symbol variable (guarded above) or the juse() default
+  # name; same caller-environment assign as jcopy(). The frame is still
+  # returned invisibly below, so every call shape composes.
+  if (isTRUE(modify) && length(converted_vars) > 0L) {
+    modify_target <- if (arg1$mode == "explicit") as.character(data_sub_expr)
+                     else arg1$name
+    assign(modify_target, data, envir = parent.frame())
+  }
+
   # --- Build notification (Q4 five-section format) --------------------------
   if (isTRUE(udm.notice)) {
 
@@ -2951,7 +3077,8 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE) {
       if (out_level != "minimal") {
         if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
         msg_lines <- c(msg_lines,
-                       .jst_durability_note("convert", data_name))
+                       .jst_durability_note("convert", data_name,
+                                            modify = modify))
       }
     }
 

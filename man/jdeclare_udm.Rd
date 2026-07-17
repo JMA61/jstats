@@ -10,7 +10,8 @@ jdeclare_udm(
   codes = NULL,
   labels = NULL,
   convention = NULL,
-  udm.notice = TRUE
+  udm.notice = TRUE,
+  modify = FALSE
 )
 }
 \arguments{
@@ -46,12 +47,27 @@ column's existing UDM declaration (if any), then from
 default.}
 
 \item{udm.notice}{Logical. When \code{TRUE} (the default), the
-function prints a notification summarizing what was declared.
+function prints a notification summarizing what was declared,
+plus a reminder of how to keep the result.
 Set \code{FALSE} to suppress.}
+
+\item{modify}{Logical. When \code{TRUE}, the declaration is written
+back onto the data frame named in the call (or onto the
+\code{juse()} default when the data argument is omitted), so no
+assignment is needed -- the recommended workflow, since a
+declaration lost to a forgotten assignment silently poisons later
+statistics. Requires the data frame to be given as a plain name.
+When \code{FALSE} (the default), the caller's data frame is
+untouched; assign the returned data frame to keep the
+declaration.}
 }
 \value{
 The data frame, with the specified variable updated to
-carry the declared UDMs.
+carry the declared UDMs, returned invisibly. With the default
+\code{modify = FALSE}, the caller's data frame is unchanged until
+the result is assigned back. With \code{modify = TRUE}, the
+change is also written back onto the caller's data frame, and the
+returned copy can be ignored.
 }
 \description{
 \code{jdeclare_udm()} declares one or more user-defined missing
@@ -114,25 +130,35 @@ declaration ends up out of step with the rest of its DF.
 df <- clinic
 jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 
-# SPSS form: declare -99 and -98 as UDMs with labels
-df <- jdeclare_udm(df, MoodRating,
-                   codes  = c(-99, -98),
-                   labels = "-99=Refused; -98=Don't know")
+# SPSS form: declare -99 and -98 as UDMs with labels. modify = TRUE
+# writes the declaration back onto df in one step -- the recommended
+# workflow.
+jdeclare_udm(df, MoodRating,
+             codes  = c(-99, -98),
+             labels = "-99=Refused; -98=Don't know",
+             modify = TRUE)
 jdesc(df, MoodRating)        # codes now excluded as missing
 
+# Equivalent without modify: assign the returned data frame back
+df2 <- clinic
+df2 <- jdeclare_udm(df2, MoodRating,
+                    codes  = c(-99, -98),
+                    labels = "-99=Refused; -98=Don't know")
+
 # Equivalent using named codes (one step instead of codes + labels)
-df2 <- jdeclare_udm(clinic, MoodRating,
+df3 <- jdeclare_udm(clinic, MoodRating,
                     codes = c("Refused" = -99, "Don't know" = -98))
 
 # Stata-style: label Stata-style missing-value cells. The jrecode() call
 # turns the literal codes into tagged cells; jdeclare_udm() labels them.
-df3 <- clinic
-df3$Mood2 <- jrecode(df3, MoodRating,
+df4 <- clinic
+df4$Mood2 <- jrecode(df4, MoodRating,
                      map = "-99=.a; -98=.b; else=copy",
                      convention = "stata")
-df3 <- jdeclare_udm(df3, Mood2,
-                    codes = c("Refused"    = haven::tagged_na("a"),
-                              "Don't know" = haven::tagged_na("b")))
+jdeclare_udm(df4, Mood2,
+             codes = c("Refused"    = haven::tagged_na("a"),
+                       "Don't know" = haven::tagged_na("b")),
+             modify = TRUE)
 
 }
 \seealso{

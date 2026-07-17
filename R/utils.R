@@ -360,7 +360,8 @@ jupdate <- function(ask = FALSE) {
 #'   build the reassignment line.
 #' @keywords internal
 .jst_durability_note <- function(rung, data_name, count = NULL,
-                                 verb = NULL, var_name = NULL) {
+                                 verb = NULL, var_name = NULL,
+                                 modify = FALSE) {
   save_call <- paste0("jsave(", data_name, ", \"", data_name, ".rds\")")
   load_call <- paste0(data_name, " <- jload(\"", data_name, ".rds\")")
   if (identical(rung, "session")) {
@@ -384,21 +385,35 @@ jupdate <- function(ask = FALSE) {
       )
     }
   } else if (identical(rung, "frame")) {
-    paste0(
-      "Assign the result to keep the declaration:\n",
-      "  ", data_name, " <- ", verb, "(", data_name, ", ", var_name, ", ...)\n",
-      "\n",
-      "To keep it across sessions, save the data frame:\n",
-      "  ", save_call
-    )
+    if (isTRUE(modify)) {
+      paste0(
+        "To keep it across sessions, save the data frame:\n",
+        "  ", save_call
+      )
+    } else {
+      paste0(
+        "This call changes ", data_name, " only if you assign the result:\n",
+        "  ", data_name, " <- ", verb, "(", data_name, ", ", var_name, ", ...)\n",
+        "\n",
+        "To change ", data_name, " directly, rerun with modify = TRUE:\n",
+        "  ", verb, "(", data_name, ", ", var_name, ", ..., modify = TRUE)"
+      )
+    }
   } else if (identical(rung, "convert")) {
-    paste0(
-      "Assign the result to keep the conversion:\n",
-      "  ", data_name, " <- jconvert(", data_name, ", ...)\n",
-      "\n",
-      "To keep it across sessions, save the data frame:\n",
-      "  ", save_call
-    )
+    if (isTRUE(modify)) {
+      paste0(
+        "To keep it across sessions, save the data frame:\n",
+        "  ", save_call
+      )
+    } else {
+      paste0(
+        "This call changes ", data_name, " only if you assign the result:\n",
+        "  ", data_name, " <- jconvert(", data_name, ", ...)\n",
+        "\n",
+        "To change ", data_name, " directly, rerun with modify = TRUE:\n",
+        "  jconvert(", data_name, ", ..., modify = TRUE)"
+      )
+    }
   } else {
     stop("Internal error: .jst_durability_note() rung must be ",
          "\"session\", \"frame\", or \"convert\".", call. = FALSE)

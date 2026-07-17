@@ -4,7 +4,7 @@
 \alias{jconvert}
 \title{Convert user-defined missing value (UDM) declarations between formats}
 \usage{
-jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE)
+jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
 }
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{juse()} default.}
@@ -27,16 +27,28 @@ variable names. Mutually exclusive with \code{...}. When both
 the whole data frame.}
 
 \item{udm.notice}{Logical; \code{TRUE} (default) prints a notification
-summarizing what was converted (and what was skipped) along with an
-assignment-syntax reminder. \code{FALSE} suppresses the message.
-Always-on by default; does not consult \code{joutput()} because the
-function reports an action it just performed rather than explaining
-system behavior.}
+summarizing what was converted (and what was skipped) along with a
+reminder of how to keep the result. \code{FALSE} suppresses the
+message. Always-on by default; does not consult \code{joutput()}
+because the function reports an action it just performed rather than
+explaining system behavior.}
+
+\item{modify}{Logical. When \code{TRUE}, the converted data frame is
+written back onto the data frame named in the call (or onto the
+\code{juse()} default when the data argument is omitted), so no
+assignment is needed -- the recommended workflow, since conversions
+lost to a forgotten assignment silently change how later analyses
+treat the affected values. Requires the data frame to be given as a
+plain name. When \code{FALSE} (the default), the caller's data frame
+is untouched; assign the returned data frame to keep the
+conversions.}
 }
 \value{
 The data frame with the requested conversions applied, returned
-invisibly. As with \code{jrelabel()} and \code{jrecode()}, the user
-must assign the return value back to retain the changes.
+invisibly. With the default \code{modify = FALSE}, the caller's data
+frame is unchanged until the result is assigned back. With
+\code{modify = TRUE}, the conversions are also written back onto the
+caller's data frame, and the returned copy can be ignored.
 }
 \description{
 \code{jconvert()} provides a single entry point for changing how user-
@@ -118,20 +130,26 @@ action is needed.
 # community ships with SPSS-form UDMs (Income, Education, Smoker,
 # Environment1, Environment3), so the conversions run on it directly.
 
-# Strip UDMs from every applicable variable:
-df <- jconvert(community, to = "baseR")
+# Convert SPSS-form UDMs to Stata-style missing values. modify = TRUE
+# writes the result back onto df in one step -- the recommended
+# workflow.
+df <- community
+jconvert(df, to = "stata", modify = TRUE)
 
-# Convert SPSS-form UDMs to Stata-style missing values:
-df <- jconvert(community, to = "stata")
+# Equivalent without modify: assign the returned data frame back
+df2 <- jconvert(community, to = "stata")
+
+# Strip UDMs from every applicable variable:
+df3 <- jconvert(community, to = "baseR")
 
 # Scope by unquoted names:
-df <- jconvert(community, to = "baseR", Income, Education)
+df4 <- jconvert(community, to = "baseR", Income, Education)
 
 # Scope by character vector (alternative form):
-df <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
+df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 
 # Suppress the notification (e.g. inside a script):
-df <- jconvert(community, to = "baseR", udm.notice = FALSE)
+df6 <- jconvert(community, to = "baseR", udm.notice = FALSE)
 
 \dontrun{
 # Convert with target inferred from joptions:
