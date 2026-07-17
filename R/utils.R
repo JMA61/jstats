@@ -120,6 +120,8 @@
 #'
 #' @section Where to go next:
 #' \itemize{
+#'   \item For a quick orientation to the package's conventions (also
+#'     useful when working with an AI assistant): \code{jai()}.
 #'   \item For the full alphabetical listing of functions:
 #'     \code{library(help = "jstats")}.
 #'   \item For source, issue reports, and contribution guidelines:
@@ -260,6 +262,64 @@ jupdate <- function(ask = FALSE) {
     "Reload jstats with library(jstats) (unless loaded automatically on startup)."
   )
 
+  invisible(NULL)
+}
+
+
+#' Print a quick orientation to jstats conventions
+#'
+#' \code{jai()} prints a short, plain-text orientation to the package's core
+#' conventions: how to load data, how jstats handles value labels and
+#' user-defined missing values, how to keep changes made to a data frame, and
+#' where to find fuller help. It is written to be useful both to people new to
+#' the package and to AI coding assistants (such as the assistant built into
+#' RStudio), which read console output and can act on what they find there.
+#'
+#' The text is deliberately brief. For the full function listing and an
+#' overview, see \code{help("jstats")}; for detailed help and worked examples,
+#' see the individual function help pages (\code{?jdesc}, \code{?jdeclare_udm},
+#' and so on); for the online guides and reference, see the package website.
+#'
+#' @return Invisibly \code{NULL}. Called for its side effect of printing the
+#'   orientation text.
+#'
+#' @examples
+#' jai()
+#'
+#' @seealso \code{help("jstats")} for the package overview and full function
+#'   list.
+#' @export
+jai <- function() {
+  lines <- c(
+    "jstats conventions -- quick orientation for users and AI assistants.",
+    "",
+    "  jstats is an integrated set of j-prefixed analysis functions (jdesc,",
+    "  jfreq, jlm, ...) with shared syntax and output styled after",
+    "  commercial statistical software. The functions work directly with",
+    "  data imported from SPSS, Stata, or SAS: value labels and",
+    "  user-defined missing values (UDM) are handled automatically.",
+    "",
+    "  - Load data with jload(). It reads many file types (.rds, .sav, .dta,",
+    "    .xlsx, .csv, ...) without separate packages such as haven or readxl,",
+    "    and runs UDM checks other loaders skip.",
+    "  - Declare stray codes such as -99 with jdeclare_udm(); do not filter",
+    "    them out by hand. jstats functions honor declared UDM codes; base",
+    "    functions such as mean() ignore them and return wrong answers with",
+    "    no warning.",
+    "  - Analysis functions print their results directly; nothing needs to",
+    "    be stored. The few functions that change data, such as",
+    "    jdeclare_udm() and jconvert(), return the changed data frame:",
+    "    keep it by assigning back (df <- jdeclare_udm(df, ...)) or with",
+    "    modify = TRUE. Save data across sessions with jsave().",
+    '  - See help("jstats") for an overview and the full function list;',
+    "    detailed help and worked examples for each function are available",
+    "    via ?jdesc, ?jdeclare_udm, and so on.",
+    "",
+    "  Guides and reference: https://jma61.github.io/jstats-guides"
+  )
+  cat("\n")
+  cat(lines, sep = "\n")
+  cat("\n")
   invisible(NULL)
 }
 

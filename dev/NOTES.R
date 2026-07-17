@@ -59,10 +59,14 @@ assemble_package()   ## No argument is necessary - - the output defaults to jsta
 
 
 devtools::load_all() ### To test the loading of the functions for parse errors - called again by document()
-devtools::document()  # regenerates the .Rd help files and NAMESPACE from roxygen2 comments
+heldevtools::document()  # regenerates the .Rd help files and NAMESPACE from roxygen2 comments
 # full CRAN-style check; you may see Quarto-related noise in the verbose output (Windows tooling quirk) —
 # it does not show up in the final 0/0/0 tally and is not a real error
 devtools::check()
+
+### to get the actual new version of the package installed on the development machine without pushing run this:
+### restart afterwards
+devtools::install()
 
 
 ## adds CRAN-incoming checks that require internet

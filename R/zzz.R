@@ -319,6 +319,11 @@
 
   installed_ver <- as.character(utils::packageVersion("jstats"))
 
+  # Evergreen pointer to the on-demand orientation printout (jai()). Shown
+  # once on a normal load, so any user -- or an AI assistant reading the
+  # console -- sees where the package's conventions live.
+  ai_pointer <- "For jstats conventions (useful to AI assistants too), run jai()."
+
   # Opt-out for networked-but-no-internet machines (e.g., locked-down lab or
   # server installs where a route exists but the internet does not). Setting
   # options(jstats.check_updates = FALSE) skips BOTH network reads and just
@@ -326,6 +331,7 @@
   # preserves the update check for everyone else.
   if (!isTRUE(getOption("jstats.check_updates", TRUE))) {
     packageStartupMessage("jstats v", installed_ver, " loaded.")
+    packageStartupMessage(ai_pointer)
     return(invisible())
   }
 
@@ -337,9 +343,11 @@
   # would only time out as well. The direct fallback line below matches the one
   # .jst_show_version_status() prints on its own failure, so the user sees the
   # same notice without waiting out a second timeout.
+  migrated <- FALSE
   if (!is.null(gist_info$successor) &&
       !identical(gist_info$successor$package, "jstats")) {
     .jst_show_migration(gist_info$successor, installed_ver)
+    migrated <- TRUE
   } else if (isTRUE(gist_info$network_ok)) {
     .jst_show_version_status(installed_ver)
   } else {
@@ -355,6 +363,12 @@
   # (message is NULL in that case).
   if (!is.null(gist_info$message)) {
     packageStartupMessage(gist_info$message)
+  }
+
+  # Evergreen jai() pointer on a normal load. Suppressed during a successor-
+  # package migration, where the migration notice takes precedence.
+  if (!migrated) {
+    packageStartupMessage(ai_pointer)
   }
 }
 

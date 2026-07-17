@@ -131,6 +131,8 @@ otherwise. See \code{?joutput} for the full toggle behavior.
 \section{Where to go next}{
 
 \itemize{
+\item For a quick orientation to the package's conventions (also
+useful when working with an AI assistant): \code{jai()}.
 \item For the full alphabetical listing of functions:
 \code{library(help = "jstats")}.
 \item For source, issue reports, and contribution guidelines:
