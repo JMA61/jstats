@@ -12,7 +12,3 @@ preserved.
 ``` r
 .jst_cps_visibility_rules
 ```
-
-## Format
-
-An object of class `data.frame` with 5 rows and 4 columns.

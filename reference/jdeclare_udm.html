@@ -33,7 +33,7 @@ destructive aspect of the replacement is not silent."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.103</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.105</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,7 +82,8 @@ destructive aspect of the replacement is not silent.</p>
 <span>  codes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  convention <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  udm.notice <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  udm.notice <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  modify <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -125,8 +126,9 @@ created with <code><a href="https://haven.tidyverse.org/reference/tagged_na.html
 
 
 <dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>
-<dd><p>Optional. One of <code>"spss"</code> or <code>"stata"</code>;
-overrides the convention resolution for this call. When
+<dd><p>Optional. One of <code>"spss"</code> or <code>"stata"</code>
+(any capitalization is accepted); overrides the convention resolution
+for this call. When
 <code>NULL</code> (the default), the convention is resolved from the
 column's existing UDM declaration (if any), then from
 <code>joptions("missing.convention")</code>, then from the SPSS-form
@@ -135,14 +137,31 @@ default.</p></dd>
 
 <dt id="arg-udm-notice">udm.notice<a class="anchor" aria-label="anchor" href="#arg-udm-notice"></a></dt>
 <dd><p>Logical. When <code>TRUE</code> (the default), the
-function prints a notification summarizing what was declared.
+function prints a notification summarizing what was declared,
+plus a reminder of how to keep the result.
 Set <code>FALSE</code> to suppress.</p></dd>
+
+
+<dt id="arg-modify">modify<a class="anchor" aria-label="anchor" href="#arg-modify"></a></dt>
+<dd><p>Logical. When <code>TRUE</code>, the declaration is written
+back onto the data frame named in the call (or onto the
+<code><a href="juse.html">juse()</a></code> default when the data argument is omitted), so no
+assignment is needed – the recommended workflow, since a
+declaration lost to a forgotten assignment silently poisons later
+statistics. Requires the data frame to be given as a plain name.
+When <code>FALSE</code> (the default), the caller's data frame is
+untouched; assign the returned data frame to keep the
+declaration.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The data frame, with the specified variable updated to
-carry the declared UDMs.</p>
+carry the declared UDMs, returned invisibly. With the default
+<code>modify = FALSE</code>, the caller's data frame is unchanged until
+the result is assigned back. With <code>modify = TRUE</code>, the
+change is also written back onto the caller's data frame, and the
+returned copy can be ignored.</p>
     </div>
     <div class="section level2">
     <h2 id="missing-values-convention">Missing-Values Convention<a class="anchor" aria-label="anchor" href="#missing-values-convention"></a></h2>
@@ -201,17 +220,16 @@ declaration ends up out of step with the rest of its DF.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> MoodRating     70           70  -99    9  -4.943  31.477</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># SPSS form: declare -99 and -98 as UDMs with labels</span></span></span>
-<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu">jdeclare_udm</span><span class="op">(</span><span class="va">df</span>, <span class="va">MoodRating</span>,</span></span>
-<span class="r-in"><span>                   codes  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   labels <span class="op">=</span> <span class="st">"-99=Refused; -98=Don't know"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Declared SPSS-style missing values in:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   df$MoodRating</span>
+<span class="r-in"><span><span class="co"># SPSS form: declare -99 and -98 as UDMs with labels. modify = TRUE</span></span></span>
+<span class="r-in"><span><span class="co"># writes the declaration back onto df in one step -- the recommended</span></span></span>
+<span class="r-in"><span><span class="co"># workflow.</span></span></span>
+<span class="r-in"><span><span class="fu">jdeclare_udm</span><span class="op">(</span><span class="va">df</span>, <span class="va">MoodRating</span>,</span></span>
+<span class="r-in"><span>             codes  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>             labels <span class="op">=</span> <span class="st">"-99=Refused; -98=Don't know"</span>,</span></span>
+<span class="r-in"><span>             modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Declared SPSS-style missing values on MoodRating in df:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   -99 ["Refused"]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   -98 ["Don't know"]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Assign the result to keep the declaration:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   df &lt;- jdeclare_udm(df, MoodRating, ...)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jsave(df, "df.rds")</span>
@@ -230,44 +248,55 @@ declaration ends up out of step with the rest of its DF.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> MoodRating     70           63    1    9  5.46  1.702</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Equivalent using named codes (one step instead of codes + labels)</span></span></span>
-<span class="r-in"><span><span class="va">df2</span> <span class="op">&lt;-</span> <span class="fu">jdeclare_udm</span><span class="op">(</span><span class="va">clinic</span>, <span class="va">MoodRating</span>,</span></span>
-<span class="r-in"><span>                    codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Refused"</span> <span class="op">=</span> <span class="op">-</span><span class="fl">99</span>, <span class="st">"Don't know"</span> <span class="op">=</span> <span class="op">-</span><span class="fl">98</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Declared SPSS-style missing values in:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   clinic$MoodRating</span>
+<span class="r-in"><span><span class="co"># Equivalent without modify: assign the returned data frame back</span></span></span>
+<span class="r-in"><span><span class="va">df2</span> <span class="op">&lt;-</span> <span class="va">clinic</span></span></span>
+<span class="r-in"><span><span class="va">df2</span> <span class="op">&lt;-</span> <span class="fu">jdeclare_udm</span><span class="op">(</span><span class="va">df2</span>, <span class="va">MoodRating</span>,</span></span>
+<span class="r-in"><span>                    codes  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                    labels <span class="op">=</span> <span class="st">"-99=Refused; -98=Don't know"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Declared SPSS-style missing values on MoodRating:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   -99 ["Refused"]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   -98 ["Don't know"]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Assign the result to keep the declaration:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> This call changes df2 only if you assign the result:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   df2 &lt;- jdeclare_udm(df2, MoodRating, ...)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> To change df2 directly, rerun with modify = TRUE:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_udm(df2, MoodRating, ..., modify = TRUE)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Equivalent using named codes (one step instead of codes + labels)</span></span></span>
+<span class="r-in"><span><span class="va">df3</span> <span class="op">&lt;-</span> <span class="fu">jdeclare_udm</span><span class="op">(</span><span class="va">clinic</span>, <span class="va">MoodRating</span>,</span></span>
+<span class="r-in"><span>                    codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Refused"</span> <span class="op">=</span> <span class="op">-</span><span class="fl">99</span>, <span class="st">"Don't know"</span> <span class="op">=</span> <span class="op">-</span><span class="fl">98</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Declared SPSS-style missing values on MoodRating:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   -99 ["Refused"]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   -98 ["Don't know"]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> This call changes clinic only if you assign the result:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   clinic &lt;- jdeclare_udm(clinic, MoodRating, ...)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jsave(clinic, "clinic.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> To change clinic directly, rerun with modify = TRUE:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_udm(clinic, MoodRating, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Stata-style: label Stata-style missing-value cells. The jrecode() call</span></span></span>
 <span class="r-in"><span><span class="co"># turns the literal codes into tagged cells; jdeclare_udm() labels them.</span></span></span>
-<span class="r-in"><span><span class="va">df3</span> <span class="op">&lt;-</span> <span class="va">clinic</span></span></span>
-<span class="r-in"><span><span class="va">df3</span><span class="op">$</span><span class="va">Mood2</span> <span class="op">&lt;-</span> <span class="fu"><a href="jrecode.html">jrecode</a></span><span class="op">(</span><span class="va">df3</span>, <span class="va">MoodRating</span>,</span></span>
+<span class="r-in"><span><span class="va">df4</span> <span class="op">&lt;-</span> <span class="va">clinic</span></span></span>
+<span class="r-in"><span><span class="va">df4</span><span class="op">$</span><span class="va">Mood2</span> <span class="op">&lt;-</span> <span class="fu"><a href="jrecode.html">jrecode</a></span><span class="op">(</span><span class="va">df4</span>, <span class="va">MoodRating</span>,</span></span>
 <span class="r-in"><span>                     map <span class="op">=</span> <span class="st">"-99=.a; -98=.b; else=copy"</span>,</span></span>
 <span class="r-in"><span>                     convention <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   df3$&lt;name&gt; &lt;- jrecode(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df4$&lt;name&gt; &lt;- jrecode(...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
-<span class="r-in"><span><span class="va">df3</span> <span class="op">&lt;-</span> <span class="fu">jdeclare_udm</span><span class="op">(</span><span class="va">df3</span>, <span class="va">Mood2</span>,</span></span>
-<span class="r-in"><span>                    codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Refused"</span>    <span class="op">=</span> <span class="fu">haven</span><span class="fu">::</span><span class="fu"><a href="https://haven.tidyverse.org/reference/tagged_na.html" class="external-link">tagged_na</a></span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                              <span class="st">"Don't know"</span> <span class="op">=</span> <span class="fu">haven</span><span class="fu">::</span><span class="fu"><a href="https://haven.tidyverse.org/reference/tagged_na.html" class="external-link">tagged_na</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Labelled Stata-style missing values in:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   df3$Mood2</span>
+<span class="r-in"><span><span class="fu">jdeclare_udm</span><span class="op">(</span><span class="va">df4</span>, <span class="va">Mood2</span>,</span></span>
+<span class="r-in"><span>             codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Refused"</span>    <span class="op">=</span> <span class="fu">haven</span><span class="fu">::</span><span class="fu"><a href="https://haven.tidyverse.org/reference/tagged_na.html" class="external-link">tagged_na</a></span><span class="op">(</span><span class="st">"a"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                       <span class="st">"Don't know"</span> <span class="op">=</span> <span class="fu">haven</span><span class="fu">::</span><span class="fu"><a href="https://haven.tidyverse.org/reference/tagged_na.html" class="external-link">tagged_na</a></span><span class="op">(</span><span class="st">"b"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>             modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Labeled Stata-style missing values on Mood2 in df4:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   .a ["Refused"]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   .b ["Don't know"]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Assign the result to keep the declaration:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   df3 &lt;- jdeclare_udm(df3, Mood2, ...)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jsave(df3, "df3.rds")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Note: variable Mood2 is Stata-style, but other columns in df3 are predominantly SPSS-style.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jsave(df4, "df4.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: variable Mood2 is Stata-style, but other columns in df4 are predominantly SPSS-style.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use jconvert() to align if desired.</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

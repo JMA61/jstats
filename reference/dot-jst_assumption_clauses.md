@@ -12,7 +12,3 @@ everywhere that site fires.
 ``` r
 .jst_assumption_clauses
 ```
-
-## Format
-
-An object of class `list` of length 7.

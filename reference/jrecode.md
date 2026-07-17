@@ -87,10 +87,11 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
 
 - convention:
 
-  Optional. One of `"spss"`, `"stata"`, or `NULL` (default). Controls
-  whether Stata-style missing-value tokens (`.a` through `.z`) are
-  accepted in the map and labels arguments. Inert when no Stata-style
-  missing-value tokens appear in either argument.
+  Optional. One of `"spss"`, `"stata"`, or `NULL` (default); any
+  capitalization is accepted. Controls whether Stata-style missing-value
+  tokens (`.a` through `.z`) are accepted in the map and labels
+  arguments. Inert when no Stata-style missing-value tokens appear in
+  either argument.
 
   When `NULL`, the convention is resolved from
   `joptions("missing.convention")`; if that is also unset, the default

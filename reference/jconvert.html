@@ -21,7 +21,7 @@ behavior."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.103</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.105</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,7 +58,7 @@ behavior.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jconvert</span><span class="op">(</span><span class="va">data</span>, to <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span>, vars <span class="op">=</span> <span class="cn">NULL</span>, udm.notice <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jconvert</span><span class="op">(</span><span class="va">data</span>, to <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span>, vars <span class="op">=</span> <span class="cn">NULL</span>, udm.notice <span class="op">=</span> <span class="cn">TRUE</span>, modify <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -71,7 +71,8 @@ behavior.</p>
 
 <dt id="arg-to">to<a class="anchor" aria-label="anchor" href="#arg-to"></a></dt>
 <dd><p>One of <code>"baseR"</code>, <code>"spss"</code>, or <code>"stata"</code>
-(case-sensitive). When <code>NULL</code> (the default), <code>jconvert()</code>
+(any capitalization is accepted). When <code>NULL</code> (the default),
+<code>jconvert()</code>
 reads <code>joptions("missing.convention")</code>: if the slot is set to
 <code>"spss"</code> or <code>"stata"</code>, <code>to</code> resolves to that value; if
 the slot is at its <code>"none"</code> default, <code>jconvert()</code> errors
@@ -94,18 +95,32 @@ the whole data frame.</p></dd>
 
 <dt id="arg-udm-notice">udm.notice<a class="anchor" aria-label="anchor" href="#arg-udm-notice"></a></dt>
 <dd><p>Logical; <code>TRUE</code> (default) prints a notification
-summarizing what was converted (and what was skipped) along with an
-assignment-syntax reminder. <code>FALSE</code> suppresses the message.
-Always-on by default; does not consult <code><a href="joutput.html">joutput()</a></code> because the
-function reports an action it just performed rather than explaining
-system behavior.</p></dd>
+summarizing what was converted (and what was skipped) along with a
+reminder of how to keep the result. <code>FALSE</code> suppresses the
+message. Always-on by default; does not consult <code><a href="joutput.html">joutput()</a></code>
+because the function reports an action it just performed rather than
+explaining system behavior.</p></dd>
+
+
+<dt id="arg-modify">modify<a class="anchor" aria-label="anchor" href="#arg-modify"></a></dt>
+<dd><p>Logical. When <code>TRUE</code>, the converted data frame is
+written back onto the data frame named in the call (or onto the
+<code><a href="juse.html">juse()</a></code> default when the data argument is omitted), so no
+assignment is needed – the recommended workflow, since conversions
+lost to a forgotten assignment silently change how later analyses
+treat the affected values. Requires the data frame to be given as a
+plain name. When <code>FALSE</code> (the default), the caller's data frame
+is untouched; assign the returned data frame to keep the
+conversions.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The data frame with the requested conversions applied, returned
-invisibly. As with <code><a href="jrelabel.html">jrelabel()</a></code> and <code><a href="jrecode.html">jrecode()</a></code>, the user
-must assign the return value back to retain the changes.</p>
+invisibly. With the default <code>modify = FALSE</code>, the caller's data
+frame is unchanged until the result is assigned back. With
+<code>modify = TRUE</code>, the conversions are also written back onto the
+caller's data frame, and the returned copy can be ignored.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -188,23 +203,11 @@ the default convention and convention codes session-wide.</p></div>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># community ships with SPSS-form UDMs (Income, Education, Smoker,</span></span></span>
 <span class="r-in"><span><span class="co"># Environment1, Environment3), so the conversions run on it directly.</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Strip UDMs from every applicable variable:</span></span></span>
-<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped declarations of user-defined missing values (UDMs) from 5 variables:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Assign the result to keep the conversion:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Convert SPSS-form UDMs to Stata-style missing values:</span></span></span>
-<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Convert SPSS-form UDMs to Stata-style missing values. modify = TRUE</span></span></span>
+<span class="r-in"><span><span class="co"># writes the result back onto df in one step -- the recommended</span></span></span>
+<span class="r-in"><span><span class="co"># workflow.</span></span></span>
+<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="va">community</span></span></span>
+<span class="r-in"><span><span class="fu">jconvert</span><span class="op">(</span><span class="va">df</span>, to <span class="op">=</span> <span class="st">"stata"</span>, modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to Stata-style missing values in 5 variables:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
@@ -212,38 +215,65 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Assign the result to keep the conversion:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(df, "df.rds")</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Equivalent without modify: assign the returned data frame back</span></span></span>
+<span class="r-in"><span><span class="va">df2</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to Stata-style missing values in 5 variables:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused" -&gt; .a)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Strip UDMs from every applicable variable:</span></span></span>
+<span class="r-in"><span><span class="va">df3</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped declarations of user-defined missing values (UDMs) from 5 variables:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused", -98 "Don't know")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused", -98 "Don't know")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused", -98 "Don't know")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused", -98 "Don't know")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Scope by unquoted names:</span></span></span>
-<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, <span class="va">Income</span>, <span class="va">Education</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">df4</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, <span class="va">Income</span>, <span class="va">Education</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped declarations of user-defined missing values (UDMs) from 2 variables:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     (-99 "Refused", -98 "Don't know")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Education  (-99 "Refused", -98 "Don't know")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Assign the result to keep the conversion:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Scope by character vector (alternative form):</span></span></span>
-<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Income"</span>, <span class="st">"Education"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">df5</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Income"</span>, <span class="st">"Education"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped declarations of user-defined missing values (UDMs) from 2 variables:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     (-99 "Refused", -98 "Don't know")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Education  (-99 "Refused", -98 "Don't know")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Assign the result to keep the conversion:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Suppress the notification (e.g. inside a script):</span></span></span>
-<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, udm.notice <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">df6</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, udm.notice <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># Convert with target inferred from joptions:</span></span></span>

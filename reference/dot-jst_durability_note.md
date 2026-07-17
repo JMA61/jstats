@@ -17,7 +17,8 @@ wording rather than the helper inferring it.
   data_name,
   count = NULL,
   verb = NULL,
-  var_name = NULL
+  var_name = NULL,
+  modify = FALSE
 )
 ```
 

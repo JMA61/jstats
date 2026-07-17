@@ -11,7 +11,7 @@ the base R target is the strip behavior.
 ## Usage
 
 ``` r
-jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE)
+jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
 ```
 
 ## Arguments
@@ -23,12 +23,13 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE)
 
 - to:
 
-  One of `"baseR"`, `"spss"`, or `"stata"` (case-sensitive). When `NULL`
-  (the default), `jconvert()` reads `joptions("missing.convention")`: if
-  the slot is set to `"spss"` or `"stata"`, `to` resolves to that value;
-  if the slot is at its `"none"` default, `jconvert()` errors with
-  guidance naming the three concrete options. The destructive `"baseR"`
-  target is never auto-resolved – it must always be passed explicitly.
+  One of `"baseR"`, `"spss"`, or `"stata"` (any capitalization is
+  accepted). When `NULL` (the default), `jconvert()` reads
+  `joptions("missing.convention")`: if the slot is set to `"spss"` or
+  `"stata"`, `to` resolves to that value; if the slot is at its `"none"`
+  default, `jconvert()` errors with guidance naming the three concrete
+  options. The destructive `"baseR"` target is never auto-resolved – it
+  must always be passed explicitly.
 
 - ...:
 
@@ -44,20 +45,32 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE)
 - udm.notice:
 
   Logical; `TRUE` (default) prints a notification summarizing what was
-  converted (and what was skipped) along with an assignment-syntax
-  reminder. `FALSE` suppresses the message. Always-on by default; does
+  converted (and what was skipped) along with a reminder of how to keep
+  the result. `FALSE` suppresses the message. Always-on by default; does
   not consult
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
   because the function reports an action it just performed rather than
   explaining system behavior.
 
+- modify:
+
+  Logical. When `TRUE`, the converted data frame is written back onto
+  the data frame named in the call (or onto the
+  [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default
+  when the data argument is omitted), so no assignment is needed – the
+  recommended workflow, since conversions lost to a forgotten assignment
+  silently change how later analyses treat the affected values. Requires
+  the data frame to be given as a plain name. When `FALSE` (the
+  default), the caller's data frame is untouched; assign the returned
+  data frame to keep the conversions.
+
 ## Value
 
 The data frame with the requested conversions applied, returned
-invisibly. As with
-[`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) and
-[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md), the
-user must assign the return value back to retain the changes.
+invisibly. With the default `modify = FALSE`, the caller's data frame is
+unchanged until the result is assigned back. With `modify = TRUE`, the
+conversions are also written back onto the caller's data frame, and the
+returned copy can be ignored.
 
 ## Details
 
@@ -145,23 +158,11 @@ setting the default convention and convention codes session-wide.
 # community ships with SPSS-form UDMs (Income, Education, Smoker,
 # Environment1, Environment3), so the conversions run on it directly.
 
-# Strip UDMs from every applicable variable:
-df <- jconvert(community, to = "baseR")
-#> Stripped declarations of user-defined missing values (UDMs) from 5 variables:
-#>   Income        (-99 "Refused", -98 "Don't know")
-#>   Education     (-99 "Refused", -98 "Don't know")
-#>   Smoker        (-99 "Refused")
-#>   Environment1  (-99 "Refused", -98 "Don't know")
-#>   Environment3  (-99 "Refused", -98 "Don't know")
-#> 
-#> Assign the result to keep the conversion:
-#>   community <- jconvert(community, ...)
-#> 
-#> To keep it across sessions, save the data frame:
-#>   jsave(community, "community.rds")
-
-# Convert SPSS-form UDMs to Stata-style missing values:
-df <- jconvert(community, to = "stata")
+# Convert SPSS-form UDMs to Stata-style missing values. modify = TRUE
+# writes the result back onto df in one step -- the recommended
+# workflow.
+df <- community
+jconvert(df, to = "stata", modify = TRUE)
 #> Converted to Stata-style missing values in 5 variables:
 #>   Income        (-99 "Refused" -> .a, -98 "Don't know" -> .b)
 #>   Education     (-99 "Refused" -> .a, -98 "Don't know" -> .b)
@@ -169,38 +170,65 @@ df <- jconvert(community, to = "stata")
 #>   Environment1  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
 #>   Environment3  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
 #> 
-#> Assign the result to keep the conversion:
+#> To keep it across sessions, save the data frame:
+#>   jsave(df, "df.rds")
+
+# Equivalent without modify: assign the returned data frame back
+df2 <- jconvert(community, to = "stata")
+#> Converted to Stata-style missing values in 5 variables:
+#>   Income        (-99 "Refused" -> .a, -98 "Don't know" -> .b)
+#>   Education     (-99 "Refused" -> .a, -98 "Don't know" -> .b)
+#>   Smoker        (-99 "Refused" -> .a)
+#>   Environment1  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
+#>   Environment3  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
+#> 
+#> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)
 #> 
-#> To keep it across sessions, save the data frame:
-#>   jsave(community, "community.rds")
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
+
+# Strip UDMs from every applicable variable:
+df3 <- jconvert(community, to = "baseR")
+#> Stripped declarations of user-defined missing values (UDMs) from 5 variables:
+#>   Income        (-99 "Refused", -98 "Don't know")
+#>   Education     (-99 "Refused", -98 "Don't know")
+#>   Smoker        (-99 "Refused")
+#>   Environment1  (-99 "Refused", -98 "Don't know")
+#>   Environment3  (-99 "Refused", -98 "Don't know")
+#> 
+#> This call changes community only if you assign the result:
+#>   community <- jconvert(community, ...)
+#> 
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
 
 # Scope by unquoted names:
-df <- jconvert(community, to = "baseR", Income, Education)
+df4 <- jconvert(community, to = "baseR", Income, Education)
 #> Stripped declarations of user-defined missing values (UDMs) from 2 variables:
 #>   Income     (-99 "Refused", -98 "Don't know")
 #>   Education  (-99 "Refused", -98 "Don't know")
 #> 
-#> Assign the result to keep the conversion:
+#> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)
 #> 
-#> To keep it across sessions, save the data frame:
-#>   jsave(community, "community.rds")
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
 
 # Scope by character vector (alternative form):
-df <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
+df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 #> Stripped declarations of user-defined missing values (UDMs) from 2 variables:
 #>   Income     (-99 "Refused", -98 "Don't know")
 #>   Education  (-99 "Refused", -98 "Don't know")
 #> 
-#> Assign the result to keep the conversion:
+#> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)
 #> 
-#> To keep it across sessions, save the data frame:
-#>   jsave(community, "community.rds")
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
 
 # Suppress the notification (e.g. inside a script):
-df <- jconvert(community, to = "baseR", udm.notice = FALSE)
+df6 <- jconvert(community, to = "baseR", udm.notice = FALSE)
 
 if (FALSE) { # \dontrun{
 # Convert with target inferred from joptions:

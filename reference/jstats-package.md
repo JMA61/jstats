@@ -183,3 +183,7 @@ Useful links:
 ## Author
 
 **Maintainer**: Jeff Ackerman <SurveyCentre@griffith.edu.au>
+
+Authors:
+
+- Jeff Ackerman <SurveyCentre@griffith.edu.au>

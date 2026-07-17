@@ -25,7 +25,8 @@ jdeclare_udm(
   codes = NULL,
   labels = NULL,
   convention = NULL,
-  udm.notice = TRUE
+  udm.notice = TRUE,
+  modify = FALSE
 )
 ```
 
@@ -67,21 +68,37 @@ jdeclare_udm(
 
 - convention:
 
-  Optional. One of `"spss"` or `"stata"`; overrides the convention
-  resolution for this call. When `NULL` (the default), the convention is
-  resolved from the column's existing UDM declaration (if any), then
-  from `joptions("missing.convention")`, then from the SPSS-form
-  default.
+  Optional. One of `"spss"` or `"stata"` (any capitalization is
+  accepted); overrides the convention resolution for this call. When
+  `NULL` (the default), the convention is resolved from the column's
+  existing UDM declaration (if any), then from
+  `joptions("missing.convention")`, then from the SPSS-form default.
 
 - udm.notice:
 
   Logical. When `TRUE` (the default), the function prints a notification
-  summarizing what was declared. Set `FALSE` to suppress.
+  summarizing what was declared, plus a reminder of how to keep the
+  result. Set `FALSE` to suppress.
+
+- modify:
+
+  Logical. When `TRUE`, the declaration is written back onto the data
+  frame named in the call (or onto the
+  [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default
+  when the data argument is omitted), so no assignment is needed – the
+  recommended workflow, since a declaration lost to a forgotten
+  assignment silently poisons later statistics. Requires the data frame
+  to be given as a plain name. When `FALSE` (the default), the caller's
+  data frame is untouched; assign the returned data frame to keep the
+  declaration.
 
 ## Value
 
 The data frame, with the specified variable updated to carry the
-declared UDMs.
+declared UDMs, returned invisibly. With the default `modify = FALSE`,
+the caller's data frame is unchanged until the result is assigned back.
+With `modify = TRUE`, the change is also written back onto the caller's
+data frame, and the returned copy can be ignored.
 
 ## Missing-Values Convention
 
@@ -142,17 +159,16 @@ jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 #> MoodRating     70           70  -99    9  -4.943  31.477
 #> 
 
-# SPSS form: declare -99 and -98 as UDMs with labels
-df <- jdeclare_udm(df, MoodRating,
-                   codes  = c(-99, -98),
-                   labels = "-99=Refused; -98=Don't know")
-#> Declared SPSS-style missing values in:
-#>   df$MoodRating
+# SPSS form: declare -99 and -98 as UDMs with labels. modify = TRUE
+# writes the declaration back onto df in one step -- the recommended
+# workflow.
+jdeclare_udm(df, MoodRating,
+             codes  = c(-99, -98),
+             labels = "-99=Refused; -98=Don't know",
+             modify = TRUE)
+#> Declared SPSS-style missing values on MoodRating in df:
 #>   -99 ["Refused"]
 #>   -98 ["Don't know"]
-#> 
-#> Assign the result to keep the declaration:
-#>   df <- jdeclare_udm(df, MoodRating, ...)
 #> 
 #> To keep it across sessions, save the data frame:
 #>   jsave(df, "df.rds")
@@ -171,43 +187,54 @@ jdesc(df, MoodRating)        # codes now excluded as missing
 #> MoodRating     70           63    1    9  5.46  1.702
 #> 
 
-# Equivalent using named codes (one step instead of codes + labels)
-df2 <- jdeclare_udm(clinic, MoodRating,
-                    codes = c("Refused" = -99, "Don't know" = -98))
-#> Declared SPSS-style missing values in:
-#>   clinic$MoodRating
+# Equivalent without modify: assign the returned data frame back
+df2 <- clinic
+df2 <- jdeclare_udm(df2, MoodRating,
+                    codes  = c(-99, -98),
+                    labels = "-99=Refused; -98=Don't know")
+#> Declared SPSS-style missing values on MoodRating:
 #>   -99 ["Refused"]
 #>   -98 ["Don't know"]
 #> 
-#> Assign the result to keep the declaration:
+#> This call changes df2 only if you assign the result:
+#>   df2 <- jdeclare_udm(df2, MoodRating, ...)
+#> 
+#> To change df2 directly, rerun with modify = TRUE:
+#>   jdeclare_udm(df2, MoodRating, ..., modify = TRUE)
+
+# Equivalent using named codes (one step instead of codes + labels)
+df3 <- jdeclare_udm(clinic, MoodRating,
+                    codes = c("Refused" = -99, "Don't know" = -98))
+#> Declared SPSS-style missing values on MoodRating:
+#>   -99 ["Refused"]
+#>   -98 ["Don't know"]
+#> 
+#> This call changes clinic only if you assign the result:
 #>   clinic <- jdeclare_udm(clinic, MoodRating, ...)
 #> 
-#> To keep it across sessions, save the data frame:
-#>   jsave(clinic, "clinic.rds")
+#> To change clinic directly, rerun with modify = TRUE:
+#>   jdeclare_udm(clinic, MoodRating, ..., modify = TRUE)
 
 # Stata-style: label Stata-style missing-value cells. The jrecode() call
 # turns the literal codes into tagged cells; jdeclare_udm() labels them.
-df3 <- clinic
-df3$Mood2 <- jrecode(df3, MoodRating,
+df4 <- clinic
+df4$Mood2 <- jrecode(df4, MoodRating,
                      map = "-99=.a; -98=.b; else=copy",
                      convention = "stata")
 #> 
 #> Note: jrecode() returns the recoded values; assign them to a column to keep them:
-#>   df3$<name> <- jrecode(...)
+#>   df4$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the new column.
-df3 <- jdeclare_udm(df3, Mood2,
-                    codes = c("Refused"    = haven::tagged_na("a"),
-                              "Don't know" = haven::tagged_na("b")))
-#> Labelled Stata-style missing values in:
-#>   df3$Mood2
+jdeclare_udm(df4, Mood2,
+             codes = c("Refused"    = haven::tagged_na("a"),
+                       "Don't know" = haven::tagged_na("b")),
+             modify = TRUE)
+#> Labeled Stata-style missing values on Mood2 in df4:
 #>   .a ["Refused"]
 #>   .b ["Don't know"]
 #> 
-#> Assign the result to keep the declaration:
-#>   df3 <- jdeclare_udm(df3, Mood2, ...)
-#> 
 #> To keep it across sessions, save the data frame:
-#>   jsave(df3, "df3.rds")
-#> Note: variable Mood2 is Stata-style, but other columns in df3 are predominantly SPSS-style.
+#>   jsave(df4, "df4.rds")
+#> Note: variable Mood2 is Stata-style, but other columns in df4 are predominantly SPSS-style.
 #> Use jconvert() to align if desired.
 ```

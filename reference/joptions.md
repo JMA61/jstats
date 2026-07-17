@@ -30,7 +30,8 @@ joptions(
 
 - missing.convention:
 
-  One of `"none"`, `"spss"`, or `"stata"`. See Slots.
+  One of `"none"`, `"spss"`, or `"stata"` (any capitalization is
+  accepted). See Slots.
 
 - udm.convention.codes:
 
