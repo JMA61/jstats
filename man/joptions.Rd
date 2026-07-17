@@ -14,7 +14,7 @@ joptions(
 }
 \arguments{
 \item{missing.convention}{One of \code{"none"}, \code{"spss"}, or
-\code{"stata"}. See Slots.}
+\code{"stata"} (any capitalization is accepted). See Slots.}
 
 \item{udm.convention.codes}{Numeric vector, length 1 to 3. See Slots.}
 

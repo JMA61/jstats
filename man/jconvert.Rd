@@ -10,7 +10,8 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
 \item{data}{A data frame, or omitted to use the \code{juse()} default.}
 
 \item{to}{One of \code{"baseR"}, \code{"spss"}, or \code{"stata"}
-(case-sensitive). When \code{NULL} (the default), \code{jconvert()}
+(any capitalization is accepted). When \code{NULL} (the default),
+\code{jconvert()}
 reads \code{joptions("missing.convention")}: if the slot is set to
 \code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
 the slot is at its \code{"none"} default, \code{jconvert()} errors

@@ -157,6 +157,15 @@
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
                   preserve.udm = TRUE, udm.notice = NULL, quiet = FALSE) {
+  # Validate TRUE/FALSE flags up front (display toggles also accept
+  # NULL, meaning defer to joutput()).
+  .jst_check_flag(use, "use")
+  .jst_check_flag(overwrite, "overwrite")
+  .jst_check_flag(package, "package")
+  .jst_check_flag(check.missing, "check.missing")
+  .jst_check_flag(preserve.udm, "preserve.udm")
+  .jst_check_flag(quiet, "quiet")
+  .jst_check_flag(udm.notice, "udm.notice", null.ok = TRUE)
 
   # quiet = TRUE mutes informational messages (the directory-resolution
   # note, file found, load summary, default-data note, and the UDM
@@ -2263,6 +2272,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'
 #' @export
 jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(overwrite, "overwrite")
+  .jst_check_flag(preserve.udm, "preserve.udm")
 
   # --- Pre-check: first argument must be a data frame -----------------------
   # The shared resolver (.jst_resolve_first_arg) frames a non-evaluating
@@ -2370,9 +2382,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   # argument into the file slot.
   if (arg1$mode == "symbol_with_default") {
     if (!missing(file)) {
-      stop("jsave(): when the data argument is omitted, all subsequent arguments must be named. ",
-           "Use jsave(file = \"yourfile.ext\")",
-           call. = FALSE)
+      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
+                "Use jsave(file = \"yourfile.ext\")",
+                fn = "jsave")
     }
     file <- eval(arg1$first_arg_sub, envir = parent.frame())
   }
@@ -2776,6 +2788,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 #' @seealso \code{\link{jload}}, \code{\link{jsave}}, \code{\link{juse}}
 #' @export
 jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(overwrite, "overwrite")
+  .jst_check_flag(quiet, "quiet")
   say <- function(...) if (!quiet) message(...)
 
   # Resolve source and destination. The destination name is unquoted and is

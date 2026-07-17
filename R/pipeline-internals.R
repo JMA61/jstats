@@ -698,6 +698,11 @@
 #' @keywords internal
 .jst_resolve_convention <- function(per_call = NULL, column_convention = NULL) {
 
+  # Platform specs are case-insensitive (accept "SPSS", "Stata", ...);
+  # canonicalize before validating so every caller inherits the rule.
+  if (is.character(per_call) && length(per_call) == 1L && !is.na(per_call)) {
+    per_call <- tolower(per_call)
+  }
   # Validate per_call up front so the error fires whether or not the
   # convention is actually consulted by the caller.
   if (!is.null(per_call)) {

@@ -181,6 +181,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     ))
   }
 
+  if (!is.character(method) || length(method) != 1L || is.na(method)) {
+    .jst_stop_arg("jcorr", "method", choices = c("pearson", "spearman", "kendall"))
+  }
   method <- tolower(method)
   if (!method %in% c("pearson", "spearman", "kendall")) {
     .jst_stop_arg("jcorr", "method", choices = c("pearson", "spearman", "kendall"))
@@ -1406,6 +1409,19 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...,
                 value.id = NULL) {
+  # Validate TRUE/FALSE flags up front (display toggles also accept
+  # NULL, meaning defer to joutput()).
+  .jst_check_flag(full, "full")
+  .jst_check_flag(ci, "ci", null.ok = TRUE)
+  .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
+  # `diagnostics` is a documented tri-mode argument: TRUE/FALSE, a character
+  # vector of diagnostic names, or NULL (defer to joutput()).
+  if (!is.null(diagnostics) && !is.character(diagnostics) &&
+      !(is.logical(diagnostics) && length(diagnostics) == 1L &&
+        !is.na(diagnostics))) {
+    .jst_stop("`diagnostics` must be TRUE or FALSE, or diagnostic names, ",
+              "e.g. c(\"vif\", \"qq\").")
+  }
 
   .jst_check_args(
     list(...),
@@ -2613,6 +2629,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                       diagnostics = NULL, ref.categories = NULL, full = FALSE,
                       case.processing.detail = NULL, digits = NULL, ...,
                       value.id = NULL) {
+  # Validate TRUE/FALSE flags up front (display toggles also accept
+  # NULL, meaning defer to joutput()).
+  .jst_check_flag(classification, "classification")
+  .jst_check_flag(full, "full")
+  .jst_check_flag(ci, "ci", null.ok = TRUE)
+  .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
+  # `diagnostics` is a documented tri-mode argument: TRUE/FALSE, a character
+  # vector of diagnostic names, or NULL (defer to joutput()).
+  if (!is.null(diagnostics) && !is.character(diagnostics) &&
+      !(is.logical(diagnostics) && length(diagnostics) == 1L &&
+        !is.na(diagnostics))) {
+    .jst_stop("`diagnostics` must be TRUE or FALSE, or diagnostic names, ",
+              "e.g. \"vif\".")
+  }
 
   .jst_check_args(
     list(...),

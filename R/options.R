@@ -132,6 +132,18 @@ joutput <- function(level, effect.size = NULL,
                     variable.id = NULL, value.id = NULL,
                     ref.categories = NULL, udm.notice = NULL,
                     digits = NULL, quiet = FALSE) {
+  # Validate TRUE/FALSE flags up front (display toggles also accept
+  # NULL, meaning defer to joutput()).
+  .jst_check_flag(quiet, "quiet")
+  .jst_check_flag(effect.size, "effect.size", null.ok = TRUE)
+  .jst_check_flag(regression.ci, "regression.ci", null.ok = TRUE)
+  .jst_check_flag(means.ci, "means.ci", null.ok = TRUE)
+  .jst_check_flag(levene, "levene", null.ok = TRUE)
+  .jst_check_flag(posthoc, "posthoc", null.ok = TRUE)
+  .jst_check_flag(diagnostics, "diagnostics", null.ok = TRUE)
+  .jst_check_flag(case.processing, "case.processing", null.ok = TRUE)
+  .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
+  .jst_check_flag(udm.notice, "udm.notice", null.ok = TRUE)
 
   valid_levels <- c("minimal", "standard", "full")
 
@@ -458,7 +470,7 @@ joutput <- function(level, effect.size = NULL,
 #' standard form -- do not trigger the notice.
 #'
 #' @param missing.convention One of \code{"none"}, \code{"spss"}, or
-#'   \code{"stata"}. See Slots.
+#'   \code{"stata"} (any capitalization is accepted). See Slots.
 #' @param udm.convention.codes Numeric vector, length 1 to 3. See Slots.
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
@@ -487,6 +499,8 @@ joutput <- function(level, effect.size = NULL,
 #'   nudge. A bare joptions() status query always prints regardless of quiet.
 joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
                      data.dir = NULL, corr.layout = NULL, quiet = FALSE) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(quiet, "quiet")
 
   mc_supplied <- !missing(missing.convention)
   cc_supplied <- !missing(udm.convention.codes)
@@ -528,6 +542,11 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
 
   # Validate (atomic) -- all checks pass before any options() write
   if (mc_supplied && !is.null(missing.convention)) {
+    # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
+    if (is.character(missing.convention) &&
+        length(missing.convention) == 1L && !is.na(missing.convention)) {
+      missing.convention <- tolower(missing.convention)
+    }
     if (!is.character(missing.convention) ||
         length(missing.convention) != 1L ||
         !(missing.convention %in% c("none", "spss", "stata"))) {
@@ -539,7 +558,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     if (!is.numeric(x))
       .jst_stop_arg("joptions", "udm.convention.codes", "numeric.")
     if (length(x) < 1L || length(x) > 3L)
-      stop("joptions(): udm.convention.codes must have length 1 to 3.", call. = FALSE)
+      .jst_stop("udm.convention.codes must have length 1 to 3.", fn = "joptions")
     if (anyNA(x) || !all(x == round(x)))
       .jst_stop("udm.convention.codes must contain only whole numbers.")
     if (anyDuplicated(x) > 0L)

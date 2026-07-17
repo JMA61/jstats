@@ -1138,6 +1138,15 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL,
                     value.id = NULL, types = TRUE, issues = TRUE, r.type = FALSE,
                     stats = FALSE, digits = NULL) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(types, "types")
+  .jst_check_flag(issues, "issues")
+  .jst_check_flag(r.type, "r.type")
+  if (!is.numeric(outlier.sd) || length(outlier.sd) != 1L ||
+      is.na(outlier.sd) || outlier.sd <= 0) {
+    .jst_stop_arg(arg = "outlier.sd",
+                  requirement = "a single positive number.")
+  }
 
   # jscreen has no per-code surface to display value labels on, so value.id
   # is accepted only to give an explicit, accurate error. A global
@@ -1153,11 +1162,17 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
   # Resolve stats= : hybrid logical-or-character. FALSE -> "none" (default),
   # TRUE -> "both", or one of "mean" / "median". TRUE is kept working (novices
-  # try it) despite being the one non-boolean toggle. digits governs the
+  # try it) despite being a non-boolean toggle. digits governs the
   # decimal places of the Mean/Median columns, deferring to joutput() when NULL.
   if (isTRUE(stats))  stats <- "both"
   if (isFALSE(stats)) stats <- "none"
-  stats_mode <- match.arg(stats, c("none", "mean", "median", "both"))
+  stats_mode <- tryCatch(
+    match.arg(stats, c("none", "mean", "median", "both")),
+    error = function(e) {
+      .jst_stop("`stats` must be TRUE or FALSE, or \"mean\", \"median\", ",
+                "or \"both\".")
+    }
+  )
   digits_n   <- .jst_resolve_digits(digits)
 
   # Resolve the first argument: explicit data frame, juse default,

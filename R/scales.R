@@ -242,10 +242,12 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   if (is.null(min.valid)) {
     threshold <- n_vars   # Default: all must be non-missing
   } else {
-    threshold <- as.integer(min.valid)
-    if (is.na(threshold) || threshold < 1) {
+    if (!is.numeric(min.valid) || length(min.valid) != 1L ||
+        is.na(min.valid) || min.valid != as.integer(min.valid) ||
+        min.valid < 1) {
       .jst_stop_arg("jsum", "min.valid", "a positive integer.")
     }
+    threshold <- as.integer(min.valid)
     if (threshold > n_vars) {
       .jst_stop(
         "min.valid (", threshold, ") cannot exceed the number of variables (",
@@ -428,6 +430,8 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 #'
 #' @export
 javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(fixed, "fixed")
 
   # Resolve the first argument: explicit data frame, juse default,
   # or bare-symbol-as-variable-name (leading comma omitted).
@@ -504,10 +508,12 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   if (is.null(min.valid)) {
     threshold <- n_vars   # Default: all must be non-missing
   } else {
-    threshold <- as.integer(min.valid)
-    if (is.na(threshold) || threshold < 1) {
+    if (!is.numeric(min.valid) || length(min.valid) != 1L ||
+        is.na(min.valid) || min.valid != as.integer(min.valid) ||
+        min.valid < 1) {
       .jst_stop_arg("javg", "min.valid", "a positive integer.")
     }
+    threshold <- as.integer(min.valid)
     if (threshold > n_vars) {
       .jst_stop(
         "min.valid (", threshold, ") cannot exceed the number of variables (",

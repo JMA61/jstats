@@ -88,9 +88,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (arg1$mode == "symbol_with_default") {
     if (!missing(var)) {
       displaced <- deparse(substitute(var))
-      stop("jrelabel(): when the data argument is omitted, all subsequent arguments must be named. ",
-           "Use jrelabel(", deparse(arg1$first_arg_sub), ", labels = ", displaced, ")",
-           call. = FALSE)
+      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
+                "Use jrelabel(", deparse(arg1$first_arg_sub), ", labels = ", displaced, ")",
+                fn = "jrelabel")
     }
     var_name <- deparse(arg1$first_arg_sub)
   } else {
@@ -753,7 +753,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   Example: \code{"1=Male; 0=Female"} or \code{".a=Refused; .b=Don't know"}.
 #'
 #' @param convention Optional. One of \code{"spss"}, \code{"stata"}, or
-#'   \code{NULL} (default). Controls whether Stata-style missing-value tokens
+#'   \code{NULL} (default); any capitalization is accepted. Controls whether
+#'   Stata-style missing-value tokens
 #'   (\code{.a} through \code{.z}) are accepted in the map and labels
 #'   arguments. Inert when no Stata-style missing-value tokens appear in either argument.
 #'
@@ -909,9 +910,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   if (arg1$mode == "symbol_with_default") {
     if (!missing(orig.var)) {
       displaced <- deparse(substitute(orig.var))
-      stop("jrecode(): when the data argument is omitted, all subsequent arguments must be named. ",
-           "Use jrecode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
-           call. = FALSE)
+      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
+                "Use jrecode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
+                fn = "jrecode")
     }
     orig_name <- deparse(arg1$first_arg_sub)
   } else {
@@ -933,6 +934,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # whether or not the recode actually uses tagged-NA tokens. The
   # resolved convention is consulted only when tokens are present.
   if (!is.null(convention)) {
+    # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
+    if (is.character(convention) && length(convention) == 1L &&
+        !is.na(convention)) {
+      convention <- tolower(convention)
+    }
     if (!is.character(convention) || length(convention) != 1L ||
         !convention %in% c("spss", "stata")) {
       .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
@@ -1375,8 +1381,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   \code{"value=label; value=label"} pairing labels with codes
 #'   (Option A only). Must be \code{NULL} when \code{codes} is named
 #'   (Option C).
-#' @param convention Optional. One of \code{"spss"} or \code{"stata"};
-#'   overrides the convention resolution for this call. When
+#' @param convention Optional. One of \code{"spss"} or \code{"stata"}
+#'   (any capitalization is accepted); overrides the convention resolution
+#'   for this call. When
 #'   \code{NULL} (the default), the convention is resolved from the
 #'   column's existing UDM declaration (if any), then from
 #'   \code{joptions("missing.convention")}, then from the SPSS-form
@@ -1500,9 +1507,9 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   if (arg1$mode == "symbol_with_default") {
     if (!missing(var)) {
       displaced <- deparse(substitute(var))
-      stop("jdeclare_udm(): when the data argument is omitted, all subsequent arguments must be named. ",
-           "Use jdeclare_udm(", deparse(arg1$first_arg_sub), ", var = ", displaced, ", ...)",
-           call. = FALSE)
+      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
+                "Use jdeclare_udm(", deparse(arg1$first_arg_sub), ", var = ", displaced, ", ...)",
+                fn = "jdeclare_udm")
     }
     var_name <- deparse(arg1$first_arg_sub)
   } else {
@@ -1560,13 +1567,8 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
            "codes = c(\".a\", \".b\")).")
     }
   }
-  if (!is.logical(udm.notice) || length(udm.notice) != 1L ||
-      is.na(udm.notice)) {
-    .jst_stop("`udm.notice` must be TRUE or FALSE.")
-  }
-  if (!is.logical(modify) || length(modify) != 1L || is.na(modify)) {
-    .jst_stop("`modify` must be TRUE or FALSE.")
-  }
+  .jst_check_flag(udm.notice, "udm.notice")
+  .jst_check_flag(modify, "modify")
   # modify = TRUE writes the result back onto the caller's variable, so the
   # data must arrive as a bare name -- an expression has no name to write to.
   # The juse()-default paths (modes "default" / "symbol_with_default") are
@@ -1581,6 +1583,11 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 
   # Validate convention argument up front.
   if (!is.null(convention)) {
+    # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
+    if (is.character(convention) && length(convention) == 1L &&
+        !is.na(convention)) {
+      convention <- tolower(convention)
+    }
     if (!is.character(convention) || length(convention) != 1L ||
         !convention %in% c("spss", "stata")) {
       .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
@@ -1611,16 +1618,16 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     partial_names <- has_any_names && !has_all_names
 
     if (partial_names) {
-      stop("jdeclare_udm(): `codes` is partially named. Either name every ",
-           "element (Option C) or none (Option A with separate labels=).",
-           call. = FALSE)
+      .jst_stop("`codes` is partially named. Either name every ",
+                "element (Option C) or none (Option A with separate labels=).",
+                fn = "jdeclare_udm")
     }
 
     if (has_all_names && !is.null(labels)) {
-      stop("jdeclare_udm(): pick one labeling form. Either name every ",
-           "element of `codes` (Option C) OR supply `labels = ...` ",
-           "separately (Option A), not both.",
-           call. = FALSE)
+      .jst_stop("pick one labeling form. Either name every ",
+                "element of `codes` (Option C) OR supply `labels = ...` ",
+                "separately (Option A), not both.",
+                fn = "jdeclare_udm")
     }
   } else {
     has_all_names <- FALSE
@@ -1689,9 +1696,9 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
                                 names(parsed_labels)[i])
                  }, character(1)),
           collapse = "; ")
-        stop("jdeclare_udm(): labels argument contains entries that ",
-             "do not match any value in `codes`: ", unused_render, ".",
-             call. = FALSE)
+        .jst_stop("labels argument contains entries that ",
+                  "do not match any value in `codes`: ", unused_render, ".",
+                  fn = "jdeclare_udm")
       }
 
       parsed_codes <- codes
@@ -1878,22 +1885,19 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 
   # Validate codes: finite, whole, no duplicates.
   if (any(!is.finite(code_vals))) {
-    stop("jdeclare_udm(): codes must be finite numeric values.",
-         call. = FALSE)
+    .jst_stop("codes must be finite numeric values.", fn = "jdeclare_udm")
   }
   if (any(code_vals != floor(code_vals))) {
-    stop("jdeclare_udm(): codes must be whole numbers.",
-         call. = FALSE)
+    .jst_stop("codes must be whole numbers.", fn = "jdeclare_udm")
   }
   if (anyDuplicated(code_vals) > 0L) {
-    stop("jdeclare_udm(): codes contains duplicate values.",
-         call. = FALSE)
+    .jst_stop("codes contains duplicate values.", fn = "jdeclare_udm")
   }
   if (length(code_vals) > 3L) {
-    stop("jdeclare_udm(): SPSS-style missing values are limited to 3 codes ",
-         "per variable; you supplied ", length(code_vals), ".\n",
-         "To declare more than 3, use Stata convention (convention = \"stata\").",
-         call. = FALSE)
+    .jst_stop("SPSS-style missing values are limited to 3 codes ",
+              "per variable; you supplied ", length(code_vals), ".\n",
+              "To declare more than 3, use Stata convention (convention = \"stata\").",
+              fn = "jdeclare_udm")
   }
 
   # Build the new value-labels set. Merge any existing labels with the
@@ -1951,8 +1955,8 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 
   tags <- haven::na_tag(parsed_codes)
   if (anyDuplicated(tags) > 0L) {
-    stop("jdeclare_udm(): codes contains duplicate Stata-style missing-value letters.",
-         call. = FALSE)
+    .jst_stop("codes contains duplicate Stata-style missing-value letters.",
+              fn = "jdeclare_udm")
   }
 
   existing_labs <- if (haven::is.labelled(col)) labelled::val_labels(col)
@@ -2008,21 +2012,18 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 
   # Validate codes.
   if (any(!is.finite(code_vals))) {
-    stop("jdeclare_udm(): codes must be finite numeric values.",
-         call. = FALSE)
+    .jst_stop("codes must be finite numeric values.", fn = "jdeclare_udm")
   }
   if (any(code_vals != floor(code_vals))) {
-    stop("jdeclare_udm(): codes must be whole numbers.",
-         call. = FALSE)
+    .jst_stop("codes must be whole numbers.", fn = "jdeclare_udm")
   }
   if (anyDuplicated(code_vals) > 0L) {
-    stop("jdeclare_udm(): codes contains duplicate values.",
-         call. = FALSE)
+    .jst_stop("codes contains duplicate values.", fn = "jdeclare_udm")
   }
   if (length(code_vals) > length(letters)) {
-    stop("jdeclare_udm(): under Stata convention with numeric codes, at ",
-         "most 26 can be converted (mapped to .a-.z).",
-         call. = FALSE)
+    .jst_stop("under Stata convention with numeric codes, at ",
+              "most 26 can be converted (mapped to .a-.z).",
+              fn = "jdeclare_udm")
   }
 
   # Ordering-based mapping per Session 30 Branch D4 (Q6): codes sorted by
@@ -2241,7 +2242,8 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #'
 #' @param data A data frame, or omitted to use the \code{juse()} default.
 #' @param to One of \code{"baseR"}, \code{"spss"}, or \code{"stata"}
-#'   (case-sensitive). When \code{NULL} (the default), \code{jconvert()}
+#'   (any capitalization is accepted). When \code{NULL} (the default),
+#'   \code{jconvert()}
 #'   reads \code{joptions("missing.convention")}: if the slot is set to
 #'   \code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
 #'   the slot is at its \code{"none"} default, \code{jconvert()} errors
@@ -2413,17 +2415,18 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       )
     }
   }
+  # Platform specs are case-insensitive: accept "SPSS", "BaseR", "Stata",
+  # etc., canonicalized here so downstream code sees the exact tokens.
+  if (is.character(to) && length(to) == 1L && !is.na(to)) {
+    hit <- match(tolower(to), c("baser", "spss", "stata"))
+    if (!is.na(hit)) to <- c("baseR", "spss", "stata")[hit]
+  }
   if (!is.character(to) || length(to) != 1L ||
       !to %in% c("baseR", "spss", "stata")) {
-    .jst_stop("`to` must be \"baseR\", \"spss\", or \"stata\" (case-sensitive).")
+    .jst_stop_arg(arg = "to", choices = c("baseR", "spss", "stata"))
   }
-  if (!is.logical(modify) || length(modify) != 1L || is.na(modify)) {
-    .jst_stop("`modify` must be TRUE or FALSE.")
-  }
-  if (!is.logical(udm.notice) || length(udm.notice) != 1L ||
-      is.na(udm.notice)) {
-    .jst_stop("`udm.notice` must be TRUE or FALSE.")
-  }
+  .jst_check_flag(modify, "modify")
+  .jst_check_flag(udm.notice, "udm.notice")
   # modify = TRUE writes the result back onto the caller's variable, so the
   # data must arrive as a bare name -- an expression has no name to write to.
   # The juse()-default paths (modes "default" / "symbol_with_default") are

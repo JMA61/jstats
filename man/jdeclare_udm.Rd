@@ -39,8 +39,9 @@ created with \code{haven::tagged_na()}, e.g.
 (Option A only). Must be \code{NULL} when \code{codes} is named
 (Option C).}
 
-\item{convention}{Optional. One of \code{"spss"} or \code{"stata"};
-overrides the convention resolution for this call. When
+\item{convention}{Optional. One of \code{"spss"} or \code{"stata"}
+(any capitalization is accepted); overrides the convention resolution
+for this call. When
 \code{NULL} (the default), the convention is resolved from the
 column's existing UDM declaration (if any), then from
 \code{joptions("missing.convention")}, then from the SPSS-form

@@ -61,7 +61,8 @@ and a note is printed.
 Example: \code{"1=Male; 0=Female"} or \code{".a=Refused; .b=Don't know"}.}
 
 \item{convention}{Optional. One of \code{"spss"}, \code{"stata"}, or
-\code{NULL} (default). Controls whether Stata-style missing-value tokens
+\code{NULL} (default); any capitalization is accepted. Controls whether
+Stata-style missing-value tokens
 (\code{.a} through \code{.z}) are accepted in the map and labels
 arguments. Inert when no Stata-style missing-value tokens appear in either argument.
 

@@ -110,6 +110,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                effect.size = NULL, levene = NULL, ci = NULL,
                subset = NULL, variable.id = NULL, value.id = NULL,
                case.processing.detail = NULL, full = FALSE, digits = NULL) {
+  # Validate TRUE/FALSE flags up front (display toggles also accept
+  # NULL, meaning defer to joutput()).
+  .jst_check_flag(paired, "paired")
+  .jst_check_flag(welch, "welch")
+  .jst_check_flag(full, "full")
+  .jst_check_flag(effect.size, "effect.size", null.ok = TRUE)
+  .jst_check_flag(levene, "levene", null.ok = TRUE)
+  .jst_check_flag(ci, "ci", null.ok = TRUE)
 
   digits_n <- .jst_resolve_digits(digits)
 
@@ -610,6 +618,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                  effect.size = NULL, levene = NULL, ci = NULL,
                  subset = NULL, variable.id = NULL, value.id = NULL,
                  case.processing.detail = NULL, full = FALSE, digits = NULL) {
+  # Validate TRUE/FALSE flags up front (display toggles also accept
+  # NULL, meaning defer to joutput()).
+  .jst_check_flag(welch, "welch")
+  .jst_check_flag(full, "full")
+  .jst_check_flag(effect.size, "effect.size", null.ok = TRUE)
+  .jst_check_flag(levene, "levene", null.ok = TRUE)
+  .jst_check_flag(ci, "ci", null.ok = TRUE)
+  .jst_check_flag(posthoc, "posthoc", null.ok = TRUE)
 
   digits_n <- .jst_resolve_digits(digits)
 
@@ -1148,6 +1164,11 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                       subset = NULL,
                       variable.id = NULL, value.id = NULL,
                       case.processing.detail = NULL, digits = NULL) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(chisq, "chisq")
+  .jst_check_flag(expected, "expected")
+  .jst_check_flag(row.pct, "row.pct")
+  .jst_check_flag(col.pct, "col.pct")
 
   digits_n <- .jst_resolve_digits(digits)
 

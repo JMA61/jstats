@@ -168,6 +168,8 @@
 #' @export
 #' @importFrom utils available.packages install.packages
 jupdate <- function(ask = FALSE) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(ask, "ask")
   # One network read doubles as a connectivity probe and a migration check.
   gist <- .jst_read_gist()
   if (!isTRUE(gist$network_ok)) {

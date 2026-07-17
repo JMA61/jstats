@@ -360,9 +360,9 @@
                   data = NULL, name = NULL,
                   first_arg_sub = NULL, first_arg_value = NULL))
     }
-    stop(paste0(fn_name, "(): NULL is not a valid data argument. ",
-                "Provide a data frame, or set a default first with juse()."),
-         call. = FALSE)
+    .jst_stop("NULL is not a valid data argument. ",
+              "Provide a data frame, or set a default first with juse().",
+              fn = fn_name)
   }
 
   # -- Try to evaluate the substituted first argument -----------------------

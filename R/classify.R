@@ -698,6 +698,30 @@
 }
 
 
+#' Internal helper: validate a TRUE/FALSE flag argument
+#'
+#' Guard for logical flag arguments on the public surface: the value must be
+#' a single non-NA TRUE or FALSE. Anything else raises the house-voice error
+#' "`<arg>` must be TRUE or FALSE." via .jst_stop, whose caller auto-detection
+#' names the user-facing function (a .jst_-prefixed helper is transparent to
+#' it, so guards must sit at the public function's entry point). Set
+#' null.ok = TRUE for the tri-state display toggles, where NULL means
+#' "not specified -- defer to joutput()" and is accepted without comment.
+#'
+#' @param x The flag value to validate.
+#' @param arg The argument's name as a string (e.g. "paired").
+#' @param null.ok Logical. Accept NULL as valid (tri-state toggles)?
+#' @return Invisibly NULL; called for its side effect (the stop).
+#' @keywords internal
+.jst_check_flag <- function(x, arg, null.ok = FALSE) {
+  if (null.ok && is.null(x)) return(invisible(NULL))
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    .jst_stop("`", arg, "` must be TRUE or FALSE.")
+  }
+  invisible(NULL)
+}
+
+
 #' Internal helper: emit a default-silent advisory note
 #'
 #' Advisory notes are pure FYI: the function did exactly what was asked, and

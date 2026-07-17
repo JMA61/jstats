@@ -191,6 +191,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                           line = FALSE, equation = TRUE, r2 = TRUE,
                           band = "ci", subset = NULL, labels = NULL,
                           numeric = NULL, categorical = NULL, count = NULL) {
+  # Validate TRUE/FALSE flags up front. (`line` is excluded: it is a hybrid
+  # flag-or-string -- FALSE/TRUE or "lm"/"loess"/"connect" -- with its own
+  # validation and house-voice error further down.)
+  .jst_check_flag(equation, "equation")
+  .jst_check_flag(r2, "r2")
 
   # Capture the call for later argument-inspection (used by the ignored-arg
   # note that fires when, e.g., the user passes line = "lm" to a histogram).
@@ -233,10 +238,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   if (!is.data.frame(data)) {
-    stop("jplot(): the first argument must be a data frame. ",
-         "To plot a result object (e.g. from jlm()), pass it as the first ",
-         "argument: jplot(my_result).",
-         call. = FALSE)
+    .jst_stop("the first argument must be a data frame. ",
+              "To plot a result object (e.g. from jlm()), pass it as the first ",
+              "argument: jplot(my_result).",
+              fn = "jplot")
   }
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -262,14 +267,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   n_vars <- length(variable_names)
   if (n_vars == 0) {
-    stop("jplot(): no variables specified. Provide one or more variable ",
-         "names, e.g. jplot(SampleData, Age, Tattoos).", call. = FALSE)
+    .jst_stop("no variables specified. Provide one or more variable ",
+              "names, e.g. jplot(SampleData, Age, Tattoos).", fn = "jplot")
   }
   if (n_vars > 2) {
-    stop("jplot(): only 1 or 2 variables can be plotted at once. ",
-         "For more variables, use `by =` to add a grouping variable ",
-         "(e.g. jplot(data, x, y, by = Gender)) or call jplot() ",
-         "multiple times.", call. = FALSE)
+    .jst_stop("only 1 or 2 variables can be plotted at once. ",
+              "For more variables, use `by =` to add a grouping variable ",
+              "(e.g. jplot(data, x, y, by = Gender)) or call jplot() ",
+              "multiple times.", fn = "jplot")
   }
 
   # Check all variables exist
@@ -593,8 +598,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
 
   if (!is.data.frame(data)) {
-    stop("jplot(): the data argument after the formula must be a data frame.",
-         call. = FALSE)
+    .jst_stop("the data argument after the formula must be a data frame.",
+              fn = "jplot")
   }
 
   # -- Handle by argument ----------------------------------------------------
@@ -675,8 +680,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     resolved_type <- type
   } else {
     if (!y_is_num) {
-      stop("jplot(): the DV (left of ~) must be numeric. \"", y_name,
-           "\" is categorical.", call. = FALSE)
+      .jst_stop("the DV (left of ~) must be numeric. \"", y_name,
+                "\" is categorical.", fn = "jplot")
     }
     resolved_type <- if (x_is_cat) "box" else "scatter"
   }
@@ -1425,6 +1430,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @importFrom rlang .data
 jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
                          equation = TRUE, r2 = TRUE, ...) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(equation, "equation")
+  .jst_check_flag(r2, "r2")
 
   .jst_check_args(
     list(...),

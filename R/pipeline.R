@@ -270,8 +270,8 @@ jsubset <- function(data, expr) {
   } else if (arg1$mode == "default") {
     # jsubset(, <expr>) — leading comma + juse default
     if (is.null(raw_expr)) {
-      stop("jsubset(): no logical expression supplied. ",
-           "Example: jsubset(Age < 40)", call. = FALSE)
+      .jst_stop("no logical expression supplied. ",
+                "Example: jsubset(Age < 40)", fn = "jsubset")
     }
     filter_raw <- raw_expr
   } else {
@@ -584,6 +584,16 @@ jsubset <- function(data, expr) {
 #' @export
 jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
                       non.deletes = FALSE) {
+  # Validate flags up front. `console` is a hybrid: FALSE/0 turns the console
+  # off, TRUE shows 10 rows, a positive number shows that many rows (negative
+  # values are caught by their own dedicated check below).
+  .jst_check_flag(preview, "preview")
+  .jst_check_flag(non.deletes, "non.deletes")
+  if (!((is.logical(console) || is.numeric(console)) &&
+        length(console) == 1L && !is.na(console))) {
+    .jst_stop("`console` must be TRUE or FALSE, or the number of rows ",
+              "to show.")
+  }
 
   default_name <- getOption(".jst_default_data", default = NULL)
 
@@ -984,6 +994,23 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 jdummy <- function(data, ..., ref = "first", show = FALSE,
                    remove = FALSE, clear.all = FALSE,
                    max.categories = 20L) {
+  # Validate flags up front. `show` is a hybrid: TRUE/FALSE, or "all"
+  # (any case) for the untruncated coding scheme.
+  .jst_check_flag(remove, "remove")
+  .jst_check_flag(clear.all, "clear.all")
+  if (!((is.logical(show) && length(show) == 1L && !is.na(show)) ||
+        (is.character(show) && length(show) == 1L && !is.na(show) &&
+         tolower(show) == "all"))) {
+    .jst_stop("`show` must be TRUE or FALSE, or \"all\" for the full ",
+              "coding scheme.")
+  }
+  if (!is.numeric(max.categories) || length(max.categories) != 1L ||
+      is.na(max.categories) ||
+      max.categories != as.integer(max.categories) ||
+      max.categories < 1) {
+    .jst_stop_arg(arg = "max.categories",
+                  requirement = "a single whole number of at least 1.")
+  }
 
   default_name <- getOption(".jst_default_data", default = NULL)
 
@@ -1103,11 +1130,11 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 
   # No usable variable: data supplied but no variable named.
   if (length(var_names) == 0L) {
-    stop("jdummy(): no variable supplied. ",
-         "Use jdummy(VarName) to register, jdummy(VarName, remove = TRUE) ",
-         "to remove, jdummy(VarName = NULL) to clear this frame, ",
-         "or jdummy(clear.all = TRUE) to clear every frame.",
-         call. = FALSE)
+    .jst_stop("no variable supplied. ",
+              "Use jdummy(VarName) to register, jdummy(VarName, remove = TRUE) ",
+              "to remove, jdummy(VarName = NULL) to clear this frame, ",
+              "or jdummy(clear.all = TRUE) to clear every frame.",
+              fn = "jdummy")
   }
 
   .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
@@ -1357,6 +1384,9 @@ jdummy <- function(data, ..., ref = "first", show = FALSE,
 #' jnumeric(clear.all = TRUE)          # clear every frame's numeric registrations
 #' @export
 jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(remove, "remove")
+  .jst_check_flag(clear.all, "clear.all")
   # jnumeric(clear.all = TRUE): clear numeric registrations on every frame.
   if (isTRUE(clear.all)) return(.jst_handle_clear("numeric", clear.all = TRUE))
   # jnumeric() with no arguments: show the session-wide registry status.
@@ -1443,6 +1473,9 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' jcount(clear.all = TRUE)            # clear every frame's count registrations
 #' @export
 jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(remove, "remove")
+  .jst_check_flag(clear.all, "clear.all")
   # jcount(clear.all = TRUE): clear count registrations on every frame.
   if (isTRUE(clear.all)) return(.jst_handle_clear("count", clear.all = TRUE))
   # jcount() with no arguments: show the session-wide registry status.
@@ -1540,6 +1573,9 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'   \code{\link{jscreen}}
 #' @export
 jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
+  # Validate TRUE/FALSE flags up front.
+  .jst_check_flag(remove, "remove")
+  .jst_check_flag(clear.all, "clear.all")
   # jlikert(clear.all = TRUE): clear Likert registrations on every frame.
   if (isTRUE(clear.all)) return(.jst_handle_clear("likert", clear.all = TRUE))
   # jlikert() with no arguments: show the session-wide registry status.
