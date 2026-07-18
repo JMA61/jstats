@@ -65,7 +65,7 @@ heldevtools::document()  # regenerates the .Rd help files and NAMESPACE from rox
 devtools::check()
 
 ### to get the actual new version of the package installed on the development machine without pushing run this:
-### restart afterwards
+### restart afterwards - to get to the state of any actual session
 devtools::install()
 
 
