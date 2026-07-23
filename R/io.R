@@ -371,10 +371,25 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # Printed before the (possibly slow) file read so the console shows activity
   # for the whole read plus the post-load scan, and the "Loaded" summary below
   # can wait until the object is actually in place. Package example datasets
-  # skip it: they are already in memory here and load instantly. The 15 MB
-  # threshold approximates loads of roughly ten seconds and up on a mid-speed
-  # machine (calibration point: a 263k-row x 11-variable numeric CSV, S204);
-  # one constant to tune.
+  # skip it: they are already in memory here and load instantly.
+  #
+  # The 15 MB threshold is a deliberately conservative catch, NOT a calibrated
+  # figure. Its S204 rationale ("roughly ten seconds and up") was measured
+  # against the quadratic Rule 2 loop in .jst_detect_suspicious_values, which
+  # dominated load time until it was fixed in S205; that calibration died with
+  # the defect. Post-fix timings on a fast local SSD (S205):
+  #
+  #   events.rds   1.1 MB    143,983 x 7    0.06 s
+  #   events.sav   9.2 MB    143,983 x 7    0.17 s
+  #   Visits.csv   109 MiB   1,945,849 x 4  1.49 s
+  #
+  # So on modern local disks nothing realistic is slow enough to need the
+  # line, and 15 MB fires early. It is kept anyway for the cases those
+  # timings cannot reach -- network shares, USB and other slow media, older
+  # machines -- where firing early is the safe direction for a reassurance
+  # message. Retuning upward would be fitting a constant to one SSD. A
+  # companion post-read gate on cell count was added and retired in the same
+  # session: with the scan fixed there was no wait left for it to announce.
   if (!from_package) {
     fsize <- suppressWarnings(file.size(resolved_path))
     big   <- !is.na(fsize) && fsize >= 15 * 1024^2
