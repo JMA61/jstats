@@ -367,6 +367,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     )
   }
 
+  # --- Start-of-load status line ---------------------------------------------
+  # Printed before the (possibly slow) file read so the console shows activity
+  # for the whole read plus the post-load scan, and the "Loaded" summary below
+  # can wait until the object is actually in place. Package example datasets
+  # skip it: they are already in memory here and load instantly. The 15 MB
+  # threshold approximates loads of roughly ten seconds and up on a mid-speed
+  # machine (calibration point: a 263k-row x 11-variable numeric CSV, S204);
+  # one constant to tune.
+  if (!from_package) {
+    fsize <- suppressWarnings(file.size(resolved_path))
+    big   <- !is.na(fsize) && fsize >= 15 * 1024^2
+    say("Loading ", obj_name, " ...",
+        if (big) " (large file; this may take a moment)" else "")
+  }
+
   # --- Read the file ---------------------------------------------------------
   # For .sav: always pass user_na = TRUE so UDM metadata is available for
   # the .jst_handle_udms step below, regardless of preserve.udm. The package
@@ -438,18 +453,6 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Assign to environment -------------------------------------------------
   assign(obj_name, df, envir = target_env)
 
-  # --- Summary message -------------------------------------------------------
-  if (from_package) {
-    say("Loaded the jstats example dataset '", file, "'.")
-  } else {
-    say(
-      "Loaded ", obj_name,
-      " (", .jst_format_label(ext), "; ",
-      format(nrow(df), big.mark = ","), " cases, ",
-      ncol(df), " variables)"
-    )
-  }
-
   # --- Refresh classification registrations ----------------------------------
   # Make the session notebook for this frame name match the file (the file is
   # the source of truth at load time). Keyed by obj_name -- the name the frame
@@ -500,6 +503,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # reading via the abstraction is a future refactor step).
   if (check.missing) {
     .jst_scan_coded_missing(df, obj_name, scan_udm = (length(udm_info) == 0))
+  }
+
+  # --- Summary message (printed last, when the object is in place) -----------
+  if (from_package) {
+    say("Loaded the jstats example dataset '", file, "'.")
+  } else {
+    say(
+      "Loaded ", obj_name,
+      " (", .jst_format_label(ext), "; ",
+      format(nrow(df), big.mark = ","), " cases, ",
+      ncol(df), " variables)"
+    )
   }
 
   invisible(df)

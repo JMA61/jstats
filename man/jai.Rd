@@ -2,33 +2,69 @@
 % Please edit documentation in R/utils.R
 \name{jai}
 \alias{jai}
-\title{Print a quick orientation to jstats conventions}
+\title{Print the jstats orientation, or install it for an AI assistant}
 \usage{
-jai()
+jai(setup = NULL, path = NULL)
+}
+\arguments{
+\item{setup}{Optional. \code{"project"}, \code{"machine"}, \code{"chat"},
+or \code{"status"}; see Details. When missing, the orientation is
+printed to the console.}
+
+\item{path}{Optional. An existing folder to write into, overriding the
+default destination; used only by \code{"project"} and
+\code{"machine"}.}
 }
 \value{
-Invisibly \code{NULL}. Called for its side effect of printing the
-orientation text.
+Invisibly \code{NULL}. Called for its side effects.
 }
 \description{
 \code{jai()} prints a short, plain-text orientation to the package's core
 conventions: how to load data, how jstats handles value labels and
-user-defined missing values, how to keep changes made to a data frame, and
-where to find fuller help. It is written to be useful both to people new to
-the package and to AI coding assistants (such as the assistant built into
-RStudio), which read console output and can act on what they find there.
+user-defined missing values, how to choose an analysis function, and how
+to keep changes made to a data frame. It is written to be useful both to
+people new to the package and to AI coding assistants (such as the
+assistant built into RStudio), which read console output and can act on
+what they find there.
 }
 \details{
-The text is deliberately brief. For the full function listing and an
-overview, see \code{help("jstats")}; for detailed help and worked examples,
-see the individual function help pages (\code{?jdesc}, \code{?jdeclare_udm},
-and so on); for the online guides and reference, see the package website.
+Beyond the plain printout, \code{jai()} can install the same orientation
+where an AI assistant finds it on its own. \code{setup} selects the
+situation (values are case-insensitive):
+\describe{
+\item{\code{"project"}}{Writes the orientation into \code{AGENTS.md} in
+the current folder (or \code{path}), inside a clearly marked block.
+Assistants that read \code{AGENTS.md} then see the conventions in
+every conversation in that project. Existing content is never
+overwritten: the block is appended to an existing file, and on
+regeneration only the marked block is replaced. Keep your own
+additions outside the markers; they survive regeneration, while edits
+inside the block are overwritten (with a warning when edits are
+detected).}
+\item{\code{"machine"}}{Writes \code{SKILL.md} to the user-level
+skills folder (or \code{path}), so assistants that support skills can
+load the conventions in any project on the machine, when relevant.}
+\item{\code{"chat"}}{For chat assistants outside RStudio. Currently
+prints a short note; a paste-ready primer is planned.}
+\item{\code{"status"}}{Reports which orientation files are present,
+their versions, and whether they are current. Nothing is written.}
+}
+
+The file-writing situations confirm the exact destination before writing
+(or write without asking when \code{path} names the folder yourself).
+Each written file carries a version stamp; after updating jstats, rerun
+the same \code{jai()} call to refresh it.
 }
 \examples{
 jai()
+\dontrun{
+jai("project")   # write AGENTS.md in the current project
+jai("machine")   # write SKILL.md to the skills folder
+jai("status")    # report what is installed where
+}
 
 }
 \seealso{
-\code{help("jstats")} for the package overview and full function
-list.
+\code{help("jstats")} for the package overview and full
+function list.
 }

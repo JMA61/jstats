@@ -266,60 +266,94 @@ jupdate <- function(ask = FALSE) {
 }
 
 
-#' Print a quick orientation to jstats conventions
+#' Print the jstats orientation, or install it for an AI assistant
 #'
 #' \code{jai()} prints a short, plain-text orientation to the package's core
 #' conventions: how to load data, how jstats handles value labels and
-#' user-defined missing values, how to keep changes made to a data frame, and
-#' where to find fuller help. It is written to be useful both to people new to
-#' the package and to AI coding assistants (such as the assistant built into
-#' RStudio), which read console output and can act on what they find there.
+#' user-defined missing values, how to choose an analysis function, and how
+#' to keep changes made to a data frame. It is written to be useful both to
+#' people new to the package and to AI coding assistants (such as the
+#' assistant built into RStudio), which read console output and can act on
+#' what they find there.
 #'
-#' The text is deliberately brief. For the full function listing and an
-#' overview, see \code{help("jstats")}; for detailed help and worked examples,
-#' see the individual function help pages (\code{?jdesc}, \code{?jdeclare_udm},
-#' and so on); for the online guides and reference, see the package website.
+#' Beyond the plain printout, \code{jai()} can install the same orientation
+#' where an AI assistant finds it on its own. \code{setup} selects the
+#' situation (values are case-insensitive):
+#' \describe{
+#'   \item{\code{"project"}}{Writes the orientation into \code{AGENTS.md} in
+#'     the current folder (or \code{path}), inside a clearly marked block.
+#'     Assistants that read \code{AGENTS.md} then see the conventions in
+#'     every conversation in that project. Existing content is never
+#'     overwritten: the block is appended to an existing file, and on
+#'     regeneration only the marked block is replaced. Keep your own
+#'     additions outside the markers; they survive regeneration, while edits
+#'     inside the block are overwritten (with a warning when edits are
+#'     detected).}
+#'   \item{\code{"machine"}}{Writes \code{SKILL.md} to the user-level
+#'     skills folder (or \code{path}), so assistants that support skills can
+#'     load the conventions in any project on the machine, when relevant.}
+#'   \item{\code{"chat"}}{For chat assistants outside RStudio. Currently
+#'     prints a short note; a paste-ready primer is planned.}
+#'   \item{\code{"status"}}{Reports which orientation files are present,
+#'     their versions, and whether they are current. Nothing is written.}
+#' }
 #'
-#' @return Invisibly \code{NULL}. Called for its side effect of printing the
-#'   orientation text.
+#' The file-writing situations confirm the exact destination before writing
+#' (or write without asking when \code{path} names the folder yourself).
+#' Each written file carries a version stamp; after updating jstats, rerun
+#' the same \code{jai()} call to refresh it.
+#'
+#' @param setup Optional. \code{"project"}, \code{"machine"}, \code{"chat"},
+#'   or \code{"status"}; see Details. When missing, the orientation is
+#'   printed to the console.
+#' @param path Optional. An existing folder to write into, overriding the
+#'   default destination; used only by \code{"project"} and
+#'   \code{"machine"}.
+#'
+#' @return Invisibly \code{NULL}. Called for its side effects.
 #'
 #' @examples
 #' jai()
+#' \dontrun{
+#' jai("project")   # write AGENTS.md in the current project
+#' jai("machine")   # write SKILL.md to the skills folder
+#' jai("status")    # report what is installed where
+#' }
 #'
-#' @seealso \code{help("jstats")} for the package overview and full function
-#'   list.
+#' @seealso \code{help("jstats")} for the package overview and full
+#'   function list.
 #' @export
-jai <- function() {
-  lines <- c(
-    "jstats conventions -- quick orientation for users and AI assistants.",
-    "",
-    "  jstats is an integrated set of j-prefixed analysis functions (jdesc,",
-    "  jfreq, jlm, ...) with shared syntax and output styled after",
-    "  commercial statistical software. The functions work directly with",
-    "  data imported from SPSS, Stata, or SAS: value labels and",
-    "  user-defined missing values (UDM) are handled automatically.",
-    "",
-    "  - Load data with jload(). It reads many file types (.rds, .sav, .dta,",
-    "    .xlsx, .csv, ...) without separate packages such as haven or readxl,",
-    "    and runs UDM checks other loaders skip.",
-    "  - Declare stray codes such as -99 with jdeclare_udm(); do not filter",
-    "    them out by hand. jstats functions honor declared UDM codes; base",
-    "    functions such as mean() ignore them and return wrong answers with",
-    "    no warning.",
-    "  - Analysis functions print their results directly; nothing needs to",
-    "    be stored. The few functions that change data, such as",
-    "    jdeclare_udm() and jconvert(), return the changed data frame:",
-    "    keep it by assigning back (df <- jdeclare_udm(df, ...)) or with",
-    "    modify = TRUE. Save data across sessions with jsave().",
-    '  - See help("jstats") for an overview and the full function list;',
-    "    detailed help and worked examples for each function are available",
-    "    via ?jdesc, ?jdeclare_udm, and so on.",
-    "",
-    "  Guides and reference: https://jma61.github.io/jstats-guides"
-  )
-  cat("\n")
-  cat(lines, sep = "\n")
-  cat("\n")
+jai <- function(setup = NULL, path = NULL) {
+  if (!is.null(path)) {
+    if (!is.character(path) || length(path) != 1L || is.na(path)) {
+      .jst_stop("`path` must be a single folder name in quotes.")
+    }
+  }
+  if (is.null(setup)) {
+    if (!is.null(path)) {
+      message("Note: `path` is used only when writing a file and was ignored.")
+    }
+    .jst_jai_print()
+    return(invisible(NULL))
+  }
+  # Situation specs are case-insensitive (accept "Project", "STATUS", ...);
+  # canonicalize before validating, per the platform-spec argument rule.
+  if (is.character(setup) && length(setup) == 1L && !is.na(setup)) {
+    setup <- tolower(trimws(setup))
+  }
+  if (!is.character(setup) || length(setup) != 1L ||
+      !setup %in% c("project", "machine", "chat", "status")) {
+    .jst_stop_arg(arg = "setup",
+                  choices = c("project", "machine", "chat", "status"))
+  }
+  if (setup %in% c("chat", "status") && !is.null(path)) {
+    message("Note: `path` is used only when writing a file and was ignored.")
+  }
+  switch(setup,
+    project = .jst_jai_project(path),
+    machine = .jst_jai_machine(path),
+    chat    = .jst_jai_chat(),
+    status  = .jst_jai_status())
   invisible(NULL)
 }
 
@@ -327,6 +361,623 @@ jai <- function() {
 # =============================================================================
 #  INTERNAL HELPERS
 # =============================================================================
+
+# -- jai() orientation and provisioning helpers -------------------------------
+
+#' Internal constant: the orientation text version
+#'
+#' Bumped whenever the orientation content changes. Stamped into every
+#' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
+#' be recognized as stale after a package update.
+#' @keywords internal
+.jst_orientation_version <- "3.1"
+
+#' Internal helper: the installed jstats version as a string
+#'
+#' Falls back to "unknown" when the package is not installed (e.g. when the
+#' source is loaded directly during development).
+#' @keywords internal
+.jst_jstats_version <- function() {
+  tryCatch(as.character(utils::packageVersion("jstats")),
+           error = function(e) "unknown")
+}
+
+#' Internal helper: the orientation body text
+#'
+#' The single content core shared by every jai() emission: the console
+#' print, the AGENTS.md block, and SKILL.md. One character element per
+#' line, in Markdown (backtick code spans; the file emissions use it as
+#' is, the console emissions pass it through
+#' .jst_orientation_render_console()). Content matches the deployed
+#' orientation text (see .jst_orientation_version); edit it here and
+#' bump the version, never per emission.
+#' @keywords internal
+.jst_orientation_body <- function() {
+  c(
+    "jstats is an integrated set of j-prefixed analysis functions (`jdesc`,",
+    "`jfreq`, `jlm`, ...) with shared syntax and output styled after commercial",
+    "statistical software. The functions work directly with data imported from",
+    "SPSS, Stata, or SAS, and with R .rds files whose columns carry haven-style",
+    "metadata: value labels and user-defined missing values (UDM) are handled",
+    "automatically.",
+    "",
+    "Note for AI assistants: jstats is newer than your training data. Do not",
+    "rely on remembered or inferred jstats syntax. When unsure of a function's",
+    "arguments, check them with `args()` (for example `args(jdeclare_udm)`) or",
+    "the function's help page instead of guessing.",
+    "",
+    "- Start each session with `library(jstats)`. If the package is not",
+    "  installed (`there is no package called 'jstats'`), do not guess an",
+    "  install command -- jstats is not on CRAN yet, so `install.packages()`",
+    "  alone will fail. Point the user to the install guide instead:",
+    "  https://jma61.github.io/jstats-guides/install-jstats.html",
+    "- Load data with `jload()`. It reads many file types (.rds, .sav, .dta,",
+    "  .xlsx, .csv, ...) without separate packages such as haven or readxl, and",
+    "  checks for undeclared missing-value codes that other loaders skip. The",
+    "  shipped example datasets load the same way, by bare name:",
+    "  `jload(\"clinic\")`, `jload(\"community\")` -- prefer this over `data()`,",
+    "  which skips those checks. `jload()` places the dataset in the global",
+    "  environment under its own name, so no assignment is needed, though",
+    "  `clinic <- jload(\"clinic\")` also works.",
+    "- Work with one dataset at a time, as in SPSS or Stata. Set it once with",
+    "  `juse(community)`; later calls then omit the data argument --",
+    "  `jdesc(Age, Income)`, `jt(CommuteTime ~ OwnsHome)`. Every result states",
+    "  which data frame it used. When more than one data frame is in play, pass",
+    "  the frame explicitly or switch the default with `juse()`. Prefer",
+    "  `jsubset()` and `jcomplete()`, which filter cases without altering the",
+    "  data, over creating modified copies of the data frame.",
+    "- Explore first with `jscreen()` (variable types, missing data, and",
+    "  outliers at a glance -- the first look at an unfamiliar dataset),",
+    "  `jfreq()` (frequencies), and `jdesc()` (descriptives). Prefer jstats",
+    "  functions over base R or tidyverse equivalents where they exist: their",
+    "  output accounts for declared missing values, and one consistent toolset",
+    "  keeps the analysis easy to follow.",
+    "- Declare stray codes such as -99 with",
+    "  `jdeclare_udm(data, var, codes = c(-99, -98))` -- the argument is",
+    "  `codes`. Do not filter such values out by hand. jstats functions honor",
+    "  declared UDM codes; base functions such as `mean()` ignore them and",
+    "  return wrong answers with no warning.",
+    "- Choose the analysis function before writing any analysis code: compare",
+    "  group means with `jt()` (two groups) or `jaov()` (three or more); test",
+    "  relationships with `jcorr()` (correlations), `jlm()` (regression,",
+    "  numeric outcome), or `jlogistic()` (regression, yes/no outcome);",
+    "  cross-tabulate with `jcrosstab()`; check scale reliability with",
+    "  `jalpha()`. The group-comparison and regression functions take a formula",
+    "  (`jt(CommuteTime ~ OwnsHome)`, `jlm(Income ~ Age + Education)`);",
+    "  `jcorr()`, `jalpha()`, `jdesc()`, and `jfreq()` take variable names",
+    "  instead. For anything not listed, check `help(\"jstats\")` for the full",
+    "  function list before reaching for another package.",
+    "- Analysis functions print their results directly; nothing needs to be",
+    "  stored. The few functions that change data, such as `jdeclare_udm()` and",
+    "  `jconvert()`, return the changed data frame: keep it by assigning back",
+    "  (`df <- jdeclare_udm(df, ...)`) or with `modify = TRUE`. `jconvert()`",
+    "  translates missing-value codes between software conventions -- it is for",
+    "  moving data to other software or to plain base-R form, and is never a",
+    "  prerequisite for analysis in jstats, which reads labelled data directly.",
+    "  Save data across sessions with `jsave()`.",
+    "- Detailed help and worked examples for each function are available via",
+    "  `?jdesc`, `?jdeclare_udm`, and so on.",
+    "",
+    "Guides and reference: https://jma61.github.io/jstats-guides"
+  )
+}
+
+#' Internal helper: build the version-stamp line(s)
+#'
+#' One line naming the orientation-text version, the jstats version it was
+#' generated against, and the date. When regenerate names a jai() setup
+#' value ("project" or "machine"), a second line carries the regenerate
+#' instruction; the live console print passes NULL (a fresh print cannot
+#' go stale, so it carries no regenerate line).
+#' @keywords internal
+.jst_orientation_stamp <- function(regenerate = NULL) {
+  line <- paste0("Orientation text v", .jst_orientation_version,
+                 " | jstats ", .jst_jstats_version(),
+                 " | generated ", format(Sys.Date()))
+  if (is.null(regenerate)) return(line)
+  c(line, paste0("Regenerate after updating jstats: jai(\"",
+                 regenerate, "\")"))
+}
+
+#' Internal helper: assemble the full orientation text
+#'
+#' Heading, intro line, stamp line(s), blank, body. flavor = "machine"
+#' drops the "Note for AI assistants:" framing prefix from the one body
+#' line that carries it (a skill body is already assistant-facing;
+#' settled S203).
+#' @keywords internal
+.jst_orientation_text <- function(stamp, flavor = c("standard", "machine")) {
+  flavor <- match.arg(flavor)
+  body <- .jst_orientation_body()
+  if (flavor == "machine") {
+    body <- sub("^Note for AI assistants: jstats", "jstats", body)
+  }
+  c("# jstats conventions",
+    "",
+    "Orientation for users and AI assistants.",
+    stamp,
+    "",
+    body)
+}
+
+#' Internal helper: render orientation Markdown for the console
+#'
+#' The body is authored in Markdown for the file emissions; a console
+#' print wants plain text. Strips backtick code spans and the leading
+#' heading marker; bullets read fine at a prompt and are kept.
+#' @keywords internal
+.jst_orientation_render_console <- function(lines) {
+  lines <- gsub("`", "", lines, fixed = TRUE)
+  sub("^# ", "", lines)
+}
+
+#' Internal helper: md5 checksum of a character vector
+#'
+#' Writes the lines to a temporary file with newline separators through a
+#' binary connection (platform-stable: no CRLF translation on Windows)
+#' and returns tools::md5sum() of it. Used for the AGENTS.md
+#' edit-detection fingerprint.
+#' @keywords internal
+.jst_md5_of_lines <- function(lines) {
+  tmp <- tempfile()
+  on.exit(unlink(tmp), add = TRUE)
+  con <- file(tmp, open = "wb")
+  writeLines(lines, con, sep = "\n")
+  close(con)
+  unname(tools::md5sum(tmp))
+}
+
+#' Internal helper: the AGENTS.md block markers
+#'
+#' HTML comments: invisible in rendered Markdown, inert to an assistant
+#' reading the file. The start marker carries the do-not-edit-inside
+#' warning where an editing user will see it; the end marker carries the
+#' checksum of the lines strictly between the two markers, as generated.
+#' Detection matches on the stable prefixes only, so the warning wording
+#' can change without stranding deployed blocks.
+#' @keywords internal
+.jst_agents_marker_start <- function() {
+  paste0("<!-- jstats orientation: start - written by jai(\"project\"); ",
+         "edits inside this block are overwritten at regeneration -->")
+}
+
+#' Internal helper: the AGENTS.md end marker
+#'
+#' Counterpart of .jst_agents_marker_start(); carries the checksum of the
+#' lines strictly between the two markers, as generated, for edit
+#' detection.
+#' @keywords internal
+.jst_agents_marker_end <- function(checksum) {
+  paste0("<!-- jstats orientation: end [checksum: ", checksum, "] -->")
+}
+
+#' Internal helper: build the complete marked AGENTS.md block
+#' @keywords internal
+.jst_agents_block <- function() {
+  content <- .jst_orientation_text(.jst_orientation_stamp("project"))
+  between <- c("", content, "")
+  c(.jst_agents_marker_start(),
+    between,
+    .jst_agents_marker_end(.jst_md5_of_lines(between)))
+}
+
+#' Internal helper: locate the jstats block markers in a file
+#'
+#' Returns the line indices of every start and end marker found (empty
+#' integer vectors when absent). The caller decides intact vs damaged:
+#' exactly one of each, start before end, is intact.
+#' @keywords internal
+.jst_agents_block_bounds <- function(lines) {
+  list(start = grep("^<!-- jstats orientation: start", lines),
+       end   = grep("^<!-- jstats orientation: end", lines))
+}
+
+#' Internal helper: parse the orientation version out of block lines
+#' @keywords internal
+.jst_orientation_version_in <- function(lines) {
+  m <- regmatches(lines, regexpr("Orientation text v[0-9][0-9.]*", lines))
+  m <- unlist(m)
+  if (!length(m)) return(NULL)
+  sub("^Orientation text v", "", m[[1L]])
+}
+
+#' Internal helper: parse the stored checksum out of an end-marker line
+#' @keywords internal
+.jst_agents_stored_checksum <- function(end_line) {
+  m <- regmatches(end_line, regexpr("\\[checksum: [0-9a-f]+\\]", end_line))
+  m <- unlist(m)
+  if (!length(m)) return(NULL)
+  sub("^\\[checksum: ([0-9a-f]+)\\]$", "\\1", m[[1L]])
+}
+
+#' Internal helper: yes/no console confirmation
+#' @keywords internal
+.jst_jai_confirm <- function(prompt) {
+  tolower(trimws(readline(prompt))) %in% c("y", "yes")
+}
+
+#' Internal helper: the declined-write note
+#' @keywords internal
+.jst_jai_declined <- function() {
+  message("Nothing was written.\n",
+          "To write to a different folder, rerun with path = \"<folder>\".")
+}
+
+#' Internal helper: jai("project") -- write the AGENTS.md block
+#'
+#' Four cases: create a new file; append to an existing file with no
+#' jstats markers; replace between intact markers (with checksum-based
+#' edit detection); refuse and print the fresh block when the markers are
+#' damaged. Interactive runs confirm before writing; an explicit path
+#' skips the destination confirmation but still confirms (or, when the
+#' session cannot ask, warns after the fact) before discarding detected
+#' hand edits.
+#' @keywords internal
+.jst_jai_project <- function(path = NULL) {
+  explicit <- !is.null(path)
+  dir <- if (explicit) path else getwd()
+  if (!dir.exists(dir)) {
+    .jst_stop("`path` must name an existing folder.\n",
+              "Nothing was written.")
+  }
+  dir_abs <- normalizePath(dir, winslash = "/")
+  target  <- file.path(dir_abs, "AGENTS.md")
+  block   <- .jst_agents_block()
+  caution <- if (!length(list.files(dir_abs, pattern = "\\.Rproj$"))) {
+    paste0("No .Rproj file is visible here, so this may not be an ",
+           "RStudio project folder.\n")
+  } else ""
+
+  if (!interactive() && !explicit) {
+    .jst_stop("writing needs confirmation, and this session cannot ask.\n",
+              "Set path = to name the destination folder and rerun.")
+  }
+
+  keep_note <- paste0("Keep your own additions outside the marked block; ",
+                      "they survive regeneration.")
+
+  if (!file.exists(target)) {
+    if (!explicit) {
+      ok <- .jst_jai_confirm(paste0(
+        "About to create the jstats orientation block in a new file:\n  ",
+        target, "\n", caution, "Proceed? (y/n): "))
+      if (!ok) {
+        .jst_jai_declined()
+        return(invisible(NULL))
+      }
+    }
+    writeLines(block, target)
+    message("Created the jstats orientation block in:\n  ", target, "\n",
+            keep_note)
+    return(invisible(NULL))
+  }
+
+  lines <- readLines(target, warn = FALSE)
+  b  <- .jst_agents_block_bounds(lines)
+  ns <- length(b$start)
+  ne <- length(b$end)
+
+  if (ns == 0L && ne == 0L) {
+    if (!explicit) {
+      ok <- .jst_jai_confirm(paste0(
+        "About to append the jstats orientation block to:\n  ", target,
+        "\nYour existing content is untouched.\n", caution,
+        "Proceed? (y/n): "))
+      if (!ok) {
+        .jst_jai_declined()
+        return(invisible(NULL))
+      }
+    }
+    writeLines(c(lines, "", block), target)
+    message("Appended the jstats orientation block to:\n  ", target, "\n",
+            "Your existing content was not changed.\n",
+            "Review any other instructions in this file alongside the ",
+            "jstats block.\n", keep_note)
+    return(invisible(NULL))
+  }
+
+  if (ns == 1L && ne == 1L && b$start < b$end) {
+    between <- if (b$end - b$start > 1L) {
+      lines[(b$start + 1L):(b$end - 1L)]
+    } else {
+      character(0)
+    }
+    stored <- .jst_agents_stored_checksum(lines[b$end])
+    edited <- !is.null(stored) &&
+      !identical(.jst_md5_of_lines(between), stored)
+    oldv <- .jst_orientation_version_in(between)
+    vers <- if (!is.null(oldv)) {
+      paste0(" (v", oldv, " -> v", .jst_orientation_version, ")")
+    } else ""
+
+    if (interactive() && (!explicit || edited)) {
+      prompt <- if (edited) {
+        paste0("The jstats orientation block in this file has been edited ",
+               "since it was generated.\n",
+               "Replacing it will discard those edits:\n  ", target,
+               "\nProceed? (y/n): ")
+      } else {
+        paste0("About to replace the jstats orientation block", vers,
+               " in:\n  ", target, "\nProceed? (y/n): ")
+      }
+      if (!.jst_jai_confirm(prompt)) {
+        .jst_jai_declined()
+        return(invisible(NULL))
+      }
+    }
+    out <- c(if (b$start > 1L) lines[1L:(b$start - 1L)],
+             block,
+             if (b$end < length(lines)) lines[(b$end + 1L):length(lines)])
+    writeLines(out, target)
+    if (edited && !interactive()) {
+      warning("The previous jstats orientation block had been edited; ",
+              "those edits were discarded.", call. = FALSE)
+    }
+    message("Replaced the jstats orientation block", vers, " in:\n  ",
+            target)
+    return(invisible(NULL))
+  }
+
+  which_msg <- if (ns >= 1L && ne == 0L) {
+    "a start marker with no end marker"
+  } else if (ns == 0L && ne >= 1L) {
+    "an end marker with no start marker"
+  } else if (ns == 1L && ne == 1L) {
+    "the end marker before the start marker"
+  } else {
+    "more than one set of markers"
+  }
+  message("Found ", which_msg, " in:\n  ", target, "\n",
+          "Repair the file by hand, or delete the damaged markers and ",
+          "rerun.\n",
+          "A fresh orientation block is printed below for reference.")
+  cat(block, sep = "\n")
+  cat("\n")
+  .jst_stop("nothing was written.")
+}
+
+#' Internal helper: the default machine-skill folder
+#'
+#' The cross-tool user-level skills location. On Windows the profile root
+#' is taken from USERPROFILE, not path.expand("~"): R historically
+#' expands "~" to Documents, while skill-reading assistants treat "~" as
+#' the profile root, and USERPROFILE is also stable under OneDrive
+#' Documents redirection.
+#' @keywords internal
+.jst_skill_default_dir <- function() {
+  if (.Platform$OS.type == "windows") {
+    up <- Sys.getenv("USERPROFILE")
+    if (nzchar(up)) {
+      return(file.path(gsub("\\\\", "/", up), ".agents", "skills",
+                       "jstats"))
+    }
+  }
+  path.expand("~/.agents/skills/jstats")
+}
+
+#' Internal helper: the user-level skill folders worth checking
+#'
+#' The default write location first, then the Posit-specific user-level
+#' location, so jai("status") reports a skill file wherever it actually
+#' sits.
+#' @keywords internal
+.jst_skill_candidate_dirs <- function() {
+  root <- dirname(dirname(dirname(.jst_skill_default_dir())))
+  unique(c(.jst_skill_default_dir(),
+           file.path(root, ".posit", "assistant", "skills", "jstats")))
+}
+
+#' Internal helper: the SKILL.md frontmatter description
+#'
+#' The when-to-use relevance trigger read by skill-supporting assistants.
+#' Wording as validated S203 (the trigger fired spontaneously on the
+#' jstats-named case); the trigger-edge probe may tighten it later.
+#' @keywords internal
+.jst_skill_description <- function() {
+  paste0("Use whenever the user is working with the jstats R package or ",
+         "its example datasets (community, clinic) -- loading data, ",
+         "exploring it, declaring missing values, comparing groups, ",
+         "running regressions or correlations, or any statistical ",
+         "analysis where jstats functions (jload, jdesc, jfreq, jscreen, ",
+         "jt, jaov, jcorr, jlm, jlogistic, jcrosstab, jalpha, ",
+         "jdeclare_udm, juse, jsave, jconvert) are or should be in use. ",
+         "jstats is newer than model training data, so its syntax must ",
+         "not be guessed.")
+}
+
+#' Internal helper: jai("machine") -- write SKILL.md
+#'
+#' Writes the skill file (frontmatter plus the orientation, machine
+#' flavor) to the default user-level skills folder, creating missing
+#' folders, or to an explicit path for hand placement. The file is
+#' package-owned by convention, so an existing copy is overwritten whole
+#' after confirmation; no marker machinery.
+#' @keywords internal
+.jst_jai_machine <- function(path = NULL) {
+  explicit <- !is.null(path)
+  dir <- if (explicit) {
+    if (!dir.exists(path)) {
+      .jst_stop("`path` must name an existing folder.\n",
+                "Nothing was written.")
+    }
+    normalizePath(path, winslash = "/")
+  } else {
+    .jst_skill_default_dir()
+  }
+  target <- file.path(dir, "SKILL.md")
+  had    <- file.exists(target)
+
+  if (!interactive() && !explicit) {
+    .jst_stop("writing needs confirmation, and this session cannot ask.\n",
+              "Set path = to name the destination folder and rerun.")
+  }
+  if (!explicit) {
+    prompt <- if (had) {
+      paste0("About to overwrite the jstats skill file:\n  ", target,
+             "\nProceed? (y/n): ")
+    } else {
+      paste0("About to create the jstats skill file:\n  ", target,
+             "\n(any missing folders on the way are created)\n",
+             "Proceed? (y/n): ")
+    }
+    if (!.jst_jai_confirm(prompt)) {
+      .jst_jai_declined()
+      return(invisible(NULL))
+    }
+  }
+
+  content <- .jst_orientation_text(.jst_orientation_stamp("machine"),
+                                   flavor = "machine")
+  skill <- c("---",
+             "name: jstats",
+             paste0("description: ", .jst_skill_description()),
+             "---",
+             "",
+             content)
+  if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
+  writeLines(skill, target)
+  message(if (had) "Replaced" else "Created",
+          " the jstats skill file:\n  ", target, "\n",
+          "Assistants that support skills find it automatically; the ",
+          "first use may ask for permission.")
+  if (explicit) {
+    message("To be found automatically, the file must sit in a folder ",
+            "named jstats inside your assistant's skills folder, e.g.:\n  ",
+            .jst_skill_default_dir())
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: jai("chat") -- the paste-primer placeholder
+#'
+#' The primer for standalone chat assistants is designed but not yet
+#' drafted; until it lands, this routes the user to the working stopgap.
+#' @keywords internal
+.jst_jai_chat <- function() {
+  cat("\n",
+      "The paste primer for chat assistants is still in development.\n",
+      "For now, run jai() and paste the printed orientation into your ",
+      "chat as your first message.\n\n", sep = "")
+  invisible(NULL)
+}
+
+#' Internal helper: one status line for a found orientation copy
+#' @keywords internal
+.jst_orientation_state_line <- function(found_v, edited, regen_call) {
+  ed <- if (edited) ", hand-edited" else ""
+  inst_v <- .jst_orientation_version
+  if (is.null(found_v)) {
+    return(paste0("Block present (version unknown", ed, ")."))
+  }
+  cmp <- tryCatch({
+    a <- numeric_version(found_v)
+    b <- numeric_version(inst_v)
+    if (a < b) -1L else if (a > b) 1L else 0L
+  }, error = function(e) NA_integer_)
+  if (identical(cmp, 0L)) {
+    paste0("Block v", found_v, ed, " -- current.")
+  } else if (identical(cmp, -1L)) {
+    paste0("Block v", found_v, ed, " -- older than installed v", inst_v,
+           ". Regenerate with ", regen_call, ".")
+  } else {
+    paste0("Block v", found_v, ed, ".")
+  }
+}
+
+#' Internal helper: jai("status") -- report deployed orientation copies
+#'
+#' Read-only. Reports the installed orientation version, then each
+#' destination: AGENTS.md in the current folder (block presence, version,
+#' hand-edit flag, staleness) and SKILL.md in the user-level skill
+#' folders. Prints ready-to-run file.edit() lines so review is one
+#' copy-paste away.
+#' @keywords internal
+.jst_jai_status <- function() {
+  out <- c("jstats orientation status",
+           "",
+           paste0("Installed (jstats ", .jst_jstats_version(),
+                  "): orientation text v", .jst_orientation_version),
+           "")
+
+  target <- file.path(normalizePath(getwd(), winslash = "/"), "AGENTS.md")
+  out <- c(out, "Project block (AGENTS.md in the current folder):",
+           paste0("  ", target))
+  if (!file.exists(target)) {
+    out <- c(out, "  Not present. Create it with jai(\"project\").")
+  } else {
+    lines <- tryCatch(readLines(target, warn = FALSE),
+                      error = function(e) NULL)
+    if (is.null(lines)) {
+      out <- c(out, "  Present but could not be read.")
+    } else {
+      b <- .jst_agents_block_bounds(lines)
+      if (length(b$start) == 1L && length(b$end) == 1L &&
+          b$start < b$end) {
+        between <- if (b$end - b$start > 1L) {
+          lines[(b$start + 1L):(b$end - 1L)]
+        } else {
+          character(0)
+        }
+        stored <- .jst_agents_stored_checksum(lines[b$end])
+        edited <- !is.null(stored) &&
+          !identical(.jst_md5_of_lines(between), stored)
+        out <- c(out, paste0("  ", .jst_orientation_state_line(
+          .jst_orientation_version_in(between), edited,
+          "jai(\"project\")")))
+      } else if (!length(b$start) && !length(b$end)) {
+        out <- c(out,
+                 paste0("  File present, no jstats block. Add one with ",
+                        "jai(\"project\")."))
+      } else {
+        out <- c(out,
+                 paste0("  File present, but the jstats block markers are ",
+                        "damaged. Run jai(\"project\") for repair ",
+                        "guidance."))
+      }
+    }
+  }
+  out <- c(out, paste0("  To open it: file.edit(\"", target, "\")"), "")
+
+  out <- c(out, "Machine skill (SKILL.md):")
+  found_any <- FALSE
+  for (d in .jst_skill_candidate_dirs()) {
+    f <- file.path(d, "SKILL.md")
+    if (file.exists(f)) {
+      found_any <- TRUE
+      lines <- tryCatch(readLines(f, warn = FALSE),
+                        error = function(e) character(0))
+      out <- c(out, paste0("  ", f),
+               paste0("  ", .jst_orientation_state_line(
+                 .jst_orientation_version_in(lines), FALSE,
+                 "jai(\"machine\")")),
+               paste0("  To open it: file.edit(\"", f, "\")"))
+    }
+  }
+  if (!found_any) {
+    out <- c(out,
+             paste0("  Not present (looked in the usual skill folders). ",
+                    "Create it with jai(\"machine\"):"),
+             paste0("  ", file.path(.jst_skill_default_dir(), "SKILL.md")))
+  }
+  cat("\n")
+  cat(out, sep = "\n")
+  cat("\n")
+  invisible(NULL)
+}
+
+#' Internal helper: print the orientation to the console
+#'
+#' The zero-argument jai() output: the full orientation, console-rendered,
+#' with the informational stamp line (no regenerate line -- a live print
+#' cannot go stale).
+#' @keywords internal
+.jst_jai_print <- function() {
+  txt <- .jst_orientation_text(.jst_orientation_stamp())
+  cat("\n")
+  cat(.jst_orientation_render_console(txt), sep = "\n")
+  cat("\n")
+  invisible(NULL)
+}
 
 # -- Output formatting helpers ------------------------------------------------
 
