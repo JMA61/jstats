@@ -83,6 +83,8 @@ copy current.
   Set session-level output verbosity
 - [`jupdate()`](https://jma61.github.io/jstats/reference/jupdate.md) :
   Update jstats to the latest version
+- [`jai()`](https://jma61.github.io/jstats/reference/jai.md) : Print the
+  jstats orientation, or install it for an AI assistant
 
 ## Plots
 

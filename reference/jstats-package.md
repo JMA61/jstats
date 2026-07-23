@@ -161,6 +161,10 @@ the full toggle behavior.
 
 ## Where to go next
 
+- For a quick orientation to the package's conventions (also useful when
+  working with an AI assistant):
+  [`jai()`](https://jma61.github.io/jstats/reference/jai.md).
+
 - For the full alphabetical listing of functions:
   [`library(help = "jstats")`](https://rdrr.io/r/base/library.html).
 
