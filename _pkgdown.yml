@@ -60,6 +60,7 @@ reference:
       - joptions
       - joutput
       - jupdate
+      - jai
 
   - title: Plots
     contents:
