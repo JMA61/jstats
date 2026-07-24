@@ -370,7 +370,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.1"
+.jst_orientation_version <- "3.2"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -411,6 +411,7 @@ jai <- function(setup = NULL, path = NULL) {
     "  install command -- jstats is not on CRAN yet, so `install.packages()`",
     "  alone will fail. Point the user to the install guide instead:",
     "  https://jma61.github.io/jstats-guides/install-jstats.html",
+    "",
     "- Load data with `jload()`. It reads many file types (.rds, .sav, .dta,",
     "  .xlsx, .csv, ...) without separate packages such as haven or readxl, and",
     "  checks for undeclared missing-value codes that other loaders skip. The",
@@ -419,6 +420,7 @@ jai <- function(setup = NULL, path = NULL) {
     "  which skips those checks. `jload()` places the dataset in the global",
     "  environment under its own name, so no assignment is needed, though",
     "  `clinic <- jload(\"clinic\")` also works.",
+    "",
     "- Work with one dataset at a time, as in SPSS or Stata. Set it once with",
     "  `juse(community)`; later calls then omit the data argument --",
     "  `jdesc(Age, Income)`, `jt(CommuteTime ~ OwnsHome)`. Every result states",
@@ -426,17 +428,20 @@ jai <- function(setup = NULL, path = NULL) {
     "  the frame explicitly or switch the default with `juse()`. Prefer",
     "  `jsubset()` and `jcomplete()`, which filter cases without altering the",
     "  data, over creating modified copies of the data frame.",
+    "",
     "- Explore first with `jscreen()` (variable types, missing data, and",
     "  outliers at a glance -- the first look at an unfamiliar dataset),",
     "  `jfreq()` (frequencies), and `jdesc()` (descriptives). Prefer jstats",
     "  functions over base R or tidyverse equivalents where they exist: their",
     "  output accounts for declared missing values, and one consistent toolset",
     "  keeps the analysis easy to follow.",
+    "",
     "- Declare stray codes such as -99 with",
     "  `jdeclare_udm(data, var, codes = c(-99, -98))` -- the argument is",
     "  `codes`. Do not filter such values out by hand. jstats functions honor",
     "  declared UDM codes; base functions such as `mean()` ignore them and",
     "  return wrong answers with no warning.",
+    "",
     "- Choose the analysis function before writing any analysis code: compare",
     "  group means with `jt()` (two groups) or `jaov()` (three or more); test",
     "  relationships with `jcorr()` (correlations), `jlm()` (regression,",
@@ -447,6 +452,7 @@ jai <- function(setup = NULL, path = NULL) {
     "  `jcorr()`, `jalpha()`, `jdesc()`, and `jfreq()` take variable names",
     "  instead. For anything not listed, check `help(\"jstats\")` for the full",
     "  function list before reaching for another package.",
+    "",
     "- Analysis functions print their results directly; nothing needs to be",
     "  stored. The few functions that change data, such as `jdeclare_udm()` and",
     "  `jconvert()`, return the changed data frame: keep it by assigning back",
@@ -455,6 +461,7 @@ jai <- function(setup = NULL, path = NULL) {
     "  moving data to other software or to plain base-R form, and is never a",
     "  prerequisite for analysis in jstats, which reads labelled data directly.",
     "  Save data across sessions with `jsave()`.",
+    "",
     "- Detailed help and worked examples for each function are available via",
     "  `?jdesc`, `?jdeclare_udm`, and so on.",
     "",
@@ -529,26 +536,35 @@ jai <- function(setup = NULL, path = NULL) {
 
 #' Internal helper: the AGENTS.md block markers
 #'
-#' HTML comments: invisible in rendered Markdown, inert to an assistant
-#' reading the file. The start marker carries the do-not-edit-inside
-#' warning where an editing user will see it; the end marker carries the
-#' checksum of the lines strictly between the two markers, as generated.
-#' Detection matches on the stable prefixes only, so the warning wording
-#' can change without stranding deployed blocks.
+#' HTML comments: invisible in rendered Markdown. The start marker carries
+#' the do-not-edit directive, addressed to BOTH readers -- the human
+#' editing the file and an assistant that may edit it agentically -- with
+#' the overwrite consequence as its rationale; the end marker carries the
+#' checksum of the lines strictly between the two markers, as generated,
+#' plus the redirect telling the user where their own notes belong.
+#' Detection matches on the stable prefixes only, so the wording of either
+#' marker can change without stranding deployed blocks. Each marker must
+#' stay ONE physical line: block bounds are line indices and everything
+#' strictly between them is checksummed content, so a wrapped marker would
+#' fold its continuation into the block. No "--" inside the comments (a
+#' double hyphen is invalid in an HTML comment).
 #' @keywords internal
 .jst_agents_marker_start <- function() {
-  paste0("<!-- jstats orientation: start - written by jai(\"project\"); ",
-         "edits inside this block are overwritten at regeneration -->")
+  paste0("<!-- jstats orientation: start - do not edit inside; edits are ",
+         "overwritten when jai(\"project\") runs again -->")
 }
 
 #' Internal helper: the AGENTS.md end marker
 #'
 #' Counterpart of .jst_agents_marker_start(); carries the checksum of the
 #' lines strictly between the two markers, as generated, for edit
-#' detection.
+#' detection, and the redirect telling the user where their own notes
+#' belong. The checksum parse anchors on the bracketed field, so trailing
+#' text after it is safe.
 #' @keywords internal
 .jst_agents_marker_end <- function(checksum) {
-  paste0("<!-- jstats orientation: end [checksum: ", checksum, "] -->")
+  paste0("<!-- jstats orientation: end [checksum: ", checksum,
+         "] - keep your own notes outside this block -->")
 }
 
 #' Internal helper: build the complete marked AGENTS.md block
@@ -591,9 +607,18 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 #' Internal helper: yes/no console confirmation
+#'
+#' Takes the informational lines only; the helper owns the question. The
+#' split matters: readline()'s prompt is a SINGLE-line facility, so a
+#' prompt carrying embedded newlines leaves the cursor parked after the
+#' first line while the rest renders below it (confusing in RStudio).
+#' Display goes through cat() to stdout -- not message(), which writes to
+#' stderr, renders red in RStudio, and can interleave unpredictably right
+#' before a prompt.
 #' @keywords internal
-.jst_jai_confirm <- function(prompt) {
-  tolower(trimws(readline(prompt))) %in% c("y", "yes")
+.jst_jai_confirm <- function(info) {
+  cat("\n", sub("\n+$", "", info), "\n\n", sep = "")
+  tolower(trimws(readline("Proceed? (y/n): "))) %in% c("y", "yes")
 }
 
 #' Internal helper: the declined-write note
@@ -640,7 +665,7 @@ jai <- function(setup = NULL, path = NULL) {
     if (!explicit) {
       ok <- .jst_jai_confirm(paste0(
         "About to create the jstats orientation block in a new file:\n  ",
-        target, "\n", caution, "Proceed? (y/n): "))
+        target, "\n", caution))
       if (!ok) {
         .jst_jai_declined()
         return(invisible(NULL))
@@ -661,8 +686,7 @@ jai <- function(setup = NULL, path = NULL) {
     if (!explicit) {
       ok <- .jst_jai_confirm(paste0(
         "About to append the jstats orientation block to:\n  ", target,
-        "\nYour existing content is untouched.\n", caution,
-        "Proceed? (y/n): "))
+        "\nYour existing content is untouched.\n", caution))
       if (!ok) {
         .jst_jai_declined()
         return(invisible(NULL))
@@ -691,16 +715,15 @@ jai <- function(setup = NULL, path = NULL) {
     } else ""
 
     if (interactive() && (!explicit || edited)) {
-      prompt <- if (edited) {
+      info <- if (edited) {
         paste0("The jstats orientation block in this file has been edited ",
                "since it was generated.\n",
-               "Replacing it will discard those edits:\n  ", target,
-               "\nProceed? (y/n): ")
+               "Replacing it will discard those edits:\n  ", target)
       } else {
         paste0("About to replace the jstats orientation block", vers,
-               " in:\n  ", target, "\nProceed? (y/n): ")
+               " in:\n  ", target)
       }
-      if (!.jst_jai_confirm(prompt)) {
+      if (!.jst_jai_confirm(info)) {
         .jst_jai_declined()
         return(invisible(NULL))
       }
@@ -812,15 +835,13 @@ jai <- function(setup = NULL, path = NULL) {
               "Set path = to name the destination folder and rerun.")
   }
   if (!explicit) {
-    prompt <- if (had) {
-      paste0("About to overwrite the jstats skill file:\n  ", target,
-             "\nProceed? (y/n): ")
+    info <- if (had) {
+      paste0("About to overwrite the jstats skill file:\n  ", target)
     } else {
       paste0("About to create the jstats skill file:\n  ", target,
-             "\n(any missing folders on the way are created)\n",
-             "Proceed? (y/n): ")
+             "\n(any missing folders on the way are created)")
     }
-    if (!.jst_jai_confirm(prompt)) {
+    if (!.jst_jai_confirm(info)) {
       .jst_jai_declined()
       return(invisible(NULL))
     }
