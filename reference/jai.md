@@ -81,7 +81,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.1 | jstats 0.9.108 | generated 2026-07-23
+#> Orientation text v3.2 | jstats 0.9.109 | generated 2026-07-24
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
@@ -100,6 +100,7 @@ jai()
 #>   install command -- jstats is not on CRAN yet, so install.packages()
 #>   alone will fail. Point the user to the install guide instead:
 #>   https://jma61.github.io/jstats-guides/install-jstats.html
+#> 
 #> - Load data with jload(). It reads many file types (.rds, .sav, .dta,
 #>   .xlsx, .csv, ...) without separate packages such as haven or readxl, and
 #>   checks for undeclared missing-value codes that other loaders skip. The
@@ -108,6 +109,7 @@ jai()
 #>   which skips those checks. jload() places the dataset in the global
 #>   environment under its own name, so no assignment is needed, though
 #>   clinic <- jload("clinic") also works.
+#> 
 #> - Work with one dataset at a time, as in SPSS or Stata. Set it once with
 #>   juse(community); later calls then omit the data argument --
 #>   jdesc(Age, Income), jt(CommuteTime ~ OwnsHome). Every result states
@@ -115,17 +117,20 @@ jai()
 #>   the frame explicitly or switch the default with juse(). Prefer
 #>   jsubset() and jcomplete(), which filter cases without altering the
 #>   data, over creating modified copies of the data frame.
+#> 
 #> - Explore first with jscreen() (variable types, missing data, and
 #>   outliers at a glance -- the first look at an unfamiliar dataset),
 #>   jfreq() (frequencies), and jdesc() (descriptives). Prefer jstats
 #>   functions over base R or tidyverse equivalents where they exist: their
 #>   output accounts for declared missing values, and one consistent toolset
 #>   keeps the analysis easy to follow.
+#> 
 #> - Declare stray codes such as -99 with
 #>   jdeclare_udm(data, var, codes = c(-99, -98)) -- the argument is
 #>   codes. Do not filter such values out by hand. jstats functions honor
 #>   declared UDM codes; base functions such as mean() ignore them and
 #>   return wrong answers with no warning.
+#> 
 #> - Choose the analysis function before writing any analysis code: compare
 #>   group means with jt() (two groups) or jaov() (three or more); test
 #>   relationships with jcorr() (correlations), jlm() (regression,
@@ -136,6 +141,7 @@ jai()
 #>   jcorr(), jalpha(), jdesc(), and jfreq() take variable names
 #>   instead. For anything not listed, check help("jstats") for the full
 #>   function list before reaching for another package.
+#> 
 #> - Analysis functions print their results directly; nothing needs to be
 #>   stored. The few functions that change data, such as jdeclare_udm() and
 #>   jconvert(), return the changed data frame: keep it by assigning back
@@ -144,6 +150,7 @@ jai()
 #>   moving data to other software or to plain base-R form, and is never a
 #>   prerequisite for analysis in jstats, which reads labelled data directly.
 #>   Save data across sessions with jsave().
+#> 
 #> - Detailed help and worked examples for each function are available via
 #>   ?jdesc, ?jdeclare_udm, and so on.
 #> 

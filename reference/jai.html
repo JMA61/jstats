@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.108</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.109</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,7 +125,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.1 | jstats 0.9.108 | generated 2026-07-23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.2 | jstats 0.9.109 | generated 2026-07-24</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -144,6 +144,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   install command -- jstats is not on CRAN yet, so install.packages()</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   alone will fail. Point the user to the install guide instead:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   https://jma61.github.io/jstats-guides/install-jstats.html</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Load data with jload(). It reads many file types (.rds, .sav, .dta,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   .xlsx, .csv, ...) without separate packages such as haven or readxl, and</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   checks for undeclared missing-value codes that other loaders skip. The</span>
@@ -152,6 +153,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   which skips those checks. jload() places the dataset in the global</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   environment under its own name, so no assignment is needed, though</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   clinic &lt;- jload("clinic") also works.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Work with one dataset at a time, as in SPSS or Stata. Set it once with</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   juse(community); later calls then omit the data argument --</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jdesc(Age, Income), jt(CommuteTime ~ OwnsHome). Every result states</span>
@@ -159,17 +161,20 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   the frame explicitly or switch the default with juse(). Prefer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jsubset() and jcomplete(), which filter cases without altering the</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   data, over creating modified copies of the data frame.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Explore first with jscreen() (variable types, missing data, and</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   outliers at a glance -- the first look at an unfamiliar dataset),</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jfreq() (frequencies), and jdesc() (descriptives). Prefer jstats</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   functions over base R or tidyverse equivalents where they exist: their</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   output accounts for declared missing values, and one consistent toolset</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   keeps the analysis easy to follow.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Declare stray codes such as -99 with</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_udm(data, var, codes = c(-99, -98)) -- the argument is</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   codes. Do not filter such values out by hand. jstats functions honor</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   declared UDM codes; base functions such as mean() ignore them and</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   return wrong answers with no warning.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Choose the analysis function before writing any analysis code: compare</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   group means with jt() (two groups) or jaov() (three or more); test</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   relationships with jcorr() (correlations), jlm() (regression,</span>
@@ -180,6 +185,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jcorr(), jalpha(), jdesc(), and jfreq() take variable names</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   instead. For anything not listed, check help("jstats") for the full</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   function list before reaching for another package.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Analysis functions print their results directly; nothing needs to be</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   stored. The few functions that change data, such as jdeclare_udm() and</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jconvert(), return the changed data frame: keep it by assigning back</span>
@@ -188,6 +194,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   moving data to other software or to plain base-R form, and is never a</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   prerequisite for analysis in jstats, which reads labelled data directly.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Save data across sessions with jsave().</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Detailed help and worked examples for each function are available via</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ?jdesc, ?jdeclare_udm, and so on.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
