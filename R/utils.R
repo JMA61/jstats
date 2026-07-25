@@ -370,7 +370,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.2"
+.jst_orientation_version <- "3.3"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -419,18 +419,23 @@ jai <- function(setup = NULL, path = NULL) {
     "  `jload(\"clinic\")`, `jload(\"community\")` -- prefer this over `data()`,",
     "  which skips those checks. `jload()` places the dataset in the global",
     "  environment under its own name, so no assignment is needed, though",
-    "  `clinic <- jload(\"clinic\")` also works.",
+    "  `clinic <- jload(\"clinic\")` also works. Loading does not make a",
+    "  dataset the default for later calls; that is what `juse()` does.",
     "",
-    "- Work with one dataset at a time, as in SPSS or Stata. Set it once with",
-    "  `juse(community)`; later calls then omit the data argument --",
-    "  `jdesc(Age, Income)`, `jt(CommuteTime ~ OwnsHome)`. Every result states",
-    "  which data frame it used. When more than one data frame is in play, pass",
-    "  the frame explicitly or switch the default with `juse()`. Prefer",
-    "  `jsubset()` and `jcomplete()`, which filter cases without altering the",
-    "  data, over creating modified copies of the data frame.",
+    "- Work with one dataset at a time, as in SPSS or Stata. Every function",
+    "  takes the data frame first: `jscreen(community)`,",
+    "  `jdesc(community, Age)`. `juse(community)` sets a default and is what",
+    "  licenses the shorter form -- after that call, and only after it, the",
+    "  data argument may be omitted: `jdesc(Age, Income)`,",
+    "  `jt(CommuteTime ~ OwnsHome)`. Omitting the frame with no `juse()` in",
+    "  the session is an error. Every result states which data frame it used.",
+    "  When more than one data frame is in play, pass the frame explicitly or",
+    "  switch the default with `juse()`. Prefer `jsubset()` and `jcomplete()`,",
+    "  which filter cases without altering the data, over creating modified",
+    "  copies of the data frame.",
     "",
-    "- Explore first with `jscreen()` (variable types, missing data, and",
-    "  outliers at a glance -- the first look at an unfamiliar dataset),",
+    "- Before analysis, explore the data with `jscreen()` (variable types,",
+    "  missing data, and outliers at a glance, for an unfamiliar dataset),",
     "  `jfreq()` (frequencies), and `jdesc()` (descriptives). Prefer jstats",
     "  functions over base R or tidyverse equivalents where they exist: their",
     "  output accounts for declared missing values, and one consistent toolset",
@@ -883,12 +888,17 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 #' Internal helper: one status line for a found orientation copy
+#'
+#' \code{noun} names the artifact the line is about: AGENTS.md carries a
+#' marked block inside a user-owned file, while SKILL.md is package-owned
+#' and overwritten whole, so "Block" is wrong for the skill case.
 #' @keywords internal
-.jst_orientation_state_line <- function(found_v, edited, regen_call) {
+.jst_orientation_state_line <- function(found_v, edited, regen_call,
+                                        noun = "Block") {
   ed <- if (edited) ", hand-edited" else ""
   inst_v <- .jst_orientation_version
   if (is.null(found_v)) {
-    return(paste0("Block present (version unknown", ed, ")."))
+    return(paste0(noun, " present (version unknown", ed, ")."))
   }
   cmp <- tryCatch({
     a <- numeric_version(found_v)
@@ -896,12 +906,12 @@ jai <- function(setup = NULL, path = NULL) {
     if (a < b) -1L else if (a > b) 1L else 0L
   }, error = function(e) NA_integer_)
   if (identical(cmp, 0L)) {
-    paste0("Block v", found_v, ed, " -- current.")
+    paste0(noun, " v", found_v, ed, " -- current.")
   } else if (identical(cmp, -1L)) {
-    paste0("Block v", found_v, ed, " -- older than installed v", inst_v,
+    paste0(noun, " v", found_v, ed, " -- older than installed v", inst_v,
            ". Regenerate with ", regen_call, ".")
   } else {
-    paste0("Block v", found_v, ed, ".")
+    paste0(noun, " v", found_v, ed, ".")
   }
 }
 
@@ -970,7 +980,7 @@ jai <- function(setup = NULL, path = NULL) {
       out <- c(out, paste0("  ", f),
                paste0("  ", .jst_orientation_state_line(
                  .jst_orientation_version_in(lines), FALSE,
-                 "jai(\"machine\")")),
+                 "jai(\"machine\")", noun = "File")),
                paste0("  To open it: file.edit(\"", f, "\")"))
     }
   }

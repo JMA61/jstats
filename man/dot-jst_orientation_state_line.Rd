@@ -4,9 +4,11 @@
 \alias{.jst_orientation_state_line}
 \title{Internal helper: one status line for a found orientation copy}
 \usage{
-.jst_orientation_state_line(found_v, edited, regen_call)
+.jst_orientation_state_line(found_v, edited, regen_call, noun = "Block")
 }
 \description{
-Internal helper: one status line for a found orientation copy
+\code{noun} names the artifact the line is about: AGENTS.md carries a
+marked block inside a user-owned file, while SKILL.md is package-owned
+and overwritten whole, so "Block" is wrong for the skill case.
 }
 \keyword{internal}
