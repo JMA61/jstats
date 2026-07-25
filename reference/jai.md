@@ -81,7 +81,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.2 | jstats 0.9.109 | generated 2026-07-24
+#> Orientation text v3.3 | jstats 0.9.110 | generated 2026-07-25
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
@@ -108,18 +108,23 @@ jai()
 #>   jload("clinic"), jload("community") -- prefer this over data(),
 #>   which skips those checks. jload() places the dataset in the global
 #>   environment under its own name, so no assignment is needed, though
-#>   clinic <- jload("clinic") also works.
+#>   clinic <- jload("clinic") also works. Loading does not make a
+#>   dataset the default for later calls; that is what juse() does.
 #> 
-#> - Work with one dataset at a time, as in SPSS or Stata. Set it once with
-#>   juse(community); later calls then omit the data argument --
-#>   jdesc(Age, Income), jt(CommuteTime ~ OwnsHome). Every result states
-#>   which data frame it used. When more than one data frame is in play, pass
-#>   the frame explicitly or switch the default with juse(). Prefer
-#>   jsubset() and jcomplete(), which filter cases without altering the
-#>   data, over creating modified copies of the data frame.
+#> - Work with one dataset at a time, as in SPSS or Stata. Every function
+#>   takes the data frame first: jscreen(community),
+#>   jdesc(community, Age). juse(community) sets a default and is what
+#>   licenses the shorter form -- after that call, and only after it, the
+#>   data argument may be omitted: jdesc(Age, Income),
+#>   jt(CommuteTime ~ OwnsHome). Omitting the frame with no juse() in
+#>   the session is an error. Every result states which data frame it used.
+#>   When more than one data frame is in play, pass the frame explicitly or
+#>   switch the default with juse(). Prefer jsubset() and jcomplete(),
+#>   which filter cases without altering the data, over creating modified
+#>   copies of the data frame.
 #> 
-#> - Explore first with jscreen() (variable types, missing data, and
-#>   outliers at a glance -- the first look at an unfamiliar dataset),
+#> - Before analysis, explore the data with jscreen() (variable types,
+#>   missing data, and outliers at a glance, for an unfamiliar dataset),
 #>   jfreq() (frequencies), and jdesc() (descriptives). Prefer jstats
 #>   functions over base R or tidyverse equivalents where they exist: their
 #>   output accounts for declared missing values, and one consistent toolset

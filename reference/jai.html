@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.109</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.110</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,7 +125,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.2 | jstats 0.9.109 | generated 2026-07-24</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.3 | jstats 0.9.110 | generated 2026-07-25</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -152,18 +152,23 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jload("clinic"), jload("community") -- prefer this over data(),</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   which skips those checks. jload() places the dataset in the global</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   environment under its own name, so no assignment is needed, though</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   clinic &lt;- jload("clinic") also works.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   clinic &lt;- jload("clinic") also works. Loading does not make a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   dataset the default for later calls; that is what juse() does.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Work with one dataset at a time, as in SPSS or Stata. Set it once with</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   juse(community); later calls then omit the data argument --</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jdesc(Age, Income), jt(CommuteTime ~ OwnsHome). Every result states</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   which data frame it used. When more than one data frame is in play, pass</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   the frame explicitly or switch the default with juse(). Prefer</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jsubset() and jcomplete(), which filter cases without altering the</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   data, over creating modified copies of the data frame.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Work with one dataset at a time, as in SPSS or Stata. Every function</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   takes the data frame first: jscreen(community),</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jdesc(community, Age). juse(community) sets a default and is what</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   licenses the shorter form -- after that call, and only after it, the</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   data argument may be omitted: jdesc(Age, Income),</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jt(CommuteTime ~ OwnsHome). Omitting the frame with no juse() in</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   the session is an error. Every result states which data frame it used.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   When more than one data frame is in play, pass the frame explicitly or</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   switch the default with juse(). Prefer jsubset() and jcomplete(),</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   which filter cases without altering the data, over creating modified</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   copies of the data frame.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Explore first with jscreen() (variable types, missing data, and</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   outliers at a glance -- the first look at an unfamiliar dataset),</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Before analysis, explore the data with jscreen() (variable types,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   missing data, and outliers at a glance, for an unfamiliar dataset),</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jfreq() (frequencies), and jdesc() (descriptives). Prefer jstats</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   functions over base R or tidyverse equivalents where they exist: their</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   output accounts for declared missing values, and one consistent toolset</span>
