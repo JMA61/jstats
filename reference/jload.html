@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.110</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.111</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -173,8 +173,12 @@ overwrite prompt are still shown.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly returns the loaded data frame. The primary effect is
-assigning the data frame in the calling environment.</p>
+    <p>Invisibly returns <code>NULL</code>; jload() is called for its side
+effects. The loaded data frame is placed in the calling environment
+under the file's name (or <code>name</code>), and any classification
+registrations saved with an .rds file are restored for that name. Do
+not assign the result: <code>x &lt;- jload("mydata.rds")</code> binds only
+<code>NULL</code>, while the data frame still arrives under its own name.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

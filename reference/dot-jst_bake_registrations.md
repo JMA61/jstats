@@ -10,8 +10,14 @@ is NOT used as the lookup key on load (jload re-keys under the name the
 frame is loaded as, which is the name later analysis calls will
 reference). The attribute is attached only when at least one
 registration exists, so a frame with none is returned unchanged and
-saves without the attribute. Only the .rds format carries arbitrary R
-attributes, so this is called only on the .rds save path.
+saves without the attribute. Courier prune (S208): only registrations
+whose variables are present in the frame being saved are baked – the
+file's card describes the file's contents. Stale entries are left out of
+the attribute (and reported back to jsave for a note) while the session
+notebook itself is left untouched; a card emptied entirely by the prune
+is not attached at all, so a later jload takes the carries-none path.
+Only the .rds format carries arbitrary R attributes, so this is called
+only on the .rds save path.
 
 ## Usage
 
@@ -32,5 +38,7 @@ attributes, so this is called only on the .rds save path.
 
 ## Value
 
-The data frame, with a ".jst_registrations" attribute attached when
-registrations exist, otherwise unchanged.
+A list with two elements: `data` (the data frame, with a
+".jst_registrations" attribute attached when at least one surviving
+registration exists) and `dropped` (character vector of variable names
+whose registrations were pruned; empty when none were).

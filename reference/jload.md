@@ -119,8 +119,12 @@ jload(
 
 ## Value
 
-Invisibly returns the loaded data frame. The primary effect is assigning
-the data frame in the calling environment.
+Invisibly returns `NULL`; jload() is called for its side effects. The
+loaded data frame is placed in the calling environment under the file's
+name (or `name`), and any classification registrations saved with an
+.rds file are restored for that name. Do not assign the result:
+`x <- jload("mydata.rds")` binds only `NULL`, while the data frame still
+arrives under its own name.
 
 ## Details
 

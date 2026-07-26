@@ -479,7 +479,7 @@ jdummy(community, Region)
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jlm(WellbeingScore ~ Region + Age)
 #> Linear Regression
 #> Using default data frame: community
@@ -519,7 +519,7 @@ jdummy(community, Region, ref = "West")
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jlm(WellbeingScore ~ Region + Age)
 #> Linear Regression
 #> Using default data frame: community

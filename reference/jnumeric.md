@@ -74,7 +74,7 @@ jnumeric(community, Environment2)             # one labelled 1-5 item
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jnumeric(community, Environment2, Environment4)  # several at once
 #> Numeric registration set for 'Environment2', 'Environment4' in community.
 #> Note: registrations are stored for this session only.
@@ -82,7 +82,7 @@ jnumeric(community, Environment2, Environment4)  # several at once
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registrations:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jnumeric(community, Environment2, remove = TRUE) # unregister one
 #> Numeric registration removed for 'Environment2' in community.
 jnumeric()                          # list all registrations

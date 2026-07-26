@@ -8,13 +8,18 @@ replacing any differing in-session registrations already sitting under
 that name. When the loaded object carries none – a non-.rds file, an
 older .rds saved before this feature existed, or freshly unregistered
 data – any stale registrations under the reused name are cleared.
-Returns a one-line note describing what happened (or NULL when nothing
-changed), for the caller to emit subject to its own quiet setting.
+Load-side intersect (S208): before filing, baked entries for variables
+absent from the loaded frame are dropped, with a note, so a card filed
+by jload never references a variable the frame lacks. Files written by
+the S208 courier prune drop nothing here; the intersect cleans cards
+from files saved before the prune existed. Returns one-line notes
+describing what happened (or NULL when nothing changed), for the caller
+to emit subject to its own quiet setting.
 
 ## Usage
 
 ``` r
-.jst_refresh_registrations(obj_name, baked)
+.jst_refresh_registrations(obj_name, baked, cols)
 ```
 
 ## Arguments
@@ -31,6 +36,13 @@ changed), for the caller to emit subject to its own quiet setting.
   with registry, dummy, and origin entries), or NULL when the object
   carried none.
 
+- cols:
+
+  Character vector of the loaded frame's variable names (names(df)),
+  used for the load-side intersect.
+
 ## Value
 
-A character note, or NULL when no notebook change was made.
+A character vector of one-line notes (any intersect drop, then the
+restored/cleared note), or NULL when no notebook change was made and
+nothing was dropped.

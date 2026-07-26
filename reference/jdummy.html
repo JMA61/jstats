@@ -19,7 +19,7 @@ datasets preserves each dataset's registrations independently."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.110</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.111</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -141,7 +141,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, <span class="va">Education</span><span class="op">)</span>            <span class="co"># Register several at once</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
@@ -161,7 +161,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registrations:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, ref <span class="op">=</span> <span class="st">"last"</span><span class="op">)</span>         <span class="co"># Last category as reference</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
@@ -176,7 +176,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, ref <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>              <span class="co"># Reference by numeric code</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
@@ -191,7 +191,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, ref <span class="op">=</span> <span class="st">"East"</span><span class="op">)</span>         <span class="co"># Reference by value label</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
@@ -206,7 +206,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, show <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>          <span class="co"># Show coding scheme</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>

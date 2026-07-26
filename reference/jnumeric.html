@@ -23,7 +23,7 @@ session, keyed by the data frame's name; save the data frame in R format
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.110</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.111</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -118,7 +118,7 @@ analyzed as a continuous score.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jnumeric</span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment2</span>, <span class="va">Environment4</span><span class="op">)</span>  <span class="co"># several at once</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Numeric registration set for 'Environment2', 'Environment4' in community.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: registrations are stored for this session only.</span>
@@ -126,7 +126,7 @@ analyzed as a continuous score.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registrations:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jload("community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jnumeric</span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment2</span>, remove <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># unregister one</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Numeric registration removed for 'Environment2' in community.</span>
 <span class="r-in"><span><span class="fu">jnumeric</span><span class="op">(</span><span class="op">)</span>                          <span class="co"># list all registrations</span></span></span>

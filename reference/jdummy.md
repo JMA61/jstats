@@ -100,7 +100,7 @@ jdummy(Region)                       # Register, first category as reference
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jdummy(Region, Education)            # Register several at once
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -120,7 +120,7 @@ jdummy(Region, Education)            # Register several at once
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registrations:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jdummy(Region, ref = "last")         # Last category as reference
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -135,7 +135,7 @@ jdummy(Region, ref = "last")         # Last category as reference
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jdummy(Region, ref = 4)              # Reference by numeric code
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -150,7 +150,7 @@ jdummy(Region, ref = 4)              # Reference by numeric code
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jdummy(Region, ref = "East")         # Reference by value label
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -165,7 +165,7 @@ jdummy(Region, ref = "East")         # Reference by value label
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jdummy(Region, show = TRUE)          # Show coding scheme
 #> Dummy Variable Registration
 #> Using default data frame: community

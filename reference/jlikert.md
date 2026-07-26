@@ -91,7 +91,7 @@ Clearing mirrors the other registration verbs:
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registrations:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
   jscreen(community)                              # Sub-class shows "Likert"
 #> Data Screening
 #>   Cases: 103 

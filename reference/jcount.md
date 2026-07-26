@@ -74,7 +74,7 @@ jcount(df, arrests)                 # treat as a count (here 0-12)
 #>   jsave(df, "df.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   df <- jload("df.rds")
+#>   jload("df.rds")
 jcount(df, arrests, remove = TRUE)
 #> Count registration removed for 'arrests' in df.
 jcount()                            # list all registrations

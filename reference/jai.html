@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.110</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.111</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,7 +125,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.3 | jstats 0.9.110 | generated 2026-07-25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.3 | jstats 0.9.111 | generated 2026-07-26</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -151,9 +151,9 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   shipped example datasets load the same way, by bare name:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jload("clinic"), jload("community") -- prefer this over data(),</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   which skips those checks. jload() places the dataset in the global</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   environment under its own name, so no assignment is needed, though</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   clinic &lt;- jload("clinic") also works. Loading does not make a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   dataset the default for later calls; that is what juse() does.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   environment under its own name and returns nothing, so never assign</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   the result: x &lt;- jload("clinic") binds only NULL. Loading does not</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   make a dataset the default for later calls; that is what juse() does.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Work with one dataset at a time, as in SPSS or Stata. Every function</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   takes the data frame first: jscreen(community),</span>

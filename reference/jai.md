@@ -81,7 +81,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.3 | jstats 0.9.110 | generated 2026-07-25
+#> Orientation text v3.3 | jstats 0.9.111 | generated 2026-07-26
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
@@ -107,9 +107,9 @@ jai()
 #>   shipped example datasets load the same way, by bare name:
 #>   jload("clinic"), jload("community") -- prefer this over data(),
 #>   which skips those checks. jload() places the dataset in the global
-#>   environment under its own name, so no assignment is needed, though
-#>   clinic <- jload("clinic") also works. Loading does not make a
-#>   dataset the default for later calls; that is what juse() does.
+#>   environment under its own name and returns nothing, so never assign
+#>   the result: x <- jload("clinic") binds only NULL. Loading does not
+#>   make a dataset the default for later calls; that is what juse() does.
 #> 
 #> - Work with one dataset at a time, as in SPSS or Stata. Every function
 #>   takes the data frame first: jscreen(community),

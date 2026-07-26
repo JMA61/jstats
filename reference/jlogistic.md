@@ -452,7 +452,7 @@ jdummy(community, Region)
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jlogistic(Volunteer ~ Region + Age)
 #> Logistic Regression
 #> Using default data frame: community
@@ -496,7 +496,7 @@ jdummy(community, Region, ref = "West")
 #>   jsave(community, "community.rds")
 #> 
 #> Next session, load that file to restore the registration:
-#>   community <- jload("community.rds")
+#>   jload("community.rds")
 jlogistic(Volunteer ~ Region + Age)
 #> Logistic Regression
 #> Using default data frame: community
