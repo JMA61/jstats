@@ -79,8 +79,12 @@ udm.notice). Errors, warnings, the multi-sheet advisory, and the
 overwrite prompt are still shown.}
 }
 \value{
-Invisibly returns the loaded data frame. The primary effect is
-assigning the data frame in the calling environment.
+Invisibly returns \code{NULL}; jload() is called for its side
+effects. The loaded data frame is placed in the calling environment
+under the file's name (or \code{name}), and any classification
+registrations saved with an .rds file are restored for that name. Do
+not assign the result: \code{x <- jload("mydata.rds")} binds only
+\code{NULL}, while the data frame still arrives under its own name.
 }
 \description{
 \code{jload()} reads a data file and assigns it as a data frame in your

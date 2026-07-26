@@ -68,8 +68,12 @@
 #'   and full output levels it prints on every such load; minimal
 #'   suppresses it. See \code{?joutput} for the full toggle behavior.
 #'
-#' @return Invisibly returns the loaded data frame. The primary effect is
-#'   assigning the data frame in the calling environment.
+#' @return Invisibly returns \code{NULL}; jload() is called for its side
+#'   effects. The loaded data frame is placed in the calling environment
+#'   under the file's name (or \code{name}), and any classification
+#'   registrations saved with an .rds file are restored for that name. Do
+#'   not assign the result: \code{x <- jload("mydata.rds")} binds only
+#'   \code{NULL}, while the data frame still arrives under its own name.
 #'
 #' @details
 #' \strong{File paths:}
@@ -474,8 +478,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # is loaded as, which is what later analysis calls reference -- not the name
   # it was saved under. Restores baked registrations (replacing any differing
   # in-session ones), or clears stale ones when the loaded data carries none.
-  reg_note <- .jst_refresh_registrations(obj_name, baked_regs)
-  if (!is.null(reg_note)) say_note(reg_note)
+  # Entries for variables absent from the loaded frame are dropped before
+  # filing (load-side intersect, S208), with a note.
+  reg_note <- .jst_refresh_registrations(obj_name, baked_regs, names(df))
+  for (nt in reg_note) say_note(nt)
 
   # --- Set as default with juse() if requested -------------------------------
   if (use) {
@@ -532,7 +538,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     )
   }
 
-  invisible(df)
+  # DECISION B (settled S205, implemented S208): return nothing. jload() is
+  # a statement -- it places the frame under obj_name above -- and returning
+  # the frame invited the capture reflex (x <- jload(...)), which minted a
+  # silent second copy the registration notebook never knew about. Post-B
+  # the capture binds NULL, visible in the Environment pane, and first use
+  # fails loudly via the resolver NULL guard.
+  invisible(NULL)
 }
 
 
@@ -2697,9 +2709,15 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   # attributes, so bake the active classification registrations (jnumeric/
   # jcount via .jst_registry, jdummy via .jst_dummy) onto the frame just for
   # that path. Other formats get a loss note after the write instead. No-op
-  # when the frame has no registrations.
+  # when the frame has no registrations. The bake prunes entries for
+  # variables not present in the frame (courier prune, S208): the file's
+  # card describes the file's contents, the session notebook is untouched,
+  # and the pruned names surface as a note with the loss notes below.
+  reg_dropped <- character(0)
   if (ext == "rds") {
-    data <- .jst_bake_registrations(data, data_name)
+    bake_result <- .jst_bake_registrations(data, data_name)
+    data        <- bake_result$data
+    reg_dropped <- bake_result$dropped
   }
 
   tryCatch({
@@ -2754,6 +2772,22 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   if (ext != "rds") {
     reg_loss_note <- .jst_jsave_registration_loss_note(ext, data_name)
     if (!is.null(reg_loss_note)) loss_notes <- c(loss_notes, reg_loss_note)
+  }
+
+  # Courier-prune note (S208): registrations for variables absent from the
+  # saved frame were left out of the file's card. Consequential -- the file's
+  # card differs from the session notebook -- and recoverable in-session,
+  # since the notebook itself was not touched.
+  if (length(reg_dropped) > 0) {
+    quoted <- paste0("'", reg_dropped, "'", collapse = ", ")
+    prune_note <- if (length(reg_dropped) == 1L) {
+      paste0("Note: ", quoted, " is not in ", data_name,
+             ", so its registration was not carried into the file.")
+    } else {
+      paste0("Note: these variables are not in ", data_name, ", so their ",
+             "registrations were not carried into the file: ", quoted, ".")
+    }
+    loss_notes <- c(loss_notes, prune_note)
   }
 
   if (length(loss_notes) > 0) message(paste(loss_notes, collapse = "\n\n"))

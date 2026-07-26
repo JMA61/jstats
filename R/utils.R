@@ -258,7 +258,8 @@ jupdate <- function(ask = FALSE) {
     "  - open the Session menu > choose Restart R\n",
     "  - or press Ctrl+Shift+F10\n",
     "\n",
-    "The Console will return to a blank prompt.\n",
+    "If your startup loads packages automatically, their usual messages will ",
+    "appear after the restart; otherwise the Console returns to an empty prompt.\n",
     "Reload jstats with library(jstats) (unless loaded automatically on startup)."
   )
 
@@ -418,9 +419,9 @@ jai <- function(setup = NULL, path = NULL) {
     "  shipped example datasets load the same way, by bare name:",
     "  `jload(\"clinic\")`, `jload(\"community\")` -- prefer this over `data()`,",
     "  which skips those checks. `jload()` places the dataset in the global",
-    "  environment under its own name, so no assignment is needed, though",
-    "  `clinic <- jload(\"clinic\")` also works. Loading does not make a",
-    "  dataset the default for later calls; that is what `juse()` does.",
+    "  environment under its own name and returns nothing, so never assign",
+    "  the result: `x <- jload(\"clinic\")` binds only NULL. Loading does not",
+    "  make a dataset the default for later calls; that is what `juse()` does.",
     "",
     "- Work with one dataset at a time, as in SPSS or Stata. Every function",
     "  takes the data frame first: `jscreen(community)`,",
@@ -1107,7 +1108,7 @@ jai <- function(setup = NULL, path = NULL) {
                                  verb = NULL, var_name = NULL,
                                  modify = FALSE) {
   save_call <- paste0("jsave(", data_name, ", \"", data_name, ".rds\")")
-  load_call <- paste0(data_name, " <- jload(\"", data_name, ".rds\")")
+  load_call <- paste0("jload(\"", data_name, ".rds\")")
   if (identical(rung, "session")) {
     if (isTRUE(count == 1L)) {
       paste0(

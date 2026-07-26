@@ -240,27 +240,64 @@
 #' as the lookup key on load (jload re-keys under the name the frame is loaded
 #' as, which is the name later analysis calls will reference). The attribute is
 #' attached only when at least one registration exists, so a frame with none is
-#' returned unchanged and saves without the attribute. Only the .rds format
+#' returned unchanged and saves without the attribute. Courier prune (S208):
+#' only registrations whose variables are present in the frame being saved are
+#' baked -- the file's card describes the file's contents. Stale entries are
+#' left out of the attribute (and reported back to jsave for a note) while the
+#' session notebook itself is left untouched; a card emptied entirely by the
+#' prune is not attached at all, so a later jload takes the carries-none path.
+#' Only the .rds format
 #' carries arbitrary R attributes, so this is called only on the .rds save path.
 #'
 #' @param data A data frame.
 #' @param data_name Character string giving the data frame name to look up in
 #'   the two registries.
-#' @return The data frame, with a ".jst_registrations" attribute attached when
-#'   registrations exist, otherwise unchanged.
+#' @return A list with two elements: \code{data} (the data frame, with a
+#'   ".jst_registrations" attribute attached when at least one surviving
+#'   registration exists) and \code{dropped} (character vector of variable
+#'   names whose registrations were pruned; empty when none were).
 #' @keywords internal
 .jst_bake_registrations <- function(data, data_name) {
   reg   <- .jst_get_registry(data_name)
   dummy <- .jst_get_dummy(data_name)
   if (is.null(reg) && is.null(dummy)) {
-    return(data)
+    return(list(data = data, dropped = character(0)))
+  }
+
+  # Courier prune (S208): bake only registrations whose variables are in the
+  # frame being saved. The session notebook is NOT touched, so the save-side
+  # note is recoverable in-session (rebuild the variable and save again).
+  cols    <- names(data)
+  dropped <- character(0)
+  if (!is.null(reg)) {
+    stale <- setdiff(names(reg), cols)
+    if (length(stale) > 0) {
+      dropped <- c(dropped, stale)
+      reg <- reg[setdiff(names(reg), stale)]
+      if (length(reg) == 0) reg <- NULL
+    }
+  }
+  if (!is.null(dummy)) {
+    stale <- setdiff(names(dummy), cols)
+    if (length(stale) > 0) {
+      dropped <- c(dropped, stale)
+      dummy <- dummy[setdiff(names(dummy), stale)]
+      if (length(dummy) == 0) dummy <- NULL
+    }
+  }
+  dropped <- unique(dropped)
+
+  if (is.null(reg) && is.null(dummy)) {
+    # Every registration was stale: attach no card, so a later jload takes
+    # the carries-none path.
+    return(list(data = data, dropped = dropped))
   }
   attr(data, ".jst_registrations") <- list(
     registry = reg,
     dummy    = dummy,
     origin   = data_name
   )
-  data
+  list(data = data, dropped = dropped)
 }
 
 #' Internal helper: refresh the registration notebook from a loaded frame
@@ -272,9 +309,13 @@
 #' in-session registrations already sitting under that name. When the loaded
 #' object carries none -- a non-.rds file, an older .rds saved before this
 #' feature existed, or freshly unregistered data -- any stale registrations
-#' under the reused name are cleared. Returns a one-line note describing what
-#' happened (or NULL when nothing changed), for the caller to emit subject to
-#' its own quiet setting.
+#' under the reused name are cleared. Load-side intersect (S208): before
+#' filing, baked entries for variables absent from the loaded frame are
+#' dropped, with a note, so a card filed by jload never references a variable
+#' the frame lacks. Files written by the S208 courier prune drop nothing
+#' here; the intersect cleans cards from files saved before the prune
+#' existed. Returns one-line notes describing what happened (or NULL when
+#' nothing changed), for the caller to emit subject to its own quiet setting.
 #'
 #' @param obj_name Character string giving the name the frame is loaded as
 #'   (jload's name= argument, or the file stem) -- the key the analysis
@@ -282,24 +323,75 @@
 #' @param baked The ".jst_registrations" attribute read from the loaded object
 #'   (a list with registry, dummy, and origin entries), or NULL when the object
 #'   carried none.
-#' @return A character note, or NULL when no notebook change was made.
+#' @param cols Character vector of the loaded frame's variable names
+#'   (names(df)), used for the load-side intersect.
+#' @return A character vector of one-line notes (any intersect drop, then the
+#'   restored/cleared note), or NULL when no notebook change was made and
+#'   nothing was dropped.
 #' @keywords internal
-.jst_refresh_registrations <- function(obj_name, baked) {
+.jst_refresh_registrations <- function(obj_name, baked, cols) {
+  notes <- character(0)
+
+  # Load-side intersect (S208): file the card only for variables actually in
+  # the loaded frame. Steady-state loads of files written by the courier
+  # prune drop nothing; entries dropped here come from files saved before
+  # the prune existed (or edited outside jstats).
+  emptied_by_intersect <- FALSE
+  if (!is.null(baked)) {
+    dropped <- character(0)
+    if (!is.null(baked$registry)) {
+      stale <- setdiff(names(baked$registry), cols)
+      if (length(stale) > 0) {
+        dropped <- c(dropped, stale)
+        baked$registry <- baked$registry[setdiff(names(baked$registry), stale)]
+        if (length(baked$registry) == 0) baked$registry <- NULL
+      }
+    }
+    if (!is.null(baked$dummy)) {
+      stale <- setdiff(names(baked$dummy), cols)
+      if (length(stale) > 0) {
+        dropped <- c(dropped, stale)
+        baked$dummy <- baked$dummy[setdiff(names(baked$dummy), stale)]
+        if (length(baked$dummy) == 0) baked$dummy <- NULL
+      }
+    }
+    dropped <- unique(dropped)
+    if (length(dropped) > 0) {
+      quoted <- paste0("'", dropped, "'", collapse = ", ")
+      notes <- c(notes, if (length(dropped) == 1L) {
+        paste0(quoted, " is not in the loaded data, so its saved ",
+               "registration was dropped.")
+      } else {
+        paste0("These variables are not in the loaded data, so their saved ",
+               "registrations were dropped: ", quoted, ".")
+      })
+    }
+    if (is.null(baked$registry) && is.null(baked$dummy)) {
+      baked <- NULL
+      emptied_by_intersect <- TRUE
+    }
+  }
+
   existing_reg   <- .jst_get_registry(obj_name)
   existing_dummy <- .jst_get_dummy(obj_name)
   had_existing   <- !is.null(existing_reg) || !is.null(existing_dummy)
 
   if (is.null(baked)) {
-    # Loaded data carries no registrations: clear any stale notebook entry
-    # sitting under this reused name. Silent when there was nothing to clear.
+    # Loaded data carries no usable registrations: clear any stale notebook
+    # entry sitting under this reused name. Silent when nothing to clear.
     if (had_existing) {
       .jst_set_registry(obj_name, NULL)
       .jst_set_dummy(obj_name, NULL)
-      return(paste0(
+      paren <- if (emptied_by_intersect) {
+        "(none of the file's saved registrations apply)"
+      } else {
+        "(the loaded data carries none)"
+      }
+      notes <- c(notes, paste0(
         "Cleared the classification registrations you had set this session ",
-        "for '", obj_name, "' (the loaded data carries none)."))
+        "for '", obj_name, "' ", paren, "."))
     }
-    return(NULL)
+    return(if (length(notes) > 0) notes else NULL)
   }
 
   # Loaded data carries registrations: make the notebook match the file.
@@ -315,14 +407,15 @@
   } else {
     ""
   }
-  if (replaced) {
+  notes <- c(notes, if (replaced) {
     paste0("Restored the classification registrations saved with this file",
            origin_note, ", replacing different registrations you had set ",
            "this session for '", obj_name, "'.")
   } else {
     paste0("Restored the classification registrations saved with this file",
            origin_note, ".")
-  }
+  })
+  notes
 }
 
 #' Internal helper: note that registrations are not kept in a non-rds format

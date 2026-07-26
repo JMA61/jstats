@@ -131,9 +131,31 @@
                                     example, fn) {
 
   if (inherits(formula, "formula")) {
-    # Formula slot is fine. If data was supplied but is not a data frame,
-    # fail fast with .jst_check_vars's existing data-frame messages instead
-    # of crashing later inside the pipeline.
+    # Formula slot is fine. If data was supplied but is NULL, fail fast with
+    # a clear message: the caller collapses a missing data argument to NULL
+    # too, but only a SUPPLIED data argument carries a data_name, so
+    # data_name distinguishes the two. Companion to the resolver NULL guard
+    # (S208) -- the data-first functions get this via .jst_resolve_first_arg;
+    # the formula family gets it here, its own shared front door.
+    if (is.null(data) && !is.null(data_name)) {
+      if (identical(data_name, "NULL")) {
+        .jst_stop(
+          "NULL is not a valid data frame. ",
+          "Provide a data frame, or set a default first with juse().",
+          fn = fn
+        )
+      }
+      .jst_stop(
+        "'", data_name, "' exists but contains nothing (it is NULL).\n",
+        "This can happen when it was created by a call that returns nothing, ",
+        "such as ", data_name, " <- jload(...).\n",
+        "Rebuild or reload '", data_name, "', then rerun.",
+        fn = fn
+      )
+    }
+    # If data was supplied but is not a data frame, fail fast with
+    # .jst_check_vars's existing data-frame messages instead of crashing
+    # later inside the pipeline.
     if (!is.null(data) && !is.data.frame(data)) {
       .jst_check_vars(data, character(0), data_name)
     }
@@ -370,6 +392,24 @@
     list(value = eval(data_sub, envir = envir), failed = FALSE),
     error = function(e) list(value = NULL, failed = TRUE)
   )
+
+  # -- Guard: existing object that evaluated to NULL ------------------------
+  # A literal NULL was handled at Case 2. Reaching here with a NULL VALUE
+  # means an existing object that contains nothing -- e.g. the result of
+  # capturing jload()'s return, which is NULL. Without this check the value
+  # slips past Case 3 and, on accept_vector functions, reaches the Case-4
+  # vector wrap, where data.frame(x = NULL) yields a zero-column frame and a
+  # cryptic names<- length error (S205 finding). Stop cleanly instead.
+  if (!eval_result$failed && is.null(eval_result$value)) {
+    data_str <- paste(deparse(data_sub), collapse = "")
+    .jst_stop(
+      "'", data_str, "' exists but contains nothing (it is NULL).\n",
+      "This can happen when it was created by a call that returns nothing, ",
+      "such as ", data_str, " <- jload(...).\n",
+      "Rebuild or reload '", data_str, "', then rerun.",
+      fn = fn_name
+    )
+  }
 
   # -- Case 3: evaluated to a data frame ------------------------------------
   if (!eval_result$failed && is.data.frame(eval_result$value)) {

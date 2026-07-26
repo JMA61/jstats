@@ -4,7 +4,7 @@
 \alias{.jst_refresh_registrations}
 \title{Internal helper: refresh the registration notebook from a loaded frame}
 \usage{
-.jst_refresh_registrations(obj_name, baked)
+.jst_refresh_registrations(obj_name, baked, cols)
 }
 \arguments{
 \item{obj_name}{Character string giving the name the frame is loaded as
@@ -14,9 +14,14 @@ functions will look the frame up by.}
 \item{baked}{The ".jst_registrations" attribute read from the loaded object
 (a list with registry, dummy, and origin entries), or NULL when the object
 carried none.}
+
+\item{cols}{Character vector of the loaded frame's variable names
+(names(df)), used for the load-side intersect.}
 }
 \value{
-A character note, or NULL when no notebook change was made.
+A character vector of one-line notes (any intersect drop, then the
+restored/cleared note), or NULL when no notebook change was made and
+nothing was dropped.
 }
 \description{
 On load, makes the session notebook for a frame name match what the file
@@ -26,8 +31,12 @@ and .jst_dummy notebooks under the load-time name, replacing any differing
 in-session registrations already sitting under that name. When the loaded
 object carries none -- a non-.rds file, an older .rds saved before this
 feature existed, or freshly unregistered data -- any stale registrations
-under the reused name are cleared. Returns a one-line note describing what
-happened (or NULL when nothing changed), for the caller to emit subject to
-its own quiet setting.
+under the reused name are cleared. Load-side intersect (S208): before
+filing, baked entries for variables absent from the loaded frame are
+dropped, with a note, so a card filed by jload never references a variable
+the frame lacks. Files written by the S208 courier prune drop nothing
+here; the intersect cleans cards from files saved before the prune
+existed. Returns one-line notes describing what happened (or NULL when
+nothing changed), for the caller to emit subject to its own quiet setting.
 }
 \keyword{internal}
