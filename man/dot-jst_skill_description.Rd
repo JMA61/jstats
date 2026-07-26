@@ -8,7 +8,14 @@
 }
 \description{
 The when-to-use relevance trigger read by skill-supporting assistants.
-Wording as validated S203 (the trigger fired spontaneously on the
-jstats-named case); the trigger-edge probe may tighten it later.
+Wording per the S207 trigger-edge probe: the trigger fires on
+jstats-specific tokens only (the dataset names are load-bearing; the
+generic activity clause bought no reach), so the description is a token
+list, not prose. Returns the EXACT emission lines of the folded YAML
+block scalar (description: >-), one element per line, break points
+chosen by hand: line 1 is independently viable as a narrow description
+(a complete clause naming jstats and both datasets), so a runtime that
+truncates at the first line degrades to working-but-narrow instead of
+broken. Edit break points here, never at the emission site.
 }
 \keyword{internal}

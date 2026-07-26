@@ -367,11 +367,13 @@ jai <- function(setup = NULL, path = NULL) {
 
 #' Internal constant: the orientation text version
 #'
-#' Bumped whenever the orientation content changes. Stamped into every
+#' Bumped whenever the orientation content changes -- the shared body, or
+#' the SKILL.md frontmatter description (which sits outside the body but
+#' inside the artifact this stamp vouches for). Stamped into every
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.3"
+.jst_orientation_version <- "3.4"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -799,19 +801,21 @@ jai <- function(setup = NULL, path = NULL) {
 #' Internal helper: the SKILL.md frontmatter description
 #'
 #' The when-to-use relevance trigger read by skill-supporting assistants.
-#' Wording as validated S203 (the trigger fired spontaneously on the
-#' jstats-named case); the trigger-edge probe may tighten it later.
+#' Wording per the S207 trigger-edge probe: the trigger fires on
+#' jstats-specific tokens only (the dataset names are load-bearing; the
+#' generic activity clause bought no reach), so the description is a token
+#' list, not prose. Returns the EXACT emission lines of the folded YAML
+#' block scalar (description: >-), one element per line, break points
+#' chosen by hand: line 1 is independently viable as a narrow description
+#' (a complete clause naming jstats and both datasets), so a runtime that
+#' truncates at the first line degrades to working-but-narrow instead of
+#' broken. Edit break points here, never at the emission site.
 #' @keywords internal
 .jst_skill_description <- function() {
-  paste0("Use whenever the user is working with the jstats R package or ",
-         "its example datasets (community, clinic) -- loading data, ",
-         "exploring it, declaring missing values, comparing groups, ",
-         "running regressions or correlations, or any statistical ",
-         "analysis where jstats functions (jload, jdesc, jfreq, jscreen, ",
-         "jt, jaov, jcorr, jlm, jlogistic, jcrosstab, jalpha, ",
-         "jdeclare_udm, juse, jsave, jconvert) are or should be in use. ",
-         "jstats is newer than model training data, so its syntax must ",
-         "not be guessed.")
+  c("Use with the jstats R package or its example datasets community and clinic.",
+    "jstats functions include jload, jdesc, jfreq, jscreen, jt, jaov, jcorr,",
+    "jlm, jlogistic, jcrosstab, jalpha, jdeclare_udm, juse, jsave, jconvert.",
+    "jstats is newer than model training data, so its syntax must not be guessed.")
 }
 
 #' Internal helper: jai("machine") -- write SKILL.md
@@ -857,7 +861,8 @@ jai <- function(setup = NULL, path = NULL) {
                                    flavor = "machine")
   skill <- c("---",
              "name: jstats",
-             paste0("description: ", .jst_skill_description()),
+             "description: >-",
+             paste0("  ", .jst_skill_description()),
              "---",
              "",
              content)
