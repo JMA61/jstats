@@ -7,13 +7,13 @@
 ## Citation
 
 Ackerman J (2026). *jstats: Simplified Statistical Analysis Tools for
-Social Science*. R package version 0.9.113,
+Social Science*. R package version 0.9.114,
 <https://jma61.github.io/jstats/>.
 
     @Manual{,
       title = {jstats: Simplified Statistical Analysis Tools for Social Science},
       author = {Jeff Ackerman},
       year = {2026},
-      note = {R package version 0.9.113},
+      note = {R package version 0.9.114},
       url = {https://jma61.github.io/jstats/},
     }

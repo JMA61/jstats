@@ -15,7 +15,7 @@ IVs.
 .jst_make_dummy_names(
   x,
   var_name,
-  ref = "first",
+  ref = "auto",
   name.length.warn = 30L,
   max.categories = 20L,
   data_name = NULL
@@ -34,8 +34,12 @@ IVs.
 
 - ref:
 
-  Reference category specifier. May be `first` (default), `last`, a
-  numeric code, or a character string matching a canonical label.
+  Reference category specifier. May be `auto` (the default: for a
+  two-category variable the reference is chosen so the affirmative or
+  code-1 category is modeled – see the `ref` documentation in
+  [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md);
+  otherwise the first category), `first`, `last`, a numeric code, or a
+  character string matching a canonical label.
 
 - name.length.warn:
 

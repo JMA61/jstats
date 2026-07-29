@@ -13,7 +13,7 @@ categorical = arguments and auto-detected categorical IVs."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.113</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.114</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,7 +49,7 @@ registration and by <code><a href="jlm.html">jlm()</a></code> / <code><a href="j
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_make_dummy_names</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  <span class="va">var_name</span>,</span>
-<span>  ref <span class="op">=</span> <span class="st">"first"</span>,</span>
+<span>  ref <span class="op">=</span> <span class="st">"auto"</span>,</span>
 <span>  name.length.warn <span class="op">=</span> <span class="fl">30L</span>,</span>
 <span>  max.categories <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span>  data_name <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -70,9 +70,12 @@ column prefix).</p></dd>
 
 
 <dt id="arg-ref">ref<a class="anchor" aria-label="anchor" href="#arg-ref"></a></dt>
-<dd><p>Reference category specifier. May be <code>first</code> (default),
-<code>last</code>, a numeric code, or a character string matching a
-canonical label.</p></dd>
+<dd><p>Reference category specifier. May be <code>auto</code> (the
+default: for a two-category variable the reference is chosen so the
+affirmative or code-1 category is modeled – see the <code>ref</code>
+documentation in <code><a href="jdummy.html">jdummy()</a></code>; otherwise the first category),
+<code>first</code>, <code>last</code>, a numeric code, or a character string
+matching a canonical label.</p></dd>
 
 
 <dt id="arg-name-length-warn">name.length.warn<a class="anchor" aria-label="anchor" href="#arg-name-length-warn"></a></dt>

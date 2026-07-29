@@ -3,15 +3,19 @@
 Given a registration-shaped object (from jdummy storage or built
 in-flight via
 [`.jst_make_dummy_names()`](https://jma61.github.io/jstats/reference/dot-jst_make_dummy_names.md)),
-add the dummy columns to `data` and replace `var_name` with the dummy
-names in `formula_str`. Used by
+add the dummy columns to `data` and substitute the variable's symbol in
+the parsed `formula` with the parenthesized dummy block
+`(d1 + d2 + ...)`. Substitution walks the formula object and compares
+symbols by identity (the resolver's sub_term pattern), so a backticked
+computed-column name can never be partially matched the way the retired
+deparse-and-gsub rewrite could (AUDIT-028/-029). Used by
 [`.jst_expand_dummies()`](https://jma61.github.io/jstats/reference/dot-jst_expand_dummies.md)
 and by the auto-categorical pathways in jlm and jlogistic.
 
 ## Usage
 
 ``` r
-.jst_expand_one_dummy(data, formula_str, reg)
+.jst_expand_one_dummy(data, formula, reg)
 ```
 
 ## Arguments
@@ -20,9 +24,9 @@ and by the auto-categorical pathways in jlm and jlogistic.
 
   The data frame.
 
-- formula_str:
+- formula:
 
-  The formula as a deparsed string.
+  The model formula (a formula object).
 
 - reg:
 
@@ -31,4 +35,4 @@ and by the auto-categorical pathways in jlm and jlogistic.
 
 ## Value
 
-A list with components `data`, `formula_str`, `dummy_coef_names`.
+A list with components `data`, `formula`, `dummy_coef_names`.

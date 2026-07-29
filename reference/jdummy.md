@@ -17,7 +17,7 @@ datasets preserves each dataset's registrations independently.
 jdummy(
   data,
   ...,
-  ref = "first",
+  ref = "auto",
   show = FALSE,
   remove = FALSE,
   clear.all = FALSE,
@@ -46,9 +46,20 @@ jdummy(
 - ref:
 
   The reference category (excluded from the regression model). Can be a
-  numeric code, a quoted label name, or `first` (default) or `last`.
-  Applied to every variable named in the call; to use different
-  reference categories, register the variables in separate calls.
+  numeric code, a quoted label name, `first`, `last`, or `auto` (the
+  default). Under `auto`, a variable with three or more categories takes
+  its first (lowest) category as the reference. A two-category variable
+  is parameterized so the category representing presence is the one
+  modeled: if the value labels are a recognized yes/no pair (yes/no,
+  y/n, true/false, t/f, present/absent, success/failure; capitalization
+  does not matter), the affirmative category is modeled and the negative
+  category is the reference – the same rule
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
+  uses to encode its outcome. Otherwise, if one of the two codes is 1,
+  that category is modeled (so a 1 = Yes / 2 = No variable models Yes,
+  and a 0/1 variable models 1). Applied to every variable named in the
+  call; to use different reference categories, register the variables in
+  separate calls.
 
 - show:
 
