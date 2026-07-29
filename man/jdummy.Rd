@@ -7,7 +7,7 @@
 jdummy(
   data,
   ...,
-  ref = "first",
+  ref = "auto",
   show = FALSE,
   remove = FALSE,
   clear.all = FALSE,
@@ -26,10 +26,19 @@ variable slot -- \code{jdummy(data, NULL)} -- clears that frame's dummy
 registrations.}
 
 \item{ref}{The reference category (excluded from the regression model).
-Can be a numeric code, a quoted label name, or \code{first}
-(default) or \code{last}. Applied to every variable named in the call;
-to use different reference categories, register the variables in
-separate calls.}
+Can be a numeric code, a quoted label name, \code{first}, \code{last},
+or \code{auto} (the default). Under \code{auto}, a variable with
+three or more categories takes its first (lowest) category as the
+reference. A two-category variable is parameterized so the category
+representing presence is the one modeled: if the value labels are a
+recognized yes/no pair (yes/no, y/n, true/false, t/f, present/absent,
+success/failure; capitalization does not matter), the affirmative
+category is modeled and the negative category is the reference -- the
+same rule \code{jlogistic()} uses to encode its outcome. Otherwise,
+if one of the two codes is 1, that category is modeled (so a
+1 = Yes / 2 = No variable models Yes, and a 0/1 variable models 1).
+Applied to every variable named in the call; to use different
+reference categories, register the variables in separate calls.}
 
 \item{show}{Logical. If \code{TRUE}, prints the dummy coding scheme
 table showing the pattern of 0s and 1s. Default is \code{FALSE}.}

@@ -7,7 +7,7 @@
 .jst_make_dummy_names(
   x,
   var_name,
-  ref = "first",
+  ref = "auto",
   name.length.warn = 30L,
   max.categories = 20L,
   data_name = NULL
@@ -19,9 +19,12 @@
 \item{var_name}{Character. The variable's name (used as the dummy
 column prefix).}
 
-\item{ref}{Reference category specifier. May be \code{first} (default),
-\code{last}, a numeric code, or a character string matching a
-canonical label.}
+\item{ref}{Reference category specifier. May be \code{auto} (the
+default: for a two-category variable the reference is chosen so the
+affirmative or code-1 category is modeled -- see the \code{ref}
+documentation in \code{jdummy()}; otherwise the first category),
+\code{first}, \code{last}, a numeric code, or a character string
+matching a canonical label.}
 
 \item{name.length.warn}{Integer. Warn if any final dummy name exceeds
 this many characters. Default 30.}

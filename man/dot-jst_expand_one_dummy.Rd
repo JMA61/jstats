@@ -4,25 +4,30 @@
 \alias{.jst_expand_one_dummy}
 \title{Internal helper: expand a single registration into dummy columns}
 \usage{
-.jst_expand_one_dummy(data, formula_str, reg)
+.jst_expand_one_dummy(data, formula, reg)
 }
 \arguments{
 \item{data}{The data frame.}
 
-\item{formula_str}{The formula as a deparsed string.}
+\item{formula}{The model formula (a formula object).}
 
 \item{reg}{A registration object (must have \code{var_name},
 \code{codes}, \code{non_ref_idx}, \code{dummy_names}).}
 }
 \value{
-A list with components \code{data}, \code{formula_str},
+A list with components \code{data}, \code{formula},
 \code{dummy_coef_names}.
 }
 \description{
 Given a registration-shaped object (from jdummy storage or built
 in-flight via \code{.jst_make_dummy_names()}), add the dummy columns
-to \code{data} and replace \code{var_name} with the dummy names in
-\code{formula_str}. Used by \code{.jst_expand_dummies()} and by the
-auto-categorical pathways in jlm and jlogistic.
+to \code{data} and substitute the variable's symbol in the parsed
+\code{formula} with the parenthesized dummy block
+\code{(d1 + d2 + ...)}. Substitution walks the formula object and
+compares symbols by identity (the resolver's sub_term pattern), so a
+backticked computed-column name can never be partially matched the way
+the retired deparse-and-gsub rewrite could (AUDIT-028/-029).
+Used by \code{.jst_expand_dummies()} and by the auto-categorical
+pathways in jlm and jlogistic.
 }
 \keyword{internal}

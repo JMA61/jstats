@@ -890,9 +890,12 @@
 #' @param x A vector -- haven_labelled, factor, character, or numeric.
 #' @param var_name Character. The variable's name (used as the dummy
 #'   column prefix).
-#' @param ref Reference category specifier. May be \code{first} (default),
-#'   \code{last}, a numeric code, or a character string matching a
-#'   canonical label.
+#' @param ref Reference category specifier. May be \code{auto} (the
+#'   default: for a two-category variable the reference is chosen so the
+#'   affirmative or code-1 category is modeled -- see the \code{ref}
+#'   documentation in \code{jdummy()}; otherwise the first category),
+#'   \code{first}, \code{last}, a numeric code, or a character string
+#'   matching a canonical label.
 #' @param name.length.warn Integer. Warn if any final dummy name exceeds
 #'   this many characters. Default 30.
 #' @param max.categories Integer. Maximum number of input categories allowed;
@@ -910,7 +913,7 @@
 #'   (character vector of warnings).
 #'
 #' @keywords internal
-.jst_make_dummy_names <- function(x, var_name, ref = "first",
+.jst_make_dummy_names <- function(x, var_name, ref = "auto",
                                   name.length.warn = 30L,
                                   max.categories = 20L,
                                   data_name = NULL) {
@@ -949,7 +952,7 @@
     # variable so a saved comparison (over40 <- Age > 40) models like any
     # other dichotomy. Codes are the OBSERVED 0/1 values, so a constant
     # logical still hits the fewer-than-2-categories stop below; with both
-    # values present the reference is FALSE (ref = "first"), so the dummy
+    # values present the reference resolves to FALSE, so the dummy
     # reads as the effect of being TRUE (Var_TRUE), matching how base R's
     # lm()/glm() name a logical predictor's coefficient.
     var_type   <- "logical"
@@ -1048,7 +1051,32 @@
   }
 
   # -- Step 6: resolve reference category -----------------------------------
-  if (is.character(ref) && tolower(ref) == "first") {
+  # ref = "auto" (the default): a variable with 3+ categories takes the
+  # first (lowest) category as reference, as before. A TWO-category
+  # variable is parameterized so the category meaning "presence" is the
+  # one modeled: (a) if the two raw labels are a recognized binary pair
+  # (.jst_match_binary_tokens -- yes/no, y/n, true/false, t/f,
+  # present/absent, success/failure; case-insensitive), the AFFIRMATIVE is
+  # modeled and the negative is the reference, the same rule jlogistic
+  # applies to its outcome encoding; (b) otherwise, for numeric-coded
+  # inputs where one code equals 1, that category is modeled (a 1 = Yes /
+  # 2 = No variable models Yes; a 0/1 variable models 1, as before);
+  # (c) otherwise the first category is the reference, as before.
+  # Factor/character/logical inputs get artificial position codes, so tier
+  # (b) is restricted to genuinely numeric codings; an explicit
+  # ref = "first" keeps its literal code-order meaning.
+  if (is.character(ref) && tolower(ref) == "auto") {
+    ref_idx <- 1L
+    if (n_cats == 2L) {
+      m <- .jst_match_binary_tokens(raw_labels)
+      if (isTRUE(m$recognized)) {
+        ref_idx <- which(raw_labels == m$reference)[1L]
+      } else if (var_type %in% c("haven_labelled", "numeric") &&
+                 any(codes == 1)) {
+        ref_idx <- which(codes != 1)[1L]
+      }
+    }
+  } else if (is.character(ref) && tolower(ref) == "first") {
     ref_idx <- 1L
   } else if (is.character(ref) && tolower(ref) == "last") {
     ref_idx <- n_cats
@@ -1126,39 +1154,27 @@
 }
 
 
-#' Internal helper: escape regex metacharacters in a literal string
-#'
-#' Backslash-escapes every extended-regular-expression metacharacter so a
-#' user-supplied name can be interpolated into a pattern and matched
-#' literally. Used when rewriting a model formula string: a variable name
-#' containing a dot (common from make.names()) would otherwise act as a
-#' wildcard and could corrupt an unrelated predictor (see
-#' .jst_expand_one_dummy).
-#'
-#' @param x Character vector to escape.
-#' @return \code{x} with regex metacharacters backslash-escaped.
-#' @keywords internal
-.jst_escape_regex <- function(x) {
-  gsub("([][{}()^$.|*+?\\\\])", "\\\\\\1", x)
-}
-
-
 #' Internal helper: expand a single registration into dummy columns
 #'
 #' Given a registration-shaped object (from jdummy storage or built
 #' in-flight via \code{.jst_make_dummy_names()}), add the dummy columns
-#' to \code{data} and replace \code{var_name} with the dummy names in
-#' \code{formula_str}. Used by \code{.jst_expand_dummies()} and by the
-#' auto-categorical pathways in jlm and jlogistic.
+#' to \code{data} and substitute the variable's symbol in the parsed
+#' \code{formula} with the parenthesized dummy block
+#' \code{(d1 + d2 + ...)}. Substitution walks the formula object and
+#' compares symbols by identity (the resolver's sub_term pattern), so a
+#' backticked computed-column name can never be partially matched the way
+#' the retired deparse-and-gsub rewrite could (AUDIT-028/-029).
+#' Used by \code{.jst_expand_dummies()} and by the auto-categorical
+#' pathways in jlm and jlogistic.
 #'
 #' @param data The data frame.
-#' @param formula_str The formula as a deparsed string.
+#' @param formula The model formula (a formula object).
 #' @param reg A registration object (must have \code{var_name},
 #'   \code{codes}, \code{non_ref_idx}, \code{dummy_names}).
-#' @return A list with components \code{data}, \code{formula_str},
+#' @return A list with components \code{data}, \code{formula},
 #'   \code{dummy_coef_names}.
 #' @keywords internal
-.jst_expand_one_dummy <- function(data, formula_str, reg) {
+.jst_expand_one_dummy <- function(data, formula, reg) {
 
   orig_col         <- .jst_as_numeric(data[[reg$var_name]])
   dummy_coef_names <- character(0)
@@ -1185,14 +1201,33 @@
     dummy_coef_names <- c(dummy_coef_names, dname)
   }
 
-  # Replace variable in formula with dummy names. Wrapping in parentheses
-  # ensures correct behavior when the variable appears inside an
-  # interaction term (e.g. y ~ x * Religion).
-  dummy_plus  <- paste0("(", paste(reg$dummy_names, collapse = " + "), ")")
-  formula_str <- gsub(paste0("\\b", .jst_escape_regex(reg$var_name), "\\b"),
-                      dummy_plus, formula_str)
+  # Substitute the variable's symbol with the dummy block, by identity, on
+  # the parsed formula (AUDIT-029; the resolver's sub_term walker is the
+  # pattern). The parentheses keep interaction terms correct
+  # (y ~ x * Religion -> y ~ x * (Rel_B + Rel_C)). The dummy names are
+  # assembled with call()/as.name() rather than parsed from text, so a
+  # non-syntactic dummy name cannot produce a parse failure. In-place
+  # editing preserves the formula's class and environment.
+  target <- as.name(reg$var_name)
+  repl   <- call("(", Reduce(function(a, b) call("+", a, b),
+                             lapply(reg$dummy_names, as.name)))
+  sub_sym <- function(e) {
+    if (is.name(e)) {
+      if (identical(e, target)) return(repl)
+      return(e)
+    }
+    if (is.call(e)) {
+      for (k in seq_along(e)) {
+        if (k == 1L) next
+        if (identical(as.list(e)[[k]], substitute())) next
+        e[[k]] <- sub_sym(e[[k]])
+      }
+    }
+    e
+  }
+  for (k in 2:length(formula)) formula[[k]] <- sub_sym(formula[[k]])
 
-  list(data = data, formula_str = formula_str,
+  list(data = data, formula = formula,
        dummy_coef_names = dummy_coef_names)
 }
 
@@ -1244,7 +1279,6 @@
   expanded_originals <- character(0)
 
   if (!is.null(dummy_regs) && length(dummy_regs) > 0) {
-    formula_str <- deparse(formula, width.cutoff = 500)
     dv_name     <- model_vars[1]
 
     for (reg in dummy_regs) {
@@ -1283,17 +1317,15 @@
           next
         }
 
-        expanded <- .jst_expand_one_dummy(data, formula_str, reg)
+        expanded <- .jst_expand_one_dummy(data, formula, reg)
         data               <- expanded$data
-        formula_str        <- expanded$formula_str
+        formula            <- expanded$formula
         dummy_coef_names   <- c(dummy_coef_names, expanded$dummy_coef_names)
         expanded_originals <- c(expanded_originals, reg$var_name)
 
         ref_cats <- c(ref_cats, paste0(reg$var_name, " = ", reg$ref_label))
       }
     }
-
-    formula <- stats::as.formula(formula_str)
   }
 
   list(data = data, formula = formula, ref_cats = ref_cats,

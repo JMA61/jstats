@@ -48,6 +48,8 @@ assemble_package()   ## No argument is necessary - - the output defaults to jsta
 ### if no local edits are done, the jstats_source can be re-uploaded to the KB from the last delivered, but running assemble_package() does an extra check
 
 
+#### TO DETERMINE WHEN R UNIVERSE HAS NEW BUILD RUN ####
+available.packages(repos = "https://jma61.r-universe.dev", type = "source")["jstats", "Version"]
 
 
 

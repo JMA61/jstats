@@ -1546,6 +1546,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   formula  <- resolved$formula
   data     <- resolved$data
 
+  # A resolver-computed logical -- e.g. I(ScreenTime > 4) -- enters the
+  # model as a numeric 0/1 column, exactly like a saved indicator column:
+  # the flat-dichotomy beta suppression and the two-level coefficient
+  # annotation then apply through the same machinery (AUDIT-028).
+  for (.cv in resolved$computed) {
+    if (is.logical(data[[.cv]])) data[[.cv]] <- as.numeric(data[[.cv]])
+  }
+
   model_vars            <- all.vars(formula)
   # Preserve the original (pre-expansion) variable names for use in
   # missing-by-variable reporting. After dummy expansion, model_vars
@@ -1848,7 +1856,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Override: categorical = "Var" forces categorical ---
     if (v %in% categorical) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
@@ -1856,6 +1864,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
       next
     }
+
+    # Resolver-computed columns never enter the auto-categorical machinery
+    # (AUDIT-028): the structural hedges below steer to jdummy()/jrecode()
+    # calls that cannot take an inline term. An explicit categorical =
+    # naming the term still wins in the branch above, per the resolution
+    # stack (per-call assertions beat structural guesses).
+    if (v %in% resolved$computed) next
 
     # --- Auto-detection (two-helper classifier) ---
     #
@@ -1872,7 +1887,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     # data, or small-range whole-number numeric), the user may have meant
     # to register with jdummy() or pass categorical = instead.
     if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
@@ -1945,16 +1960,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # the same .jst_expand_one_dummy() helper that .jst_expand_dummies()
   # uses for jdummy registrations, so naming is uniform across pathways.
   if (length(auto_cat_regs) > 0) {
-    formula_str <- deparse(formula, width.cutoff = 500)
     for (vname in names(auto_cat_regs)) {
       reg <- auto_cat_regs[[vname]]
       reg$var_name <- vname
-      expanded2 <- .jst_expand_one_dummy(data, formula_str, reg)
+      expanded2 <- .jst_expand_one_dummy(data, formula, reg)
       data             <- expanded2$data
-      formula_str      <- expanded2$formula_str
+      formula          <- expanded2$formula
       dummy_coef_names <- c(dummy_coef_names, expanded2$dummy_coef_names)
     }
-    formula    <- stats::as.formula(formula_str)
     model_vars <- all.vars(formula)
   }
 
@@ -2750,6 +2763,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   formula  <- resolved$formula
   data     <- resolved$data
 
+  # A resolver-computed logical -- e.g. I(ScreenTime > 4) -- enters the
+  # model as a numeric 0/1 column, exactly like a saved indicator column:
+  # the flat-dichotomy beta suppression and the two-level coefficient
+  # annotation then apply through the same machinery (AUDIT-028).
+  for (.cv in resolved$computed) {
+    if (is.logical(data[[.cv]])) data[[.cv]] <- as.numeric(data[[.cv]])
+  }
+
   model_vars            <- all.vars(formula)
   dv_name               <- model_vars[1]
 
@@ -2852,7 +2873,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Override: categorical = "Var" forces categorical ---
     if (!is.null(categorical) && v %in% categorical) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
@@ -2862,9 +2883,16 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       next
     }
 
+    # Resolver-computed columns never enter the auto-categorical machinery
+    # (AUDIT-028): the structural hedges below steer to jdummy()/jrecode()
+    # calls that cannot take an inline term. An explicit categorical =
+    # naming the term still wins in the branch above, per the resolution
+    # stack (per-call assertions beat structural guesses).
+    if (v %in% resolved$computed) next
+
     # --- Auto-detection via unified classifier ---
     if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "first",
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
@@ -2937,16 +2965,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # applied via .jst_expand_one_dummy() so dummy column names are uniform
   # across pathways.
   if (length(auto_cat_regs) > 0) {
-    formula_str <- deparse(formula, width.cutoff = 500)
     for (vname in names(auto_cat_regs)) {
       reg <- auto_cat_regs[[vname]]
       reg$var_name <- vname
-      expanded2 <- .jst_expand_one_dummy(data, formula_str, reg)
+      expanded2 <- .jst_expand_one_dummy(data, formula, reg)
       data             <- expanded2$data
-      formula_str      <- expanded2$formula_str
+      formula          <- expanded2$formula
       dummy_coef_names <- c(dummy_coef_names, expanded2$dummy_coef_names)
     }
-    formula    <- stats::as.formula(formula_str)
     model_vars <- all.vars(formula)
   }
 
