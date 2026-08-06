@@ -12,24 +12,37 @@
 #' @description
 #' \code{jrelabel()} attaches a variable label and/or value labels to any
 #' variable in a data frame. It is designed as a simple label applicator ---
-#' it does not recode values or compare variables. Use it to add labels after
-#' a recode, to fix missing labels, or to label any variable that needs them.
+#' it does not recode values, convert types, or compare variables. Use it to
+#' add labels after a recode, to fix missing labels, or to label any variable
+#' that needs them.
 #'
-#' The function accepts haven-labelled, plain numeric, factor, and character
-#' variables. The output is always a \code{haven_labelled} vector, which is
-#' compatible with all jstats functions.
+#' A variable label (\code{var.label}) can be attached to a variable of any
+#' type --- the variable is returned unchanged apart from the new label, so
+#' dates stay dates, factors stay factors, and text stays text. Value labels
+#' (\code{labels}) can be applied to haven-labelled, plain numeric, and
+#' logical variables; logical values are stored as 1 (TRUE) and 0 (FALSE).
+#' Factor, character, and date/time variables cannot carry value labels, and
+#' \code{jrelabel()} refuses the \code{labels} argument for these with a
+#' message naming the fix.
+#'
+#' \code{jrelabel()} never rebuilds the variable it is given. Existing value
+#' labels, SPSS-style missing values (\code{na_values} / \code{na_range}),
+#' Stata-style missing values, and the variable's class all pass through
+#' untouched unless an argument you supply replaces them: new value labels
+#' replace the full existing set (as \code{VALUE LABELS} does in SPSS), and
+#' a new variable label replaces the old one. A replacement set clears any
+#' labels attached to declared missing-value codes; the declaration itself
+#' is unaffected, but re-supply its label alongside the new value labels to
+#' keep it.
 #'
 #' Both the \code{labels} and \code{var.label} arguments are optional. If
-#' neither is supplied, the function returns the variable unchanged as a
-#' \code{haven_labelled} vector.
-#'
-#' If the variable already has labels, they are silently overwritten when
-#' new labels are provided.
+#' neither is supplied, the function returns the variable unchanged.
 #'
 #' @param data A data frame containing the variable.
 #' @param var The variable to label (unquoted, e.g. \code{StatusR}).
 #' @param labels Optional. A quoted string specifying value labels using the
 #'   format \code{"code=Label Text"} with rules separated by semicolons.
+#'   Accepted on haven-labelled, plain numeric, and logical variables only.
 #'
 #'   Examples:
 #'   \itemize{
@@ -42,8 +55,12 @@
 #'   If omitted, any existing variable label is preserved. If the variable
 #'   has no existing label, no variable label is set.
 #'
-#' @return A \code{haven_labelled} vector with the requested labels applied.
-#'   Assign this back to a column in your data frame:
+#' @return The variable with the requested labels applied. The variable keeps
+#'   its class: haven-labelled input stays haven-labelled with any declared
+#'   SPSS-style or Stata-style missing values intact; plain numeric and
+#'   logical input becomes \code{haven_labelled} when value labels are
+#'   applied; any other type is returned unchanged apart from the labels.
+#'   Assign the result back to a column in your data frame:
 #'   \code{MyData$VarName <- jrelabel(MyData, VarName, ...)}
 #'
 #' @examples
@@ -58,6 +75,11 @@
 #'
 #' # Add just value labels
 #' df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No")
+#'
+#' # Label a date variable (the variable stays a Date)
+#' df$Enrolled <- as.Date(c("2024-01-15", "2024-02-01", "2024-01-20",
+#'                          "2024-03-05", "2024-02-14", "2024-01-30"))
+#' df$Enrolled <- jrelabel(df, Enrolled, var.label = "Enrollment date")
 #'
 #' # Using juse() default
 #' juse(df)
@@ -108,60 +130,64 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   x <- data[[var_name]]
 
-  # --- Preserve any existing variable label before conversion ---
-  existing_var_label <- NULL
-  if (haven::is.labelled(x)) {
-    existing_var_label <- labelled::var_label(x)
-  }
+  # In-place contract: `result` IS the caller's column. Labels are attached
+  # to it directly, so its class and every attribute it carries (value
+  # labels, SPSS-style na_values / na_range, Stata-style tagged values,
+  # variable label) survive unless an argument below replaces them. The
+  # column is never rebuilt or converted. (Session 215)
+  result <- x
 
-  # --- Convert to numeric vector for haven_labelled construction ---
-  if (haven::is.labelled(x)) {
-    num_vals <- .jst_as_numeric(x)
-  } else if (is.factor(x)) {
-    num_vals <- suppressWarnings(as.numeric(as.character(x)))
-    if (all(is.na(num_vals[!is.na(x)]))) {
-      .jst_stop(paste0(
-        "'", var_name, "' is a factor with non-numeric levels. ",
-        "Convert it to numeric values before using jrelabel()."
-      ))
-    }
-  } else if (is.character(x)) {
-    num_vals <- suppressWarnings(as.numeric(x))
-    if (all(is.na(num_vals[!is.na(x)]))) {
-      .jst_stop(paste0(
-        "'", var_name, "' contains non-numeric text values. ",
-        "Convert it to numeric values before using jrelabel()."
-      ))
-    }
-  } else {
-    num_vals <- as.numeric(x)
-  }
-
-  # --- Build haven_labelled vector ---
-  result <- labelled::labelled(num_vals)
-
-  # --- Apply variable label ---
+  # --- Validate var.label ---
   if (!is.null(var.label)) {
     if (!is.character(var.label) || length(var.label) != 1) {
       .jst_stop("The var.label argument must be a single quoted string.")
     }
-    labelled::var_label(result) <- var.label
-  } else if (!is.null(existing_var_label) &&
-             nchar(trimws(existing_var_label)) > 0) {
-    labelled::var_label(result) <- existing_var_label
   }
 
   # --- Apply value labels ---
+  # Value labels attach only where the carrier is determined by the
+  # column's CLASS alone: haven-labelled (numeric-backed), plain numeric,
+  # and logical (stored as 1/0 --- a total, lossless mapping). Factor,
+  # character, and date/time columns are refused with a fix, because
+  # whether they could be converted depends on the column's CONTENTS, and
+  # jrelabel() never converts. Mirrors jdeclare_udm()'s type guard.
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
       .jst_stop("The labels argument must be a single quoted string, e.g. \"1=Yes; 0=No\".")
     }
+    if (inherits(x, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
+      .jst_stop("'", var_name, "' is a date/time variable; value labels can ",
+                "only be applied to numeric variables.")
+    }
+    if (is.factor(x)) {
+      .jst_stop("'", var_name, "' is a factor; value labels can only be ",
+                "applied to numeric variables.\n",
+                "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
+    }
+    if (is.character(x) ||
+        (haven::is.labelled(x) && typeof(x) == "character")) {
+      .jst_stop("'", var_name, "' is a character (text) variable; value ",
+                "labels can only be applied to numeric variables.\n",
+                "If the values are numbers stored as text, convert with as.numeric() first.")
+    }
+    if (!is.numeric(x) && !is.logical(x) && !haven::is.labelled(x)) {
+      .jst_stop("'", var_name, "' is of type ", typeof(x),
+                " and cannot carry value labels.")
+    }
+
+    if (is.logical(result)) result <- as.numeric(result)
+
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                       conditionMessage(e)))
     )
     labelled::val_labels(result) <- parsed_labels
+  }
+
+  # --- Apply variable label (any column type, in place) ---
+  if (!is.null(var.label)) {
+    labelled::var_label(result) <- var.label
   }
 
   return(invisible(result))
@@ -771,7 +797,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   \code{MyData$AgeGroupR <- jrecode(MyData, AgeGroup, map = "...")}
 #'
 #' @details
-#' The function accepts haven-labelled, plain numeric, and factor variables.
+#' The function accepts haven-labelled, plain numeric, and logical variables.
+#' Factor, character, and date/time variables are refused with a message
+#' naming the fix --- recoding works with a variable's numeric values, so
+#' convert these to numeric first.
 #'
 #' The variable label from the original variable is carried across automatically
 #' with "(recoded)" appended. If the original variable has no variable label,
@@ -946,6 +975,31 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   }
 
   orig <- data[[orig_name]]
+
+  # Type guard: recoding works with the column's numeric values, so text,
+  # factor, and date/time columns are refused with a fix (a factor would
+  # otherwise be silently recoded by its internal integer codes rather
+  # than its level values). Mirrors jdeclare_udm()'s type guard.
+  # (Session 215)
+  if (inherits(orig, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
+    .jst_stop("'", orig_name, "' is a date/time variable; values can only ",
+              "be recoded on numeric variables.")
+  }
+  if (is.factor(orig)) {
+    .jst_stop("'", orig_name, "' is a factor; values can only be recoded ",
+              "on numeric variables.\n",
+              "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
+  }
+  if (is.character(orig) ||
+      (haven::is.labelled(orig) && typeof(orig) == "character")) {
+    .jst_stop("'", orig_name, "' is a character (text) variable; values can ",
+              "only be recoded on numeric variables.\n",
+              "If the values are numbers stored as text, convert with as.numeric() first.")
+  }
+  if (!is.numeric(orig) && !is.logical(orig) && !haven::is.labelled(orig)) {
+    .jst_stop("'", orig_name, "' is of type ", typeof(orig),
+              " and cannot be recoded.")
+  }
 
   # --- Detect suspicious coded missing values ---
   suspicious_vals <- .jst_detect_suspicious_values(orig, orig_name)
