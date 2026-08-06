@@ -305,6 +305,8 @@ joutput <- function(level, effect.size = NULL,
                   .jst_options_defaults$data.dir)
   cl <- getOption(".jst_options_corr_layout",
                   .jst_options_defaults$corr.layout)
+  md <- getOption(".jst_options_missing_detail",
+                  .jst_options_defaults$missing.detail)
 
   # Map the slot value to a user-facing label. "none" reads as "None
   # selected" so users understand they're in the no-auto-conversion
@@ -336,6 +338,7 @@ joutput <- function(level, effect.size = NULL,
   cat("UDM convention codes: ", paste(cc, collapse = ", "), "\n", sep = "")
   cat("Data folder: ", dd_label, "\n", sep = "")
   cat("Correlation layout: ", cl, "\n", sep = "")
+  cat("Missing-value detail: ", md, "\n", sep = "")
   cat("\n")
 }
 
@@ -442,6 +445,20 @@ joutput <- function(level, effect.size = NULL,
 #'     overrides this. It lives here rather than in \code{\link{joutput}}
 #'     because it is specific to one function's output, not a tiered
 #'     analysis-content toggle.}
+#'   \item{missing.detail}{Character, length 1. One of \code{"totals"},
+#'     \code{"per_code"}, or \code{"all"}. Default: \code{"per_code"}.
+#'     Governs how much of a declared missing-value RANGE
+#'     \code{\link{jfreq}} spells out in its Missing block.
+#'     \code{"totals"} collapses the whole band into one row;
+#'     \code{"per_code"} prints one row per observed in-band value, at
+#'     most 10, with the remainder gathered into a single line at the
+#'     foot of the block; \code{"all"} prints every observed in-band
+#'     value with no cap. Declared discrete codes always print in full
+#'     at every setting -- the cap applies only to values reached by a
+#'     range. A per-call \code{missing.detail} argument to
+#'     \code{jfreq()} overrides this. Like \code{corr.layout} it lives
+#'     here rather than in \code{\link{joutput}} because it is specific
+#'     to one function's output.}
 #' }
 #'
 #' @section Call patterns:
@@ -475,6 +492,8 @@ joutput <- function(level, effect.size = NULL,
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
 #'   \code{NULL}. See Slots.
+#' @param missing.detail One of \code{"totals"}, \code{"per_code"}, or
+#'   \code{"all"}, or \code{NULL}. See Slots.
 #'
 #' @return Invisibly returns \code{NULL}. Called for the side effect of
 #'   updating session options and printing the status panel.
@@ -498,7 +517,8 @@ joutput <- function(level, effect.size = NULL,
 #'   change silently, suppressing both the status panel and the convention
 #'   nudge. A bare joptions() status query always prints regardless of quiet.
 joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
-                     data.dir = NULL, corr.layout = NULL, quiet = FALSE) {
+                     data.dir = NULL, corr.layout = NULL,
+                     missing.detail = NULL, quiet = FALSE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(quiet, "quiet")
 
@@ -506,9 +526,11 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   cc_supplied <- !missing(udm.convention.codes)
   dd_supplied <- !missing(data.dir)
   cl_supplied <- !missing(corr.layout)
+  md_supplied <- !missing(missing.detail)
 
   # joptions() -- no args, status only
-  if (!mc_supplied && !cc_supplied && !dd_supplied && !cl_supplied) {
+  if (!mc_supplied && !cc_supplied && !dd_supplied && !cl_supplied &&
+      !md_supplied) {
     .jst_options_status()
     return(invisible(NULL))
   }
@@ -536,6 +558,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     options(.jst_options_udm_convention_codes = NULL)
     options(.jst_options_data_dir             = NULL)
     options(.jst_options_corr_layout          = NULL)
+    options(.jst_options_missing_detail       = NULL)
     if (!quiet) .jst_options_status()
     return(invisible(NULL))
   }
@@ -587,6 +610,14 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
       .jst_stop_arg("joptions", "corr.layout", choices = c("wide", "stacked"))
     }
   }
+  if (md_supplied && !is.null(missing.detail)) {
+    if (!is.character(missing.detail) ||
+        length(missing.detail) != 1L ||
+        !(missing.detail %in% c("totals", "per_code", "all"))) {
+      .jst_stop_arg("joptions", "missing.detail",
+                    choices = c("totals", "per_code", "all"))
+    }
+  }
 
   # Write -- only supplied non-NULL args; NULL means "leave alone"
   trigger_nudge <- FALSE
@@ -610,6 +641,9 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   }
   if (cl_supplied && !is.null(corr.layout)) {
     options(.jst_options_corr_layout = corr.layout)
+  }
+  if (md_supplied && !is.null(missing.detail)) {
+    options(.jst_options_missing_detail = missing.detail)
   }
 
   # Status panel, then nudge (per Session 28 Item 1 decision). quiet = TRUE

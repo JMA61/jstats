@@ -382,12 +382,25 @@
 #                          value names a folder (relative to working
 #                          directory) used for both save target and
 #                          load search.
+#   missing.detail       - one of "totals", "per_code", "all". Governs how
+#                          much of a declared missing-value RANGE jfreq
+#                          spells out: "totals" collapses the whole band
+#                          into a single row, "per_code" (default) prints
+#                          one row per observed in-band value capped at 10,
+#                          "all" prints every observed in-band value.
+#                          Discrete declared codes always print in full at
+#                          every setting.
 .jst_options_defaults <- list(
   missing.convention   = "none",
   udm.convention.codes = c(-99, -98, -97),
   data.dir             = NULL,
-  corr.layout          = "wide"
+  corr.layout          = "wide",
+  missing.detail       = "per_code"
 )
+
+# Row cap applied to IN-BAND rows at missing.detail = "per_code". Declared
+# discrete codes are never capped -- they are the user's own declaration.
+.jst_missing_detail_cap <- 10L
 
 #' Internal helper: resolve a display toggle value
 #'
@@ -553,6 +566,68 @@
     return(global)
   }
   "wide"
+}
+
+#' Internal helper: validate and resolve the missing-value detail tier
+#'
+#' Resolves \code{jfreq()}'s \code{missing.detail} argument to one of
+#' \code{"totals"}, \code{"per_code"}, or \code{"all"}. Like
+#' \code{corr.layout} and unlike the joutput()-backed display toggles,
+#' this choice is specific to the one function that renders a
+#' missing-value breakdown per variable, so its global default lives in
+#' joptions() rather than joutput(): a per-call value wins, else the
+#' \code{missing.detail} joptions slot, else the built-in default of
+#' \code{"per_code"}.
+#'
+#' Not a platform-spec string (it names no statistical platform), so it
+#' is matched exactly, as \code{corr.layout} and
+#' \code{case.processing.detail} are.
+#'
+#' @param per_call The value of \code{jfreq()}'s \code{missing.detail}
+#'   argument: NULL (defer to joptions()), or one of \code{"totals"},
+#'   \code{"per_code"}, \code{"all"}.
+#'
+#' @return Single character token: \code{"totals"}, \code{"per_code"},
+#'   or \code{"all"}.
+#'
+#' @keywords internal
+.jst_resolve_missing_detail <- function(per_call) {
+  valid <- c("totals", "per_code", "all")
+  if (!is.null(per_call)) {
+    if (!is.character(per_call) || length(per_call) != 1 ||
+        !(per_call %in% valid)) {
+      .jst_stop_arg(arg = "missing.detail", choices = valid)
+    }
+    return(per_call)
+  }
+  global <- getOption(".jst_options_missing_detail",
+                      .jst_options_defaults$missing.detail)
+  if (!is.null(global) && length(global) == 1 && global %in% valid) {
+    return(global)
+  }
+  "per_code"
+}
+
+#' Internal helper: render one missing-value row label
+#'
+#' The established form for a missing-value row in jfreq and in
+#' \code{.jst_cps_var_rows()}: \code{-99 ["Refused"]} when the value
+#' carries a label, \code{-99 (no label)} when it does not. Shared so
+#' declared codes, Stata tags, and observed in-band values all render
+#' identically -- nothing new is invented for the in-band rows.
+#'
+#' @param code_display Character display form of the value.
+#' @param label Character label, or \code{NA} / \code{""} for none.
+#'
+#' @return A single character string.
+#'
+#' @keywords internal
+.jst_udm_row_label <- function(code_display, label) {
+  if (!is.na(label) && nzchar(label)) {
+    sprintf('%s ["%s"]', code_display, label)
+  } else {
+    sprintf('%s (no label)', code_display)
+  }
 }
 
 #' Internal helper: validate and resolve the value.id display mode

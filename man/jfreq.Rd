@@ -10,6 +10,7 @@ jfreq(
   subset = NULL,
   variable.id = NULL,
   value.id = NULL,
+  missing.detail = NULL,
   case.processing.detail = NULL
 )
 }
@@ -44,6 +45,18 @@ per-table, \code{"legend.bottom"} consolidated where multiple tables
 are produced). A no-op for variables with no value
 labels. NULL (default) defers to \code{joutput()}'s \code{value.id}
 setting. Not a logical.}
+
+\item{missing.detail}{Character or NULL. How much of a declared
+missing-value RANGE the Missing block spells out: one of
+\code{"totals"} (collapse the whole band into a single row),
+\code{"per_code"} (one row per observed in-band value, at most 10,
+with the remainder gathered into one line at the foot of the block),
+or \code{"all"} (every observed in-band value, no cap). NULL
+(default) defers to the \code{missing.detail} setting in
+\code{\link{joptions}}, whose own default is \code{"per_code"}.
+Declared discrete codes always print in full at every setting; the
+cap applies only to values reached by a range. Has no effect on a
+variable with no declared range.}
 
 \item{case.processing.detail}{Accepted for API symmetry. jfreq's
 Case Processing Summary is top-table only (no missing-data

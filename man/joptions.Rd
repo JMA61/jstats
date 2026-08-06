@@ -9,6 +9,7 @@ joptions(
   udm.convention.codes = NULL,
   data.dir = NULL,
   corr.layout = NULL,
+  missing.detail = NULL,
   quiet = FALSE
 )
 }
@@ -22,6 +23,9 @@ joptions(
 
 \item{corr.layout}{One of \code{"wide"} or \code{"stacked"}, or
 \code{NULL}. See Slots.}
+
+\item{missing.detail}{One of \code{"totals"}, \code{"per_code"}, or
+\code{"all"}, or \code{NULL}. See Slots.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, joptions() applies the
 change silently, suppressing both the status panel and the convention
@@ -81,6 +85,20 @@ variables. A per-call \code{layout} argument to \code{jcorr()}
 overrides this. It lives here rather than in \code{\link{joutput}}
 because it is specific to one function's output, not a tiered
 analysis-content toggle.}
+\item{missing.detail}{Character, length 1. One of \code{"totals"},
+\code{"per_code"}, or \code{"all"}. Default: \code{"per_code"}.
+Governs how much of a declared missing-value RANGE
+\code{\link{jfreq}} spells out in its Missing block.
+\code{"totals"} collapses the whole band into one row;
+\code{"per_code"} prints one row per observed in-band value, at
+most 10, with the remainder gathered into a single line at the
+foot of the block; \code{"all"} prints every observed in-band
+value with no cap. Declared discrete codes always print in full
+at every setting -- the cap applies only to values reached by a
+range. A per-call \code{missing.detail} argument to
+\code{jfreq()} overrides this. Like \code{corr.layout} it lives
+here rather than in \code{\link{joutput}} because it is specific
+to one function's output.}
 }
 }
 

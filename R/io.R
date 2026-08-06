@@ -696,6 +696,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'
 #' @param col A column from a data frame, possibly with UDM attributes
 #'   or Stata-style missing-value markers.
+#' @param observed Logical. When \code{TRUE}, additionally enumerate the
+#'   distinct values actually PRESENT in the column that fall inside a
+#'   declared \code{na_range}, returned as \code{range_values}. Defaults
+#'   to \code{FALSE} because that enumeration reads the column's data
+#'   (cost proportional to its length), while every other component of
+#'   the return is an attribute read. Callers that need only the
+#'   declaration -- jsave's pre-flight, jload's narrative, jconvert, the
+#'   CPS renderers -- leave it \code{FALSE} and pay nothing.
 #'
 #' @return \code{NULL} if the column has no formal UDM declarations.
 #'   Otherwise a list with:
@@ -711,10 +719,32 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'       \code{numeric} (underlying numeric value; \code{NA} for
 #'       tagged NAs), \code{tag} (tag letter for Stata; \code{NA} for
 #'       SPSS UDMs).}
+#'     \item{range_values}{Only when \code{observed = TRUE} and an
+#'       \code{na_range} is declared: a data frame of the DISTINCT
+#'       observed in-band values, same columns as \code{codes} (with
+#'       \code{source = "na_range"}), ascending by value, carrying no
+#'       counts -- consumers keep their own counting logic, exactly as
+#'       they do for \code{codes}. Values that are also declared
+#'       discretely in \code{na_values} are excluded, so the two
+#'       components never describe the same cell twice. A zero-row data
+#'       frame means the band is declared but no in-band value occurs;
+#'       \code{NULL} means the enumeration was not requested, or no
+#'       band is declared.}
 #'   }
 #'
+#' @section Why codes is not extended:
+#' \code{codes} carries DECLARATION-SLOT semantics -- consumers such as
+#' jsave's .sav pre-flight, jconvert's letter cap and its SPSS-to-Stata
+#' ordering, and jdeclare_udm's drop notice read \code{nrow(codes)} as
+#' "how many discrete codes has the user declared". Folding observed
+#' in-band values into \code{codes} would take a range-bearing column
+#' from zero declared codes to however many happen to be present, and
+#' those consumers would then refuse a file that saves correctly today.
+#' Observed values are therefore a separate component, never a longer
+#' \code{codes}.
+#'
 #' @keywords internal
-.jst_missing_info <- function(col) {
+.jst_missing_info <- function(col, observed = FALSE) {
   na_vals  <- attr(col, "na_values")
   na_range <- attr(col, "na_range")
 
@@ -765,10 +795,50 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       )
     }
 
+    # Observed in-band values (opt-in; see @param observed). This is the
+    # only part of the return that reads the column's data rather than
+    # its attributes, so it is computed only when asked for and only
+    # when a band is actually declared.
+    range_values_df <- NULL
+    if (isTRUE(observed) && !is.null(na_range) && length(na_range) == 2) {
+      lo    <- min(na_range)
+      hi    <- max(na_range)
+      x_num <- suppressWarnings(as.numeric(unclass(col)))
+      vals  <- sort(unique(x_num[!is.na(x_num) & x_num >= lo & x_num <= hi]))
+
+      # A value that is ALSO declared discretely belongs to codes, not
+      # here: reporting it in both would double-count the same cells.
+      if (!is.null(na_vals) && length(na_vals) > 0) {
+        vals <- vals[!(vals %in% suppressWarnings(as.numeric(na_vals)))]
+      }
+
+      rv_labels <- rep(NA_character_, length(vals))
+      if (!is.null(val_labs) && length(val_labs) > 0 && length(vals) > 0) {
+        numeric_labels <- suppressWarnings(as.numeric(val_labs))
+        for (i in seq_along(vals)) {
+          idx <- which(!is.na(numeric_labels) & numeric_labels == vals[i])
+          if (length(idx) > 0) rv_labels[i] <- names(val_labs)[idx[1]]
+        }
+      }
+
+      # trim = TRUE: format() pads a multi-value vector to a common
+      # width, which would put stray leading spaces in front of the
+      # shorter codes when these strings are rendered as row labels.
+      range_values_df <- data.frame(
+        code    = format(vals, trim = TRUE),
+        label   = rv_labels,
+        source  = rep("na_range", length(vals)),
+        numeric = as.numeric(vals),
+        tag     = rep(NA_character_, length(vals)),
+        stringsAsFactors = FALSE
+      )
+    }
+
     list(
       representation = "spss",
       na_range       = if (!is.null(na_range) && length(na_range) == 2) na_range else NULL,
-      codes          = codes_df
+      codes          = codes_df,
+      range_values   = range_values_df
     )
 
   } else {
@@ -800,7 +870,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     list(
       representation = "stata",
       na_range       = NULL,
-      codes          = codes_df
+      codes          = codes_df,
+      range_values   = NULL   # Stata form has no range declaration
     )
   }
 }

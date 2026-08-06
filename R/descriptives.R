@@ -621,12 +621,24 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
+#' @param missing.detail Character or NULL. How much of a declared
+#'   missing-value RANGE the Missing block spells out: one of
+#'   \code{"totals"} (collapse the whole band into a single row),
+#'   \code{"per_code"} (one row per observed in-band value, at most 10,
+#'   with the remainder gathered into one line at the foot of the block),
+#'   or \code{"all"} (every observed in-band value, no cap). NULL
+#'   (default) defers to the \code{missing.detail} setting in
+#'   \code{\link{joptions}}, whose own default is \code{"per_code"}.
+#'   Declared discrete codes always print in full at every setting; the
+#'   cap applies only to values reached by a range. Has no effect on a
+#'   variable with no declared range.
 #' @param case.processing.detail Accepted for API symmetry. jfreq's
 #'   Case Processing Summary is top-table only (no missing-data
 #'   breakdown), so this argument has no effect; per-variable code
 #'   detail already appears in each variable's frequency table.
 jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
-                  value.id = NULL, case.processing.detail = NULL) {
+                  value.id = NULL, missing.detail = NULL,
+                  case.processing.detail = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # vector input, or bare-symbol-as-variable-name (leading comma omitted).
@@ -647,12 +659,17 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     temp_df  <- data.frame(x = arg1$first_arg_value)
     names(temp_df) <- var_name
     return(jfreq(temp_df, !!rlang::sym(var_name), variable.id = variable.id,
-                 value.id = value.id))
+                 value.id = value.id, missing.detail = missing.detail))
   }
 
   data              <- arg1$data
   .jst_data_name    <- arg1$name
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  # Resolved once for the whole call, so every variable in a multi-variable
+  # jfreq renders its Missing block at the same granularity. Validation of a
+  # bad per-call token happens here, before any table prints.
+  detail_tier <- .jst_resolve_missing_detail(missing.detail)
 
   variables <- rlang::enquos(...)
 
@@ -818,63 +835,138 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       if (identical(mi$representation, "stata")) {
         # Stata/SAS-form: per-tag rows. haven::na_tag() distinguishes
         # lowercase (.a, .b) from uppercase (.A, .B) markers, so SAS-
-        # style declarations land in their own rows correctly.
+        # style declarations land in their own rows correctly. Tagged NAs
+        # carry no range, so missing.detail has nothing to act on here.
         tag_vec <- haven::na_tag(raw_col)
         for (i in seq_len(nrow(mi$codes))) {
           r <- mi$codes[i, ]
           row_count <- as.integer(sum(!is.na(tag_vec) & tag_vec == r$tag))
-          row_label <- if (!is.na(r$label) && nzchar(r$label)) {
-            sprintf('%s ["%s"]', r$code, r$label)
-          } else {
-            sprintf('%s (no label)', r$code)
-          }
-          udm_total <- udm_total + row_count
-          udm_rows  <- rbind(udm_rows,
-                             data.frame(Value = row_label, Freq = row_count,
-                                        stringsAsFactors = FALSE))
+          udm_rows  <- rbind(udm_rows, data.frame(
+            Value = .jst_udm_row_label(r$code, r$label),
+            Freq  = row_count,
+            stringsAsFactors = FALSE))
         }
       } else {
-        # SPSS-form: per-code rows plus optional range row. Counts come
-        # from the masking pass (udm_masked_vars$entries); a variable
+        # SPSS-form: per-code rows, plus range rows whose granularity is
+        # set by missing.detail. Counts come from the masking pass
+        # (udm_masked_vars$entries), whose `source` marker says which
+        # declaration produced each row ("code" / "range"). A variable
         # whose codes matched zero cells is absent from the bundle and its
-        # rows must still print (count 0) — mi drives that, lookup -> 0.
+        # rows must still print (count 0) -- mi drives that, lookup -> 0.
         ent <- pipeline$pipeline_counts$udm_masked_vars[[variable_name]]$entries
         code_count <- function(code_disp) {
           if (is.null(ent)) return(0L)
-          hit <- ent$count[ent$code_display == code_disp]
+          hit <- ent$count[ent$source == "code" & ent$code_display == code_disp]
           if (length(hit) == 0L) 0L else as.integer(hit[1])
         }
+
+        # (1) Declared discrete codes. These are the user's own explicit
+        # declaration, so they are never capped and never dropped.
+        code_rows <- data.frame(Value = character(0), Freq = integer(0),
+                                Sort = numeric(0), stringsAsFactors = FALSE)
         if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
           for (i in seq_len(nrow(mi$codes))) {
             r <- mi$codes[i, ]
-            row_count <- code_count(r$code)
-            row_label <- if (!is.na(r$label) && nzchar(r$label)) {
-              sprintf('%s ["%s"]', r$code, r$label)
-            } else {
-              sprintf('%s (no label)', r$code)
-            }
-            udm_total <- udm_total + row_count
-            udm_rows  <- rbind(udm_rows,
-                               data.frame(Value = row_label, Freq = row_count,
-                                          stringsAsFactors = FALSE))
+            code_rows <- rbind(code_rows, data.frame(
+              Value = .jst_udm_row_label(r$code, r$label),
+              Freq  = code_count(r$code),
+              Sort  = as.numeric(r$numeric),
+              stringsAsFactors = FALSE))
           }
         }
+
+        # (2) Range rows.
+        range_rows   <- data.frame(Value = character(0), Freq = integer(0),
+                                   Sort = numeric(0), stringsAsFactors = FALSE)
+        overflow_row <- NULL
+
         if (!is.null(mi$na_range) && length(mi$na_range) == 2L) {
-          rg          <- mi$na_range
-          # Range count is the entries row whose code_display is not one
-          # of the discrete declared codes (at most one such row).
-          range_count <- if (is.null(ent)) 0L else {
-            rr <- ent$count[!ent$code_display %in% mi$codes$code]
-            if (length(rr) == 0L) 0L else as.integer(sum(rr))
+          rg      <- mi$na_range
+          in_band <- if (is.null(ent)) NULL
+                     else ent[ent$source == "range", , drop = FALSE]
+
+          # Collapse the band into one row at "totals" always, and at
+          # "per_code" / "all" when no in-band value occurs. With nothing
+          # to enumerate, the collapsed row keeps the DECLARATION visible
+          # -- exactly as a declared discrete code prints at count 0.
+          # Without this fallback a declared band would vanish from the
+          # table entirely, so the enumerating tiers would tell the reader
+          # LESS about the declaration than "totals" does.
+          collapse_band <- identical(detail_tier, "totals") ||
+                           is.null(in_band) || nrow(in_band) == 0L
+
+          if (collapse_band) {
+            # The band's cells are exactly the "range" entries (values
+            # also declared discretely are filed under "code" and are
+            # not double-counted here).
+            range_rows <- data.frame(
+              Value = sprintf("range %s to %s", rg[1], rg[2]),
+              Freq  = if (is.null(in_band) || nrow(in_band) == 0L) 0L
+                      else as.integer(sum(in_band$count)),
+              Sort  = as.numeric(min(rg)),
+              stringsAsFactors = FALSE)
+
+          } else {
+            keep_n <- if (identical(detail_tier, "all")) nrow(in_band)
+                      else .jst_missing_detail_cap
+
+            if (nrow(in_band) > keep_n) {
+              # SELECTION (which rows survive) is independent of DISPLAY
+              # order. Labelled values rank ahead of unlabelled ones, so a
+              # labelled row is never truncated while an unlabelled one
+              # prints; within each group the ranking is by descending
+              # count. Labelled values therefore compete among themselves
+              # when they alone exceed the cap.
+              has_lab  <- !is.na(in_band$label) & nzchar(in_band$label)
+              rank_ord <- order(!has_lab, -in_band$count, in_band$numeric)
+              keep_i   <- rank_ord[seq_len(keep_n)]
+              drop_i   <- rank_ord[-seq_len(keep_n)]
+              dropped  <- in_band[drop_i, , drop = FALSE]
+              in_band  <- in_band[keep_i, , drop = FALSE]
+
+              # Foot-of-block summary. It carries the dropped cells' count
+              # so the Missing rows still sum to the variable's missing
+              # total. Worded "values in range" rather than "unlabelled
+              # values": labelled rows can be among those dropped.
+              overflow_row <- data.frame(
+                Value = sprintf("%d more %s in range", nrow(dropped),
+                                if (nrow(dropped) == 1L) "value" else "values"),
+                Freq  = as.integer(sum(dropped$count)),
+                Sort  = Inf,
+                stringsAsFactors = FALSE)
+            }
+
+            range_rows <- data.frame(
+              Value = vapply(seq_len(nrow(in_band)), function(i)
+                        .jst_udm_row_label(in_band$code_display[i],
+                                           in_band$label[i]), character(1)),
+              Freq  = as.integer(in_band$count),
+              Sort  = as.numeric(in_band$numeric),
+              stringsAsFactors = FALSE)
           }
-          row_label   <- sprintf("range %s to %s", rg[1], rg[2])
-          udm_total   <- udm_total + range_count
-          udm_rows    <- rbind(udm_rows,
-                               data.frame(Value = row_label, Freq = range_count,
-                                          stringsAsFactors = FALSE))
+        }
+
+        # (3) Assemble. At "totals" the historical layout is kept: declared
+        # codes in declaration order, then the collapsed band row. At
+        # "per_code" / "all" the whole Missing block sorts ascending by
+        # value as commercial statistical software does, so a declared
+        # discrete code can print BELOW in-band values -- deliberate.
+        combined <- rbind(code_rows, range_rows)
+        if (!identical(detail_tier, "totals") && nrow(combined) > 0L) {
+          combined <- combined[order(combined$Sort), , drop = FALSE]
+        }
+        if (!is.null(overflow_row)) combined <- rbind(combined, overflow_row)
+
+        if (nrow(combined) > 0L) {
+          udm_rows <- data.frame(Value = combined$Value, Freq = combined$Freq,
+                                 stringsAsFactors = FALSE)
         }
       }
     }
+
+    # One source for the missing subtotal, so the Valid / Missing / Total
+    # arithmetic holds however the block above was assembled.
+    udm_total <- as.integer(sum(udm_rows$Freq, na.rm = TRUE))
 
     total_na <- as.integer(sum(is.na(temp_var)))
     sys_na   <- max(0L, total_na - udm_total)

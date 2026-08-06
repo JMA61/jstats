@@ -187,7 +187,10 @@
 
   for (vname in names(data)) {
     col  <- data[[vname]]
-    info <- .jst_missing_info(col)
+    # observed = TRUE: this pass already scans every column's data to build
+    # the mask, so enumerating in-band values here costs nothing extra and
+    # keeps ONE source for both the values and their counts.
+    info <- .jst_missing_info(col, observed = TRUE)
     if (is.null(info)) next
     if (info$representation != "spss") next
 
@@ -196,15 +199,27 @@
     x_num <- suppressWarnings(as.numeric(unclass(col)))
     mask  <- rep(FALSE, length(x_num))
 
-    # Per-code entries: one row per declared na_values code (count may be
-    # 0 when a declared code is absent from the data), plus one row for
-    # the na_range when declared. code_display / label mirror
-    # .jst_missing_info()'s codes data frame so jfreq's Missing section
-    # and the future CPS per_code bottom share one per-code count source.
+    # Per-value entries: one row per declared na_values code (count may be
+    # 0 when a declared code is absent from the data), plus one row per
+    # DISTINCT OBSERVED value falling inside a declared na_range.
+    # code_display / label mirror .jst_missing_info()'s codes data frame
+    # so jfreq's Missing section and the future CPS per_code bottom share
+    # one per-value count source.
+    #
+    # `source` marks which declaration produced the row -- "code" for a
+    # discrete na_values code, "range" for an in-band value. Consumers
+    # that want the band collapsed sum the "range" rows; consumers that
+    # want it enumerated read them individually. This replaces the
+    # earlier rule that identified the range row as "whatever row is not
+    # a declared code", which was fragile the moment more than one range
+    # row could exist.
+    #
     # The aggregate n_cells keeps its prior OR-mask semantics (used for
-    # masking-activity detection / udm_active).
+    # masking-activity detection / udm_active), so the callers that read
+    # only n_cells (jcomplete, jsum, javg, the pipeline) are unaffected.
     entries <- data.frame(code_display = character(0), label = character(0),
-                          count = integer(0), stringsAsFactors = FALSE)
+                          count = integer(0), source = character(0),
+                          numeric = numeric(0), stringsAsFactors = FALSE)
 
     if (!is.null(info$codes) && nrow(info$codes) > 0L) {
       for (i in seq_len(nrow(info$codes))) {
@@ -216,21 +231,34 @@
           code_display = info$codes$code[i],
           label        = info$codes$label[i],
           count        = as.integer(sum(code_mask)),
+          source       = "code",
+          numeric      = as.numeric(cnum),
           stringsAsFactors = FALSE))
       }
     }
     if (!is.null(info$na_range) && length(info$na_range) == 2L) {
+      # The mask still covers the WHOLE declared band, not just the
+      # values that happen to occur -- masking semantics are unchanged.
       range_mask <- (!is.na(x_num) &
-                       x_num >= info$na_range[1] &
-                       x_num <= info$na_range[2])
-      mask    <- mask | range_mask
-      entries <- rbind(entries, data.frame(
-        code_display = sprintf("range %s to %s",
-                               as.character(info$na_range[1]),
-                               as.character(info$na_range[2])),
-        label        = NA_character_,
-        count        = as.integer(sum(range_mask)),
-        stringsAsFactors = FALSE))
+                       x_num >= min(info$na_range) &
+                       x_num <= max(info$na_range))
+      mask <- mask | range_mask
+
+      # range_values excludes any value that is also declared discretely,
+      # so summing the "range" rows never double-counts a "code" row.
+      rv <- info$range_values
+      if (!is.null(rv) && nrow(rv) > 0L) {
+        for (i in seq_len(nrow(rv))) {
+          rnum <- rv$numeric[i]
+          entries <- rbind(entries, data.frame(
+            code_display = rv$code[i],
+            label        = rv$label[i],
+            count        = as.integer(sum(!is.na(x_num) & x_num == rnum)),
+            source       = "range",
+            numeric      = as.numeric(rnum),
+            stringsAsFactors = FALSE))
+        }
+      }
     }
 
     n_cells <- sum(mask)

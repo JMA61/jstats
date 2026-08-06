@@ -1768,7 +1768,7 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 
   if (resolved_convention == "spss") {
     # ---------- Branch D1: SPSS canonical (numeric codes) ------------------
-    new_col <- .jst_jdeclare_udm_spss(col, parsed_codes)
+    new_col <- .jst_jdeclare_udm_spss(col, parsed_codes, var_name)
     branch  <- "spss_canonical"
 
   } else if (has_tagged) {
@@ -1794,7 +1794,14 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     # Determine which existing codes are not in the new set. For SPSS-form
     # this is numeric values; for Stata-form this is tag letters.
     if (existing_info$representation == "spss") {
-      old_codes <- as.numeric(existing_info$codes$numeric)
+      # A range-only column has codes = NULL. The notice is about discrete
+      # codes leaving the declaration; the range itself is now preserved
+      # through the SPSS branch (AUDIT-038), so there is nothing for it to
+      # report on a range-only column and the empty mask is correct rather
+      # than merely harmless. Removing or replacing a band is not something
+      # jdeclare_udm can currently be asked to do.
+      old_codes <- if (is.null(existing_info$codes)) numeric(0)
+                   else as.numeric(existing_info$codes$numeric)
       new_codes <- if (branch == "spss_canonical") {
         as.numeric(parsed_codes)
       } else {
@@ -1877,7 +1884,7 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_spss <- function(col, parsed_codes) {
+.jst_jdeclare_udm_spss <- function(col, parsed_codes, var_name) {
   # parsed_codes: named numeric vector (names = labels or "", values =
   # numeric codes). Tagged-NA elements have been ruled out upstream.
 
@@ -1893,7 +1900,31 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   if (anyDuplicated(code_vals) > 0L) {
     .jst_stop("codes contains duplicate values.", fn = "jdeclare_udm")
   }
-  if (length(code_vals) > 3L) {
+
+  # An existing range on the column narrows the discrete-code allowance
+  # from 3 to 1: SPSS accepts a range plus at most one code, and refuses
+  # the combination at declaration time rather than at save time. The
+  # legality rule here is the same one jsave's .sav pre-flight applies
+  # (a range plus more than one code), so the two can never disagree.
+  existing_range <- attr(col, "na_range")
+  has_range      <- !is.null(existing_range) && length(existing_range) == 2L
+
+  if (has_range && length(code_vals) > 1L) {
+    # Remedy names only what is reachable. Routing a RANGE-bearing column to
+    # Stata convention is a dead end -- jconvert refuses na_range columns
+    # outright ("Stata does not support range-based user-defined missing
+    # values"), so the user would be sent from one refusal to another. The
+    # no-range 3-code message below keeps its Stata pointer, where the
+    # conversion genuinely works. (S213 record; E18 in the field notes.)
+    .jst_stop("'", var_name, "' already has a missing-value range (",
+              format(min(existing_range)), " to ",
+              format(max(existing_range)),
+              "), which allows at most 1 separate code alongside it; ",
+              "you supplied ", length(code_vals), ".\n",
+              "Declare a single code alongside the range.",
+              fn = "jdeclare_udm")
+  }
+  if (!has_range && length(code_vals) > 3L) {
     .jst_stop("SPSS-style missing values are limited to 3 codes ",
               "per variable; you supplied ", length(code_vals), ".\n",
               "To declare more than 3, use Stata convention (convention = \"stata\").",
@@ -1934,11 +1965,15 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   if (length(combined_labs) == 0L) combined_labs <- NULL
 
   # Use labelled_spss to attach na_values together with labels and
-  # variable label.
+  # variable label. na_range is threaded through from the column as it
+  # stood: declaring a discrete code says nothing about an existing band,
+  # so the band survives. Omitting it here silently promoted every
+  # in-band cell back to ordinary data (AUDIT-038).
   haven::labelled_spss(
     x         = as.numeric(unclass(col)),
     labels    = combined_labs,
     na_values = code_vals,
+    na_range  = if (has_range) as.numeric(existing_range) else NULL,
     label     = attr(col, "label", exact = TRUE)
   )
 }
