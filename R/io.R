@@ -981,10 +981,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         attr(df[[vname]], "na_range")  <- NULL
 
       } else if (info$representation == "stata") {
-        # Tagged NAs already satisfy is.na() in analysis paths; conversion
-        # here is for users who want plain-NA columns (no tagged-NA metadata
-        # to round-trip back to Stata). haven::zap_missing converts tagged
-        # NAs to plain NAs while preserving labels on non-missing values.
+        # User-requested plain-NA conversion (preserve.udm = FALSE): strip
+        # the tagged-NA metadata so nothing round-trips back to Stata.
+        # haven::zap_missing converts tagged NAs to plain NAs while
+        # preserving labels on non-missing values. (The analysis pipeline's
+        # Step 0 applies the same zap on its own copy -- AUDIT-039 -- for a
+        # different reason: keeping as_factor() from reviving labelled
+        # tags as factor levels.)
         df[[vname]] <- haven::zap_missing(col)
       }
     }

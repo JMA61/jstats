@@ -820,11 +820,12 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # .jst_format_udm_narrative (shared-rendering-conventions principle,
     # Decision 7). Per-code COUNTS for SPSS-form variables come from the
     # pipeline's declared-UDM masking pass (.jst_apply_declared_udms_as_na,
-    # via pipeline$pipeline_counts$udm_masked_vars) rather than being
-    # re-counted here, so jfreq and the forthcoming CPS per_code bottom
-    # share one count source. Stata-form tagged_na variables are not
-    # masked (is.na() catches them natively), so that branch still counts
-    # via haven::na_tag() on the raw column.
+    # via pipeline$pipeline_counts$udm_spss_masked_vars) rather than being
+    # re-counted here, so both readers share one count source. Stata/SAS-
+    # form tags are counted via haven::na_tag() on raw_col -- the ORIGINAL
+    # pre-pipeline column (arg1$data below) -- which is why Step 0's
+    # zapping of tags on the analysis copy (AUDIT-039) leaves these rows
+    # intact: the count source sits upstream of the masking.
     raw_col   <- arg1$data[[variable_name]]
     mi        <- .jst_missing_info(raw_col)
     udm_rows  <- data.frame(Value = character(0), Freq = integer(0),
@@ -849,11 +850,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       } else {
         # SPSS-form: per-code rows, plus range rows whose granularity is
         # set by missing.detail. Counts come from the masking pass
-        # (udm_masked_vars$entries), whose `source` marker says which
+        # (udm_spss_masked_vars$entries), whose `source` marker says which
         # declaration produced each row ("code" / "range"). A variable
         # whose codes matched zero cells is absent from the bundle and its
         # rows must still print (count 0) -- mi drives that, lookup -> 0.
-        ent <- pipeline$pipeline_counts$udm_masked_vars[[variable_name]]$entries
+        ent <- pipeline$pipeline_counts$udm_spss_masked_vars[[variable_name]]$entries
         code_count <- function(code_disp) {
           if (is.null(ent)) return(0L)
           hit <- ent$count[ent$source == "code" & ent$code_display == code_disp]

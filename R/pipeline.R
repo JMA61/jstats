@@ -678,7 +678,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
         valid_vars <- cs$vars[cs$vars %in% names(df)]
         if (length(valid_vars) > 0L) {
           n_total    <- nrow(df)
-          # Mask SPSS-form UDMs first so the live count matches the analysis
+          # Mask declared UDMs first so the live count matches the analysis
           # pipeline (Cross-cutting 5); see the setup-summary note below.
           masked     <- .jst_apply_declared_udms_as_na(
             df[, valid_vars, drop = FALSE])$data
@@ -805,13 +805,14 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 
   .jst_check_vars(data, variable_names, .jst_data_name, default_used = .jst_default_used)
 
-  # Compute summary. Mask declared SPSS-form UDMs (na_values / na_range) to NA on
+  # Compute summary. Mask declared UDMs to NA on
   # an analysis-only copy first, so this listwise diagnostic matches what the
   # analysis pipeline will actually exclude (Cross-cutting 5). complete.cases()
   # does not honour haven_labelled_spss na_values; is.na() does -- deriving both
   # the Missing column and the complete-case count from the masked copy keeps them
-  # consistent. Stata/SAS tagged-NA values satisfy is.na() natively and are not
-  # touched by the helper, so they already flow through complete.cases() correctly.
+  # consistent. Stata/SAS tagged-NA cells are likewise zapped to plain NA by the
+  # helper (AUDIT-039); they were already is.na()-TRUE, so this count is
+  # unchanged -- the zap exists for the label-driven conversion sites.
   n_total <- nrow(data)
   masked  <- .jst_apply_declared_udms_as_na(
     data[, variable_names, drop = FALSE])$data

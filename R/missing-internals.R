@@ -155,31 +155,64 @@
 # -----------------------------------------------------------------------------
 # .jst_apply_declared_udms_as_na()
 #
-# Pipeline-step helper invoked at .jst_apply_pipeline's Step 0. For each
-# column whose formal UDM information (as surfaced by .jst_missing_info)
-# uses SPSS representation, masks declared na_values codes and na_range
-# cells to NA on the analysis copy. The underlying data frame in the user's
-# workspace is unchanged — na_values / na_range metadata stays attached to
-# the column so round-trip fidelity through jsave is preserved. Stata-form
-# tagged_na columns are not touched; tagged NAs satisfy is.na() natively at
-# the C level and downstream code catches them without intervention.
+# Pipeline-step helper invoked at .jst_apply_pipeline's Step 0 (and called
+# directly by the listwise diagnostics and jsum/javg, which need the same
+# masking without the pipeline's row filtering). Masks every column's
+# DECLARED user-defined missing values to NA on the analysis copy; the
+# user's data frame in the workspace is never touched. Treatment differs
+# by representation, deliberately:
+#
+#   SPSS form (na_values / na_range attributes on haven_labelled_spss):
+#   declared codes and in-band cells are overwritten with NA; the
+#   na_values / na_range ATTRIBUTES STAY ATTACHED. The declaration is
+#   metadata separate from the data, so after masking it still truthfully
+#   describes what those codes mean on this variable.
+#
+#   Stata/SAS form (tagged NAs; lowercase .a.. and uppercase .A.. markers
+#   alike): haven::zap_missing() converts tagged cells to plain NA and
+#   removes the value labels attached to the tags. No keep-the-declaration
+#   option exists on this side: a tag IS the declaration (it lives in the
+#   cell, not in an attribute), so blanking the cell destroys it either
+#   way, and labels left behind would be orphans pointing at markers no
+#   longer present in the data. zap_missing() is the package's house
+#   treatment for this shape (matches .jst_handle_udms()'s Stata branch).
+#
+# WHY tagged NAs are masked at all (AUDIT-039): tagged cells already
+# satisfy is.na(), so every count, N, and complete.cases() result is
+# correct without intervention -- but LABEL-DRIVEN conversion downstream
+# does not go through is.na(). haven::as_factor() maps a labelled tag onto
+# its label as an ordinary factor level, resurrecting declared-missing
+# cases as their own category at the analysis functions' and plot helpers'
+# conversion sites (jt mis-refused; jaov and jcrosstab ran silently wrong
+# with the CPS contradicting the printed table). Zapping here protects
+# every such site at one point. The fix is count-neutral by construction:
+# tagged cells were is.na()-TRUE before and are plain NA after.
 #
 # Replaces .jst_preprocess_na (retired in v0.9.5) per Cross-cutting Decision
 # 5 of JStats_Missing_Values_Reference.txt Part 4.
 #
 # Returns a list with:
 #   data      - the modified analysis copy
-#   converted - a named list of per-variable entries. Each element is
+#   converted - per-variable masking detail, SPSS FORM ONLY (deliberate --
+#               see below). A named list; each element is
 #               list(entries, n_cells) where entries is a data.frame with
 #               columns code_display, label, count (one row per declared
-#               na_values code, count possibly 0; plus one row for the
-#               na_range when declared), and n_cells is the aggregate
-#               OR-mask count. Consumed by jfreq's Missing section for
-#               per-code counts and by the (forthcoming) CPS per_code
-#               bottom; n_cells drives udm_active.
+#               na_values code, count possibly 0; plus one row per distinct
+#               observed in-band value when a na_range is declared), and
+#               n_cells is the aggregate OR-mask count. Consumed by jfreq's
+#               Missing section for per-code counts; n_cells drives
+#               udm_spss_active.
+#
+#               converted deliberately records NOTHING for Stata/SAS
+#               columns. jfreq's per-tag Missing rows count tags off the
+#               ORIGINAL pre-pipeline frame (haven::na_tag on raw_col) and
+#               the Case Processing Summary reads the pre-pipeline
+#               snapshot; recording tag entries here would create a
+#               second, unsynchronized source for numbers that already
+#               have one.
 # -----------------------------------------------------------------------------
 
-#' Internal helper: mask declared SPSS-form UDM cells to NA on analysis copy
+#' Internal helper: mask declared UDM cells to NA on the analysis copy
 #'
 #' @keywords internal
 .jst_apply_declared_udms_as_na <- function(data) {
@@ -192,7 +225,16 @@
     # keeps ONE source for both the values and their counts.
     info <- .jst_missing_info(col, observed = TRUE)
     if (is.null(info)) next
-    if (info$representation != "spss") next
+
+    if (info$representation == "stata") {
+      # Stata/SAS-form (lower- and uppercase tags alike): zap tagged cells
+      # to plain NA and drop their labels, so downstream as_factor() cannot
+      # revive a labelled tag as a factor level (AUDIT-039). Count-neutral;
+      # deliberately records nothing in `converted` (see banner above).
+      data[[vname]] <- haven::zap_missing(col)
+      next
+    }
+    # Only SPSS representation remains (.jst_missing_info returns no other).
 
     # unclass() bypasses vctrs cast issues — see the matching note in
     # .jst_detect_suspicious_values() and .jst_handle_udms() for context.
@@ -215,7 +257,7 @@
     # row could exist.
     #
     # The aggregate n_cells keeps its prior OR-mask semantics (used for
-    # masking-activity detection / udm_active), so the callers that read
+    # masking-activity detection / udm_spss_active), so the callers that read
     # only n_cells (jcomplete, jsum, javg, the pipeline) are unaffected.
     entries <- data.frame(code_display = character(0), label = character(0),
                           count = integer(0), source = character(0),

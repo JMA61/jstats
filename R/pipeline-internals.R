@@ -114,13 +114,16 @@
 
   # -- Step 0: declared UDM masking on the analysis copy --------------------
   # Mask values declared as user-defined missing values (UDMs) to NA on a
-  # copy of the data frame used for this analysis. The user's data frame in
-  # the workspace is unchanged — na_values / na_range metadata stays
-  # attached so round-trip fidelity through jsave is preserved. Stata-form
-  # tagged_na values are not touched here; they satisfy is.na() natively at
-  # the C level. Replaces the former auto-NA-by-label mechanism
-  # (.jst_preprocess_na, retired in v0.9.5) per Cross-cutting Decision 5 of
-  # JStats_Missing_Values_Reference.txt Part 4.
+  # copy of the data frame used for this analysis; the user's workspace
+  # data frame is unchanged. SPSS-form declarations (na_values / na_range)
+  # keep their attributes attached; Stata/SAS-form tagged NAs are zapped
+  # (cells to plain NA, tag labels removed) so haven::as_factor() at the
+  # downstream conversion sites cannot revive a labelled tag as a factor
+  # level (AUDIT-039). Counts are unaffected either way: tagged cells
+  # already satisfied is.na(). Full rationale at
+  # .jst_apply_declared_udms_as_na(). Replaces the former auto-NA-by-label
+  # mechanism (.jst_preprocess_na, retired in v0.9.5) per Cross-cutting
+  # Decision 5 of JStats_Missing_Values_Reference.txt Part 4.
   #
   # The whole-DF YELLOW notice that previously announced UDM masking was
   # dropped in v0.9.6 — the information is now surfaced per-variable via
@@ -223,12 +226,15 @@
     filter_active    = filter_active,
     filter_expr      = filter_expr_str,
     subset_expr      = subset_expr_str,
-    # UDM masking activity from Step 0. udm_active = TRUE when at least
-    # one variable had declared UDMs masked to NA on the analysis copy.
-    # udm_masked_vars carries the per-variable detail (entries + n_cells)
-    # for downstream display (Case Processing Summary, etc.).
-    udm_active       = length(udm_result$converted) > 0L,
-    udm_masked_vars  = udm_result$converted,
+    # SPSS-form UDM masking activity from Step 0. udm_spss_active = TRUE
+    # when at least one variable had declared SPSS-form codes/ranges masked
+    # on the analysis copy; udm_spss_masked_vars carries the per-variable
+    # detail (entries + n_cells) consumed by jfreq's Missing section.
+    # SPSS-only is deliberate: Stata/SAS tag zapping is count-neutral and
+    # per-tag display counts come from the pre-pipeline frame -- one count
+    # source per number (see the helper's banner).
+    udm_spss_active       = length(udm_result$converted) > 0L,
+    udm_spss_masked_vars  = udm_result$converted,
     # CPS rendering inputs (Steps 3-6). pre_pipeline_data holds the original
     # rows with UDM codes intact; surviving_ids are the original row numbers
     # that survived the pipeline (the analysis pool). The renderer derives
@@ -308,8 +314,8 @@
     filter_active      = pipeline_counts$filter_active,
     filter_expr        = pipeline_counts$filter_expr,
     subset_expr        = pipeline_counts$subset_expr,
-    udm_active         = pipeline_counts$udm_active,
-    udm_masked_vars    = pipeline_counts$udm_masked_vars,
+    udm_spss_active         = pipeline_counts$udm_spss_active,
+    udm_spss_masked_vars    = pipeline_counts$udm_spss_masked_vars,
     pre_pipeline_data  = pipeline_counts$pre_pipeline_data,
     surviving_ids      = pipeline_counts$surviving_ids,
     transform_na       = transform_na

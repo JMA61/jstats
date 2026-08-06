@@ -2,11 +2,11 @@
 % Please edit documentation in R/missing-internals.R
 \name{.jst_apply_declared_udms_as_na}
 \alias{.jst_apply_declared_udms_as_na}
-\title{Internal helper: mask declared SPSS-form UDM cells to NA on analysis copy}
+\title{Internal helper: mask declared UDM cells to NA on the analysis copy}
 \usage{
 .jst_apply_declared_udms_as_na(data)
 }
 \description{
-Internal helper: mask declared SPSS-form UDM cells to NA on analysis copy
+Internal helper: mask declared UDM cells to NA on the analysis copy
 }
 \keyword{internal}

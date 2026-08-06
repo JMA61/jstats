@@ -221,10 +221,10 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   # analysis-only copy BEFORE stripping the haven class, so declared
   # missing codes (e.g. -98) are excluded rather than summed as literal
   # data. The user's data frame is unchanged (na_values / na_range stay
-  # attached for round-trip fidelity). Stata-form tagged NAs need no
-  # masking -- they satisfy is.na() natively and survive
-  # .jst_as_numeric() as NA, so the non-missing count already excludes
-  # them. Applies the SPSS-UDM auto-conversion helper directly rather
+  # attached for round-trip fidelity). Stata-form tagged NAs are zapped
+  # to plain NA by the same helper (AUDIT-039); they were already
+  # is.na()-TRUE, so the non-missing count is unchanged either way.
+  # Applies the UDM auto-conversion helper directly rather
   # than routing through .jst_apply_pipeline, whose jsubset/jcomplete
   # filtering would drop rows and misalign this row-wise result with
   # the data frame.
@@ -487,10 +487,10 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   # analysis-only copy BEFORE stripping the haven class, so declared
   # missing codes (e.g. -98) are excluded rather than summed as literal
   # data. The user's data frame is unchanged (na_values / na_range stay
-  # attached for round-trip fidelity). Stata-form tagged NAs need no
-  # masking -- they satisfy is.na() natively and survive
-  # .jst_as_numeric() as NA, so the non-missing count already excludes
-  # them. Applies the SPSS-UDM auto-conversion helper directly rather
+  # attached for round-trip fidelity). Stata-form tagged NAs are zapped
+  # to plain NA by the same helper (AUDIT-039); they were already
+  # is.na()-TRUE, so the non-missing count is unchanged either way.
+  # Applies the UDM auto-conversion helper directly rather
   # than routing through .jst_apply_pipeline, whose jsubset/jcomplete
   # filtering would drop rows and misalign this row-wise result with
   # the data frame.
