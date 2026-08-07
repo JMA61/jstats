@@ -457,7 +457,17 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #' @keywords internal
 .jst_jdeclare_udm_convention_error <- function(parsed_codes,
-                                               data_name, var_name) {
+                                               data_name, var_name, col) {
+
+  # S218 rewrite. Sole caller is the hoisted tagged-token gate, and the
+  # sole case is a column that carries SPSS-STYLE declarations while the
+  # codes vector names Stata-style markers. The column's own form drives
+  # the refusal -- the convention setting is irrelevant here, so the
+  # message must not blame it or suggest switching it (the pre-S218
+  # wording did both; following that advice dead-ended on the
+  # convention-conflict guard). Two genuine remedies: label the numeric
+  # codes the column already declares, or jconvert() the column to
+  # Stata form first.
 
   # --- Identify tagged-NA elements ------------------------------------------
   tags_in_codes <- haven::na_tag(parsed_codes)
@@ -465,127 +475,135 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   all_tags      <- sort(unique(tags_in_codes[tag_idx]))
   first_tag     <- all_tags[1]
 
+  na_vals <- attr(col, "na_values")
+  na_vals <- if (is.null(na_vals)) numeric(0)
+             else as.numeric(na_vals)
+  na_rng  <- attr(col, "na_range")
+  has_rng <- !is.null(na_rng) && length(na_rng) == 2L
+
+  decl_disp <- character(0)
+  if (length(na_vals) > 0L) {
+    decl_disp <- c(decl_disp,
+                   paste0("na_values: ", paste(format(na_vals, trim = TRUE),
+                                               collapse = ", ")))
+  }
+  if (has_rng) {
+    decl_disp <- c(decl_disp, sprintf("na_range: [%s, %s]",
+                                      format(min(na_rng)),
+                                      format(max(na_rng))))
+  }
+  decl_disp <- paste(decl_disp, collapse = "; ")
+
   # --- Verbosity gate -------------------------------------------------------
   output_level <- getOption(".jst_output_level", "standard")
 
   if (identical(output_level, "minimal")) {
     return(paste0(
       "codes for ", var_name, " contains '.", first_tag,
-      "', a Stata-style missing-value marker.\n",
-      "The package is currently set to SPSS convention.\n",
-      "Run joptions(missing.convention = \"stata\") to switch."
+      "', a Stata-style missing-value marker, but ", var_name,
+      " carries SPSS-style missing values. ",
+      "Name the numeric codes directly, or convert first with ",
+      data_name, " <- jconvert(", data_name, ", to = \"stata\")."
     ))
   }
 
   # --- Standard / full block ------------------------------------------------
 
-  letter_to_code <- .jst_tag_letters_to_codes(all_tags)
-  unmapped       <- attr(letter_to_code, "unmapped")
-  if (is.null(unmapped)) unmapped <- character(0)
-  mapped_tags    <- setdiff(all_tags, unmapped)
-
-  # Rebuild the codes vector with tagged-NA elements substituted by
-  # their SPSS-form numeric equivalents. Unmapped tags drop out of the
-  # rebuilt call (no numeric equivalent available); the cap note below
-  # explains.
-  format_num <- function(x) {
-    if (is.na(x)) return("NA")
-    if (x == floor(x)) format(as.integer(x)) else format(x)
-  }
-
-  rebuilt_parts <- character(0)
-  for (i in seq_along(parsed_codes)) {
-    val <- parsed_codes[i]
-    lbl <- names(parsed_codes)[i]
-    if (i %in% tag_idx) {
-      this_tag <- tags_in_codes[i]
-      if (this_tag %in% unmapped) next   # drop unmapped tagged elements
-      code <- letter_to_code[this_tag]
-      val_render <- format_num(code)
-    } else {
-      val_render <- format_num(as.numeric(val))
-    }
-    if (is.null(lbl) || !nzchar(lbl)) {
-      rebuilt_parts <- c(rebuilt_parts, val_render)
-    } else {
-      # Quote labels that need it; backtick labels containing spaces or
-      # other syntax-sensitive characters to keep the rebuilt call
-      # syntactically valid R.
-      lbl_render <- if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", lbl)) {
-        lbl
-      } else {
-        paste0("`", lbl, "`")
-      }
-      rebuilt_parts <- c(rebuilt_parts,
-                         paste0(lbl_render, " = ", val_render))
-    }
-  }
-
-  # Compose the rewritten jdeclare_udm call.
-  if (length(rebuilt_parts) > 1L) {
-    codes_arg <- paste0("c(", paste(rebuilt_parts, collapse = ", "), ")")
-  } else if (length(rebuilt_parts) == 1L) {
-    # If the single remaining element has a name, keep the c() wrapper
-    # so the name survives. Otherwise a bare scalar is fine.
-    if (grepl(" = ", rebuilt_parts)) {
-      codes_arg <- paste0("c(", rebuilt_parts, ")")
-    } else {
-      codes_arg <- rebuilt_parts
-    }
-  } else {
-    codes_arg <- "c()"
-  }
-
-  jdeclare_line <- paste0("    jdeclare_udm(", data_name, ", ", var_name,
-                          ", codes = ", codes_arg, ")")
-
-  # Assemble the message.
   msg_parts <- c(
     paste0("codes for ", var_name, " contains '.", first_tag,
-           "', a Stata-style missing-value marker."),
-    "The package is currently set to SPSS convention, which uses numeric codes.",
-    "Here is the equivalent declaration in SPSS style:",
-    "",
-    jdeclare_line,
-    "",
-    paste0("The numeric code",
-           if (length(mapped_tags) > 1L) "s" else "",
-           " above came from joptions(\"udm.convention.codes\").")
-  )
+           "', a Stata-style missing-value marker, but ", var_name,
+           " carries SPSS-style missing values (", decl_disp, ")."))
 
-  # Cap note: appended when one or more tags exceeded the convention
-  # code count.
-  if (length(unmapped) > 0L) {
-    n_tags  <- length(all_tags)
-    n_codes <- length(letter_to_code)
-    unmapped_render <- paste0("'.", unmapped, "'", collapse = ", ")
-    were_was <- if (length(unmapped) == 1L) "was" else "were"
-    # SPSS-side cap on udm.convention.codes (joptions enforces length 1-3).
-    # Above the cap, adding a code cannot cover the markers, so steer to
-    # Stata convention (the switch line below) rather than advising a code.
-    if (n_tags > 3L) {
+  # Equivalent-call block: substitute each tagged element with the
+  # column's own declared codes, matched largest-magnitude-first (ties
+  # more-negative-first) -- the same Q6 ordering jconvert() uses to
+  # letter these codes, so .a here corresponds to the marker that
+  # jconvert(to = "stata") would in fact produce for that code. Range-
+  # only columns have no discrete codes to name, so the block is
+  # skipped and the jconvert remedy below carries the message alone
+  # (jconvert enumerates the range).
+  unmapped <- character(0)
+  if (length(na_vals) > 0L) {
+    sorted_codes  <- na_vals[order(-abs(na_vals), na_vals)]
+    tag_positions <- match(all_tags, letters)
+    letter_to_code <- stats::setNames(
+      ifelse(!is.na(tag_positions) & tag_positions <= length(sorted_codes),
+             sorted_codes[tag_positions], NA_real_),
+      all_tags)
+    unmapped <- all_tags[is.na(letter_to_code)]
+
+    format_num <- function(x) {
+      if (is.na(x)) return("NA")
+      if (x == floor(x)) format(as.integer(x)) else format(x)
+    }
+
+    rebuilt_parts <- character(0)
+    for (i in seq_along(parsed_codes)) {
+      val <- parsed_codes[i]
+      lbl <- names(parsed_codes)[i]
+      if (i %in% tag_idx) {
+        this_tag <- tags_in_codes[i]
+        if (this_tag %in% unmapped) next   # no column code to substitute
+        val_render <- format_num(letter_to_code[[this_tag]])
+      } else {
+        val_render <- format_num(as.numeric(val))
+      }
+      if (is.null(lbl) || !nzchar(lbl)) {
+        rebuilt_parts <- c(rebuilt_parts, val_render)
+      } else {
+        lbl_render <- if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", lbl)) {
+          lbl
+        } else {
+          paste0("`", lbl, "`")
+        }
+        rebuilt_parts <- c(rebuilt_parts,
+                           paste0(lbl_render, " = ", val_render))
+      }
+    }
+
+    if (length(rebuilt_parts) > 0L) {
+      if (length(rebuilt_parts) > 1L) {
+        codes_arg <- paste0("c(", paste(rebuilt_parts, collapse = ", "), ")")
+      } else if (grepl(" = ", rebuilt_parts)) {
+        codes_arg <- paste0("c(", rebuilt_parts, ")")
+      } else {
+        codes_arg <- rebuilt_parts
+      }
+      msg_parts <- c(msg_parts,
+        "To label the declared numeric codes, name them directly:",
+        "",
+        paste0("    jdeclare_udm(", data_name, ", ", var_name,
+               ", codes = ", codes_arg, ")"),
+        "",
+        paste0("The numeric code",
+               if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
+               " above ",
+               if (sum(!is.na(letter_to_code)) > 1L) "are" else "is",
+               " ", var_name, "'s declared missing value",
+               if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
+               ", matched largest magnitude first (the ordering ",
+               "jconvert() uses)."))
+    }
+
+    if (length(unmapped) > 0L) {
+      unmapped_render <- paste0("'.", unmapped, "'", collapse = ", ")
+      were_was <- if (length(unmapped) == 1L) "was" else "were"
       msg_parts <- c(msg_parts, "",
-        paste0("Note: `codes` uses ", n_tags, " Stata-style markers (",
+        paste0("Note: `codes` uses ", length(all_tags),
+               " Stata-style markers (",
                paste0(".", all_tags, collapse = ", "),
-               ") but SPSS convention supports at most 3 user-defined missing ",
-               "values; ", unmapped_render, " ", were_was,
-               " not substituted in the example above.")
-      )
-    } else {
-      msg_parts <- c(msg_parts, "",
-        paste0("Note: `codes` uses ", n_tags, " Stata-style markers (",
-               paste0(".", all_tags, collapse = ", "),
-               ") but joptions(\"udm.convention.codes\") currently holds only ",
-               n_codes, " values; ", unmapped_render, " ", were_was,
-               " not substituted in the example above."),
-        "To add another code, run something like joptions(udm.convention.codes = c(-99, -98, -97))."
-      )
+               ") but ", var_name, " declares only ", length(na_vals),
+               " numeric code", if (length(na_vals) > 1L) "s" else "",
+               "; ", unmapped_render, " ", were_was,
+               " not substituted in the example above."))
     }
   }
 
   msg_parts <- c(msg_parts, "",
-    "To switch to Stata convention instead, run:",
-    "joptions(missing.convention = \"stata\").")
+    "To use Stata-style markers instead, convert the column first:",
+    "",
+    paste0("    ", data_name, " <- jconvert(", data_name,
+           ", to = \"stata\")"))
 
   paste(msg_parts, collapse = "\n")
 }
@@ -1428,9 +1446,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'       names are the labels. E.g.
 #'       \code{codes = c(Refused = -99, `Don't know` = -98)}.}
 #'   }
-#'   Under Stata convention, code values may be Stata-style missing-value markers
-#'   created with \code{haven::tagged_na()}, e.g.
-#'   \code{codes = c(Refused = tagged_na("a"))}.
+#'   On a column that already carries Stata-style missing values, codes
+#'   may name the markers directly as quoted tokens, e.g.
+#'   \code{codes = c(Refused = ".a")} -- a token \code{".a"} means the
+#'   \code{.a} marker. Tokens are refused on columns with no Stata-style
+#'   missing values to label (see the Missing-Values Convention section).
 #' @param labels Optional. A quoted string in the form
 #'   \code{"value=label; value=label"} pairing labels with codes
 #'   (Option A only). Must be \code{NULL} when \code{codes} is named
@@ -1469,8 +1489,26 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' SPSS-form UDMs). The data cells themselves are unchanged; only the
 #' metadata that flags certain values as missing is added.
 #'
-#' Under Stata convention with Stata-style missing-value input, the function attaches
-#' value labels to existing Stata-style missing-value cells on the column.
+#' Under Stata convention with Stata-style missing-value input (quoted
+#' tokens such as \code{".a"}), the function attaches value labels to
+#' the column's existing Stata-style missing-value markers. This
+#' requires the column to already carry Stata-style missing values --
+#' either tagged cells, or markers previously declared through value
+#' labels (a marker may be labeled before any cases carry it, so a
+#' declaration made early in data collection is complete for later
+#' data). Tokens against a column with no Stata-style missing values
+#' are refused identically under every convention source: on a plain
+#' column the error points at \code{jrecode()} (which creates tagged
+#' cells from numeric codes); on a column carrying SPSS-style
+#' declarations it points at \code{jconvert()}.
+#'
+#' Note that on a plain numeric column with plain numeric codes and no
+#' \code{convention} argument, the resolved convention decides the
+#' outcome: under SPSS convention the numbers stay in the cells and are
+#' flagged missing; under Stata convention the matching cells are
+#' converted to markers and the numbers leave the data. This is the one
+#' place \code{joptions(missing.convention = ...)} changes what happens
+#' to data (see the examples).
 #'
 #' Under Stata convention with numeric input, the function converts
 #' matching cells to Stata-style missing-value markers (Session 30 design lock). The
@@ -1526,15 +1564,27 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'                     codes = c("Refused" = -99, "Don't know" = -98))
 #'
 #' # Stata-style: label Stata-style missing-value cells. The jrecode() call
-#' # turns the literal codes into tagged cells; jdeclare_udm() labels them.
+#' # turns the literal codes into tagged cells; jdeclare_udm() labels them
+#' # by naming the markers as quoted tokens.
 #' df4 <- clinic
 #' df4$Mood2 <- jrecode(df4, MoodRating,
 #'                      map = "-99=.a; -98=.b; else=copy",
 #'                      convention = "stata")
 #' jdeclare_udm(df4, Mood2,
-#'              codes = c("Refused"    = haven::tagged_na("a"),
-#'                        "Don't know" = haven::tagged_na("b")),
+#'              codes = c("Refused" = ".a", "Don't know" = ".b"),
 #'              modify = TRUE)
+#'
+#' \dontrun{
+#' # The same neutral call -- plain numeric codes, no convention argument,
+#' # plain column -- forks on joptions(missing.convention = ...):
+#' joptions(missing.convention = "spss")
+#' df5 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+#' # -99 stays in the cells, flagged as missing (SPSS-form declaration)
+#'
+#' joptions(missing.convention = "stata")
+#' df6 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+#' # -99 cells become the .a marker; the number -99 leaves the data
+#' }
 #'
 #' @export
 jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
@@ -1779,6 +1829,54 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   existing_conv <- if (!is.null(existing_info)) existing_info$representation
                    else NULL
 
+  # Stata-form evidence check (S218). .jst_missing_info detects tagged
+  # CELLS; a forward-declared column (tagged value labels, no tagged
+  # cells yet -- e.g. a marker declared before any cases carry it) is
+  # Stata-form too, and must resolve as such: otherwise an SPSS-resolved
+  # convention would route its tagged tokens into the numeric branch.
+  col_has_stata_form <- FALSE
+  if (is.double(col)) {
+    if (any(!is.na(haven::na_tag(col)))) {
+      col_has_stata_form <- TRUE
+    } else if (haven::is.labelled(col)) {
+      vl_probe <- labelled::val_labels(col)
+      if (!is.null(vl_probe) && length(vl_probe) > 0L &&
+          any(!is.na(haven::na_tag(vl_probe)))) {
+        col_has_stata_form <- TRUE
+      }
+    }
+  }
+  if (is.null(existing_conv) && col_has_stata_form) existing_conv <- "stata"
+
+  # --- Sign-off 3 (hoisted S218): tagged tokens need a Stata-form column ---
+  # Runs BEFORE convention resolution, so the outcome is identical under
+  # every convention source (per-call argument, joptions setting, or the
+  # default). jdeclare_udm labels existing Stata-style missings; it does
+  # not create them, so tagged tokens against a column with no Stata-form
+  # representation are refused whatever the convention says. Previously
+  # this check lived inside the SPSS-resolved arm only, so a Stata-resolved
+  # convention silently attached labels to markers absent from the column.
+  if (has_tagged && !col_has_stata_form) {
+    if (!is.null(existing_conv) && existing_conv == "spss") {
+      # Column carries SPSS-style declarations: point at the column's own
+      # codes and at jconvert (S218 builder rewrite).
+      err_msg <- .jst_jdeclare_udm_convention_error(
+        parsed_codes = parsed_codes,
+        data_name    = data_name,
+        var_name     = var_name,
+        col          = col
+      )
+      .jst_stop(err_msg)
+    }
+    # Plain column: Stata-style tokens have no tagged cells to label.
+    # Point at the tools that create them.
+    .jst_stop("'", var_name, "' has no tagged missing values to label, so ",
+         "Stata-style tokens (.a-.z) cannot be applied here.\n",
+         "To turn numeric codes into tagged missings, use jrecode() (for ",
+         "example -99=.a); or declare the numbers directly with ",
+         "codes = c(-99).")
+  }
+
   # --- Sign-off 2: per-call convention vs existing column UDM conflict -----
   if (!is.null(convention) && !is.null(existing_conv) &&
       existing_conv != convention) {
@@ -1794,27 +1892,6 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     per_call          = convention,
     column_convention = existing_conv
   )
-
-  # --- Sign-off 3 / Branch D2: SPSS-resolved convention + tagged-NA input --
-  if (resolved_convention == "spss" && has_tagged) {
-    if (is.null(existing_conv)) {
-      # Plain column with no existing convention: Stata-style tokens have no
-      # tagged cells to label (jdeclare_udm labels existing tagged missings,
-      # it does not create them). Point at the tools that do.
-      .jst_stop("'", var_name, "' has no tagged missing values to label, so ",
-           "Stata-style tokens (.a-.z) cannot be applied here.\n",
-           "To turn numeric codes into tagged missings, use jrecode() (for ",
-           "example -99=.a); or declare the numbers directly with ",
-           "codes = c(-99).")
-    }
-    # Column already carries SPSS-style missing values: keep the guard.
-    err_msg <- .jst_jdeclare_udm_convention_error(
-      parsed_codes = parsed_codes,
-      data_name    = data_name,
-      var_name     = var_name
-    )
-    .jst_stop(err_msg)
-  }
 
   # ==========================================================================
   #  Branch dispatch
@@ -1866,10 +1943,25 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     } else {
       # existing is Stata-form
       old_tags <- existing_info$codes$tag
-      new_tags <- if (branch == "stata_canonical") {
-        as.character(haven::na_tag(parsed_codes))
-      } else if (branch == "stata_conversion") {
-        conversion_info$tag_letters
+      new_tags <- if (branch %in% c("stata_canonical", "stata_conversion")) {
+        # Compare against the column's actual resulting state -- tags
+        # present in cells or declared through value labels -- not
+        # against the tokens named in this call. The Stata-side branches
+        # have keep-semantics (a marker absent from the call is
+        # untouched, not dropped), so a call-list comparison falsely
+        # reported preserved markers as dropped (S218 fix; surfaced by
+        # the forward-declaration pattern, where each call names only
+        # the new marker).
+        nt <- haven::na_tag(new_col)
+        nt <- nt[!is.na(nt)]
+        if (haven::is.labelled(new_col)) {
+          vl_new <- labelled::val_labels(new_col)
+          if (!is.null(vl_new) && length(vl_new) > 0L) {
+            lt <- haven::na_tag(vl_new)
+            nt <- c(nt, lt[!is.na(lt)])
+          }
+        }
+        unique(nt)
       } else {
         # branch ended up SPSS; everything Stata-side is dropped
         old_tags
@@ -1964,12 +2056,13 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   has_range      <- !is.null(existing_range) && length(existing_range) == 2L
 
   if (has_range && length(code_vals) > 1L) {
-    # Remedy names only what is reachable. Routing a RANGE-bearing column to
-    # Stata convention is a dead end -- jconvert refuses na_range columns
-    # outright ("Stata does not support range-based user-defined missing
-    # values"), so the user would be sent from one refusal to another. The
-    # no-range 3-code message below keeps its Stata pointer, where the
-    # conversion genuinely works. (S213 record; E18 in the field notes.)
+    # Remedy scope note. This message deliberately names no Stata pointer
+    # (S213 record; E18 in the field notes), a decision originally premised
+    # on jconvert refusing na_range columns. Since S218 jconvert ENUMERATES
+    # ranges, so the Stata route is no longer a dead end -- whether this
+    # message should now offer it is an open question flagged at S218, not
+    # silently changed here. The no-range 3-code message below keeps its
+    # Stata pointer as before.
     .jst_stop("'", var_name, "' already has a missing-value range (",
               format(min(existing_range)), " to ",
               format(max(existing_range)),
@@ -2330,13 +2423,13 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #' behavior.
 #'
 #' @param data A data frame, or omitted to use the \code{juse()} default.
-#' @param to One of \code{"baseR"}, \code{"spss"}, or \code{"stata"}
-#'   (any capitalization is accepted). When \code{NULL} (the default),
-#'   \code{jconvert()}
+#' @param to One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
+#'   \code{"sas"} (any capitalization is accepted). When \code{NULL} (the
+#'   default), \code{jconvert()}
 #'   reads \code{joptions("missing.convention")}: if the slot is set to
 #'   \code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
 #'   the slot is at its \code{"none"} default, \code{jconvert()} errors
-#'   with guidance naming the three concrete options. The destructive
+#'   with guidance naming the concrete options. The destructive
 #'   \code{"baseR"} target is never auto-resolved -- it must always be
 #'   passed explicitly.
 #' @param ... Optional unquoted variable names. When supplied, only the
@@ -2392,8 +2485,10 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #'     display shows the original (pre-correction) tag for SAS-corrected
 #'     columns -- e.g. \code{.A "Refused" -> -99} -- so the user-visible
 #'     mapping reflects what was actually in the data on input. Letter
-#'     tags beyond \code{.d} (after case correction) are refused with
-#'     guidance to use \code{jrecode()} for manual mapping.}
+#'     tags beyond those covered by the convention codes (default
+#'     \code{.a}--\code{.c}, one letter per code, after case correction)
+#'     are refused with guidance to use \code{jrecode()} for manual
+#'     mapping.}
 #'   \item{\code{to = "stata"}}{Convert SPSS-form numeric codes to
 #'     Stata-style missing values. Letter tags are assigned by ordering
 #'     rather than by convention: each column's own declared
@@ -2406,11 +2501,34 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #'     codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.a, .b} -> SPSS
 #'     \code{c(-99, -98)} loses the original numbers), but the value
 #'     labels survive intact and the missingness semantics are preserved.
-#'     Range-based SPSS missings (\code{na_range}) are out of cross-format
-#'     scope; columns with \code{na_range} are refused with guidance to
-#'     enumerate the range in SPSS first. Columns with more than 4
-#'     distinct \code{na_values} codes are also refused (matches the
-#'     4-code cap on Stata letter-tag mapping).}
+#'     Range-based SPSS missings (\code{na_range}) are enumerated:
+#'     Stata-style missing values have no range concept, so the distinct
+#'     range values present in the column's data, plus any range values
+#'     carrying a value label, are translated individually. They join the
+#'     column's discrete \code{na_values} codes in a single set, sorted
+#'     and lettered by the same ordering rule. The range rule itself is
+#'     not preserved -- a range value with neither a data occurrence nor
+#'     a label at conversion time is not translated, so if it first
+#'     appears in later data it arrives as an ordinary data value. A
+#'     column whose combined set exceeds 26 values (the \code{.a}--\code{.z}
+#'     alphabet) is refused before any data is touched. A range
+#'     declaration with no values to translate does not block the
+#'     conversion: the column still converts, with the empty range
+#'     declaration dropped and reported. SAS-style (uppercase) tagged
+#'     columns are
+#'     case-corrected to Stata-style (lowercase) and counted as
+#'     converted; columns already fully lowercase are skipped as already
+#'     in the target form.}
+#'   \item{\code{to = "sas"}}{Identical to \code{to = "stata"} except
+#'     that the letters are uppercase (\code{.A}--\code{.Z}, SAS's
+#'     native extended-missing convention): SPSS-form columns are
+#'     enumerated and mapped to uppercase tags, Stata-style (lowercase)
+#'     tagged columns are case-corrected to uppercase and counted as
+#'     converted, and columns already fully uppercase are skipped.
+#'     Inside R the two tagged forms are the same structure differing
+#'     only in letter case; note that saving to Stata format (.dta)
+#'     lowercases uppercase tags again, since the .dta format only
+#'     supports lowercase letters.}
 #' }
 #'
 #' Pre-flight checks for \code{to = "spss"} include a collision check:
@@ -2445,6 +2563,9 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 #'
 #' # Equivalent without modify: assign the returned data frame back
 #' df2 <- jconvert(community, to = "stata")
+#'
+#' # Convert to SAS-style missing values (uppercase .A, .B, ...):
+#' df_sas <- jconvert(community, to = "sas")
 #'
 #' # Strip UDMs from every applicable variable:
 #' df3 <- jconvert(community, to = "baseR")
@@ -2500,19 +2621,19 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       to <- convention
     } else {
       .jst_stop(
-        "A target format is required. Set to = \"baseR\", \"spss\", or \"stata\"."
+        "A target format is required. Set to = \"baseR\", \"spss\", \"stata\", or \"sas\"."
       )
     }
   }
   # Platform specs are case-insensitive: accept "SPSS", "BaseR", "Stata",
   # etc., canonicalized here so downstream code sees the exact tokens.
   if (is.character(to) && length(to) == 1L && !is.na(to)) {
-    hit <- match(tolower(to), c("baser", "spss", "stata"))
-    if (!is.na(hit)) to <- c("baseR", "spss", "stata")[hit]
+    hit <- match(tolower(to), c("baser", "spss", "stata", "sas"))
+    if (!is.na(hit)) to <- c("baseR", "spss", "stata", "sas")[hit]
   }
   if (!is.character(to) || length(to) != 1L ||
-      !to %in% c("baseR", "spss", "stata")) {
-    .jst_stop_arg(arg = "to", choices = c("baseR", "spss", "stata"))
+      !to %in% c("baseR", "spss", "stata", "sas")) {
+    .jst_stop_arg(arg = "to", choices = c("baseR", "spss", "stata", "sas"))
   }
   .jst_check_flag(modify, "modify")
   .jst_check_flag(udm.notice, "udm.notice")
@@ -2577,7 +2698,11 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
 
   for (vname in target_vars) {
     col  <- data[[vname]]
-    info <- .jst_missing_info(col)
+    # The tagged targets (stata/sas) enumerate na_range declarations, so
+    # they need the observed in-band values; observed = TRUE reads the
+    # column's data only on columns that actually declare a band, so the
+    # extra cost is confined to exactly the columns that need it.
+    info <- .jst_missing_info(col, observed = to %in% c("stata", "sas"))
 
     if (!is.null(info)) {
       info_list[[vname]] <- info
@@ -2763,81 +2888,105 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
     }
   }
 
-  if (to == "stata") {
-    # SPSS-to-Stata: na_range is out of cross-format scope (Stata has no range
-    # missings). Discrete na_values map to letter tags by descending |code|
-    # (Decision 4 Q6), so a column can carry up to 26 (.a-.z); more than 26 has
-    # no tag to map to and is refused. The convention codes are NOT consulted
-    # for this direction.
-    range_vars     <- character(0)
-    over_cap_vars  <- list()
+  # Per-column conversion plans for the tagged targets. Filled by the
+  # pre-flight below; the conversion loop consumes them.
+  tagged_plan <- list()
+
+  if (to %in% c("stata", "sas")) {
+    # SPSS-to-tagged (Decision 4 Q6 + the S218 range extension): discrete
+    # na_values codes and enumerated na_range values merge into ONE set per
+    # column, sorted by descending |value| (more-negative-first tie-break)
+    # and lettered in that order -- lowercase for to = "stata", uppercase
+    # for to = "sas". Range enumeration takes the distinct in-band values
+    # OBSERVED in the data plus any in-band values carrying a value LABEL
+    # (declaration-by-label parallels how a discrete declared code converts
+    # whether or not it occurs); a value in the band with neither is not
+    # translated. The 26-letter alphabet caps the merged set; more is
+    # refused here, before any mutation (strict atomicity). The convention
+    # codes are NOT consulted for this direction.
+    tag_alphabet <- if (to == "sas") LETTERS else letters
+    tag_display  <- if (to == "sas") ".A-.Z" else ".a-.z"
+    style_word   <- if (to == "sas") "SAS-style" else "Stata-style"
+    over_cap_vars <- list()
 
     for (vname in names(info_list)) {
       info <- info_list[[vname]]
       if (info$representation != "spss") next
 
-      if (!is.null(info$na_range) && length(info$na_range) == 2L) {
-        range_vars <- c(range_vars, vname)
+      declared_codes <- if (!is.null(info$codes)) info$codes$numeric else numeric(0)
+      declared_codes <- declared_codes[!is.na(declared_codes)]
+
+      band        <- info$na_range
+      band_values <- numeric(0)
+      if (!is.null(band) && length(band) == 2L) {
+        # Observed in-band values (already excludes discrete codes; see
+        # .jst_missing_info's range_values component).
+        if (!is.null(info$range_values) && nrow(info$range_values) > 0L) {
+          band_values <- info$range_values$numeric
+        }
+        # Labelled in-band values: value labels pointing at numbers inside
+        # the band that are neither observed nor discretely declared.
+        col      <- data[[vname]]
+        val_labs <- if (haven::is.labelled(col)) labelled::val_labels(col)
+                    else NULL
+        if (!is.null(val_labs) && length(val_labs) > 0L) {
+          lab_nums <- suppressWarnings(as.numeric(val_labs))
+          lo <- min(band); hi <- max(band)
+          in_band <- !is.na(lab_nums) & lab_nums >= lo & lab_nums <= hi
+          lab_vals <- unique(lab_nums[in_band])
+          lab_vals <- lab_vals[!(lab_vals %in% declared_codes) &
+                               !(lab_vals %in% band_values)]
+          band_values <- c(band_values, lab_vals)
+        }
       }
-      if (!is.null(info$codes) && nrow(info$codes) > length(letters)) {
+
+      merged <- c(declared_codes, band_values)
+      if (length(merged) > length(tag_alphabet)) {
         over_cap_vars[[length(over_cap_vars) + 1L]] <- list(
-          var = vname, n_codes = nrow(info$codes))
+          var = vname, n_total = length(merged),
+          n_codes = length(declared_codes), n_band = length(band_values))
+        next
       }
+
+      ordering      <- order(-abs(merged), merged)
+      sorted_values <- merged[ordering]
+      tagged_plan[[vname]] <- list(
+        sorted_values = sorted_values,
+        letters       = tag_alphabet[seq_along(sorted_values)],
+        band          = if (!is.null(band) && length(band) == 2L) band
+                        else NULL,
+        band_n        = length(band_values)
+      )
     }
 
-    if (length(range_vars) > 0L || length(over_cap_vars) > 0L) {
-      has_rng  <- length(range_vars) > 0L
-      has_over <- length(over_cap_vars) > 0L
-
-      rng_lines  <- .jst_cap_var_lines(sprintf("    %s", range_vars))
+    if (length(over_cap_vars) > 0L) {
       over_lines <- .jst_cap_var_lines(vapply(over_cap_vars,
-        function(e) sprintf("    %s: %d codes", e$var, e$n_codes), character(1)))
+        function(e) {
+          if (e$n_band > 0L) {
+            sprintf("    %s: %d values (%d declared code%s + %d range value%s)",
+                    e$var, e$n_total,
+                    e$n_codes, if (e$n_codes == 1L) "" else "s",
+                    e$n_band,  if (e$n_band  == 1L) "" else "s")
+          } else {
+            sprintf("    %s: %d codes", e$var, e$n_total)
+          }
+        }, character(1)))
 
-      n_rng  <- length(range_vars)
-      n_over <- length(over_cap_vars)
-      rng_lead  <- if (n_rng == 1L) "This variable" else "These variables"
-      rng_verb  <- if (n_rng == 1L) "is" else "are"
+      n_over    <- length(over_cap_vars)
       over_lead <- if (n_over == 1L) "This variable" else "These variables"
       over_verb <- if (n_over == 1L) "has" else "have"
-      rng_obj   <- if (n_rng == 1L) "the variable above" else "the variables above"
 
-      if (has_rng && !has_over) {
-        msg_lines <- c(
-          "Stata does not support range-based user-defined missing values.",
-          "",
-          sprintf("%s in %s %s affected:", rng_lead, data_name, rng_verb),
-          rng_lines,
-          "",
-          "Suggested resolution:",
-          sprintf("  Convert a narrower set, leaving out %s:", rng_obj),
-          sprintf("       jconvert(%s, to = \"stata\", vars = c(...))", data_name))
-      } else if (has_over && !has_rng) {
-        msg_lines <- c(
-          "Stata supports at most 26 user-defined missing values (UDMs) per variable (mapped to .a-.z).",
-          "",
-          sprintf("%s in %s %s more:", over_lead, data_name, over_verb),
-          over_lines,
-          "",
-          "Resolution options:",
-          "  1. Convert a narrower set of variables, leaving out those above:",
-          sprintf("       jconvert(%s, to = \"stata\", vars = c(...))", data_name),
-          "  2. Reduce each variable to 26 or fewer UDMs first with jrecode().")
-      } else {
-        msg_lines <- c(
-          sprintf("cannot convert %s to Stata -- two problems:", data_name),
-          "",
-          "Stata does not support range-based user-defined missing values (UDMs).",
-          sprintf("%s %s affected:", rng_lead, rng_verb),
-          rng_lines,
-          "",
-          "Stata supports at most 26 UDMs per variable (mapped to .a-.z).",
-          sprintf("%s %s more:", over_lead, over_verb),
-          over_lines,
-          "To fix, reduce each to 26 or fewer UDMs with jrecode().",
-          "",
-          "Or convert a narrower set, leaving out all the variables above:",
-          sprintf("    jconvert(%s, to = \"stata\", vars = c(...))", data_name))
-      }
+      msg_lines <- c(
+        sprintf("%s missing values support at most 26 per variable (mapped to %s).",
+                style_word, tag_display),
+        "",
+        sprintf("%s in %s %s more to convert:", over_lead, data_name, over_verb),
+        over_lines,
+        "",
+        "Resolution options:",
+        "  1. Convert a narrower set of variables, leaving out those above:",
+        sprintf("       jconvert(%s, to = \"%s\", vars = c(...))", data_name, to),
+        "  2. Reduce each variable to 26 or fewer values first with jrecode().")
       .jst_stop(paste(msg_lines, collapse = "\n"))
     }
   }
@@ -2846,6 +2995,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
   converted_vars   <- character(0)
   converted_info   <- list()
   skipped_already  <- character(0)   # in target format already (user_specified only)
+  banded_converted <- character(0)   # converted vars that carried an na_range
 
   for (vname in names(info_list)) {
     info <- info_list[[vname]]
@@ -2964,36 +3114,85 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       converted_vars         <- c(converted_vars, vname)
       converted_info[[vname]] <- list(display = display_entries)
 
-    } else if (to == "stata") {
+    } else if (to %in% c("stata", "sas")) {
+
+      target_upper <- identical(to, "sas")
 
       if (info$representation == "stata") {
-        skipped_already <- c(skipped_already, vname)
+        # Tagged column already. If every tag (cells and value labels) is
+        # in the target case, it is genuinely in target form -- skip. Any
+        # off-case tag is case-corrected -- a real conversion, counted and
+        # displayed as such. Mixed-case columns collapse to the target
+        # case: an off-case tag flipping onto an existing same-letter tag
+        # merges with it, mirroring the to = "spss" branch's collapse
+        # (the case distinction is not a distinction the tagged formats
+        # can jointly preserve).
+        cell_tags <- haven::na_tag(col)
+        val_labs  <- labelled::val_labels(col)
+        lab_tags  <- if (!is.null(val_labs)) haven::na_tag(val_labs)
+                     else character(0)
+        all_tags  <- c(cell_tags[!is.na(cell_tags)],
+                       lab_tags[!is.na(lab_tags)])
+        off_case  <- unique(all_tags[if (target_upper) all_tags %in% letters
+                                     else all_tags %in% LETTERS])
+
+        if (length(off_case) == 0L) {
+          skipped_already <- c(skipped_already, vname)
+          next
+        }
+
+        flip <- if (target_upper) toupper else tolower
+
+        off_cells <- which(!is.na(cell_tags) & cell_tags %in% off_case)
+        if (length(off_cells) > 0L) {
+          for (i in off_cells) col[i] <- haven::tagged_na(flip(cell_tags[i]))
+        }
+        if (!is.null(val_labs) && length(val_labs) > 0L) {
+          off_labs <- which(!is.na(lab_tags) & lab_tags %in% off_case)
+          if (length(off_labs) > 0L) {
+            new_vl <- val_labs
+            for (i in off_labs) {
+              new_vl[i] <- haven::tagged_na(flip(lab_tags[i]))
+            }
+            labelled::val_labels(col) <- new_vl
+          }
+        }
+        data[[vname]] <- col
+
+        # Display: original tag (with its label, if any) -> flipped tag.
+        display_entries <- character(0)
+        for (tg in sort(off_case)) {
+          lbl <- NA_character_
+          if (!is.null(val_labs) && length(val_labs) > 0L) {
+            mm <- which(!is.na(lab_tags) & lab_tags == tg)
+            if (length(mm) > 0L) lbl <- names(val_labs)[mm[1]]
+          }
+          source_disp <- if (!is.na(lbl) && nzchar(lbl)) {
+            sprintf('.%s "%s"', tg, lbl)
+          } else paste0(".", tg)
+          display_entries <- c(display_entries,
+                               sprintf("%s -> .%s", source_disp, flip(tg)))
+        }
+        converted_vars          <- c(converted_vars, vname)
+        converted_info[[vname]] <- list(display = display_entries)
         next
       }
 
-      x_num <- suppressWarnings(as.numeric(unclass(col)))
-      declared_codes <- info$codes$numeric
-      declared_codes <- declared_codes[!is.na(declared_codes)]
+      # SPSS-form column: consume the pre-flight's conversion plan (the
+      # merged discrete + enumerated-range set, Q6-ordered and lettered
+      # in the target case; see the pre-flight above for the rules).
+      plan          <- tagged_plan[[vname]]
+      sorted_values <- plan$sorted_values
+      plan_letters  <- plan$letters
+      tag_for_value <- stats::setNames(plan_letters,
+                                       as.character(sorted_values))
 
-      # Q6 (Session 29 design lock): SPSS->Stata mapping is ordering-based,
-      # not convention-based. Sort the column's own declared codes by
-      # absolute value descending, with more-negative-first as the tie-
-      # breaker. Then map sorted_codes[1] -> .a, sorted_codes[2] -> .b,
-      # etc. The convention codes are NOT consulted for this direction;
-      # they only govern the reverse (Stata->SPSS) direction.
-      ordering           <- order(-abs(declared_codes), declared_codes)
-      sorted_codes       <- declared_codes[ordering]
-      column_tag_letters <- letters[seq_along(sorted_codes)]
-      column_tag_for_code <- stats::setNames(column_tag_letters,
-                                             as.character(sorted_codes))
-
-      new_col   <- as.numeric(x_num)
-      used_tags <- character(0)
-      for (code in sorted_codes) {
-        tag_letter <- column_tag_for_code[[as.character(code)]]
-        pos        <- which(!is.na(x_num) & x_num == code)
-        new_col[pos] <- haven::tagged_na(tag_letter)
-        used_tags <- c(used_tags, tag_letter)
+      x_num   <- suppressWarnings(as.numeric(unclass(col)))
+      new_col <- as.numeric(x_num)
+      for (v in sorted_values) {
+        tag_letter <- tag_for_value[[as.character(v)]]
+        pos        <- which(!is.na(x_num) & x_num == v)
+        if (length(pos) > 0L) new_col[pos] <- haven::tagged_na(tag_letter)
       }
 
       val_labs     <- labelled::val_labels(col)
@@ -3001,15 +3200,12 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       if (!is.null(new_val_labs) && length(new_val_labs) > 0L) {
         for (i in seq_along(new_val_labs)) {
           v <- unname(new_val_labs[i])
-          # Gate on declared_codes — val_labs entries pointing at codes
-          # that aren't formally declared are real-data labels and must
-          # stay as numeric entries. Otherwise a val_lab like "Don't know"
-          # = -98 on a column with na_values = c(-99) would be incorrectly
-          # converted to a tagged-NA marker, breaking the labeling for
-          # real -98 cells in the data.
-          if (!is.na(v) && v %in% declared_codes) {
+          # Gate on the merged set — val_labs entries pointing at values
+          # that are neither declared codes nor enumerated range values
+          # are real-data labels and must stay as numeric entries.
+          if (!is.na(v) && v %in% sorted_values) {
             new_val_labs[i] <- haven::tagged_na(
-              column_tag_for_code[[as.character(v)]])
+              tag_for_value[[as.character(v)]])
           }
         }
       }
@@ -3020,28 +3216,43 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
         label  = attr(col, "label", exact = TRUE)
       )
 
-      # Build display entries — source code -> destination tag, with the
-      # label shown on the source side (the label survives unchanged on
-      # the destination, so showing it once on the source is enough). The
-      # entries are emitted in sorted_codes order (largest |code| first
-      # per Q6), so the user reads ".a came from the largest |code|" left
-      # to right.
+      # Build display entries — source value -> destination tag, with the
+      # label shown on the source side, emitted in sorted order (largest
+      # |value| first per Q6). A band contributes a trailing entry: either
+      # the enumeration fact, or -- when it supplied no values at all --
+      # the dropped-declaration report (Q1: the empty declaration is
+      # reported even at zero, since the loss is largest exactly when
+      # nothing was translated).
       display_entries <- character(0)
-      for (i in seq_along(sorted_codes)) {
-        code <- sorted_codes[i]
-        tg   <- column_tag_letters[i]
-        lbl  <- NA_character_
+      for (i in seq_along(sorted_values)) {
+        v   <- sorted_values[i]
+        tg  <- plan_letters[i]
+        lbl <- NA_character_
         if (!is.null(val_labs) && length(val_labs) > 0L) {
-          mm <- which(unname(val_labs) == code & !is.na(unname(val_labs)))
+          mm <- which(unname(val_labs) == v & !is.na(unname(val_labs)))
           if (length(mm) > 0L) lbl <- names(val_labs)[mm[1]]
         }
         source_disp <- if (!is.na(lbl) && nzchar(lbl)) {
-          sprintf('%s "%s"', as.character(code), lbl)
-        } else as.character(code)
+          sprintf('%s "%s"', as.character(v), lbl)
+        } else as.character(v)
         display_entries <- c(display_entries,
                              sprintf("%s -> .%s", source_disp, tg))
       }
-      converted_vars         <- c(converted_vars, vname)
+      if (!is.null(plan$band)) {
+        band_disp <- sprintf("range [%s, %s]",
+                             as.character(plan$band[1]),
+                             as.character(plan$band[2]))
+        if (plan$band_n > 0L) {
+          display_entries <- c(display_entries,
+                               paste0(band_disp, " enumerated"))
+        } else {
+          display_entries <- c(display_entries,
+                               paste0(band_disp,
+                                      ": no values found; declaration dropped"))
+        }
+        banded_converted <- c(banded_converted, vname)
+      }
+      converted_vars          <- c(converted_vars, vname)
       converted_info[[vname]] <- list(display = display_entries)
     }
   }
@@ -3103,7 +3314,8 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
         to,
         baseR = "Stripped declarations of user-defined missing values (UDMs) from",
         spss  = "Converted to SPSS-style missing values in",
-        stata = "Converted to Stata-style missing values in"
+        stata = "Converted to Stata-style missing values in",
+        sas   = "Converted to SAS-style missing values in"
       )
       msg_lines <- c(msg_lines, paste0(
         header_verb, " ", n_converted, " variable",
@@ -3115,6 +3327,25 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
         msg_lines <- c(msg_lines, paste0(
           "  ", format(vname, width = max_name_len),
           "  (", paste(ci$display, collapse = ", "), ")"))
+      }
+
+      # Range-loss note (S218). Whenever a converted column carried an
+      # na_range, state plainly what did not survive: the tagged formats
+      # have no range concept, so the rule itself is gone and only the
+      # values enumerated above were translated. Most important precisely
+      # when the band was empty -- the declaration vanished with nothing
+      # translated. Rides inside the udm.notice gate (Q2: an explicit
+      # udm.notice = FALSE suppresses this along with the rest of the
+      # report).
+      if (length(banded_converted) > 0L) {
+        style_word <- if (identical(to, "sas")) "SAS-style" else "Stata-style"
+        msg_lines <- c(msg_lines, "", paste0(
+          "Note: ", style_word, " missing values have no range concept. For the"))
+        msg_lines <- c(msg_lines,
+          "  range declarations above, only values present in the data or",
+          "  carrying value labels were translated; the range rule itself was",
+          "  not preserved. A range value first appearing in later data will",
+          "  arrive as an ordinary data value.")
       }
     }
 

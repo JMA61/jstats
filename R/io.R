@@ -1658,18 +1658,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' encountered on a \code{.dta} write. The .dta format has no
 #' representation for SPSS-style missing-value codes; haven would
 #' otherwise drop them silently. The user is directed to convert via
-#' \code{jconvert(to = "stata")} for enumerated codes, or to drop
-#' via \code{jconvert(to = "baseR")} for range-based missingness
-#' (which cannot be converted to Stata form). Verbosity is
-#' controlled by the active \code{joutput()} level.
+#' \code{jconvert(to = "stata")} -- since S218 the one remedy covers
+#' both forms, as jconvert enumerates \code{na_range} declarations
+#' too. Verbosity is controlled by the active \code{joutput()} level.
 #'
-#' @param enum_vars Character vector of variable names with
-#'   enumerated missing-value codes (\code{na_values}).
-#' @param range_vars Character vector of variable names with
-#'   range-based missingness (\code{na_range}). A column that
-#'   carries both \code{na_values} and \code{na_range} is placed
-#'   in this bucket by the caller, since the range portion is the
-#'   more restrictive constraint.
+#' @param spss_vars Character vector of variable names carrying
+#'   SPSS-form UDM declarations (\code{na_values} and/or
+#'   \code{na_range}).
 #' @param data_name Character. Name of the data frame argument in
 #'   the user's call to \code{jsave()}, used to construct the
 #'   suggested \code{jconvert()} call.
@@ -1677,10 +1672,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
-.jst_jsave_dta_error_msg <- function(enum_vars, range_vars, data_name) {
+.jst_jsave_dta_error_msg <- function(spss_vars, data_name) {
 
   output_level <- getOption(".jst_output_level", "standard")
-  n_total      <- length(enum_vars) + length(range_vars)
+  n_total      <- length(spss_vars)
   is_sg        <- (n_total == 1)
   noun         <- if (is_sg) "variable" else "variables"
   verb_carry   <- if (is_sg) "carries" else "carry"
@@ -1691,39 +1686,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       n_total, " ", noun, " ", verb_carry,
       " SPSS-style missing values, incompatible with the .dta format. ",
       "Run ", data_name, " <- jconvert(", data_name, ", to = \"stata\") ",
-      "for enumerated codes; range-based user-defined missing values need recoding or ",
-      data_name, " <- jconvert(", data_name, ", to = \"baseR\") ",
-      "to drop the metadata."
+      "first, then save again."
     ))
   }
 
   # --- Standard / full tier ----------------------------------------------
-  msg <- paste0(
+  paste0(
     n_total, " ", noun, " ", verb_carry,
-    " SPSS-style missing values, incompatible with the .dta format."
+    " SPSS-style missing values, incompatible with the .dta format.",
+    "\n\n",
+    "  ", .jst_format_var_list(spss_vars), "\n",
+    "Before saving to Stata format, convert with:\n",
+    "  ", data_name, " <- jconvert(", data_name, ", to = \"stata\")"
   )
-
-  if (length(enum_vars) > 0) {
-    msg <- paste0(
-      msg, "\n\n",
-      "  ", .jst_format_var_list(enum_vars), "\n",
-      "Before saving to Stata format, convert with:\n",
-      "  ", data_name, " <- jconvert(", data_name, ", to = \"stata\")"
-    )
-  }
-
-  if (length(range_vars) > 0) {
-    msg <- paste0(
-      msg, "\n\n",
-      "  ", .jst_format_var_list(range_vars), "\n",
-      "Range-based missingness cannot be converted to Stata-style. ",
-      "Either re-code the range to enumerated codes (then run jconvert), ",
-      "or drop the metadata with:\n",
-      "  ", data_name, " <- jconvert(", data_name, ", to = \"baseR\")"
-    )
-  }
-
-  msg
 }
 
 #' Internal: build jsave's .xpt pre-flight error message
@@ -2674,23 +2649,16 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
           .jst_jsave_sav_overcap_error_msg(overcap_info, data_name)
       }
     } else if (ext == "dta") {
+      # Any SPSS-form column blocks the write; since S218 the remedy is
+      # uniform (jconvert enumerates na_range declarations too), so no
+      # bucketing by form -- one list, one remedy. Residual accepted by
+      # design: a range enumerating past 26 values will be refused by
+      # jconvert itself, with its own explanation, rather than
+      # pre-checked here (the 26-cap logic lives in one place).
       spss_vars <- .jst_has_spss_udm(data)
       if (length(spss_vars) > 0) {
-        # Bucket by missing-value form. A column carrying both na_values and
-        # na_range goes in the range bucket -- the range portion blocks
-        # conversion to Stata form, so the stricter remediation applies.
-        enum_vars  <- character(0)
-        range_vars <- character(0)
-        for (vname in spss_vars) {
-          info <- .jst_missing_info(data[[vname]])
-          if (!is.null(info$na_range)) {
-            range_vars <- c(range_vars, vname)
-          } else {
-            enum_vars  <- c(enum_vars, vname)
-          }
-        }
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_dta_error_msg(enum_vars, range_vars, data_name)
+          .jst_jsave_dta_error_msg(spss_vars, data_name)
       }
     } else if (ext == "xpt") {
       # Both missing-value forms are unrepresentable in .xpt: tagged NAs

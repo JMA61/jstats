@@ -4,17 +4,12 @@
 \alias{.jst_jsave_dta_error_msg}
 \title{Internal: build jsave's .dta pre-flight error message}
 \usage{
-.jst_jsave_dta_error_msg(enum_vars, range_vars, data_name)
+.jst_jsave_dta_error_msg(spss_vars, data_name)
 }
 \arguments{
-\item{enum_vars}{Character vector of variable names with
-enumerated missing-value codes (\code{na_values}).}
-
-\item{range_vars}{Character vector of variable names with
-range-based missingness (\code{na_range}). A column that
-carries both \code{na_values} and \code{na_range} is placed
-in this bucket by the caller, since the range portion is the
-more restrictive constraint.}
+\item{spss_vars}{Character vector of variable names carrying
+SPSS-form UDM declarations (\code{na_values} and/or
+\code{na_range}).}
 
 \item{data_name}{Character. Name of the data frame argument in
 the user's call to \code{jsave()}, used to construct the
@@ -29,9 +24,8 @@ UDM declarations (\code{na_values} and/or \code{na_range}) are
 encountered on a \code{.dta} write. The .dta format has no
 representation for SPSS-style missing-value codes; haven would
 otherwise drop them silently. The user is directed to convert via
-\code{jconvert(to = "stata")} for enumerated codes, or to drop
-via \code{jconvert(to = "baseR")} for range-based missingness
-(which cannot be converted to Stata form). Verbosity is
-controlled by the active \code{joutput()} level.
+\code{jconvert(to = "stata")} -- since S218 the one remedy covers
+both forms, as jconvert enumerates \code{na_range} declarations
+too. Verbosity is controlled by the active \code{joutput()} level.
 }
 \keyword{internal}

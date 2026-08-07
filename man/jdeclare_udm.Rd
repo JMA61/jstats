@@ -30,9 +30,11 @@ vector; labels supplied via the \code{labels} argument. E.g.
 names are the labels. E.g.
 \code{codes = c(Refused = -99, `Don't know` = -98)}.}
 }
-Under Stata convention, code values may be Stata-style missing-value markers
-created with \code{haven::tagged_na()}, e.g.
-\code{codes = c(Refused = tagged_na("a"))}.}
+On a column that already carries Stata-style missing values, codes
+may name the markers directly as quoted tokens, e.g.
+\code{codes = c(Refused = ".a")} -- a token \code{".a"} means the
+\code{.a} marker. Tokens are refused on columns with no Stata-style
+missing values to label (see the Missing-Values Convention section).}
 
 \item{labels}{Optional. A quoted string in the form
 \code{"value=label; value=label"} pairing labels with codes
@@ -94,8 +96,26 @@ column's \code{na_values} attribute (haven's representation of
 SPSS-form UDMs). The data cells themselves are unchanged; only the
 metadata that flags certain values as missing is added.
 
-Under Stata convention with Stata-style missing-value input, the function attaches
-value labels to existing Stata-style missing-value cells on the column.
+Under Stata convention with Stata-style missing-value input (quoted
+tokens such as \code{".a"}), the function attaches value labels to
+the column's existing Stata-style missing-value markers. This
+requires the column to already carry Stata-style missing values --
+either tagged cells, or markers previously declared through value
+labels (a marker may be labeled before any cases carry it, so a
+declaration made early in data collection is complete for later
+data). Tokens against a column with no Stata-style missing values
+are refused identically under every convention source: on a plain
+column the error points at \code{jrecode()} (which creates tagged
+cells from numeric codes); on a column carrying SPSS-style
+declarations it points at \code{jconvert()}.
+
+Note that on a plain numeric column with plain numeric codes and no
+\code{convention} argument, the resolved convention decides the
+outcome: under SPSS convention the numbers stay in the cells and are
+flagged missing; under Stata convention the matching cells are
+converted to markers and the numbers leave the data. This is the one
+place \code{joptions(missing.convention = ...)} changes what happens
+to data (see the examples).
 
 Under Stata convention with numeric input, the function converts
 matching cells to Stata-style missing-value markers (Session 30 design lock). The
@@ -151,15 +171,27 @@ df3 <- jdeclare_udm(clinic, MoodRating,
                     codes = c("Refused" = -99, "Don't know" = -98))
 
 # Stata-style: label Stata-style missing-value cells. The jrecode() call
-# turns the literal codes into tagged cells; jdeclare_udm() labels them.
+# turns the literal codes into tagged cells; jdeclare_udm() labels them
+# by naming the markers as quoted tokens.
 df4 <- clinic
 df4$Mood2 <- jrecode(df4, MoodRating,
                      map = "-99=.a; -98=.b; else=copy",
                      convention = "stata")
 jdeclare_udm(df4, Mood2,
-             codes = c("Refused"    = haven::tagged_na("a"),
-                       "Don't know" = haven::tagged_na("b")),
+             codes = c("Refused" = ".a", "Don't know" = ".b"),
              modify = TRUE)
+
+\dontrun{
+# The same neutral call -- plain numeric codes, no convention argument,
+# plain column -- forks on joptions(missing.convention = ...):
+joptions(missing.convention = "spss")
+df5 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+# -99 stays in the cells, flagged as missing (SPSS-form declaration)
+
+joptions(missing.convention = "stata")
+df6 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+# -99 cells become the .a marker; the number -99 leaves the data
+}
 
 }
 \seealso{

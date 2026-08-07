@@ -9,13 +9,13 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{juse()} default.}
 
-\item{to}{One of \code{"baseR"}, \code{"spss"}, or \code{"stata"}
-(any capitalization is accepted). When \code{NULL} (the default),
-\code{jconvert()}
+\item{to}{One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
+\code{"sas"} (any capitalization is accepted). When \code{NULL} (the
+default), \code{jconvert()}
 reads \code{joptions("missing.convention")}: if the slot is set to
 \code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
 the slot is at its \code{"none"} default, \code{jconvert()} errors
-with guidance naming the three concrete options. The destructive
+with guidance naming the concrete options. The destructive
 \code{"baseR"} target is never auto-resolved -- it must always be
 passed explicitly.}
 
@@ -86,8 +86,10 @@ no parallel uppercase convention). The notification's per-column
 display shows the original (pre-correction) tag for SAS-corrected
 columns -- e.g. \code{.A "Refused" -> -99} -- so the user-visible
 mapping reflects what was actually in the data on input. Letter
-tags beyond \code{.d} (after case correction) are refused with
-guidance to use \code{jrecode()} for manual mapping.}
+tags beyond those covered by the convention codes (default
+\code{.a}--\code{.c}, one letter per code, after case correction)
+are refused with guidance to use \code{jrecode()} for manual
+mapping.}
 \item{\code{to = "stata"}}{Convert SPSS-form numeric codes to
 Stata-style missing values. Letter tags are assigned by ordering
 rather than by convention: each column's own declared
@@ -100,11 +102,34 @@ conversions are not guaranteed to preserve the original numeric
 codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.a, .b} -> SPSS
 \code{c(-99, -98)} loses the original numbers), but the value
 labels survive intact and the missingness semantics are preserved.
-Range-based SPSS missings (\code{na_range}) are out of cross-format
-scope; columns with \code{na_range} are refused with guidance to
-enumerate the range in SPSS first. Columns with more than 4
-distinct \code{na_values} codes are also refused (matches the
-4-code cap on Stata letter-tag mapping).}
+Range-based SPSS missings (\code{na_range}) are enumerated:
+Stata-style missing values have no range concept, so the distinct
+range values present in the column's data, plus any range values
+carrying a value label, are translated individually. They join the
+column's discrete \code{na_values} codes in a single set, sorted
+and lettered by the same ordering rule. The range rule itself is
+not preserved -- a range value with neither a data occurrence nor
+a label at conversion time is not translated, so if it first
+appears in later data it arrives as an ordinary data value. A
+column whose combined set exceeds 26 values (the \code{.a}--\code{.z}
+alphabet) is refused before any data is touched. A range
+declaration with no values to translate does not block the
+conversion: the column still converts, with the empty range
+declaration dropped and reported. SAS-style (uppercase) tagged
+columns are
+case-corrected to Stata-style (lowercase) and counted as
+converted; columns already fully lowercase are skipped as already
+in the target form.}
+\item{\code{to = "sas"}}{Identical to \code{to = "stata"} except
+that the letters are uppercase (\code{.A}--\code{.Z}, SAS's
+native extended-missing convention): SPSS-form columns are
+enumerated and mapped to uppercase tags, Stata-style (lowercase)
+tagged columns are case-corrected to uppercase and counted as
+converted, and columns already fully uppercase are skipped.
+Inside R the two tagged forms are the same structure differing
+only in letter case; note that saving to Stata format (.dta)
+lowercases uppercase tags again, since the .dta format only
+supports lowercase letters.}
 }
 
 Pre-flight checks for \code{to = "spss"} include a collision check:
@@ -139,6 +164,9 @@ jconvert(df, to = "stata", modify = TRUE)
 
 # Equivalent without modify: assign the returned data frame back
 df2 <- jconvert(community, to = "stata")
+
+# Convert to SAS-style missing values (uppercase .A, .B, ...):
+df_sas <- jconvert(community, to = "sas")
 
 # Strip UDMs from every applicable variable:
 df3 <- jconvert(community, to = "baseR")
