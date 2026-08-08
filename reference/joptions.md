@@ -22,6 +22,7 @@ joptions(
   udm.convention.codes = NULL,
   data.dir = NULL,
   corr.layout = NULL,
+  missing.detail = NULL,
   quiet = FALSE
 )
 ```
@@ -44,6 +45,10 @@ joptions(
 - corr.layout:
 
   One of `"wide"` or `"stacked"`, or `NULL`. See Slots.
+
+- missing.detail:
+
+  One of `"totals"`, `"per_code"`, or `"all"`, or `NULL`. See Slots.
 
 - quiet:
 
@@ -109,6 +114,23 @@ options and printing the status panel.
   because it is specific to one function's output, not a tiered
   analysis-content toggle.
 
+- missing.detail:
+
+  Character, length 1. One of `"totals"`, `"per_code"`, or `"all"`.
+  Default: `"per_code"`. Governs how much of a declared missing-value
+  RANGE [`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md)
+  spells out in its Missing block. `"totals"` collapses the whole band
+  into one row; `"per_code"` prints one row per observed in-band value,
+  at most 10, with the remainder gathered into a single line at the foot
+  of the block; `"all"` prints every observed in-band value with no cap.
+  Declared discrete codes always print in full at every setting – the
+  cap applies only to values reached by a range. A per-call
+  `missing.detail` argument to
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md)
+  overrides this. Like `corr.layout` it lives here rather than in
+  [`joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  because it is specific to one function's output.
+
 ## Call patterns
 
 - `joptions()`:
@@ -158,6 +180,7 @@ joptions()                                        # show current settings
 #> UDM convention codes: -99, -98, -97
 #> Data folder: Working directory
 #> Correlation layout: wide
+#> Missing-value detail: per_code
 #> 
 joptions(missing.convention = "spss")             # set, panel, nudge
 #> Options Settings
@@ -165,6 +188,7 @@ joptions(missing.convention = "spss")             # set, panel, nudge
 #> UDM convention codes: -99, -98, -97
 #> Data folder: Working directory
 #> Correlation layout: wide
+#> Missing-value detail: per_code
 #> 
 joptions(udm.convention.codes = c(-99, -98))      # set, panel, no nudge
 #> Options Settings
@@ -172,6 +196,7 @@ joptions(udm.convention.codes = c(-99, -98))      # set, panel, no nudge
 #> UDM convention codes: -99, -98
 #> Data folder: Working directory
 #> Correlation layout: wide
+#> Missing-value detail: per_code
 #> 
 joptions(data.dir = "Data")                       # set save/load folder
 #> Options Settings
@@ -179,6 +204,7 @@ joptions(data.dir = "Data")                       # set save/load folder
 #> UDM convention codes: -99, -98
 #> Data folder: Data (will be created on first save)
 #> Correlation layout: wide
+#> Missing-value detail: per_code
 #> 
 joptions(missing.convention = "stata",
          udm.convention.codes = c(-99, -98, -97)) # set both
@@ -187,6 +213,7 @@ joptions(missing.convention = "stata",
 #> UDM convention codes: -99, -98, -97
 #> Data folder: Data (will be created on first save)
 #> Correlation layout: wide
+#> Missing-value detail: per_code
 #> 
 joptions(missing.convention = "spss",
          udm.convention.codes = NULL)             # set mc, leave codes
@@ -195,6 +222,7 @@ joptions(missing.convention = "spss",
 #> UDM convention codes: -99, -98, -97
 #> Data folder: Data (will be created on first save)
 #> Correlation layout: wide
+#> Missing-value detail: per_code
 #> 
 joptions(NULL)                                    # reset all to defaults
 #> Options Settings
@@ -202,5 +230,6 @@ joptions(NULL)                                    # reset all to defaults
 #> UDM convention codes: -99, -98, -97
 #> Data folder: Working directory
 #> Correlation layout: wide
+#> Missing-value detail: per_code
 #> 
 ```

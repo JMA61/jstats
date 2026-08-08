@@ -23,7 +23,7 @@ explicit transform path for data already in the workspace."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.114</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.120</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,6 +66,7 @@ explicit transform path for data already in the workspace.</p>
 <span>  udm.convention.codes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  data.dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  corr.layout <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  missing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -90,6 +91,11 @@ explicit transform path for data already in the workspace.</p>
 <dt id="arg-corr-layout">corr.layout<a class="anchor" aria-label="anchor" href="#arg-corr-layout"></a></dt>
 <dd><p>One of <code>"wide"</code> or <code>"stacked"</code>, or
 <code>NULL</code>. See Slots.</p></dd>
+
+
+<dt id="arg-missing-detail">missing.detail<a class="anchor" aria-label="anchor" href="#arg-missing-detail"></a></dt>
+<dd><p>One of <code>"totals"</code>, <code>"per_code"</code>, or
+<code>"all"</code>, or <code>NULL</code>. See Slots.</p></dd>
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
@@ -151,6 +157,22 @@ overrides this. It lives here rather than in <code><a href="joutput.html">joutpu
 because it is specific to one function's output, not a tiered
 analysis-content toggle.</p></dd>
 
+<dt>missing.detail</dt>
+<dd><p>Character, length 1. One of <code>"totals"</code>,
+<code>"per_code"</code>, or <code>"all"</code>. Default: <code>"per_code"</code>.
+Governs how much of a declared missing-value RANGE
+<code><a href="jfreq.html">jfreq</a></code> spells out in its Missing block.
+<code>"totals"</code> collapses the whole band into one row;
+<code>"per_code"</code> prints one row per observed in-band value, at
+most 10, with the remainder gathered into a single line at the
+foot of the block; <code>"all"</code> prints every observed in-band
+value with no cap. Declared discrete codes always print in full
+at every setting – the cap applies only to values reached by a
+range. A per-call <code>missing.detail</code> argument to
+<code><a href="jfreq.html">jfreq()</a></code> overrides this. Like <code>corr.layout</code> it lives
+here rather than in <code><a href="joutput.html">joutput</a></code> because it is specific
+to one function's output.</p></dd>
+
 
 </dl></div>
     <div class="section level2">
@@ -203,6 +225,7 @@ standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"spss"</span><span class="op">)</span>             <span class="co"># set, panel, nudge</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
@@ -210,6 +233,7 @@ standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>udm.convention.codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span><span class="op">)</span><span class="op">)</span>      <span class="co"># set, panel, no nudge</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
@@ -217,6 +241,7 @@ standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="st">"Data"</span><span class="op">)</span>                       <span class="co"># set save/load folder</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
@@ -224,6 +249,7 @@ standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Data (will be created on first save)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"stata"</span>,</span></span>
 <span class="r-in"><span>         udm.convention.codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span>, <span class="op">-</span><span class="fl">97</span><span class="op">)</span><span class="op">)</span> <span class="co"># set both</span></span></span>
@@ -232,6 +258,7 @@ standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Data (will be created on first save)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"spss"</span>,</span></span>
 <span class="r-in"><span>         udm.convention.codes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>             <span class="co"># set mc, leave codes</span></span></span>
@@ -240,6 +267,7 @@ standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Data (will be created on first save)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                                    <span class="co"># reset all to defaults</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
@@ -247,6 +275,7 @@ standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

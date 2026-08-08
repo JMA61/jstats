@@ -13,6 +13,7 @@ jfreq(
   subset = NULL,
   variable.id = NULL,
   value.id = NULL,
+  missing.detail = NULL,
   case.processing.detail = NULL
 )
 ```
@@ -58,6 +59,19 @@ jfreq(
   no-op for variables with no value labels. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `value.id` setting. Not a logical.
+
+- missing.detail:
+
+  Character or NULL. How much of a declared missing-value RANGE the
+  Missing block spells out: one of `"totals"` (collapse the whole band
+  into a single row), `"per_code"` (one row per observed in-band value,
+  at most 10, with the remainder gathered into one line at the foot of
+  the block), or `"all"` (every observed in-band value, no cap). NULL
+  (default) defers to the `missing.detail` setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md),
+  whose own default is `"per_code"`. Declared discrete codes always
+  print in full at every setting; the cap applies only to values reached
+  by a range. Has no effect on a variable with no declared range.
 
 - case.processing.detail:
 

@@ -21,7 +21,7 @@ behavior."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.114</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.120</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -70,13 +70,13 @@ behavior.</p>
 
 
 <dt id="arg-to">to<a class="anchor" aria-label="anchor" href="#arg-to"></a></dt>
-<dd><p>One of <code>"baseR"</code>, <code>"spss"</code>, or <code>"stata"</code>
-(any capitalization is accepted). When <code>NULL</code> (the default),
-<code>jconvert()</code>
+<dd><p>One of <code>"baseR"</code>, <code>"spss"</code>, <code>"stata"</code>, or
+<code>"sas"</code> (any capitalization is accepted). When <code>NULL</code> (the
+default), <code>jconvert()</code>
 reads <code>joptions("missing.convention")</code>: if the slot is set to
 <code>"spss"</code> or <code>"stata"</code>, <code>to</code> resolves to that value; if
 the slot is at its <code>"none"</code> default, <code>jconvert()</code> errors
-with guidance naming the three concrete options. The destructive
+with guidance naming the concrete options. The destructive
 <code>"baseR"</code> target is never auto-resolved – it must always be
 passed explicitly.</p></dd>
 
@@ -149,8 +149,10 @@ no parallel uppercase convention). The notification's per-column
 display shows the original (pre-correction) tag for SAS-corrected
 columns – e.g. <code>.A "Refused" -&gt; -99</code> – so the user-visible
 mapping reflects what was actually in the data on input. Letter
-tags beyond <code>.d</code> (after case correction) are refused with
-guidance to use <code><a href="jrecode.html">jrecode()</a></code> for manual mapping.</p></dd>
+tags beyond those covered by the convention codes (default
+<code>.a</code>–<code>.c</code>, one letter per code, after case correction)
+are refused with guidance to use <code><a href="jrecode.html">jrecode()</a></code> for manual
+mapping.</p></dd>
 
 <dt><code>to = "stata"</code></dt>
 <dd><p>Convert SPSS-form numeric codes to
@@ -165,11 +167,36 @@ conversions are not guaranteed to preserve the original numeric
 codes (e.g. SPSS <code>c(-1, 9)</code> -&gt; Stata <code>.a, .b</code> -&gt; SPSS
 <code>c(-99, -98)</code> loses the original numbers), but the value
 labels survive intact and the missingness semantics are preserved.
-Range-based SPSS missings (<code>na_range</code>) are out of cross-format
-scope; columns with <code>na_range</code> are refused with guidance to
-enumerate the range in SPSS first. Columns with more than 4
-distinct <code>na_values</code> codes are also refused (matches the
-4-code cap on Stata letter-tag mapping).</p></dd>
+Range-based SPSS missings (<code>na_range</code>) are enumerated:
+Stata-style missing values have no range concept, so the distinct
+range values present in the column's data, plus any range values
+carrying a value label, are translated individually. They join the
+column's discrete <code>na_values</code> codes in a single set, sorted
+and lettered by the same ordering rule. The range rule itself is
+not preserved – a range value with neither a data occurrence nor
+a label at conversion time is not translated, so if it first
+appears in later data it arrives as an ordinary data value. A
+column whose combined set exceeds 26 values (the <code>.a</code>–<code>.z</code>
+alphabet) is refused before any data is touched. A range
+declaration with no values to translate does not block the
+conversion: the column still converts, with the empty range
+declaration dropped and reported. SAS-style (uppercase) tagged
+columns are
+case-corrected to Stata-style (lowercase) and counted as
+converted; columns already fully lowercase are skipped as already
+in the target form.</p></dd>
+
+<dt><code>to = "sas"</code></dt>
+<dd><p>Identical to <code>to = "stata"</code> except
+that the letters are uppercase (<code>.A</code>–<code>.Z</code>, SAS's
+native extended-missing convention): SPSS-form columns are
+enumerated and mapped to uppercase tags, Stata-style (lowercase)
+tagged columns are case-corrected to uppercase and counted as
+converted, and columns already fully uppercase are skipped.
+Inside R the two tagged forms are the same structure differing
+only in letter case; note that saving to Stata format (.dta)
+lowercases uppercase tags again, since the .dta format only
+supports lowercase letters.</p></dd>
 
 
 </dl><p>Pre-flight checks for <code>to = "spss"</code> include a collision check:
@@ -226,6 +253,21 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused" -&gt; .a)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Convert to SAS-style missing values (uppercase .A, .B, ...):</span></span></span>
+<span class="r-in"><span><span class="va">df_sas</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"sas"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to SAS-style missing values in 5 variables:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused" -&gt; .A)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>

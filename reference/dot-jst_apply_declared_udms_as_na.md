@@ -1,7 +1,6 @@
-# Internal helper: mask declared SPSS-form UDM cells to NA on analysis copy
+# Internal helper: mask declared UDM cells to NA on the analysis copy
 
-Internal helper: mask declared SPSS-form UDM cells to NA on analysis
-copy
+Internal helper: mask declared UDM cells to NA on the analysis copy
 
 ## Usage
 

@@ -43,7 +43,10 @@ jsave(data, file, overwrite = FALSE, preserve.udm = TRUE)
 
   Logical. If `TRUE`, overwrites an existing file without prompting. If
   `FALSE` (default), prompts for confirmation in interactive sessions.
-  In non-interactive sessions, stops with an error.
+  In non-interactive sessions, stops with an error. In a script, state
+  it explicitly: `jsave(mydata, "mydata.rds", overwrite = TRUE)`.
+  Otherwise, if the file already exists and the script was run by
+  pasting or with RStudio's Run button, the call stops with an error.
 
 - preserve.udm:
 
@@ -107,7 +110,7 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpWetv2s/community.sav (SPSS format; 103 cases, 15 variables)
+#> Saved community to /tmp/Rtmp2Aam3R/community.sav (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
 # The file extension determines the format ---

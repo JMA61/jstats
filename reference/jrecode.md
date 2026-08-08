@@ -112,8 +112,10 @@ new column in your data frame:
 
 ## Details
 
-The function accepts haven-labelled, plain numeric, and factor
-variables.
+The function accepts haven-labelled, plain numeric, and logical
+variables. Factor, character, and date/time variables are refused with a
+message naming the fix — recoding works with a variable's numeric
+values, so convert these to numeric first.
 
 The variable label from the original variable is carried across
 automatically with "(recoded)" appended. If the original variable has no

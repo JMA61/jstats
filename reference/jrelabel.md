@@ -2,20 +2,31 @@
 
 `jrelabel()` attaches a variable label and/or value labels to any
 variable in a data frame. It is designed as a simple label applicator —
-it does not recode values or compare variables. Use it to add labels
-after a recode, to fix missing labels, or to label any variable that
-needs them.
+it does not recode values, convert types, or compare variables. Use it
+to add labels after a recode, to fix missing labels, or to label any
+variable that needs them.
 
-The function accepts haven-labelled, plain numeric, factor, and
-character variables. The output is always a `haven_labelled` vector,
-which is compatible with all jstats functions.
+A variable label (`var.label`) can be attached to a variable of any type
+— the variable is returned unchanged apart from the new label, so dates
+stay dates, factors stay factors, and text stays text. Value labels
+(`labels`) can be applied to haven-labelled, plain numeric, and logical
+variables; logical values are stored as 1 (TRUE) and 0 (FALSE). Factor,
+character, and date/time variables cannot carry value labels, and
+`jrelabel()` refuses the `labels` argument for these with a message
+naming the fix.
+
+`jrelabel()` never rebuilds the variable it is given. Existing value
+labels, SPSS-style missing values (`na_values` / `na_range`),
+Stata-style missing values, and the variable's class all pass through
+untouched unless an argument you supply replaces them: new value labels
+replace the full existing set (as `VALUE LABELS` does in SPSS), and a
+new variable label replaces the old one. A replacement set clears any
+labels attached to declared missing-value codes; the declaration itself
+is unaffected, but re-supply its label alongside the new value labels to
+keep it.
 
 Both the `labels` and `var.label` arguments are optional. If neither is
-supplied, the function returns the variable unchanged as a
-`haven_labelled` vector.
-
-If the variable already has labels, they are silently overwritten when
-new labels are provided.
+supplied, the function returns the variable unchanged.
 
 ## Usage
 
@@ -36,7 +47,8 @@ jrelabel(data, var, labels = NULL, var.label = NULL)
 - labels:
 
   Optional. A quoted string specifying value labels using the format
-  `"code=Label Text"` with rules separated by semicolons.
+  `"code=Label Text"` with rules separated by semicolons. Accepted on
+  haven-labelled, plain numeric, and logical variables only.
 
   Examples:
 
@@ -55,8 +67,12 @@ jrelabel(data, var, labels = NULL, var.label = NULL)
 
 ## Value
 
-A `haven_labelled` vector with the requested labels applied. Assign this
-back to a column in your data frame:
+The variable with the requested labels applied. The variable keeps its
+class: haven-labelled input stays haven-labelled with any declared
+SPSS-style or Stata-style missing values intact; plain numeric and
+logical input becomes `haven_labelled` when value labels are applied;
+any other type is returned unchanged apart from the labels. Assign the
+result back to a column in your data frame:
 `MyData$VarName <- jrelabel(MyData, VarName, ...)`
 
 ## See also
@@ -82,6 +98,11 @@ df$StatusR <- jrelabel(df, StatusR, var.label = "Employment Status")
 
 # Add just value labels
 df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No")
+
+# Label a date variable (the variable stays a Date)
+df$Enrolled <- as.Date(c("2024-01-15", "2024-02-01", "2024-01-20",
+                         "2024-03-05", "2024-02-14", "2024-01-30"))
+df$Enrolled <- jrelabel(df, Enrolled, var.label = "Enrollment date")
 
 # Using juse() default
 juse(df)

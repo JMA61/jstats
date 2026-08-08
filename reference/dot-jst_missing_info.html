@@ -23,7 +23,7 @@ specific knowledge in one place."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.114</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.120</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,7 +61,7 @@ specific knowledge in one place.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_missing_info</span><span class="op">(</span><span class="va">col</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_missing_info</span><span class="op">(</span><span class="va">col</span>, observed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -71,6 +71,17 @@ specific knowledge in one place.</p>
 <dl><dt id="arg-col">col<a class="anchor" aria-label="anchor" href="#arg-col"></a></dt>
 <dd><p>A column from a data frame, possibly with UDM attributes
 or Stata-style missing-value markers.</p></dd>
+
+
+<dt id="arg-observed">observed<a class="anchor" aria-label="anchor" href="#arg-observed"></a></dt>
+<dd><p>Logical. When <code>TRUE</code>, additionally enumerate the
+distinct values actually PRESENT in the column that fall inside a
+declared <code>na_range</code>, returned as <code>range_values</code>. Defaults
+to <code>FALSE</code> because that enumeration reads the column's data
+(cost proportional to its length), while every other component of
+the return is an attribute read. Callers that need only the
+declaration – jsave's pre-flight, jload's narrative, jconvert, the
+CPS renderers – leave it <code>FALSE</code> and pay nothing.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -93,6 +104,19 @@ or <code>NULL</code> if only <code>na_range</code> is present. Columns:
 tagged NAs), <code>tag</code> (tag letter for Stata; <code>NA</code> for
 SPSS UDMs).</p></dd>
 
+<dt>range_values</dt>
+<dd><p>Only when <code>observed = TRUE</code> and an
+<code>na_range</code> is declared: a data frame of the DISTINCT
+observed in-band values, same columns as <code>codes</code> (with
+<code>source = "na_range"</code>), ascending by value, carrying no
+counts – consumers keep their own counting logic, exactly as
+they do for <code>codes</code>. Values that are also declared
+discretely in <code>na_values</code> are excluded, so the two
+components never describe the same cell twice. A zero-row data
+frame means the band is declared but no in-band value occurs;
+<code>NULL</code> means the enumeration was not requested, or no
+band is declared.</p></dd>
+
 
 </dl></div>
     <div class="section level2">
@@ -100,6 +124,20 @@ SPSS UDMs).</p></dd>
     <p>Label-only detection (values with labels like "Refused" but no
 formal declaration) is NOT in scope here – that pattern is handled
 by <code>.jst_scan_coded_missing</code>'s heuristic branch.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="why-codes-is-not-extended">Why codes is not extended<a class="anchor" aria-label="anchor" href="#why-codes-is-not-extended"></a></h2>
+
+
+<p><code>codes</code> carries DECLARATION-SLOT semantics – consumers such as
+jsave's .sav pre-flight, jconvert's letter cap and its SPSS-to-Stata
+ordering, and jdeclare_udm's drop notice read <code>nrow(codes)</code> as
+"how many discrete codes has the user declared". Folding observed
+in-band values into <code>codes</code> would take a range-bearing column
+from zero declared codes to however many happen to be present, and
+those consumers would then refuse a file that saves correctly today.
+Observed values are therefore a separate component, never a longer
+<code>codes</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

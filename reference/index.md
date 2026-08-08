@@ -48,7 +48,7 @@ Recode, relabel, declare missing values, and select cases.
 - [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) :
   Apply variable and value labels to a variable
 - [`jdeclare_udm()`](https://jma61.github.io/jstats/reference/jdeclare_udm.md)
-  : Declare user-defined missing values on a variable
+  : Declare user-defined missing values on one or more variables
 - [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) :
   Set, activate, deactivate, or clear a per-dataset case-selection
   expression

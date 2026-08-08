@@ -30,7 +30,10 @@ jcopy(data, name, overwrite = FALSE, quiet = FALSE)
 
   Logical; if FALSE (the default) and the destination name already
   exists in your environment, an interactive session asks before
-  overwriting.
+  overwriting. In a script, state it explicitly:
+  `jcopy(mydata, mydata2, overwrite = TRUE)`. Otherwise, if the name
+  already exists in your environment, and the script was run by pasting
+  or with RStudio's Run button, the call stops with an error.
 
 - quiet:
 

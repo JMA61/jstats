@@ -10,7 +10,7 @@ level.
 ## Usage
 
 ``` r
-.jst_jdeclare_udm_convention_error(parsed_codes, data_name, var_name)
+.jst_jdeclare_udm_convention_error(parsed_codes, data_name, var_name, col)
 ```
 
 ## Arguments

@@ -1,29 +1,44 @@
-# Declare user-defined missing values on a variable
+# Declare user-defined missing values on one or more variables
 
 `jdeclare_udm()` declares one or more user-defined missing values (UDMs)
-on a variable. UDMs are specific data values – typically negative codes
-such as `-99` or Stata-style tagged markers such as `.a` – that indicate
-*why* a value is missing (refused, don't know, not applicable, etc.)
-rather than simply that it is missing. Once declared, UDM cells are
-automatically excluded from analyses but remain visible in the data for
-diagnostic purposes (see
+on one or more variables. UDMs are specific data values – typically
+negative codes such as `-99` or Stata-style tagged markers such as `.a`
+– that indicate *why* a value is missing (refused, don't know, not
+applicable, etc.) rather than simply that it is missing. Once declared,
+UDM cells are automatically excluded from analyses but remain visible in
+the data for diagnostic purposes (see
 [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md)).
 
-The function operates in declarative mode: each call states the column's
-complete UDM set. A second call to `jdeclare_udm()` on the same column
-replaces, not augments, the prior declaration. This matches SPSS's
-`MISSING VALUES` and Stata's `mvdecode` semantics. When prior UDMs are
-dropped, a note lists them so the destructive aspect of the replacement
-is not silent.
+The function operates in declarative mode: what a call mentions, it
+replaces; what it omits survives. Supplying `codes` replaces the
+column's discrete-code set; supplying `range` replaces the column's
+missing-value range; an existing range survives a codes-only call, and
+existing discrete codes survive a range-only call. A second call
+therefore replaces, not augments, whichever parts it names – matching
+SPSS's `MISSING VALUES` and Stata's `mvdecode` semantics, neither of
+which has an additive form. When prior UDMs are dropped, a note lists
+them so the destructive aspect of the replacement is not silent.
+
+Variables are given either as unquoted names
+(`jdeclare_udm(df, MathScore, EnglishScore, codes = c(-99))`) or as a
+character vector via `vars =` (the programmatic form, e.g.
+`vars = offence_cols`). A multi-variable call applies the same
+declaration to every named column, all-or-nothing: if any column fails a
+check, no column is changed. There is deliberately no whole-data-frame
+default – declaring a code frame-wide would flag it missing even on
+columns where that value is legitimate data. To declare on every column,
+pass `vars = names(data)` explicitly.
 
 ## Usage
 
 ``` r
 jdeclare_udm(
   data,
-  var,
+  ...,
   codes = NULL,
   labels = NULL,
+  range = NULL,
+  vars = NULL,
   convention = NULL,
   udm.notice = TRUE,
   modify = FALSE
@@ -34,11 +49,13 @@ jdeclare_udm(
 
 - data:
 
-  A data frame containing the variable.
+  A data frame containing the variable(s).
 
-- var:
+- ...:
 
-  The variable to declare UDMs on (unquoted, e.g. `Income`).
+  The variable(s) to declare UDMs on, as unquoted names (e.g. `Income`,
+  or `MathScore, EnglishScore`). Use either `...` or `vars`, not both.
+  All arguments after the variables must be named.
 
 - codes:
 
@@ -55,16 +72,42 @@ jdeclare_udm(
   :   Named numeric vector; names are the labels. E.g.
       `` codes = c(Refused = -99, `Don't know` = -98) ``.
 
-  Under Stata convention, code values may be Stata-style missing-value
-  markers created with
-  [`haven::tagged_na()`](https://haven.tidyverse.org/reference/tagged_na.html),
-  e.g. `codes = c(Refused = tagged_na("a"))`.
+  On a column that already carries Stata-style missing values, codes may
+  name the markers directly as quoted tokens, e.g.
+  `codes = c(Refused = ".a")` – a token `".a"` means the `.a` marker.
+  Tokens are refused on columns with no Stata-style missing values to
+  label (see the Missing-Values Convention section).
 
 - labels:
 
   Optional. A quoted string in the form `"value=label; value=label"`
   pairing labels with codes (Option A only). Must be `NULL` when `codes`
-  is named (Option C).
+  is named (Option C). When a `range` is in effect (supplied in this
+  call, or already on the column), entries may also name values inside
+  the range: those attach as value labels on the in-range values without
+  becoming discrete declared codes (see the Missing-value ranges
+  section).
+
+- range:
+
+  Optional. A length-2 numeric vector declaring a missing-value RANGE
+  (band), e.g. `range = c(-99, -51)` – every value from the first bound
+  through the second is treated as missing. The SPSS parallel is
+  `MISSING VALUES X (-99 THRU -51)`. Bounds may be non-integer, and one
+  bound may be infinite (`c(-Inf, -51)` is SPSS's `LO THRU -51`). Ranges
+  exist only under SPSS convention; combining `range` with the Stata
+  convention or with Stata-style tokens is refused. SPSS allows at most
+  ONE discrete code alongside a range, and the check applies to the
+  column's composed result (what this call supplies plus what already
+  survives on the column), so a declaration that a `.sav` file could not
+  hold is refused here rather than at save time.
+
+- vars:
+
+  Optional. A character vector of variable names, the programmatic
+  alternative to unquoted names in `...` (e.g.
+  `vars = c("Age", "Income")`, or `vars = offence_cols` where
+  `offence_cols` holds the names). Use either `vars` or `...`, not both.
 
 - convention:
 
@@ -72,7 +115,8 @@ jdeclare_udm(
   accepted); overrides the convention resolution for this call. When
   `NULL` (the default), the convention is resolved from the column's
   existing UDM declaration (if any), then from
-  `joptions("missing.convention")`, then from the SPSS-form default.
+  `joptions("missing.convention")`, then from the SPSS-form default. A
+  `range` forces SPSS convention (see `range`).
 
 - udm.notice:
 
@@ -94,7 +138,7 @@ jdeclare_udm(
 
 ## Value
 
-The data frame, with the specified variable updated to carry the
+The data frame, with the specified variable(s) updated to carry the
 declared UDMs, returned invisibly. With the default `modify = FALSE`,
 the caller's data frame is unchanged until the result is assigned back.
 With `modify = TRUE`, the change is also written back onto the caller's
@@ -107,9 +151,27 @@ column's `na_values` attribute (haven's representation of SPSS-form
 UDMs). The data cells themselves are unchanged; only the metadata that
 flags certain values as missing is added.
 
-Under Stata convention with Stata-style missing-value input, the
-function attaches value labels to existing Stata-style missing-value
-cells on the column.
+Under Stata convention with Stata-style missing-value input (quoted
+tokens such as `".a"`), the function attaches value labels to the
+column's existing Stata-style missing-value markers. This requires the
+column to already carry Stata-style missing values – either tagged
+cells, or markers previously declared through value labels (a marker may
+be labeled before any cases carry it, so a declaration made early in
+data collection is complete for later data). Tokens against a column
+with no Stata-style missing values are refused identically under every
+convention source: on a plain column the error points at
+[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)
+(which creates tagged cells from numeric codes); on a column carrying
+SPSS-style declarations it points at
+[`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md).
+
+Note that on a plain numeric column with plain numeric codes and no
+`convention` argument, the resolved convention decides the outcome:
+under SPSS convention the numbers stay in the cells and are flagged
+missing; under Stata convention the matching cells are converted to
+markers and the numbers leave the data. This is the one place
+`joptions(missing.convention = ...)` changes what happens to data (see
+the examples).
 
 Under Stata convention with numeric input, the function converts
 matching cells to Stata-style missing-value markers (Session 30 design
@@ -119,6 +181,29 @@ descending, more-negative-first as tie-breaker, then assigned `.a`,
 `joptions("udm.convention.codes")` (which only governs the reverse
 Stata-to-SPSS direction). A conversion note in the standard/full
 `joutput` tier shows the Stata-style equivalent for future calls.
+
+## Missing-value ranges
+
+A range declares a whole band of values missing at once – the form
+commercial statistical software uses when a study's sentinel codes share
+a band (e.g. every code from -99 through -51). SPSS accepts at most
+three discrete missing values, OR a range, OR a range plus one discrete
+value; `jdeclare_udm()` enforces the same rule on the composed result of
+each call, so a declaration is refused at the moment it becomes illegal
+rather than when
+[`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) later
+refuses the file. A range-only call is complete in itself
+(`jdeclare_udm(df, X, range = c(-99, -51))`).
+
+Values inside the band may carry value labels: with a range in effect,
+`labels` entries that match no discrete code but fall inside the band
+attach as ordinary value labels on those values. They do not become
+discrete declared codes – the band already covers them – but analysis
+output that breaks out in-range values can then show their meanings.
+Because a range replaces the column's existing range and existing
+discrete codes survive a range-only call, a column already carrying two
+or more discrete codes cannot take a range in the same declaration; the
+call is refused with the surviving codes named.
 
 ## Mixed conventions and file export
 
@@ -134,8 +219,7 @@ pointer to
 [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
 when the mix is incompatible. The post-declaration mismatch notice
 emitted at the bottom of this function's output exists to alert you
-early if a single-column declaration ends up out of step with the rest
-of its DF.
+early if a declaration ends up out of step with the rest of its DF.
 
 ## See also
 
@@ -215,26 +299,60 @@ df3 <- jdeclare_udm(clinic, MoodRating,
 #> To change clinic directly, rerun with modify = TRUE:
 #>   jdeclare_udm(clinic, MoodRating, ..., modify = TRUE)
 
+# A missing-value RANGE: every value from -99 through -51 is missing.
+# SPSS parallel: MISSING VALUES MoodRating (-99 THRU -51).
+df4 <- jdeclare_udm(clinic, MoodRating, range = c(-99, -51))
+#> Declared SPSS-style missing values on MoodRating:
+#>   range -99 to -51
+#> 
+#> This call changes clinic only if you assign the result:
+#>   clinic <- jdeclare_udm(clinic, MoodRating, ...)
+#> 
+#> To change clinic directly, rerun with modify = TRUE:
+#>   jdeclare_udm(clinic, MoodRating, ..., modify = TRUE)
+
+# Range plus labeled values inside the band, on several variables at
+# once. The same declaration lands on every named column,
+# all-or-nothing.
+if (FALSE) { # \dontrun{
+jdeclare_udm(mydata, vars = c("Theft", "Assault", "Burglary"),
+             range  = c(-99, -51),
+             labels = "-99=Refused; -61=Not applicable",
+             modify = TRUE)
+} # }
+
 # Stata-style: label Stata-style missing-value cells. The jrecode() call
-# turns the literal codes into tagged cells; jdeclare_udm() labels them.
-df4 <- clinic
-df4$Mood2 <- jrecode(df4, MoodRating,
+# turns the literal codes into tagged cells; jdeclare_udm() labels them
+# by naming the markers as quoted tokens.
+df5 <- clinic
+df5$Mood2 <- jrecode(df5, MoodRating,
                      map = "-99=.a; -98=.b; else=copy",
                      convention = "stata")
 #> 
 #> Note: jrecode() returns the recoded values; assign them to a column to keep them:
-#>   df4$<name> <- jrecode(...)
+#>   df5$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the new column.
-jdeclare_udm(df4, Mood2,
-             codes = c("Refused"    = haven::tagged_na("a"),
-                       "Don't know" = haven::tagged_na("b")),
+jdeclare_udm(df5, Mood2,
+             codes = c("Refused" = ".a", "Don't know" = ".b"),
              modify = TRUE)
-#> Labeled Stata-style missing values on Mood2 in df4:
+#> Labeled Stata-style missing values on Mood2 in df5:
 #>   .a ["Refused"]
 #>   .b ["Don't know"]
 #> 
 #> To keep it across sessions, save the data frame:
-#>   jsave(df4, "df4.rds")
-#> Note: variable Mood2 is Stata-style, but other columns in df4 are predominantly SPSS-style.
+#>   jsave(df5, "df5.rds")
+#> Note: variable Mood2 is Stata-style, but other columns in df5 are predominantly SPSS-style.
 #> Use jconvert() to align if desired.
+
+if (FALSE) { # \dontrun{
+# The same neutral call -- plain numeric codes, no convention argument,
+# plain column -- forks on joptions(missing.convention = ...):
+joptions(missing.convention = "spss")
+df6 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+# -99 stays in the cells, flagged as missing (SPSS-form declaration)
+
+joptions(missing.convention = "stata")
+df7 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+# -99 cells become the .a marker; the number -99 leaves the data
+} # }
 ```

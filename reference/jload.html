@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.114</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.120</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -113,7 +113,11 @@ functions. Default is <code>FALSE</code>.</p></dd>
 <dd><p>Logical. If <code>TRUE</code>, overwrites an existing object
 with the same name without prompting. If <code>FALSE</code> (default),
 prompts for confirmation in interactive sessions. In non-interactive
-sessions, overwrites with a warning message.</p></dd>
+sessions, overwrites with a warning message. In a script, state it
+explicitly: <code>jload("mydata.rds", overwrite = TRUE)</code>. Otherwise,
+if the name already exists in your environment, and the script was
+run by pasting or with RStudio's Run button, the call stops with an
+error.</p></dd>
 
 
 <dt id="arg-package">package<a class="anchor" aria-label="anchor" href="#arg-package"></a></dt>

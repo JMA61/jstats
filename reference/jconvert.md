@@ -23,11 +23,11 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
 
 - to:
 
-  One of `"baseR"`, `"spss"`, or `"stata"` (any capitalization is
-  accepted). When `NULL` (the default), `jconvert()` reads
+  One of `"baseR"`, `"spss"`, `"stata"`, or `"sas"` (any capitalization
+  is accepted). When `NULL` (the default), `jconvert()` reads
   `joptions("missing.convention")`: if the slot is set to `"spss"` or
   `"stata"`, `to` resolves to that value; if the slot is at its `"none"`
-  default, `jconvert()` errors with guidance naming the three concrete
+  default, `jconvert()` errors with guidance naming the concrete
   options. The destructive `"baseR"` target is never auto-resolved – it
   must always be passed explicitly.
 
@@ -102,7 +102,8 @@ The three target formats:
   The notification's per-column display shows the original
   (pre-correction) tag for SAS-corrected columns – e.g.
   `.A "Refused" -> -99` – so the user-visible mapping reflects what was
-  actually in the data on input. Letter tags beyond `.d` (after case
+  actually in the data on input. Letter tags beyond those covered by the
+  convention codes (default `.a`–`.c`, one letter per code, after case
   correction) are refused with guidance to use
   [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) for
   manual mapping.
@@ -119,10 +120,32 @@ The three target formats:
   (e.g. SPSS `c(-1, 9)` -\> Stata `.a, .b` -\> SPSS `c(-99, -98)` loses
   the original numbers), but the value labels survive intact and the
   missingness semantics are preserved. Range-based SPSS missings
-  (`na_range`) are out of cross-format scope; columns with `na_range`
-  are refused with guidance to enumerate the range in SPSS first.
-  Columns with more than 4 distinct `na_values` codes are also refused
-  (matches the 4-code cap on Stata letter-tag mapping).
+  (`na_range`) are enumerated: Stata-style missing values have no range
+  concept, so the distinct range values present in the column's data,
+  plus any range values carrying a value label, are translated
+  individually. They join the column's discrete `na_values` codes in a
+  single set, sorted and lettered by the same ordering rule. The range
+  rule itself is not preserved – a range value with neither a data
+  occurrence nor a label at conversion time is not translated, so if it
+  first appears in later data it arrives as an ordinary data value. A
+  column whose combined set exceeds 26 values (the `.a`–`.z` alphabet)
+  is refused before any data is touched. A range declaration with no
+  values to translate does not block the conversion: the column still
+  converts, with the empty range declaration dropped and reported.
+  SAS-style (uppercase) tagged columns are case-corrected to Stata-style
+  (lowercase) and counted as converted; columns already fully lowercase
+  are skipped as already in the target form.
+
+- `to = "sas"`:
+
+  Identical to `to = "stata"` except that the letters are uppercase
+  (`.A`–`.Z`, SAS's native extended-missing convention): SPSS-form
+  columns are enumerated and mapped to uppercase tags, Stata-style
+  (lowercase) tagged columns are case-corrected to uppercase and counted
+  as converted, and columns already fully uppercase are skipped. Inside
+  R the two tagged forms are the same structure differing only in letter
+  case; note that saving to Stata format (.dta) lowercases uppercase
+  tags again, since the .dta format only supports lowercase letters.
 
 Pre-flight checks for `to = "spss"` include a collision check: if a
 column's target numeric code (e.g. `-99` for `.a`) is present as genuine
@@ -181,6 +204,21 @@ df2 <- jconvert(community, to = "stata")
 #>   Smoker        (-99 "Refused" -> .a)
 #>   Environment1  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
 #>   Environment3  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
+#> 
+#> This call changes community only if you assign the result:
+#>   community <- jconvert(community, ...)
+#> 
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
+
+# Convert to SAS-style missing values (uppercase .A, .B, ...):
+df_sas <- jconvert(community, to = "sas")
+#> Converted to SAS-style missing values in 5 variables:
+#>   Income        (-99 "Refused" -> .A, -98 "Don't know" -> .B)
+#>   Education     (-99 "Refused" -> .A, -98 "Don't know" -> .B)
+#>   Smoker        (-99 "Refused" -> .A)
+#>   Environment1  (-99 "Refused" -> .A, -98 "Don't know" -> .B)
+#>   Environment3  (-99 "Refused" -> .A, -98 "Don't know" -> .B)
 #> 
 #> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)

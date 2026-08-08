@@ -23,7 +23,7 @@ below for the canonical patterns under each convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.114</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.120</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -140,7 +140,10 @@ this to a new column in your data frame:
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The function accepts haven-labelled, plain numeric, and factor variables.</p>
+    <p>The function accepts haven-labelled, plain numeric, and logical variables.
+Factor, character, and date/time variables are refused with a message
+naming the fix — recoding works with a variable's numeric values, so
+convert these to numeric first.</p>
 <p>The variable label from the original variable is carried across automatically
 with "(recoded)" appended. If the original variable has no variable label,
 the variable name is used instead.</p>

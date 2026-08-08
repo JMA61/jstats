@@ -59,7 +59,10 @@ jload(
   Logical. If `TRUE`, overwrites an existing object with the same name
   without prompting. If `FALSE` (default), prompts for confirmation in
   interactive sessions. In non-interactive sessions, overwrites with a
-  warning message.
+  warning message. In a script, state it explicitly:
+  `jload("mydata.rds", overwrite = TRUE)`. Otherwise, if the name
+  already exists in your environment, and the script was run by pasting
+  or with RStudio's Run button, the call stops with an error.
 
 - package:
 
