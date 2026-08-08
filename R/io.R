@@ -34,7 +34,11 @@
 #' @param overwrite Logical. If \code{TRUE}, overwrites an existing object
 #'   with the same name without prompting. If \code{FALSE} (default),
 #'   prompts for confirmation in interactive sessions. In non-interactive
-#'   sessions, overwrites with a warning message.
+#'   sessions, overwrites with a warning message. In a script, state it
+#'   explicitly: \code{jload("mydata.rds", overwrite = TRUE)}. Otherwise,
+#'   if the name already exists in your environment, and the script was
+#'   run by pasting or with RStudio's Run button, the call stops with an
+#'   error.
 #' @param package Logical. If \code{TRUE}, loads a jstats example dataset
 #'   shipped in the package (e.g. \code{community}, \code{clinic}) by bare
 #'   name, bypassing the disk search. Use this when a same-named file in the
@@ -347,11 +351,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   target_env <- parent.frame()
   if (exists(obj_name, envir = target_env, inherits = FALSE) && !overwrite) {
     if (interactive()) {
-      response <- readline(
+      ok <- .jst_confirm(
         paste0("'", obj_name, "' already exists in your environment. ",
-               "Overwrite? (y/n): ")
+               "Overwrite? (y/n): "),
+        "Add overwrite = TRUE to the call, then run it again."
       )
-      if (!tolower(trimws(response)) %in% c("y", "yes")) {
+      if (!ok) {
         message("Load cancelled.")
         return(invisible(NULL))
       }
@@ -2318,7 +2323,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param overwrite Logical. If \code{TRUE}, overwrites an existing file
 #'   without prompting. If \code{FALSE} (default), prompts for confirmation
 #'   in interactive sessions. In non-interactive sessions, stops with an
-#'   error.
+#'   error. In a script, state it explicitly:
+#'   \code{jsave(mydata, "mydata.rds", overwrite = TRUE)}. Otherwise, if
+#'   the file already exists and the script was run by pasting or with
+#'   RStudio's Run button, the call stops with an error.
 #' @param preserve.udm Logical. If \code{TRUE} (the default), missing-value
 #'   declarations are written as they stand; formats that cannot store them
 #'   (notably Excel and CSV) drop the metadata, and SPSS-style codes such as
@@ -2596,10 +2604,12 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   # --- Overwrite check -------------------------------------------------------
   if (file.exists(out_path) && !overwrite) {
     if (interactive()) {
-      response <- readline(
-        paste0("File '", .jst_norm_path(out_path), "' already exists. Overwrite? (y/n): ")
+      ok <- .jst_confirm(
+        paste0("File '", .jst_norm_path(out_path),
+               "' already exists. Overwrite? (y/n): "),
+        "Add overwrite = TRUE to the call, then run it again."
       )
-      if (!tolower(trimws(response)) %in% c("y", "yes")) {
+      if (!ok) {
         message("Save cancelled.")
         return(invisible(NULL))
       }
@@ -2907,7 +2917,10 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
 #'   single name is given it is read as the destination, not the source.
 #' @param overwrite Logical; if FALSE (the default) and the destination name
 #'   already exists in your environment, an interactive session asks before
-#'   overwriting.
+#'   overwriting. In a script, state it explicitly:
+#'   \code{jcopy(mydata, mydata2, overwrite = TRUE)}. Otherwise, if the
+#'   name already exists in your environment, and the script was run by
+#'   pasting or with RStudio's Run button, the call stops with an error.
 #' @param quiet Logical; if TRUE, suppress the confirmation message.
 #' @return Invisibly NULL. Called for its side effect: the copy is assigned into
 #'   the calling environment under \code{name}, and its registrations are cloned
@@ -2981,10 +2994,12 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
   target_env <- parent.frame()
   if (exists(dest_name, envir = target_env, inherits = FALSE) && !overwrite) {
     if (interactive()) {
-      response <- readline(
+      ok <- .jst_confirm(
         paste0("'", dest_name, "' already exists in your environment. ",
-               "Overwrite? (y/n): "))
-      if (!tolower(trimws(response)) %in% c("y", "yes")) {
+               "Overwrite? (y/n): "),
+        "Add overwrite = TRUE to the call, then run it again."
+      )
+      if (!ok) {
         message("Copy cancelled.")
         return(invisible(NULL))
       }

@@ -33,7 +33,11 @@ functions. Default is \code{FALSE}.}
 \item{overwrite}{Logical. If \code{TRUE}, overwrites an existing object
 with the same name without prompting. If \code{FALSE} (default),
 prompts for confirmation in interactive sessions. In non-interactive
-sessions, overwrites with a warning message.}
+sessions, overwrites with a warning message. In a script, state it
+explicitly: \code{jload("mydata.rds", overwrite = TRUE)}. Otherwise,
+if the name already exists in your environment, and the script was
+run by pasting or with RStudio's Run button, the call stops with an
+error.}
 
 \item{package}{Logical. If \code{TRUE}, loads a jstats example dataset
 shipped in the package (e.g. \code{community}, \code{clinic}) by bare

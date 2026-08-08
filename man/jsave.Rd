@@ -17,7 +17,10 @@ file paths.}
 \item{overwrite}{Logical. If \code{TRUE}, overwrites an existing file
 without prompting. If \code{FALSE} (default), prompts for confirmation
 in interactive sessions. In non-interactive sessions, stops with an
-error.}
+error. In a script, state it explicitly:
+\code{jsave(mydata, "mydata.rds", overwrite = TRUE)}. Otherwise, if
+the file already exists and the script was run by pasting or with
+RStudio's Run button, the call stops with an error.}
 
 \item{preserve.udm}{Logical. If \code{TRUE} (the default), missing-value
 declarations are written as they stand; formats that cannot store them

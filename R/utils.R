@@ -614,7 +614,81 @@ jai <- function(setup = NULL, path = NULL) {
   sub("^\\[checksum: ([0-9a-f]+)\\]$", "\\1", m[[1L]])
 }
 
-#' Internal helper: yes/no console confirmation
+#' Internal helper: validated yes/no console confirmation
+#'
+#' The shared confirmation reader behind every user-facing prompt (jsave,
+#' jload, jcopy, and jai via .jst_jai_confirm). Reads one answer with
+#' readline() and validates it: y/yes proceeds, n/no declines, and
+#' anything else -- including an empty answer -- stops with an error. The
+#' validation exists because advancing a script while a prompt is waiting
+#' -- select-all + Run, pasting, or stepping line by line with Ctrl+Enter
+#' -- sends the next script line as the answer: the operation cancels, the
+#' consumed line never executes, and nothing announces either. An
+#' unrecognizable answer is treated as that case, since no human's reply
+#' at a y/n prompt is a function call or a comment. Deliberately does NOT
+#' re-prompt on invalid input -- a retry would consume a further script
+#' line and compound the misalignment.
+#'
+#' Enter is NOT a decline (S221, widening the original E8 scope on
+#' evidence). RStudio sends a script's blank lines to the console, so a
+#' blank line following a prompting call is consumed and arrives here as
+#' "" -- and a blank line after a save is ordinary formatting, making it
+#' the COMMONEST route into the silent non-write this helper exists to
+#' prevent. Since every call site is interactive()-guarded (jai stops
+#' before its prompt when non-interactive), an empty answer has exactly
+#' two possible origins: a human pressed Enter, or a blank script line
+#' was consumed. Treating it as an error costs the first case an error
+#' instead of a quiet cancel -- the operation does not happen either way,
+#' so nothing is at risk -- and closes the second. The prompt reads
+#' "(y/n):" with no capitalized default, so it never promised Enter would
+#' answer it.
+#'
+#' Message shape (Rules D and I): the question, the received text on its
+#' own line, and ONE corrective action. The received text carries the
+#' diagnosis, so no sentence explains the mechanism -- it would be
+#' accurate for the script case and wrong for a user who simply typed
+#' "yep", and both readers act on the same fix. The text is shown
+#' unquoted because a consumed line is often itself quoted. The two
+#' truncation bounds differ ON PURPOSE: clipping starts only past 70
+#' characters but cuts to 60, so a line just over the display width is
+#' shown whole rather than losing a character or two to an ellipsis that
+#' saves nothing. The empty case takes a two-line form of its own, since
+#' "It received:" followed by nothing reads as a rendering fault.
+#'
+#' The error routes through .jst_stop(), whose stack walk skips this
+#' helper (no j-prefix) and prefixes the user-facing caller's name.
+#' @param prompt The single-line prompt string, ending "(y/n): ".
+#' @param remedy One sentence naming the caller-specific fix; becomes the
+#'   error's final line.
+#' @param subject The question's name as it reads in the error's first
+#'   line; "overwrite" for the three overwrite prompts, "confirmation"
+#'   for jai, which asks about writing rather than overwriting.
+#' @return TRUE to proceed, FALSE to decline; or signals an error.
+#' @keywords internal
+.jst_confirm <- function(prompt, remedy, subject = "overwrite") {
+  response <- trimws(readline(prompt))
+  answer <- tolower(response)
+  if (answer %in% c("y", "yes")) return(TRUE)
+  if (answer %in% c("n", "no")) return(FALSE)
+  if (!nzchar(answer)) {
+    .jst_stop(
+      "The ", subject, " question needs y or n. It received an empty line.\n",
+      remedy
+    )
+  }
+  shown <- if (nchar(response) > 70L) {
+    paste0(substr(response, 1L, 60L), "...")
+  } else {
+    response
+  }
+  .jst_stop(
+    "The ", subject, " question needs y or n. It received:\n",
+    shown, "\n",
+    remedy
+  )
+}
+
+#' Internal helper: yes/no console confirmation for jai()
 #'
 #' Takes the informational lines only; the helper owns the question. The
 #' split matters: readline()'s prompt is a SINGLE-line facility, so a
@@ -622,11 +696,18 @@ jai <- function(setup = NULL, path = NULL) {
 #' first line while the rest renders below it (confusing in RStudio).
 #' Display goes through cat() to stdout -- not message(), which writes to
 #' stderr, renders red in RStudio, and can interleave unpredictably right
-#' before a prompt.
+#' before a prompt. The answer itself is read and validated by
+#' .jst_confirm(); jai's fix is path = (naming the destination is the
+#' consent, so no prompt fires), not overwrite =, and its question is
+#' about writing a file rather than overwriting one.
 #' @keywords internal
 .jst_jai_confirm <- function(info) {
   cat("\n", sub("\n+$", "", info), "\n\n", sep = "")
-  tolower(trimws(readline("Proceed? (y/n): "))) %in% c("y", "yes")
+  .jst_confirm(
+    "Proceed? (y/n): ",
+    "Set path = to name the destination folder and rerun.",
+    subject = "confirmation"
+  )
 }
 
 #' Internal helper: the declined-write note

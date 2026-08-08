@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{.jst_jai_confirm}
 \alias{.jst_jai_confirm}
-\title{Internal helper: yes/no console confirmation}
+\title{Internal helper: yes/no console confirmation for jai()}
 \usage{
 .jst_jai_confirm(info)
 }
@@ -13,6 +13,9 @@ prompt carrying embedded newlines leaves the cursor parked after the
 first line while the rest renders below it (confusing in RStudio).
 Display goes through cat() to stdout -- not message(), which writes to
 stderr, renders red in RStudio, and can interleave unpredictably right
-before a prompt.
+before a prompt. The answer itself is read and validated by
+.jst_confirm(); jai's fix is path = (naming the destination is the
+consent, so no prompt fires), not overwrite =, and its question is
+about writing a file rather than overwriting one.
 }
 \keyword{internal}
