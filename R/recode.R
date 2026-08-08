@@ -1414,11 +1414,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
 # -- jdeclare_udm ------------------------------------------------------------
 
-#' Declare user-defined missing values on a variable
+#' Declare user-defined missing values on one or more variables
 #'
 #' @description
 #' \code{jdeclare_udm()} declares one or more user-defined missing
-#' values (UDMs) on a variable. UDMs are specific data values --
+#' values (UDMs) on one or more variables. UDMs are specific data values --
 #' typically negative codes such as \code{-99} or Stata-style tagged
 #' markers such as \code{.a} -- that indicate \emph{why} a value is
 #' missing (refused, don't know, not applicable, etc.) rather than
@@ -1426,16 +1426,32 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' automatically excluded from analyses but remain visible in the data
 #' for diagnostic purposes (see \code{jfreq()}).
 #'
-#' The function operates in declarative mode: each call states the
-#' column's complete UDM set. A second call to \code{jdeclare_udm()} on
-#' the same column replaces, not augments, the prior declaration. This
-#' matches SPSS's \code{MISSING VALUES} and Stata's \code{mvdecode}
-#' semantics. When prior UDMs are dropped, a note lists them so the
-#' destructive aspect of the replacement is not silent.
+#' The function operates in declarative mode: what a call mentions, it
+#' replaces; what it omits survives. Supplying \code{codes} replaces the
+#' column's discrete-code set; supplying \code{range} replaces the
+#' column's missing-value range; an existing range survives a codes-only
+#' call, and existing discrete codes survive a range-only call. A second
+#' call therefore replaces, not augments, whichever parts it names --
+#' matching SPSS's \code{MISSING VALUES} and Stata's \code{mvdecode}
+#' semantics, neither of which has an additive form. When prior UDMs are
+#' dropped, a note lists them so the destructive aspect of the
+#' replacement is not silent.
 #'
-#' @param data A data frame containing the variable.
-#' @param var  The variable to declare UDMs on (unquoted, e.g.
-#'   \code{Income}).
+#' Variables are given either as unquoted names (\code{jdeclare_udm(df,
+#' MathScore, EnglishScore, codes = c(-99))}) or as a character vector
+#' via \code{vars =} (the programmatic form, e.g.
+#' \code{vars = offence_cols}). A multi-variable call applies the same
+#' declaration to every named column, all-or-nothing: if any column
+#' fails a check, no column is changed. There is deliberately no
+#' whole-data-frame default -- declaring a code frame-wide would flag it
+#' missing even on columns where that value is legitimate data. To
+#' declare on every column, pass \code{vars = names(data)} explicitly.
+#'
+#' @param data A data frame containing the variable(s).
+#' @param ... The variable(s) to declare UDMs on, as unquoted names
+#'   (e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
+#'   either \code{...} or \code{vars}, not both. All arguments after
+#'   the variables must be named.
 #' @param codes Numeric vector of code values to declare as UDMs.
 #'   Accepts two forms:
 #'   \describe{
@@ -1454,14 +1470,36 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' @param labels Optional. A quoted string in the form
 #'   \code{"value=label; value=label"} pairing labels with codes
 #'   (Option A only). Must be \code{NULL} when \code{codes} is named
-#'   (Option C).
+#'   (Option C). When a \code{range} is in effect (supplied in this
+#'   call, or already on the column), entries may also name values
+#'   inside the range: those attach as value labels on the in-range
+#'   values without becoming discrete declared codes (see the
+#'   Missing-value ranges section).
+#' @param range Optional. A length-2 numeric vector declaring a
+#'   missing-value RANGE (band), e.g. \code{range = c(-99, -51)} --
+#'   every value from the first bound through the second is treated as
+#'   missing. The SPSS parallel is \code{MISSING VALUES X (-99 THRU
+#'   -51)}. Bounds may be non-integer, and one bound may be infinite
+#'   (\code{c(-Inf, -51)} is SPSS's \code{LO THRU -51}). Ranges exist
+#'   only under SPSS convention; combining \code{range} with the Stata
+#'   convention or with Stata-style tokens is refused. SPSS allows at
+#'   most ONE discrete code alongside a range, and the check applies to
+#'   the column's composed result (what this call supplies plus what
+#'   already survives on the column), so a declaration that a
+#'   \code{.sav} file could not hold is refused here rather than at
+#'   save time.
+#' @param vars Optional. A character vector of variable names, the
+#'   programmatic alternative to unquoted names in \code{...}
+#'   (e.g. \code{vars = c("Age", "Income")}, or \code{vars =
+#'   offence_cols} where \code{offence_cols} holds the names). Use
+#'   either \code{vars} or \code{...}, not both.
 #' @param convention Optional. One of \code{"spss"} or \code{"stata"}
 #'   (any capitalization is accepted); overrides the convention resolution
 #'   for this call. When
 #'   \code{NULL} (the default), the convention is resolved from the
 #'   column's existing UDM declaration (if any), then from
 #'   \code{joptions("missing.convention")}, then from the SPSS-form
-#'   default.
+#'   default. A \code{range} forces SPSS convention (see \code{range}).
 #' @param udm.notice Logical. When \code{TRUE} (the default), the
 #'   function prints a notification summarizing what was declared,
 #'   plus a reminder of how to keep the result.
@@ -1476,7 +1514,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   untouched; assign the returned data frame to keep the
 #'   declaration.
 #'
-#' @return The data frame, with the specified variable updated to
+#' @return The data frame, with the specified variable(s) updated to
 #'   carry the declared UDMs, returned invisibly. With the default
 #'   \code{modify = FALSE}, the caller's data frame is unchanged until
 #'   the result is assigned back. With \code{modify = TRUE}, the
@@ -1520,6 +1558,28 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' conversion note in the standard/full \code{joutput} tier shows the
 #' Stata-style equivalent for future calls.
 #'
+#' @section Missing-value ranges:
+#' A range declares a whole band of values missing at once -- the form
+#' commercial statistical software uses when a study's sentinel codes
+#' share a band (e.g. every code from -99 through -51). SPSS accepts at
+#' most three discrete missing values, OR a range, OR a range plus one
+#' discrete value; \code{jdeclare_udm()} enforces the same rule on the
+#' composed result of each call, so a declaration is refused at the
+#' moment it becomes illegal rather than when \code{jsave()} later
+#' refuses the file. A range-only call is complete in itself
+#' (\code{jdeclare_udm(df, X, range = c(-99, -51))}).
+#'
+#' Values inside the band may carry value labels: with a range in
+#' effect, \code{labels} entries that match no discrete code but fall
+#' inside the band attach as ordinary value labels on those values.
+#' They do not become discrete declared codes -- the band already
+#' covers them -- but analysis output that breaks out in-range values
+#' can then show their meanings. Because a range replaces the column's
+#' existing range and existing discrete codes survive a range-only
+#' call, a column already carrying two or more discrete codes cannot
+#' take a range in the same declaration; the call is refused with the
+#' surviving codes named.
+#'
 #' @section Mixed conventions and file export:
 #' A single data frame may carry both SPSS-form and Stata-form UDM
 #' columns. In-memory analysis and display tolerate the mix without
@@ -1531,8 +1591,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' against the destination format and errors with a pointer to
 #' \code{jconvert()} when the mix is incompatible. The
 #' post-declaration mismatch notice emitted at the bottom of this
-#' function's output exists to alert you early if a single-column
-#' declaration ends up out of step with the rest of its DF.
+#' function's output exists to alert you early if a declaration
+#' ends up out of step with the rest of its DF.
 #'
 #' @seealso \code{\link{jrecode}}, \code{\link{jconvert}},
 #'   \code{\link{joptions}}, \code{\link{jstats}}
@@ -1563,14 +1623,28 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' df3 <- jdeclare_udm(clinic, MoodRating,
 #'                     codes = c("Refused" = -99, "Don't know" = -98))
 #'
+#' # A missing-value RANGE: every value from -99 through -51 is missing.
+#' # SPSS parallel: MISSING VALUES MoodRating (-99 THRU -51).
+#' df4 <- jdeclare_udm(clinic, MoodRating, range = c(-99, -51))
+#'
+#' # Range plus labeled values inside the band, on several variables at
+#' # once. The same declaration lands on every named column,
+#' # all-or-nothing.
+#' \dontrun{
+#' jdeclare_udm(mydata, vars = c("Theft", "Assault", "Burglary"),
+#'              range  = c(-99, -51),
+#'              labels = "-99=Refused; -61=Not applicable",
+#'              modify = TRUE)
+#' }
+#'
 #' # Stata-style: label Stata-style missing-value cells. The jrecode() call
 #' # turns the literal codes into tagged cells; jdeclare_udm() labels them
 #' # by naming the markers as quoted tokens.
-#' df4 <- clinic
-#' df4$Mood2 <- jrecode(df4, MoodRating,
+#' df5 <- clinic
+#' df5$Mood2 <- jrecode(df5, MoodRating,
 #'                      map = "-99=.a; -98=.b; else=copy",
 #'                      convention = "stata")
-#' jdeclare_udm(df4, Mood2,
+#' jdeclare_udm(df5, Mood2,
 #'              codes = c("Refused" = ".a", "Don't know" = ".b"),
 #'              modify = TRUE)
 #'
@@ -1578,18 +1652,18 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' # The same neutral call -- plain numeric codes, no convention argument,
 #' # plain column -- forks on joptions(missing.convention = ...):
 #' joptions(missing.convention = "spss")
-#' df5 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+#' df6 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
 #' # -99 stays in the cells, flagged as missing (SPSS-form declaration)
 #'
 #' joptions(missing.convention = "stata")
-#' df6 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
+#' df7 <- jdeclare_udm(clinic, MoodRating, codes = c(-99))
 #' # -99 cells become the .a marker; the number -99 leaves the data
 #' }
 #'
 #' @export
-jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
-                         convention = NULL, udm.notice = TRUE,
-                         modify = FALSE) {
+jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
+                         range = NULL, vars = NULL, convention = NULL,
+                         udm.notice = TRUE, modify = FALSE) {
 
   # Captured before `data` is reassigned below: substitute() on the
   # rebound variable would return the value, not the caller's expression.
@@ -1607,57 +1681,90 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   data      <- arg1$data
   data_name <- arg1$name
 
-  # Determine variable name (parallel to jrecode's pattern).
-  if (arg1$mode == "symbol_with_default") {
-    if (!missing(var)) {
-      displaced <- deparse(substitute(var))
-      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
-                "Use jdeclare_udm(", deparse(arg1$first_arg_sub), ", var = ", displaced, ", ...)",
-                fn = "jdeclare_udm")
-    }
-    var_name <- deparse(arg1$first_arg_sub)
-  } else {
-    var_name <- deparse(substitute(var))
-  }
-
-  # --- Input checks ---------------------------------------------------------
   if (!is.data.frame(data)) {
     .jst_stop("The first argument must be a data frame.")
   }
-  if (!var_name %in% names(data)) {
-    .jst_stop(paste0("Variable '", var_name, "' not found in '",
-                data_name, "'."))
+
+  # --- Resolve variable list (... vs vars; mutually exclusive) --------------
+  # Same dual interface as jconvert(): unquoted names through the dots, or
+  # a character vector through vars =. Unlike jconvert(), an empty
+  # selection is an ERROR, not a whole-frame default: conversion is
+  # representational and round-trips, but a declaration changes analysis
+  # semantics -- a code declared frame-wide is flagged missing even on
+  # columns where that value is legitimate data. The explicit whole-frame
+  # route (vars = names(data)) is named in the error instead. Do not
+  # "fix" this asymmetry into consistency with jconvert; it is the point.
+  variables <- rlang::enquos(...)
+
+  # Leading-comma-omitted form: if first arg was captured as a bare symbol
+  # alongside an active juse() default, prepend it to the variables list.
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
   }
 
-  # Type guard: declaring numeric codes on a text or factor column is
-  # destructive (text coerces to all-NA; a factor is silently replaced
-  # by its internal integer codes), so both are refused with a fix.
-  guard_col <- data[[var_name]]
-  if (is.character(guard_col) ||
-      (haven::is.labelled(guard_col) && typeof(guard_col) == "character")) {
-    .jst_stop("'", var_name, "' is a character (text) variable; missing-value ",
-         "codes can only be declared on numeric variables.\n",
-         "If the values are numbers stored as text, convert with as.numeric() first.")
+  dot_names <- if (length(variables) > 0) {
+    vapply(variables, rlang::quo_name, character(1))
+  } else {
+    character(0)
   }
-  if (is.factor(guard_col)) {
-    .jst_stop("'", var_name, "' is a factor; missing-value codes can only be ",
-         "declared on numeric variables.\n",
-         "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
+
+  if (length(dot_names) > 0 && !is.null(vars)) {
+    .jst_stop("Use either unquoted variable names (...) or quoted names ",
+         "via vars = c(...), but not both.")
   }
+  if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
+    .jst_stop("`vars` must be one or more variable names in quotes, ",
+         "e.g. vars = c(\"Age\", \"Income\").")
+  }
+
+  if (length(dot_names) > 0) {
+    target_vars <- dot_names
+  } else if (!is.null(vars)) {
+    target_vars <- vars
+  } else {
+    .jst_stop("specify at least one variable to declare on: unquoted names ",
+         "(for example jdeclare_udm(", data_name, ", Age, Income, ",
+         "codes = c(-99))) or quoted names via vars = c(...).\n",
+         "To apply one declaration to every column, pass ",
+         "vars = names(", data_name, ") explicitly.",
+         fn = "jdeclare_udm")
+  }
+
+  if (anyDuplicated(target_vars) > 0L) {
+    dups <- unique(target_vars[duplicated(target_vars)])
+    .jst_stop("variable name(s) given more than once: ",
+              paste0("'", dups, "'", collapse = ", "), ".",
+              fn = "jdeclare_udm")
+  }
+
+  .jst_check_vars(data, target_vars, data_name)
+  n_targets <- length(target_vars)
+
+  # --- Input checks (call-level) --------------------------------------------
 
   # Labels-only form: `codes` omitted; `labels` carries both the code values
   # and their names (for example labels = "-99=Refused; -98=Don't know", or
-  # labels = ".a=Refused; .b=Don't know"). Detect it before `codes` is
-  # touched so missing() reads correctly.
-  labels_only <- (missing(codes) || is.null(codes)) && !is.null(labels)
+  # labels = ".a=Refused; .b=Don't know"). Only available when no range is
+  # supplied: with a range in the call, label entries name values inside
+  # the band rather than defining discrete codes, so they are routed to
+  # the in-range path below instead. Detect before `codes` is touched so
+  # missing() reads correctly.
+  labels_only <- (missing(codes) || is.null(codes)) && !is.null(labels) &&
+                 is.null(range)
 
-  if ((missing(codes) || is.null(codes)) && is.null(labels)) {
-    .jst_stop("Provide `codes` (for example codes = c(-99, -98)), or use the ",
+  if ((missing(codes) || is.null(codes)) && is.null(labels) &&
+      is.null(range)) {
+    .jst_stop("Provide `codes` (for example codes = c(-99, -98)), a ",
+         "`range` (for example range = c(-99, -51)), or use the ",
          "labels-only form, for example labels = \"-99=Refused; -98=Don't know\" ",
          "or labels = \".a=Refused; .b=Don't know\".")
   }
 
-  if (!labels_only) {
+  has_codes_arg <- !(missing(codes) || is.null(codes))
+
+  if (has_codes_arg && !labels_only) {
     # Accept Stata-style tokens and numeric strings in `codes` so callers
     # need not write haven::tagged_na(): ".a" -> tagged_na("a"); "-99" -> -99.
     if (is.character(codes)) {
@@ -1669,6 +1776,17 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
       .jst_stop("`codes` must be one or more numbers (for example ",
            "codes = c(-99, -98)) or Stata-style tokens (for example ",
            "codes = c(\".a\", \".b\")).")
+    }
+    # haven::na_tag() (used on parsed_codes below) accepts only double
+    # vectors; an integer input -- e.g. codes = -(51:99), the natural way
+    # to type a run of codes -- crashed it with a raw haven error before
+    # this coercion (S219 sweep finding). Integer input cannot carry
+    # tagged NAs, so the coercion is lossless for values; names must be
+    # carried across by hand because as.double() drops attributes.
+    if (is.integer(codes)) {
+      code_nm <- names(codes)
+      codes <- as.double(codes)
+      names(codes) <- code_nm
     }
   }
   .jst_check_flag(udm.notice, "udm.notice")
@@ -1698,6 +1816,31 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     }
   }
 
+  # --- Validate range (call-level) ------------------------------------------
+  if (!is.null(range)) {
+    if (!is.numeric(range) || length(range) != 2L || anyNA(range)) {
+      .jst_stop("`range` must be two numbers giving the bounds of the ",
+           "missing-value range, for example range = c(-99, -51).")
+    }
+    if (all(is.infinite(range))) {
+      .jst_stop("`range` cannot be infinite at both ends; that would ",
+           "declare every value missing.\n",
+           "Use one finite bound, for example range = c(-Inf, -51).")
+    }
+    range <- sort(as.numeric(range))
+    # A missing-value range exists only in the SPSS representation
+    # (haven's na_range); written as != "spss" so any future non-SPSS
+    # convention token is covered without edits here.
+    if (!is.null(convention) && convention != "spss") {
+      .jst_stop("a missing-value `range` exists only under SPSS ",
+           "convention; it cannot be combined with convention = \"",
+           convention, "\".\n",
+           "Drop the convention argument, or declare discrete codes ",
+           "instead of a range.",
+           fn = "jdeclare_udm")
+    }
+  }
+
   # --- Parse labels (Option A path and the labels-only form) ---------------
   parsed_labels <- NULL
   if (!is.null(labels)) {
@@ -1715,7 +1858,7 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   # --- Argument disambiguation (Option A vs Option C) ----------------------
   # Skipped for the labels-only form, where the parsed labels are themselves
   # the codes (resolved at parsed_codes construction, below).
-  if (!labels_only) {
+  if (!labels_only && has_codes_arg) {
     codes_names <- names(codes)
     has_all_names <- !is.null(codes_names) && all(nzchar(codes_names))
     has_any_names <- !is.null(codes_names) && any(nzchar(codes_names))
@@ -1742,11 +1885,20 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   # parsed_codes is the internal canonical form: a named numeric vector
   # where names are the labels (empty string where none) and values are
   # the code values (numeric or tagged-NA). All branches below consume
-  # this form.
+  # this form. label_residue collects labels entries that match no code;
+  # with a range in effect they may label values INSIDE the band, and
+  # are validated per column below (a residue entry outside every target
+  # column's band is an error there).
+  label_residue <- NULL
   if (labels_only) {
     # Labels-only form: the parsed labels ARE the codes -- a named vector
     # whose names are the labels and whose values are numeric or tagged-NA.
     parsed_codes <- parsed_labels
+  } else if (!has_codes_arg) {
+    # Range-only call (with or without labels): no discrete codes; every
+    # labels entry is a candidate in-range label.
+    parsed_codes <- stats::setNames(numeric(0), character(0))
+    label_residue <- parsed_labels
   } else if (has_all_names) {
     # Option C: names are labels directly.
     parsed_codes <- codes
@@ -1776,7 +1928,9 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
           assigned[i] <- names(parsed_labels)[idx[1]]
         }
       }
-      # Warn about any labels that didn't match any code.
+      # Labels that matched no code become residue: legal only where a
+      # missing-value range is in effect and the value falls inside it
+      # (validated per column below).
       pl_unused_idx <- setdiff(seq_along(parsed_labels),
                                unique(unlist(lapply(seq_along(codes),
                                  function(i) {
@@ -1788,21 +1942,7 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
                                    }
                                  }))))
       if (length(pl_unused_idx) > 0L) {
-        unused_render <- paste(
-          vapply(pl_unused_idx,
-                 function(i) {
-                   v <- parsed_labels[i]
-                   if (!is.na(pl_tags[i])) sprintf(".%s=%s",
-                                                  pl_tags[i],
-                                                  names(parsed_labels)[i])
-                   else sprintf("%s=%s",
-                                format(as.numeric(v)),
-                                names(parsed_labels)[i])
-                 }, character(1)),
-          collapse = "; ")
-        .jst_stop("labels argument contains entries that ",
-                  "do not match any value in `codes`: ", unused_render, ".",
-                  fn = "jdeclare_udm")
+        label_residue <- parsed_labels[pl_unused_idx]
       }
 
       parsed_codes <- codes
@@ -1811,6 +1951,26 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     }
   }
 
+  # Residue entries written as Stata-style tokens can never be in-range
+  # labels (a band is an SPSS-form structure; tokens are Stata-form), so
+  # they are refused here rather than per column.
+  if (!is.null(label_residue) && length(label_residue) > 0L) {
+    res_tags <- haven::na_tag(label_residue)
+    if (any(!is.na(res_tags))) {
+      bad <- which(!is.na(res_tags))
+      bad_render <- paste(
+        vapply(bad, function(i) sprintf(".%s=%s", res_tags[i],
+                                        names(label_residue)[i]),
+               character(1)), collapse = "; ")
+      .jst_stop("labels argument contains Stata-style token entries that ",
+                "do not match any token in `codes`: ", bad_render, ".\n",
+                "Token entries label markers named in `codes`; they cannot ",
+                "name values inside a missing-value range.",
+                fn = "jdeclare_udm")
+    }
+  }
+  has_residue <- !is.null(label_residue) && length(label_residue) > 0L
+
   # --- Detect tagged-NA elements -------------------------------------------
   c_tags         <- haven::na_tag(parsed_codes)
   tag_idx        <- which(!is.na(c_tags))
@@ -1818,162 +1978,296 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   has_tagged     <- length(tag_idx) > 0L
   has_numeric    <- length(num_idx) > 0L
 
+  # A range is SPSS-only; tagged tokens are Stata-form. The two cannot
+  # appear in one declaration.
+  if (!is.null(range) && has_tagged) {
+    .jst_stop("a missing-value `range` exists only under SPSS convention ",
+         "and cannot be combined with Stata-style tokens in `codes`.\n",
+         "Declare the range with numeric codes only, or drop `range` ",
+         "and label the markers with tokens alone.",
+         fn = "jdeclare_udm")
+  }
+
   # --- Sign-off 4: reject mixed tagged + numeric ---------------------------
   if (has_tagged && has_numeric) {
-    .jst_stop(.jst_jdeclare_udm_mixed_error(parsed_codes, data_name, var_name))
+    .jst_stop(.jst_jdeclare_udm_mixed_error(parsed_codes, data_name,
+                                            target_vars[1]))
   }
-
-  # --- Read existing UDM info on the column --------------------------------
-  col          <- data[[var_name]]
-  existing_info <- .jst_missing_info(col)
-  existing_conv <- if (!is.null(existing_info)) existing_info$representation
-                   else NULL
-
-  # Stata-form evidence check (S218). .jst_missing_info detects tagged
-  # CELLS; a forward-declared column (tagged value labels, no tagged
-  # cells yet -- e.g. a marker declared before any cases carry it) is
-  # Stata-form too, and must resolve as such: otherwise an SPSS-resolved
-  # convention would route its tagged tokens into the numeric branch.
-  col_has_stata_form <- FALSE
-  if (is.double(col)) {
-    if (any(!is.na(haven::na_tag(col)))) {
-      col_has_stata_form <- TRUE
-    } else if (haven::is.labelled(col)) {
-      vl_probe <- labelled::val_labels(col)
-      if (!is.null(vl_probe) && length(vl_probe) > 0L &&
-          any(!is.na(haven::na_tag(vl_probe)))) {
-        col_has_stata_form <- TRUE
-      }
-    }
-  }
-  if (is.null(existing_conv) && col_has_stata_form) existing_conv <- "stata"
-
-  # --- Sign-off 3 (hoisted S218): tagged tokens need a Stata-form column ---
-  # Runs BEFORE convention resolution, so the outcome is identical under
-  # every convention source (per-call argument, joptions setting, or the
-  # default). jdeclare_udm labels existing Stata-style missings; it does
-  # not create them, so tagged tokens against a column with no Stata-form
-  # representation are refused whatever the convention says. Previously
-  # this check lived inside the SPSS-resolved arm only, so a Stata-resolved
-  # convention silently attached labels to markers absent from the column.
-  if (has_tagged && !col_has_stata_form) {
-    if (!is.null(existing_conv) && existing_conv == "spss") {
-      # Column carries SPSS-style declarations: point at the column's own
-      # codes and at jconvert (S218 builder rewrite).
-      err_msg <- .jst_jdeclare_udm_convention_error(
-        parsed_codes = parsed_codes,
-        data_name    = data_name,
-        var_name     = var_name,
-        col          = col
-      )
-      .jst_stop(err_msg)
-    }
-    # Plain column: Stata-style tokens have no tagged cells to label.
-    # Point at the tools that create them.
-    .jst_stop("'", var_name, "' has no tagged missing values to label, so ",
-         "Stata-style tokens (.a-.z) cannot be applied here.\n",
-         "To turn numeric codes into tagged missings, use jrecode() (for ",
-         "example -99=.a); or declare the numbers directly with ",
-         "codes = c(-99).")
-  }
-
-  # --- Sign-off 2: per-call convention vs existing column UDM conflict -----
-  if (!is.null(convention) && !is.null(existing_conv) &&
-      existing_conv != convention) {
-    other_form <- if (existing_conv == "spss") "SPSS-style" else "Stata-style"
-    .jst_stop("Column '", var_name, "' already carries ", other_form,
-         " missing values; cannot use convention = \"", convention,
-         "\" here. Use jconvert() to convert the column first, or ",
-         "omit the convention argument.")
-  }
-
-  # --- Resolve convention ---------------------------------------------------
-  resolved_convention <- .jst_resolve_convention(
-    per_call          = convention,
-    column_convention = existing_conv
-  )
 
   # ==========================================================================
-  #  Branch dispatch
+  #  Per-column build pass (all-or-nothing: nothing is assigned until
+  #  every target column has built cleanly)
   # ==========================================================================
 
-  if (resolved_convention == "spss") {
-    # ---------- Branch D1: SPSS canonical (numeric codes) ------------------
-    new_col <- .jst_jdeclare_udm_spss(col, parsed_codes, var_name)
-    branch  <- "spss_canonical"
+  results   <- vector("list", n_targets)
+  build_err <- character(0)
 
-  } else if (has_tagged) {
-    # ---------- Branch D3: Stata canonical (tagged-NA labeling) -----------
-    new_col <- .jst_jdeclare_udm_stata_label(col, parsed_codes)
-    branch  <- "stata_canonical"
+  for (ti in seq_len(n_targets)) {
+    vn <- target_vars[ti]
+    res <- tryCatch({
+      col <- data[[vn]]
 
-  } else {
-    # ---------- Branch D4: Stata conversion (numeric -> tagged-NA) ---------
-    conv_result <- .jst_jdeclare_udm_stata_convert(col, parsed_codes,
-                                                   var_name)
-    new_col <- conv_result$new_col
-    branch  <- "stata_conversion"
-    # Conversion-specific info for the notification.
-    conversion_info <- conv_result
-  }
-
-  data[[var_name]] <- new_col
-
-  # --- Sign-off 5: drop notice ---------------------------------------------
-  drop_notice_msg <- NULL
-  if (!is.null(existing_info)) {
-    # Determine which existing codes are not in the new set. For SPSS-form
-    # this is numeric values; for Stata-form this is tag letters.
-    if (existing_info$representation == "spss") {
-      # A range-only column has codes = NULL. The notice is about discrete
-      # codes leaving the declaration; the range itself is now preserved
-      # through the SPSS branch (AUDIT-038), so there is nothing for it to
-      # report on a range-only column and the empty mask is correct rather
-      # than merely harmless. Removing or replacing a band is not something
-      # jdeclare_udm can currently be asked to do.
-      old_codes <- if (is.null(existing_info$codes)) numeric(0)
-                   else as.numeric(existing_info$codes$numeric)
-      new_codes <- if (branch == "spss_canonical") {
-        as.numeric(parsed_codes)
-      } else {
-        # branch ended up Stata; everything SPSS-side is dropped
-        old_codes
+      # Type guard: declaring numeric codes on a text or factor column is
+      # destructive (text coerces to all-NA; a factor is silently replaced
+      # by its internal integer codes), so both are refused with a fix.
+      if (is.character(col) ||
+          (haven::is.labelled(col) && typeof(col) == "character")) {
+        .jst_stop("'", vn, "' is a character (text) variable; missing-value ",
+             "codes can only be declared on numeric variables.\n",
+             "If the values are numbers stored as text, convert with as.numeric() first.")
       }
-      dropped_mask <- !old_codes %in% new_codes
-    } else {
-      # existing is Stata-form
-      old_tags <- existing_info$codes$tag
-      new_tags <- if (branch %in% c("stata_canonical", "stata_conversion")) {
-        # Compare against the column's actual resulting state -- tags
-        # present in cells or declared through value labels -- not
-        # against the tokens named in this call. The Stata-side branches
-        # have keep-semantics (a marker absent from the call is
-        # untouched, not dropped), so a call-list comparison falsely
-        # reported preserved markers as dropped (S218 fix; surfaced by
-        # the forward-declaration pattern, where each call names only
-        # the new marker).
-        nt <- haven::na_tag(new_col)
-        nt <- nt[!is.na(nt)]
-        if (haven::is.labelled(new_col)) {
-          vl_new <- labelled::val_labels(new_col)
-          if (!is.null(vl_new) && length(vl_new) > 0L) {
-            lt <- haven::na_tag(vl_new)
-            nt <- c(nt, lt[!is.na(lt)])
+      if (is.factor(col)) {
+        .jst_stop("'", vn, "' is a factor; missing-value codes can only be ",
+             "declared on numeric variables.\n",
+             "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
+      }
+
+      # --- Read existing UDM info on the column ----------------------------
+      existing_info <- .jst_missing_info(col)
+      existing_conv <- if (!is.null(existing_info)) existing_info$representation
+                       else NULL
+
+      # Stata-form evidence check (S218). .jst_missing_info detects tagged
+      # CELLS; a forward-declared column (tagged value labels, no tagged
+      # cells yet -- e.g. a marker declared before any cases carry it) is
+      # Stata-form too, and must resolve as such: otherwise an SPSS-resolved
+      # convention would route its tagged tokens into the numeric branch.
+      col_has_stata_form <- FALSE
+      if (is.double(col)) {
+        if (any(!is.na(haven::na_tag(col)))) {
+          col_has_stata_form <- TRUE
+        } else if (haven::is.labelled(col)) {
+          vl_probe <- labelled::val_labels(col)
+          if (!is.null(vl_probe) && length(vl_probe) > 0L &&
+              any(!is.na(haven::na_tag(vl_probe)))) {
+            col_has_stata_form <- TRUE
           }
         }
-        unique(nt)
-      } else {
-        # branch ended up SPSS; everything Stata-side is dropped
-        old_tags
       }
-      dropped_mask <- !old_tags %in% new_tags
-    }
-    if (any(dropped_mask)) {
-      drop_notice_msg <- .jst_jdeclare_udm_drop_notice(
-        dropped_df     = existing_info$codes[dropped_mask, , drop = FALSE],
-        var_name       = var_name,
-        representation = existing_info$representation
+      if (is.null(existing_conv) && col_has_stata_form) existing_conv <- "stata"
+
+      # --- Sign-off 3 (hoisted S218): tagged tokens need a Stata-form column
+      # Runs BEFORE convention resolution, so the outcome is identical under
+      # every convention source (per-call argument, joptions setting, or the
+      # default). jdeclare_udm labels existing Stata-style missings; it does
+      # not create them, so tagged tokens against a column with no Stata-form
+      # representation are refused whatever the convention says.
+      if (has_tagged && !col_has_stata_form) {
+        if (!is.null(existing_conv) && existing_conv == "spss") {
+          # Column carries SPSS-style declarations: point at the column's own
+          # codes and at jconvert (S218 builder rewrite).
+          err_msg <- .jst_jdeclare_udm_convention_error(
+            parsed_codes = parsed_codes,
+            data_name    = data_name,
+            var_name     = vn,
+            col          = col
+          )
+          .jst_stop(err_msg)
+        }
+        # Plain column: Stata-style tokens have no tagged cells to label.
+        # Point at the tools that create them.
+        .jst_stop("'", vn, "' has no tagged missing values to label, so ",
+             "Stata-style tokens (.a-.z) cannot be applied here.\n",
+             "To turn numeric codes into tagged missings, use jrecode() (for ",
+             "example -99=.a); or declare the numbers directly with ",
+             "codes = c(-99).")
+      }
+
+      # A range cannot land on a Stata-form column: the band is an
+      # SPSS-form structure with no Stata representation.
+      if (!is.null(range) && !is.null(existing_conv) &&
+          existing_conv == "stata") {
+        .jst_stop("'", vn, "' carries Stata-style missing values; a ",
+             "missing-value range exists only under SPSS convention.\n",
+             "Use jconvert() to convert the column to SPSS form first.",
+             fn = "jdeclare_udm")
+      }
+
+      # --- Sign-off 2: per-call convention vs existing column UDM conflict -
+      if (!is.null(convention) && !is.null(existing_conv) &&
+          existing_conv != convention) {
+        other_form <- if (existing_conv == "spss") "SPSS-style" else "Stata-style"
+        .jst_stop("Column '", vn, "' already carries ", other_form,
+             " missing values; cannot use convention = \"", convention,
+             "\" here. Use jconvert() to convert the column first, or ",
+             "omit the convention argument.")
+      }
+
+      # --- Resolve convention ----------------------------------------------
+      # A supplied range forces SPSS: the band exists only in that
+      # representation, so neither a joptions() Stata setting nor the
+      # Stata default may route this call to a conversion branch.
+      # (convention = "stata" + range was already refused call-level;
+      # a Stata-form column + range was refused just above.)
+      per_call_conv <- if (!is.null(range)) "spss" else convention
+      resolved_convention <- .jst_resolve_convention(
+        per_call          = per_call_conv,
+        column_convention = existing_conv
       )
+
+      # --- Validate in-range label residue against this column -------------
+      # Residue entries must fall inside the effective band: the range
+      # supplied in this call, or failing that the band already on the
+      # column. No band, or a value outside it, is an error here.
+      inband_labels <- NULL
+      if (has_residue) {
+        if (resolved_convention != "spss") {
+          .jst_stop("labels argument contains entries that do not match ",
+               "any value in `codes`: ",
+               .jst_render_label_entries(label_residue), ".\n",
+               "Only SPSS-form columns can carry in-range value labels.",
+               fn = "jdeclare_udm")
+        }
+        band <- if (!is.null(range)) range else {
+          er <- attr(col, "na_range")
+          if (!is.null(er) && length(er) == 2L) as.numeric(sort(er)) else NULL
+        }
+        if (is.null(band)) {
+          .jst_stop("labels argument contains entries that do not match ",
+               "any value in `codes`, and '", vn, "' has no ",
+               "missing-value range they could fall inside: ",
+               .jst_render_label_entries(label_residue), ".",
+               fn = "jdeclare_udm")
+        }
+        res_vals <- as.numeric(label_residue)
+        outside  <- res_vals < band[1] | res_vals > band[2]
+        if (any(outside)) {
+          .jst_stop("labels argument contains entries that match no value ",
+               "in `codes` and fall outside the missing-value range (",
+               format(band[1]), " to ", format(band[2]), ") on '", vn,
+               "': ",
+               .jst_render_label_entries(label_residue[outside]), ".",
+               fn = "jdeclare_udm")
+        }
+        inband_labels <- label_residue
+      }
+
+      # --- Branch dispatch --------------------------------------------------
+      conversion_info <- NULL
+      if (resolved_convention == "spss") {
+        # ---------- Branch D1: SPSS canonical (numeric codes / range) ------
+        new_col <- .jst_jdeclare_udm_spss(col, parsed_codes, vn,
+                                          range         = range,
+                                          inband_labels = inband_labels)
+        branch  <- "spss_canonical"
+
+      } else if (has_tagged) {
+        # ---------- Branch D3: Stata canonical (tagged-NA labeling) --------
+        new_col <- .jst_jdeclare_udm_stata_label(col, parsed_codes)
+        branch  <- "stata_canonical"
+
+      } else {
+        # ---------- Branch D4: Stata conversion (numeric -> tagged-NA) -----
+        conv_result <- .jst_jdeclare_udm_stata_convert(col, parsed_codes,
+                                                       vn)
+        new_col <- conv_result$new_col
+        branch  <- "stata_conversion"
+        # Conversion-specific info for the notification.
+        conversion_info <- conv_result
+      }
+
+      list(new_col = new_col, branch = branch,
+           conversion_info = conversion_info,
+           existing_info = existing_info,
+           resolved_convention = resolved_convention)
+    }, error = function(e) {
+      structure(list(msg = conditionMessage(e)), class = "jst_build_err")
+    })
+
+    if (inherits(res, "jst_build_err")) {
+      build_err <- c(build_err,
+                     stats::setNames(res$msg, vn))
+    } else {
+      results[[ti]] <- res
+    }
+  }
+
+  # All-or-nothing: any failure means no column is changed.
+  if (length(build_err) > 0L) {
+    if (n_targets == 1L) {
+      # Single-variable call: re-raise the original message untouched
+      # (it already carries the variable name where relevant).
+      stop(build_err[[1L]], call. = FALSE)
+    }
+    lines <- vapply(seq_along(build_err), function(i) {
+      m <- sub("^jdeclare_udm\\(\\): ", "", build_err[[i]])
+      paste0("  ", names(build_err)[i], ": ",
+             gsub("\n", "\n    ", m, fixed = TRUE))
+    }, character(1))
+    .jst_stop("cannot declare on ", length(build_err), " of ", n_targets,
+              " variables; no variable was changed:\n",
+              paste(lines, collapse = "\n"),
+              fn = "jdeclare_udm")
+  }
+
+  # ==========================================================================
+  #  Apply pass (all builds clean; assign and collect notices)
+  # ==========================================================================
+
+  drop_notices <- character(0)
+
+  for (ti in seq_len(n_targets)) {
+    vn  <- target_vars[ti]
+    res <- results[[ti]]
+    new_col       <- res$new_col
+    branch        <- res$branch
+    existing_info <- res$existing_info
+
+    data[[vn]] <- new_col
+
+    # --- Sign-off 5: drop notice -------------------------------------------
+    if (!is.null(existing_info)) {
+      # Determine which existing codes are not in the new set. Both arms
+      # compare against the column's actual RESULTING state, not against
+      # the call's argument list (S218 principle, extended to the SPSS arm
+      # when range-only calls made "codes absent from the call" no longer
+      # mean "codes dropped": a range-only declaration preserves existing
+      # discrete codes, and the old parsed_codes comparison would have
+      # falsely reported them dropped).
+      if (existing_info$representation == "spss") {
+        old_codes <- if (is.null(existing_info$codes)) numeric(0)
+                     else as.numeric(existing_info$codes$numeric)
+        new_codes <- if (branch == "spss_canonical") {
+          nv <- attr(new_col, "na_values")
+          if (is.null(nv)) numeric(0) else as.numeric(nv)
+        } else {
+          # branch ended up Stata; everything SPSS-side is dropped
+          numeric(0)
+        }
+        dropped_mask <- !old_codes %in% new_codes
+      } else {
+        # existing is Stata-form
+        old_tags <- existing_info$codes$tag
+        new_tags <- if (branch %in% c("stata_canonical", "stata_conversion")) {
+          # Tags present in cells or declared through value labels -- the
+          # Stata-side branches have keep-semantics (a marker absent from
+          # the call is untouched, not dropped), so a call-list comparison
+          # falsely reported preserved markers as dropped (S218 fix;
+          # surfaced by the forward-declaration pattern, where each call
+          # names only the new marker).
+          nt <- haven::na_tag(new_col)
+          nt <- nt[!is.na(nt)]
+          if (haven::is.labelled(new_col)) {
+            vl_new <- labelled::val_labels(new_col)
+            if (!is.null(vl_new) && length(vl_new) > 0L) {
+              lt <- haven::na_tag(vl_new)
+              nt <- c(nt, lt[!is.na(lt)])
+            }
+          }
+          unique(nt)
+        } else {
+          # branch ended up SPSS; everything Stata-side is dropped
+          character(0)
+        }
+        dropped_mask <- !old_tags %in% new_tags
+      }
+      if (any(dropped_mask)) {
+        drop_notices <- c(drop_notices, .jst_jdeclare_udm_drop_notice(
+          dropped_df     = existing_info$codes[dropped_mask, , drop = FALSE],
+          var_name       = vn,
+          representation = existing_info$representation
+        ))
+      }
     }
   }
 
@@ -1990,34 +2284,60 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 
   # --- Build and emit notification -----------------------------------------
   if (isTRUE(udm.notice)) {
-    notif <- .jst_jdeclare_udm_notification(
-      data_name           = data_name,
-      var_name            = var_name,
-      parsed_codes        = parsed_codes,
-      branch              = branch,
-      conversion_info     = if (branch == "stata_conversion") conversion_info
-                            else NULL,
-      modify              = modify
-    )
+    if (n_targets == 1L) {
+      notif <- .jst_jdeclare_udm_notification(
+        data_name           = data_name,
+        var_name            = target_vars[1L],
+        parsed_codes        = parsed_codes,
+        branch              = results[[1L]]$branch,
+        conversion_info     = if (results[[1L]]$branch == "stata_conversion")
+                                results[[1L]]$conversion_info else NULL,
+        modify              = modify,
+        range               = range,
+        inband_labels       = if (has_residue) label_residue else NULL
+      )
+    } else {
+      notif <- .jst_jdeclare_udm_bulk_notification(
+        data_name     = data_name,
+        target_vars   = target_vars,
+        results       = results,
+        parsed_codes  = parsed_codes,
+        range         = range,
+        inband_labels = if (has_residue) label_residue else NULL,
+        modify        = modify
+      )
+    }
     cat(notif, sep = "")
   }
 
-  # Drop notice fires after the main notification (consistent with the
+  # Drop notices fire after the main notification (consistent with the
   # established pattern of placing follow-on notes after the primary
   # output block).
-  if (!is.null(drop_notice_msg) && isTRUE(udm.notice)) {
-    cat(drop_notice_msg, "\n", sep = "")
+  if (length(drop_notices) > 0L && isTRUE(udm.notice)) {
+    cat(paste(drop_notices, collapse = "\n"), "\n", sep = "")
   }
 
   # --- Post-declaration mismatch notice (Decision 11 closing rule) ---------
   if (isTRUE(udm.notice)) {
     df_predominant <- .jst_predominant_convention(data)
-    if (!is.na(df_predominant) && df_predominant != resolved_convention) {
-      this_form  <- if (resolved_convention == "spss") "SPSS-style" else "Stata-style"
-      other_form <- if (df_predominant       == "spss") "SPSS-style" else "Stata-style"
-      cat(sprintf(
-        "Note: variable %s is %s, but other columns in %s are predominantly %s.\nUse jconvert() to align if desired.\n",
-        var_name, this_form, data_name, other_form))
+    if (!is.na(df_predominant)) {
+      mismatched <- target_vars[vapply(results, function(r)
+        r$resolved_convention != df_predominant, logical(1))]
+      if (length(mismatched) > 0L) {
+        this_conv  <- results[[match(mismatched[1L], target_vars)]]$resolved_convention
+        this_form  <- if (this_conv == "spss") "SPSS-style" else "Stata-style"
+        other_form <- if (df_predominant == "spss") "SPSS-style" else "Stata-style"
+        if (length(mismatched) == 1L) {
+          cat(sprintf(
+            "Note: variable %s is %s, but other columns in %s are predominantly %s.\nUse jconvert() to align if desired.\n",
+            mismatched[1L], this_form, data_name, other_form))
+        } else {
+          cat(sprintf(
+            "Note: variables %s are %s, but other columns in %s are predominantly %s.\nUse jconvert() to align if desired.\n",
+            paste(mismatched, collapse = ", "), this_form, data_name,
+            other_form))
+        }
+      }
     }
   }
 
@@ -2030,13 +2350,19 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_spss <- function(col, parsed_codes, var_name) {
+.jst_jdeclare_udm_spss <- function(col, parsed_codes, var_name,
+                                   range = NULL, inband_labels = NULL) {
   # parsed_codes: named numeric vector (names = labels or "", values =
-  # numeric codes). Tagged-NA elements have been ruled out upstream.
+  # numeric codes), possibly EMPTY (a range-only call). Tagged-NA elements
+  # have been ruled out upstream. range: the call's supplied band (already
+  # validated and sorted), or NULL. inband_labels: named numeric vector of
+  # labels for values inside the effective band (validated upstream), or
+  # NULL.
 
   code_vals <- as.numeric(unname(parsed_codes))
 
-  # Validate codes: finite, whole, no duplicates.
+  # Validate codes: finite, whole, no duplicates. (All vacuously true for
+  # a range-only call's empty vector.)
   if (any(!is.finite(code_vals))) {
     .jst_stop("codes must be finite numeric values.", fn = "jdeclare_udm")
   }
@@ -2047,34 +2373,82 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
     .jst_stop("codes contains duplicate values.", fn = "jdeclare_udm")
   }
 
-  # An existing range on the column narrows the discrete-code allowance
-  # from 3 to 1: SPSS accepts a range plus at most one code, and refuses
-  # the combination at declaration time rather than at save time. The
-  # legality rule here is the same one jsave's .sav pre-flight applies
-  # (a range plus more than one code), so the two can never disagree.
-  existing_range <- attr(col, "na_range")
-  has_range      <- !is.null(existing_range) && length(existing_range) == 2L
+  # --- Compose the resulting declaration ------------------------------------
+  # Declarative-replace with omission-survival: what the call mentions, it
+  # replaces; what it omits survives. A supplied range replaces the
+  # column's band; supplied codes replace the column's discrete set; an
+  # existing band survives a codes-only call, and existing discrete codes
+  # survive a range-only call.
+  existing_range  <- attr(col, "na_range")
+  has_exist_range <- !is.null(existing_range) && length(existing_range) == 2L
+  existing_codes  <- attr(col, "na_values")
+  has_exist_codes <- !is.null(existing_codes) && length(existing_codes) > 0L
 
-  if (has_range && length(code_vals) > 1L) {
-    # Remedy scope note. This message deliberately names no Stata pointer
-    # (S213 record; E18 in the field notes), a decision originally premised
-    # on jconvert refusing na_range columns. Since S218 jconvert ENUMERATES
-    # ranges, so the Stata route is no longer a dead end -- whether this
-    # message should now offer it is an open question flagged at S218, not
-    # silently changed here. The no-range 3-code message below keeps its
-    # Stata pointer as before.
-    .jst_stop("'", var_name, "' already has a missing-value range (",
-              format(min(existing_range)), " to ",
-              format(max(existing_range)),
-              "), which allows at most 1 separate code alongside it; ",
-              "you supplied ", length(code_vals), ".\n",
-              "Declare a single code alongside the range.",
-              fn = "jdeclare_udm")
+  range_supplied <- !is.null(range)
+  codes_supplied <- length(code_vals) > 0L
+
+  eff_range <- if (range_supplied) as.numeric(range)
+               else if (has_exist_range) as.numeric(sort(existing_range))
+               else NULL
+  eff_codes <- if (codes_supplied) code_vals
+               else if (has_exist_codes) as.numeric(existing_codes)
+               else numeric(0)
+
+  # --- Composed-result legality (SPSS's own acceptance rule) ----------------
+  # SPSS accepts at most three discrete missing values, OR a range, OR a
+  # range plus ONE discrete value. The check runs on the COMPOSED result
+  # (supplied-or-surviving range + supplied-or-surviving codes), so it can
+  # never disagree with jsave's .sav pre-flight -- an illegal combination
+  # is refused at the moment the user can fix it, with the column named,
+  # rather than at the writer (haven refuses late and does not name the
+  # column).
+  if (!is.null(eff_range) && length(eff_codes) > 1L) {
+    if (range_supplied && codes_supplied) {
+      # Remedy scope note. This message deliberately names no Stata pointer
+      # (S218 decision, extended here from the existing-range case to the
+      # supplied-range case): users declaring SPSS-style UDMs almost
+      # certainly need SPSS-compatible files, so the Stata route is not a
+      # meaningful fix for this audience; Book 2 carries the fuller story.
+      .jst_stop("a missing-value range allows at most 1 separate code ",
+                "alongside it; you supplied ", length(code_vals),
+                " codes with the range.\n",
+                "Declare a single code alongside the range.",
+                fn = "jdeclare_udm")
+    } else if (range_supplied) {
+      # Range-only call; the >1 surviving discrete codes make the
+      # composition illegal. There is currently no way to clear an
+      # existing code set in the same call (codes = NULL means "not
+      # supplied", and survives by design), so the remedy is to
+      # redeclare the full set explicitly.
+      .jst_stop("'", var_name, "' already carries ", length(eff_codes),
+                " declared codes (",
+                paste(format(eff_codes, trim = TRUE), collapse = ", "),
+                "), and a missing-value range allows at most 1 code ",
+                "alongside it.\n",
+                "Redeclare with the range and a single code, for example ",
+                "range = c(", format(eff_range[1]), ", ",
+                format(eff_range[2]), "), codes = ",
+                format(eff_codes[1], trim = TRUE), ".",
+                fn = "jdeclare_udm")
+    } else {
+      # Codes-only call against a surviving band (the pre-existing case).
+      .jst_stop("'", var_name, "' already has a missing-value range (",
+                format(eff_range[1]), " to ", format(eff_range[2]),
+                "), which allows at most 1 separate code alongside it; ",
+                "you supplied ", length(code_vals), ".\n",
+                "Declare a single code alongside the range.",
+                fn = "jdeclare_udm")
+    }
   }
-  if (!has_range && length(code_vals) > 3L) {
+  if (is.null(eff_range) && length(eff_codes) > 3L) {
+    # E18 rewrite: for a .sav deliverable the range is the answer, so it
+    # is named first; the Stata convention second.
     .jst_stop("SPSS-style missing values are limited to 3 codes ",
-              "per variable; you supplied ", length(code_vals), ".\n",
-              "To declare more than 3, use Stata convention (convention = \"stata\").",
+              "per variable, or a range, or a range plus 1 code; ",
+              "you supplied ", length(code_vals), " codes.\n",
+              "To declare a band of consecutive codes, use ",
+              "range = c(low, high); to declare more than 3 unrelated ",
+              "codes, use Stata convention (convention = \"stata\").",
               fn = "jdeclare_udm")
   }
 
@@ -2089,9 +2463,13 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   # declaring a value as missing does not touch its label (SPSS
   # parallel: MISSING VALUES never alters VALUE LABELS). Labels on
   # non-declared codes (real-data labels) are always preserved.
+  # In-range labels follow the same replace-by-value rule.
   label_names <- names(parsed_codes)
   if (is.null(label_names)) label_names <- rep("", length(parsed_codes))
   relabelled <- as.numeric(parsed_codes[nzchar(label_names)])
+  if (!is.null(inband_labels) && length(inband_labels) > 0L) {
+    relabelled <- c(relabelled, as.numeric(inband_labels))
+  }
   if (!is.null(existing_labs) && length(existing_labs) > 0L &&
       length(relabelled) > 0L) {
     keep_mask <- !(unname(existing_labs) %in% relabelled)
@@ -2107,20 +2485,27 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
       new_labs <- c(new_labs, entry)
     }
   }
+  # In-range labels attach as ordinary value labels on the in-band
+  # values; they do NOT join na_values (the band already covers them).
+  if (!is.null(inband_labels) && length(inband_labels) > 0L) {
+    ib <- as.numeric(inband_labels)
+    names(ib) <- names(inband_labels)
+    new_labs <- c(new_labs, ib)
+  }
 
   combined_labs <- c(existing_labs, new_labs)
   if (length(combined_labs) == 0L) combined_labs <- NULL
 
   # Use labelled_spss to attach na_values together with labels and
-  # variable label. na_range is threaded through from the column as it
-  # stood: declaring a discrete code says nothing about an existing band,
-  # so the band survives. Omitting it here silently promoted every
-  # in-band cell back to ordinary data (AUDIT-038).
+  # variable label. The effective band and effective code set were
+  # composed above: a band survives a codes-only call (omitting it here
+  # silently promoted every in-band cell back to ordinary data,
+  # AUDIT-038), and discrete codes survive a range-only call.
   haven::labelled_spss(
     x         = as.numeric(unclass(col)),
     labels    = combined_labs,
-    na_values = code_vals,
-    na_range  = if (has_range) as.numeric(existing_range) else NULL,
+    na_values = if (length(eff_codes) > 0L) eff_codes else NULL,
+    na_range  = eff_range,
     label     = attr(col, "label", exact = TRUE)
   )
 }
@@ -2283,7 +2668,9 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
 .jst_jdeclare_udm_notification <- function(data_name, var_name,
                                            parsed_codes, branch,
                                            conversion_info = NULL,
-                                           modify = FALSE) {
+                                           modify = FALSE,
+                                           range = NULL,
+                                           inband_labels = NULL) {
 
   output_level <- getOption(".jst_output_level", "standard")
 
@@ -2335,7 +2722,15 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
       }
     }
   } else {
-    # SPSS canonical
+    # SPSS canonical. A declared range leads (mirroring jfreq's Missing-
+    # section "range lo to hi" row), then discrete codes, then labeled
+    # in-range values marked "(in range)" -- they carry value labels but
+    # are covered by the band rather than declared discretely.
+    if (!is.null(range)) {
+      body_lines <- c(body_lines,
+                      sprintf("  range %s to %s",
+                              format(range[1]), format(range[2])))
+    }
     for (i in seq_along(parsed_codes)) {
       v   <- format(as.numeric(parsed_codes[i]))
       lbl <- names(parsed_codes)[i]
@@ -2344,6 +2739,15 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
                         sprintf("  %s [\"%s\"]", v, lbl))
       } else {
         body_lines <- c(body_lines, sprintf("  %s", v))
+      }
+    }
+    if (!is.null(inband_labels) && length(inband_labels) > 0L) {
+      for (i in seq_along(inband_labels)) {
+        body_lines <- c(body_lines,
+                        sprintf("  %s [\"%s\"]  (in range)",
+                                format(as.numeric(inband_labels[i]),
+                                       trim = TRUE),
+                                names(inband_labels)[i]))
       }
     }
   }
@@ -2403,6 +2807,137 @@ jdeclare_udm <- function(data, var, codes = NULL, labels = NULL,
   }
 
   msg
+}
+
+
+#' Internal: consolidated notification for a multi-variable jdeclare_udm call
+#'
+#' @description
+#' One summary block instead of one block per column: a bulk call on 52
+#' variables must not print 52 near-identical notices. Variables are
+#' grouped by resulting branch (a single call CAN split branches -- e.g.
+#' numeric codes applied across a frame where some columns already carry
+#' Stata-form markers resolve to conversion while plain columns resolve
+#' to the SPSS default), each group gets one header plus one body block
+#' (the declaration is identical within a group by construction), and
+#' the durability note prints once at the end.
+#'
+#' @keywords internal
+.jst_jdeclare_udm_bulk_notification <- function(data_name, target_vars,
+                                                results, parsed_codes,
+                                                range = NULL,
+                                                inband_labels = NULL,
+                                                modify = FALSE) {
+  output_level <- getOption(".jst_output_level", "standard")
+
+  branches <- vapply(results, function(r) r$branch, character(1))
+  msg <- character(0)
+
+  for (br in unique(branches)) {
+    idx    <- which(branches == br)
+    vn_set <- target_vars[idx]
+    header <- switch(
+      br,
+      spss_canonical    = "Declared SPSS-style missing values on ",
+      stata_canonical   = "Labeled Stata-style missing values on ",
+      stata_conversion  = "Declared and converted to Stata-style missing values on "
+    )
+    header <- if (isTRUE(modify)) {
+      paste0(header, length(vn_set), " variables in ", data_name, ":")
+    } else {
+      paste0(header, length(vn_set), " variables:")
+    }
+    # Echo the variable list (wrapped): the user supplied it via vars= or
+    # the dots, and the echo confirms exactly which columns changed.
+    var_line <- paste(strwrap(paste(vn_set, collapse = ", "),
+                              width = 70, initial = "  ", prefix = "  "),
+                      collapse = "\n")
+
+    body_lines <- character(0)
+    if (br == "stata_conversion") {
+      ci <- results[[idx[1]]]$conversion_info
+      for (i in seq_along(ci$sorted_codes)) {
+        tag <- ci$tag_letters[i]
+        lbl <- ci$sorted_labels[i]
+        if (nzchar(lbl)) {
+          body_lines <- c(body_lines,
+                          sprintf("  .%s [\"%s\"]  (from %s)", tag, lbl,
+                                  format(ci$sorted_codes[i])))
+        } else {
+          body_lines <- c(body_lines,
+                          sprintf("  .%s  (from %s)", tag,
+                                  format(ci$sorted_codes[i])))
+        }
+      }
+    } else if (br == "stata_canonical") {
+      c_tags <- haven::na_tag(parsed_codes)
+      for (i in seq_along(parsed_codes)) {
+        lbl <- names(parsed_codes)[i]
+        if (nzchar(lbl)) {
+          body_lines <- c(body_lines,
+                          sprintf("  .%s [\"%s\"]", c_tags[i], lbl))
+        } else {
+          body_lines <- c(body_lines, sprintf("  .%s", c_tags[i]))
+        }
+      }
+    } else {
+      if (!is.null(range)) {
+        body_lines <- c(body_lines,
+                        sprintf("  range %s to %s",
+                                format(range[1]), format(range[2])))
+      }
+      for (i in seq_along(parsed_codes)) {
+        v   <- format(as.numeric(parsed_codes[i]))
+        lbl <- names(parsed_codes)[i]
+        if (nzchar(lbl)) {
+          body_lines <- c(body_lines, sprintf("  %s [\"%s\"]", v, lbl))
+        } else {
+          body_lines <- c(body_lines, sprintf("  %s", v))
+        }
+      }
+      if (!is.null(inband_labels) && length(inband_labels) > 0L) {
+        for (i in seq_along(inband_labels)) {
+          body_lines <- c(body_lines,
+                          sprintf("  %s [\"%s\"]  (in range)",
+                                  format(as.numeric(inband_labels[i]),
+                                         trim = TRUE),
+                                  names(inband_labels)[i]))
+        }
+      }
+    }
+
+    msg <- c(msg, paste0(header, "\n", var_line, "\n",
+                         paste(body_lines, collapse = "\n"), "\n"))
+  }
+
+  out <- paste(msg, collapse = "\n")
+
+  if (!identical(output_level, "minimal")) {
+    out <- paste0(out, "\n",
+                  .jst_durability_note("frame", data_name,
+                                       verb = "jdeclare_udm",
+                                       var_name = "vars = c(...)",
+                                       modify = modify),
+                  "\n")
+  }
+  out
+}
+
+
+#' Internal: render a named numeric label set for an error message
+#'
+#' @description
+#' Formats entries of a parsed-labels vector (names = labels, values =
+#' numeric) as "value=label; value=label" for quoting back to the user
+#' in refusals about unmatched labels entries.
+#'
+#' @keywords internal
+.jst_render_label_entries <- function(x) {
+  paste(
+    vapply(seq_along(x), function(i) {
+      sprintf("%s=%s", format(as.numeric(x[i]), trim = TRUE), names(x)[i])
+    }, character(1)),
+    collapse = "; ")
 }
 
 # =============================================================================

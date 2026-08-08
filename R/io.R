@@ -752,10 +752,24 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                    (!is.null(na_range) && length(na_range) == 2)
 
   # Tagged NAs only exist on doubles; haven::na_tag returns NA for
-  # non-tagged elements on any double vector.
+  # non-tagged elements on any double vector. A column is Stata-form on
+  # EITHER kind of evidence: tagged cells in the data, or markers
+  # declared through tagged value labels with no tagged cells yet -- the
+  # forward-declaration pattern (a marker labeled before any cases carry
+  # it; the same evidence rule jdeclare_udm applies since S218). Without
+  # the label arm, a forward-declared column returned NULL here and its
+  # declarations were invisible to every consumer of this abstraction,
+  # including jload's narrative.
   has_tagged <- FALSE
   if (is.double(col)) {
     has_tagged <- any(!is.na(haven::na_tag(col)))
+    if (!has_tagged && haven::is.labelled(col)) {
+      vl_probe <- labelled::val_labels(col)
+      if (!is.null(vl_probe) && length(vl_probe) > 0L &&
+          any(!is.na(haven::na_tag(vl_probe)))) {
+        has_tagged <- TRUE
+      }
+    }
   }
 
   if (!has_spss_udms && !has_tagged) return(NULL)
@@ -842,9 +856,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     )
 
   } else {
-    # Stata representation: tagged_na markers
+    # Stata representation: tagged_na markers. Union of both evidence
+    # kinds -- tags present in cells, and tags declared through value
+    # labels (forward-declared markers; see the has_tagged comment
+    # above). Cell order first, then label-only tags, deduplicated.
     tags_present <- unique(haven::na_tag(col))
     tags_present <- tags_present[!is.na(tags_present)]
+    if (!is.null(val_labs) && length(val_labs) > 0) {
+      lab_tags <- haven::na_tag(val_labs)
+      lab_tags <- lab_tags[!is.na(lab_tags)]
+      tags_present <- unique(c(tags_present, lab_tags))
+    }
 
     if (length(tags_present) == 0) return(NULL)  # defensive
 
