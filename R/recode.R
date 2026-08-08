@@ -245,6 +245,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (isTRUE(parsed_map$else_action == "tagged")) {
     map_tags <- c(map_tags, parsed_map$else_tag)
   }
+  if (!is.null(parsed_map$na_rule) &&
+      !is.null(parsed_map$na_rule$tagged)) {
+    map_tags <- c(map_tags, parsed_map$na_rule$tagged)
+  }
 
   label_tags_lookup <- character(0)  # letter -> label, for jdeclare_udm
   if (!is.null(parsed_labels)) {
@@ -300,6 +304,19 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       rhs <- format_num(rule$new_val)
     }
     rebuilt_map_parts <- c(rebuilt_map_parts, paste0(lhs, "=", rhs))
+  }
+  if (!is.null(parsed_map$na_rule)) {
+    if (!is.null(parsed_map$na_rule$tagged)) {
+      code   <- letter_to_code[parsed_map$na_rule$tagged]
+      na_rhs <- if (is.na(code)) {
+        paste0(".", parsed_map$na_rule$tagged)
+      } else {
+        format_num(code)
+      }
+    } else {
+      na_rhs <- format_num(parsed_map$na_rule$new_val)
+    }
+    rebuilt_map_parts <- c(rebuilt_map_parts, paste0("NA=", na_rhs))
   }
   if (isTRUE(parsed_map$else_explicit)) {
     if (identical(parsed_map$else_action, "tagged")) {
@@ -767,6 +784,15 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   Individual values can also be mapped to system NA using the same
 #'   aliases: \code{"-5=NA"}, \code{"-5=System"}, or \code{"-5=SYSMIS"}.
 #'
+#'   The same aliases may also appear as an OLD value, converting plain
+#'   \code{NA} cells to a code: \code{"NA=-98; else=copy"} recodes every
+#'   \code{NA} to \code{-98} (declare the code afterward with
+#'   \code{jdeclare_udm()}). \code{NA} may be combined with numeric old
+#'   values in one rule (\code{"NA,-99=-98"}) and may be named in at most
+#'   one rule. Only plain \code{NA} cells are affected; Stata-style
+#'   missing values are never converted by an \code{NA} rule. Under
+#'   Stata convention the target may itself be a token: \code{"NA=.a"}.
+#'
 #'   Under Stata convention, values can be mapped to Stata-style missing-value tokens:
 #'   \code{"-99=.a; -98=.b"}.
 #'
@@ -776,6 +802,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     \item \code{"1=1; 2,3=2; 4,5=3; else=NA"}
 #'     \item \code{"1=1; 2=0; else=copy"}
 #'     \item \code{"-5=System; else=copy"}
+#'     \item \code{"NA=-98; else=copy"}
 #'     \item \code{"3=1; 4=2; else=.a"} (Stata convention only)
 #'   }
 #'
@@ -836,8 +863,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     directing you to supply labels manually.
 #' }
 #'
-#' NA values in the original variable are always set to NA in the new variable,
-#' regardless of the \code{else} setting.
+#' NA values in the original variable are carried across as NA unless the
+#' map names \code{NA} as an old value (for example \code{"NA=-98"}); the
+#' \code{else} setting never converts NA. An \code{NA} rule affects plain
+#' \code{NA} cells only --- Stata-style missing values (tagged NAs) are
+#' declared missings and are preserved with their tags regardless of the
+#' map.
 #'
 #' Values that appear to be coded missing values (e.g. -99, -9, 999) from SPSS
 #' or another package are automatically detected and set to NA, even when
@@ -870,6 +901,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' subsequent \code{jdeclare_udm()} call attaches the label and flags
 #' \code{-99} as missing. Labeling \code{-99} inside the \code{labels}
 #' argument is unnecessary --- \code{jdeclare_udm()} owns that label.
+#'
+#' The same two-step pattern serves data whose missingness arrived as
+#' plain \code{NA} (data born in R, or read from a CSV): \code{map =
+#' "NA=-98; else=copy"} mints the sentinel from the NA cells, and
+#' \code{jdeclare_udm()} declares it.
 #'
 #' Under \strong{Stata convention}, UDMs are typed missing cells marked
 #' with Stata-style tags (\code{.a} through \code{.z}). The single-call
@@ -914,6 +950,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #' # Convert a specific coded missing value to system NA
 #' df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
+#'
+#' # Give plain NA cells a codable value, then declare it
+#' df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
+#' df <- jdeclare_udm(df, AgeR, codes = c("Not recorded" = -98))
 #'
 #' # Stata convention: Stata-style missing-value tokens in map and labels
 #' # (single call; convention = "stata" scopes the choice to this call only)
@@ -1052,7 +1092,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # tokens are accepted and flow through to the recode loop.
   map_has_tag <- any(!vapply(parsed_map$mappings,
                              function(r) is.null(r$tagged), logical(1))) ||
-                 identical(parsed_map$else_action, "tagged")
+                 identical(parsed_map$else_action, "tagged") ||
+                 (!is.null(parsed_map$na_rule) &&
+                  !is.null(parsed_map$na_rule$tagged))
   labels_has_tag <- if (!is.null(parsed_labels)) {
     any(!is.na(haven::na_tag(parsed_labels)))
   } else FALSE
@@ -1255,13 +1297,58 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     }
   }
 
-  # NAs in original are NA in output. Preserve Stata-form tagged NAs by
-  # re-applying their tags afterward (the flatten collapses tagged NAs, which
-  # satisfy is.na(), to plain NA). Tagged cells are never targeted by a
-  # numeric map rule, so all of them are preserved under the declared-code
-  # policy regardless of the else setting.
-  new_num[is.na(orig_num)] <- NA_real_
-  orig_tags  <- haven::na_tag(orig_num)
+  # NA-rule messages (E11): when the map names NA as an old value, report
+  # what it did. A numeric-target mint gets a standard-tier note pointing
+  # at jdeclare_udm() (the SPSS-style second step; an NA=.a target under
+  # Stata convention mints an already-declared missing, so no note). When
+  # the variable held no plain NA, a full-tier advisory mirrors the
+  # existing absent-map-values note.
+  if (!is.null(parsed_map$na_rule)) {
+    n_plain_na <- sum(is.na(orig_num) & is.na(haven::na_tag(orig_num)))
+    if (n_plain_na == 0) {
+      .jst_advisory_note(paste0(
+        "Note: '", orig_name, "' contained no NA values - nothing was ",
+        "recoded for the NA rule."))
+    } else if (is.null(parsed_map$na_rule$tagged) &&
+               !is.na(parsed_map$na_rule$new_val)) {
+      na_code <- parsed_map$na_rule$new_val
+      code_txt <- if (na_code == floor(na_code)) {
+        format(as.integer(na_code))
+      } else {
+        format(na_code)
+      }
+      if (n_plain_na == 1L) {
+        message(paste0(
+          "Note: 1 NA value in '", orig_name, "' was recoded to ",
+          code_txt, ".\n",
+          "Declare ", code_txt, " with jdeclare_udm() so analyses ",
+          "exclude it."))
+      } else {
+        message(paste0(
+          "Note: ", n_plain_na, " NA values in '", orig_name,
+          "' were recoded to ", code_txt, ".\n",
+          "Declare ", code_txt, " with jdeclare_udm() so analyses ",
+          "exclude it."))
+      }
+    }
+  }
+
+  # NAs in original: plain-NA cells follow the map's NA rule when one is
+  # present (E11) and stay NA otherwise; the else setting never converts
+  # NA. Stata-form tagged NAs are declared missings and are never targeted
+  # by the NA rule (or by a numeric map rule) -- their tags are re-applied
+  # below, so all of them are preserved regardless of the else setting.
+  orig_tags     <- haven::na_tag(orig_num)
+  plain_na_mask <- is.na(orig_num) & is.na(orig_tags)
+  if (!is.null(parsed_map$na_rule)) {
+    if (!is.null(parsed_map$na_rule$tagged)) {
+      new_num[plain_na_mask] <- haven::tagged_na(parsed_map$na_rule$tagged)
+    } else {
+      new_num[plain_na_mask] <- parsed_map$na_rule$new_val
+    }
+  } else {
+    new_num[plain_na_mask] <- NA_real_
+  }
   tagged_pos <- which(!is.na(orig_tags))
   if (length(tagged_pos) > 0) {
     new_num[tagged_pos] <- haven::tagged_na(orig_tags[tagged_pos])

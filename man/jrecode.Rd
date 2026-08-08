@@ -31,6 +31,15 @@ convention only): unmapped values are set to that Stata-style missing value.
 Individual values can also be mapped to system NA using the same
 aliases: \code{"-5=NA"}, \code{"-5=System"}, or \code{"-5=SYSMIS"}.
 
+The same aliases may also appear as an OLD value, converting plain
+\code{NA} cells to a code: \code{"NA=-98; else=copy"} recodes every
+\code{NA} to \code{-98} (declare the code afterward with
+\code{jdeclare_udm()}). \code{NA} may be combined with numeric old
+values in one rule (\code{"NA,-99=-98"}) and may be named in at most
+one rule. Only plain \code{NA} cells are affected; Stata-style
+missing values are never converted by an \code{NA} rule. Under
+Stata convention the target may itself be a token: \code{"NA=.a"}.
+
 Under Stata convention, values can be mapped to Stata-style missing-value tokens:
 \code{"-99=.a; -98=.b"}.
 
@@ -40,6 +49,7 @@ Examples:
 \item \code{"1=1; 2,3=2; 4,5=3; else=NA"}
 \item \code{"1=1; 2=0; else=copy"}
 \item \code{"-5=System; else=copy"}
+\item \code{"NA=-98; else=copy"}
 \item \code{"3=1; 4=2; else=.a"} (Stata convention only)
 }}
 
@@ -113,8 +123,12 @@ value), automatic transfer is not possible and a note is printed
 directing you to supply labels manually.
 }
 
-NA values in the original variable are always set to NA in the new variable,
-regardless of the \code{else} setting.
+NA values in the original variable are carried across as NA unless the
+map names \code{NA} as an old value (for example \code{"NA=-98"}); the
+\code{else} setting never converts NA. An \code{NA} rule affects plain
+\code{NA} cells only --- Stata-style missing values (tagged NAs) are
+declared missings and are preserved with their tags regardless of the
+map.
 
 Values that appear to be coded missing values (e.g. -99, -9, 999) from SPSS
 or another package are automatically detected and set to NA, even when
@@ -147,6 +161,11 @@ The \code{jrecode()} call assigns the numeric sentinel \code{-99}; the
 subsequent \code{jdeclare_udm()} call attaches the label and flags
 \code{-99} as missing. Labeling \code{-99} inside the \code{labels}
 argument is unnecessary --- \code{jdeclare_udm()} owns that label.
+
+The same two-step pattern serves data whose missingness arrived as
+plain \code{NA} (data born in R, or read from a CSV): \code{map =
+"NA=-98; else=copy"} mints the sentinel from the NA cells, and
+\code{jdeclare_udm()} declares it.
 
 Under \strong{Stata convention}, UDMs are typed missing cells marked
 with Stata-style tags (\code{.a} through \code{.z}). The single-call
@@ -191,6 +210,10 @@ df$EducR2 <- jrecode(df, Education,
 
 # Convert a specific coded missing value to system NA
 df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
+
+# Give plain NA cells a codable value, then declare it
+df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
+df <- jdeclare_udm(df, AgeR, codes = c("Not recorded" = -98))
 
 # Stata convention: Stata-style missing-value tokens in map and labels
 # (single call; convention = "stata" scopes the choice to this call only)

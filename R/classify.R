@@ -1814,7 +1814,12 @@
 #' (used by \code{jrecode()}) into a list of mapping rules plus an
 #' else-action. Each rule's left-hand side may be a single value or a
 #' comma-separated list of values; an explicit \code{else=...} clause
-#' sets the fallback action.
+#' sets the fallback action. A left-hand side may also include the
+#' system-NA aliases (\code{NA}, \code{System}, or \code{SYSMIS},
+#' case-insensitive) to target plain \code{NA} cells; alias tokens are
+#' split out into the \code{na_rule} component rather than entering
+#' \code{mappings}, so downstream consumers of \code{mappings} continue
+#' to see numeric old values only.
 #'
 #' The right-hand side of each rule may be a numeric value, one of the
 #' system-NA aliases (\code{System}, \code{NA}, or \code{SYSMIS}, case-
@@ -1842,6 +1847,13 @@
 #'       \code{else_action} is \code{"tagged"}.}
 #'     \item{else_explicit}{Logical: \code{TRUE} if the user wrote an
 #'       explicit \code{else=...} clause, \code{FALSE} if defaulted.}
+#'     \item{na_rule}{\code{NULL} when the map does not name \code{NA}
+#'       as an old value; otherwise a list with \code{new_val} (single
+#'       numeric; \code{NA_real_} for system-NA and tagged-NA targets)
+#'       and \code{tagged} (\code{NULL}, or a single lowercase letter
+#'       for a tagged-NA target). Populated by the \code{NA} /
+#'       \code{System} / \code{SYSMIS} aliases on a rule's left-hand
+#'       side; at most one rule may name \code{NA}.}
 #'   }
 #'
 #' @keywords internal
@@ -1855,7 +1867,8 @@
   }
 
   result <- list(mappings = list(), else_action = "na",
-                 else_tag = NULL, else_explicit = FALSE)
+                 else_tag = NULL, else_explicit = FALSE,
+                 na_rule = NULL)
 
   # Helper: parse an RHS token. Returns list(new_val = numeric,
   # tagged = NULL | letter) or NULL if the token is not recognized
@@ -1932,14 +1945,50 @@
       next
     }
 
-    # old values (may be comma-separated)
-    old_strs <- trimws(strsplit(lhs, ",")[[1]])
+    # old values (may be comma-separated). System-NA aliases (NA / System
+    # / SYSMIS, case-insensitive) may appear among them: alias tokens are
+    # split out into the na_rule component (targeting plain-NA cells) and
+    # any numeric remainder proceeds as an ordinary mapping rule. (E11)
+    old_strs    <- trimws(strsplit(lhs, ",")[[1]])
+    is_na_alias <- tolower(old_strs) %in% c("na", "sysmis", "system")
+
+    if (any(is_na_alias)) {
+      if (!is.null(result$na_rule)) {
+        stop(paste0(
+          "NA appears as an old value in more than one map rule. ",
+          "Name NA (or System / SYSMIS) in at most one rule."
+        ), call. = FALSE)
+      }
+      na_rhs <- parse_rhs_token(rhs, rule)
+      if (is.null(na_rhs)) {
+        na_val <- suppressWarnings(as.numeric(rhs))
+        if (is.na(na_val)) {
+          if (grepl(",", rhs) && grepl("=", rhs)) {
+            stop(paste0(
+              "It looks like commas were used to separate rules in the map string. ",
+              "Use semicolons instead, e.g. map = \"1=5; 2=4; 3=3\"."
+            ), call. = FALSE)
+          }
+          stop(paste0(
+            "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
+            "New values must be numeric, a system-NA alias (NA, System, ",
+            "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
+          ), call. = FALSE)
+        }
+        na_rhs <- list(new_val = na_val, tagged = NULL)
+      }
+      result$na_rule <- na_rhs
+      old_strs <- old_strs[!is_na_alias]
+      if (length(old_strs) == 0) next
+    }
+
     old_vals <- suppressWarnings(as.numeric(old_strs))
 
     if (any(is.na(old_vals))) {
       stop(paste0(
         "Invalid old value(s) '", lhs, "' in map rule '", rule, "'. ",
-        "Old values must be numeric."
+        "Old values must be numeric or a system-NA alias (NA, System, ",
+        "or SYSMIS)."
       ), call. = FALSE)
     }
 
@@ -1975,7 +2024,7 @@
     )
   }
 
-  if (length(result$mappings) == 0) {
+  if (length(result$mappings) == 0 && is.null(result$na_rule)) {
     stop("The map argument contains no valid recode rules (only an else clause was found).", call. = FALSE)
   }
 

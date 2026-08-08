@@ -25,6 +25,13 @@ for tagged-NA rules).}
 \code{else_action} is \code{"tagged"}.}
 \item{else_explicit}{Logical: \code{TRUE} if the user wrote an
 explicit \code{else=...} clause, \code{FALSE} if defaulted.}
+\item{na_rule}{\code{NULL} when the map does not name \code{NA}
+as an old value; otherwise a list with \code{new_val} (single
+numeric; \code{NA_real_} for system-NA and tagged-NA targets)
+and \code{tagged} (\code{NULL}, or a single lowercase letter
+for a tagged-NA target). Populated by the \code{NA} /
+\code{System} / \code{SYSMIS} aliases on a rule's left-hand
+side; at most one rule may name \code{NA}.}
 }
 }
 \description{
@@ -32,7 +39,12 @@ Parses a map string of the form \code{"1=1; 2,3=2; 4,5=3; else=copy"}
 (used by \code{jrecode()}) into a list of mapping rules plus an
 else-action. Each rule's left-hand side may be a single value or a
 comma-separated list of values; an explicit \code{else=...} clause
-sets the fallback action.
+sets the fallback action. A left-hand side may also include the
+system-NA aliases (\code{NA}, \code{System}, or \code{SYSMIS},
+case-insensitive) to target plain \code{NA} cells; alias tokens are
+split out into the \code{na_rule} component rather than entering
+\code{mappings}, so downstream consumers of \code{mappings} continue
+to see numeric old values only.
 }
 \details{
 The right-hand side of each rule may be a numeric value, one of the
