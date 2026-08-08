@@ -947,13 +947,26 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
           }
         }
 
-        # (3) Assemble. At "totals" the historical layout is kept: declared
-        # codes in declaration order, then the collapsed band row. At
-        # "per_code" / "all" the whole Missing block sorts ascending by
-        # value as commercial statistical software does, so a declared
-        # discrete code can print BELOW in-band values -- deliberate.
+        # (3) Assemble. The whole Missing block sorts ascending by value at
+        # EVERY detail tier, as commercial statistical software does, so a
+        # declared discrete code can print BELOW in-band values -- deliberate.
+        #
+        # ONE ORDERING PRINCIPLE ACROSS ALL THREE TIERS (S220). Before this,
+        # "totals" kept the pre-S214 layout -- declared codes in DECLARATION
+        # order, then the collapsed band row -- while "per_code" and "all"
+        # sorted by value. A reader stepping between tiers therefore saw rows
+        # move, and not only around a band: a range-free column whose codes
+        # were declared out of value order reordered too, because the sort
+        # covers the whole block rather than just the range rows. Declaration
+        # order was a leftover, not a principle; the commercial-software
+        # parity that justifies the sort does not stop applying at "totals".
+        #
+        # The collapsed band row sorts on its LOWER BOUND, so it lands where
+        # the band actually sits among the discrete codes rather than always
+        # trailing them. A code carrying no numeric value sorts last
+        # (order()'s na.last default) and is still printed.
         combined <- rbind(code_rows, range_rows)
-        if (!identical(detail_tier, "totals") && nrow(combined) > 0L) {
+        if (nrow(combined) > 0L) {
           combined <- combined[order(combined$Sort), , drop = FALSE]
         }
         if (!is.null(overflow_row)) combined <- rbind(combined, overflow_row)

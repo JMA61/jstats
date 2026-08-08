@@ -800,7 +800,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       }
 
       codes_df <- data.frame(
-        code    = format(n_vals),
+        # trim = TRUE for the same reason range_values below carries it:
+        # format() pads a multi-value vector to a common width, which puts
+        # stray leading spaces in front of the narrower codes when these
+        # strings are rendered as row labels (" -5" beside "-99"). The
+        # padding was fixed on the range side at S214 and missed here;
+        # with the S220 ordering alignment interleaving code rows and
+        # in-band rows, the mismatch became visible in one block.
+        code    = format(n_vals, trim = TRUE),
         label   = labels_vec,
         source  = rep("na_values", length(n_vals)),
         numeric = n_vals,
