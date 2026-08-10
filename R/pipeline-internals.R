@@ -371,11 +371,14 @@
 # getOption() fallback when no explicit setting is present.
 #
 # Slots:
-#   missing.convention   - one of "none", "spss", "stata". "none" =
-#                          preserve-as-loaded (no auto-conversion at
-#                          load time). "spss" / "stata" opts into
-#                          load-time auto-conversion and supplies the
-#                          target convention for fresh UDM declarations.
+#   missing.convention   - one of "none", "spss", "stata", "sas".
+#                          "none" = no stated preference. A set value
+#                          supplies the target convention for fresh UDM
+#                          declarations and convention-conditional
+#                          recodes (via .jst_resolve_convention), the
+#                          default target for jconvert(to = NULL), and
+#                          the reference point for the joptions
+#                          environment-scan notice.
 #   udm.convention.codes - numeric vector, length 1-3, whole numbers,
 #                          no duplicates. Recommended UDM code set used
 #                          by jconvert for Stata-tag -> SPSS-code mapping
@@ -746,35 +749,41 @@
 #' Internal helper: resolve the active missing-value convention
 #'
 #' Implements Decision 11's four-step precedence rule for determining
-#' which UDM convention (SPSS-form or Stata-form) applies to a fresh
-#' UDM declaration or convention-conditional recode. Returns either
-#' \code{"spss"} or \code{"stata"} -- never \code{NULL}.
+#' which UDM convention (SPSS-form, Stata-form, or SAS-form; Decision
+#' 13 added "sas") applies to a fresh UDM declaration or
+#' convention-conditional recode. Returns \code{"spss"},
+#' \code{"stata"}, or \code{"sas"} -- never \code{NULL}.
 #'
 #' The four levels of the precedence rule, in order:
 #' \enumerate{
 #'   \item If the column already carries a UDM convention (na_values
-#'     metadata for SPSS-form, tagged_na markers for Stata-form),
-#'     match it. Handled at the call site by passing a non-NULL value
-#'     to \code{column_convention}; \code{jrecode()} does not engage
-#'     this level because it produces fresh columns.
-#'   \item If \code{per_call} is \code{"spss"} or \code{"stata"}, use
-#'     that.
-#'   \item If \code{joptions("missing.convention")} is \code{"spss"}
-#'     or \code{"stata"}, use that.
+#'     metadata for SPSS-form; tagged_na markers for Stata-form when
+#'     lowercase, SAS-form when uppercase), match it. Handled at the
+#'     call site by passing a non-NULL value to
+#'     \code{column_convention}; \code{jrecode()} does not engage
+#'     this level because it produces fresh columns. A mixed-case
+#'     tagged column classifies as no convention (Decision 13's
+#'     ambiguous rule) and does not engage this level.
+#'   \item If \code{per_call} is \code{"spss"}, \code{"stata"}, or
+#'     \code{"sas"}, use that.
+#'   \item If \code{joptions("missing.convention")} is \code{"spss"},
+#'     \code{"stata"}, or \code{"sas"}, use that.
 #'   \item Else default to SPSS-form.
 #' }
 #'
 #' @param per_call The value of the calling function's
-#'   \code{convention} argument (typically NULL, "spss", or "stata").
-#'   Validated; values other than NULL, "spss", or "stata" raise an
-#'   error.
+#'   \code{convention} argument (typically NULL, "spss", "stata", or
+#'   "sas"). Validated; other values raise an error.
 #' @param column_convention Optional. \code{"spss"}, \code{"stata"},
-#'   or \code{NULL}. When non-NULL, level 1 of the precedence rule
-#'   applies and the function returns this value immediately. Step 5b
-#'   (\code{jdeclare_udm()}) will populate this argument from
-#'   \code{.jst_missing_info()} on the operand column.
+#'   \code{"sas"}, or \code{NULL} (an \code{NA} from an ambiguous
+#'   mixed-case column is treated as \code{NULL}). When non-NULL and
+#'   non-NA, level 1 of the precedence rule applies and the function
+#'   returns this value immediately. Step 5b (\code{jdeclare_udm()})
+#'   will populate this argument from \code{.jst_missing_info()} on
+#'   the operand column.
 #'
-#' @return Single character: \code{"spss"} or \code{"stata"}.
+#' @return Single character: \code{"spss"}, \code{"stata"}, or
+#'   \code{"sas"}.
 #'
 #' @keywords internal
 .jst_resolve_convention <- function(per_call = NULL, column_convention = NULL) {
@@ -788,14 +797,15 @@
   # convention is actually consulted by the caller.
   if (!is.null(per_call)) {
     if (!is.character(per_call) || length(per_call) != 1L ||
-        !per_call %in% c("spss", "stata")) {
-      .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
+        !per_call %in% c("spss", "stata", "sas")) {
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
     }
   }
 
-  # Level 1: column already carries a convention.
+  # Level 1: column already carries a convention. An NA (ambiguous
+  # mixed-case column) fails the %in% and falls through -- Decision 13.
   if (!is.null(column_convention) &&
-      column_convention %in% c("spss", "stata")) {
+      column_convention %in% c("spss", "stata", "sas")) {
     return(column_convention)
   }
 
@@ -805,10 +815,57 @@
   # Level 3: joptions setting.
   opt <- getOption(".jst_options_missing_convention",
                    .jst_options_defaults$missing.convention)
-  if (opt %in% c("spss", "stata")) return(opt)
+  if (opt %in% c("spss", "stata", "sas")) return(opt)
 
   # Level 4: SPSS-form default.
   return("spss")
+}
+
+#' Internal helper: canonical letter case for a tagged-NA marker
+#'
+#' Embodies Decision 13's token case rule: marker-letter INPUT is
+#' case-insensitive everywhere, but the case actually STORED follows
+#' the governing convention -- uppercase under "sas", lowercase
+#' otherwise. Display always follows the stored tag, never the
+#' setting; this helper governs minting only.
+#'
+#' Foundation-session machinery (S226): the mint sites (jrecode,
+#' jdeclare_udm) adopt it at their parity-worklist touches; until
+#' then they mint lowercase regardless of convention (the documented
+#' piecewise lag).
+#'
+#' @param tag Character vector of single tag letters, any case.
+#' @param convention Single character: \code{"spss"}, \code{"stata"},
+#'   or \code{"sas"} (a resolved convention, as returned by
+#'   \code{.jst_resolve_convention()}).
+#'
+#' @return Character vector of tag letters in the convention's
+#'   canonical case.
+#'
+#' @keywords internal
+.jst_canonical_tag <- function(tag, convention) {
+  if (identical(convention, "sas")) toupper(tag) else tolower(tag)
+}
+
+#' Internal helper: user-facing style label for a UDM convention
+#'
+#' Maps a convention token to the locked user-facing vocabulary
+#' (the MISSING-VALUE-TERMS rule, S36): "SPSS-style" / "Stata-style" /
+#' "SAS-style". Shared by the joptions environment-scan notice and
+#' jdeclare_udm's post-declaration mismatch notice so the two render
+#' identically.
+#'
+#' @param convention Character vector of convention tokens ("spss",
+#'   "stata", "sas").
+#'
+#' @return Character vector of display labels; \code{NA} for
+#'   unrecognized or \code{NA} input.
+#'
+#' @keywords internal
+.jst_convention_label <- function(convention) {
+  unname(c(spss  = "SPSS-style",
+           stata = "Stata-style",
+           sas   = "SAS-style")[convention])
 }
 
 #' CPS rendering rule tables (data, not logic)

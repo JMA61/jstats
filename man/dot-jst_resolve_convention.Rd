@@ -8,37 +8,43 @@
 }
 \arguments{
 \item{per_call}{The value of the calling function's
-\code{convention} argument (typically NULL, "spss", or "stata").
-Validated; values other than NULL, "spss", or "stata" raise an
-error.}
+\code{convention} argument (typically NULL, "spss", "stata", or
+"sas"). Validated; other values raise an error.}
 
 \item{column_convention}{Optional. \code{"spss"}, \code{"stata"},
-or \code{NULL}. When non-NULL, level 1 of the precedence rule
-applies and the function returns this value immediately. Step 5b
-(\code{jdeclare_udm()}) will populate this argument from
-\code{.jst_missing_info()} on the operand column.}
+\code{"sas"}, or \code{NULL} (an \code{NA} from an ambiguous
+mixed-case column is treated as \code{NULL}). When non-NULL and
+non-NA, level 1 of the precedence rule applies and the function
+returns this value immediately. Step 5b (\code{jdeclare_udm()})
+will populate this argument from \code{.jst_missing_info()} on
+the operand column.}
 }
 \value{
-Single character: \code{"spss"} or \code{"stata"}.
+Single character: \code{"spss"}, \code{"stata"}, or
+\code{"sas"}.
 }
 \description{
 Implements Decision 11's four-step precedence rule for determining
-which UDM convention (SPSS-form or Stata-form) applies to a fresh
-UDM declaration or convention-conditional recode. Returns either
-\code{"spss"} or \code{"stata"} -- never \code{NULL}.
+which UDM convention (SPSS-form, Stata-form, or SAS-form; Decision
+13 added "sas") applies to a fresh UDM declaration or
+convention-conditional recode. Returns \code{"spss"},
+\code{"stata"}, or \code{"sas"} -- never \code{NULL}.
 }
 \details{
 The four levels of the precedence rule, in order:
 \enumerate{
 \item If the column already carries a UDM convention (na_values
-metadata for SPSS-form, tagged_na markers for Stata-form),
-match it. Handled at the call site by passing a non-NULL value
-to \code{column_convention}; \code{jrecode()} does not engage
-this level because it produces fresh columns.
-\item If \code{per_call} is \code{"spss"} or \code{"stata"}, use
-that.
-\item If \code{joptions("missing.convention")} is \code{"spss"}
-or \code{"stata"}, use that.
+metadata for SPSS-form; tagged_na markers for Stata-form when
+lowercase, SAS-form when uppercase), match it. Handled at the
+call site by passing a non-NULL value to
+\code{column_convention}; \code{jrecode()} does not engage
+this level because it produces fresh columns. A mixed-case
+tagged column classifies as no convention (Decision 13's
+ambiguous rule) and does not engage this level.
+\item If \code{per_call} is \code{"spss"}, \code{"stata"}, or
+\code{"sas"}, use that.
+\item If \code{joptions("missing.convention")} is \code{"spss"},
+\code{"stata"}, or \code{"sas"}, use that.
 \item Else default to SPSS-form.
 }
 }

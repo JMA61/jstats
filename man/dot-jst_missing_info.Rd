@@ -23,7 +23,18 @@ CPS renderers -- leave it \code{FALSE} and pay nothing.}
 \code{NULL} if the column has no formal UDM declarations.
 Otherwise a list with:
 \describe{
-\item{representation}{\code{"spss"} or \code{"stata"}}
+\item{representation}{\code{"spss"} or \code{"stata"} -- the
+PHYSICAL structure (na_values metadata vs tagged_na markers).
+Deliberately binary: SAS-form is structurally Stata-form
+(Decision 13), so structural consumers (conversion loops,
+UDM-to-NA application) key on this and never see "sas".}
+\item{convention}{\code{"spss"}, \code{"stata"}, \code{"sas"},
+or \code{NA_character_} -- the user-facing CONVENTION, refined
+from tag letter case: all-lowercase tags read as Stata-form,
+all-uppercase as SAS-form, mixed case as \code{NA} (ambiguous;
+Decision 13's rule -- such a column is skipped by convention
+counting and does not engage the resolver's column level).
+Always \code{"spss"} for SPSS-representation columns.}
 \item{na_range}{Length-2 numeric vector for SPSS range-based
 missingness, or \code{NULL}}
 \item{codes}{A data frame with one row per declared code/tag,

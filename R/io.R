@@ -713,7 +713,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @return \code{NULL} if the column has no formal UDM declarations.
 #'   Otherwise a list with:
 #'   \describe{
-#'     \item{representation}{\code{"spss"} or \code{"stata"}}
+#'     \item{representation}{\code{"spss"} or \code{"stata"} -- the
+#'       PHYSICAL structure (na_values metadata vs tagged_na markers).
+#'       Deliberately binary: SAS-form is structurally Stata-form
+#'       (Decision 13), so structural consumers (conversion loops,
+#'       UDM-to-NA application) key on this and never see "sas".}
+#'     \item{convention}{\code{"spss"}, \code{"stata"}, \code{"sas"},
+#'       or \code{NA_character_} -- the user-facing CONVENTION, refined
+#'       from tag letter case: all-lowercase tags read as Stata-form,
+#'       all-uppercase as SAS-form, mixed case as \code{NA} (ambiguous;
+#'       Decision 13's rule -- such a column is skipped by convention
+#'       counting and does not engage the resolver's column level).
+#'       Always \code{"spss"} for SPSS-representation columns.}
 #'     \item{na_range}{Length-2 numeric vector for SPSS range-based
 #'       missingness, or \code{NULL}}
 #'     \item{codes}{A data frame with one row per declared code/tag,
@@ -862,6 +873,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
     list(
       representation = "spss",
+      convention     = "spss",
       na_range       = if (!is.null(na_range) && length(na_range) == 2) na_range else NULL,
       codes          = codes_df,
       range_values   = range_values_df
@@ -901,8 +913,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       stringsAsFactors = FALSE
     )
 
+    # Convention refinement from tag letter case (Decision 13): all
+    # lowercase = Stata-form, all uppercase = SAS-form, mixed = NA
+    # (ambiguous). Judged over the union of cell tags and label-declared
+    # tags -- the same evidence set the codes table is built from.
+    tag_convention <- if (all(tags_present %in% letters)) {
+      "stata"
+    } else if (all(tags_present %in% LETTERS)) {
+      "sas"
+    } else {
+      NA_character_
+    }
+
     list(
       representation = "stata",
+      convention     = tag_convention,
       na_range       = NULL,
       codes          = codes_df,
       range_values   = NULL   # Stata form has no range declaration
@@ -911,49 +936,77 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 }
 
 # -----------------------------------------------------------------------------
-# .jst_predominant_convention()
+# .jst_convention_census() / .jst_predominant_convention()
 #
-# Scans the columns of a data frame and returns its predominant UDM
-# convention. Per Sign-off 6b (Session 32), extracted from the body of
+# Scans the columns of a data frame and classifies its UDM convention
+# make-up. Per Sign-off 6b (Session 32), extracted from the body of
 # .jst_options_nudge so both that helper and jdeclare_udm's post-
-# declaration mismatch notice consume the same logic.
+# declaration mismatch notice consume the same logic; generalized to
+# the three-way census at S226 (Decision 13).
 #
-# Classification rules (per locked design, Cross-cutting 3 Notes):
-#   - Only columns with declared UDMs count toward the predominant
-#     convention. Plain numeric columns are ignored.
-#   - Ties (equal SPSS- and Stata-form counts) return NA.
-#   - DFs with zero UDM-bearing columns return NA.
+# Classification rules (per locked design, Cross-cutting 3 Notes,
+# extended by Decision 13):
+#   - Only columns with a classifiable convention count. Plain numeric
+#     columns are ignored; mixed-case tagged columns (convention = NA,
+#     the ambiguous rule) are likewise ignored -- they count toward
+#     neither the verdict nor unanimity.
+#   - The predominant convention is the STRICT PLURALITY winner; a tie
+#     for the top count, or zero countable columns, yields NA.
 # -----------------------------------------------------------------------------
 
-#' Internal helper: classify a data frame's predominant UDM convention
+#' Internal helper: census a data frame's UDM conventions
 #'
-#' Walks a data frame's columns via \code{.jst_missing_info()}, counts
-#' SPSS-form vs Stata-form UDM-bearing columns, and returns the
-#' convention with the larger count. Returns \code{NA_character_} when
-#' counts tie or when no columns carry UDM declarations.
+#' Walks a data frame's columns via \code{.jst_missing_info()} and
+#' tallies countable columns by convention (\code{"spss"},
+#' \code{"stata"}, \code{"sas"}; ambiguous mixed-case columns are
+#' skipped).
 #'
 #' @param df A data frame.
 #'
-#' @return Character scalar: \code{"spss"}, \code{"stata"}, or
-#'   \code{NA_character_}.
+#' @return A list with \code{counts} (named integer vector: spss,
+#'   stata, sas), \code{predominant} (the strict-plurality winner, or
+#'   \code{NA_character_} on a top-count tie or zero countable
+#'   columns), and \code{unanimous} (\code{TRUE} when exactly one
+#'   convention has a nonzero count; \code{FALSE} otherwise, including
+#'   the zero-column case).
+#'
+#' @keywords internal
+.jst_convention_census <- function(df) {
+  counts <- c(spss = 0L, stata = 0L, sas = 0L)
+  if (is.data.frame(df)) {
+    for (col in df) {
+      info <- .jst_missing_info(col)
+      if (is.null(info)) next
+      conv <- info$convention
+      if (is.null(conv) || is.na(conv)) next
+      if (conv %in% names(counts)) counts[[conv]] <- counts[[conv]] + 1L
+    }
+  }
+
+  total   <- sum(counts)
+  top     <- max(counts)
+  winners <- names(counts)[counts == top]
+
+  predominant <- if (total == 0L || length(winners) > 1L) NA_character_
+                 else winners
+  unanimous   <- total > 0L && sum(counts > 0L) == 1L
+
+  list(counts = counts, predominant = predominant, unanimous = unanimous)
+}
+
+#' Internal helper: classify a data frame's predominant UDM convention
+#'
+#' Thin wrapper over \code{.jst_convention_census()} returning only the
+#' verdict, for callers that need no counts or unanimity.
+#'
+#' @param df A data frame.
+#'
+#' @return Character scalar: \code{"spss"}, \code{"stata"},
+#'   \code{"sas"}, or \code{NA_character_}.
 #'
 #' @keywords internal
 .jst_predominant_convention <- function(df) {
-  if (!is.data.frame(df)) return(NA_character_)
-
-  spss_count  <- 0L
-  stata_count <- 0L
-  for (col in df) {
-    info <- .jst_missing_info(col)
-    if (is.null(info)) next
-    if (identical(info$representation, "spss"))  spss_count  <- spss_count  + 1L
-    if (identical(info$representation, "stata")) stata_count <- stata_count + 1L
-  }
-
-  if (spss_count == 0L && stata_count == 0L) return(NA_character_)
-  if (spss_count == stata_count)              return(NA_character_)
-  if (spss_count > stata_count)               return("spss")
-  return("stata")
+  .jst_convention_census(df)$predominant
 }
 
 #' Internal: inspect a data frame for UDM-bearing columns and optionally

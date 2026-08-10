@@ -2405,6 +2405,12 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   }
 
   # --- Post-declaration mismatch notice (Decision 11 closing rule) ---------
+  # Detection is unchanged: predominance over the WHOLE frame decides
+  # whether the notice fires. The verb, though, describes the "other
+  # columns" -- so unanimity is judged over the frame MINUS the
+  # mismatched variables, matching what the sentence claims (S226;
+  # excluding a minority can only strengthen or unanimize the same
+  # verdict, never flip it).
   if (isTRUE(udm.notice)) {
     df_predominant <- .jst_predominant_convention(data)
     if (!is.na(df_predominant)) {
@@ -2412,17 +2418,21 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         r$resolved_convention != df_predominant, logical(1))]
       if (length(mismatched) > 0L) {
         this_conv  <- results[[match(mismatched[1L], target_vars)]]$resolved_convention
-        this_form  <- if (this_conv == "spss") "SPSS-style" else "Stata-style"
-        other_form <- if (df_predominant == "spss") "SPSS-style" else "Stata-style"
+        this_form  <- .jst_convention_label(this_conv)
+        other_form <- .jst_convention_label(df_predominant)
+        others_census <- .jst_convention_census(
+          data[, setdiff(names(data), mismatched), drop = FALSE])
+        other_verb <- if (isTRUE(others_census$unanimous)) "are"
+                      else "are predominantly"
         if (length(mismatched) == 1L) {
           cat(sprintf(
-            "Note: variable %s is %s, but other columns in %s are predominantly %s.\nUse jconvert() to align if desired.\n",
-            mismatched[1L], this_form, data_name, other_form))
+            "Note: variable %s is %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
+            mismatched[1L], this_form, data_name, other_verb, other_form))
         } else {
           cat(sprintf(
-            "Note: variables %s are %s, but other columns in %s are predominantly %s.\nUse jconvert() to align if desired.\n",
+            "Note: variables %s are %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
             paste(mismatched, collapse = ", "), this_form, data_name,
-            other_form))
+            other_verb, other_form))
         }
       }
     }
@@ -3239,7 +3249,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
   if (is.null(to)) {
     convention <- getOption(".jst_options_missing_convention",
                             .jst_options_defaults$missing.convention)
-    if (convention %in% c("spss", "stata")) {
+    if (convention %in% c("spss", "stata", "sas")) {
       to <- convention
     } else {
       .jst_stop(

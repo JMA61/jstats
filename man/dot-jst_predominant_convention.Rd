@@ -10,13 +10,11 @@
 \item{df}{A data frame.}
 }
 \value{
-Character scalar: \code{"spss"}, \code{"stata"}, or
-\code{NA_character_}.
+Character scalar: \code{"spss"}, \code{"stata"},
+\code{"sas"}, or \code{NA_character_}.
 }
 \description{
-Walks a data frame's columns via \code{.jst_missing_info()}, counts
-SPSS-form vs Stata-form UDM-bearing columns, and returns the
-convention with the larger count. Returns \code{NA_character_} when
-counts tie or when no columns carry UDM declarations.
+Thin wrapper over \code{.jst_convention_census()} returning only the
+verdict, for callers that need no counts or unanimity.
 }
 \keyword{internal}

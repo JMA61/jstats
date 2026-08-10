@@ -315,6 +315,7 @@ joutput <- function(level, effect.size = NULL,
                      none  = "None selected",
                      spss  = "SPSS",
                      stata = "Stata",
+                     sas   = "SAS",
                      mc)
 
   # data.dir: NULL displays as "Working directory" for parallelism with
@@ -343,52 +344,78 @@ joutput <- function(level, effect.size = NULL,
 }
 
 
-# -- Internal: globalenv() scan and one-line mismatch nudge -------------------
+# -- Internal: globalenv() scan and mismatch nudge ----------------------------
 #
-# Called by joptions() when missing.convention is set to "spss" or
-# "stata". Scans globalenv() for data frames; for each, classifies each
-# column's UDM convention via .jst_missing_info(); computes the DF's
-# predominant convention; emits a one-line notice listing DFs whose
+# Called by joptions() when missing.convention is set to "spss",
+# "stata", or "sas". Scans globalenv() for data frames; for each,
+# classifies each column's UDM convention via .jst_convention_census();
+# emits one notice per mismatch group (see below) listing DFs whose
 # predominant convention differs from target_convention. Silent when
 # no mismatches.
 #
-# Classification rules (per locked design, Cross-cutting 3 Notes):
-#   - Only columns with declared UDMs (SPSS-form na_values or Stata-form
-#     tagged_na) count toward the predominant convention. Plain numeric
-#     columns are ignored.
-#   - Ties (equal SPSS- and Stata-form counts) cause the DF to be skipped.
-#   - DFs with zero UDM-bearing columns are skipped (no predominant
-#     convention to mismatch against).
+# Classification rules (per locked design, Cross-cutting 3 Notes;
+# extended by Decision 13):
+#   - Only columns with declared UDMs (SPSS-form na_values, or
+#     tagged_na markers -- lowercase Stata-form / uppercase SAS-form)
+#     count toward the predominant convention. Plain numeric columns
+#     are ignored; mixed-case tagged columns classify as ambiguous
+#     and are ignored (Decision 13).
+#   - No strict plurality winner (a tie for the top count) causes the
+#     DF to be skipped.
+#   - DFs with zero countable UDM-bearing columns are skipped.
 #
-# All mismatched DFs share the same predominant convention (the one
-# opposite the newly-set target), so the message can group them.
+# Wording (S226 redraft): a DF whose countable columns are all one
+# convention gets the plain verb ("uses") and the remedy "change"; a
+# DF with a genuine internal majority keeps "predominantly" and the
+# remedy "align". Mismatched DFs group by (convention, unanimity),
+# one Note per group in fixed order (spss, stata, sas; unanimous
+# before majority), a blank line between consecutive notes (Rule F),
+# DF lists capped via .jst_format_var_list. No cross-DF comparison
+# commentary -- each note states its group's convention and the fix.
 
 #' @keywords internal
 .jst_options_nudge <- function(target_convention) {
   env       <- globalenv()
   obj_names <- ls(envir = env)
-  mismatched <- character(0)
+
+  groups <- list()  # key "conv|unanimity" -> character vector of DF names
 
   for (nm in obj_names) {
     obj <- tryCatch(get(nm, envir = env, inherits = FALSE),
                     error = function(e) NULL)
     if (!is.data.frame(obj)) next
 
-    predominant <- .jst_predominant_convention(obj)
-    if (is.na(predominant)) next
+    census <- .jst_convention_census(obj)
+    if (is.na(census$predominant)) next
+    if (census$predominant == target_convention) next
 
-    if (predominant != target_convention) {
-      mismatched <- c(mismatched, nm)
-    }
+    key <- paste0(census$predominant, "|",
+                  if (census$unanimous) "u" else "m")
+    groups[[key]] <- c(groups[[key]], nm)
   }
 
-  if (length(mismatched) > 0L) {
-    other_conv <- if (target_convention == "spss") "Stata" else "SPSS"
-    verb       <- if (length(mismatched) == 1L) "uses" else "use"
-    cat(sprintf("Note: %s predominantly %s %s-form user-defined missing values. Use jconvert() to align.\n",
-                paste(mismatched, collapse = ", "),
-                verb,
-                other_conv))
+  if (length(groups) > 0L) {
+    notes <- character(0)
+    for (conv in c("spss", "stata", "sas")) {
+      for (mode in c("u", "m")) {
+        dfs <- groups[[paste0(conv, "|", mode)]]
+        if (is.null(dfs)) next
+        df_list <- .jst_format_var_list(dfs)
+        label   <- .jst_convention_label(conv)
+        if (mode == "u") {
+          verb <- if (length(dfs) == 1L) "uses" else "use"
+          notes <- c(notes, sprintf(
+            "Note: %s %s %s missing values. Use jconvert() to change.\n",
+            df_list, verb, label))
+        } else {
+          verb <- if (length(dfs) == 1L) "predominantly uses" else "predominantly use"
+          notes <- c(notes, sprintf(
+            "Note: %s %s %s missing values. Use jconvert() to align.\n",
+            df_list, verb, label))
+        }
+      }
+    }
+    cat(paste(notes, collapse = "\n"))
   }
 
   invisible(NULL)
@@ -401,8 +428,9 @@ joutput <- function(level, effect.size = NULL,
 #' missing-value information and related conventions. \code{joptions}
 #' complements \code{\link{joutput}}: joutput governs output verbosity and
 #' tiering, while joptions holds session-wide conventions plus a small number
-#' of per-function display defaults (currently the \code{jcorr()} cell
-#' layout). Settings are read fresh on each function call:
+#' of per-function display defaults (the \code{jcorr()} cell layout via
+#' \code{corr.layout}, and the \code{jfreq()} missing-value range detail
+#' via \code{missing.detail}). Settings are read fresh on each function call:
 #' changing a setting after data has been loaded does not retroactively
 #' transform data already in memory. \code{\link{jconvert}} is the
 #' explicit transform path for data already in the workspace.
@@ -410,17 +438,22 @@ joutput <- function(level, effect.size = NULL,
 #' @section Slots:
 #' \describe{
 #'   \item{missing.convention}{Character, length 1. One of \code{"none"},
-#'     \code{"spss"}, or \code{"stata"}. Default: \code{"none"}.
-#'     \code{"none"} preserves loaded data as-is (no automatic conversion
-#'     between user-defined missing value (UDM) representations at load time). \code{"spss"} or
-#'     \code{"stata"} opts into load-time auto-conversion via
-#'     \code{\link{jload}}, and also supplies the target convention for
-#'     fresh UDM declarations on columns with no existing convention.}
+#'     \code{"spss"}, \code{"stata"}, or \code{"sas"}. Default:
+#'     \code{"none"}, meaning no stated preference: loaded data is
+#'     preserved as-is and fresh user-defined missing value (UDM)
+#'     declarations fall back to SPSS-style. A set value states your
+#'     working convention: it supplies the target for fresh UDM
+#'     declarations on columns with no existing convention, becomes the
+#'     default target for \code{\link{jconvert}} when \code{to} is not
+#'     given, and is the reference point for the environment-scan
+#'     notice (see below). Data already loaded is never changed by
+#'     setting this; \code{\link{jconvert}} is the explicit transform
+#'     path.}
 #'   \item{udm.convention.codes}{Numeric vector, length 1 to 3, whole
 #'     numbers, no duplicates. Sign unconstrained. Default:
 #'     \code{c(-99, -98, -97)}. The recommended UDM code set used
 #'     by \code{\link{jconvert}} when translating Stata-style missing values
-#'     (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-form
+#'     (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-style
 #'     numeric codes, and by the load-time diagnostic for
 #'     convention-matched detection.}
 #'   \item{data.dir}{Character string (length 1), or \code{NULL}. Default:
@@ -477,17 +510,20 @@ joutput <- function(level, effect.size = NULL,
 #' }
 #'
 #' @section Environment-scan notice:
-#' Setting \code{missing.convention} to \code{"spss"} or \code{"stata"}
-#' triggers a one-time scan of \code{globalenv()} for data frames whose
-#' predominant UDM convention differs from the newly-set value. When
-#' mismatches exist, a one-line notice lists the affected data frames
-#' and suggests \code{\link{jconvert}} for alignment. The notice is
-#' informational; nothing is changed. Plain data frames with no
-#' UDM-bearing columns -- including the course datasets in their
-#' standard form -- do not trigger the notice.
+#' Setting \code{missing.convention} to \code{"spss"}, \code{"stata"},
+#' or \code{"sas"} triggers a one-time scan of \code{globalenv()} for
+#' data frames whose UDM convention differs from the newly-set value.
+#' When mismatches exist, a notice lists the affected data frames and
+#' suggests \code{\link{jconvert}}: frames whose declared columns all
+#' carry one convention read "use X-style missing values", while
+#' frames with a genuine internal majority read "predominantly use".
+#' The notice is informational; nothing is changed. Plain data frames
+#' with no UDM-bearing columns -- including the course datasets in
+#' their standard form -- do not trigger the notice.
 #'
-#' @param missing.convention One of \code{"none"}, \code{"spss"}, or
-#'   \code{"stata"} (any capitalization is accepted). See Slots.
+#' @param missing.convention One of \code{"none"}, \code{"spss"},
+#'   \code{"stata"}, or \code{"sas"} (any capitalization is accepted).
+#'   See Slots.
 #' @param udm.convention.codes Numeric vector, length 1 to 3. See Slots.
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
@@ -500,8 +536,13 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @examples
 #' joptions()                                        # show current settings
-#' joptions(missing.convention = "spss")             # set, panel, nudge
-#' joptions(udm.convention.codes = c(-99, -98))      # set, panel, no nudge
+#'
+#' # Setting a convention prints the panel, then scans the workspace and
+#' # notes any data frames whose UDM convention differs (see the
+#' # Environment-scan notice section):
+#' joptions(missing.convention = "spss")             # set, panel, scan notice
+#' joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
+#' joptions(udm.convention.codes = c(-99, -98))      # set, panel, no scan
 #' joptions(data.dir = "Data")                       # set save/load folder
 #' joptions(missing.convention = "stata",
 #'          udm.convention.codes = c(-99, -98, -97)) # set both
@@ -572,8 +613,9 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     }
     if (!is.character(missing.convention) ||
         length(missing.convention) != 1L ||
-        !(missing.convention %in% c("none", "spss", "stata"))) {
-      .jst_stop_arg("joptions", "missing.convention", choices = c("none", "spss", "stata"))
+        !(missing.convention %in% c("none", "spss", "stata", "sas"))) {
+      .jst_stop_arg("joptions", "missing.convention",
+                    choices = c("none", "spss", "stata", "sas"))
     }
   }
   if (cc_supplied && !is.null(udm.convention.codes)) {
@@ -623,7 +665,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   trigger_nudge <- FALSE
   if (mc_supplied && !is.null(missing.convention)) {
     options(.jst_options_missing_convention = missing.convention)
-    if (missing.convention %in% c("spss", "stata")) trigger_nudge <- TRUE
+    if (missing.convention %in% c("spss", "stata", "sas")) trigger_nudge <- TRUE
   }
   if (cc_supplied && !is.null(udm.convention.codes)) {
     options(.jst_options_udm_convention_codes = udm.convention.codes)

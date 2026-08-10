@@ -14,8 +14,9 @@ joptions(
 )
 }
 \arguments{
-\item{missing.convention}{One of \code{"none"}, \code{"spss"}, or
-\code{"stata"} (any capitalization is accepted). See Slots.}
+\item{missing.convention}{One of \code{"none"}, \code{"spss"},
+\code{"stata"}, or \code{"sas"} (any capitalization is accepted).
+See Slots.}
 
 \item{udm.convention.codes}{Numeric vector, length 1 to 3. See Slots.}
 
@@ -40,8 +41,9 @@ Controls session-wide settings that affect how the package handles
 missing-value information and related conventions. \code{joptions}
 complements \code{\link{joutput}}: joutput governs output verbosity and
 tiering, while joptions holds session-wide conventions plus a small number
-of per-function display defaults (currently the \code{jcorr()} cell
-layout). Settings are read fresh on each function call:
+of per-function display defaults (the \code{jcorr()} cell layout via
+\code{corr.layout}, and the \code{jfreq()} missing-value range detail
+via \code{missing.detail}). Settings are read fresh on each function call:
 changing a setting after data has been loaded does not retroactively
 transform data already in memory. \code{\link{jconvert}} is the
 explicit transform path for data already in the workspace.
@@ -50,17 +52,22 @@ explicit transform path for data already in the workspace.
 
 \describe{
 \item{missing.convention}{Character, length 1. One of \code{"none"},
-\code{"spss"}, or \code{"stata"}. Default: \code{"none"}.
-\code{"none"} preserves loaded data as-is (no automatic conversion
-between user-defined missing value (UDM) representations at load time). \code{"spss"} or
-\code{"stata"} opts into load-time auto-conversion via
-\code{\link{jload}}, and also supplies the target convention for
-fresh UDM declarations on columns with no existing convention.}
+\code{"spss"}, \code{"stata"}, or \code{"sas"}. Default:
+\code{"none"}, meaning no stated preference: loaded data is
+preserved as-is and fresh user-defined missing value (UDM)
+declarations fall back to SPSS-style. A set value states your
+working convention: it supplies the target for fresh UDM
+declarations on columns with no existing convention, becomes the
+default target for \code{\link{jconvert}} when \code{to} is not
+given, and is the reference point for the environment-scan
+notice (see below). Data already loaded is never changed by
+setting this; \code{\link{jconvert}} is the explicit transform
+path.}
 \item{udm.convention.codes}{Numeric vector, length 1 to 3, whole
 numbers, no duplicates. Sign unconstrained. Default:
 \code{c(-99, -98, -97)}. The recommended UDM code set used
 by \code{\link{jconvert}} when translating Stata-style missing values
-(\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-form
+(\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-style
 numeric codes, and by the load-time diagnostic for
 convention-matched detection.}
 \item{data.dir}{Character string (length 1), or \code{NULL}. Default:
@@ -121,20 +128,27 @@ slot to its default, pass the default value explicitly (e.g.
 
 \section{Environment-scan notice}{
 
-Setting \code{missing.convention} to \code{"spss"} or \code{"stata"}
-triggers a one-time scan of \code{globalenv()} for data frames whose
-predominant UDM convention differs from the newly-set value. When
-mismatches exist, a one-line notice lists the affected data frames
-and suggests \code{\link{jconvert}} for alignment. The notice is
-informational; nothing is changed. Plain data frames with no
-UDM-bearing columns -- including the course datasets in their
-standard form -- do not trigger the notice.
+Setting \code{missing.convention} to \code{"spss"}, \code{"stata"},
+or \code{"sas"} triggers a one-time scan of \code{globalenv()} for
+data frames whose UDM convention differs from the newly-set value.
+When mismatches exist, a notice lists the affected data frames and
+suggests \code{\link{jconvert}}: frames whose declared columns all
+carry one convention read "use X-style missing values", while
+frames with a genuine internal majority read "predominantly use".
+The notice is informational; nothing is changed. Plain data frames
+with no UDM-bearing columns -- including the course datasets in
+their standard form -- do not trigger the notice.
 }
 
 \examples{
 joptions()                                        # show current settings
-joptions(missing.convention = "spss")             # set, panel, nudge
-joptions(udm.convention.codes = c(-99, -98))      # set, panel, no nudge
+
+# Setting a convention prints the panel, then scans the workspace and
+# notes any data frames whose UDM convention differs (see the
+# Environment-scan notice section):
+joptions(missing.convention = "spss")             # set, panel, scan notice
+joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
+joptions(udm.convention.codes = c(-99, -98))      # set, panel, no scan
 joptions(data.dir = "Data")                       # set save/load folder
 joptions(missing.convention = "stata",
          udm.convention.codes = c(-99, -98, -97)) # set both
