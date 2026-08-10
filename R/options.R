@@ -400,18 +400,31 @@ joutput <- function(level, effect.size = NULL,
       for (mode in c("u", "m")) {
         dfs <- groups[[paste0(conv, "|", mode)]]
         if (is.null(dfs)) next
-        df_list <- .jst_format_var_list(dfs)
+        # S227: the note opens with an article and names the object kind
+        # ("the community and small data frames use ...") rather than a
+        # bare frame name. A frame name cannot be capitalized -- R is
+        # case-sensitive -- so the old form opened mid-sentence and read
+        # as a fragment; the article also teaches "data frame" in
+        # passing. Lowercase after the "Note: " prefix, matching every
+        # sibling note. Names are and-joined (Oxford at 3+); a truncated
+        # list keeps its own "... and N more" tail.
+        df_list <- .jst_format_var_list(dfs, and = TRUE)
         label   <- .jst_convention_label(conv)
+        kind    <- if (length(dfs) == 1L) "data frame" else "data frames"
+        # Rule E: the remedy is a second sentence and takes its own line.
+        # (Non-conformance predating S227; fixed here at Jeff's direction
+        # while the message was open.)
         if (mode == "u") {
           verb <- if (length(dfs) == 1L) "uses" else "use"
           notes <- c(notes, sprintf(
-            "Note: %s %s %s missing values. Use jconvert() to change.\n",
-            df_list, verb, label))
+            "Note: the %s %s %s %s missing values.\nUse jconvert() to change.\n",
+            df_list, kind, verb, label))
         } else {
-          verb <- if (length(dfs) == 1L) "predominantly uses" else "predominantly use"
+          verb <- if (length(dfs) == 1L) "predominantly uses"
+                  else "predominantly use"
           notes <- c(notes, sprintf(
-            "Note: %s %s %s missing values. Use jconvert() to align.\n",
-            df_list, verb, label))
+            "Note: the %s %s %s %s missing values.\nUse jconvert() to align.\n",
+            df_list, kind, verb, label))
         }
       }
     }

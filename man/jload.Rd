@@ -69,12 +69,15 @@ carry missing-value declarations --- typically \code{.sav},
 saved from such data. For \code{.sav} files, \code{TRUE}
 corresponds to haven's \code{user_na = TRUE}.}
 
-\item{udm.notice}{Per-call override for the user-defined missing value (UDM) notification.
+\item{udm.notice}{Per-call override for the missing-value notification.
 \code{NULL} (default) defers to the setting from \code{joutput()}.
-\code{TRUE} prints the notification on every load with UDM-bearing
-variables; \code{FALSE} suppresses it. Under the default (standard)
-and full output levels it prints on every such load; minimal
-suppresses it. See \code{?joutput} for the full toggle behavior.}
+\code{TRUE} prints the notification, in its full form, on any load
+with declared missing values; \code{FALSE} suppresses it. Under the
+default (standard) and full output levels the first such load in a
+session prints the full notification and later loads print a compact
+form (the variable inventory, plus the convention note when one
+applies, without the guidance lines); minimal suppresses the
+notification. See \code{?joutput} for the full toggle behavior.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, suppresses jload()'s
 informational messages (the directory-resolution note, file found,
@@ -133,6 +136,15 @@ Excel files (\code{.xlsx}, \code{.xls}) do not contain variable or
 value labels. The data will be loaded as plain numeric, character, or
 logical columns. Use \code{jrelabel()} to add labels after loading
 if needed.
+
+\strong{Missing-value declarations:}
+Missing-value declarations are stored in the file itself, but they
+only survive the trip back if the reader requests them.
+\code{jload()} always does, so declarations written by
+\code{jsave()} are present after every jstats load. Other ways of
+reading the same file may convert the declared cells to plain
+\code{NA} and discard the declarations, so the same file can show
+different numbers of valid cases depending on how it was read.
 
 \strong{Coded missing values:}
 When \code{check.missing = TRUE}, the function scans numeric variables

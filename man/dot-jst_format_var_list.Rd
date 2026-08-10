@@ -4,13 +4,20 @@
 \alias{.jst_format_var_list}
 \title{Internal: format a character vector as a comma-separated list with truncation}
 \usage{
-.jst_format_var_list(vars, max_show = 10L)
+.jst_format_var_list(vars, max_show = 10L, and = FALSE)
 }
 \arguments{
 \item{vars}{Character vector of names to render.}
 
 \item{max_show}{Integer. Maximum number of names to show before
 truncating. Default \code{10L}.}
+
+\item{and}{Logical. When \code{TRUE} and the list is not truncated,
+the final name is joined with \code{"and"} ("A and B"; "A, B, and
+C" at three or more, Oxford comma per Rule A). Default
+\code{FALSE}, the comma-only form every pre-S227 caller expects.
+A truncated list is unaffected either way -- its "... and N more"
+tail already supplies the conjunction.}
 }
 \value{
 Character scalar. Empty string if \code{vars} is empty.

@@ -2424,15 +2424,20 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
           data[, setdiff(names(data), mismatched), drop = FALSE])
         other_verb <- if (isTRUE(others_census$unanimous)) "are"
                       else "are predominantly"
+        # S227: variable names stand alone -- the leading "variable" /
+        # "variables" is dropped. A variable name carries its own case
+        # and the context makes the kind obvious, unlike a frame name at
+        # the head of the joptions nudge (which takes an article). Plural
+        # lists are and-joined, matching that note.
         if (length(mismatched) == 1L) {
           cat(sprintf(
-            "Note: variable %s is %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
+            "Note: %s is %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
             mismatched[1L], this_form, data_name, other_verb, other_form))
         } else {
           cat(sprintf(
-            "Note: variables %s are %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
-            paste(mismatched, collapse = ", "), this_form, data_name,
-            other_verb, other_form))
+            "Note: %s are %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
+            .jst_format_var_list(mismatched, and = TRUE), this_form,
+            data_name, other_verb, other_form))
         }
       }
     }

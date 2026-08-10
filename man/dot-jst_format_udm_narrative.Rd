@@ -8,18 +8,68 @@
   udm_info,
   preserve.udm,
   max_show = 10L,
-  data_name = "data"
+  data_name = "data",
+  compact = FALSE
 )
+}
+\arguments{
+\item{compact}{Logical. \code{TRUE} selects the repeat-showing
+compact form described above.}
 }
 \description{
 Builds the message string emitted when UDM-bearing variables are
-detected during a load. Wording differs depending on whether the
-UDMs were preserved (\code{preserve.udm = TRUE}) or converted
-(\code{preserve.udm = FALSE}). Variable list is truncated at
-\code{max_show} entries with an "...and N more" tail.
+detected during a load. The S227 (E17) redesign conditions the text
+on three things: the convention(s) actually read (per-variable
+\code{convention} from \code{.jst_missing_info()}), the
+\code{joptions("missing.convention")} setting, and whether the full
+form has already been shown this session (\code{compact}).
 }
 \details{
-Renders SPSS UDM codes (e.g. \code{-99}) and Stata tagged NAs
+Shapes produced under \code{preserve.udm = TRUE}:
+\itemize{
+\item Uniform frame: style-named header ("5 variables have
+SPSS-style missing values:"). SPSS-style frames with no
+conflicting setting add the base-R gap fact and the one
+jconvert remedy; Stata- and SAS-style frames add nothing, since
+tagged markers are already NA to base R.
+\item Uniform frame under an explicitly set, different
+\code{missing.convention}: a setting-mismatch note with two
+equal-standing remedies (change the setting, or convert the
+data), neither recommended -- the Rule D equal-standing-remedies
+carve-out (S227).
+\item Mixed frame: grouped-count header ("6 variables have missing
+values (5 SPSS-style, 1 Stata-style):") plus a mixes note with
+one align line per real style present. Under an explicitly set
+convention the note instead names the off-setting columns, the
+setting's own style leads the align lines, and align targets
+other than the setting carry a joptions rider so the setting is
+not left stale. Ambiguous mixed-case tagged columns (convention
+NA, Decision 13) form their own "mixed-case" display group and
+get no align line of their own -- any align target collapses
+them.
+\item Compact form (second and later showings in a session, unless
+the call passed \code{udm.notice = TRUE}): header + inventory,
+with the convention note retained -- it is frame-specific, and
+compaction must not silence a new frame's mismatch -- and the
+Case 1 guidance lines dropped.
+}
+The setting-MISMATCH notice is gated on an explicitly set
+\code{missing.convention}: the resolver's SPSS fallback must never
+nag a user who stated no preference (S226). Mixed-frame ALIGN lines
+are not so gated -- each carries a
+\code{joptions(missing.convention = ...)} rider whenever running it
+would leave the setting not matching the result, which under
+\code{"none"} means both of them (S227; the joptions rider rule in
+the missing-values reference). The rider is not a suggestion to adopt
+a convention -- it is the second half of a remedy the user has
+already chosen to run.
+
+The \code{preserve.udm = FALSE} branch (declarations converted to
+plain NA on request) keeps its original shape with a style-named
+header and is never compacted -- it reports a destructive action the
+user explicitly requested.
+
+Renders SPSS UDM codes (e.g. \code{-99}) and tagged markers
 (e.g. \code{.a}) using parallel notation: \code{code ["label"]} or
 \code{code (no label)}. The code form comes pre-rendered in the
 \code{code} column of \code{.jst_missing_info()}'s return.

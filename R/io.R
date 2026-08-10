@@ -65,12 +65,15 @@
 #'   \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
 #'   saved from such data. For \code{.sav} files, \code{TRUE}
 #'   corresponds to haven's \code{user_na = TRUE}.
-#' @param udm.notice Per-call override for the user-defined missing value (UDM) notification.
+#' @param udm.notice Per-call override for the missing-value notification.
 #'   \code{NULL} (default) defers to the setting from \code{joutput()}.
-#'   \code{TRUE} prints the notification on every load with UDM-bearing
-#'   variables; \code{FALSE} suppresses it. Under the default (standard)
-#'   and full output levels it prints on every such load; minimal
-#'   suppresses it. See \code{?joutput} for the full toggle behavior.
+#'   \code{TRUE} prints the notification, in its full form, on any load
+#'   with declared missing values; \code{FALSE} suppresses it. Under the
+#'   default (standard) and full output levels the first such load in a
+#'   session prints the full notification and later loads print a compact
+#'   form (the variable inventory, plus the convention note when one
+#'   applies, without the guidance lines); minimal suppresses the
+#'   notification. See \code{?joutput} for the full toggle behavior.
 #'
 #' @return Invisibly returns \code{NULL}; jload() is called for its side
 #'   effects. The loaded data frame is placed in the calling environment
@@ -104,6 +107,15 @@
 #' value labels. The data will be loaded as plain numeric, character, or
 #' logical columns. Use \code{jrelabel()} to add labels after loading
 #' if needed.
+#'
+#' \strong{Missing-value declarations:}
+#' Missing-value declarations are stored in the file itself, but they
+#' only survive the trip back if the reader requests them.
+#' \code{jload()} always does, so declarations written by
+#' \code{jsave()} are present after every jstats load. Other ways of
+#' reading the same file may convert the declared cells to plain
+#' \code{NA} and discard the declarations, so the same file can show
+#' different numbers of valid cases depending on how it was read.
 #'
 #' \strong{Coded missing values:}
 #' When \code{check.missing = TRUE}, the function scans numeric variables
@@ -494,12 +506,34 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     say_note("Default data frame set to: ", obj_name)
   }
 
+  # --- Summary message --------------------------------------------------------
+  # Printed BEFORE the UDM narrative (S227, E17 reorder): the load
+  # confirmation leads, and the narrative reads as detail under it. The
+  # object is already in place -- the environment assign happened above.
+  # A status line, not a note: no Rule F spacing (see say_note above).
+  if (from_package) {
+    say("Loaded the jstats example dataset '", file, "'.")
+  } else {
+    say(
+      "Loaded ", obj_name,
+      " (", .jst_format_label(ext), "; ",
+      format(nrow(df), big.mark = ","), " cases, ",
+      ncol(df), " variables)"
+    )
+  }
+
   # --- UDM narrative notification --------------------------------------------
   # Toggle resolution: per-call udm.notice arg > joutput global toggle >
   # joutput level default. Standard and full both default to TRUE (show on
   # every UDM-bearing load); minimal is FALSE. The NULL/"auto" branch below
   # (show once per session, tracked via .jst_udm_notice_shown) is retained
   # but no preset level now selects it.
+  # Form (S227, E17): the first showing in a session uses the full form;
+  # later showings use the compact form (inventory plus any convention
+  # note, guidance lines dropped). An explicitly passed udm.notice = TRUE
+  # forces the full form, giving a way to recall the guidance later in a
+  # session. The narrative follows the Loaded line directly with no blank
+  # line, so the pre-narrative Rule F spacer is gone by design.
   if (length(udm_info) > 0) {
     notice_setting <- .jst_resolve_toggle("udm.notice", udm.notice)
     show_notice <- if (isTRUE(notice_setting)) {
@@ -511,8 +545,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       !isTRUE(getOption(".jst_udm_notice_shown", FALSE))
     }
     if (show_notice && !quiet) {
-      if (.jst_note_fired) message("")
-      message(.jst_format_udm_narrative(udm_info, preserve.udm, data_name = obj_name))
+      compact <- isTRUE(getOption(".jst_udm_notice_shown", FALSE)) &&
+        !isTRUE(udm.notice)
+      message(.jst_format_udm_narrative(udm_info, preserve.udm,
+                                        data_name = obj_name,
+                                        compact = compact))
       .jst_note_fired <- TRUE
       options(.jst_udm_notice_shown = TRUE)
     }
@@ -529,18 +566,6 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # reading via the abstraction is a future refactor step).
   if (check.missing) {
     .jst_scan_coded_missing(df, obj_name, scan_udm = (length(udm_info) == 0))
-  }
-
-  # --- Summary message (printed last, when the object is in place) -----------
-  if (from_package) {
-    say("Loaded the jstats example dataset '", file, "'.")
-  } else {
-    say(
-      "Loaded ", obj_name,
-      " (", .jst_format_label(ext), "; ",
-      format(nrow(df), big.mark = ","), " cases, ",
-      ncol(df), " variables)"
-    )
   }
 
   # DECISION B (settled S205, implemented S208): return nothing. jload() is
@@ -1086,26 +1111,99 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Internal: format the UDM narrative notification text
 #'
 #' Builds the message string emitted when UDM-bearing variables are
-#' detected during a load. Wording differs depending on whether the
-#' UDMs were preserved (\code{preserve.udm = TRUE}) or converted
-#' (\code{preserve.udm = FALSE}). Variable list is truncated at
-#' \code{max_show} entries with an "...and N more" tail.
+#' detected during a load. The S227 (E17) redesign conditions the text
+#' on three things: the convention(s) actually read (per-variable
+#' \code{convention} from \code{.jst_missing_info()}), the
+#' \code{joptions("missing.convention")} setting, and whether the full
+#' form has already been shown this session (\code{compact}).
 #'
-#' Renders SPSS UDM codes (e.g. \code{-99}) and Stata tagged NAs
+#' Shapes produced under \code{preserve.udm = TRUE}:
+#' \itemize{
+#'   \item Uniform frame: style-named header ("5 variables have
+#'     SPSS-style missing values:"). SPSS-style frames with no
+#'     conflicting setting add the base-R gap fact and the one
+#'     jconvert remedy; Stata- and SAS-style frames add nothing, since
+#'     tagged markers are already NA to base R.
+#'   \item Uniform frame under an explicitly set, different
+#'     \code{missing.convention}: a setting-mismatch note with two
+#'     equal-standing remedies (change the setting, or convert the
+#'     data), neither recommended -- the Rule D equal-standing-remedies
+#'     carve-out (S227).
+#'   \item Mixed frame: grouped-count header ("6 variables have missing
+#'     values (5 SPSS-style, 1 Stata-style):") plus a mixes note with
+#'     one align line per real style present. Under an explicitly set
+#'     convention the note instead names the off-setting columns, the
+#'     setting's own style leads the align lines, and align targets
+#'     other than the setting carry a joptions rider so the setting is
+#'     not left stale. Ambiguous mixed-case tagged columns (convention
+#'     NA, Decision 13) form their own "mixed-case" display group and
+#'     get no align line of their own -- any align target collapses
+#'     them.
+#'   \item Compact form (second and later showings in a session, unless
+#'     the call passed \code{udm.notice = TRUE}): header + inventory,
+#'     with the convention note retained -- it is frame-specific, and
+#'     compaction must not silence a new frame's mismatch -- and the
+#'     Case 1 guidance lines dropped.
+#' }
+#' The setting-MISMATCH notice is gated on an explicitly set
+#' \code{missing.convention}: the resolver's SPSS fallback must never
+#' nag a user who stated no preference (S226). Mixed-frame ALIGN lines
+#' are not so gated -- each carries a
+#' \code{joptions(missing.convention = ...)} rider whenever running it
+#' would leave the setting not matching the result, which under
+#' \code{"none"} means both of them (S227; the joptions rider rule in
+#' the missing-values reference). The rider is not a suggestion to adopt
+#' a convention -- it is the second half of a remedy the user has
+#' already chosen to run.
+#'
+#' The \code{preserve.udm = FALSE} branch (declarations converted to
+#' plain NA on request) keeps its original shape with a style-named
+#' header and is never compacted -- it reports a destructive action the
+#' user explicitly requested.
+#'
+#' Renders SPSS UDM codes (e.g. \code{-99}) and tagged markers
 #' (e.g. \code{.a}) using parallel notation: \code{code ["label"]} or
 #' \code{code (no label)}. The code form comes pre-rendered in the
 #' \code{code} column of \code{.jst_missing_info()}'s return.
 #'
+#' @param compact Logical. \code{TRUE} selects the repeat-showing
+#'   compact form described above.
+#'
 #' @keywords internal
 .jst_format_udm_narrative <- function(udm_info, preserve.udm, max_show = 10L,
-                                      data_name = "data") {
-  # Suggested jconvert() calls below use the loaded object's name (threaded
-  # from jload) so the advice is copy-paste runnable; fall back to the
-  # generic placeholder only when no name is available.
+                                      data_name = "data", compact = FALSE) {
+  # Suggested jconvert()/joptions() calls below use the loaded object's
+  # name (threaded from jload) so the advice is copy-paste runnable; fall
+  # back to the generic placeholder only when no name is available.
   call_name <- if (!is.null(data_name) && nzchar(data_name)) data_name else "data"
   n_vars <- length(udm_info)
   if (n_vars == 0) return(NULL)
 
+  # --- Convention census over the loaded frame's declared columns -----------
+  # info$convention: "spss" | "stata" | "sas" | NA (ambiguous mixed-case
+  # tags, Decision 13). NA columns form their own display group.
+  convs <- vapply(udm_info, function(e) {
+    cv <- e$info$convention
+    if (is.null(cv) || is.na(cv)) "ambiguous" else cv
+  }, character(1))
+  grp_order  <- c("spss", "stata", "sas", "ambiguous")
+  grp_counts <- vapply(grp_order, function(g) sum(convs == g), integer(1))
+  names(grp_counts) <- grp_order
+  present        <- grp_order[grp_counts > 0L]
+  styles_present <- setdiff(present, "ambiguous")
+  uniform  <- length(present) == 1L && !identical(present, "ambiguous")
+  all_amb  <- identical(present, "ambiguous")
+  disp_label <- function(g) {
+    if (identical(g, "ambiguous")) "mixed-case" else .jst_convention_label(g)
+  }
+
+  # --- The joptions setting (the explicit-setting gate, S226) ---------------
+  opt <- getOption(".jst_options_missing_convention",
+                   .jst_options_defaults$missing.convention)
+  explicit_set <- is.character(opt) && length(opt) == 1L && !is.na(opt) &&
+    opt %in% c("spss", "stata", "sas")
+
+  # --- Per-variable inventory lines -----------------------------------------
   show_n <- min(n_vars, max_show)
   var_strings <- character(show_n)
 
@@ -1131,7 +1229,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       parts <- c(parts, paste(val_strs, collapse = ", "))
     }
 
-    # Range rendering (SPSS only — Stata has no equivalent)
+    # Range rendering (SPSS only -- Stata form has no equivalent)
     if (!is.null(info$na_range)) {
       parts <- c(parts, sprintf("range %s to %s",
                                 format(info$na_range[1]),
@@ -1150,27 +1248,154 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
   list_str <- paste(list_lines, collapse = "\n")
 
-  if (preserve.udm) {
-    paste0(
-      sprintf("%d %s user-defined missing values:\n", n_vars,
-              if (n_vars == 1) "variable has" else "variables have"),
-      list_str,
-      "\nThese codes are excluded as missing in jstats analyses. ",
-      "For better base R compatibility, convert them:\n",
-      sprintf("  jconvert(%s, to = \"stata\")  - retains missing-value codes, ", call_name),
-      "base R compatible (recommended)\n",
-      sprintf("  jconvert(%s, to = \"baseR\")  - converts to plain NA and ", call_name),
-      "removes missing-value codes"
-    )
-  } else {
-    paste0(
-      sprintf("%d %s user-defined missing values, ", n_vars,
-              if (n_vars == 1) "variable had" else "variables had"),
-      "converted to plain NA per preserve.udm = FALSE:\n",
-      list_str,
+  # --- Header ----------------------------------------------------------------
+  # Uniform frames name the style (the locked S226 header form); mixed
+  # frames carry grouped counts in canonical order, ambiguous last.
+  verb_have <- if (n_vars == 1) "has" else "have"
+  verb_noun <- if (n_vars == 1) "variable" else "variables"
+  count_parens <- paste(vapply(present, function(g)
+    sprintf("%d %s", grp_counts[[g]], disp_label(g)), character(1)),
+    collapse = ", ")
+
+  # --- preserve.udm = FALSE: conversion report, never compacted -------------
+  if (!preserve.udm) {
+    head_str <- if (uniform) {
+      sprintf(paste0("%d %s had %s missing values, converted to plain NA per\n",
+                     "preserve.udm = FALSE:"),
+              n_vars, verb_noun, disp_label(present))
+    } else {
+      sprintf(paste0("%d %s had missing values (%s), converted to plain NA per\n",
+                     "preserve.udm = FALSE:"),
+              n_vars, verb_noun, count_parens)
+    }
+    return(paste0(
+      head_str, "\n", list_str,
       "\nTo keep the declarations instead, reload with preserve.udm = TRUE."
-    )
+    ))
   }
+
+  # --- preserve.udm = TRUE ---------------------------------------------------
+  head_str <- if (uniform) {
+    sprintf("%d %s %s %s missing values:",
+            n_vars, verb_noun, verb_have, disp_label(present))
+  } else {
+    sprintf("%d %s %s missing values (%s):",
+            n_vars, verb_noun, verb_have, count_parens)
+  }
+
+  tail_lines <- character(0)  # Case 1 guidance; dropped in compact form
+  note_lines <- character(0)  # convention note; retained in compact form
+
+  if (uniform) {
+    st <- present
+    if (explicit_set && !identical(opt, st)) {
+      # Case 4: uniform frame, explicitly set different convention. Two
+      # equal-standing remedies (Rule D carve-out, S227), the data's own
+      # style first per the non-destructive-first suggestion convention;
+      # neither recommended -- which is right depends on whether the user
+      # regards the data or the setting as the truth.
+      note_lines <- c(
+        sprintf(paste0("Note: these variables are %s, but the session's ",
+                       "missing convention is\nset to \"%s\"."),
+                disp_label(st), opt),
+        sprintf(paste0("To use %s missing values, run ",
+                       "joptions(missing.convention = \"%s\")."),
+                disp_label(st), st),
+        sprintf("To use %s missing values, run %s <- jconvert(%s, to = \"%s\").",
+                disp_label(opt), call_name, call_name, opt)
+      )
+    } else if (identical(st, "spss")) {
+      # Case 1: uniform SPSS-style, no conflicting setting. The one
+      # fidelity fact a user cannot see (base R reads the codes as real
+      # values) plus the one conditional remedy. The to = "baseR" path
+      # and the range-enumeration cost live in ?jconvert and in
+      # jconvert's own run-time messages (settled S227: costs surface
+      # where they bite -- jsave's pre-flight refusals cover the .sav
+      # dead end).
+      tail_lines <- c(
+        "jstats analyses treat these codes as missing. Base R functions do not.",
+        sprintf(paste0("To make them missing in base R as well, run ",
+                       "%s <- jconvert(%s, to = \"stata\")."),
+                call_name, call_name)
+      )
+    }
+    # Uniform Stata-/SAS-style with no conflicting setting (Case 5):
+    # tagged markers are already NA to base R -- header and inventory
+    # say everything; the .sav route lives in jsave's pre-flight.
+  } else if (!all_amb) {
+    if (explicit_set) {
+      # Case 7: mixed frame under an explicitly set convention. The note
+      # names the off-setting columns (grouped by style, canonical
+      # order); one align line per real style present, the setting's
+      # style first; align targets other than the setting carry the
+      # joptions rider so the chosen style and the setting end up
+      # matching either way.
+      off_groups <- setdiff(present, opt)
+      seg <- vapply(off_groups, function(g) {
+        vars_g <- vapply(udm_info[convs == g], function(e) e$var,
+                         character(1))
+        sprintf("%s %s %s",
+                .jst_format_var_list(vars_g, and = TRUE),
+                if (length(vars_g) == 1L) "is" else "are",
+                disp_label(g))
+      }, character(1))
+      note_first <- sprintf(paste0("Note: %s, but the session's missing ",
+                                   "convention is set\nto \"%s\"."),
+                            paste(seg, collapse = " and "), opt)
+      remedy_styles <- c(intersect(opt, styles_present),
+                         setdiff(styles_present, opt))
+      note_rest <- vapply(remedy_styles, function(g) {
+        base_line <- sprintf(paste0("To use %s missing values throughout, ",
+                                    "run %s <- jconvert(%s, to = \"%s\")"),
+                             disp_label(g), call_name, call_name, g)
+        if (identical(g, opt)) {
+          paste0(base_line, ".")
+        } else {
+          sprintf("%s\nand joptions(missing.convention = \"%s\").",
+                  base_line, g)
+        }
+      }, character(1))
+      note_lines <- c(note_first, note_rest)
+    } else {
+      # Case 6: mixed frame, no convention set.
+      mix_labels <- vapply(present, disp_label, character(1))
+      mix_str <- if (length(mix_labels) == 2L) {
+        paste(mix_labels, collapse = " and ")
+      } else {
+        paste0(paste(mix_labels[-length(mix_labels)], collapse = ", "),
+               ", and ", mix_labels[length(mix_labels)])
+      }
+      # S227: BOTH align lines carry the joptions rider here. Running
+      # either one leaves missing.convention at "none", so the resolver
+      # falls back to SPSS and the next fresh declaration re-mixes the
+      # frame -- the same bite the Case 7 rider prevents. Governing rule:
+      # an align line carries a rider whenever running it would leave the
+      # setting not matching the result. Scoped to mixed-frame align
+      # lines; Case 1's jconvert line answers a different question
+      # ("make them missing in base R") and is deliberately left alone.
+      note_lines <- c(
+        sprintf("Note: %s mixes %s missing values.", call_name, mix_str),
+        vapply(styles_present, function(g)
+          sprintf(paste0("To use %s throughout, run %s <- jconvert(%s, ",
+                         "to = \"%s\")\nand joptions(missing.convention",
+                         " = \"%s\")."),
+                  disp_label(g), call_name, call_name, g, g), character(1))
+      )
+    }
+  }
+  # All-ambiguous frames (every declared column mixed-case): header and
+  # inventory only. No style can be named and no remedy reasoned about
+  # from muddled evidence -- the Decision 13 ambiguous rule's display
+  # counterpart.
+
+  out <- paste0(head_str, "\n", list_str)
+  if (!compact && length(tail_lines) > 0L) {
+    out <- paste0(out, "\n", paste(tail_lines, collapse = "\n"))
+  }
+  if (length(note_lines) > 0L) {
+    out <- paste0(out, "\n\n", paste(note_lines, collapse = "\n"))
+  }
+  out
 }
 
 #' Internal: format a character vector as a comma-separated list with truncation
@@ -1184,19 +1409,28 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param vars Character vector of names to render.
 #' @param max_show Integer. Maximum number of names to show before
 #'   truncating. Default \code{10L}.
+#' @param and Logical. When \code{TRUE} and the list is not truncated,
+#'   the final name is joined with \code{"and"} ("A and B"; "A, B, and
+#'   C" at three or more, Oxford comma per Rule A). Default
+#'   \code{FALSE}, the comma-only form every pre-S227 caller expects.
+#'   A truncated list is unaffected either way -- its "... and N more"
+#'   tail already supplies the conjunction.
 #'
 #' @return Character scalar. Empty string if \code{vars} is empty.
 #'
 #' @keywords internal
-.jst_format_var_list <- function(vars, max_show = 10L) {
+.jst_format_var_list <- function(vars, max_show = 10L, and = FALSE) {
   n <- length(vars)
   if (n == 0) return("")
   show_n <- min(n, max_show)
-  out <- paste(vars[seq_len(show_n)], collapse = ", ")
+  shown  <- vars[seq_len(show_n)]
   if (n > show_n) {
-    out <- paste0(out, ", ... and ", n - show_n, " more")
+    return(paste0(paste(shown, collapse = ", "),
+                  ", ... and ", n - show_n, " more"))
   }
-  out
+  if (!isTRUE(and) || show_n == 1L) return(paste(shown, collapse = ", "))
+  if (show_n == 2L) return(paste(shown, collapse = " and "))
+  paste0(paste(shown[-show_n], collapse = ", "), ", and ", shown[show_n])
 }
 
 #' Internal: cap an own-line variable list at max_show, with "...and N more"
