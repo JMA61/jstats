@@ -373,7 +373,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.5"
+.jst_orientation_version <- "3.6"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -463,8 +463,10 @@ jai <- function(setup = NULL, path = NULL) {
     "",
     "- Analysis functions print their results directly; nothing needs to be",
     "  stored. The few functions that change data, such as `jdeclare_udm()` and",
-    "  `jconvert()`, return the changed data frame: keep it by assigning back",
-    "  (`df <- jdeclare_udm(df, ...)`) or with `modify = TRUE`. `jconvert()`",
+    "  `jconvert()`, take `modify = TRUE` to apply the change directly",
+    "  (`jdeclare_udm(df, ..., modify = TRUE)`) -- the form jstats teaches.",
+    "  They also return the changed data frame, so assigning back",
+    "  (`df <- jdeclare_udm(df, ...)`) works as well. `jconvert()`",
     "  translates missing-value codes between software conventions -- it is for",
     "  moving data to other software or to plain base-R form, and is never a",
     "  prerequisite for analysis in jstats, which reads labelled data directly.",

@@ -1301,8 +1301,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         sprintf(paste0("To use %s missing values, run ",
                        "joptions(missing.convention = \"%s\")."),
                 disp_label(st), st),
-        sprintf("To use %s missing values, run %s <- jconvert(%s, to = \"%s\").",
-                disp_label(opt), call_name, call_name, opt)
+        sprintf("To use %s missing values, run jconvert(%s, to = \"%s\", modify = TRUE).",
+                disp_label(opt), call_name, opt)
       )
     } else if (identical(st, "spss")) {
       # Case 1: uniform SPSS-style, no conflicting setting. The one
@@ -1315,8 +1315,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       tail_lines <- c(
         "jstats analyses treat these codes as missing. Base R functions do not.",
         sprintf(paste0("To make them missing in base R as well, run ",
-                       "%s <- jconvert(%s, to = \"stata\")."),
-                call_name, call_name)
+                       "jconvert(%s, to = \"stata\", modify = TRUE)."),
+                call_name)
       )
     }
     # Uniform Stata-/SAS-style with no conflicting setting (Case 5):
@@ -1346,8 +1346,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                          setdiff(styles_present, opt))
       note_rest <- vapply(remedy_styles, function(g) {
         base_line <- sprintf(paste0("To use %s missing values throughout, ",
-                                    "run %s <- jconvert(%s, to = \"%s\")"),
-                             disp_label(g), call_name, call_name, g)
+                                    "run jconvert(%s, to = \"%s\", ",
+                                    "modify = TRUE)"),
+                             disp_label(g), call_name, g)
         if (identical(g, opt)) {
           paste0(base_line, ".")
         } else {
@@ -1376,10 +1377,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       note_lines <- c(
         sprintf("Note: %s mixes %s missing values.", call_name, mix_str),
         vapply(styles_present, function(g)
-          sprintf(paste0("To use %s throughout, run %s <- jconvert(%s, ",
-                         "to = \"%s\")\nand joptions(missing.convention",
-                         " = \"%s\")."),
-                  disp_label(g), call_name, call_name, g, g), character(1))
+          sprintf(paste0("To use %s throughout, run jconvert(%s, ",
+                         "to = \"%s\", modify = TRUE)\nand ",
+                         "joptions(missing.convention = \"%s\")."),
+                  disp_label(g), call_name, g, g), character(1))
       )
     }
   }
@@ -1948,8 +1949,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         paste0("c(", paste(format(ex_codes, trim = TRUE), collapse = ", "), ")")
       }
       cat("\n# To declare one variable's codes as missing:\n")
-      cat(sprintf("  %s <- jdeclare_udm(%s, %s, codes = %s)\n",
-                  obj_name, obj_name, ex_var, codes_str))
+      cat(sprintf("  jdeclare_udm(%s, %s, codes = %s, modify = TRUE)\n",
+                  obj_name, ex_var, codes_str))
       # For a suspected (unlabelled) target, offer a commented example that
       # also attaches labels in the same call. Placeholder label strings, not
       # guessed meanings -- the scan does not know what the codes signify
@@ -1960,8 +1961,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                             format(ex_codes, trim = TRUE))
         lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
         cat("# To label them at the same time (example only):\n")
-        cat(sprintf("#   %s <- jdeclare_udm(%s, %s, codes = %s)\n",
-                    obj_name, obj_name, ex_var, lbl_str))
+        cat(sprintf("#   jdeclare_udm(%s, %s, codes = %s, modify = TRUE)\n",
+                    obj_name, ex_var, lbl_str))
       }
     }
   }
@@ -2006,7 +2007,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     return(paste0(
       n_total, " ", noun, " ", verb_carry,
       " SPSS-style missing values, incompatible with the .dta format. ",
-      "Run ", data_name, " <- jconvert(", data_name, ", to = \"stata\") ",
+      "Run jconvert(", data_name, ", to = \"stata\", modify = TRUE) ",
       "first, then save again."
     ))
   }
@@ -2018,7 +2019,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "\n\n",
     "  ", .jst_format_var_list(spss_vars), "\n",
     "Before saving to Stata format, convert with:\n",
-    "  ", data_name, " <- jconvert(", data_name, ", to = \"stata\")"
+    "  jconvert(", data_name, ", to = \"stata\", modify = TRUE)"
   )
 }
 
@@ -2083,7 +2084,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     return(paste0(
       n, " ", noun, " ", verb_contain,
       " missing-value codes, incompatible with the .xpt format. ",
-      "Run ", data_name, " <- jconvert(", data_name, ", to = \"baseR\") ",
+      "Run jconvert(", data_name, ", to = \"baseR\", modify = TRUE) ",
       tail
     ))
   }
@@ -2105,7 +2106,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     " missing-value codes, incompatible with the .xpt format:\n",
     "  ", .jst_format_var_list(all_vars), "\n\n",
     "To save as .xpt, drop these by running:\n",
-    "  ", data_name, " <- jconvert(", data_name, ", to = \"baseR\")\n\n",
+    "  jconvert(", data_name, ", to = \"baseR\", modify = TRUE)\n\n",
     preserve_advice
   )
 }
@@ -2176,7 +2177,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       n, " ", noun, " ", verb_contain, " ",
       style_phrase, ", incompatible with the .sav format. ",
       "Before saving, convert with ",
-      data_name, " <- jconvert(", data_name, ", to = \"spss\")."
+      "jconvert(", data_name, ", to = \"spss\", modify = TRUE)."
     ))
   }
 
@@ -2187,7 +2188,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "  ", .jst_format_var_list(vars), "\n\n",
     "Before saving to SPSS format, convert to SPSS-style missing values ",
     "with:\n",
-    "  ", data_name, " <- jconvert(", data_name, ", to = \"spss\")"
+    "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)"
   )
 }
 
@@ -2249,7 +2250,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "  1. Save in R format (.rds) instead, which keeps all the codes:",
     sprintf("       jsave(%s, \"%s.rds\")", data_name, data_name),
     "  2. Convert to Stata and save as Stata format (.dta), which also keeps all the codes:",
-    sprintf("       %s <- jconvert(%s, to = \"stata\")", data_name, data_name),
+    sprintf("       jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
     sprintf("       jsave(%s, \"%s.dta\")", data_name, data_name),
     "  3. Reduce each variable's UDMs to fit with jrecode()."
   ), collapse = "\n")

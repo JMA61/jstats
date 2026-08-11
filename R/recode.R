@@ -375,7 +375,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     }
     jdeclare_line <- paste0("    jdeclare_udm(", data_name, ", ",
                             orig_name, ", codes = c(",
-                            paste(codes_parts, collapse = ", "), "))")
+                            paste(codes_parts, collapse = ", "),
+                            "), modify = TRUE)")
   }
 
   # Assemble the message.
@@ -520,7 +521,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       "', a Stata-style missing-value marker, but ", var_name,
       " carries SPSS-style missing values. ",
       "Name the numeric codes directly, or convert first with ",
-      data_name, " <- jconvert(", data_name, ", to = \"stata\")."
+      "jconvert(", data_name, ", to = \"stata\", modify = TRUE)."
     ))
   }
 
@@ -619,8 +620,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   msg_parts <- c(msg_parts, "",
     "To use Stata-style markers instead, convert the column first:",
     "",
-    paste0("    ", data_name, " <- jconvert(", data_name,
-           ", to = \"stata\")"))
+    paste0("    jconvert(", data_name,
+           ", to = \"stata\", modify = TRUE)"))
 
   paste(msg_parts, collapse = "\n")
 }
@@ -673,8 +674,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   tag_arg <- if (length(tag_parts) > 1L || grepl(" = ", tag_parts[1])) {
     paste0("c(", paste(tag_parts, collapse = ", "), ")")
   } else tag_parts[1]
-  tag_line <- paste0("    ", data_name, " <- jdeclare_udm(",
-                     data_name, ", ", var_name, ", codes = ", tag_arg, ")")
+  tag_line <- paste0("    jdeclare_udm(", data_name, ", ", var_name,
+                     ", codes = ", tag_arg, ", modify = TRUE)")
 
   # Numeric-only call
   num_parts <- character(0)
@@ -687,8 +688,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   num_arg <- if (length(num_parts) > 1L || grepl(" = ", num_parts[1])) {
     paste0("c(", paste(num_parts, collapse = ", "), ")")
   } else num_parts[1]
-  num_line <- paste0("    ", data_name, " <- jdeclare_udm(",
-                     data_name, ", ", var_name, ", codes = ", num_arg, ")")
+  num_line <- paste0("    jdeclare_udm(", data_name, ", ", var_name,
+                     ", codes = ", num_arg, ", modify = TRUE)")
 
   msg_parts <- c(
     paste0("codes for ", var_name, " mixes Stata-style missing values ",
@@ -3491,7 +3492,8 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
           "",
           "Resolution options:",
           "  1. Convert a narrower set of variables, leaving out those above:",
-          sprintf("       jconvert(%s, to = \"spss\", vars = c(...))", data_name),
+          sprintf("       jconvert(%s, to = \"spss\", vars = c(...), modify = TRUE)",
+                  data_name),
           "  2. Reduce each variable to 3 or fewer UDMs first with jrecode().")
       } else if (has_coll && !has_over) {
         msg_lines <- c(
@@ -3519,7 +3521,8 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
           "    joptions(udm.convention.codes = c(...))",
           "",
           "Or convert a narrower set, leaving out all the variables above:",
-          sprintf("    jconvert(%s, to = \"spss\", vars = c(...))", data_name))
+          sprintf("    jconvert(%s, to = \"spss\", vars = c(...), modify = TRUE)",
+                  data_name))
       }
       .jst_stop(paste(msg_lines, collapse = "\n"))
     }
@@ -3622,7 +3625,8 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
         "",
         "Resolution options:",
         "  1. Convert a narrower set of variables, leaving out those above:",
-        sprintf("       jconvert(%s, to = \"%s\", vars = c(...))", data_name, to),
+        sprintf("       jconvert(%s, to = \"%s\", vars = c(...), modify = TRUE)",
+                data_name, to),
         "  2. Reduce each variable to 26 or fewer values first with jrecode().")
       .jst_stop(paste(msg_lines, collapse = "\n"))
     }
