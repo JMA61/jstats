@@ -70,11 +70,14 @@ and a note is printed.
 
 Example: \code{"1=Male; 0=Female"} or \code{".a=Refused; .b=Don't know"}.}
 
-\item{convention}{Optional. One of \code{"spss"}, \code{"stata"}, or
-\code{NULL} (default); any capitalization is accepted. Controls whether
-Stata-style missing-value tokens
-(\code{.a} through \code{.z}) are accepted in the map and labels
-arguments. Inert when no Stata-style missing-value tokens appear in either argument.
+\item{convention}{Optional. One of \code{"spss"}, \code{"stata"},
+\code{"sas"}, or \code{NULL} (default); any capitalization is
+accepted. Controls whether missing-value tokens (\code{.a} through
+\code{.z} or \code{.A} through \code{.Z}) are accepted in the map
+and labels arguments. Token letters are matched case-insensitively;
+the stored markers take the convention's letter case (lowercase
+Stata-style under \code{"stata"}, uppercase SAS-style under
+\code{"sas"}). Inert when no such tokens appear in either argument.
 
 When \code{NULL}, the convention is resolved from
 \code{joptions("missing.convention")}; if that is also unset, the
@@ -142,9 +145,10 @@ If the map specifies values that do not exist in the original variable, a
 warning is issued (but the function continues). This helps catch typos in
 the map string.
 
-\strong{Missing values in the map.} The package supports two conventions
-for representing user-defined missing values (UDMs), and the syntax for
-producing UDMs from \code{jrecode()} depends on which one is active:
+\strong{Missing values in the map.} The package supports three
+conventions for representing user-defined missing values (UDMs), and
+the syntax for producing UDMs from \code{jrecode()} depends on which
+one is active:
 
 Under \strong{SPSS convention} (the default), UDMs are real numeric
 codes carrying metadata that flags them as missing. The two-step
@@ -154,7 +158,7 @@ canonical pattern is:
 df$EducR <- jrecode(df, Education,
                     map    = "1,2=1; 3=2; 4,5=3; -99,-98=-99",
                     labels = "1=High school or less; 2=Some college; 3=Degree")
-df <- jdeclare_udm(df, EducR, codes = c(Refused = -99))
+jdeclare_udm(df, EducR, codes = c(Refused = -99), modify = TRUE)
 }
 
 The \code{jrecode()} call assigns the numeric sentinel \code{-99}; the
@@ -181,10 +185,17 @@ Under Stata convention, \code{jdeclare_udm()} is not needed for this
 pattern --- \code{jrecode()} handles both the value recoding and the
 Stata-style missing-value labeling in one call.
 
-Writing Stata-style missing-value tokens while the active convention is SPSS raises an
-informative error that echoes the user's call rewritten in SPSS-style
-syntax. Switching the convention session-wide is one line:
-\code{joptions(missing.convention = "stata")}.
+\strong{SAS convention} works the same way with SAS-style missing
+values (\code{.A} through \code{.Z}). Map and labels tokens are
+matched case-insensitively, and the stored markers take the active
+convention's letter case: lowercase under Stata convention, uppercase
+under SAS convention.
+
+Writing these missing-value tokens while the active convention is
+SPSS raises an informative error that echoes the user's call
+rewritten in SPSS-style syntax; the error also names the one-line
+\code{joptions(missing.convention = ...)} switch to Stata or SAS
+convention.
 }
 \examples{
 # Recode with explicit labels (a 1/2 dichotomy to 0/1)
@@ -221,6 +232,13 @@ df$EducR4 <- jrecode(df, Education,
                      map    = "1,2=1; 3,4,5=2; else=.a",
                      labels = "1=No college; 2=College; .a=Refused",
                      convention = "stata")
+
+# SAS convention: the same single-call pattern; tokens are matched
+# case-insensitively and the markers store in uppercase (.A)
+df$EducR5 <- jrecode(df, Education,
+                     map    = "1,2=1; 3,4,5=2; else=.a",
+                     labels = "1=No college; 2=College; .a=Refused",
+                     convention = "sas")
 
 # Using juse() default
 juse(df)

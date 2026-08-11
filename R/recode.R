@@ -207,10 +207,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # worked example.
 #
 # joutput-level gating:
-#   minimal  - three lines: what went wrong, see ?jrecode, the
-#              joptions switch hint. No dynamic echo-back.
-#   standard - full block with the rewritten jrecode and jdeclare_udm
-#   full       lines, plus the joptions switch line at the end.
+#   minimal  - the marker line, the convention line, and the three-way
+#              switch recipe (Rule L form). No dynamic echo-back.
+#   standard - full block with the rewritten jrecode (assignment form,
+#   full       per Rule G) and jdeclare_udm lines, plus the three-way
+#              switch recipe at the end.
 #
 # Cap behavior: when tagged-NA token count exceeds the convention
 # code count, the helper substitutes the mappable subset and leaves
@@ -222,7 +223,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' Internal helper: build jrecode's cross-convention error message
 #'
 #' Produces the error message used by \code{jrecode()} when Stata-style
-#' Stata-style missing-value tokens appear in the map or labels argument but the
+#' missing-value tokens appear in the map or labels argument but the
 #' resolved convention is SPSS. Verbosity is controlled by the active
 #' \code{joutput()} level.
 #'
@@ -272,7 +273,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     return(paste0(
       "the map uses '.", first_tag, "', a Stata-style missing-value ",
       "marker.\nThe package is currently set to SPSS convention.\n",
-      "Run joptions(missing.convention = \"stata\") to switch."
+      "To switch conventions, run one of:\n",
+      "  joptions(missing.convention = \"stata\")\n",
+      "  joptions(missing.convention = \"sas\")"
     ))
   }
 
@@ -349,11 +352,17 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     }
   }
 
-  # Compose the rewritten jrecode call.
-  jrecode_line <- paste0("    jrecode(", data_name, ", ", orig_name,
+  # Compose the rewritten jrecode call. Rule G: the suggested transform
+  # is non-destructive -- it assigns to a NEW column named <original>R,
+  # and the follow-up declaration targets that new column. (Session 231;
+  # closes the S223 echo-back recipe defect: the earlier form had no
+  # assignment and aimed the declaration at the original column.)
+  new_name    <- paste0(orig_name, "R")
+  call_prefix <- paste0("    ", data_name, "$", new_name, " <- jrecode(")
+  jrecode_line <- paste0(call_prefix, data_name, ", ", orig_name,
                          ", map = \"", rebuilt_map, "\"")
   if (!is.null(rebuilt_labels)) {
-    indent <- paste(rep(" ", nchar("    jrecode(")), collapse = "")
+    indent <- paste(rep(" ", nchar(call_prefix)), collapse = "")
     jrecode_line <- paste0(jrecode_line, ",\n", indent,
                            "labels = \"", rebuilt_labels, "\"")
   }
@@ -374,7 +383,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
                        paste0(label, " = ", format_num(code)))
     }
     jdeclare_line <- paste0("    jdeclare_udm(", data_name, ", ",
-                            orig_name, ", codes = c(",
+                            new_name, ", codes = c(",
                             paste(codes_parts, collapse = ", "),
                             "), modify = TRUE)")
   }
@@ -406,7 +415,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     were_was <- if (length(unmapped) == 1L) "was" else "were"
     # SPSS-side cap on udm.convention.codes (joptions enforces length 1-3).
     # Above the cap, adding a code cannot cover the markers, so steer to
-    # Stata convention (the switch line below) rather than advising a code.
+    # a tag convention (the switch recipe below) rather than advising a code.
     if (n_tags > 3L) {
       msg_parts <- c(msg_parts, "",
         .jst_wrap_prose(paste0(
@@ -432,8 +441,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   }
 
   msg_parts <- c(msg_parts, "",
-    "To switch to Stata convention instead, run:",
-    "joptions(missing.convention = \"stata\").")
+    "To switch conventions instead, run one of:",
+    "  joptions(missing.convention = \"stata\")",
+    "  joptions(missing.convention = \"sas\")")
 
   paste(msg_parts, collapse = "\n")
 }
@@ -832,11 +842,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #'   Example: \code{"1=Male; 0=Female"} or \code{".a=Refused; .b=Don't know"}.
 #'
-#' @param convention Optional. One of \code{"spss"}, \code{"stata"}, or
-#'   \code{NULL} (default); any capitalization is accepted. Controls whether
-#'   Stata-style missing-value tokens
-#'   (\code{.a} through \code{.z}) are accepted in the map and labels
-#'   arguments. Inert when no Stata-style missing-value tokens appear in either argument.
+#' @param convention Optional. One of \code{"spss"}, \code{"stata"},
+#'   \code{"sas"}, or \code{NULL} (default); any capitalization is
+#'   accepted. Controls whether missing-value tokens (\code{.a} through
+#'   \code{.z} or \code{.A} through \code{.Z}) are accepted in the map
+#'   and labels arguments. Token letters are matched case-insensitively;
+#'   the stored markers take the convention's letter case (lowercase
+#'   Stata-style under \code{"stata"}, uppercase SAS-style under
+#'   \code{"sas"}). Inert when no such tokens appear in either argument.
 #'
 #'   When \code{NULL}, the convention is resolved from
 #'   \code{joptions("missing.convention")}; if that is also unset, the
@@ -891,9 +904,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' warning is issued (but the function continues). This helps catch typos in
 #' the map string.
 #'
-#' \strong{Missing values in the map.} The package supports two conventions
-#' for representing user-defined missing values (UDMs), and the syntax for
-#' producing UDMs from \code{jrecode()} depends on which one is active:
+#' \strong{Missing values in the map.} The package supports three
+#' conventions for representing user-defined missing values (UDMs), and
+#' the syntax for producing UDMs from \code{jrecode()} depends on which
+#' one is active:
 #'
 #' Under \strong{SPSS convention} (the default), UDMs are real numeric
 #' codes carrying metadata that flags them as missing. The two-step
@@ -903,7 +917,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' df$EducR <- jrecode(df, Education,
 #'                     map    = "1,2=1; 3=2; 4,5=3; -99,-98=-99",
 #'                     labels = "1=High school or less; 2=Some college; 3=Degree")
-#' df <- jdeclare_udm(df, EducR, codes = c(Refused = -99))
+#' jdeclare_udm(df, EducR, codes = c(Refused = -99), modify = TRUE)
 #' }
 #'
 #' The \code{jrecode()} call assigns the numeric sentinel \code{-99}; the
@@ -930,10 +944,17 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' pattern --- \code{jrecode()} handles both the value recoding and the
 #' Stata-style missing-value labeling in one call.
 #'
-#' Writing Stata-style missing-value tokens while the active convention is SPSS raises an
-#' informative error that echoes the user's call rewritten in SPSS-style
-#' syntax. Switching the convention session-wide is one line:
-#' \code{joptions(missing.convention = "stata")}.
+#' \strong{SAS convention} works the same way with SAS-style missing
+#' values (\code{.A} through \code{.Z}). Map and labels tokens are
+#' matched case-insensitively, and the stored markers take the active
+#' convention's letter case: lowercase under Stata convention, uppercase
+#' under SAS convention.
+#'
+#' Writing these missing-value tokens while the active convention is
+#' SPSS raises an informative error that echoes the user's call
+#' rewritten in SPSS-style syntax; the error also names the one-line
+#' \code{joptions(missing.convention = ...)} switch to Stata or SAS
+#' convention.
 #'
 #' @examples
 #' # Recode with explicit labels (a 1/2 dichotomy to 0/1)
@@ -970,6 +991,13 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'                      map    = "1,2=1; 3,4,5=2; else=.a",
 #'                      labels = "1=No college; 2=College; .a=Refused",
 #'                      convention = "stata")
+#'
+#' # SAS convention: the same single-call pattern; tokens are matched
+#' # case-insensitively and the markers store in uppercase (.A)
+#' df$EducR5 <- jrecode(df, Education,
+#'                      map    = "1,2=1; 3,4,5=2; else=.a",
+#'                      labels = "1=No college; 2=College; .a=Refused",
+#'                      convention = "sas")
 #'
 #' # Using juse() default
 #' juse(df)
@@ -1036,8 +1064,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       convention <- tolower(convention)
     }
     if (!is.character(convention) || length(convention) != 1L ||
-        !convention %in% c("spss", "stata")) {
-      .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
+        !convention %in% c("spss", "stata", "sas")) {
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
     }
   }
 
@@ -1119,7 +1147,46 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       )
       .jst_stop(err_msg)
     }
-    # else: Stata convention — proceed; tagged-NA tokens are valid.
+    # else: Stata or SAS convention — proceed; tagged-NA tokens are valid.
+
+    # Canonicalize the parsed tag letters to the resolved convention's
+    # mint case (Decision 13's token case rule: input is case-insensitive
+    # -- the parsers lowercase-normalize -- and the case actually STORED
+    # follows the governing convention: uppercase under "sas", lowercase
+    # otherwise). Done once here on the parsed structures so every
+    # downstream mint site and the value-label attachment inherit the
+    # canonical case together; minting a lowercase cell against an
+    # uppercase label (or vice versa) would silently fail to match.
+    # Preserved tags from the ORIGINAL column are deliberately NOT
+    # canonicalized -- display follows the stored tag, never the setting;
+    # canonical case governs minting only. (Session 231)
+    for (i in seq_along(parsed_map$mappings)) {
+      if (!is.null(parsed_map$mappings[[i]]$tagged)) {
+        parsed_map$mappings[[i]]$tagged <-
+          .jst_canonical_tag(parsed_map$mappings[[i]]$tagged,
+                             resolved_convention)
+      }
+    }
+    if (!is.null(parsed_map$else_tag)) {
+      parsed_map$else_tag <- .jst_canonical_tag(parsed_map$else_tag,
+                                                resolved_convention)
+    }
+    if (!is.null(parsed_map$na_rule) &&
+        !is.null(parsed_map$na_rule$tagged)) {
+      parsed_map$na_rule$tagged <-
+        .jst_canonical_tag(parsed_map$na_rule$tagged, resolved_convention)
+    }
+    if (!is.null(parsed_labels)) {
+      label_tags <- haven::na_tag(parsed_labels)
+      tagged_idx <- which(!is.na(label_tags))
+      if (length(tagged_idx) > 0L) {
+        canon <- .jst_canonical_tag(label_tags[tagged_idx],
+                                    resolved_convention)
+        # Subassignment keeps the vector's existing names, so only the
+        # tagged values themselves are re-minted in canonical case.
+        parsed_labels[tagged_idx] <- haven::tagged_na(canon)
+      }
+    }
   }
 
   # --- Apply recode ---
