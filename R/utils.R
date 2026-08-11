@@ -1730,3 +1730,85 @@ jai <- function(setup = NULL, path = NULL) {
     cat(prefix, paste(row_cells, collapse = gap), "\n", sep = "")
   }
 }
+
+
+#' Internal: width-aware wrapping for runtime-message prose
+#'
+#' Wraps ONE prose sentence (or short paragraph) at word boundaries to a
+#' target width, replacing the former practice of hardcoded mid-sentence
+#' line breaks sized against one content width (S230; the S229 walk showed
+#' those breaks failing in both directions as variable content changed).
+#' Three refinements over a bare strwrap():
+#'   - ATOMIC TOKENS: function calls (jconvert(...), joptions(...)) and
+#'     dotted argument references (preserve.udm = FALSE) are never split
+#'     across lines -- a break inside a runnable token is worse than a
+#'     long line.
+#'   - ORPHAN PULL-BACK: while the last line is shorter than min_last,
+#'     words are pulled down from the line above (a one-word dangling
+#'     tail such as `to "spss".` reads as an accident).
+#'   - PREFIX RESERVE: for strings surfaced through .jst_stop(), the
+#'     emitter prepends a `fn(): ` prefix AFTER the builder returns;
+#'     `reserve` narrows the first line by that many characters so the
+#'     rendered first line still lands within width. (R's own `Error: `
+#'     is not counted, matching the S230 agreed renders.)
+#'
+#' Scope: prose only. Runnable command lines follow Rule L (their own
+#' indented line) and are never passed through this helper. Applied at
+#' the S230 sites; other messages adopt it as they are touched.
+#'
+#' @param text Character scalar: one sentence/paragraph, no embedded newlines.
+#' @param width Target line width (default 76).
+#' @param min_last Minimum last-line length before pull-back stops.
+#' @param reserve Characters the emitter will prepend to line 1.
+#' @return Character scalar with newline characters at the break points.
+#' @keywords internal
+.jst_wrap_prose <- function(text, width = 76L, min_last = 20L,
+                            reserve = 0L) {
+  if (!nzchar(text)) return(text)
+  # Protect atomic tokens: swap internal spaces for \x01 so they travel
+  # as single words, restored after line assembly.
+  protected <- text
+  atom_re <- paste0(
+    "[A-Za-z_.][A-Za-z0-9_.]*\\([^()]*\\)",              # calls
+    "|[A-Za-z][A-Za-z0-9._]*\\.[A-Za-z0-9._]+ = [^ ]+"   # dotted arg = value
+  )
+  m <- gregexpr(atom_re, protected)[[1]]
+  if (m[1] != -1L) {
+    starts <- as.integer(m)
+    lens   <- attr(m, "match.length")
+    for (i in rev(seq_along(starts))) {
+      seg <- substr(protected, starts[i], starts[i] + lens[i] - 1L)
+      seg <- gsub(" ", "\x01", seg, fixed = TRUE)
+      protected <- paste0(substr(protected, 1L, starts[i] - 1L), seg,
+                          substring(protected, starts[i] + lens[i]))
+    }
+  }
+  words <- strsplit(protected, " ", fixed = TRUE)[[1]]
+  words <- words[nzchar(words)]
+  lines <- character(0)
+  cur   <- ""
+  avail <- width - reserve
+  for (w in words) {
+    cand <- if (nzchar(cur)) paste(cur, w) else w
+    if (nchar(cand) <= avail) {
+      cur <- cand
+    } else {
+      lines <- c(lines, cur)
+      cur   <- w
+      avail <- width   # reserve applies to the first line only
+    }
+  }
+  lines <- c(lines, cur)
+  # Orphan pull-back: iterate until the last line reaches min_last or a
+  # move would overflow the width.
+  while (length(lines) > 1L && nchar(lines[length(lines)]) < min_last) {
+    prev <- strsplit(lines[length(lines) - 1L], " ", fixed = TRUE)[[1]]
+    if (length(prev) < 2L) break
+    moved <- prev[length(prev)]
+    cand  <- paste(moved, lines[length(lines)])
+    if (nchar(cand) > width) break
+    lines[length(lines) - 1L] <- paste(prev[-length(prev)], collapse = " ")
+    lines[length(lines)]      <- cand
+  }
+  gsub("\x01", " ", paste(lines, collapse = "\n"), fixed = TRUE)
+}

@@ -414,8 +414,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (!from_package) {
     fsize <- suppressWarnings(file.size(resolved_path))
     big   <- !is.na(fsize) && fsize >= 15 * 1024^2
-    say("Loading ", obj_name, " ...",
-        if (big) " (large file; this may take a moment)" else "")
+    # Bare-line floor (S230): since the D1 reorder put "Loaded ..." first,
+    # the bare Loading line is redundant on a fast load, so it fires only
+    # from 1 MB up -- below that even slow media finish in about a second.
+    # The floor inherits the S205 err-low principle (a 1 MB/s share takes
+    # ~1 s at the floor and grows from there); an unknown size also shows
+    # the line, erring toward reassurance. The 15 MB suffix gate above is
+    # unchanged -- see the S205 comment for why it must not be retuned.
+    show_line <- is.na(fsize) || fsize >= 1 * 1024^2
+    if (show_line) {
+      say("Loading ", obj_name, " ...",
+          if (big) " (large file; this may take a moment)" else "")
+    }
   }
 
   # --- Read the file ---------------------------------------------------------
@@ -517,8 +527,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     say(
       "Loaded ", obj_name,
       " (", .jst_format_label(ext), "; ",
-      format(nrow(df), big.mark = ","), " cases, ",
-      ncol(df), " variables)"
+      format(nrow(df), big.mark = ","),
+      if (nrow(df) == 1L) " case, " else " cases, ",
+      ncol(df),
+      if (ncol(df) == 1L) " variable)" else " variables)"
     )
   }
 
@@ -1260,13 +1272,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- preserve.udm = FALSE: conversion report, never compacted -------------
   if (!preserve.udm) {
     head_str <- if (uniform) {
-      sprintf(paste0("%d %s had %s missing values, converted to plain NA per\n",
-                     "preserve.udm = FALSE:"),
-              n_vars, verb_noun, disp_label(present))
+      .jst_wrap_prose(sprintf(
+        "%d %s had %s missing values, converted to plain NA per preserve.udm = FALSE:",
+        n_vars, verb_noun, disp_label(present)))
     } else {
-      sprintf(paste0("%d %s had missing values (%s), converted to plain NA per\n",
-                     "preserve.udm = FALSE:"),
-              n_vars, verb_noun, count_parens)
+      .jst_wrap_prose(sprintf(
+        "%d %s had missing values (%s), converted to plain NA per preserve.udm = FALSE:",
+        n_vars, verb_noun, count_parens))
     }
     return(paste0(
       head_str, "\n", list_str,
@@ -1295,14 +1307,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # neither recommended -- which is right depends on whether the user
       # regards the data or the setting as the truth.
       note_lines <- c(
-        sprintf(paste0("Note: these variables are %s, but the session's ",
-                       "missing convention is\nset to \"%s\"."),
-                disp_label(st), opt),
-        sprintf(paste0("To use %s missing values, run ",
-                       "joptions(missing.convention = \"%s\")."),
-                disp_label(st), st),
-        sprintf("To use %s missing values, run jconvert(%s, to = \"%s\", modify = TRUE).",
-                disp_label(opt), call_name, opt)
+        .jst_wrap_prose(sprintf(
+          "Note: these variables are %s, but the session's missing convention is set to \"%s\".",
+          disp_label(st), opt)),
+        sprintf("To use %s missing values, run:", disp_label(st)),
+        sprintf("  joptions(missing.convention = \"%s\")", st),
+        sprintf("To use %s missing values, run:", disp_label(opt)),
+        sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)", call_name, opt)
       )
     } else if (identical(st, "spss")) {
       # Case 1: uniform SPSS-style, no conflicting setting. The one
@@ -1339,23 +1350,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 if (length(vars_g) == 1L) "is" else "are",
                 disp_label(g))
       }, character(1))
-      note_first <- sprintf(paste0("Note: %s, but the session's missing ",
-                                   "convention is set\nto \"%s\"."),
-                            paste(seg, collapse = " and "), opt)
+      note_first <- .jst_wrap_prose(sprintf(
+        "Note: %s, but the session's missing convention is set to \"%s\".",
+        paste(seg, collapse = " and "), opt))
       remedy_styles <- c(intersect(opt, styles_present),
                          setdiff(styles_present, opt))
-      note_rest <- vapply(remedy_styles, function(g) {
-        base_line <- sprintf(paste0("To use %s missing values throughout, ",
-                                    "run jconvert(%s, to = \"%s\", ",
-                                    "modify = TRUE)"),
-                             disp_label(g), call_name, g)
+      # Rule L form (S230): the intro clause ends in a colon and each
+      # runnable call gets its own two-space-indented line, no trailing
+      # period. An off-setting target carries the joptions rider as a
+      # second indented call under "run both:".
+      note_rest <- unlist(lapply(remedy_styles, function(g) {
+        conv_line <- sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)",
+                             call_name, g)
         if (identical(g, opt)) {
-          paste0(base_line, ".")
+          c(sprintf("To use %s missing values throughout, run:",
+                    disp_label(g)),
+            conv_line)
         } else {
-          sprintf("%s\nand joptions(missing.convention = \"%s\").",
-                  base_line, g)
+          c(sprintf("To use %s missing values throughout, run both:",
+                    disp_label(g)),
+            conv_line,
+            sprintf("  joptions(missing.convention = \"%s\")", g))
         }
-      }, character(1))
+      }), use.names = FALSE)
       note_lines <- c(note_first, note_rest)
     } else {
       # Case 6: mixed frame, no convention set.
@@ -1376,11 +1393,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # ("make them missing in base R") and is deliberately left alone.
       note_lines <- c(
         sprintf("Note: %s mixes %s missing values.", call_name, mix_str),
-        vapply(styles_present, function(g)
-          sprintf(paste0("To use %s throughout, run jconvert(%s, ",
-                         "to = \"%s\", modify = TRUE)\nand ",
-                         "joptions(missing.convention = \"%s\")."),
-                  disp_label(g), call_name, g, g), character(1))
+        unlist(lapply(styles_present, function(g) c(
+          sprintf("To use %s throughout, run both:", disp_label(g)),
+          sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)", call_name, g),
+          sprintf("  joptions(missing.convention = \"%s\")", g)
+        )), use.names = FALSE)
       )
     }
   }
@@ -2005,10 +2022,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      n_total, " ", noun, " ", verb_carry,
-      " SPSS-style missing values, incompatible with the .dta format. ",
-      "Run jconvert(", data_name, ", to = \"stata\", modify = TRUE) ",
-      "first, then save again."
+      .jst_wrap_prose(paste0(
+        n_total, " ", noun, " ", verb_carry,
+        " SPSS-style missing values, incompatible with the .dta format."),
+        reserve = 9L),
+      "\n",
+      .jst_wrap_prose(paste0(
+        "Run jconvert(", data_name, ", to = \"stata\", modify = TRUE) ",
+        "first, then save again."))
     ))
   }
 
@@ -2082,10 +2103,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "to drop them, or save as Stata format (.dta) to preserve them."
     }
     return(paste0(
-      n, " ", noun, " ", verb_contain,
-      " missing-value codes, incompatible with the .xpt format. ",
-      "Run jconvert(", data_name, ", to = \"baseR\", modify = TRUE) ",
-      tail
+      .jst_wrap_prose(paste0(
+        n, " ", noun, " ", verb_contain,
+        " missing-value codes, incompatible with the .xpt format."),
+        reserve = 9L),
+      "\n",
+      .jst_wrap_prose(paste0(
+        "Run jconvert(", data_name, ", to = \"baseR\", modify = TRUE) ",
+        tail))
     ))
   }
 
@@ -2174,10 +2199,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      n, " ", noun, " ", verb_contain, " ",
-      style_phrase, ", incompatible with the .sav format. ",
-      "Before saving, convert with ",
-      "jconvert(", data_name, ", to = \"spss\", modify = TRUE)."
+      .jst_wrap_prose(paste0(
+        n, " ", noun, " ", verb_contain, " ",
+        style_phrase, ", incompatible with the .sav format."),
+        reserve = 9L),
+      "\n",
+      .jst_wrap_prose(paste0(
+        "Before saving, convert with ",
+        "jconvert(", data_name, ", to = \"spss\", modify = TRUE)."))
     ))
   }
 
@@ -2366,9 +2395,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   output_level <- getOption(".jst_output_level", "standard")
 
-  # Minimal tier: join the compact one-line section messages, no frame.
+  # Minimal tier: join the compact section messages, no frame. Newline
+  # join (S230): sections are Rule E split internally, so a space join
+  # would glue the next section onto the previous one mid-line.
   if (identical(output_level, "minimal")) {
-    return(paste(unlist(sections), collapse = " "))
+    return(paste(unlist(sections), collapse = "\n"))
   }
 
   # Standard / full tier: numbered sections under a unified header.
@@ -3162,11 +3193,16 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   if (length(loss_notes) > 0) message(paste(loss_notes, collapse = "\n\n"))
 
   # --- Confirmation message --------------------------------------------------
+  # Two lines (S230): the parenthetical (format, cases, variables) is the
+  # verification payload and gets its own flush-left line regardless of
+  # path length, so it is never hostage to a long path's console wrap.
   message(
     "Saved ", data_name, " to ", .jst_norm_path(out_path),
-    " (", .jst_format_label(ext), "; ",
-    format(nrow(data), big.mark = ","), " cases, ",
-    ncol(data), " variables)"
+    "\n(", .jst_format_label(ext), "; ",
+    format(nrow(data), big.mark = ","),
+    if (nrow(data) == 1L) " case, " else " cases, ",
+    ncol(data),
+    if (ncol(data) == 1L) " variable)" else " variables)"
   )
 
   invisible(NULL)
@@ -3311,8 +3347,10 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
 
   # Confirmation.
   say("Copied ", src_name, " to ", dest_name, " (",
-      format(nrow(src_data), big.mark = ","), " cases, ",
-      ncol(src_data), " variables)")
+      format(nrow(src_data), big.mark = ","),
+      if (nrow(src_data) == 1L) " case, " else " cases, ",
+      ncol(src_data),
+      if (ncol(src_data) == 1L) " variable)" else " variables)")
   if (carried) {
     say("Carried over the classification registrations from ", src_name, ".")
   }

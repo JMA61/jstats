@@ -381,10 +381,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   # Assemble the message.
   msg_parts <- c(
-    paste0("the map uses '.", first_tag, "', a Stata-style missing-",
-           "value marker. The package is currently set to SPSS"),
-    "convention, which uses numeric codes. Here is the equivalent",
-    "recode in SPSS style:",
+    .jst_wrap_prose(paste0("the map uses '.", first_tag,
+                           "', a Stata-style missing-value marker."),
+                    reserve = 11L),
+    "The package is currently set to SPSS convention, which uses numeric codes.",
+    "Here is the equivalent recode in SPSS style:",
     "",
     jrecode_line
   )
@@ -408,20 +409,24 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     # Stata convention (the switch line below) rather than advising a code.
     if (n_tags > 3L) {
       msg_parts <- c(msg_parts, "",
-        paste0("Note: `map` uses ", n_tags, " Stata-style markers (",
-               paste0(".", all_tags, collapse = ", "), ") but SPSS"),
-        "convention supports at most 3 user-defined missing values;",
-        paste0(unmapped_render, " ", were_was,
-               " not substituted in the example above.")
+        .jst_wrap_prose(paste0(
+          "Note: `map` uses ", n_tags, " Stata-style markers (",
+          paste0(".", all_tags, collapse = ", "),
+          ") but SPSS convention supports at most 3 user-defined missing ",
+          "values; ", unmapped_render, " ", were_was,
+          " not substituted in the example above."))
       )
     } else {
       msg_parts <- c(msg_parts, "",
-        paste0("Note: `map` uses ", n_tags, " Stata-style markers (",
-               paste0(".", all_tags, collapse = ", "), ") but"),
-        paste0("joptions(\"udm.convention.codes\") currently holds only ",
-               n_codes, " values; ", unmapped_render, " ", were_was),
-        "not substituted in the example above. To add another code, run",
-        "something like joptions(udm.convention.codes = c(-99, -98, -97))."
+        .jst_wrap_prose(paste0(
+          "Note: `map` uses ", n_tags, " Stata-style markers (",
+          paste0(".", all_tags, collapse = ", "),
+          ") but joptions(\"udm.convention.codes\") currently holds only ",
+          n_codes, " values; ", unmapped_render, " ", were_was,
+          " not substituted in the example above.")),
+        .jst_wrap_prose(paste0(
+          "To add another code, run something like ",
+          "joptions(udm.convention.codes = c(-99, -98, -97))."))
       )
     }
   }
@@ -692,12 +697,15 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
                      ", codes = ", num_arg, ", modify = TRUE)")
 
   msg_parts <- c(
-    paste0("codes for ", var_name, " mixes Stata-style missing values ",
-           "and SPSS-style numeric codes."),
-    "The two operations are different -- labeling existing Stata-style",
-    "missing-value cells (tagged input) and converting numeric cells to",
-    "Stata-style missing values (numeric input) -- and must be issued as",
-    "separate calls.",
+    .jst_wrap_prose(paste0("codes for ", var_name,
+                           " mixes Stata-style missing values ",
+                           "and SPSS-style numeric codes."),
+                    reserve = 16L),
+    .jst_wrap_prose(paste0(
+      "The two operations are different -- labeling existing Stata-style ",
+      "missing-value cells (tagged input) and converting numeric cells to ",
+      "Stata-style missing values (numeric input) -- and must be issued ",
+      "as separate calls.")),
     "For your input, that would be:",
     "",
     tag_line,
