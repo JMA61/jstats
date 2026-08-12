@@ -601,16 +601,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- Coded missing value scan ----------------------------------------------
-  # When UDMs were found and announced by the narrative above, suppress the
-  # diagnostic's formal branch to avoid duplicate per-variable tabular
-  # output (scan_udm = FALSE). The heuristic branch always runs and can
-  # surface suspicious values that aren't formally declared anywhere.
-  # When no UDMs were found, scan_udm = TRUE so the formal branch picks
-  # up haven_labelled_spss columns that may have arrived via .rds round-
-  # trip or R-side construction (currently na_values-only; tagged_na
-  # reading via the abstraction is a future refactor step).
+  # Formally declared UDMs are the narrative's job (.jst_handle_udms,
+  # above); the scan reports only what the narrative cannot -- values
+  # whose labels look like missing-value codes without a declaration
+  # (label-only), and suspicious sentinel values with no metadata at all
+  # (suspected). Declared codes are excluded from both classifications.
+  # (The scan's formal-UDM branch, unreachable from this call by
+  # construction, was removed at S233 -- see the changelog.)
   if (check.missing) {
-    .jst_scan_coded_missing(df, obj_name, scan_udm = (length(udm_info) == 0))
+    .jst_scan_coded_missing(df, obj_name)
   }
 
   # DECISION B (settled S205, implemented S208): return nothing. jload() is
@@ -900,6 +899,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         tag     = rep(NA_character_, length(n_vals)),
         stringsAsFactors = FALSE
       )
+
+      # Deterministic order: ascending by value (S233). haven returns
+      # na_values in DECLARATION order, which is stable within a column
+      # but arbitrary across columns, so two columns declaring the same
+      # two codes could render them in opposite orders. Sorting here
+      # rather than at each render point means the load narrative, the
+      # CPS detail table and the UDM entries builder -- all three iterate
+      # this frame row-by-row -- cannot disagree with each other. Same
+      # principle the jfreq Missing block already applies across its
+      # three tiers (S220: declaration order is a leftover, not a
+      # principle; ascending by value is the commercial-software parity).
+      codes_df <- codes_df[order(codes_df$numeric), , drop = FALSE]
+      rownames(codes_df) <- NULL
     }
 
     # Observed in-band values (opt-in; see @param observed). This is the
@@ -982,6 +994,25 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       tag     = tags_present,
       stringsAsFactors = FALSE
     )
+
+    # Deterministic order: by tag letter (S233), the tagged-NA analogue of
+    # the SPSS branch's ascending-by-value rule. tags_present is built
+    # from cell order of first appearance, so before this the same two
+    # codes could render ".a, .b" on one column and ".b, .a" on the next,
+    # and would shuffle again if the rows were re-sorted. method =
+    # "radix" pins C-locale collation: R's default character ordering
+    # follows the session locale, so a plain sort would still differ
+    # between machines -- the same class of defect being fixed. Primary
+    # key is the lowercased letter so a mixed-case (ambiguous-convention)
+    # column interleaves as .a, .A, .b, .B rather than splitting by case.
+    # The tiebreak between a letter's two cases runs DESCENDING because
+    # C-locale byte order puts uppercase first (65 before 97); descending
+    # puts the lowercase Stata-form member ahead of its SAS-form twin,
+    # which is the commoner form in this package's data.
+    codes_df <- codes_df[order(tolower(codes_df$tag), codes_df$tag,
+                               method = "radix",
+                               decreasing = c(FALSE, TRUE)), , drop = FALSE]
+    rownames(codes_df) <- NULL
 
     # Convention refinement from tag letter case (Decision 13): all
     # lowercase = Stata-form, all uppercase = SAS-form, mixed = NA
@@ -1667,18 +1698,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
 #' Internal: scan for coded missing values and report findings
 #'
-#' @param scan_udm Logical. When \code{FALSE}, the haven \code{na_values}
-#'   and \code{na_range} branches are skipped (only the suspicious-values
-#'   heuristic runs). Set to \code{FALSE} when called after
-#'   \code{.jst_handle_udms()} has already produced its narrative for
-#'   \code{.sav} loads, to avoid duplicate output. The heuristic branch
-#'   always excludes values that are formally declared in
-#'   \code{na_values} or \code{na_range} on the variable, so passing
-#'   \code{scan_udm = FALSE} produces no UDM-related output -- neither
-#'   tabular nor flagged-as-suspected.
+#' Classifies findings two ways: label-only (a value label suggesting
+#' missingness, per the package wordlist, with no formal declaration) and
+#' suspected (a suspicious sentinel value with no metadata at all).
+#' Values formally declared in \code{na_values} or \code{na_range} are
+#' excluded from both classifications -- declared UDMs are reported by
+#' jload's narrative (\code{.jst_handle_udms}), not here.
 #'
 #' @keywords internal
-.jst_scan_coded_missing <- function(df, obj_name, scan_udm = TRUE) {
+.jst_scan_coded_missing <- function(df, obj_name) {
 
   max_report <- 10L  # Maximum number of rows to display (harmonized with
                      # the narrative cap in .jst_format_udm_narrative)
@@ -1693,10 +1721,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     num_vals <- suppressWarnings(as.numeric(col))
     if (all(is.na(num_vals))) next
 
-    # Pull formal UDM declarations once per variable. Both branches use
-    # them: the formal branch (when scan_udm = TRUE) tabulates them, and
-    # the heuristic branch (always) filters them OUT so values formally
-    # declared as UDMs are never flagged as "suspected".
+    # Pull formal UDM declarations once per variable. The heuristic
+    # filter reads them so values formally declared as UDMs are never
+    # flagged as "suspected" (declared codes are the load narrative's
+    # job, not the scan's).
     spss_na_vals  <- attr(col, "na_values")
     spss_na_range <- attr(col, "na_range")
 
@@ -1707,58 +1735,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # preserve value labels but not the formal UDM declaration.
     val_labs <- attr(col, "labels")
 
-    # --- Check SPSS user-defined missing values (haven attribute) ---
-    # SPSS-defined missings are checked on ALL values (including decimals)
-    # because SPSS allows any value to be defined as missing.
-    # Skipped (scan_udm = FALSE) when called from jload after the
-    # narrative notification has already covered UDMs for .sav loads.
-    if (scan_udm) {
-      if (!is.null(spss_na_vals)) {
-        for (sv in spss_na_vals) {
-          n_cases <- sum(num_vals == sv, na.rm = TRUE)
-          if (n_cases > 0) {
-            findings[[length(findings) + 1]] <- list(
-              var = vname, value = sv, count = n_cases,
-              source = "udm"
-            )
-          }
-        }
-      }
-
-      if (!is.null(spss_na_range)) {
-        range_lo <- spss_na_range[1]
-        range_hi <- spss_na_range[2]
-        range_match <- !is.na(num_vals) & num_vals >= range_lo & num_vals <= range_hi
-        if (any(range_match)) {
-          range_vals <- sort(unique(num_vals[range_match]))
-          for (rv in range_vals) {
-            # Skip if already found via na_values
-            already <- any(vapply(findings, function(f) {
-              f$var == vname && f$value == rv
-            }, logical(1)))
-            if (!already) {
-              n_cases <- sum(num_vals == rv, na.rm = TRUE)
-              findings[[length(findings) + 1]] <- list(
-                var = vname, value = rv, count = n_cases,
-                source = "udm"
-              )
-            }
-          }
-        }
-      }
-    }
-
     # --- Heuristic scan using existing detection function ---
     # Only scan whole-number values — coded missings are always integers
     whole_vals <- num_vals[!is.na(num_vals) & num_vals == round(num_vals)]
     if (length(whole_vals) >= 2) {
       suspicious <- .jst_detect_suspicious_values(whole_vals, vname)
       for (sv in suspicious) {
-        # Skip if formally declared as UDM on this variable. This filter
-        # runs whether or not scan_udm = TRUE: when scan_udm = FALSE the
-        # formal branch was gated off (because the .sav narrative covered
-        # the UDMs), and without this filter the heuristic would mislabel
-        # those same values as suspected ("not formally defined").
+        # Skip if formally declared as UDM on this variable: declared
+        # codes are covered by the load narrative, and without this
+        # filter the heuristic would mislabel those same values as
+        # suspected ("not formally defined").
         is_formal_udm <-
           (!is.null(spss_na_vals) && sv %in% spss_na_vals) ||
           (!is.null(spss_na_range) && length(spss_na_range) == 2 &&
@@ -1813,20 +1799,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Report findings -------------------------------------------------------
   if (length(findings) > 0) {
 
-    # Internal source keys ("udm", "label_only", "suspected") are kept
+    # Internal source keys ("label_only", "suspected") are kept
     # separate from the user-facing tag text below, so display wording
     # can change without touching comparison logic. (The former em-dash
     # tag strings doubled as comparison keys; this split removes that
     # hazard, and the tag text itself is now ASCII-only per the
     # runtime-string punctuation convention.)
     src_display <- c(
-      udm        = "user-defined missing value",
       label_only = "label-only - not formally declared",
       suspected  = "suspected - not formally defined"
     )
 
     sources_present <- unique(vapply(findings, function(f) f$source, character(1)))
-    has_udm        <- "udm"        %in% sources_present
     has_label_only <- "label_only" %in% sources_present
     has_heur       <- "suspected"  %in% sources_present
 
@@ -1838,10 +1822,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     single_source <- length(sources_present) == 1L
 
     # Heading: telegraph "Suspected" only when ALL findings are pure
-    # heuristic (no formal UDMs and no label-only). Both formal UDMs and
-    # label-only findings represent real metadata that earns the neutral
-    # wording even when heuristic findings are mixed in.
-    heading <- if (has_heur && !has_udm && !has_label_only) {
+    # heuristic (no label-only). Label-only findings represent real
+    # metadata that earns the neutral wording even when heuristic
+    # findings are mixed in.
+    heading <- if (has_heur && !has_label_only) {
       "Suspected missing-value codes detected:"
     } else {
       "Missing-value codes detected:"
@@ -1849,12 +1833,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     cat("\n", heading, "\n", sep = "")
 
     # Group findings by (variable, source). One row per group lists every
-    # value flagged for that combination. This collapses the typical UDM
-    # case (Cont_udm with codes -99 and -98) from two lines to one. Mixed
-    # sources on the same variable (rare -- e.g. a UDM-bearing variable
-    # with an additional sentinel value caught only by the heuristic)
-    # produce two rows for that variable, one per source. Group order
-    # preserves the scan order of first appearance.
+    # value flagged for that combination. This collapses the common case
+    # of one variable carrying two codes (e.g. -99 and -98, both
+    # label-only) from two lines to one. Mixed sources on the same
+    # variable (rare -- e.g. a labelled code alongside an unlabelled
+    # sentinel caught only by the heuristic) produce two rows for that
+    # variable, one per source. Group order preserves the scan order of
+    # first appearance.
     group_keys <- character(0)
     groups     <- list()
     for (f in findings) {
@@ -1920,16 +1905,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # already covers the interpretation and the simple count suffices.
       hidden_sources <- vapply(groups[group_keys[(max_report + 1):n_groups]],
                                function(g) g$source, character(1))
-      hidden_udm        <- sum(hidden_sources == "udm")
       hidden_label_only <- sum(hidden_sources == "label_only")
       hidden_heur       <- sum(hidden_sources == "suspected")
 
-      mixed <- (hidden_udm > 0) + (hidden_label_only > 0) + (hidden_heur > 0) > 1
+      mixed <- (hidden_label_only > 0) + (hidden_heur > 0) > 1
       if (mixed) {
         cat(sprintf("  ... and %d more:\n", n_groups - max_report))
-        if (hidden_udm > 0) {
-          cat(sprintf("    %d with [%s]\n", hidden_udm, src_display[["udm"]]))
-        }
         if (hidden_label_only > 0) {
           cat(sprintf("    %d with [%s]\n", hidden_label_only,
                       src_display[["label_only"]]))
@@ -1947,13 +1928,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     if (single_source) {
       # One source type present: the legend reads as plain prose with no
       # bracket tag, since there is nothing to disambiguate.
-      if (has_udm) {
-        cat("These codes are declared as user-defined missing values and are already\n")
-        cat("treated as NA by jstats analysis functions.\n")
-        cat("Conversion to plain NA is optional --- useful if you'll use this dataset\n")
-        cat("with base R or non-package functions where the numeric values may be\n")
-        cat("misinterpreted as real.\n")
-      } else if (has_label_only) {
+      if (has_label_only) {
         cat("These codes are not formally declared, so they are not treated as missing,\n")
         cat("but their value labels look like user-defined missing values.\n")
         cat("Declare them as missing if they are; leave as-is if real.\n")
@@ -1962,12 +1937,6 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         cat("Declare them as missing if they are; leave as-is if real.\n")
       }
     } else {
-      if (has_udm) {
-        cat("[", src_display[["udm"]], "]: already treated as NA by jstats\n", sep = "")
-        cat("  analysis functions. Conversion to plain NA is optional --- useful\n")
-        cat("  if you'll use this dataset with base R or non-package functions where\n")
-        cat("  the numeric values may be misinterpreted as real.\n")
-      }
       if (has_label_only) {
         cat("[", src_display[["label_only"]], "]: not automatically treated as NA, but\n", sep = "")
         cat("  value labels look like user-defined missing values.\n")
@@ -1982,13 +1951,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # Suggestion example: lead with the non-destructive declaration
     # (jdeclare_udm) rather than a destructive recode-to-NA, per the
     # message-suggestion convention (Session-113 addendum in the missing-
-    # values reference). Omitted entirely on pure-UDM reports -- the load
-    # narrative and the legend above already carry the jconvert guidance
-    # there. Target preference: label-only first (it typically has
-    # several labelled codes, the most informative example), then
-    # suspected; UDM rows are never the target, and a mixed-source
-    # variable's UDM codes are excluded from the example's codes= set
-    # because they are already declared.
+    # values reference). Target preference: label-only first (it
+    # typically has several labelled codes, the most informative
+    # example), then suspected.
     ex_var <- NULL
     ex_src <- NULL
     for (src in c("label_only", "suspected")) {
@@ -2001,7 +1966,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     if (!is.null(ex_var)) {
       ex_codes <- sort(unique(vapply(findings, function(f) {
-        if (f$var == ex_var && f$source != "udm") f$value else NA_real_
+        if (f$var == ex_var) f$value else NA_real_
       }, numeric(1))))
       ex_codes <- ex_codes[!is.na(ex_codes)]
       codes_str <- if (length(ex_codes) == 1L) {

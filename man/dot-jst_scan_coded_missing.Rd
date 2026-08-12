@@ -4,20 +4,14 @@
 \alias{.jst_scan_coded_missing}
 \title{Internal: scan for coded missing values and report findings}
 \usage{
-.jst_scan_coded_missing(df, obj_name, scan_udm = TRUE)
-}
-\arguments{
-\item{scan_udm}{Logical. When \code{FALSE}, the haven \code{na_values}
-and \code{na_range} branches are skipped (only the suspicious-values
-heuristic runs). Set to \code{FALSE} when called after
-\code{.jst_handle_udms()} has already produced its narrative for
-\code{.sav} loads, to avoid duplicate output. The heuristic branch
-always excludes values that are formally declared in
-\code{na_values} or \code{na_range} on the variable, so passing
-\code{scan_udm = FALSE} produces no UDM-related output -- neither
-tabular nor flagged-as-suspected.}
+.jst_scan_coded_missing(df, obj_name)
 }
 \description{
-Internal: scan for coded missing values and report findings
+Classifies findings two ways: label-only (a value label suggesting
+missingness, per the package wordlist, with no formal declaration) and
+suspected (a suspicious sentinel value with no metadata at all).
+Values formally declared in \code{na_values} or \code{na_range} are
+excluded from both classifications -- declared UDMs are reported by
+jload's narrative (\code{.jst_handle_udms}), not here.
 }
 \keyword{internal}

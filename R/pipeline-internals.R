@@ -367,8 +367,8 @@
 #
 # Single source of truth for joptions slot defaults. Consulted both by
 # joptions itself for reset semantics and by downstream readers (jload,
-# jconvert, jdeclare_udm, jrecode, .jst_scan_coded_missing) via
-# getOption() fallback when no explicit setting is present.
+# jconvert, jdeclare_udm, jrecode) via getOption() fallback when no
+# explicit setting is present.
 #
 # Slots:
 #   missing.convention   - one of "none", "spss", "stata", "sas".
@@ -381,9 +381,7 @@
 #                          environment-scan notice.
 #   udm.convention.codes - numeric vector, length 1-3, whole numbers,
 #                          no duplicates. Recommended UDM code set used
-#                          by jconvert for Stata-tag -> SPSS-code mapping
-#                          and by .jst_scan_coded_missing for
-#                          convention-matched detection.
+#                          by jconvert for Stata-tag -> SPSS-code mapping.
 #   data.dir             - single character string, or NULL. NULL =
 #                          jsave writes bare-filename saves to the
 #                          working directory; jload bare-filename

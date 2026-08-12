@@ -44,11 +44,11 @@
   # -99 in variables with naturally high positives (e.g., Age 18-80
   # would not flag -99 because 99 < 3 * 80 = 240). Trade-off: better
   # to miss a sentinel that the user can spot from jload's output than
-  # to flag a real extreme value as suspicious. The SPSS-defined UDM
-  # detector (.jst_scan_coded_missing's na_values branch) catches
-  # these cases when haven metadata is preserved; the heuristic is
-  # the safety net for plain numerics where metadata has been stripped
-  # (e.g., post-csv/xlsx/dta load).
+  # to flag a real extreme value as suspicious. When haven metadata is
+  # preserved, jload's UDM narrative (.jst_handle_udms) reports declared
+  # codes regardless of magnitude; the heuristic is the safety net for
+  # plain numerics where metadata has been stripped (e.g., post-csv/
+  # xlsx/dta load).
   neg_vals <- vals[vals < 0]
   pos_vals <- vals[vals >= 0]
 
