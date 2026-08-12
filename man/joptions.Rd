@@ -29,12 +29,15 @@ See Slots.}
 \code{"all"}, or \code{NULL}. See Slots.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, joptions() applies the
-change silently, suppressing both the status panel and the convention
-nudge. A bare joptions() status query always prints regardless of quiet.}
+change silently, suppressing the settings echo, its pointer, and the
+convention nudge alike. A bare joptions() status query always prints
+regardless of quiet.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for the side effect of
-updating session options and printing the status panel.
+updating session options and printing the settings panel -- in full
+for a status query or a reset, or as an echo of the slots a setting
+call touched.
 }
 \description{
 Controls session-wide settings that affect how the package handles
@@ -112,13 +115,19 @@ to one function's output.}
 \section{Call patterns}{
 
 \describe{
-\item{\code{joptions()}}{Print the current settings panel.}
+\item{\code{joptions()}}{Print the full settings panel.}
 \item{\code{joptions(NULL)}}{Reset all slots to defaults, then print
-the panel.}
-\item{\code{joptions(slot = value, ...)}}{Set one or more slots,
-then print the panel. Passing \code{slot = NULL} as a named
+the full panel -- everything changed.}
+\item{\code{joptions(slot = value, ...)}}{Set one or more slots, then
+echo only what the call touched: the slots named, plus
+\code{udm.convention.codes} whenever \code{missing.convention} is
+set and vice versa (the codes are read in light of the convention),
+closed by a pointer to \code{joptions()} for the full panel. The
+other three slots are independent and are not pulled in.
+Passing \code{slot = NULL} as a named
 argument leaves that slot at its current value -- useful for
-setting one slot without touching another. To reset a single
+setting one slot without touching another -- and echoes that
+unchanged value back. To reset a single
 slot to its default, pass the default value explicitly (e.g.
 \code{joptions(missing.convention = "none")}). Because
 \code{data.dir}'s default is \code{NULL} -- which already means
@@ -143,12 +152,12 @@ their standard form -- do not trigger the notice.
 \examples{
 joptions()                                        # show current settings
 
-# Setting a convention prints the panel, then scans the workspace and
-# notes any data frames whose UDM convention differs (see the
-# Environment-scan notice section):
-joptions(missing.convention = "spss")             # set, panel, scan notice
+# Setting a convention echoes the convention and its codes, then scans
+# the workspace and notes any data frames whose UDM convention differs
+# (see the Environment-scan notice section):
+joptions(missing.convention = "spss")             # set, echo, scan notice
 joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
-joptions(udm.convention.codes = c(-99, -98))      # set, panel, no scan
+joptions(udm.convention.codes = c(-99, -98))      # set, echo, no scan
 joptions(data.dir = "Data")                       # set save/load folder
 joptions(missing.convention = "stata",
          udm.convention.codes = c(-99, -98, -97)) # set both

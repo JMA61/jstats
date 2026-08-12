@@ -289,14 +289,45 @@ joutput <- function(level, effect.size = NULL,
 #  joptions -- non-display session options
 # =============================================================================
 
+# -- Internal: joptions slot relatedness map ----------------------------------
+#
+# Which OTHER slots a setting call pulls into its echo. Strict test (S233
+# design): B is related to A only if setting A changes how B behaves or how
+# B's value should be read. Exactly one pair qualifies --
+# missing.convention and udm.convention.codes, because the codes are the
+# Stata-tag -> SPSS-code mapping set and are dormant off "spss", so the
+# convention is what tells you how to read them. data.dir, corr.layout and
+# missing.detail are singletons and are absent from the map entirely
+# (missing.detail is a display tier, not convention-coupled).
+#
+# Only a slot actually WRITTEN pulls its partner. A named-NULL leave-alone
+# call echoes the slot's own current value but changes nothing, so nothing
+# has changed about how its partner should be read.
+
+#' @keywords internal
+.jst_options_related <- list(
+  missing.convention   = "udm.convention.codes",
+  udm.convention.codes = "missing.convention"
+)
+
+
 # -- Internal: print current joptions() status --------------------------------
 #
 # Reads slot values from options() with fallback to .jst_options_defaults
 # and prints the Options Settings panel. Called at the end of every
 # joptions() call (including reset).
+#
+# slots = NULL (the default) prints the FULL five-slot panel: the shape a
+# bare joptions() status query wants, and the shape the joptions(NULL) reset
+# wants because everything changed. A character vector of slot names instead
+# prints a PARTIAL panel -- the same red title, only the named lines, then
+# one trailing pointer at the full panel (S233: a setting call echoes what
+# it touched, not the standing state). Canonical panel order and
+# de-duplication are enforced here rather than at the call site, so callers
+# may pass an unordered set with repeats; unrecognized names are ignored.
 
 #' @keywords internal
-.jst_options_status <- function() {
+.jst_options_status <- function(slots = NULL) {
   mc <- getOption(".jst_options_missing_convention",
                   .jst_options_defaults$missing.convention)
   cc <- getOption(".jst_options_udm_convention_codes",
@@ -333,13 +364,35 @@ joutput <- function(level, effect.size = NULL,
     dd
   }
 
+  # Build every line first, named by slot, then subset. One construction
+  # path serves both shapes, so a partial panel cannot word a line
+  # differently from the full one; the vector's own order IS the canonical
+  # panel order.
+  panel_lines <- c(
+    missing.convention   = paste0(
+      "User-defined missing values (UDMs) convention: ", mc_label, "\n"),
+    udm.convention.codes = paste0(
+      "UDM convention codes: ", paste(cc, collapse = ", "), "\n"),
+    data.dir             = paste0("Data folder: ", dd_label, "\n"),
+    corr.layout          = paste0("Correlation layout: ", cl, "\n"),
+    missing.detail       = paste0("Missing-value detail: ", md, "\n")
+  )
+
+  partial <- !is.null(slots)
+  if (partial) {
+    # Select BY the canonical vector, not by the caller's vector: order and
+    # duplicates in `slots` cannot reach the output.
+    panel_lines <- panel_lines[names(panel_lines) %in% slots]
+  }
+
   .cat_red("Options Settings\n")
-  cat("User-defined missing values (UDMs) convention: ", mc_label,
-      "\n", sep = "")
-  cat("UDM convention codes: ", paste(cc, collapse = ", "), "\n", sep = "")
-  cat("Data folder: ", dd_label, "\n", sep = "")
-  cat("Correlation layout: ", cl, "\n", sep = "")
-  cat("Missing-value detail: ", md, "\n", sep = "")
+  cat(panel_lines, sep = "")
+  # The pointer emits from here rather than from joptions()'s tail so the
+  # truncation and its explanation cannot drift apart. It CLOSES the panel
+  # rather than trailing the whole emission: it explains the lines directly
+  # above it, and closing here leaves the last line on screen for the
+  # environment-scan notice's remedy whenever that fires.
+  if (partial) cat("Run joptions() to see all settings.\n")
   cat("\n")
 }
 
@@ -509,13 +562,19 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @section Call patterns:
 #' \describe{
-#'   \item{\code{joptions()}}{Print the current settings panel.}
+#'   \item{\code{joptions()}}{Print the full settings panel.}
 #'   \item{\code{joptions(NULL)}}{Reset all slots to defaults, then print
-#'     the panel.}
-#'   \item{\code{joptions(slot = value, ...)}}{Set one or more slots,
-#'     then print the panel. Passing \code{slot = NULL} as a named
+#'     the full panel -- everything changed.}
+#'   \item{\code{joptions(slot = value, ...)}}{Set one or more slots, then
+#'     echo only what the call touched: the slots named, plus
+#'     \code{udm.convention.codes} whenever \code{missing.convention} is
+#'     set and vice versa (the codes are read in light of the convention),
+#'     closed by a pointer to \code{joptions()} for the full panel. The
+#'     other three slots are independent and are not pulled in.
+#'     Passing \code{slot = NULL} as a named
 #'     argument leaves that slot at its current value -- useful for
-#'     setting one slot without touching another. To reset a single
+#'     setting one slot without touching another -- and echoes that
+#'     unchanged value back. To reset a single
 #'     slot to its default, pass the default value explicitly (e.g.
 #'     \code{joptions(missing.convention = "none")}). Because
 #'     \code{data.dir}'s default is \code{NULL} -- which already means
@@ -545,17 +604,19 @@ joutput <- function(level, effect.size = NULL,
 #'   \code{"all"}, or \code{NULL}. See Slots.
 #'
 #' @return Invisibly returns \code{NULL}. Called for the side effect of
-#'   updating session options and printing the status panel.
+#'   updating session options and printing the settings panel -- in full
+#'   for a status query or a reset, or as an echo of the slots a setting
+#'   call touched.
 #'
 #' @examples
 #' joptions()                                        # show current settings
 #'
-#' # Setting a convention prints the panel, then scans the workspace and
-#' # notes any data frames whose UDM convention differs (see the
-#' # Environment-scan notice section):
-#' joptions(missing.convention = "spss")             # set, panel, scan notice
+#' # Setting a convention echoes the convention and its codes, then scans
+#' # the workspace and notes any data frames whose UDM convention differs
+#' # (see the Environment-scan notice section):
+#' joptions(missing.convention = "spss")             # set, echo, scan notice
 #' joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
-#' joptions(udm.convention.codes = c(-99, -98))      # set, panel, no scan
+#' joptions(udm.convention.codes = c(-99, -98))      # set, echo, no scan
 #' joptions(data.dir = "Data")                       # set save/load folder
 #' joptions(missing.convention = "stata",
 #'          udm.convention.codes = c(-99, -98, -97)) # set both
@@ -568,8 +629,9 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, joptions() applies the
-#'   change silently, suppressing both the status panel and the convention
-#'   nudge. A bare joptions() status query always prints regardless of quiet.
+#'   change silently, suppressing the settings echo, its pointer, and the
+#'   convention nudge alike. A bare joptions() status query always prints
+#'   regardless of quiet.
 joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
                      data.dir = NULL, corr.layout = NULL,
                      missing.detail = NULL, quiet = FALSE) {
@@ -676,12 +738,18 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
 
   # Write -- only supplied non-NULL args; NULL means "leave alone"
   trigger_nudge <- FALSE
+  # Slots actually SET, accumulated as they are written rather than
+  # re-derived afterwards: the echo's map pull keys off this, and a
+  # re-derivation would have to restate every condition below.
+  written       <- character(0)
   if (mc_supplied && !is.null(missing.convention)) {
     options(.jst_options_missing_convention = missing.convention)
+    written <- c(written, "missing.convention")
     if (missing.convention %in% c("spss", "stata", "sas")) trigger_nudge <- TRUE
   }
   if (cc_supplied && !is.null(udm.convention.codes)) {
     options(.jst_options_udm_convention_codes = udm.convention.codes)
+    written <- c(written, "udm.convention.codes")
   }
   if (dd_supplied && !is.null(data.dir)) {
     # "" (empty or whitespace-only) clears the slot back to its NULL
@@ -693,18 +761,41 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
       options(.jst_options_data_dir = data.dir)
       .jst_data_dir_case_warning(data.dir)
     }
+    written <- c(written, "data.dir")
   }
   if (cl_supplied && !is.null(corr.layout)) {
     options(.jst_options_corr_layout = corr.layout)
+    written <- c(written, "corr.layout")
   }
   if (md_supplied && !is.null(missing.detail)) {
     options(.jst_options_missing_detail = missing.detail)
+    written <- c(written, "missing.detail")
   }
 
-  # Status panel, then nudge (per Session 28 Item 1 decision). quiet = TRUE
-  # silences both -- a quiet call is fully quiet.
+  # Partial panel, then nudge. S233 revisit of the Session 28 Item 1
+  # full-panel-on-every-call decision: a setting call now echoes only what
+  # it touched, so the change is visible against the standing state instead
+  # of buried in it. The echo names every slot the call SUPPLIED --
+  # including a named-NULL leave-alone, which echoes its current value back
+  # under the no-change-detection principle -- plus the map partner of
+  # every slot actually WRITTEN. .jst_options_status() imposes canonical
+  # order and drops duplicates, so this set may be unordered.
+  #
+  # Ordering consequence, and the point of the change: with the echo down
+  # to one or two lines, the nudge lands directly beneath the setting that
+  # triggered it rather than five lines below it.
+  #
+  # quiet = TRUE silences panel, pointer and nudge alike -- a quiet call is
+  # fully quiet.
   if (!quiet) {
-    .jst_options_status()
+    supplied <- c(if (mc_supplied) "missing.convention",
+                  if (cc_supplied) "udm.convention.codes",
+                  if (dd_supplied) "data.dir",
+                  if (cl_supplied) "corr.layout",
+                  if (md_supplied) "missing.detail")
+    .jst_options_status(c(supplied,
+                          unlist(.jst_options_related[written],
+                                 use.names = FALSE)))
     if (trigger_nudge) .jst_options_nudge(missing.convention)
   }
 
