@@ -61,7 +61,7 @@ available.packages(repos = "https://jma61.r-universe.dev", type = "source")["jst
 
 
 devtools::load_all() ### To test the loading of the functions for parse errors - called again by document()
-heldevtools::document()  # regenerates the .Rd help files and NAMESPACE from roxygen2 comments
+devtools::document()  # regenerates the .Rd help files and NAMESPACE from roxygen2 comments
 # full CRAN-style check; you may see Quarto-related noise in the verbose output (Windows tooling quirk) —
 # it does not show up in the final 0/0/0 tally and is not a real error
 devtools::check()

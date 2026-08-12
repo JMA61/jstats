@@ -131,6 +131,22 @@
 #' Detected values are reported but not changed. Use \code{\link{jrecode}}
 #' to convert them to \code{NA} if needed.
 #'
+#' \strong{Package example datasets and .rda / .RData files:}
+#' \code{jload()} opens the example datasets shipped with jstats --
+#' currently \code{community} and \code{clinic} -- by bare name:
+#' \code{jload("community")}. These ship inside the package as .rda
+#' files, but the bare-name load is a lookup of the shipped dataset,
+#' not a file read, and it works only for package datasets. It does
+#' not extend to .rda or .RData files generally: naming the extension
+#' (\code{jload("community.rda")}) or pointing at any other .rda or
+#' .RData file is refused with a pointer to base R's \code{load()},
+#' because such files can hold several objects under names of their
+#' own choosing, outside jload's one-data-frame contract. Note also
+#' that the shipped dataset is a fallback: a file with a matching name
+#' in the working directory or data.dir folder is opened instead of
+#' the shipped copy. Use \code{package = TRUE} to force the shipped
+#' dataset.
+#'
 #' @examples
 #' \dontrun{
 #' # SPSS
@@ -267,6 +283,23 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         from_package <- TRUE
         df <- pkg_df
       } else {
+        # Nothing loadable, and no shipped dataset of this name. Before
+        # reporting a bare not-found, check whether an .RData-family file is
+        # sitting there under this stem: the file the user meant plainly
+        # exists, and "no file found" would send them looking for a typo.
+        # Same redirect as the typed-extension path above.
+        rdata_hit <- .jst_search_no_extension(file, has_dir,
+                                              exts = c("rdata", "rda"))
+        if (length(rdata_hit) > 0) {
+          shown <- sub("^\\./", "", rdata_hit[1])
+          .jst_stop(
+            "No file found matching '", file, "' with any supported ",
+            "extension.\n",
+            shown, " is an .RData file, which jstats does not load.\n",
+            "Load it with base R:\n",
+            "  load(\"", shown, "\")"
+          )
+        }
         search_dirs <- if (has_dir) character(0) else .jst_get_search_dirs()
         .jst_stop(
           "No file found matching '", file, "' with any supported extension ",
@@ -1522,10 +1555,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 }
 
 #' Internal: search for a file without extension across supported formats
+#'
+#' @param basename_no_ext The stem to search for (no extension).
+#' @param has_dir Logical. Does the stem carry a directory component?
+#' @param exts Character vector of extensions to try, without the dot.
+#'   Defaults to the eight loadable formats. jload also calls this with
+#'   \code{c("rdata", "rda")} to detect an .RData file sitting where a
+#'   loadable one was expected, so the two searches share one set of
+#'   directory rules.
 #' @keywords internal
-.jst_search_no_extension <- function(basename_no_ext, has_dir) {
+.jst_search_no_extension <- function(basename_no_ext, has_dir,
+                                     exts = c("sav", "dta", "csv", "rds",
+                                              "sas7bdat", "xpt", "xlsx",
+                                              "xls")) {
 
-  search_ext <- c("sav", "dta", "csv", "rds", "sas7bdat", "xpt", "xlsx", "xls")
+  search_ext <- exts
   found <- character(0)
 
   if (has_dir) {

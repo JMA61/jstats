@@ -3128,12 +3128,11 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 #'
 #' \code{jconvert()} provides a single entry point for changing how user-
 #' defined missing values (UDMs) are represented on the columns of a data
-#' frame already in memory. Three target formats are supported: SPSS-style
+#' frame already in memory. Four target formats are supported: SPSS-style
 #' (\code{na_values} on \code{haven_labelled_spss}), Stata-style
-#' (\code{tagged_na} on \code{haven_labelled}), and base R (declarations
-#' stripped, declared cells converted to plain \code{NA}). Replaces
-#' \code{jstrip_udm()} (retired in v0.9.5); the base R target is the strip
-#' behavior.
+#' (lowercase \code{tagged_na} on \code{haven_labelled}), SAS-style
+#' (uppercase \code{tagged_na} on \code{haven_labelled}), and base R
+#' (declarations stripped, declared cells converted to plain \code{NA}).
 #'
 #' @param data A data frame, or omitted to use the \code{juse()} default.
 #' @param to One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or

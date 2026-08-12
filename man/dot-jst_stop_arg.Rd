@@ -9,13 +9,16 @@
 \arguments{
 \item{fn}{The user-facing function name, without parentheses (e.g. "jcorr").}
 
-\item{arg}{The offending argument's name (e.g. "method").}
+\item{arg}{The offending argument's name (e.g. "method"); backticked
+automatically when choices is supplied.}
 
 \item{requirement}{A string completing "\if{html}{\out{<arg>}} must be ..."; include the
 trailing period. Ignored when choices is supplied.}
 
-\item{choices}{Optional character vector of allowed values; renders as a
-double-quoted comma-separated list introduced by "one of:".}
+\item{choices}{Optional character vector of allowed values; renders in the
+Rule A choice-error house form -- a double-quoted natural list, "or"
+before the last element, Oxford comma at three or more, and no "one of:"
+lead-in.}
 }
 \value{
 Never returns; always signals an error.
@@ -27,6 +30,7 @@ The fn prefix names the user-facing function so the message identifies its
 origin even though the package signals errors with call. = FALSE (which
 suppresses R's automatic call context). Supply either a freeform
 requirement string, or a character vector of allowed values via choices to
-get a standardized "one of:" enumeration with consistent double-quoting.
+get the standardized choice-error enumeration with consistent
+double-quoting.
 }
 \keyword{internal}

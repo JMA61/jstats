@@ -159,6 +159,22 @@ data and extreme outlier values (5x the range of other values).
 }
 Detected values are reported but not changed. Use \code{\link{jrecode}}
 to convert them to \code{NA} if needed.
+
+\strong{Package example datasets and .rda / .RData files:}
+\code{jload()} opens the example datasets shipped with jstats --
+currently \code{community} and \code{clinic} -- by bare name:
+\code{jload("community")}. These ship inside the package as .rda
+files, but the bare-name load is a lookup of the shipped dataset,
+not a file read, and it works only for package datasets. It does
+not extend to .rda or .RData files generally: naming the extension
+(\code{jload("community.rda")}) or pointing at any other .rda or
+.RData file is refused with a pointer to base R's \code{load()},
+because such files can hold several objects under names of their
+own choosing, outside jload's one-data-frame contract. Note also
+that the shipped dataset is a fallback: a file with a matching name
+in the working directory or data.dir folder is opened instead of
+the shipped copy. Use \code{package = TRUE} to force the shipped
+dataset.
 }
 \examples{
 \dontrun{

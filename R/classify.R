@@ -668,14 +668,18 @@
 #' origin even though the package signals errors with call. = FALSE (which
 #' suppresses R's automatic call context). Supply either a freeform
 #' requirement string, or a character vector of allowed values via choices to
-#' get a standardized "one of:" enumeration with consistent double-quoting.
+#' get the standardized choice-error enumeration with consistent
+#' double-quoting.
 #'
 #' @param fn The user-facing function name, without parentheses (e.g. "jcorr").
-#' @param arg The offending argument's name (e.g. "method").
+#' @param arg The offending argument's name (e.g. "method"); backticked
+#'   automatically when choices is supplied.
 #' @param requirement A string completing "<arg> must be ..."; include the
 #'   trailing period. Ignored when choices is supplied.
-#' @param choices Optional character vector of allowed values; renders as a
-#'   double-quoted comma-separated list introduced by "one of:".
+#' @param choices Optional character vector of allowed values; renders in the
+#'   Rule A choice-error house form -- a double-quoted natural list, "or"
+#'   before the last element, Oxford comma at three or more, and no "one of:"
+#'   lead-in.
 #' @return Never returns; always signals an error.
 #' @keywords internal
 .jst_stop_arg <- function(fn = NULL, arg, requirement = NULL, choices = NULL) {

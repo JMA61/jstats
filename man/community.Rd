@@ -5,7 +5,7 @@
 \alias{community}
 \title{Community survey example dataset}
 \format{
-A data frame with 100 rows and 15 variables:
+A data frame with 103 rows and 15 variables:
 \describe{
 \item{RespondentID}{Respondent ID, character ("R001", "R002", ...).}
 \item{Income}{Annual income (USD). Carries SPSS-style missing values

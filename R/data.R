@@ -14,7 +14,7 @@
 #' value labels, and an imperfect scale -- the material the data-cleaning
 #' workflow operates on -- see \code{\link{clinic}}.
 #'
-#' @format A data frame with 100 rows and 15 variables:
+#' @format A data frame with 103 rows and 15 variables:
 #' \describe{
 #'   \item{RespondentID}{Respondent ID, character ("R001", "R002", ...).}
 #'   \item{Income}{Annual income (USD). Carries SPSS-style missing values

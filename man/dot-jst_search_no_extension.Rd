@@ -4,7 +4,22 @@
 \alias{.jst_search_no_extension}
 \title{Internal: search for a file without extension across supported formats}
 \usage{
-.jst_search_no_extension(basename_no_ext, has_dir)
+.jst_search_no_extension(
+  basename_no_ext,
+  has_dir,
+  exts = c("sav", "dta", "csv", "rds", "sas7bdat", "xpt", "xlsx", "xls")
+)
+}
+\arguments{
+\item{basename_no_ext}{The stem to search for (no extension).}
+
+\item{has_dir}{Logical. Does the stem carry a directory component?}
+
+\item{exts}{Character vector of extensions to try, without the dot.
+Defaults to the eight loadable formats. jload also calls this with
+\code{c("rdata", "rda")} to detect an .RData file sitting where a
+loadable one was expected, so the two searches share one set of
+directory rules.}
 }
 \description{
 Internal: search for a file without extension across supported formats
