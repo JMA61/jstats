@@ -1475,7 +1475,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     out <- paste0(out, "\n", paste(tail_lines, collapse = "\n"))
   }
   if (length(note_lines) > 0L) {
-    out <- paste0(out, "\n\n", paste(note_lines, collapse = "\n"))
+    out <- paste0(out, "\n", paste(note_lines, collapse = "\n"))
   }
   out
 }

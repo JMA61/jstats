@@ -1874,35 +1874,11 @@
                  else_tag = NULL, else_explicit = FALSE,
                  na_rule = NULL)
 
-  # Helper: parse an RHS token. Returns list(new_val = numeric,
-  # tagged = NULL | letter) or NULL if the token is not recognized
-  # (caller then falls through to the existing numeric-error path).
-  parse_rhs_token <- function(rhs_str, rule_str) {
-    rhs_lower <- tolower(trimws(rhs_str))
-
-    # System-NA aliases.
-    if (rhs_lower %in% c("na", "sysmis", "system")) {
-      return(list(new_val = NA_real_, tagged = NULL))
-    }
-
-    # Stata-style missing-value token: .a through .z.
-    if (grepl("^\\.[a-z]$", rhs_lower)) {
-      return(list(new_val = NA_real_,
-                  tagged = substr(rhs_lower, 2L, 2L)))
-    }
-
-    # Malformed tagged-NA shapes: helpful error.
-    if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
-      stop(paste0(
-        "Invalid new value '", rhs_str, "' in map rule '", rule_str, "'. ",
-        "Stata-style missing-value tokens must be '.a' through '.z' ",
-        "(a single lowercase letter after the period). The NA(a) ",
-        "longhand is not supported in the map argument."
-      ), call. = FALSE)
-    }
-
-    NULL
-  }
+  # The RHS token reader was a local closure here until Session 237; it is
+  # now the shared .jst_parse_rhs_token(), so jrecode's numeric map and
+  # jencode's text map read their targets through ONE helper and a new
+  # target keyword is added in one place. Behavior unchanged -- the closure
+  # captured nothing from this frame.
 
   for (rule in rules) {
 
@@ -1963,7 +1939,7 @@
           "Name NA (or System / SYSMIS) in at most one rule."
         ), call. = FALSE)
       }
-      na_rhs <- parse_rhs_token(rhs, rule)
+      na_rhs <- .jst_parse_rhs_token(rhs, rule)
       if (is.null(na_rhs)) {
         na_val <- suppressWarnings(as.numeric(rhs))
         if (is.na(na_val)) {
@@ -1997,7 +1973,7 @@
     }
 
     # new value
-    rhs_parsed <- parse_rhs_token(rhs, rule)
+    rhs_parsed <- .jst_parse_rhs_token(rhs, rule)
 
     if (!is.null(rhs_parsed)) {
       new_val <- rhs_parsed$new_val
@@ -2163,4 +2139,380 @@
   }
 
   return(invisible(result))
+}
+
+
+#' Internal helper: parse a map rule's right-hand side
+#'
+#' The ONE shared right-hand-side token reader for the recode family:
+#' \code{.jst_parse_map()} (numeric old values, used by \code{jrecode()})
+#' and \code{.jst_parse_text_map()} (text old values, used by
+#' \code{jencode()}) both route their RHS through it, so a new target
+#' keyword is added in one place and both functions inherit it.
+#' Recognizes the system-NA aliases and Stata-style missing-value
+#' tokens, and raises a helpful error on malformed tagged-NA shapes.
+#' Returns \code{NULL} when the token is not a recognized keyword,
+#' leaving the caller to fall through to its own numeric-target path.
+#'
+#' Hoisted out of \code{.jst_parse_map()} unchanged (Session 237); it was
+#' a local closure capturing nothing from its enclosing frame, so both
+#' callers see identical behavior.
+#'
+#' @param rhs_str Character. The raw right-hand side of one rule.
+#' @param rule_str Character. The whole rule, quoted back in the error
+#'   message so the user can find it in the map string.
+#'
+#' @return A list with \code{new_val} (numeric; \code{NA_real_} for
+#'   system-NA and tagged-NA targets) and \code{tagged} (\code{NULL},
+#'   or a single lowercase letter), or \code{NULL} when the token is
+#'   not recognized.
+#'
+#' @keywords internal
+.jst_parse_rhs_token <- function(rhs_str, rule_str) {
+  rhs_lower <- tolower(trimws(rhs_str))
+
+  # System-NA aliases.
+  if (rhs_lower %in% c("na", "sysmis", "system")) {
+    return(list(new_val = NA_real_, tagged = NULL))
+  }
+
+  # Stata-style missing-value token: .a through .z.
+  if (grepl("^\\.[a-z]$", rhs_lower)) {
+    return(list(new_val = NA_real_,
+                tagged = substr(rhs_lower, 2L, 2L)))
+  }
+
+  # ======================= SEAM: THE "missing" TOKEN =======================
+  # Session C's convention-resolved missing token branches HERE, and only
+  # here. Design-locked S236: "missing" (case-insensitive, RHS only) mints
+  # the resolved convention's missing form -- tagged .a under stata, .A
+  # under sas, udm.convention.codes[1] plus an auto-declaration on the
+  # result column under spss. The resolved convention is not visible from
+  # this helper, so the branch returns a marker that each caller resolves
+  # after its convention gate. Both jrecode and jencode inherit the token
+  # from this single point; do not add a second copy in a caller.
+  # =========================================================================
+
+  # Malformed tagged-NA shapes: helpful error.
+  if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
+    stop(paste0(
+      "Invalid new value '", rhs_str, "' in map rule '", rule_str, "'. ",
+      "Stata-style missing-value tokens must be '.a' through '.z' ",
+      "(a single lowercase letter after the period). The NA(a) ",
+      "longhand is not supported in the map argument."
+    ), call. = FALSE)
+  }
+
+  NULL
+}
+
+
+#' Internal helper: split a string on a separator, ignoring quoted spans
+#'
+#' Text maps let a word be quoted, and a quoted word may itself contain
+#' the characters the map syntax uses as separators
+#' (\code{"Refused; not asked"=9}). A plain \code{strsplit()} would cut
+#' inside the quotes, so the map string is walked character by character
+#' with the quote state tracked, and only unquoted separators split.
+#' Quote marks are left in place; \code{.jst_unquote_word()} strips them
+#' afterwards.
+#'
+#' @param x Character scalar to split.
+#' @param sep Character scalar. The single-character separator.
+#'
+#' @return Character vector of pieces, carrying an \code{unbalanced}
+#'   attribute that is \code{TRUE} when a quote was opened and never
+#'   closed.
+#'
+#' @keywords internal
+.jst_split_unquoted <- function(x, sep) {
+  chars      <- strsplit(x, "", fixed = TRUE)[[1]]
+  out        <- character(0)
+  cur        <- character(0)
+  quote_char <- ""
+
+  for (ch in chars) {
+    if (nzchar(quote_char)) {
+      cur <- c(cur, ch)
+      if (identical(ch, quote_char)) quote_char <- ""
+    } else if (identical(ch, "'") || identical(ch, "\"")) {
+      quote_char <- ch
+      cur        <- c(cur, ch)
+    } else if (identical(ch, sep)) {
+      out <- c(out, paste(cur, collapse = ""))
+      cur <- character(0)
+    } else {
+      cur <- c(cur, ch)
+    }
+  }
+  out <- c(out, paste(cur, collapse = ""))
+  attr(out, "unbalanced") <- nzchar(quote_char)
+  out
+}
+
+
+#' Internal helper: strip optional surrounding quotes from a map word
+#'
+#' Map words take optional quoting, required when the word contains a
+#' semicolon, an equals sign, or a comma. Quoting also makes a reserved
+#' word literal: bare \code{NA}, \code{else}, and \code{blank} are
+#' keywords, while \code{"NA"}, \code{'else'}, and \code{"blank"} are
+#' ordinary data words. The caller therefore needs to know not just the
+#' text but whether it arrived quoted. Outer whitespace is trimmed
+#' either way, matching the trim applied to the data side.
+#'
+#' @param s Character scalar. One raw left-hand-side piece.
+#'
+#' @return A list with \code{text} (the word, unquoted and trimmed) and
+#'   \code{quoted} (logical).
+#'
+#' @keywords internal
+.jst_unquote_word <- function(s) {
+  s <- trimws(s)
+  n <- nchar(s)
+  if (n >= 2L) {
+    first_ch <- substr(s, 1L, 1L)
+    last_ch  <- substr(s, n, n)
+    if ((identical(first_ch, "\"") && identical(last_ch, "\"")) ||
+        (identical(first_ch, "'")  && identical(last_ch, "'"))) {
+      return(list(text = trimws(substr(s, 2L, n - 1L)), quoted = TRUE))
+    }
+  }
+  list(text = s, quoted = FALSE)
+}
+
+
+#' Internal helper: parse a text-map string into a list of rules
+#'
+#' The text-aware sibling of \code{.jst_parse_map()}, used by
+#' \code{jencode()}. Parses a map string of the form
+#' \code{"Bail=1; Parole=2; Remand=3"} -- words on the left, numbers on
+#' the right -- and returns the SAME list shape \code{.jst_parse_map()}
+#' returns, with \code{old_vals} character rather than numeric, so the
+#' convention gate, the tag canonicalization, and the cross-convention
+#' echo-back consume one structure from either parser.
+#'
+#' Differences from the numeric parser, all of them consequences of the
+#' left-hand side being text:
+#' \itemize{
+#'   \item Splitting is quote-aware, so a quoted word may contain
+#'     \code{;}, \code{=}, or a comma.
+#'   \item Three reserved unquoted left-hand words: \code{NA} (with its
+#'     \code{System} / \code{SYSMIS} aliases) names plain-NA cells,
+#'     \code{else} opens the else clause, and \code{blank} names blank
+#'     cells. Quoting any of them makes it a literal data word.
+#'   \item \code{blank} canonicalizes to the empty string, the form a
+#'     blank cell takes once outer whitespace is trimmed, so a blank
+#'     rule is an ordinary mapping and needs no separate component. A
+#'     quoted empty string is accepted as a quiet synonym. At most one
+#'     blank rule is allowed.
+#'   \item An else-only map is legal (\code{map = "else=NA"} is the
+#'     one-line repair for a column of numbers stored as text mixed
+#'     with words); the numeric parser refuses one.
+#' }
+#'
+#' @param map_str Character string giving the encoding map, e.g.
+#'   \code{"Bail=1; Parole=2; Remand=3; else=NA"}.
+#'
+#' @return Invisibly, a list with components:
+#'   \describe{
+#'     \item{mappings}{List of lists; each inner list has
+#'       \code{old_vals} (character vector; the empty string for the
+#'       blank rule), \code{new_val} (single numeric; \code{NA_real_}
+#'       for system-NA and tagged-NA rules), and \code{tagged} (NULL,
+#'       or a single lowercase letter).}
+#'     \item{else_action}{Character: \code{"na"}, \code{"copy"}, or
+#'       \code{"tagged"}.}
+#'     \item{else_tag}{NULL, or a single lowercase letter when
+#'       \code{else_action} is \code{"tagged"}.}
+#'     \item{else_explicit}{Logical: TRUE if the user wrote an explicit
+#'       else clause.}
+#'     \item{na_rule}{NULL, or a list with \code{new_val} and
+#'       \code{tagged}, populated by the NA / System / SYSMIS aliases.}
+#'   }
+#'
+#' @keywords internal
+.jst_parse_text_map <- function(map_str) {
+
+  rules <- .jst_split_unquoted(map_str, ";")
+  if (isTRUE(attr(rules, "unbalanced"))) {
+    stop(paste0(
+      "Unbalanced quotation mark in the map argument. A quoted word must ",
+      "open and close with the same mark, as in \"Not stated\"=9."
+    ), call. = FALSE)
+  }
+  rules <- trimws(as.character(rules))
+  rules <- rules[nchar(rules) > 0]
+
+  if (length(rules) == 0) {
+    stop("The map argument is empty. Provide at least one rule, e.g. map = \"Bail=1; Parole=2\".", call. = FALSE)
+  }
+
+  result <- list(mappings = list(), else_action = "na",
+                 else_tag = NULL, else_explicit = FALSE,
+                 na_rule = NULL)
+
+  blank_seen <- FALSE
+
+  for (rule in rules) {
+
+    parts <- as.character(.jst_split_unquoted(rule, "="))
+    if (length(parts) < 2L) {
+      stop(paste0(
+        "Invalid rule '", rule, "' in map argument: each rule must contain '=', ",
+        "e.g. 'Bail=1' or 'Bail,Remand=1'."
+      ), call. = FALSE)
+    }
+    # Split on the FIRST unquoted equals sign; anything after it rejoins,
+    # so an unquoted equals sign inside the target is reported by the
+    # RHS check rather than silently truncated.
+    lhs <- trimws(parts[1L])
+    rhs <- trimws(paste(parts[-1L], collapse = "="))
+
+    # --- else clause (reserved; recognized unquoted only) -------------------
+    lhs_word <- .jst_unquote_word(lhs)
+    if (!lhs_word$quoted && identical(tolower(lhs_word$text), "else")) {
+      rhs_lower <- tolower(rhs)
+      if (rhs_lower %in% c("na", "sysmis", "system")) {
+        result$else_action   <- "na"
+        result$else_tag      <- NULL
+        result$else_explicit <- TRUE
+      } else if (rhs_lower == "copy") {
+        result$else_action   <- "copy"
+        result$else_tag      <- NULL
+        result$else_explicit <- TRUE
+      } else if (grepl("^\\.[a-z]$", rhs_lower)) {
+        result$else_action   <- "tagged"
+        result$else_tag      <- substr(rhs_lower, 2L, 2L)
+        result$else_explicit <- TRUE
+      } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
+        stop(paste0(
+          "Invalid else action '", rhs, "' in map argument. ",
+          "Stata-style missing-value tokens must be '.a' through '.z' ",
+          "(a single lowercase letter after the period). The NA(a) ",
+          "longhand is not supported in the map argument."
+        ), call. = FALSE)
+      } else {
+        stop(paste0(
+          "Invalid else action '", rhs, "' in map argument. Use ",
+          "'else=NA', 'else=copy', or a Stata-style missing-value token ",
+          "such as 'else=.a' (Stata convention only)."
+        ), call. = FALSE)
+      }
+      next
+    }
+
+    # --- old words (may be comma-separated) ---------------------------------
+    old_pieces <- as.character(.jst_split_unquoted(lhs, ","))
+    old_words  <- lapply(old_pieces, .jst_unquote_word)
+
+    is_na_alias <- vapply(old_words, function(w) {
+      !w$quoted && tolower(w$text) %in% c("na", "sysmis", "system")
+    }, logical(1))
+
+    if (any(is_na_alias)) {
+      if (!is.null(result$na_rule)) {
+        stop(paste0(
+          "NA appears as an old value in more than one map rule. ",
+          "Name NA (or System / SYSMIS) in at most one rule."
+        ), call. = FALSE)
+      }
+      na_rhs <- .jst_parse_rhs_token(rhs, rule)
+      if (is.null(na_rhs)) {
+        na_val <- suppressWarnings(as.numeric(rhs))
+        if (is.na(na_val)) {
+          stop(.jst_text_map_rhs_error(rhs, rule), call. = FALSE)
+        }
+        na_rhs <- list(new_val = na_val, tagged = NULL)
+      }
+      result$na_rule <- na_rhs
+      old_words <- old_words[!is_na_alias]
+      if (length(old_words) == 0) next
+    }
+
+    # The taught blank token and its quiet quoted-empty-string synonym both
+    # canonicalize to "", the form a blank cell takes after the outer-space
+    # trim -- so the blank rule needs no separate structure.
+    old_vals <- vapply(old_words, function(w) {
+      if (!w$quoted && identical(tolower(w$text), "blank")) return("")
+      w$text
+    }, character(1))
+
+    bare_empty <- vapply(old_words, function(w) {
+      !w$quoted && !nzchar(w$text)
+    }, logical(1))
+    if (any(bare_empty)) {
+      stop(paste0(
+        "Empty word on the left of '=' in map rule '", rule, "'. ",
+        "Name a word, or use blank for blank cells."
+      ), call. = FALSE)
+    }
+
+    if (any(!nzchar(old_vals))) {
+      if (blank_seen) {
+        stop(paste0(
+          "Blank cells appear as an old value in more than one map rule. ",
+          "Name blank in at most one rule."
+        ), call. = FALSE)
+      }
+      blank_seen <- TRUE
+    }
+
+    # --- new value ----------------------------------------------------------
+    rhs_parsed <- .jst_parse_rhs_token(rhs, rule)
+
+    if (!is.null(rhs_parsed)) {
+      new_val <- rhs_parsed$new_val
+      tagged  <- rhs_parsed$tagged
+    } else {
+      tagged  <- NULL
+      new_val <- suppressWarnings(as.numeric(rhs))
+      if (is.na(new_val)) {
+        stop(.jst_text_map_rhs_error(rhs, rule), call. = FALSE)
+      }
+    }
+
+    result$mappings[[length(result$mappings) + 1]] <- list(
+      old_vals = old_vals,
+      new_val  = new_val,
+      tagged   = tagged
+    )
+  }
+
+  # An else-only map is legal here (unlike the numeric parser): it is the
+  # one-line repair for a column of numbers stored as text with a few words
+  # mixed in, offered by jencode()'s mixed-column error.
+  if (length(result$mappings) == 0 && is.null(result$na_rule) &&
+      !isTRUE(result$else_explicit)) {
+    stop("The map argument contains no valid rules.", call. = FALSE)
+  }
+
+  return(invisible(result))
+}
+
+
+#' Internal helper: text-map right-hand-side error text
+#'
+#' Shared by the two places \code{.jst_parse_text_map()} rejects a
+#' target, so the wording stays in one place. Detects the common
+#' commas-instead-of-semicolons slip first.
+#'
+#' @param rhs Character. The offending right-hand side.
+#' @param rule Character. The whole rule.
+#'
+#' @return Character scalar suitable for passing to \code{stop()}.
+#'
+#' @keywords internal
+.jst_text_map_rhs_error <- function(rhs, rule) {
+  if (grepl(",", rhs) && grepl("=", rhs)) {
+    return(paste0(
+      "It looks like commas were used to separate rules in the map string. ",
+      "Use semicolons instead, e.g. map = \"Bail=1; Parole=2; Remand=3\"."
+    ))
+  }
+  paste0(
+    "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
+    "New values must be numeric, a system-NA alias (NA, System, ",
+    "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
+  )
 }

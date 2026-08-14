@@ -4,7 +4,14 @@
 \alias{.jst_jrecode_convention_error}
 \title{Internal helper: build jrecode's cross-convention error message}
 \usage{
-.jst_jrecode_convention_error(parsed_map, parsed_labels, data_name, orig_name)
+.jst_jrecode_convention_error(
+  parsed_map,
+  parsed_labels,
+  data_name,
+  orig_name,
+  fn_name = "jrecode",
+  lhs_render = NULL
+)
 }
 \arguments{
 \item{parsed_map}{List returned by \code{.jst_parse_map()}.}
@@ -17,6 +24,17 @@ was supplied.}
 call (used to reconstruct the example).}
 
 \item{orig_name}{Character. Name of the variable being recoded.}
+
+\item{fn_name}{Character. The user-facing function the echo-back
+should name. Defaults to \code{"jrecode"}; \code{jencode()}
+passes its own name. Parameterized rather than forked (S236 ruling
+6): a sibling copy of this helper would be some two hundred lines
+of drifting duplicate.}
+
+\item{lhs_render}{Optional function taking one rule's
+\code{old_vals} and returning the rendered left-hand side. Default
+\code{NULL} uses the numeric rendering, so jrecode's output is
+unchanged; jencode passes a word renderer.}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.

@@ -234,12 +234,23 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' @param data_name Character. Name of the data frame in the user's
 #'   call (used to reconstruct the example).
 #' @param orig_name Character. Name of the variable being recoded.
+#' @param fn_name Character. The user-facing function the echo-back
+#'   should name. Defaults to \code{"jrecode"}; \code{jencode()}
+#'   passes its own name. Parameterized rather than forked (S236 ruling
+#'   6): a sibling copy of this helper would be some two hundred lines
+#'   of drifting duplicate.
+#' @param lhs_render Optional function taking one rule's
+#'   \code{old_vals} and returning the rendered left-hand side. Default
+#'   \code{NULL} uses the numeric rendering, so jrecode's output is
+#'   unchanged; jencode passes a word renderer.
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
 .jst_jrecode_convention_error <- function(parsed_map, parsed_labels,
-                                          data_name, orig_name) {
+                                          data_name, orig_name,
+                                          fn_name    = "jrecode",
+                                          lhs_render = NULL) {
 
   # --- Gather every tagged-NA letter that appeared --------------------------
   map_tags <- unlist(lapply(parsed_map$mappings, function(r) r$tagged))
@@ -296,8 +307,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   rebuilt_map_parts <- character(0)
   for (rule in parsed_map$mappings) {
-    lhs <- paste(vapply(rule$old_vals, format_num, character(1)),
-                 collapse = ",")
+    lhs <- if (is.null(lhs_render)) {
+      paste(vapply(rule$old_vals, format_num, character(1)),
+            collapse = ",")
+    } else {
+      lhs_render(rule$old_vals)
+    }
     if (!is.null(rule$tagged)) {
       code <- letter_to_code[rule$tagged]
       rhs  <- if (is.na(code)) paste0(".", rule$tagged) else format_num(code)
@@ -358,7 +373,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # closes the S223 echo-back recipe defect: the earlier form had no
   # assignment and aimed the declaration at the original column.)
   new_name    <- paste0(orig_name, "R")
-  call_prefix <- paste0("    ", data_name, "$", new_name, " <- jrecode(")
+  call_prefix <- paste0("    ", data_name, "$", new_name, " <- ",
+                        fn_name, "(")
   jrecode_line <- paste0(call_prefix, data_name, ", ", orig_name,
                          ", map = \"", rebuilt_map, "\"")
   if (!is.null(rebuilt_labels)) {
@@ -1572,6 +1588,827 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   }
 
   return(invisible(result))
+}
+
+
+
+# -- jencode ------------------------------------------------------------------
+#
+# NO ROXYGEN AND NO @export IN THIS BUILD (S236 ruling 1). jencode() ships
+# UNEXPORTED from the core build so the pkgdown reference-index hard-fail
+# ("all topics must be included in the reference index", which R CMD check
+# does not catch) cannot be tripped between this session and the completion
+# session that adds the roxygen, the export, and BOTH hand-curated reference
+# lists (_pkgdown.yml and the guides' reference.qmd) together. Interim
+# testing goes through jstats:::jencode().
+#
+# jencode() converts a text column ("Parole", "Bail", "Remand") to a
+# labelled-numeric column, with the original words carried across as the
+# value labels. Two modes: a supplied map picks the numbers (the required
+# route for ordered categories), an omitted map numbers the words
+# alphabetically. Numeric-looking text converts by FACE VALUE, never by
+# rank -- the one deliberate departure from the equivalent commercial-
+# software command. Design record: changelog S225 decisions (0)-(5) and
+# (7), S235 (e)/(f), S236 (b).
+
+
+#' Internal helper: render a numeric code without a trailing decimal
+#'
+#' Whole numbers render as integers (\code{-99}, not \code{-99.0}); other
+#' values fall through to \code{format()}. Used by \code{jencode()}'s
+#' message surface wherever a code value is shown to the user.
+#'
+#' @param x Numeric scalar.
+#'
+#' @return Character scalar.
+#'
+#' @keywords internal
+.jst_fmt_code <- function(x) {
+  if (is.na(x)) return("NA")
+  if (x == floor(x)) format(as.integer(x)) else format(x)
+}
+
+
+#' Internal helper: render words as a double-quoted comma list
+#'
+#' The house rendering for a list of data words in a runtime message.
+#' Double quotes make trailing and leading spaces visible, which is the
+#' whole point when the message is about words that did or did not match.
+#'
+#' @param x Character vector of words.
+#'
+#' @return Character scalar.
+#'
+#' @keywords internal
+.jst_quote_words <- function(x) {
+  paste0("\"", x, "\"", collapse = ", ")
+}
+
+
+#' Internal helper: render a vector as a natural "a, b, and c" list
+#'
+#' @param x Character vector.
+#'
+#' @return Character scalar; Oxford comma at three or more, plain "and"
+#'   at exactly two.
+#'
+#' @keywords internal
+.jst_and_list <- function(x) {
+  n <- length(x)
+  if (n == 0L) return("")
+  if (n == 1L) return(x)
+  if (n == 2L) return(paste0(x[1L], " and ", x[2L]))
+  paste0(paste(x[-n], collapse = ", "), ", and ", x[n])
+}
+
+
+#' Internal helper: pad a character vector to a common width
+#'
+#' Right-pads with spaces so a two-column listing lines up. Used by
+#' \code{jencode()}'s alphabetical-assignment note.
+#'
+#' @param x Character vector.
+#'
+#' @return Character vector, each element padded to the longest width.
+#'
+#' @keywords internal
+.jst_pad_right <- function(x) {
+  width <- max(nchar(x))
+  paste0(x, strrep(" ", width - nchar(x)))
+}
+
+
+#' Internal helper: render a runnable jencode() call for a remedy line
+#'
+#' Builds the prefilled, non-destructive jencode() call that
+#' \code{jencode()}'s notes offer as a remedy: Rule G's R-suffix target,
+#' the data name from the user's own call, and the map string filled in
+#' from the column's own words, so the line runs as pasted. The call is
+#' emitted on one line when it fits the 76-column message width, and
+#' otherwise breaks after the variable with the map string continuing
+#' under its own opening quote. Every continuation still parses, because
+#' \code{.jst_parse_text_map()} trims each rule.
+#'
+#' @param data_name Character. The data frame's name in the user's call.
+#' @param var_name Character. The variable being encoded.
+#' @param rules_text Character. The map string's contents, without the
+#'   surrounding quotes.
+#' @param indent Character. Leading indent for the first line.
+#'
+#' @return Character scalar; may contain newlines.
+#'
+#' @keywords internal
+.jst_jencode_map_call <- function(data_name, var_name, rules_text,
+                                  indent = "  ") {
+  new_name <- paste0(var_name, "R")
+  head_str <- paste0(indent, data_name, "$", new_name, " <- jencode(")
+  one_line <- paste0(head_str, data_name, ", ", var_name,
+                     ", map = \"", rules_text, "\")")
+  if (nchar(one_line) <= 76L) return(one_line)
+
+  cont      <- strrep(" ", nchar(head_str))
+  str_cont  <- strrep(" ", nchar(cont) + 6L)
+  line1     <- paste0(head_str, data_name, ", ", var_name, ",")
+
+  # Pack the rules across continuation lines, keeping each within the
+  # message width. The separator stays on the line it ends.
+  pieces  <- trimws(strsplit(rules_text, ";", fixed = TRUE)[[1]])
+  pieces  <- pieces[nzchar(pieces)]
+  lines   <- character(0)
+  current <- paste0(cont, "map = \"")
+  first   <- TRUE
+  for (i in seq_along(pieces)) {
+    sep      <- if (i < length(pieces)) ";" else ""
+    addition <- paste0(if (first) "" else " ", pieces[i], sep)
+    if (!first && nchar(current) + nchar(addition) > 76L) {
+      lines   <- c(lines, current)
+      current <- paste0(str_cont, pieces[i], sep)
+    } else {
+      current <- paste0(current, addition)
+    }
+    first <- FALSE
+  }
+  lines <- c(lines, paste0(current, "\")"))
+  paste(c(line1, lines), collapse = "\n")
+}
+
+
+jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
+
+  # --- Resolve first argument -----------------------------------------------
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = substitute(data),
+    data_missing  = missing(data),
+    fn_name       = "jencode",
+    envir         = parent.frame(),
+    accept_vector = FALSE
+  )
+
+  data           <- arg1$data
+  .jst_data_name <- arg1$name
+
+  # Determine variable name. If the user typed jencode(VarName, map = "...")
+  # -- data omitted, named map -- the helper captured VarName as
+  # first_arg_sub. Otherwise var is supplied positionally.
+  if (arg1$mode == "symbol_with_default") {
+    if (!missing(var)) {
+      displaced <- deparse(substitute(var))
+      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
+                "Use jencode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
+                fn = "jencode")
+    }
+    var_name <- deparse(arg1$first_arg_sub)
+  } else {
+    var_name <- deparse(substitute(var))
+  }
+
+  # --- Input checks ---------------------------------------------------------
+  if (!is.data.frame(data)) {
+    .jst_stop("The first argument must be a data frame.")
+  }
+  if (!var_name %in% names(data)) {
+    .jst_stop(paste0("Variable '", var_name, "' not found in '",
+                     .jst_data_name, "'."))
+  }
+  if (!is.null(map) && (!is.character(map) || length(map) != 1)) {
+    .jst_stop("The map argument must be a single quoted string, e.g. map = \"Bail=1; Parole=2\".")
+  }
+  if (!is.null(labels) && (!is.character(labels) || length(labels) != 1)) {
+    .jst_stop("The labels argument must be a single quoted string, e.g. labels = \"1=Bail; 2=Parole\".")
+  }
+
+  # Validate convention up front so an invalid value errors whether or not
+  # the map actually uses tagged-NA tokens (jrecode's rule, inherited).
+  if (!is.null(convention)) {
+    # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
+    if (is.character(convention) && length(convention) == 1L &&
+        !is.na(convention)) {
+      convention <- tolower(convention)
+    }
+    if (!is.character(convention) || length(convention) != 1L ||
+        !convention %in% c("spss", "stata", "sas")) {
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
+    }
+  }
+
+  orig <- data[[var_name]]
+
+  # --- Type guard -----------------------------------------------------------
+  # jencode() is the text counterpart of jrecode(): it encodes words, so
+  # everything jrecode() accepts is refused here, and the message points
+  # back at jrecode() where that is the right tool.
+  is_text <- is.character(orig) ||
+             (haven::is.labelled(orig) && typeof(orig) == "character")
+  if (!is_text) {
+    if (is.factor(orig)) {
+      .jst_stop("'", var_name, "' is a factor; only text variables can be ",
+                "encoded.\n",
+                "Convert it to text first with as.character().")
+    }
+    if (inherits(orig, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
+      .jst_stop("'", var_name, "' is a date/time variable; only text ",
+                "variables can be encoded.")
+    }
+    if (is.numeric(orig) || haven::is.labelled(orig)) {
+      .jst_stop("'", var_name, "' is a numeric variable; only text variables ",
+                "can be encoded.\n",
+                "To change numeric values, use jrecode().")
+    }
+    if (is.logical(orig)) {
+      .jst_stop("'", var_name, "' is a logical variable; only text variables ",
+                "can be encoded.")
+    }
+    .jst_stop("'", var_name, "' is of type ", typeof(orig),
+              " and cannot be encoded.")
+  }
+
+  # --- Words, blanks, and NA cells ------------------------------------------
+  # Three kinds of cell, kept distinct in every message: a WORD, a BLANK
+  # ("" or all spaces once outer whitespace is trimmed -- real data in the
+  # field, where blank often means No), and a plain NA. Outer whitespace is
+  # trimmed on both the data side and the map side before matching.
+  txt        <- as.character(unclass(orig))
+  na_mask    <- is.na(txt)
+  words      <- txt
+  words[!na_mask] <- trimws(txt[!na_mask])
+  blank_mask <- !na_mask & !nzchar(words)
+  word_mask  <- !na_mask & !blank_mask
+  n_blank    <- sum(blank_mask)
+
+  words_u <- unique(words[word_mask])
+  # "Alphabetical" = radix sort on the lowercased word, tie-broken by the
+  # word itself: deterministic across locales, and reads as alphabetical.
+  words_u <- words_u[order(tolower(words_u), words_u, method = "radix")]
+
+  new_num        <- rep(NA_real_, length(txt))
+  val_labels_out <- c()
+  msgs           <- character(0)   # emitted in order at the end
+
+  # =========================================================================
+  # AUTOMATIC MODE (map omitted)
+  # =========================================================================
+  if (is.null(map)) {
+
+    if (length(words_u) == 0) {
+      .jst_stop("'", var_name, "' contains no words to encode - every cell ",
+                "is blank or missing.")
+    }
+
+    # "Numeric-looking" = what as.numeric() accepts. "1,234" and "$5" are
+    # words; documented, extendable by explicit decision (S225 decision 4).
+    num_like <- !is.na(suppressWarnings(as.numeric(words_u)))
+
+    if (all(num_like)) {
+      # --- Numbers stored as text: face value, never renumbered ------------
+      vals <- as.numeric(words_u)
+      for (i in seq_along(words_u)) {
+        new_num[word_mask & words == words_u[i]] <- vals[i]
+      }
+      big <- which.max(vals)
+      msgs <- c(msgs, paste0(
+        "Note: every value in '", var_name, "' is a number stored as text; ",
+        "each was converted to its own value (\"", words_u[big], "\" -> ",
+        .jst_fmt_code(vals[big]), ", never renumbered).\n",
+        "No value labels were attached. To add labels, use jrelabel()."))
+      assigned_rules <- paste0(words_u, "=", vapply(vals, .jst_fmt_code,
+                                                    character(1)))
+
+      # The minted face values run the shipped looks-like-a-coded-missing
+      # heuristic, so a text "-99" comes out declared-nudged (S225 (4)).
+      msgs <- c(msgs, .jst_jencode_suspicious_note(new_num, var_name))
+
+    } else if (any(num_like)) {
+      # --- Mixed column: refuse, with the two real routes ------------------
+      word_only <- words_u[!num_like]
+      .jst_stop("'", var_name, "' mixes numbers stored as text with words: ",
+                .jst_quote_words(word_only), ".\n",
+                "The numbers convert to their own values, so the words cannot ",
+                "be numbered automatically.\n",
+                "Map the words (e.g. \"", word_only[length(word_only)],
+                "=-99\"), or set map = \"else=NA\" to convert them all to ",
+                "missing.")
+
+    } else {
+      # --- Alphabetical numbering ------------------------------------------
+      codes <- seq_along(words_u)
+      for (i in seq_along(words_u)) {
+        new_num[word_mask & words == words_u[i]] <- codes[i]
+      }
+      val_labels_out <- stats::setNames(as.numeric(codes), words_u)
+      assigned_rules <- paste0(words_u, "=", codes)
+
+      listing <- paste0("  ", .jst_pad_right(paste0("\"", words_u, "\"")),
+                        " -> ", codes)
+      msgs <- c(msgs, paste0(
+        "Note: '", var_name, "' was encoded alphabetically:\n",
+        paste(listing, collapse = "\n"), "\n",
+        "If these categories have a natural order (like Low/Medium/High), ",
+        "rerun with a map to choose the numbers:\n",
+        .jst_jencode_map_call(.jst_data_name, var_name,
+                              paste(assigned_rules, collapse = "; "))))
+    }
+
+    # Outer spaces removed before encoding: the stray spaces are still in
+    # the user's file, so this reports a fact about their data.
+    trim_mask <- word_mask & (txt != words)
+    if (any(trim_mask)) {
+      n_t    <- sum(trim_mask)
+      ex_raw <- txt[trim_mask][1]
+      msgs <- c(msgs, paste0(
+        "Note: ", n_t, " cell", if (n_t == 1L) "" else "s", " in '", var_name,
+        "' had outer spaces removed before encoding (e.g. \"", ex_raw,
+        "\" was read as \"", trimws(ex_raw), "\")."))
+    }
+
+    # Blanks go to plain NA in automatic mode -- no convention sensitivity.
+    if (n_blank > 0) {
+      msgs <- c(msgs, paste0(
+        "Note: ", n_blank, " blank cell", if (n_blank == 1L) "" else "s",
+        " in '", var_name, "' ", if (n_blank == 1L) "was" else "were",
+        " left missing (NA).\n",
+        "To give blank cells their own category, rerun with a map naming them:\n",
+        .jst_jencode_map_call(.jst_data_name, var_name,
+                              paste(c(assigned_rules, "blank=0"),
+                                    collapse = "; "))))
+    }
+
+  } else {
+
+    # =======================================================================
+    # MAP MODE
+    # =======================================================================
+    parsed_map <- tryCatch(
+      .jst_parse_text_map(map),
+      error = function(e) .jst_stop(paste0("Error in map argument: ",
+                                           conditionMessage(e)))
+    )
+
+    # else=copy is refused wholesale: words cannot live in a numeric column,
+    # so there is no partial case where copying makes sense.
+    if (identical(parsed_map$else_action, "copy")) {
+      .jst_stop("else=copy cannot be used here - words cannot be kept in a ",
+                "numeric column.\n",
+                "Add the remaining words to the map, or set else=NA to ",
+                "convert them to missing.")
+    }
+
+    parsed_labels <- NULL
+    if (!is.null(labels)) {
+      parsed_labels <- tryCatch(
+        .jst_parse_labels(labels),
+        error = function(e) .jst_stop(paste0("Error in labels argument: ",
+                                             conditionMessage(e)))
+      )
+    }
+
+    # --- Cross-convention validation (E11 gate, inherited exactly) ---------
+    resolved_convention <- NULL
+    map_has_tag <- any(!vapply(parsed_map$mappings,
+                               function(r) is.null(r$tagged), logical(1))) ||
+                   identical(parsed_map$else_action, "tagged") ||
+                   (!is.null(parsed_map$na_rule) &&
+                    !is.null(parsed_map$na_rule$tagged))
+    labels_has_tag <- if (!is.null(parsed_labels)) {
+      any(!is.na(haven::na_tag(parsed_labels)))
+    } else FALSE
+
+    if (map_has_tag || labels_has_tag) {
+      resolved_convention <- .jst_resolve_convention(convention)
+      if (identical(resolved_convention, "spss")) {
+        err_msg <- .jst_jrecode_convention_error(
+          parsed_map    = parsed_map,
+          parsed_labels = parsed_labels,
+          data_name     = .jst_data_name,
+          orig_name     = var_name,
+          fn_name       = "jencode",
+          lhs_render    = .jst_jencode_lhs_render
+        )
+        .jst_stop(err_msg)
+      }
+      # else: Stata or SAS convention -- tagged-NA tokens are valid.
+
+      # Canonicalize the parsed tag letters to the resolved convention's
+      # mint case (Decision 13). Done once, on the parsed structures, so
+      # every mint site and the label attachment inherit the same case;
+      # minting an uppercase cell against a lowercase label would silently
+      # fail to match. sas is handled from birth here (S237).
+      for (i in seq_along(parsed_map$mappings)) {
+        if (!is.null(parsed_map$mappings[[i]]$tagged)) {
+          parsed_map$mappings[[i]]$tagged <-
+            .jst_canonical_tag(parsed_map$mappings[[i]]$tagged,
+                               resolved_convention)
+        }
+      }
+      if (!is.null(parsed_map$else_tag)) {
+        parsed_map$else_tag <- .jst_canonical_tag(parsed_map$else_tag,
+                                                  resolved_convention)
+      }
+      if (!is.null(parsed_map$na_rule) &&
+          !is.null(parsed_map$na_rule$tagged)) {
+        parsed_map$na_rule$tagged <-
+          .jst_canonical_tag(parsed_map$na_rule$tagged, resolved_convention)
+      }
+      if (!is.null(parsed_labels)) {
+        label_tags <- haven::na_tag(parsed_labels)
+        tagged_idx <- which(!is.na(label_tags))
+        if (length(tagged_idx) > 0L) {
+          canon <- .jst_canonical_tag(label_tags[tagged_idx],
+                                      resolved_convention)
+          parsed_labels[tagged_idx] <- haven::tagged_na(canon)
+        }
+      }
+    }
+
+    # --- Match the data against the map ------------------------------------
+    map_words_all  <- unlist(lapply(parsed_map$mappings,
+                                    function(r) r$old_vals))
+    map_words_real <- unique(map_words_all[nzchar(map_words_all)])
+    blank_in_map   <- any(!nzchar(map_words_all))
+
+    absent <- setdiff(map_words_real, words_u)
+    if (length(absent) > 0) {
+      .jst_advisory_note(paste0(
+        "Note: '", var_name, "' contained none of the map words ",
+        .jst_quote_words(absent), " - nothing was encoded for them."))
+    }
+
+    # --- The one-line repair for a column of numbers stored as text --------
+    # S225 decision (4) says two things that pull apart once a map is in
+    # play: numeric-looking text converts by FACE VALUE and an else-only
+    # map is the "poisoned-column repair", but also that in map mode
+    # numeric-looking strings are ordinary matchable words. Read narrowly,
+    # both hold: an ELSE-ONLY map (no word rules at all) names no words, so
+    # it asks jencode to do the automatic thing and send whatever is left
+    # to the else clause -- numeric-looking text keeps its own value, real
+    # words route through else. That is exactly the case the mixed-column
+    # error names, and it is what makes its "set map = "else=NA" to convert
+    # them all to missing" remedy true rather than an all-NA column. As
+    # soon as the map names one word, the second sentence governs and a
+    # numeric-looking string is an ordinary word again.
+    repair_mode <- length(map_words_real) == 0 &&
+                   isTRUE(parsed_map$else_explicit)
+    face_words  <- character(0)
+    if (repair_mode) {
+      face_words <- words_u[!is.na(suppressWarnings(as.numeric(words_u)))]
+    }
+
+    unmapped <- setdiff(words_u, c(map_words_real, face_words))
+    unmapped <- unmapped[order(tolower(unmapped), unmapped, method = "radix")]
+    blank_unhandled <- n_blank > 0 && !blank_in_map
+
+    # Strict default: an unhandled word or blank is an error, not a silent
+    # NA. Two remedies, equal standing.
+    if (!parsed_map$else_explicit &&
+        (length(unmapped) > 0 || blank_unhandled)) {
+
+      blank_txt <- paste0(n_blank, " blank cell",
+                          if (n_blank == 1L) "" else "s")
+      word_txt  <- if (length(unmapped) == 1L) "a word" else "words"
+      lines <- if (length(unmapped) > 0 && blank_unhandled) {
+        paste0("'", var_name, "' contains ", word_txt, " not in the map: ",
+               .jst_quote_words(unmapped), ", plus ", blank_txt, ".")
+      } else if (length(unmapped) > 0) {
+        paste0("'", var_name, "' contains ", word_txt, " not in the map: ",
+               .jst_quote_words(unmapped), ".")
+      } else {
+        paste0("'", var_name, "' contains ", blank_txt, " that ",
+               if (n_blank == 1L) "is" else "are", " not in the map.")
+      }
+
+      # Near-miss diagnosis: name the case clash rather than leaving the
+      # user to spot it. Matching is case-sensitive by design.
+      for (w in unmapped) {
+        hit <- map_words_real[tolower(map_words_real) == tolower(w)]
+        if (length(hit) > 0) {
+          lines <- c(lines, paste0(
+            "\"", w, "\" differs from the map's \"", hit[1],
+            "\" only in capitalization - matching is case-sensitive."))
+        }
+      }
+      if (blank_unhandled) {
+        lines <- c(lines,
+          "Blank cells are named in the map by the word blank, as in blank=0.")
+      }
+      lines <- c(lines, if (length(unmapped) > 1L) {
+        "Add these words to the map, or set map = \"...; else=NA\" to convert unmapped words to missing."
+      } else if (length(unmapped) == 1L) {
+        "Add this word to the map, or set map = \"...; else=NA\" to convert unmapped words to missing."
+      } else {
+        "Add a blank rule to the map, or set map = \"...; else=NA\" to convert blank cells to missing."
+      })
+      .jst_stop(paste(lines, collapse = "\n"))
+    }
+
+    # Apply the rules. A blank rule is an ordinary mapping whose old value
+    # is the empty string, so blank cells fall out of this loop unaided.
+    for (rule in parsed_map$mappings) {
+      rule_mask <- !na_mask & words %in% rule$old_vals
+      if (!is.null(rule$tagged)) {
+        new_num[rule_mask] <- haven::tagged_na(rule$tagged)
+      } else {
+        new_num[rule_mask] <- rule$new_val
+      }
+    }
+
+    # Numbers stored as text, under the repair reading above: face value,
+    # never renumbered.
+    if (length(face_words) > 0) {
+      face_vals <- as.numeric(face_words)
+      for (i in seq_along(face_words)) {
+        new_num[word_mask & words == face_words[i]] <- face_vals[i]
+      }
+      big <- which.max(face_vals)
+      msgs <- c(msgs, paste0(
+        "Note: values in '", var_name, "' that are numbers stored as text ",
+        "were kept as their own values (\"", face_words[big], "\" -> ",
+        .jst_fmt_code(face_vals[big]), ", never renumbered)."))
+      msgs <- c(msgs, .jst_jencode_suspicious_note(new_num, var_name))
+    }
+
+    # Outer-space trim that decided a match.
+    trim_mask <- word_mask & (txt != words) & (words %in% map_words_real)
+    if (any(trim_mask)) {
+      n_t    <- sum(trim_mask)
+      ex_raw <- txt[trim_mask][1]
+      msgs <- c(msgs, paste0(
+        "Note: ", n_t, " cell", if (n_t == 1L) "" else "s", " in '", var_name,
+        "' matched the map only after removing outer spaces (e.g. \"", ex_raw,
+        "\" matched \"", trimws(ex_raw), "\")."))
+    }
+
+    # --- else clause -------------------------------------------------------
+    if (parsed_map$else_explicit) {
+      else_word_mask  <- word_mask & words %in% unmapped
+      else_blank_mask <- blank_mask & !blank_in_map
+      target_mask     <- else_word_mask | else_blank_mask
+
+      if (any(target_mask)) {
+        if (identical(parsed_map$else_action, "tagged")) {
+          new_num[target_mask] <- haven::tagged_na(parsed_map$else_tag)
+        } else {
+          new_num[target_mask] <- NA_real_
+        }
+
+        n_w_cells <- sum(else_word_mask)
+        n_w_words <- length(unmapped)
+        n_b       <- sum(else_blank_mask)
+        parts <- character(0)
+        if (n_w_cells > 0) {
+          w_txt <- paste0(n_w_words, " unmapped word",
+                          if (n_w_words == 1L) "" else "s")
+          # Two numbers answer two questions: the word count says WHAT went
+          # (and matches the list the strict-default error named), the cell
+          # count says HOW MUCH. Both are shown ALWAYS, even when they are
+          # equal. Suppressing the second where it merely restates the first
+          # would save four characters and cost a stable message shape: a
+          # user working down a run of columns should not have to work out
+          # why this one reported differently, and seeing the pair agree is
+          # what teaches the reader what the parenthetical means.
+          w_txt <- paste0(w_txt, " (", n_w_cells, " cell",
+                          if (n_w_cells == 1L) "" else "s", ")")
+          parts <- c(parts, w_txt)
+        }
+        if (n_b > 0) parts <- c(parts, paste0(n_b, " blank cell",
+                                              if (n_b == 1L) "" else "s"))
+        what <- paste(parts, collapse = " and ")
+
+        if (identical(parsed_map$else_action, "tagged")) {
+          style <- if (identical(resolved_convention, "sas")) {
+            "SAS-style"
+          } else "Stata-style"
+          msgs <- c(msgs, paste0(
+            "Note: else=.", parsed_map$else_tag, " converted ", what, " in '",
+            var_name, "' to the ", style, " missing value .",
+            parsed_map$else_tag, "."))
+        } else {
+          msgs <- c(msgs, paste0(
+            "Note: else=NA converted ", what, " in '", var_name,
+            "' to missing (NA)."))
+        }
+      }
+    }
+
+    # --- NA rule (E11 semantics, transplanted) -----------------------------
+    # Plain-NA cells of the ORIGINAL column only; at most one NA rule;
+    # single pass, so cells the else clause sent to missing are not
+    # re-swept here.
+    if (!is.null(parsed_map$na_rule)) {
+      n_plain_na <- sum(na_mask)
+      if (n_plain_na == 0) {
+        .jst_advisory_note(paste0(
+          "Note: '", var_name, "' contained no NA values - nothing was ",
+          "encoded for the NA rule."))
+      } else {
+        if (!is.null(parsed_map$na_rule$tagged)) {
+          new_num[na_mask] <- haven::tagged_na(parsed_map$na_rule$tagged)
+        } else {
+          new_num[na_mask] <- parsed_map$na_rule$new_val
+          if (!is.na(parsed_map$na_rule$new_val)) {
+            code_txt <- .jst_fmt_code(parsed_map$na_rule$new_val)
+            msgs <- c(msgs, paste0(
+              "Note: ", n_plain_na, " NA value",
+              if (n_plain_na == 1L) "" else "s", " in '", var_name,
+              if (n_plain_na == 1L) "' was" else "' were",
+              " encoded as ", code_txt, ".\n",
+              "Declare ", code_txt, " with jdeclare_udm() so analyses ",
+              "exclude it."))
+          }
+        }
+      }
+    }
+
+    # --- Value labels ------------------------------------------------------
+    if (!is.null(parsed_labels)) {
+      # User-supplied labels always take precedence.
+      val_labels_out <- parsed_labels
+    } else {
+      # jencode uniquely has the label in hand -- the word itself. Only the
+      # COLLAPSED numbers arrive unlabelled, since for them there is nothing
+      # to choose between; un-collapsed words keep their words (S235 delta
+      # against S225 decision (3)'s "mirrors jrecode exactly").
+      targets <- list()
+      for (rule in parsed_map$mappings) {
+        rw <- rule$old_vals[nzchar(rule$old_vals)]
+        if (length(rw) == 0) next          # blank-only rule: no word to use
+        if (is.null(rule$tagged) && is.na(rule$new_val)) next  # NA: no anchor
+        key <- if (!is.null(rule$tagged)) {
+          paste0(".", rule$tagged)
+        } else .jst_fmt_code(rule$new_val)
+        if (is.null(targets[[key]])) {
+          targets[[key]] <- list(value = rule$new_val, tagged = rule$tagged,
+                                 words = character(0))
+        }
+        targets[[key]]$words <- c(targets[[key]]$words, rw)
+      }
+
+      collapsed_keys <- character(0)
+      entries        <- c()
+      for (key in names(targets)) {
+        tg <- targets[[key]]
+        if (length(tg$words) > 1L) {
+          collapsed_keys <- c(collapsed_keys, key)
+        } else {
+          entry <- if (!is.null(tg$tagged)) {
+            haven::tagged_na(tg$tagged)
+          } else tg$value
+          names(entry) <- tg$words[1]
+          entries      <- c(entries, entry)
+        }
+      }
+      val_labels_out <- entries
+
+      if (length(collapsed_keys) > 0) {
+        ord_val <- vapply(collapsed_keys, function(k) {
+          tg <- targets[[k]]
+          if (is.null(tg$tagged)) tg$value else Inf
+        }, numeric(1))
+        collapsed_keys <- collapsed_keys[order(ord_val, collapsed_keys,
+                                               method = "radix")]
+        lines <- vapply(collapsed_keys, function(k) {
+          tg   <- targets[[k]]
+          disp <- if (!is.null(tg$tagged)) {
+            paste0(".", tg$tagged)
+          } else .jst_fmt_code(tg$value)
+          paste0("  ", disp, " <- ", .jst_quote_words(tg$words))
+        }, character(1))
+        collapse_msg <- paste0(
+          "Note: Some numbers combine two or more words, so no label could ",
+          "be chosen for them:\n", paste(lines, collapse = "\n"))
+        if (length(entries) > 0) {
+          collapse_msg <- paste0(collapse_msg,
+            "\nThe other numbers keep their original words as labels.")
+        }
+        collapse_msg <- paste0(collapse_msg,
+          "\nName each combined number with labels = , or later with jrelabel().")
+        msgs <- c(msgs, collapse_msg)
+      }
+    }
+
+    # --- Target-side minting note ------------------------------------------
+    # The heuristic runs on MAP TARGETS only. The NA rule's own mint has
+    # already been reported above, so it is excluded here rather than
+    # nudged twice.
+    plain_targets <- unlist(lapply(parsed_map$mappings, function(r) {
+      if (is.null(r$tagged) && !is.na(r$new_val)) r$new_val else NULL
+    }))
+    plain_targets <- unique(plain_targets)
+    if (length(plain_targets) > 0) {
+      susp    <- .jst_detect_suspicious_values(new_num, var_name)
+      flagged <- sort(intersect(susp, plain_targets))
+      if (length(flagged) > 0) {
+        pairs <- character(0)
+        for (i in seq_along(flagged)) {
+          v  <- flagged[i]
+          wd <- character(0)
+          for (rule in parsed_map$mappings) {
+            if (is.null(rule$tagged) && !is.na(rule$new_val) &&
+                rule$new_val == v) {
+              wd <- c(wd, rule$old_vals[nzchar(rule$old_vals)])
+            }
+          }
+          shown <- if (length(wd) > 0) paste0("\"", wd[1], "\"") else "a blank cell"
+          pairs <- c(pairs, if (i == 1L) {
+            paste0(shown, " was encoded as ", .jst_fmt_code(v))
+          } else {
+            paste0(shown, " as ", .jst_fmt_code(v))
+          })
+        }
+        codes <- vapply(flagged, .jst_fmt_code, character(1))
+        msgs <- c(msgs, paste0(
+          "Note: ", .jst_and_list(pairs), ", which ",
+          if (length(flagged) == 1L) "looks like a coded missing value."
+          else "look like coded missing values.", "\n",
+          "Declare ", .jst_and_list(codes), " with jdeclare_udm() so ",
+          "analyses exclude ", if (length(flagged) == 1L) "it." else "them."))
+      }
+    }
+  }
+
+  # =========================================================================
+  # RESULT
+  # =========================================================================
+  result <- labelled::labelled(new_num)
+
+  orig_var_label <- if (inherits(orig, "haven_labelled")) {
+    labelled::var_label(orig)
+  } else NULL
+  new_var_label <- if (!is.null(orig_var_label) &&
+                       nchar(trimws(orig_var_label)) > 0) {
+    paste0(orig_var_label, " (encoded)")
+  } else {
+    paste0(var_name, " (encoded)")
+  }
+  labelled::var_label(result) <- new_var_label
+
+  if (length(val_labels_out) > 0) {
+    labelled::val_labels(result) <- val_labels_out
+  }
+
+  # --- Messages, in order ---------------------------------------------------
+  for (m in msgs) message(m)
+
+  # Assign-or-lose reminder (standard + full): jencode() returns the encoded
+  # values invisibly, so an unassigned top-level call silently drops them.
+  # The leading blank line keeps it clear of any note above (Rule F).
+  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    message(
+      "\nNote: jencode() returns the encoded values; assign them to a column to keep them:\n",
+      "  ", .jst_data_name, "$<name> <- jencode(...)\n",
+      "To check the encoding landed correctly, compare jfreq() on the original and the new column."
+    )
+  }
+
+  return(invisible(result))
+}
+
+
+#' Internal helper: jencode's face-value minting note
+#'
+#' Runs the shipped looks-like-a-coded-missing heuristic over values
+#' \code{jencode()} minted by FACE VALUE (a text \code{"-99"} becoming
+#' the number -99) and returns the nudge toward
+#' \code{jdeclare_udm()}, or \code{character(0)} when nothing is
+#' flagged. Shared by the all-numeric automatic path and the
+#' numbers-stored-as-text repair path so the two read identically.
+#'
+#' @param x Numeric vector. The encoded values.
+#' @param var_name Character. The variable's name.
+#'
+#' @return Character scalar, or \code{character(0)}.
+#'
+#' @keywords internal
+.jst_jencode_suspicious_note <- function(x, var_name) {
+  susp <- .jst_detect_suspicious_values(x, var_name)
+  if (length(susp) == 0) return(character(0))
+  codes <- vapply(susp, .jst_fmt_code, character(1))
+  paste0(
+    "Note: ", .jst_and_list(codes), " in '", var_name, "' ",
+    if (length(susp) == 1L) "looks like a coded missing value."
+    else "look like coded missing values.", "\n",
+    "Declare ", .jst_and_list(codes), " with jdeclare_udm() so analyses ",
+    "exclude ", if (length(susp) == 1L) "it." else "them.")
+}
+
+
+#' Internal helper: render a text map's left-hand side for the echo-back
+#'
+#' The left-hand-side renderer \code{jencode()} hands to
+#' \code{.jst_jrecode_convention_error()}. Words render as themselves,
+#' quoted when they contain a map separator; the empty string renders as
+#' the taught \code{blank} token rather than as a pair of quotes, since
+#' the quotes-around-nothing form is deliberately never shown to users.
+#'
+#' @param old_vals Character vector of old values from one parsed rule.
+#'
+#' @return Character scalar: the rule's left-hand side.
+#'
+#' @keywords internal
+.jst_jencode_lhs_render <- function(old_vals) {
+  paste(vapply(old_vals, function(w) {
+    if (!nzchar(w)) return("blank")
+    if (grepl("[;=,]", w)) return(paste0("\"", w, "\""))
+    w
+  }, character(1)), collapse = ",")
 }
 
 
