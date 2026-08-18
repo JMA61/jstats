@@ -1770,7 +1770,8 @@ jai <- function(setup = NULL, path = NULL) {
   protected <- text
   atom_re <- paste0(
     "[A-Za-z_.][A-Za-z0-9_.]*\\([^()]*\\)",              # calls
-    "|[A-Za-z][A-Za-z0-9._]*\\.[A-Za-z0-9._]+ = [^ ]+"   # dotted arg = value
+    "|[A-Za-z][A-Za-z0-9._]*\\.[A-Za-z0-9._]+ = [^ ]+",  # dotted arg = value
+    "|\"[^\"\n]{1,60}\""                                # quoted phrases (S238)
   )
   m <- gregexpr(atom_re, protected)[[1]]
   if (m[1] != -1L) {
@@ -1811,4 +1812,70 @@ jai <- function(setup = NULL, path = NULL) {
     lines[length(lines)]      <- cand
   }
   gsub("\x01", " ", paste(lines, collapse = "\n"), fixed = TRUE)
+}
+
+
+# -----------------------------------------------------------------------------
+# .jst_fmt_n()
+#
+# House rendering for a COUNT in runtime-message prose: comma-grouped at a
+# thousand and above ("1,540 cells"). The package-wide convention, locked
+# S238 after the field corpus made four-figure counts routine.
+#
+# SCOPE -- counts in prose only. A number that is a DATA VALUE or part of a
+# RUNNABLE line is never grouped: "Refused=-99", codes = c(-99999), and any
+# prefilled call keep their bare digits, because a comma inside a runnable
+# token would break the line the user is invited to paste. Table cells are
+# also out of scope; their own column logic governs alignment.
+#
+# Adoption follows Rule U's pattern -- applied here at jencode's whole
+# surface, and elsewhere ON TOUCH rather than by sweep. The three sites
+# that already grouped by hand (jload / jsave / jcopy case counts) are
+# conformant as written and are converted when next touched.
+# -----------------------------------------------------------------------------
+
+#' Internal helper: render a count for runtime-message prose
+#'
+#' Returns the count comma-grouped at a thousand and above. Used for
+#' counts in message prose (cells, cases, words, variables), never for
+#' data values or for numbers inside a runnable command line.
+#'
+#' @param n Numeric scalar (or vector). The count.
+#'
+#' @return Character vector of the same length.
+#'
+#' @keywords internal
+.jst_fmt_n <- function(n) {
+  formatC(n, format = "d", big.mark = ",")
+}
+
+
+#' Internal helper: width-wrap a multi-line message, sparing runnable lines
+#'
+#' Applies \code{.jst_wrap_prose()} line by line, leaving indented lines
+#' untouched: under Rule U a runnable command line takes Rule L form on
+#' its own indented line and is never wrapped, while the prose around it
+#' is. Used where a message is assembled from a caught error whose text
+#' may already contain a Rule L line, so the surfacing wrap cannot know in
+#' advance whether it is wrapping prose or a command.
+#'
+#' @param text Character scalar, possibly containing newlines.
+#' @param reserve Integer. Characters to reserve on the FIRST line for a
+#'   prefix the caller will prepend (e.g. \code{"jencode(): "}).
+#'
+#' @return Character scalar.
+#'
+#' @keywords internal
+.jst_wrap_lines <- function(text, reserve = 0L) {
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1]]
+  out   <- character(length(lines))
+  for (i in seq_along(lines)) {
+    ln <- lines[i]
+    out[i] <- if (grepl("^\\s\\s", ln) || !nzchar(trimws(ln))) {
+      ln
+    } else {
+      .jst_wrap_prose(ln, reserve = if (i == 1L) reserve else 0L)
+    }
+  }
+  paste(out, collapse = "\n")
 }

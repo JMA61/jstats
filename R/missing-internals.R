@@ -153,6 +153,102 @@
 
 
 # -----------------------------------------------------------------------------
+# .jst_evidence_admits_missing_values()
+#
+# THE EVIDENCE CHANNEL of the package's user-defined-missing detection, and
+# the sibling of .jst_detect_suspicious_values() above (THE MAGNITUDE
+# CHANNEL). The two answer the same question from different evidence:
+#
+#   magnitude  - "this number is wildly out of line with the rest of the
+#                column, so it may be a code rather than a measurement."
+#                Sees numbers only. Deliberately conservative, and
+#                documented as missing -99 in a column of plausible
+#                magnitudes (ages, scores).
+#   evidence   - "something attached to this column SAYS missing" (a value
+#                label, or, in jencode's case, the words in the cells
+#                themselves). Where that evidence is present, a candidate
+#                does not have to clear the magnitude bar.
+#
+# Centralised here from birth (Session 238) so the admission rule is
+# modified ONCE and every caller inherits the change, rather than each
+# function growing its own bar. Any future revision -- widening what counts
+# as evidence, changing which kept values qualify -- belongs in this
+# function, not in a caller.
+#
+# THE RULE (S238, Jeff-ruled): evidence licenses reporting NEGATIVE values
+# only. High positive sentinels (999 in a column of ages) already clear the
+# magnitude bar via Rule 2 there, so admitting positives here would add
+# false positives without covering a real gap.
+#
+# CURRENT CALLERS: jencode() only. jload's .jst_scan_coded_missing consults
+# the wordlist too, but ONLY to reclassify a value magnitude already
+# flagged ("suspected" -> "label-only") -- it cannot yet admit a value
+# magnitude missed. Widening the scan to this admission channel is a
+# separate item, coupled to the missing-label wordlist decision (S237),
+# and until it lands the two paths are KNOWINGLY ASYMMETRIC: jencode
+# reports a labelled -99 that the scan would not. Recorded rather than
+# silently tolerated; see the cross-project to-do.
+# -----------------------------------------------------------------------------
+
+#' Internal helper: admit missing-value candidates on word/label evidence
+#'
+#' The evidence channel of UDM detection, sibling to
+#' \code{.jst_detect_suspicious_values()} (the magnitude channel). Given a
+#' set of values and a set of evidence strings drawn from the same column,
+#' returns the values that evidence licenses reporting even though the
+#' magnitude heuristic did not flag them.
+#'
+#' Evidence is present when at least one supplied string matches
+#' \code{.jst_missing_label_wordlist} (via
+#' \code{.jst_label_suggests_missing()}). When it is, negative values
+#' qualify; positives never do, since positive sentinels already clear the
+#' magnitude bar.
+#'
+#' @param values Numeric vector. Candidate values from the column, after
+#'   any encoding has been applied.
+#' @param evidence Character vector. Strings drawn from the same column
+#'   that may signal missingness -- value labels, or the original words in
+#'   a text column being encoded.
+#'
+#' @return A sorted numeric vector of admitted values, or
+#'   \code{numeric(0)} when there is no evidence or nothing qualifies. The
+#'   caller is responsible for excluding values the magnitude channel has
+#'   already reported.
+#'
+#' @keywords internal
+.jst_evidence_admits_missing_values <- function(values, evidence) {
+  if (length(values) == 0L || length(evidence) == 0L) return(numeric(0))
+  evidence <- evidence[!is.na(evidence)]
+  if (length(evidence) == 0L) return(numeric(0))
+
+  has_evidence <- any(vapply(evidence, .jst_label_suggests_missing,
+                             logical(1)))
+  if (!has_evidence) return(numeric(0))
+
+  vals <- unique(as.numeric(values[!is.na(values)]))
+  sort(vals[vals < 0])
+}
+
+
+#' Internal helper: which evidence strings signal missingness?
+#'
+#' Returns the subset of \code{evidence} that matches the missing-label
+#' wordlist, so a message can cite the evidence it acted on rather than
+#' asserting a conclusion the user cannot check. Order is preserved.
+#'
+#' @param evidence Character vector.
+#'
+#' @return Character vector, possibly empty.
+#'
+#' @keywords internal
+.jst_missing_evidence_words <- function(evidence) {
+  if (length(evidence) == 0L) return(character(0))
+  evidence <- evidence[!is.na(evidence)]
+  evidence[vapply(evidence, .jst_label_suggests_missing, logical(1))]
+}
+
+
+# -----------------------------------------------------------------------------
 # .jst_apply_declared_udms_as_na()
 #
 # Pipeline-step helper invoked at .jst_apply_pipeline's Step 0 (and called

@@ -4,7 +4,7 @@
 \alias{.jst_jencode_suspicious_note}
 \title{Internal helper: jencode's face-value minting note}
 \usage{
-.jst_jencode_suspicious_note(x, var_name)
+.jst_jencode_suspicious_note(x, var_name, evidence = character(0))
 }
 \arguments{
 \item{x}{Numeric vector. The encoded values.}

@@ -1946,7 +1946,8 @@
           if (grepl(",", rhs) && grepl("=", rhs)) {
             stop(paste0(
               "It looks like commas were used to separate rules in the map string. ",
-              "Use semicolons instead, e.g. map = \"1=5; 2=4; 3=3\"."
+              "Use semicolons instead:\n",
+              "  map = \"1=5; 2=4; 3=3\""
             ), call. = FALSE)
           }
           stop(paste0(
@@ -1986,7 +1987,8 @@
         if (grepl(",", rhs) && grepl("=", rhs)) {
           stop(paste0(
             "It looks like commas were used to separate rules in the map string. ",
-            "Use semicolons instead, e.g. map = \"1=5; 2=4; 3=3\"."
+            "Use semicolons instead:\n",
+            "  map = \"1=5; 2=4; 3=3\""
           ), call. = FALSE)
         }
         stop(paste0(
@@ -2235,7 +2237,19 @@
     if (nzchar(quote_char)) {
       cur <- c(cur, ch)
       if (identical(ch, quote_char)) quote_char <- ""
-    } else if (identical(ch, "'") || identical(ch, "\"")) {
+    } else if ((identical(ch, "'") || identical(ch, "\"")) &&
+               !nzchar(trimws(paste(cur, collapse = "")))) {
+      # A quote mark opens a quoted word only at the START of a word
+      # (S238). Partway through, it is an ordinary character -- which is
+      # what makes an apostrophe in a data word work unquoted:
+      # Don't know=8 parses as the word it looks like, while the quoted
+      # form "Don't know"=8 continues to work for anyone who quotes by
+      # habit. A genuinely unbalanced opening quote is still caught,
+      # because it is at a word start by definition. The one behavior
+      # this gives up is the stray mid-word quote (Yes"=1), which becomes
+      # a literal word rather than an error -- still reported, as an
+      # unmapped word under a strict map and in the else-clause count
+      # otherwise.
       quote_char <- ch
       cur        <- c(cur, ch)
     } else if (identical(ch, sep)) {
@@ -2507,7 +2521,8 @@
   if (grepl(",", rhs) && grepl("=", rhs)) {
     return(paste0(
       "It looks like commas were used to separate rules in the map string. ",
-      "Use semicolons instead, e.g. map = \"Bail=1; Parole=2; Remand=3\"."
+      "Use semicolons instead:\n",
+      "  map = \"Bail=1; Parole=2; Remand=3\""
     ))
   }
   paste0(
