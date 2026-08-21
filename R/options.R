@@ -467,18 +467,50 @@ joutput <- function(level, effect.size = NULL,
         # Rule E: the remedy is a second sentence and takes its own line.
         # (Non-conformance predating S227; fixed here at Jeff's direction
         # while the message was open.)
+        #
+        # S242 (mv R1): the remedy carries RUNNABLE jconvert() lines in
+        # Rule L form -- the sibling notes (D2, D6, D7, the jload Case
+        # 6/7 riders) all hand the user a pasteable call, and this one
+        # named the function without one. Rule U's repeated-remedy cap
+        # applies: one frame -> "run:" + one call; exactly two -> "run
+        # both:" + one call each; three or more -> "run one call per
+        # data frame:" + a SINGLE exemplar built from the first named
+        # frame. The cap is what keeps a max_show = 10 frame list from
+        # putting ten near-identical calls in one note, and it absorbs a
+        # TRUNCATED list without special handling -- "one call per data
+        # frame" is equally true of the named frames and the "... and N
+        # more" tail.
+        recipe_line <- function(nm) {
+          paste0("  jconvert(", nm, ", to = \"", target_convention,
+                 "\", modify = TRUE)")
+        }
+        if (length(dfs) == 1L) {
+          intro <- "To convert it to match this setting, run:"
+          calls <- recipe_line(dfs[1L])
+        } else if (length(dfs) == 2L) {
+          intro <- "To convert them to match this setting, run both:"
+          calls <- paste(vapply(dfs, recipe_line, character(1)),
+                         collapse = "\n")
+        } else {
+          intro <- paste0("To convert them to match this setting, run ",
+                          "one call per data frame:")
+          calls <- recipe_line(dfs[1L])
+        }
         if (mode == "u") {
           verb <- if (length(dfs) == 1L) "uses" else "use"
-          notes <- c(notes, sprintf(
-            "Note: the %s %s %s %s missing values.\nUse jconvert() to change.\n",
-            df_list, kind, verb, label))
         } else {
           verb <- if (length(dfs) == 1L) "predominantly uses"
                   else "predominantly use"
-          notes <- c(notes, sprintf(
-            "Note: the %s %s %s %s missing values.\nUse jconvert() to align.\n",
-            df_list, kind, verb, label))
         }
+        # Rule U adopt-on-touch (S242): the head sentence carries a
+        # variable-length frame list (up to max_show = 10 names plus a
+        # "... and N more" tail) and was emitted unwrapped -- a 12-frame
+        # workspace put 130 characters on one line. The runnable lines
+        # below it are NOT wrapped, per Rule U.
+        head_txt <- sprintf("Note: the %s %s %s %s missing values.",
+                            df_list, kind, verb, label)
+        notes <- c(notes, paste0(.jst_wrap_prose(head_txt), "\n",
+                                 intro, "\n", calls, "\n"))
       }
     }
     cat(paste(notes, collapse = "\n"))

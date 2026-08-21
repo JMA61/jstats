@@ -218,6 +218,13 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # unmapped tokens in their original .x form. A plain-language cap
 # note explaining the situation is appended between the example
 # block and the switch-convention line.
+#
+# S242 (audit F2): display only, the message phrases in the user's
+# tagged convention (.jst_phrasing_convention: per-call, else a sas
+# setting, else stata) -- token case and style word follow it, so a
+# sas-setting user reads '.A' / "SAS-style". Firing conditions and
+# both remedies are unchanged; the code-substitution logic stays on
+# the lowercase parsed letters.
 # -----------------------------------------------------------------------------
 
 #' Internal helper: build jrecode's cross-convention error message
@@ -243,6 +250,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   \code{old_vals} and returning the rendered left-hand side. Default
 #'   \code{NULL} uses the numeric rendering, so jrecode's output is
 #'   unchanged; jencode passes a word renderer.
+#' @param per_call_convention Character or \code{NULL}. The caller's raw
+#'   per-call \code{convention} argument, forwarded for display-time
+#'   phrasing only (token case and style word via
+#'   \code{.jst_phrasing_convention()}); it plays no part in whether the
+#'   error fires.
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
@@ -250,7 +262,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 .jst_jrecode_convention_error <- function(parsed_map, parsed_labels,
                                           data_name, orig_name,
                                           fn_name    = "jrecode",
-                                          lhs_render = NULL) {
+                                          lhs_render = NULL,
+                                          per_call_convention = NULL) {
 
   # --- Gather every tagged-NA letter that appeared --------------------------
   map_tags <- unlist(lapply(parsed_map$mappings, function(r) r$tagged))
@@ -275,15 +288,25 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   label_tags <- names(label_tags_lookup)
 
   all_tags <- sort(unique(c(map_tags, label_tags)))
-  first_tag <- all_tags[1]
+
+  # S242 (audit F2): display-time phrasing convention -- token case and
+  # style word follow the user's tagged convention (.jst_phrasing_convention:
+  # per-call, else a sas setting, else stata), matching the S240 treatment
+  # of the jdeclare_udm builders. Firing condition and remedies unchanged.
+  # Logic below stays on the lowercase parsed letters (all_tags);
+  # disp_tags and first_tag are display-only.
+  phr       <- .jst_phrasing_convention(per_call_convention)
+  phr_style <- .jst_convention_label(phr)
+  disp_tags <- .jst_canonical_tag(all_tags, phr)
+  first_tag <- disp_tags[1]
 
   # --- Verbosity gate -------------------------------------------------------
   output_level <- getOption(".jst_output_level", "standard")
 
   if (identical(output_level, "minimal")) {
     return(paste0(
-      "the map uses '.", first_tag, "', a Stata-style missing-value ",
-      "marker.\nThe package is currently set to SPSS convention.\n",
+      "the map uses '.", first_tag, "', a ", phr_style,
+      " missing-value marker.\nThe package is currently set to SPSS convention.\n",
       "To switch conventions, run one of:\n",
       "  joptions(missing.convention = \"stata\")\n",
       "  joptions(missing.convention = \"sas\")"
@@ -315,7 +338,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     }
     if (!is.null(rule$tagged)) {
       code <- letter_to_code[rule$tagged]
-      rhs  <- if (is.na(code)) paste0(".", rule$tagged) else format_num(code)
+      rhs  <- if (is.na(code)) {
+        paste0(".", .jst_canonical_tag(rule$tagged, phr))
+      } else format_num(code)
     } else if (is.na(rule$new_val)) {
       rhs <- "NA"
     } else {
@@ -327,7 +352,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     if (!is.null(parsed_map$na_rule$tagged)) {
       code   <- letter_to_code[parsed_map$na_rule$tagged]
       na_rhs <- if (is.na(code)) {
-        paste0(".", parsed_map$na_rule$tagged)
+        paste0(".", .jst_canonical_tag(parsed_map$na_rule$tagged, phr))
       } else {
         format_num(code)
       }
@@ -340,7 +365,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     if (identical(parsed_map$else_action, "tagged")) {
       code <- letter_to_code[parsed_map$else_tag]
       else_rhs <- if (is.na(code)) {
-        paste0(".", parsed_map$else_tag)
+        paste0(".", .jst_canonical_tag(parsed_map$else_tag, phr))
       } else format_num(code)
     } else if (identical(parsed_map$else_action, "copy")) {
       else_rhs <- "copy"
@@ -407,7 +432,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # Assemble the message.
   msg_parts <- c(
     .jst_wrap_prose(paste0("the map uses '.", first_tag,
-                           "', a Stata-style missing-value marker."),
+                           "', a ", phr_style, " missing-value marker."),
                     reserve = 11L),
     "The package is currently set to SPSS convention, which uses numeric codes.",
     "Here is the equivalent recode in SPSS style:",
@@ -427,7 +452,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (length(unmapped) > 0L) {
     n_tags  <- length(all_tags)
     n_codes <- length(letter_to_code)
-    unmapped_render <- paste0("'.", unmapped, "'", collapse = ", ")
+    unmapped_render <- paste0("'.", .jst_canonical_tag(unmapped, phr),
+                              "'", collapse = ", ")
     were_was <- if (length(unmapped) == 1L) "was" else "were"
     # SPSS-side cap on udm.convention.codes (joptions enforces length 1-3).
     # Above the cap, adding a code cannot cover the markers, so steer to
@@ -435,8 +461,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     if (n_tags > 3L) {
       msg_parts <- c(msg_parts, "",
         .jst_wrap_prose(paste0(
-          "Note: `map` uses ", n_tags, " Stata-style markers (",
-          paste0(".", all_tags, collapse = ", "),
+          "Note: `map` uses ", n_tags, " ", phr_style, " markers (",
+          paste0(".", disp_tags, collapse = ", "),
           ") but SPSS convention supports at most 3 user-defined missing ",
           "values; ", unmapped_render, " ", were_was,
           " not substituted in the example above."))
@@ -444,8 +470,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     } else {
       msg_parts <- c(msg_parts, "",
         .jst_wrap_prose(paste0(
-          "Note: `map` uses ", n_tags, " Stata-style markers (",
-          paste0(".", all_tags, collapse = ", "),
+          "Note: `map` uses ", n_tags, " ", phr_style, " markers (",
+          paste0(".", disp_tags, collapse = ", "),
           ") but joptions(\"udm.convention.codes\") currently holds only ",
           n_codes, " values; ", unmapped_render, " ", were_was,
           " not substituted in the example above.")),
@@ -1211,9 +1237,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   if (!is.null(tok_missing_label) && !has_missing_token) {
     .jst_stop(
       .jst_wrap_prose(paste0(
-        "labels names missing, but the map has no missing target for it ",
+        "labels names missing, but the map has no target for it ",
         "to label."), reserve = 11L), "\n",
-      "Add missing to the map (for example 8=missing), or label the value directly.")
+      .jst_wrap_prose(paste0(
+        "Add missing to the map (for example 8=missing), or label the ",
+        "value directly.")))
   }
 
   tok_mint_code  <- NULL     # numeric; spss arm only
@@ -1347,10 +1375,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     resolved_convention <- .jst_resolve_convention(convention)
     if (identical(resolved_convention, "spss")) {
       err_msg <- .jst_jrecode_convention_error(
-        parsed_map    = parsed_map,
-        parsed_labels = parsed_labels,
-        data_name     = .jst_data_name,
-        orig_name     = orig_name
+        parsed_map          = parsed_map,
+        parsed_labels       = parsed_labels,
+        data_name           = .jst_data_name,
+        orig_name           = orig_name,
+        per_call_convention = convention
       )
       .jst_stop(err_msg)
     }
@@ -2493,9 +2522,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     if (!is.null(tok_missing_label) && !has_missing_token) {
       .jst_stop(
         .jst_wrap_prose(paste0(
-          "labels names missing, but the map has no missing target for ",
+          "labels names missing, but the map has no target for ",
           "it to label."), reserve = 11L), "\n",
-        "Add missing to the map (for example Refused=missing), or label the value directly.")
+        .jst_wrap_prose(paste0(
+          "Add missing to the map (for example Refused=missing), or ",
+          "label the value directly.")))
     }
 
     tok_tag <- NULL
@@ -2547,12 +2578,13 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       resolved_convention <- .jst_resolve_convention(convention)
       if (identical(resolved_convention, "spss")) {
         err_msg <- .jst_jrecode_convention_error(
-          parsed_map    = parsed_map,
-          parsed_labels = parsed_labels,
-          data_name     = .jst_data_name,
-          orig_name     = var_name,
-          fn_name       = "jencode",
-          lhs_render    = .jst_jencode_lhs_render
+          parsed_map          = parsed_map,
+          parsed_labels       = parsed_labels,
+          data_name           = .jst_data_name,
+          orig_name           = var_name,
+          fn_name             = "jencode",
+          lhs_render          = .jst_jencode_lhs_render,
+          per_call_convention = convention
         )
         .jst_stop(err_msg)
       }
@@ -4268,16 +4300,36 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         # and the context makes the kind obvious, unlike a frame name at
         # the head of the joptions nudge (which takes an article). Plural
         # lists are and-joined, matching that note.
-        if (length(mismatched) == 1L) {
-          cat(sprintf(
-            "Note: %s is %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
-            mismatched[1L], this_form, data_name, other_verb, other_form))
+        # S242 (mv R2): the opening spends the full locked term
+        # ("uses Stata-style missing values") on first mention and drops
+        # to the bare style word for the second clause, matching shipped
+        # D2 read side by side. "Mixing forms is allowed." replaces the
+        # two-word "if desired" hedge, which was carrying the whole
+        # reassurance load. The remedy becomes a runnable Rule L line
+        # (jconvert carries a vars formal); singular takes a bare
+        # vars = "Income", plural takes c(...). One remedy only, not
+        # D2's two -- here the frame is simply the frame, so Rule D's
+        # one-fix applies.
+        vars_arg <- if (length(mismatched) == 1L) {
+          paste0("\"", mismatched[1L], "\"")
         } else {
-          cat(sprintf(
-            "Note: %s are %s, but other columns in %s %s %s.\nUse jconvert() to align if desired.\n",
-            .jst_format_var_list(mismatched, and = TRUE), this_form,
-            data_name, other_verb, other_form))
+          paste0("c(", paste0("\"", mismatched, "\"", collapse = ", "), ")")
         }
+        head_line <- if (length(mismatched) == 1L) {
+          sprintf("Note: %s uses %s missing values, but other columns in %s %s %s.",
+                  mismatched[1L], this_form, data_name, other_verb, other_form)
+        } else {
+          sprintf("Note: %s use %s missing values, but other columns in %s %s %s.",
+                  .jst_format_var_list(mismatched, and = TRUE), this_form,
+                  data_name, other_verb, other_form)
+        }
+        align_obj <- if (length(mismatched) == 1L) mismatched[1L] else "them"
+        cat(paste0(
+          .jst_wrap_prose(head_line), "\n",
+          "Mixing forms is allowed. To align ", align_obj,
+          " with the rest, run:\n",
+          "  jconvert(", data_name, ", to = \"", df_predominant,
+          "\", vars = ", vars_arg, ", modify = TRUE)\n"))
       }
     }
   }

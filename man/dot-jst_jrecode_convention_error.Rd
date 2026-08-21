@@ -10,7 +10,8 @@
   data_name,
   orig_name,
   fn_name = "jrecode",
-  lhs_render = NULL
+  lhs_render = NULL,
+  per_call_convention = NULL
 )
 }
 \arguments{
@@ -35,6 +36,12 @@ of drifting duplicate.}
 \code{old_vals} and returning the rendered left-hand side. Default
 \code{NULL} uses the numeric rendering, so jrecode's output is
 unchanged; jencode passes a word renderer.}
+
+\item{per_call_convention}{Character or \code{NULL}. The caller's raw
+per-call \code{convention} argument, forwarded for display-time
+phrasing only (token case and style word via
+\code{.jst_phrasing_convention()}); it plays no part in whether the
+error fires.}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.
