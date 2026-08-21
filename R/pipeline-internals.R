@@ -845,6 +845,37 @@
   if (identical(convention, "sas")) toupper(tag) else tolower(tag)
 }
 
+# -----------------------------------------------------------------------------
+# .jst_phrasing_convention()
+#
+# Display-time tagged convention for MESSAGE PHRASING ONLY (S240). Used by
+# refusal messages that fire before (or independently of) convention
+# resolution -- the jdeclare_udm plain-column token refusal and the
+# cross-convention builder -- so their token case, style word, and remedy
+# targets read congruently for a sas-setting user. Rule: a per-call
+# "stata"/"sas" wins; else a "sas" joptions setting; else "stata" (today's
+# phrasing, which is also correct for the lowercase-normalized tokens the
+# parsers produce). Deliberately NEVER consults the resolver's default
+# level, so it stays non-gating when the unset state becomes a choose-first
+# gate (Decision 11 step (4) revisit, Session 240 design). Returns "stata"
+# or "sas" only -- never "spss", never an error.
+# -----------------------------------------------------------------------------
+
+#' @keywords internal
+.jst_phrasing_convention <- function(per_call = NULL) {
+  # Robust to a RAW per-call value (some callers fire before the argument
+  # is validated/canonicalized): anything that is not a single "stata"/
+  # "sas" string, in any capitalization, simply falls through.
+  if (is.character(per_call) && length(per_call) == 1L && !is.na(per_call)) {
+    pc <- tolower(per_call)
+    if (pc %in% c("stata", "sas")) return(pc)
+  }
+  opt <- getOption(".jst_options_missing_convention",
+                   .jst_options_defaults$missing.convention)
+  if (identical(opt, "sas")) return("sas")
+  "stata"
+}
+
 #' Internal helper: user-facing style label for a UDM convention
 #'
 #' Maps a convention token to the locked user-facing vocabulary

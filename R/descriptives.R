@@ -1193,7 +1193,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'   haven_labelled / factor / character / date-time) to the Variable Types
 #'   table, showing each variable's storage type alongside its jstats class.
 #'   Default is FALSE: the storage type is expert detail (its main signal is
-#'   "this variable carries value labels / came from SPSS or Stata"), so it
+#'   "this variable carries value labels / came from SPSS, Stata, or SAS"), so it
 #'   is opt-in rather than shown by default. The returned data frame always
 #'   includes it regardless of this setting.
 #' @param stats Logical or character. Adds central-tendency columns to the

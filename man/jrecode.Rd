@@ -36,11 +36,11 @@ The same aliases may also appear as an OLD value, converting plain
 \code{NA} to \code{-98} (declare the code afterward with
 \code{jdeclare_udm()}). \code{NA} may be combined with numeric old
 values in one rule (\code{"NA,-99=-98"}) and may be named in at most
-one rule. Only plain \code{NA} cells are affected; Stata-style
+one rule. Only plain \code{NA} cells are affected; tagged
 missing values are never converted by an \code{NA} rule. Under
-Stata convention the target may itself be a token: \code{"NA=.a"}.
+Stata or SAS convention the target may itself be a token: \code{"NA=.a"}.
 
-Under Stata convention, values can be mapped to Stata-style missing-value tokens:
+Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 \code{"-99=.a; -98=.b"}.
 
 Examples:
@@ -50,7 +50,7 @@ Examples:
 \item \code{"1=1; 2=0; else=copy"}
 \item \code{"-5=System; else=copy"}
 \item \code{"NA=-98; else=copy"}
-\item \code{"3=1; 4=2; else=.a"} (Stata convention only)
+\item \code{"3=1; 4=2; else=.a"} (Stata or SAS convention only)
 }}
 
 \item{labels}{Optional. A quoted string specifying value labels for the

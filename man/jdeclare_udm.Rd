@@ -34,11 +34,13 @@ vector; labels supplied via the \code{labels} argument. E.g.
 names are the labels. E.g.
 \code{codes = c(Refused = -99, `Don't know` = -98)}.}
 }
-On a column that already carries Stata-style missing values, codes
-may name the markers directly as quoted tokens, e.g.
+On a column that already carries Stata-style or SAS-style missing
+values, codes may name the markers directly as quoted tokens, e.g.
 \code{codes = c(Refused = ".a")} -- a token \code{".a"} means the
-\code{.a} marker. Tokens are refused on columns with no Stata-style
-missing values to label (see the Missing-Values Convention section).}
+\code{.a} marker (or \code{.A} on a SAS-style column: token case is
+accepted either way and canonicalized to the column's convention).
+Tokens are refused on columns with no tagged missing values to
+label (see the Missing-Values Convention section).}
 
 \item{labels}{Optional. A quoted string in the form
 \code{"value=label; value=label"} pairing labels with codes
@@ -56,7 +58,7 @@ missing. The SPSS parallel is \code{MISSING VALUES X (-99 THRU
 -51)}. Bounds may be non-integer, and one bound may be infinite
 (\code{c(-Inf, -51)} is SPSS's \code{LO THRU -51}). Ranges exist
 only under SPSS convention; combining \code{range} with the Stata
-convention or with Stata-style tokens is refused. SPSS allows at
+or SAS convention or with tagged tokens is refused. SPSS allows at
 most ONE discrete code alongside a range, and the check applies to
 the column's composed result (what this call supplies plus what
 already survives on the column), so a declaration that a
@@ -69,13 +71,17 @@ programmatic alternative to unquoted names in \code{...}
 offence_cols} where \code{offence_cols} holds the names). Use
 either \code{vars} or \code{...}, not both.}
 
-\item{convention}{Optional. One of \code{"spss"} or \code{"stata"}
-(any capitalization is accepted); overrides the convention resolution
-for this call. When
+\item{convention}{Optional. One of \code{"spss"}, \code{"stata"}, or
+\code{"sas"} (any capitalization is accepted); overrides the
+convention resolution for this call. When
 \code{NULL} (the default), the convention is resolved from the
 column's existing UDM declaration (if any), then from
 \code{joptions("missing.convention")}, then from the SPSS-form
-default. A \code{range} forces SPSS convention (see \code{range}).}
+default. A \code{range} forces SPSS convention (see \code{range}).
+The SAS convention behaves as the Stata convention with uppercase
+markers: markers mint and label as \code{.A}-\code{.Z}. Token
+input is case-insensitive under both tagged conventions; the case
+written to the column follows the resolved convention.}
 
 \item{udm.notice}{Logical. When \code{TRUE} (the default), the
 function prints a notification summarizing what was declared,
@@ -138,32 +144,36 @@ column's \code{na_values} attribute (haven's representation of
 SPSS-form UDMs). The data cells themselves are unchanged; only the
 metadata that flags certain values as missing is added.
 
-Under Stata convention with Stata-style missing-value input (quoted
+Under Stata or SAS convention with tagged missing-value input (quoted
 tokens such as \code{".a"}), the function attaches value labels to
-the column's existing Stata-style missing-value markers. This
-requires the column to already carry Stata-style missing values --
+the column's existing tagged missing-value markers. This
+requires the column to already carry tagged missing values --
 either tagged cells, or markers previously declared through value
 labels (a marker may be labeled before any cases carry it, so a
 declaration made early in data collection is complete for later
-data). Tokens against a column with no Stata-style missing values
-are refused identically under every convention source: on a plain
-column the error points at \code{jrecode()} (which creates tagged
-cells from numeric codes); on a column carrying SPSS-style
+data). Token case is accepted either way and canonicalized to the
+resolved convention: lowercase markers under Stata convention,
+uppercase under SAS. Tokens against a column with no tagged missing
+values are refused identically under every convention source: on a
+plain column the error points at \code{jrecode()} (which creates
+tagged cells from numeric codes); on a column carrying SPSS-style
 declarations it points at \code{jconvert()}.
 
 Note that on a plain numeric column with plain numeric codes and no
 \code{convention} argument, the resolved convention decides the
 outcome: under SPSS convention the numbers stay in the cells and are
-flagged missing; under Stata convention the matching cells are
-converted to markers and the numbers leave the data. This is the one
-place \code{joptions(missing.convention = ...)} changes what happens
-to data (see the examples).
+flagged missing; under Stata or SAS convention the matching cells
+are converted to markers and the numbers leave the data. This is the
+one place \code{joptions(missing.convention = ...)} changes what
+happens to data (see the examples).
 
-Under Stata convention with numeric input, the function converts
-matching cells to Stata-style missing-value markers (Session 30 design lock). The
+Under Stata or SAS convention with numeric input, the function
+converts matching cells to tagged missing-value markers (Session 30
+design lock; SAS convention mints the same letters uppercase). The
 mapping is ordering-based: codes sorted by absolute value
 descending, more-negative-first as tie-breaker, then assigned
-\code{.a}, \code{.b}, \code{.c}, \code{.d} in that order. The
+\code{.a}, \code{.b}, \code{.c}, \code{.d} in that order (\code{.A},
+\code{.B}, ... under SAS convention). The
 assignment proceeds independently of \code{joptions("udm.convention.codes")}
 (which only governs the reverse Stata-to-SPSS direction). A
 conversion note in the standard/full \code{joutput} tier shows the

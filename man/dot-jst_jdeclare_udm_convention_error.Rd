@@ -4,7 +4,13 @@
 \alias{.jst_jdeclare_udm_convention_error}
 \title{Internal helper: build jdeclare_udm's cross-convention error message}
 \usage{
-.jst_jdeclare_udm_convention_error(parsed_codes, data_name, var_name, col)
+.jst_jdeclare_udm_convention_error(
+  parsed_codes,
+  data_name,
+  var_name,
+  col,
+  per_call_convention = NULL
+)
 }
 \arguments{
 \item{parsed_codes}{Named numeric vector. Names are labels (\code{""}

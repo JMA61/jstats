@@ -506,23 +506,33 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #' @keywords internal
 .jst_jdeclare_udm_convention_error <- function(parsed_codes,
-                                               data_name, var_name, col) {
+                                               data_name, var_name, col,
+                                               per_call_convention = NULL) {
 
   # S218 rewrite. Sole caller is the hoisted tagged-token gate, and the
   # sole case is a column that carries SPSS-STYLE declarations while the
-  # codes vector names Stata-style markers. The column's own form drives
-  # the refusal -- the convention setting is irrelevant here, so the
-  # message must not blame it or suggest switching it (the pre-S218
-  # wording did both; following that advice dead-ended on the
+  # codes vector names tagged markers. The column's own form drives the
+  # refusal -- the convention setting is irrelevant to WHETHER this
+  # fires, so the message must not blame it or suggest switching it (the
+  # pre-S218 wording did both; following that advice dead-ended on the
   # convention-conflict guard). Two genuine remedies: label the numeric
   # codes the column already declares, or jconvert() the column to
-  # Stata form first.
+  # tagged form first.
+  #
+  # S240: display only, the message phrases in the user's tagged
+  # convention (.jst_phrasing_convention: per-call, else a sas setting,
+  # else stata) -- token case, style word, and the jconvert target all
+  # follow it, so a sas-setting user reads '.A' / "SAS-style" /
+  # to = "sas". Firing conditions and both remedies are unchanged.
 
   # --- Identify tagged-NA elements ------------------------------------------
   tags_in_codes <- haven::na_tag(parsed_codes)
   tag_idx       <- which(!is.na(tags_in_codes))
-  all_tags      <- sort(unique(tags_in_codes[tag_idx]))
-  first_tag     <- all_tags[1]
+  all_tags      <- sort(unique(tolower(tags_in_codes[tag_idx])))
+  phr           <- .jst_phrasing_convention(per_call_convention)
+  phr_style     <- .jst_convention_label(phr)
+  disp_tags     <- .jst_canonical_tag(all_tags, phr)
+  first_tag     <- disp_tags[1]
 
   na_vals <- attr(col, "na_values")
   na_vals <- if (is.null(na_vals)) numeric(0)
@@ -548,26 +558,31 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   if (identical(output_level, "minimal")) {
     return(paste0(
-      "codes for ", var_name, " contains '.", first_tag,
-      "', a Stata-style missing-value marker, but ", var_name,
-      " carries SPSS-style missing values. ",
-      "Name the numeric codes directly, or convert first with ",
-      "jconvert(", data_name, ", to = \"stata\", modify = TRUE)."
+      .jst_wrap_prose(paste0(
+        "codes for ", var_name, " contains '.", first_tag,
+        "', a ", phr_style, " missing-value marker, but ", var_name,
+        " carries SPSS-style missing values."), reserve = 16L),
+      "\n",
+      "Name the numeric codes directly, or convert first:\n",
+      "  jconvert(", data_name, ", to = \"", phr, "\", modify = TRUE)"
     ))
   }
 
   # --- Standard / full block ------------------------------------------------
 
   msg_parts <- c(
-    paste0("codes for ", var_name, " contains '.", first_tag,
-           "', a Stata-style missing-value marker, but ", var_name,
-           " carries SPSS-style missing values (", decl_disp, ")."))
+    .jst_wrap_prose(paste0(
+      "codes for ", var_name, " contains '.", first_tag,
+      "', a ", phr_style, " missing-value marker, but ", var_name,
+      " carries SPSS-style missing values (", decl_disp, ")."),
+      reserve = 16L))
 
   # Equivalent-call block: substitute each tagged element with the
   # column's own declared codes, matched largest-magnitude-first (ties
   # more-negative-first) -- the same Q6 ordering jconvert() uses to
-  # letter these codes, so .a here corresponds to the marker that
-  # jconvert(to = "stata") would in fact produce for that code. Range-
+  # letter these codes, so the first displayed marker corresponds to the
+  # marker that jconvert(to = <phrasing convention>) would in fact
+  # produce for that code (same positions, case per convention). Range-
   # only columns have no discrete codes to name, so the block is
   # skipped and the jconvert remedy below carries the message alone
   # (jconvert enumerates the range).
@@ -591,7 +606,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       val <- parsed_codes[i]
       lbl <- names(parsed_codes)[i]
       if (i %in% tag_idx) {
-        this_tag <- tags_in_codes[i]
+        this_tag <- tolower(tags_in_codes[i])
         if (this_tag %in% unmapped) next   # no column code to substitute
         val_render <- format_num(letter_to_code[[this_tag]])
       } else {
@@ -635,24 +650,27 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     }
 
     if (length(unmapped) > 0L) {
-      unmapped_render <- paste0("'.", unmapped, "'", collapse = ", ")
+      unmapped_render <- paste0("'.", .jst_canonical_tag(unmapped, phr),
+                                "'", collapse = ", ")
       were_was <- if (length(unmapped) == 1L) "was" else "were"
       msg_parts <- c(msg_parts, "",
-        paste0("Note: `codes` uses ", length(all_tags),
-               " Stata-style markers (",
-               paste0(".", all_tags, collapse = ", "),
-               ") but ", var_name, " declares only ", length(na_vals),
-               " numeric code", if (length(na_vals) > 1L) "s" else "",
-               "; ", unmapped_render, " ", were_was,
-               " not substituted in the example above."))
+        .jst_wrap_prose(paste0(
+          "Note: `codes` uses ", length(all_tags),
+          " ", phr_style, " markers (",
+          paste0(".", disp_tags, collapse = ", "),
+          ") but ", var_name, " declares only ", length(na_vals),
+          " numeric code", if (length(na_vals) > 1L) "s" else "",
+          "; ", unmapped_render, " ", were_was,
+          " not substituted in the example above.")))
     }
   }
 
   msg_parts <- c(msg_parts, "",
-    "To use Stata-style markers instead, convert the column first:",
+    paste0("To use ", phr_style, " markers instead, convert the column ",
+           "first:"),
     "",
     paste0("    jconvert(", data_name,
-           ", to = \"stata\", modify = TRUE)"))
+           ", to = \"", phr, "\", modify = TRUE)"))
 
   paste(msg_parts, collapse = "\n")
 }
@@ -667,17 +685,24 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_mixed_error <- function(parsed_codes, data_name, var_name) {
+.jst_jdeclare_udm_mixed_error <- function(parsed_codes, data_name, var_name,
+                                          per_call_convention = NULL) {
 
   tags_in_codes <- haven::na_tag(parsed_codes)
   tag_idx       <- which(!is.na(tags_in_codes))
   num_idx       <- setdiff(seq_along(parsed_codes), tag_idx)
 
+  # S240: the token style word follows the display-time phrasing
+  # convention (per-call, else a sas setting, else stata); firing
+  # condition and both split-call remedies are unchanged.
+  phr       <- .jst_phrasing_convention(per_call_convention)
+  phr_style <- .jst_convention_label(phr)
+
   output_level <- getOption(".jst_output_level", "standard")
 
   if (identical(output_level, "minimal")) {
     return(paste0(
-      "codes for ", var_name, " mixes Stata-style missing values and ",
+      "codes for ", var_name, " mixes ", phr_style, " missing values and ",
       "SPSS-style numeric codes. Issue these as separate jdeclare_udm() calls."
     ))
   }
@@ -694,11 +719,15 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     else paste0("`", lbl, "`")
   }
 
-  # Tagged-only call
+  # Tagged-only call. Tag case and the explicit convention follow the
+  # phrasing convention (S240): the rendered example shows the case that
+  # would actually be written, and carries its convention so pasting it
+  # verbatim survives the unset state (gate-ready, per the Tier 3 rule).
   tag_parts <- character(0)
   for (i in tag_idx) {
     lbl <- fmt_label(names(parsed_codes)[i])
-    rhs <- paste0("tagged_na(\"", tags_in_codes[i], "\")")
+    rhs <- paste0("tagged_na(\"",
+                  .jst_canonical_tag(tags_in_codes[i], phr), "\")")
     if (is.na(lbl)) tag_parts <- c(tag_parts, rhs)
     else            tag_parts <- c(tag_parts, paste0(lbl, " = ", rhs))
   }
@@ -706,7 +735,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     paste0("c(", paste(tag_parts, collapse = ", "), ")")
   } else tag_parts[1]
   tag_line <- paste0("    jdeclare_udm(", data_name, ", ", var_name,
-                     ", codes = ", tag_arg, ", modify = TRUE)")
+                     ", codes = ", tag_arg, ", convention = \"", phr,
+                     "\", modify = TRUE)")
 
   # Numeric-only call
   num_parts <- character(0)
@@ -720,17 +750,18 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     paste0("c(", paste(num_parts, collapse = ", "), ")")
   } else num_parts[1]
   num_line <- paste0("    jdeclare_udm(", data_name, ", ", var_name,
-                     ", codes = ", num_arg, ", modify = TRUE)")
+                     ", codes = ", num_arg, ", convention = \"", phr,
+                     "\", modify = TRUE)")
 
   msg_parts <- c(
     .jst_wrap_prose(paste0("codes for ", var_name,
-                           " mixes Stata-style missing values ",
+                           " mixes ", phr_style, " missing values ",
                            "and SPSS-style numeric codes."),
                     reserve = 16L),
     .jst_wrap_prose(paste0(
-      "The two operations are different -- labeling existing Stata-style ",
+      "The two operations are different -- labeling existing ", phr_style, " ",
       "missing-value cells (tagged input) and converting numeric cells to ",
-      "Stata-style missing values (numeric input) -- and must be issued ",
+      phr_style, " missing values (numeric input) -- and must be issued ",
       "as separate calls.")),
     "For your input, that would be:",
     "",
@@ -824,11 +855,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   \code{NA} to \code{-98} (declare the code afterward with
 #'   \code{jdeclare_udm()}). \code{NA} may be combined with numeric old
 #'   values in one rule (\code{"NA,-99=-98"}) and may be named in at most
-#'   one rule. Only plain \code{NA} cells are affected; Stata-style
+#'   one rule. Only plain \code{NA} cells are affected; tagged
 #'   missing values are never converted by an \code{NA} rule. Under
-#'   Stata convention the target may itself be a token: \code{"NA=.a"}.
+#'   Stata or SAS convention the target may itself be a token: \code{"NA=.a"}.
 #'
-#'   Under Stata convention, values can be mapped to Stata-style missing-value tokens:
+#'   Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 #'   \code{"-99=.a; -98=.b"}.
 #'
 #'   Examples:
@@ -838,7 +869,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     \item \code{"1=1; 2=0; else=copy"}
 #'     \item \code{"-5=System; else=copy"}
 #'     \item \code{"NA=-98; else=copy"}
-#'     \item \code{"3=1; 4=2; else=.a"} (Stata convention only)
+#'     \item \code{"3=1; 4=2; else=.a"} (Stata or SAS convention only)
 #'   }
 #'
 #' @param labels   Optional. A quoted string specifying value labels for the
@@ -2751,11 +2782,13 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'       names are the labels. E.g.
 #'       \code{codes = c(Refused = -99, `Don't know` = -98)}.}
 #'   }
-#'   On a column that already carries Stata-style missing values, codes
-#'   may name the markers directly as quoted tokens, e.g.
+#'   On a column that already carries Stata-style or SAS-style missing
+#'   values, codes may name the markers directly as quoted tokens, e.g.
 #'   \code{codes = c(Refused = ".a")} -- a token \code{".a"} means the
-#'   \code{.a} marker. Tokens are refused on columns with no Stata-style
-#'   missing values to label (see the Missing-Values Convention section).
+#'   \code{.a} marker (or \code{.A} on a SAS-style column: token case is
+#'   accepted either way and canonicalized to the column's convention).
+#'   Tokens are refused on columns with no tagged missing values to
+#'   label (see the Missing-Values Convention section).
 #' @param labels Optional. A quoted string in the form
 #'   \code{"value=label; value=label"} pairing labels with codes
 #'   (Option A only). Must be \code{NULL} when \code{codes} is named
@@ -2771,7 +2804,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   -51)}. Bounds may be non-integer, and one bound may be infinite
 #'   (\code{c(-Inf, -51)} is SPSS's \code{LO THRU -51}). Ranges exist
 #'   only under SPSS convention; combining \code{range} with the Stata
-#'   convention or with Stata-style tokens is refused. SPSS allows at
+#'   or SAS convention or with tagged tokens is refused. SPSS allows at
 #'   most ONE discrete code alongside a range, and the check applies to
 #'   the column's composed result (what this call supplies plus what
 #'   already survives on the column), so a declaration that a
@@ -2782,13 +2815,17 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   (e.g. \code{vars = c("Age", "Income")}, or \code{vars =
 #'   offence_cols} where \code{offence_cols} holds the names). Use
 #'   either \code{vars} or \code{...}, not both.
-#' @param convention Optional. One of \code{"spss"} or \code{"stata"}
-#'   (any capitalization is accepted); overrides the convention resolution
-#'   for this call. When
+#' @param convention Optional. One of \code{"spss"}, \code{"stata"}, or
+#'   \code{"sas"} (any capitalization is accepted); overrides the
+#'   convention resolution for this call. When
 #'   \code{NULL} (the default), the convention is resolved from the
 #'   column's existing UDM declaration (if any), then from
 #'   \code{joptions("missing.convention")}, then from the SPSS-form
 #'   default. A \code{range} forces SPSS convention (see \code{range}).
+#'   The SAS convention behaves as the Stata convention with uppercase
+#'   markers: markers mint and label as \code{.A}-\code{.Z}. Token
+#'   input is case-insensitive under both tagged conventions; the case
+#'   written to the column follows the resolved convention.
 #' @param udm.notice Logical. When \code{TRUE} (the default), the
 #'   function prints a notification summarizing what was declared,
 #'   plus a reminder of how to keep the result.
@@ -2816,32 +2853,36 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' SPSS-form UDMs). The data cells themselves are unchanged; only the
 #' metadata that flags certain values as missing is added.
 #'
-#' Under Stata convention with Stata-style missing-value input (quoted
+#' Under Stata or SAS convention with tagged missing-value input (quoted
 #' tokens such as \code{".a"}), the function attaches value labels to
-#' the column's existing Stata-style missing-value markers. This
-#' requires the column to already carry Stata-style missing values --
+#' the column's existing tagged missing-value markers. This
+#' requires the column to already carry tagged missing values --
 #' either tagged cells, or markers previously declared through value
 #' labels (a marker may be labeled before any cases carry it, so a
 #' declaration made early in data collection is complete for later
-#' data). Tokens against a column with no Stata-style missing values
-#' are refused identically under every convention source: on a plain
-#' column the error points at \code{jrecode()} (which creates tagged
-#' cells from numeric codes); on a column carrying SPSS-style
+#' data). Token case is accepted either way and canonicalized to the
+#' resolved convention: lowercase markers under Stata convention,
+#' uppercase under SAS. Tokens against a column with no tagged missing
+#' values are refused identically under every convention source: on a
+#' plain column the error points at \code{jrecode()} (which creates
+#' tagged cells from numeric codes); on a column carrying SPSS-style
 #' declarations it points at \code{jconvert()}.
 #'
 #' Note that on a plain numeric column with plain numeric codes and no
 #' \code{convention} argument, the resolved convention decides the
 #' outcome: under SPSS convention the numbers stay in the cells and are
-#' flagged missing; under Stata convention the matching cells are
-#' converted to markers and the numbers leave the data. This is the one
-#' place \code{joptions(missing.convention = ...)} changes what happens
-#' to data (see the examples).
+#' flagged missing; under Stata or SAS convention the matching cells
+#' are converted to markers and the numbers leave the data. This is the
+#' one place \code{joptions(missing.convention = ...)} changes what
+#' happens to data (see the examples).
 #'
-#' Under Stata convention with numeric input, the function converts
-#' matching cells to Stata-style missing-value markers (Session 30 design lock). The
+#' Under Stata or SAS convention with numeric input, the function
+#' converts matching cells to tagged missing-value markers (Session 30
+#' design lock; SAS convention mints the same letters uppercase). The
 #' mapping is ordering-based: codes sorted by absolute value
 #' descending, more-negative-first as tie-breaker, then assigned
-#' \code{.a}, \code{.b}, \code{.c}, \code{.d} in that order. The
+#' \code{.a}, \code{.b}, \code{.c}, \code{.d} in that order (\code{.A},
+#' \code{.B}, ... under SAS convention). The
 #' assignment proceeds independently of \code{joptions("udm.convention.codes")}
 #' (which only governs the reverse Stata-to-SPSS direction). A
 #' conversion note in the standard/full \code{joutput} tier shows the
@@ -3062,9 +3103,12 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         error = function(e) .jst_stop(conditionMessage(e)))
     }
     if (!is.numeric(codes) || length(codes) == 0L) {
+      phr0 <- .jst_phrasing_convention(convention)
+      tok_ab <- .jst_canonical_tag(c("a", "b"), phr0)
       .jst_stop("`codes` must be one or more numbers (for example ",
-           "codes = c(-99, -98)) or Stata-style tokens (for example ",
-           "codes = c(\".a\", \".b\")).")
+           "codes = c(-99, -98)) or ", .jst_convention_label(phr0),
+           " tokens (for example ",
+           "codes = c(\".", tok_ab[1], "\", \".", tok_ab[2], "\")).")
     }
     # haven::na_tag() (used on parsed_codes below) accepts only double
     # vectors; an integer input -- e.g. codes = -(51:99), the natural way
@@ -3100,8 +3144,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       convention <- tolower(convention)
     }
     if (!is.character(convention) || length(convention) != 1L ||
-        !convention %in% c("spss", "stata")) {
-      .jst_stop_arg(arg = "convention", choices = c("spss", "stata"))
+        !convention %in% c("spss", "stata", "sas")) {
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
     }
   }
 
@@ -3251,7 +3295,9 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         vapply(bad, function(i) sprintf(".%s=%s", res_tags[i],
                                         names(label_residue)[i]),
                character(1)), collapse = "; ")
-      .jst_stop("labels argument contains Stata-style token entries that ",
+      .jst_stop("labels argument contains ",
+                .jst_convention_label(.jst_phrasing_convention(convention)),
+                " token entries that ",
                 "do not match any token in `codes`: ", bad_render, ".\n",
                 "Token entries label markers named in `codes`; they cannot ",
                 "name values inside a missing-value range.",
@@ -3271,7 +3317,9 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   # appear in one declaration.
   if (!is.null(range) && has_tagged) {
     .jst_stop("a missing-value `range` exists only under SPSS convention ",
-         "and cannot be combined with Stata-style tokens in `codes`.\n",
+         "and cannot be combined with ",
+         .jst_convention_label(.jst_phrasing_convention(convention)),
+         " tokens in `codes`.\n",
          "Declare the range with numeric codes only, or drop `range` ",
          "and label the markers with tokens alone.",
          fn = "jdeclare_udm")
@@ -3280,7 +3328,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   # --- Sign-off 4: reject mixed tagged + numeric ---------------------------
   if (has_tagged && has_numeric) {
     .jst_stop(.jst_jdeclare_udm_mixed_error(parsed_codes, data_name,
-                                            target_vars[1]))
+                                            target_vars[1],
+                                            per_call_convention = convention))
   }
 
   # ==========================================================================
@@ -3312,8 +3361,15 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       }
 
       # --- Read existing UDM info on the column ----------------------------
+      # Feed switched from $representation to $convention (S240, Decision
+      # 13 parity): an uppercase-tag column now reads "sas" (so its mints
+      # and gate messages go uppercase), a lowercase-tag column "stata",
+      # an SPSS-form column "spss". A MIXED-case column reads NA
+      # (ambiguous) -- it casts no vote, falls through the resolver, and
+      # skips the sign-off 2 conflict gate below; every comparison on
+      # this value must therefore be NA-safe.
       existing_info <- .jst_missing_info(col)
-      existing_conv <- if (!is.null(existing_info)) existing_info$representation
+      existing_conv <- if (!is.null(existing_info)) existing_info$convention
                        else NULL
 
       # Stata-form evidence check (S218). .jst_missing_info detects tagged
@@ -3342,44 +3398,83 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       # not create them, so tagged tokens against a column with no Stata-form
       # representation are refused whatever the convention says.
       if (has_tagged && !col_has_stata_form) {
-        if (!is.null(existing_conv) && existing_conv == "spss") {
+        if (identical(existing_conv, "spss")) {
           # Column carries SPSS-style declarations: point at the column's own
-          # codes and at jconvert (S218 builder rewrite).
+          # codes and at jconvert (S218 builder rewrite; phrasing convention
+          # threaded S240 so a sas-setting user reads uppercase tokens and a
+          # to = "sas" remedy).
           err_msg <- .jst_jdeclare_udm_convention_error(
-            parsed_codes = parsed_codes,
-            data_name    = data_name,
-            var_name     = vn,
-            col          = col
+            parsed_codes        = parsed_codes,
+            data_name           = data_name,
+            var_name            = vn,
+            col                 = col,
+            per_call_convention = convention
           )
           .jst_stop(err_msg)
         }
-        # Plain column: Stata-style tokens have no tagged cells to label.
-        # Point at the tools that create them.
-        .jst_stop("'", vn, "' has no tagged missing values to label, so ",
-             "Stata-style tokens (.a-.z) cannot be applied here.\n",
-             "To turn numeric codes into tagged missings, use jrecode() (for ",
-             "example -99=.a); or declare the numbers directly with ",
-             "codes = c(-99).")
+        # Plain column: tagged tokens have no tagged cells to label. Point
+        # at the tools that create them. Phrased in the display-time
+        # convention (S240) with gate-ready remedies: both suggested calls
+        # carry an explicit convention =, so pasting them verbatim survives
+        # the unset state once the Decision 11 choose-first gate ships.
+        phr       <- .jst_phrasing_convention(convention)
+        tok_style <- .jst_convention_label(phr)
+        tok_range <- if (identical(phr, "sas")) ".A-.Z" else ".a-.z"
+        tok_ex    <- .jst_canonical_tag("a", phr)
+        .jst_stop(
+          .jst_wrap_prose(paste0(
+            "'", vn, "' has no tagged missing values to label, so ",
+            tok_style, " tokens (", tok_range, ") cannot be applied ",
+            "here."), reserve = 16L),
+          "\n",
+          .jst_wrap_prose(paste0(
+            "To turn numeric codes into tagged missings, use jrecode() ",
+            "(for example map = \"-99=.", tok_ex, "\", convention = \"",
+            phr, "\"); or declare the numbers directly with ",
+            "codes = c(-99), convention = \"", phr, "\".")))
       }
 
-      # A range cannot land on a Stata-form column: the band is an
-      # SPSS-form structure with no Stata representation.
+      # A range cannot land on a tagged-form column: the band is an
+      # SPSS-form structure with no Stata/SAS representation. Written as
+      # not-"spss" (S240) so it covers "stata", "sas", AND the NA of a
+      # mixed-case column -- all three are structurally tagged form.
       if (!is.null(range) && !is.null(existing_conv) &&
-          existing_conv == "stata") {
-        .jst_stop("'", vn, "' carries Stata-style missing values; a ",
-             "missing-value range exists only under SPSS convention.\n",
-             "Use jconvert() to convert the column to SPSS form first.",
-             fn = "jdeclare_udm")
+          !identical(existing_conv, "spss")) {
+        carried <- if (is.na(existing_conv)) {
+          "tagged (Stata/SAS-style)"
+        } else {
+          .jst_convention_label(existing_conv)
+        }
+        .jst_stop(
+          .jst_wrap_prose(paste0(
+            "'", vn, "' carries ", carried, " missing values; a ",
+            "missing-value range exists only under SPSS convention."),
+            reserve = 16L),
+          "\n",
+          "Use jconvert() to convert the column to SPSS form first.",
+          fn = "jdeclare_udm")
       }
 
       # --- Sign-off 2: per-call convention vs existing column UDM conflict -
+      # NA-ambiguous (mixed-case) columns SKIP this gate by design (S240
+      # ruling): with no column vote there is no contradiction to catch,
+      # matching the resolver's fall-through semantics -- the per-call
+      # argument genuinely governs there. The gate still refuses every
+      # clean-column conflict, so jdeclare_udm can never CREATE a mixed
+      # column out of a clean one; the post-apply mixed-marker note below
+      # covers columns that arrived mixed.
       if (!is.null(convention) && !is.null(existing_conv) &&
-          existing_conv != convention) {
-        other_form <- if (existing_conv == "spss") "SPSS-style" else "Stata-style"
-        .jst_stop("Column '", vn, "' already carries ", other_form,
-             " missing values; cannot use convention = \"", convention,
-             "\" here. Use jconvert() to convert the column first, or ",
-             "omit the convention argument.")
+          !is.na(existing_conv) && existing_conv != convention) {
+        other_form <- .jst_convention_label(existing_conv)
+        .jst_stop(
+          .jst_wrap_prose(paste0(
+            "Column '", vn, "' already carries ", other_form,
+            " missing values; cannot use convention = \"", convention,
+            "\" here."), reserve = 16L),
+          "\n",
+          .jst_wrap_prose(paste0(
+            "Use jconvert() to convert the column first, or omit the ",
+            "convention argument.")))
       }
 
       # --- Resolve convention ----------------------------------------------
@@ -3393,6 +3488,49 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         per_call          = per_call_conv,
         column_convention = existing_conv
       )
+
+      # --- Canonicalize parsed tag case for THIS column (S240) -------------
+      # Mint case follows the resolved convention (Decision 13): parsers
+      # normalize tokens to lowercase, so under a sas resolution the tags
+      # must be uppercased before dispatch -- the D3 strip-and-relabel
+      # match and every mint site inherit the case from this one point.
+      # Done on a per-column COPY because resolution is per column: two
+      # columns in one call can legitimately canonicalize differently.
+      # (Mirrors the jrecode/jencode canonicalize-once pattern at the
+      # per-column scope this function resolves at.)
+      pc <- parsed_codes
+      if (resolved_convention %in% c("stata", "sas") && has_tagged) {
+        tg  <- haven::na_tag(pc)
+        idx <- which(!is.na(tg))
+        if (length(idx) > 0L) {
+          canon <- .jst_canonical_tag(tg[idx], resolved_convention)
+          for (k in seq_along(idx)) {
+            pc[idx[k]] <- haven::tagged_na(canon[k])
+          }
+        }
+      }
+
+      # Mixed-column edge (S240): fires only on an AMBIGUOUS (mixed-case)
+      # column whose resolution fell through to spss -- a clean tagged
+      # column resolves its own convention at Level 1, tokens on an
+      # SPSS-form or plain column were refused at sign-off 3, and a
+      # pathological both-representations input keeps its historical D1
+      # path (existing_conv "spss" there, not NA). Without this guard,
+      # token calls would die on a misleading "codes must be finite"
+      # error, and numeric-code calls would mint na_values BESIDE the
+      # tagged cells -- creating the both-representations state
+      # .jst_missing_info treats as pathological.
+      if (resolved_convention == "spss" && !is.null(existing_conv) &&
+          is.na(existing_conv)) {
+        .jst_stop(
+          .jst_wrap_prose(paste0(
+            "'", vn, "' carries tagged missing values in both letter ",
+            "cases, which the resolved convention (SPSS) cannot act on."),
+            reserve = 16L),
+          "\n",
+          "Set convention = \"stata\" or convention = \"sas\" on this ",
+          "call.")
+      }
 
       # --- Validate in-range label residue against this column -------------
       # Residue entries must fall inside the effective band: the range
@@ -3432,6 +3570,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       }
 
       # --- Branch dispatch --------------------------------------------------
+      # Tagged branches consume the canonicalized per-column copy (pc);
+      # the SPSS branch takes the original (no tags can reach it).
       conversion_info <- NULL
       if (resolved_convention == "spss") {
         # ---------- Branch D1: SPSS canonical (numeric codes / range) ------
@@ -3441,14 +3581,14 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         branch  <- "spss_canonical"
 
       } else if (has_tagged) {
-        # ---------- Branch D3: Stata canonical (tagged-NA labeling) --------
-        new_col <- .jst_jdeclare_udm_stata_label(col, parsed_codes)
+        # ---------- Branch D3: Stata/SAS canonical (tagged-NA labeling) ----
+        new_col <- .jst_jdeclare_udm_stata_label(col, pc)
         branch  <- "stata_canonical"
 
       } else {
-        # ---------- Branch D4: Stata conversion (numeric -> tagged-NA) -----
-        conv_result <- .jst_jdeclare_udm_stata_convert(col, parsed_codes,
-                                                       vn)
+        # ---------- Branch D4: Stata/SAS conversion (numeric -> tagged) ----
+        conv_result <- .jst_jdeclare_udm_stata_convert(col, pc, vn,
+                         convention = resolved_convention)
         new_col <- conv_result$new_col
         branch  <- "stata_conversion"
         # Conversion-specific info for the notification.
@@ -3458,7 +3598,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       list(new_col = new_col, branch = branch,
            conversion_info = conversion_info,
            existing_info = existing_info,
-           resolved_convention = resolved_convention)
+           resolved_convention = resolved_convention,
+           parsed_codes_used = pc)
     }, error = function(e) {
       structure(list(msg = conditionMessage(e)), class = "jst_build_err")
     })
@@ -3494,6 +3635,7 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   # ==========================================================================
 
   drop_notices <- character(0)
+  mixed_notes  <- character(0)
 
   for (ti in seq_len(n_targets)) {
     vn  <- target_vars[ti]
@@ -3503,6 +3645,46 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
     existing_info <- res$existing_info
 
     data[[vn]] <- new_col
+
+    # --- Mixed-marker note (S240, consequential) ---------------------------
+    # A declared-on column that carries tags in BOTH letter cases after
+    # the call gets a note naming the mix and the collapse remedy. Only a
+    # column that ARRIVED mixed can be in this state (sign-off 2 plus the
+    # resolver's column-wins level prevent creating a mix from a clean
+    # column), so the note fires rarely and persists only until remedied.
+    # Remedy target follows THIS call's resolved convention -- the user's
+    # demonstrated preference. No joptions rider (S227 rule check): this
+    # is a column-scoped collapse, not a mixed-frame align line -- a
+    # cleaned column resolves by its own form at Level 1 thereafter, so
+    # the re-mix bite the rider prevents cannot occur.
+    if (branch != "spss_canonical") {
+      post_tags <- haven::na_tag(new_col)
+      post_tags <- post_tags[!is.na(post_tags)]
+      if (haven::is.labelled(new_col)) {
+        vl_post <- labelled::val_labels(new_col)
+        if (!is.null(vl_post) && length(vl_post) > 0L) {
+          lt <- haven::na_tag(vl_post)
+          post_tags <- c(post_tags, lt[!is.na(lt)])
+        }
+      }
+      post_tags <- unique(post_tags)
+      lo_tags <- sort(post_tags[post_tags %in% letters])
+      up_tags <- sort(post_tags[post_tags %in% LETTERS])
+      if (length(lo_tags) > 0L && length(up_tags) > 0L) {
+        mixed_notes <- c(mixed_notes, paste0(
+          .jst_wrap_prose(paste0(
+            "Note: ", vn, " carries both Stata-style (",
+            paste0(".", lo_tags, collapse = ", "),
+            ") and SAS-style (",
+            paste0(".", up_tags, collapse = ", "),
+            ") missing-value markers.")),
+          "\n",
+          "To collapse them to one form:\n",
+          "  jconvert(", data_name,
+          ", to = \"", res$resolved_convention, "\", vars = \"", vn,
+          "\", modify = TRUE)"))
+      }
+    }
 
     # --- Sign-off 5: drop notice -------------------------------------------
     if (!is.null(existing_info)) {
@@ -3577,13 +3759,14 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       notif <- .jst_jdeclare_udm_notification(
         data_name           = data_name,
         var_name            = target_vars[1L],
-        parsed_codes        = parsed_codes,
+        parsed_codes        = results[[1L]]$parsed_codes_used,
         branch              = results[[1L]]$branch,
         conversion_info     = if (results[[1L]]$branch == "stata_conversion")
                                 results[[1L]]$conversion_info else NULL,
         modify              = modify,
         range               = range,
-        inband_labels       = if (has_residue) label_residue else NULL
+        inband_labels       = if (has_residue) label_residue else NULL,
+        resolved_convention = results[[1L]]$resolved_convention
       )
     } else {
       notif <- .jst_jdeclare_udm_bulk_notification(
@@ -3604,6 +3787,12 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   # output block).
   if (length(drop_notices) > 0L && isTRUE(udm.notice)) {
     cat(paste(drop_notices, collapse = "\n"), "\n", sep = "")
+  }
+
+  # Mixed-marker notes (S240): consequential level, so always shown when
+  # notices are on; column-level before the frame-level mismatch notice.
+  if (length(mixed_notes) > 0L && isTRUE(udm.notice)) {
+    cat(paste(mixed_notes, collapse = "\n"), "\n", sep = "")
   }
 
   # --- Post-declaration mismatch notice (Decision 11 closing rule) ---------
@@ -3826,7 +4015,11 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 
   tags <- haven::na_tag(parsed_codes)
   if (anyDuplicated(tags) > 0L) {
-    .jst_stop("codes contains duplicate Stata-style missing-value letters.",
+    # Style word follows the tags' (already canonicalized) case (S240).
+    dup_style <- if (all(tags[!is.na(tags)] %in% LETTERS)) "SAS-style"
+                 else "Stata-style"
+    .jst_stop("codes contains duplicate ", dup_style,
+              " missing-value letters.",
               fn = "jdeclare_udm")
   }
 
@@ -3875,11 +4068,17 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_stata_convert <- function(col, parsed_codes, var_name) {
+.jst_jdeclare_udm_stata_convert <- function(col, parsed_codes, var_name,
+                                            convention = "stata") {
   # parsed_codes: named numeric vector (names = labels or "", values =
   # plain numeric codes). Tagged-NA elements ruled out upstream.
+  # convention: the resolved convention ("stata" or "sas"); drives the
+  # mint alphabet and the cap message case (S240, Decision 13 parity).
 
   code_vals <- as.numeric(unname(parsed_codes))
+  mint_alphabet <- if (identical(convention, "sas")) LETTERS else letters
+  conv_word     <- if (identical(convention, "sas")) "SAS" else "Stata"
+  conv_span     <- if (identical(convention, "sas")) ".A-.Z" else ".a-.z"
 
   # Validate codes.
   if (any(!is.finite(code_vals))) {
@@ -3891,19 +4090,19 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   if (anyDuplicated(code_vals) > 0L) {
     .jst_stop("codes contains duplicate values.", fn = "jdeclare_udm")
   }
-  if (length(code_vals) > length(letters)) {
-    .jst_stop("under Stata convention with numeric codes, at ",
-              "most 26 can be converted (mapped to .a-.z).",
+  if (length(code_vals) > length(mint_alphabet)) {
+    .jst_stop("under ", conv_word, " convention with numeric codes, at ",
+              "most 26 can be converted (mapped to ", conv_span, ").",
               fn = "jdeclare_udm")
   }
 
   # Ordering-based mapping per Session 30 Branch D4 (Q6): codes sorted by
-  # |code| descending, more-negative-first as tie-breaker. Then .a, .b,
-  # .c, .d in that order.
+  # |code| descending, more-negative-first as tie-breaker. Then the first
+  # alphabet letters in that order (.a, .b, ... or .A, .B, ... under sas).
   ordering           <- order(-abs(code_vals), code_vals)
   sorted_codes       <- code_vals[ordering]
   sorted_labels      <- names(parsed_codes)[ordering]
-  tag_letters        <- letters[seq_along(sorted_codes)]
+  tag_letters        <- mint_alphabet[seq_along(sorted_codes)]
 
   x_num <- suppressWarnings(as.numeric(unclass(col)))
   new_col <- as.numeric(x_num)
@@ -3974,19 +4173,29 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
                                            conversion_info = NULL,
                                            modify = FALSE,
                                            range = NULL,
-                                           inband_labels = NULL) {
+                                           inband_labels = NULL,
+                                           resolved_convention = "stata") {
 
   output_level <- getOption(".jst_output_level", "standard")
 
   # Two-branch header (assignment-accuracy rule): the frame name appears
   # only in the modify branch, where the claim that the frame changed is
   # true. The default branch names just the variable -- the declaration is
-  # true of the returned column regardless of assignment.
+  # true of the returned column regardless of assignment. Style word
+  # follows the resolved convention (S240): a sas resolution says
+  # "SAS-style" and its body lines carry the uppercase markers actually
+  # minted. parsed_codes here is the caller's CANONICALIZED per-column
+  # copy, so the stata_canonical body renders the case that was written.
+  style_word <- .jst_convention_label(
+    if (identical(branch, "spss_canonical")) "spss" else resolved_convention)
   header <- switch(
     branch,
-    spss_canonical    = paste0("Declared SPSS-style missing values on "),
-    stata_canonical   = paste0("Labeled Stata-style missing values on "),
-    stata_conversion  = paste0("Declared and converted to Stata-style missing values on ")
+    spss_canonical    = paste0("Declared ", style_word,
+                               " missing values on "),
+    stata_canonical   = paste0("Labeled ", style_word,
+                               " missing values on "),
+    stata_conversion  = paste0("Declared and converted to ", style_word,
+                               " missing values on ")
   )
   header <- if (isTRUE(modify)) {
     paste0(header, var_name, " in ", data_name, ":")
@@ -4078,8 +4287,10 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
                   "\n")
   }
 
-  # Full tier: conversion equivalent for Stata-conversion branch.
+  # Full tier: conversion equivalent for the tagged-conversion branch.
+  # Style word follows the resolved convention (S240).
   if (identical(output_level, "full") && branch == "stata_conversion") {
+    eq_style <- .jst_convention_label(resolved_convention)
     tag_parts <- character(0)
     for (i in seq_along(conversion_info$sorted_codes)) {
       tag <- conversion_info$tag_letters[i]
@@ -4095,14 +4306,14 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
     }
     eq_call <- if (isTRUE(modify)) {
       paste0(
-        "Equivalent Stata-style call for future use:\n",
+        "Equivalent ", eq_style, " call for future use:\n",
         "    jdeclare_udm(", data_name, ", ", var_name,
         ", codes = c(", paste(tag_parts, collapse = ", "),
         "), modify = TRUE)\n"
       )
     } else {
       paste0(
-        "Equivalent Stata-style call for future use:\n",
+        "Equivalent ", eq_style, " call for future use:\n",
         "    ", data_name, " <- jdeclare_udm(", data_name, ", ", var_name,
         ", codes = c(", paste(tag_parts, collapse = ", "), "))\n"
       )
@@ -4135,21 +4346,38 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   output_level <- getOption(".jst_output_level", "standard")
 
   branches <- vapply(results, function(r) r$branch, character(1))
+  # Group key includes the resolved convention (S240): resolution is per
+  # column, so one bulk call can hold stata- and sas-resolved columns in
+  # the SAME branch, minting different letter cases -- a branch-only
+  # group would render one case for columns that got the other. Within a
+  # (branch, convention) subgroup the canonicalized copies are identical,
+  # so the subgroup's first result renders for all of it.
+  convs    <- vapply(results, function(r) r$resolved_convention, character(1))
+  grp_keys <- paste(branches, convs, sep = "|")
   msg <- character(0)
 
-  for (br in unique(branches)) {
-    idx    <- which(branches == br)
+  for (gk in unique(grp_keys)) {
+    idx    <- which(grp_keys == gk)
+    br     <- branches[idx[1]]
     vn_set <- target_vars[idx]
+    style_word <- .jst_convention_label(
+      if (identical(br, "spss_canonical")) "spss" else convs[idx[1]])
     header <- switch(
       br,
-      spss_canonical    = "Declared SPSS-style missing values on ",
-      stata_canonical   = "Labeled Stata-style missing values on ",
-      stata_conversion  = "Declared and converted to Stata-style missing values on "
+      spss_canonical    = paste0("Declared ", style_word,
+                                 " missing values on "),
+      stata_canonical   = paste0("Labeled ", style_word,
+                                 " missing values on "),
+      stata_conversion  = paste0("Declared and converted to ", style_word,
+                                 " missing values on ")
     )
     header <- if (isTRUE(modify)) {
-      paste0(header, length(vn_set), " variables in ", data_name, ":")
+      paste0(header, length(vn_set),
+             if (length(vn_set) == 1L) " variable in " else " variables in ",
+             data_name, ":")
     } else {
-      paste0(header, length(vn_set), " variables:")
+      paste0(header, length(vn_set),
+             if (length(vn_set) == 1L) " variable:" else " variables:")
     }
     # Echo the variable list (wrapped): the user supplied it via vars= or
     # the dots, and the echo confirms exactly which columns changed.
@@ -4174,9 +4402,12 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         }
       }
     } else if (br == "stata_canonical") {
-      c_tags <- haven::na_tag(parsed_codes)
-      for (i in seq_along(parsed_codes)) {
-        lbl <- names(parsed_codes)[i]
+      # Subgroup-local canonicalized copy: carries the letter case this
+      # subgroup's columns actually got (S240).
+      pc_grp <- results[[idx[1]]]$parsed_codes_used
+      c_tags <- haven::na_tag(pc_grp)
+      for (i in seq_along(pc_grp)) {
+        lbl <- names(pc_grp)[i]
         if (nzchar(lbl)) {
           body_lines <- c(body_lines,
                           sprintf("  .%s [\"%s\"]", c_tags[i], lbl))
@@ -4265,7 +4496,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 #'   \code{"sas"} (any capitalization is accepted). When \code{NULL} (the
 #'   default), \code{jconvert()}
 #'   reads \code{joptions("missing.convention")}: if the slot is set to
-#'   \code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
+#'   \code{"spss"}, \code{"stata"}, or \code{"sas"}, \code{to} resolves to
+#'   that value; if
 #'   the slot is at its \code{"none"} default, \code{jconvert()} errors
 #'   with guidance naming the concrete options. The destructive
 #'   \code{"baseR"} target is never auto-resolved -- it must always be

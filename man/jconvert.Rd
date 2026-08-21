@@ -13,7 +13,8 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
 \code{"sas"} (any capitalization is accepted). When \code{NULL} (the
 default), \code{jconvert()}
 reads \code{joptions("missing.convention")}: if the slot is set to
-\code{"spss"} or \code{"stata"}, \code{to} resolves to that value; if
+\code{"spss"}, \code{"stata"}, or \code{"sas"}, \code{to} resolves to
+that value; if
 the slot is at its \code{"none"} default, \code{jconvert()} errors
 with guidance naming the concrete options. The destructive
 \code{"baseR"} target is never auto-resolved -- it must always be
