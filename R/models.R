@@ -3109,17 +3109,40 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       }
 
       if (length(coded_miss) > 0) {
-        miss_str <- paste(coded_miss, collapse = ", ")
-        .jst_stop(paste0(
-          "'", dv_name, "' has ", n_unique, " unique values (",
-          paste(unique_vals, collapse = ", "),
-          "). The dependent variable must have exactly 2 categories coded 0/1.\n",
-          "The value(s) ", miss_str, " may be coded missing value(s).\n",
-          "Convert to NA before running jlogistic():\n",
-          "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ", dv_name,
-          ", map = \"", paste0(coded_miss, "=NA", collapse = "; "),
-          "; else=copy\")"
-        ))
+        # Two-remedy redraft (D5, S239): the declaration route first --
+        # pipeline Step 0 masks declared UDMs on the analysis copy, so a
+        # jdeclare_udm() call makes the very same jlogistic() call run --
+        # then the destructive jrecode-to-NA route, its consequence named.
+        one       <- length(coded_miss) == 1L
+        miss_txt  <- .jst_and_list(vapply(coded_miss, .jst_fmt_code,
+                                          character(1)))
+        codes_txt <- if (one) {
+          .jst_fmt_code(coded_miss)
+        } else {
+          paste0("c(", paste(vapply(coded_miss, .jst_fmt_code,
+                                    character(1)), collapse = ", "), ")")
+        }
+        .jst_stop(
+          .jst_wrap_prose(paste0(
+            dv_name, " has ", n_unique, " unique values (",
+            paste(vapply(unique_vals, .jst_fmt_code, character(1)),
+                  collapse = ", "), ")."), reserve = 13L), "\n",
+          "The dependent variable must have exactly 2 categories coded 0/1.\n",
+          .jst_wrap_prose(paste0(
+            miss_txt,
+            if (one) " looks like a coded missing value."
+            else " look like coded missing values.")), "\n",
+          "Declare ", if (one) "it" else "them",
+          " so analyses exclude ", if (one) "it" else "them", ":\n",
+          "  jdeclare_udm(", .jst_data_name, ", ", dv_name, ", codes = ",
+          codes_txt, ", modify = TRUE)\n",
+          "Or convert ", if (one) "it" else "them",
+          " to NA, dropping the code", if (one) "" else "s", ":\n",
+          "  ", .jst_data_name, "$", dv_name, "R <- jrecode(",
+          .jst_data_name, ", ", dv_name, ", map = \"",
+          paste0(vapply(coded_miss, .jst_fmt_code, character(1)),
+                 "=NA", collapse = "; "),
+          "; else=copy\")")
       } else {
         .jst_stop(paste0(
           "'", dv_name, "' has values: ",

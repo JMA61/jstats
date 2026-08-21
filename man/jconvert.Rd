@@ -148,7 +148,7 @@ declaration.} When a column has no formal UDM declaration but carries
 value labels matching the package's missing-label wordlist (e.g.
 \code{"Refused"}, \code{"Don't know"}, \code{"Not applicable"}),
 \code{jconvert()} skips the column and surfaces it in the
-notification with the affected value/label pairs. To formalise these
+notification with the affected value/label pairs. To formalize these
 as UDMs use \code{jdeclare_udm()}; to leave them as ordinary data, no
 action is needed.
 }

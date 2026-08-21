@@ -241,7 +241,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (ext %in% c("rdata", "rda")) {
     .jst_stop(
       ".RData files contain multiple named objects. ",
-      "Use load(\"", file, "\") to load these directly."
+      # Slash-swap for the same reason as the leading-digit recipe:
+      # the echoed call must paste back into R.
+      "Use load(\"", gsub("\\", "/", file, fixed = TRUE),
+      "\") to load these directly."
     )
   }
 
@@ -384,7 +387,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "The filename '", basename(file), "' starts with a number. ",
       "R does not allow variable names to start with a digit.\n",
       "Provide a name, e.g.:\n",
-      "  jload(\"", file, "\", name = \"",
+      # Slash-swap, not normalizePath: a bare data.dir-resolved name
+      # must stay bare so the rerun resolves the same way; only the
+      # backslashes are unpasteable (S241 walk finding, D6 sibling).
+      "  jload(\"", gsub("\\", "/", file, fixed = TRUE),
+      "\", name = \"",
       gsub("^[0-9]+", "", obj_name), "\")"
     )
   }
@@ -2529,6 +2536,120 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   list(data = data, n_changed = n_changed)
 }
 
+
+#' Internal helper: jsave's undeclared-stray release note
+#'
+#' The RELEASE-side note of the S239 mint/observe/release framework:
+#' \code{jsave()} is the boundary past which the package can no longer
+#' reach the data, so an undeclared suspicious code written to a
+#' declaration-carrying format is reported ONCE, when the frame's own
+#' metadata supplies the evidence. Fires only when all three hold:
+#' the target format carries declarations (gated at the call site);
+#' another column declares missing values in the same style (SPSS-form
+#' numeric declarations -- tag-form columns are self-declaring, so no
+#' undeclared-tag state exists and tags do not testify about numeric
+#' strays); and an undeclared suspicious code sits on a column. Silent
+#' when the frame declares nothing anywhere (the pure-guess case).
+#' Groups by column when codes differ; the remedy is a runnable
+#' declare-then-resave pair.
+#'
+#' @param data The data frame as written (post any preserve.udm
+#'   collapse, so a stripped frame has no evidence and stays silent).
+#' @param data_name Character. The frame's display name.
+#' @param file_arg Character. The normalized (forward-slash) target
+#'   path, echoed into the resave line. Never the raw file argument: a
+#'   Windows backslash path inside the quoted recipe is a parse error
+#'   on paste.
+#'
+#' @return Character scalar note, or \code{NULL} when nothing fires.
+#'
+#' @keywords internal
+.jst_jsave_release_notes <- function(data, data_name, file_arg) {
+  # Evidence columns (Reading 2, S239): numeric-code (SPSS-form)
+  # declarations. Tag-form columns are self-declaring and do not testify
+  # about numeric strays, so they are neither evidence nor exempt.
+  infos <- lapply(data, .jst_missing_info)
+  evidence_cols <- names(data)[vapply(infos, function(i) {
+    !is.null(i) && identical(i$representation, "spss")
+  }, logical(1))]
+  if (length(evidence_cols) == 0L) return(NULL)
+
+  strays <- list()
+  for (vn in names(data)) {
+    col <- data[[vn]]
+    if (is.character(col) || is.factor(col) || is.logical(col) ||
+        inherits(col, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
+      next
+    }
+    susp <- .jst_detect_suspicious_values(col, vn)
+    if (length(susp) == 0L) next
+    info <- infos[[vn]]
+    if (!is.null(info)) {
+      if (!is.null(info$codes)) susp <- setdiff(susp, info$codes$numeric)
+      if (!is.null(info$na_range)) {
+        susp <- susp[susp < info$na_range[1] | susp > info$na_range[2]]
+      }
+    }
+    if (length(susp) == 0L) next
+    # "Other columns": the evidence must sit somewhere besides the stray
+    # column itself, or the note's own sentence would be false.
+    if (length(setdiff(evidence_cols, vn)) == 0L) next
+    strays[[vn]] <- sort(susp)
+  }
+  if (length(strays) == 0L) return(NULL)
+
+  vars     <- names(strays)
+  n_codes  <- length(unlist(strays))
+  plural   <- n_codes > 1L
+  pair_txt <- vapply(vars, function(vn) {
+    paste0(.jst_and_list(vapply(strays[[vn]], .jst_fmt_code,
+                                character(1))),
+           " in ", vn)
+  }, character(1))
+  oth <- setdiff(evidence_cols, vars)
+  if (length(oth) == 0L) oth <- evidence_cols
+  oth_one <- length(oth) == 1L
+
+  head1 <- paste0(
+    "Note: ", .jst_and_list(pair_txt),
+    if (plural) " are" else " is",
+    " not declared as missing, though ",
+    if (oth_one) "another column in " else "other columns in ",
+    data_name,
+    if (oth_one) " declares " else " declare ",
+    "SPSS-style missing values.")
+  head2 <- if (plural) {
+    paste0("They were written to the file as ordinary values, so other ",
+           "software will read them as valid data.")
+  } else {
+    paste0("It was written to the file as an ordinary value, so other ",
+           "software will read it as valid data.")
+  }
+  decl_lines <- vapply(vars, function(vn) {
+    cs <- strays[[vn]]
+    ct <- if (length(cs) == 1L) {
+      .jst_fmt_code(cs)
+    } else {
+      paste0("c(", paste(vapply(cs, .jst_fmt_code, character(1)),
+                         collapse = ", "), ")")
+    }
+    paste0("  jdeclare_udm(", data_name, ", ", vn, ", codes = ", ct,
+           ", modify = TRUE)")
+  }, character(1))
+  jsave_line <- paste0("  jsave(", data_name, ", \"", file_arg,
+                       "\", overwrite = TRUE)")
+  n_lines <- length(decl_lines) + 1L
+  intro <- paste0("To declare ", if (plural) "them" else "it",
+                  " and save again, run",
+                  if (n_lines == 2L) " both:" else ":")
+
+  paste0(.jst_wrap_prose(head1), "\n", .jst_wrap_prose(head2), "\n",
+         intro, "\n", paste(decl_lines, collapse = "\n"), "\n",
+         jsave_line)
+}
+
+
+
 #' Internal: build the label / missing-value loss note for Excel and CSV saves
 #'
 #' @description
@@ -3197,6 +3318,24 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
              "registrations were not carried into the file: ", quoted, ".")
     }
     loss_notes <- c(loss_notes, prune_note)
+  }
+
+  # Release note (D6, S239): an undeclared suspicious code written to a
+  # declaration-carrying format, with same-style evidence elsewhere in
+  # the frame. Silent on formats with no declaration slot (.csv/.xlsx
+  # keep their own label-loss note above) and when the frame declares
+  # nothing anywhere. Runs on the frame AS WRITTEN, so preserve.udm =
+  # FALSE (declarations stripped above) leaves no evidence and stays
+  # silent by the same rule. Consequential level: loss_notes is plain
+  # message(), never joutput-gated.
+  if (ext %in% c("sav", "dta", "xpt")) {
+    # The resave recipe echoes the NORMALIZED path (the same
+    # .jst_norm_path form the Saved line prints), never the raw file
+    # argument: a Windows backslash path inside the quoted recipe is a
+    # parse error on paste (S241 walk finding).
+    release_note <- .jst_jsave_release_notes(data, data_name,
+                                             .jst_norm_path(out_path))
+    if (!is.null(release_note)) loss_notes <- c(loss_notes, release_note)
   }
 
   if (length(loss_notes) > 0) message(paste(loss_notes, collapse = "\n\n"))

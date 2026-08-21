@@ -1977,10 +1977,12 @@
     rhs_parsed <- .jst_parse_rhs_token(rhs, rule)
 
     if (!is.null(rhs_parsed)) {
-      new_val <- rhs_parsed$new_val
-      tagged  <- rhs_parsed$tagged
+      new_val     <- rhs_parsed$new_val
+      tagged      <- rhs_parsed$tagged
+      tok_missing <- isTRUE(rhs_parsed$missing)
     } else {
-      tagged  <- NULL
+      tagged      <- NULL
+      tok_missing <- FALSE
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
         # Detect commas used instead of semicolons between rules
@@ -2002,7 +2004,8 @@
     result$mappings[[length(result$mappings) + 1]] <- list(
       old_vals = old_vals,
       new_val  = new_val,
-      tagged   = tagged
+      tagged   = tagged,
+      missing  = tok_missing
     )
   }
 
@@ -2090,7 +2093,8 @@
     stop("The labels argument is empty. Provide at least one label, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
   }
 
-  result <- c()
+  result        <- c()
+  missing_label <- NULL
 
   for (rule in rules) {
 
@@ -2106,6 +2110,27 @@
     label_str <- trimws(substr(rule, eq_pos + 1, nchar(rule)))
 
     val_lower <- tolower(val_str)
+
+    if (identical(val_lower, "missing")) {
+      # The map token's labels-side counterpart (Decision 14): the entry
+      # labels whatever the map's missing target minted, so the VALUE is
+      # resolved by the caller after its convention gate. Recorded on the
+      # return as the missing_label attribute; at most one such entry.
+      if (!is.null(missing_label)) {
+        stop(paste0(
+          "missing appears in more than one label rule. ",
+          "Name missing in at most one rule."
+        ), call. = FALSE)
+      }
+      if (nchar(label_str) == 0) {
+        stop(paste0(
+          "Empty label text in rule '", rule, "'. ",
+          "Provide a label name after the equals sign."
+        ), call. = FALSE)
+      }
+      missing_label <- label_str
+      next
+    }
 
     if (grepl("^\\.[a-z]$", val_lower)) {
       # Stata-style missing-value token: .a through .z.
@@ -2140,6 +2165,11 @@
     result <- c(result, entry)
   }
 
+  if (!is.null(missing_label)) {
+    if (is.null(result)) result <- numeric(0)
+    attr(result, "missing_label") <- missing_label
+  }
+
   return(invisible(result))
 }
 
@@ -2165,8 +2195,10 @@
 #'   message so the user can find it in the map string.
 #'
 #' @return A list with \code{new_val} (numeric; \code{NA_real_} for
-#'   system-NA and tagged-NA targets) and \code{tagged} (\code{NULL},
-#'   or a single lowercase letter), or \code{NULL} when the token is
+#'   system-NA and tagged-NA targets), \code{tagged} (\code{NULL},
+#'   or a single lowercase letter), and -- for the \code{missing}
+#'   token only -- \code{missing = TRUE}, a marker the caller resolves
+#'   after its convention gate; or \code{NULL} when the token is
 #'   not recognized.
 #'
 #' @keywords internal
@@ -2184,15 +2216,19 @@
                 tagged = substr(rhs_lower, 2L, 2L)))
   }
 
-  # ======================= SEAM: THE "missing" TOKEN =======================
-  # Session C's convention-resolved missing token branches HERE, and only
-  # here. Design-locked S236: "missing" (case-insensitive, RHS only) mints
-  # the resolved convention's missing form -- tagged .a under stata, .A
-  # under sas, udm.convention.codes[1] plus an auto-declaration on the
-  # result column under spss. The resolved convention is not visible from
-  # this helper, so the branch returns a marker that each caller resolves
-  # after its convention gate. Both jrecode and jencode inherit the token
-  # from this single point; do not add a second copy in a caller.
+  # ======================= THE "missing" TOKEN =============================
+  # Design-locked S236, live since S241: "missing" (case-insensitive, RHS
+  # only) mints the resolved convention's missing form -- tagged .a under
+  # stata, .A under sas, udm.convention.codes[1] plus an auto-declaration
+  # on the result column under spss. The resolved convention is not
+  # visible from this helper, so the branch returns a MARKER (missing =
+  # TRUE) that each caller resolves after its convention gate. Both
+  # jrecode and jencode inherit the token from this single point; do not
+  # add a second copy in a caller. (Missing-Values Reference Part 4
+  # Decision 14.)
+  if (identical(rhs_lower, "missing")) {
+    return(list(new_val = NA_real_, tagged = NULL, missing = TRUE))
+  }
   # =========================================================================
 
   # Malformed tagged-NA shapes: helpful error.
@@ -2206,6 +2242,77 @@
   }
 
   NULL
+}
+
+
+#' Internal helper: render a parsed map back to its map-string form
+#'
+#' Rebuilds the user's map string from the parsed structure, for the
+#' runnable-recipe lines of the missing-token message family (Session
+#' 241): the conflict gate re-shows the map verbatim, the cap error
+#' swaps the missing target for a declared code, and the map-target
+#' mint note swaps a flagged numeric target for the missing token.
+#' Token rules render as the word missing whether or not they have
+#' been substituted yet, so the same renderer serves pre- and
+#' post-resolution callers.
+#'
+#' @param parsed_map A parsed map from \code{.jst_parse_map()} or
+#'   \code{.jst_parse_text_map()}.
+#' @param lhs_render Optional function rendering one rule's
+#'   \code{old_vals}; \code{NULL} renders them as numbers
+#'   (\code{jrecode()}'s side). \code{jencode()} supplies
+#'   \code{.jst_jencode_lhs_render}.
+#' @param targets_to_missing Numeric vector. Plain numeric targets to
+#'   render as the missing token instead of their value.
+#' @param missing_as Optional character. When supplied, token rules
+#'   render as this text instead of the word missing (the cap error's
+#'   declared-code swap).
+#'
+#' @return Character scalar: the map string, without surrounding quotes.
+#'
+#' @keywords internal
+.jst_render_map_string <- function(parsed_map, lhs_render = NULL,
+                                   targets_to_missing = numeric(0),
+                                   missing_as = NULL) {
+  fmt_lhs <- function(old_vals) {
+    if (is.null(lhs_render)) {
+      paste(vapply(as.numeric(old_vals), .jst_fmt_code, character(1)),
+            collapse = ",")
+    } else {
+      lhs_render(old_vals)
+    }
+  }
+  fmt_rhs <- function(rule) {
+    if (isTRUE(rule$missing)) {
+      if (!is.null(missing_as)) return(missing_as)
+      return("missing")
+    }
+    if (!is.null(rule$tagged)) return(paste0(".", rule$tagged))
+    if (is.na(rule$new_val)) return("NA")
+    if (length(targets_to_missing) > 0 &&
+        rule$new_val %in% targets_to_missing) {
+      return("missing")
+    }
+    .jst_fmt_code(rule$new_val)
+  }
+  parts <- character(0)
+  for (rule in parsed_map$mappings) {
+    parts <- c(parts, paste0(fmt_lhs(rule$old_vals), "=", fmt_rhs(rule)))
+  }
+  if (!is.null(parsed_map$na_rule)) {
+    parts <- c(parts, paste0("NA=", fmt_rhs(parsed_map$na_rule)))
+  }
+  if (isTRUE(parsed_map$else_explicit)) {
+    else_rhs <- if (identical(parsed_map$else_action, "tagged")) {
+      paste0(".", parsed_map$else_tag)
+    } else if (identical(parsed_map$else_action, "copy")) {
+      "copy"
+    } else {
+      "NA"
+    }
+    parts <- c(parts, paste0("else=", else_rhs))
+  }
+  paste(parts, collapse = "; ")
 }
 
 
@@ -2476,10 +2583,12 @@
     rhs_parsed <- .jst_parse_rhs_token(rhs, rule)
 
     if (!is.null(rhs_parsed)) {
-      new_val <- rhs_parsed$new_val
-      tagged  <- rhs_parsed$tagged
+      new_val     <- rhs_parsed$new_val
+      tagged      <- rhs_parsed$tagged
+      tok_missing <- isTRUE(rhs_parsed$missing)
     } else {
-      tagged  <- NULL
+      tagged      <- NULL
+      tok_missing <- FALSE
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
         stop(.jst_text_map_rhs_error(rhs, rule), call. = FALSE)
@@ -2489,7 +2598,8 @@
     result$mappings[[length(result$mappings) + 1]] <- list(
       old_vals = old_vals,
       new_val  = new_val,
-      tagged   = tagged
+      tagged   = tagged,
+      missing  = tok_missing
     )
   }
 

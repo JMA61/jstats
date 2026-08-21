@@ -14,8 +14,10 @@ message so the user can find it in the map string.}
 }
 \value{
 A list with \code{new_val} (numeric; \code{NA_real_} for
-system-NA and tagged-NA targets) and \code{tagged} (\code{NULL},
-or a single lowercase letter), or \code{NULL} when the token is
+system-NA and tagged-NA targets), \code{tagged} (\code{NULL},
+or a single lowercase letter), and -- for the \code{missing}
+token only -- \code{missing = TRUE}, a marker the caller resolves
+after its convention gate; or \code{NULL} when the token is
 not recognized.
 }
 \description{

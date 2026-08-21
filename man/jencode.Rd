@@ -30,7 +30,11 @@ blank rule to use). Special targets: \code{else=NA} converts every
 unmapped word to system missing; \code{else=.a} (through \code{.z})
 converts them to a tagged missing value under the Stata or SAS
 convention (see \code{convention}). \code{else=copy} is refused:
-words cannot be kept in a numeric column.
+words cannot be kept in a numeric column. A word may also be sent to
+the word \code{missing} -- your working convention's own missing
+form, declared automatically under the SPSS convention (see
+\code{jrecode()}'s \code{map} for the full rule); \code{blank=missing}
+composes the two tokens.
 
 By default an incomplete map is an error that names the unmatched
 words (nothing is dropped silently); add an \code{else} rule to sweep

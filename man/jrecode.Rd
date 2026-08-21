@@ -43,6 +43,20 @@ Stata or SAS convention the target may itself be a token: \code{"NA=.a"}.
 Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 \code{"-99=.a; -98=.b"}.
 
+The right-hand side may also be the word \code{missing}
+(case-insensitive): the value is converted to your working
+convention's own missing form -- a tagged marker under the Stata or
+SAS convention, or the first code from
+\code{joptions("udm.convention.codes")} under the SPSS convention,
+declared on the result automatically. The same map string therefore
+works under every setting: \code{"8=missing; else=copy"}. The NA
+rule composes with it (\code{"NA=missing"} converts plain \code{NA}
+cells the same way), and \code{labels = "missing=Refused"} labels
+whatever the token minted. If the column already carries the other
+convention's markers while your \code{missing.convention} setting
+is set, the call stops and shows both resolutions rather than
+guessing.
+
 Examples:
 \itemize{
 \item \code{"1=1; 2=0"}
@@ -51,6 +65,7 @@ Examples:
 \item \code{"-5=System; else=copy"}
 \item \code{"NA=-98; else=copy"}
 \item \code{"3=1; 4=2; else=.a"} (Stata or SAS convention only)
+\item \code{"8=missing; else=copy"} (any convention)
 }}
 
 \item{labels}{Optional. A quoted string specifying value labels for the
@@ -60,7 +75,9 @@ separated by semicolons. If supplied, these labels are used as-is.
 The left side of each rule may be a numeric code or, under Stata
 convention, a Stata-style missing-value token (\code{.a} through
 \code{.z}). Tagged-NA labels are stored on the tag itself, not on
-a numeric code.
+a numeric code. It may also be the word \code{missing}, labelling
+whatever the map's \code{missing} target produced:
+\code{labels = "missing=Refused"}.
 
 If omitted, the function attempts to transfer value labels automatically
 from the original variable. This works when the original variable has

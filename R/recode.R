@@ -862,6 +862,20 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 #'   \code{"-99=.a; -98=.b"}.
 #'
+#'   The right-hand side may also be the word \code{missing}
+#'   (case-insensitive): the value is converted to your working
+#'   convention's own missing form -- a tagged marker under the Stata or
+#'   SAS convention, or the first code from
+#'   \code{joptions("udm.convention.codes")} under the SPSS convention,
+#'   declared on the result automatically. The same map string therefore
+#'   works under every setting: \code{"8=missing; else=copy"}. The NA
+#'   rule composes with it (\code{"NA=missing"} converts plain \code{NA}
+#'   cells the same way), and \code{labels = "missing=Refused"} labels
+#'   whatever the token minted. If the column already carries the other
+#'   convention's markers while your \code{missing.convention} setting
+#'   is set, the call stops and shows both resolutions rather than
+#'   guessing.
+#'
 #'   Examples:
 #'   \itemize{
 #'     \item \code{"1=1; 2=0"}
@@ -870,6 +884,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     \item \code{"-5=System; else=copy"}
 #'     \item \code{"NA=-98; else=copy"}
 #'     \item \code{"3=1; 4=2; else=.a"} (Stata or SAS convention only)
+#'     \item \code{"8=missing; else=copy"} (any convention)
 #'   }
 #'
 #' @param labels   Optional. A quoted string specifying value labels for the
@@ -879,7 +894,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   The left side of each rule may be a numeric code or, under Stata
 #'   convention, a Stata-style missing-value token (\code{.a} through
 #'   \code{.z}). Tagged-NA labels are stored on the tag itself, not on
-#'   a numeric code.
+#'   a numeric code. It may also be the word \code{missing}, labelling
+#'   whatever the map's \code{missing} target produced:
+#'   \code{labels = "missing=Refused"}.
 #'
 #'   If omitted, the function attempts to transfer value labels automatically
 #'   from the original variable. This works when the original variable has
@@ -1170,6 +1187,147 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     )
   }
 
+  # --- The missing token (Decision 14, Session 241) -------------------------
+  # "missing" as a map target (or as the NA rule's target) mints the
+  # resolved convention's own missing form. Resolution is setting-only
+  # (per-call argument, then the joptions setting, then the resolver's
+  # default level): the source column's form never silently decides, but
+  # it IS read, to catch the one configuration where following the
+  # setting would contradict the user's own data -- an explicitly chosen
+  # setting against a column already carrying the other form. That
+  # conflict ERRORS (the set-but-contradicted teach-gate, S239 closing
+  # audit) with the per-call convention argument as the one-call escape.
+  # The unset-state behavior stays inside .jst_resolve_convention(): this
+  # block never branches on "no setting chosen", so the Decision 11
+  # choose-first gate drops in at the resolver without re-touching the
+  # token.
+  tok_rule_idx <- which(vapply(parsed_map$mappings,
+                               function(r) isTRUE(r$missing), logical(1)))
+  tok_in_na    <- !is.null(parsed_map$na_rule) &&
+                  isTRUE(parsed_map$na_rule$missing)
+  has_missing_token <- length(tok_rule_idx) > 0L || tok_in_na
+  tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
+
+  if (!is.null(tok_missing_label) && !has_missing_token) {
+    .jst_stop(
+      .jst_wrap_prose(paste0(
+        "labels names missing, but the map has no missing target for it ",
+        "to label."), reserve = 11L), "\n",
+      "Add missing to the map (for example 8=missing), or label the value directly.")
+  }
+
+  tok_mint_code  <- NULL     # numeric; spss arm only
+  tok_reused     <- FALSE    # spss arm: code already declared on the source
+  tok_minted_any <- FALSE    # did the token actually assign any cell
+  tok_tag        <- NULL     # canonical tag letter; stata/sas arms
+  if (has_missing_token) {
+    src_info <- .jst_missing_info(orig)
+    src_conv <- if (is.null(src_info)) NULL else src_info$convention
+    opt_conv <- getOption(".jst_options_missing_convention",
+                          .jst_options_defaults$missing.convention)
+
+    # The set-but-contradicted teach-gate (D7). A per-call convention is
+    # the user answering the question, so it never conflicts; an unset
+    # option has made no claim to contradict. Ambiguous mixed-case
+    # columns (src_conv NA) carry markers of BOTH forms, so minting in
+    # the chosen setting is consistent with part of the column and the
+    # gate stays out of the way.
+    if (is.null(convention) && opt_conv %in% c("spss", "stata", "sas") &&
+        !is.null(src_conv) && !is.na(src_conv) &&
+        !identical(src_conv, opt_conv)) {
+      .jst_stop(
+        .jst_wrap_prose(paste0(
+          "'missing' is ambiguous for ", orig_name, ". The column uses ",
+          .jst_convention_label(src_conv), " missing values, but your ",
+          "missing.convention setting is ",
+          .jst_convention_label(opt_conv), "."), reserve = 11L), "\n",
+        "To follow the column's form for this call:\n",
+        "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+        .jst_data_name, ", ", orig_name, ", map = \"",
+        .jst_render_map_string(parsed_map), "\", convention = \"",
+        src_conv, "\")\n",
+        "Or convert the data frame to match your setting first:\n",
+        "  jconvert(", .jst_data_name, ", to = \"", opt_conv,
+        "\", modify = TRUE)")
+    }
+
+    tok_conv <- .jst_resolve_convention(convention)
+    if (identical(tok_conv, "spss")) {
+      cc <- getOption(".jst_options_udm_convention_codes",
+                      .jst_options_defaults$udm.convention.codes)
+      tok_mint_code <- as.numeric(cc[1])
+      src_codes <- attr(orig, "na_values", exact = TRUE)
+      src_codes <- if (is.null(src_codes)) numeric(0) else as.numeric(src_codes)
+      if (tok_mint_code %in% src_codes) {
+        # Benign reuse (S239): the minted code is the user's own
+        # declaration, not a fourth code -- no cap arithmetic, and the
+        # confirmation note fires in its already-declared variant.
+        tok_reused <- TRUE
+      } else {
+        # Cap gate (D3): the declared codes that will survive this
+        # recode (codes the map does not consume) plus the mint. Only a
+        # full slate of three surviving codes can breach; the error
+        # names them and offers the two remedies.
+        lhs_all   <- unlist(lapply(parsed_map$mappings, `[[`, "old_vals"))
+        survivors <- src_codes[!(src_codes %in% lhs_all)]
+        if (length(survivors) >= 3L) {
+          surv_txt <- paste(vapply(survivors, .jst_fmt_code, character(1)),
+                            collapse = ", ")
+          cap_txt  <- if (length(survivors) == 3L) {
+            ", the maximum SPSS allows"
+          } else {
+            "; SPSS allows at most 3"
+          }
+          .jst_stop(
+            .jst_wrap_prose(paste0(
+              orig_name, " already declares ", length(survivors),
+              " SPSS-style missing values (", surv_txt, ")", cap_txt,
+              ". 'missing' would add ", .jst_fmt_code(tok_mint_code),
+              " as a fourth."), reserve = 11L), "\n",
+            "Use one of the declared codes instead:\n",
+            "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+            .jst_data_name, ", ", orig_name, ", map = \"",
+            .jst_render_map_string(parsed_map,
+                                   missing_as = .jst_fmt_code(survivors[1])),
+            "\")\n",
+            "Or re-declare ", orig_name, " with fewer codes first:\n",
+            "  jdeclare_udm(", .jst_data_name, ", ", orig_name,
+            ", codes = c(",
+            paste(vapply(survivors[1:2], .jst_fmt_code, character(1)),
+                  collapse = ", "),
+            "), modify = TRUE)")
+        }
+      }
+      for (i in tok_rule_idx) {
+        parsed_map$mappings[[i]]$new_val <- tok_mint_code
+        parsed_map$mappings[[i]]$tagged  <- NULL
+      }
+      if (tok_in_na) {
+        parsed_map$na_rule$new_val <- tok_mint_code
+        parsed_map$na_rule$tagged  <- NULL
+      }
+    } else {
+      tok_tag <- .jst_canonical_tag("a", tok_conv)
+      for (i in tok_rule_idx) {
+        parsed_map$mappings[[i]]$new_val <- NA_real_
+        parsed_map$mappings[[i]]$tagged  <- tok_tag
+      }
+      if (tok_in_na) {
+        parsed_map$na_rule$new_val <- NA_real_
+        parsed_map$na_rule$tagged  <- tok_tag
+      }
+    }
+
+    # labels = "missing=Label": the entry labels whatever the token just
+    # minted -- the numeric code under spss, the tagged marker otherwise.
+    if (!is.null(tok_missing_label)) {
+      entry <- if (!is.null(tok_mint_code)) tok_mint_code
+               else haven::tagged_na(tok_tag)
+      names(entry) <- tok_missing_label
+      parsed_labels <- c(parsed_labels, entry)
+    }
+  }
+
   # --- Cross-convention validation ---
   # Gather tagged-NA tokens from map and labels. If any are present,
   # resolve the active convention; under SPSS convention, raise the
@@ -1435,7 +1593,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         "Note: '", orig_name, "' contained no NA values - nothing was ",
         "recoded for the NA rule."))
     } else if (is.null(parsed_map$na_rule$tagged) &&
-               !is.na(parsed_map$na_rule$new_val)) {
+               !is.na(parsed_map$na_rule$new_val) &&
+               !isTRUE(parsed_map$na_rule$missing)) {
+      # A token-minted NA target (NA=missing) is confirmed by the
+      # missing-token note instead -- the declare remedy here would
+      # prescribe a step the token already took.
       na_code <- parsed_map$na_rule$new_val
       code_txt <- if (na_code == floor(na_code)) {
         format(as.integer(na_code))
@@ -1479,6 +1641,125 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     new_num[tagged_pos] <- haven::tagged_na(orig_tags[tagged_pos])
   }
 
+  # --- Declarations the result will carry -----------------------------------
+  # Three sources compose: declared codes preserved unchanged (above),
+  # declared codes the map recodes INTO (so a "8=-1" against a declared
+  # -1 keeps the minted cells missing -- the cap error's first remedy
+  # depends on this), and the missing token's spss-arm mint.
+  declared_target_codes <- numeric(0)
+  if (length(udm_codes) > 0) {
+    tgt_vals <- unlist(lapply(parsed_map$mappings, function(r) {
+      if (is.null(r$tagged) && !is.na(r$new_val) && !isTRUE(r$missing)) {
+        r$new_val
+      } else NULL
+    }))
+    if (!is.null(parsed_map$na_rule) &&
+        is.null(parsed_map$na_rule$tagged) &&
+        !is.na(parsed_map$na_rule$new_val) &&
+        !isTRUE(parsed_map$na_rule$missing)) {
+      tgt_vals <- c(tgt_vals, parsed_map$na_rule$new_val)
+    }
+    declared_target_codes <- udm_codes[udm_codes %in% tgt_vals]
+  }
+  if (!is.null(tok_mint_code)) {
+    tok_lhs <- unlist(lapply(parsed_map$mappings[tok_rule_idx],
+                             `[[`, "old_vals"))
+    tok_minted_any <-
+      (length(tok_lhs) > 0 &&
+         any(!is.na(orig_num) & orig_num %in% tok_lhs)) ||
+      (tok_in_na && any(is.na(orig_num) & is.na(orig_tags)))
+  }
+  result_na_values <- sort(unique(c(
+    preserved_udm_codes, declared_target_codes,
+    if (isTRUE(tok_minted_any)) tok_mint_code)))
+
+  # Missing-token confirmation (D4, spss arm only; Rule R). Under a
+  # stata/sas resolution the user wrote missing and got missing --
+  # silent. Under spss the package chose the number AND attached the
+  # declaration, so the note names both; the already-declared variant
+  # covers benign reuse, where the result carries the user's own
+  # declaration rather than adding a fourth code.
+  if (!is.null(tok_mint_code) && isTRUE(tok_minted_any)) {
+    if (isTRUE(tok_reused)) {
+      message(paste0(
+        .jst_wrap_prose(paste0(
+          "Note: ", .jst_fmt_code(tok_mint_code), " was used for ",
+          "missing, from your udm.convention.codes setting.")), "\n",
+        .jst_wrap_prose(paste0(
+          orig_name, " already declares ", .jst_fmt_code(tok_mint_code),
+          " as a missing value, so the recoded variable carries the ",
+          "existing declaration."))))
+    } else {
+      message(.jst_wrap_prose(paste0(
+        "Note: ", .jst_fmt_code(tok_mint_code), " was used for missing, ",
+        "from your udm.convention.codes setting, and declared as a ",
+        "missing value on the recoded variable.")))
+    }
+  }
+
+  # Map-target mint note (D1, S239 row 5): plain numeric targets the map
+  # minted that look like coded missing values. The result vector is the
+  # judge (the same heuristic jencode's target-side note uses); token
+  # mints and declared targets are excluded -- those are already properly
+  # missing on the result -- and a rule that matched nothing already drew
+  # the nothing-was-recoded advisory.
+  d1_rules <- Filter(function(r) {
+    is.null(r$tagged) && !is.na(r$new_val) && !isTRUE(r$missing)
+  }, parsed_map$mappings)
+  if (length(d1_rules) > 0) {
+    d1_targets <- setdiff(unique(vapply(d1_rules, `[[`, numeric(1),
+                                        "new_val")),
+                          result_na_values)
+    if (length(d1_targets) > 0) {
+      susp_res <- .jst_detect_suspicious_values(new_num, orig_name)
+      flagged  <- sort(intersect(susp_res, d1_targets))
+      flagged  <- as.numeric(Filter(function(v) {
+        any(vapply(d1_rules, function(r) {
+          r$new_val == v && any(!is.na(orig_num) & orig_num %in% r$old_vals)
+        }, logical(1)))
+      }, flagged))
+      if (length(flagged) > 0) {
+        pairs  <- character(0)
+        plural <- FALSE
+        for (i in seq_along(flagged)) {
+          v  <- flagged[i]
+          ov <- sort(unique(unlist(lapply(d1_rules, function(r) {
+            if (r$new_val == v) {
+              r$old_vals[r$old_vals %in% orig_num[!is.na(orig_num)]]
+            } else NULL
+          }))))
+          shown <- .jst_and_list(vapply(ov, .jst_fmt_code, character(1)))
+          if (i == 1L) plural <- length(ov) > 1L
+          pairs <- c(pairs, if (i == 1L) {
+            paste0(shown, if (plural) " were" else " was",
+                   " recoded to ", .jst_fmt_code(v))
+          } else {
+            paste0(shown, " as ", .jst_fmt_code(v))
+          })
+        }
+        one   <- length(flagged) == 1L
+        codes <- vapply(flagged, .jst_fmt_code, character(1))
+        message(paste0(
+          .jst_wrap_prose(paste0(
+            "Note: ", .jst_and_list(pairs), ", which ",
+            if (one) "looks like a coded missing value."
+            else "look like coded missing values.")), "\n",
+          .jst_wrap_prose(paste0(
+            "To make the value", if (one) "" else "s",
+            " missing under your current convention, map ",
+            if (one) "it" else "them", " directly:")), "\n",
+          "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+          .jst_data_name, ", ", orig_name, ", map = \"",
+          .jst_render_map_string(parsed_map, targets_to_missing = flagged),
+          "\")\n",
+          .jst_wrap_prose(paste0(
+            "Or declare ", .jst_and_list(codes),
+            " with jdeclare_udm() so analyses exclude ",
+            if (one) "it." else "them."))))
+      }
+    }
+  }
+
   # --- Variable label ---
   is_haven       <- inherits(orig, "haven_labelled")
   orig_var_label <- if (is_haven) labelled::var_label(orig) else NULL
@@ -1491,13 +1772,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   }
 
   # --- Build output as haven_labelled vector ---
-  # If declared SPSS-form UDM codes were preserved, the result carries an
-  # na_values declaration so those codes stay typed missings (excluded in
-  # analyses, shown by jfreq, written back out by jsave). Otherwise a plain
-  # labelled vector; any preserved Stata-form tagged NAs already sit in the
-  # double payload.
-  if (length(preserved_udm_codes) > 0) {
-    result <- haven::labelled_spss(new_num, na_values = preserved_udm_codes)
+  # If the result carries any SPSS-form declarations (preserved codes,
+  # declared map targets, or the missing token's mint -- composed above),
+  # attach them as na_values so those codes stay typed missings (excluded
+  # in analyses, shown by jfreq, written back out by jsave). Otherwise a
+  # plain labelled vector; any preserved Stata-form tagged NAs already sit
+  # in the double payload.
+  if (length(result_na_values) > 0) {
+    result <- haven::labelled_spss(new_num, na_values = result_na_values)
   } else {
     result <- labelled::labelled(new_num)
   }
@@ -1821,7 +2103,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   unmapped word to system missing; \code{else=.a} (through \code{.z})
 #'   converts them to a tagged missing value under the Stata or SAS
 #'   convention (see \code{convention}). \code{else=copy} is refused:
-#'   words cannot be kept in a numeric column.
+#'   words cannot be kept in a numeric column. A word may also be sent to
+#'   the word \code{missing} -- your working convention's own missing
+#'   form, declared automatically under the SPSS convention (see
+#'   \code{jrecode()}'s \code{map} for the full rule); \code{blank=missing}
+#'   composes the two tokens.
 #'
 #'   By default an incomplete map is an error that names the unmatched
 #'   words (nothing is dropped silently); add an \code{else} rule to sweep
@@ -2050,6 +2336,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   val_labels_out <- c()
   msgs           <- character(0)   # emitted in order at the end
 
+  # Missing-token state (Decision 14; set by map mode, read at the
+  # result build). jencode's column is fresh, so the token has no
+  # conflict gate and no cap arithmetic here.
+  tok_mint_code  <- NULL     # numeric; spss arm only
+  tok_minted_any <- FALSE
+
   # =========================================================================
   # AUTOMATIC MODE (map omitted)
   # =========================================================================
@@ -2182,6 +2474,62 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                              conditionMessage(e)))
       )
+    }
+
+    # --- The missing token (Decision 14, Session 241) ----------------------
+    # jrecode's token, inherited: "missing" as a target mints the resolved
+    # convention's own missing form. jencode builds its column from
+    # scratch, so no existing form can disagree (no conflict gate) and no
+    # declarations can crowd a cap (no cap error); the spss arm's mint is
+    # declared on the fresh result below. The unset-state behavior stays
+    # inside .jst_resolve_convention() -- see jrecode's token block.
+    tok_rule_idx <- which(vapply(parsed_map$mappings,
+                                 function(r) isTRUE(r$missing), logical(1)))
+    tok_in_na    <- !is.null(parsed_map$na_rule) &&
+                    isTRUE(parsed_map$na_rule$missing)
+    has_missing_token <- length(tok_rule_idx) > 0L || tok_in_na
+    tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
+
+    if (!is.null(tok_missing_label) && !has_missing_token) {
+      .jst_stop(
+        .jst_wrap_prose(paste0(
+          "labels names missing, but the map has no missing target for ",
+          "it to label."), reserve = 11L), "\n",
+        "Add missing to the map (for example Refused=missing), or label the value directly.")
+    }
+
+    tok_tag <- NULL
+    if (has_missing_token) {
+      tok_conv <- .jst_resolve_convention(convention)
+      if (identical(tok_conv, "spss")) {
+        cc <- getOption(".jst_options_udm_convention_codes",
+                        .jst_options_defaults$udm.convention.codes)
+        tok_mint_code <- as.numeric(cc[1])
+        for (i in tok_rule_idx) {
+          parsed_map$mappings[[i]]$new_val <- tok_mint_code
+          parsed_map$mappings[[i]]$tagged  <- NULL
+        }
+        if (tok_in_na) {
+          parsed_map$na_rule$new_val <- tok_mint_code
+          parsed_map$na_rule$tagged  <- NULL
+        }
+      } else {
+        tok_tag <- .jst_canonical_tag("a", tok_conv)
+        for (i in tok_rule_idx) {
+          parsed_map$mappings[[i]]$new_val <- NA_real_
+          parsed_map$mappings[[i]]$tagged  <- tok_tag
+        }
+        if (tok_in_na) {
+          parsed_map$na_rule$new_val <- NA_real_
+          parsed_map$na_rule$tagged  <- tok_tag
+        }
+      }
+      if (!is.null(tok_missing_label)) {
+        entry <- if (!is.null(tok_mint_code)) tok_mint_code
+                 else haven::tagged_na(tok_tag)
+        names(entry) <- tok_missing_label
+        parsed_labels <- c(parsed_labels, entry)
+      }
     }
 
     # --- Cross-convention validation (E11 gate, inherited exactly) ---------
@@ -2460,7 +2808,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
           new_num[na_mask] <- haven::tagged_na(parsed_map$na_rule$tagged)
         } else {
           new_num[na_mask] <- parsed_map$na_rule$new_val
-          if (!is.na(parsed_map$na_rule$new_val)) {
+          if (!is.na(parsed_map$na_rule$new_val) &&
+              !isTRUE(parsed_map$na_rule$missing)) {
+            # A token-minted NA target (NA=missing) is confirmed by the
+            # missing-token note instead.
             code_txt <- .jst_fmt_code(parsed_map$na_rule$new_val)
             msgs <- c(msgs, paste0(
               "Note: ", n_plain_na, " NA value",
@@ -2545,14 +2896,40 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       }
     }
 
+    # --- Missing-token confirmation (D4, spss arm only; Rule R) ------------
+    # Under a stata/sas resolution the user wrote missing and got missing
+    # -- silent. Under spss the package chose the number AND attached the
+    # declaration on the fresh column, so the note names both. The
+    # already-declared variant cannot arise here: a text source carries
+    # no declarations.
+    if (!is.null(tok_mint_code)) {
+      tok_lhs <- unlist(lapply(parsed_map$mappings[tok_rule_idx],
+                               `[[`, "old_vals"))
+      tok_minted_any <-
+        (length(tok_lhs) > 0 && any(!na_mask & words %in% tok_lhs)) ||
+        (tok_in_na && any(na_mask))
+      if (tok_minted_any) {
+        msgs <- c(msgs, .jst_wrap_prose(paste0(
+          "Note: ", .jst_fmt_code(tok_mint_code), " was used for ",
+          "missing, from your udm.convention.codes setting, and declared ",
+          "as a missing value on the encoded variable.")))
+      }
+    }
+
     # --- Target-side minting note ------------------------------------------
     # The heuristic runs on MAP TARGETS only. The NA rule's own mint has
     # already been reported above, so it is excluded here rather than
-    # nudged twice.
+    # nudged twice; token mints are confirmed by the note above and the
+    # spss mint is a declared missing, so both stay out of the flag set.
     plain_targets <- unlist(lapply(parsed_map$mappings, function(r) {
-      if (is.null(r$tagged) && !is.na(r$new_val)) r$new_val else NULL
+      if (is.null(r$tagged) && !is.na(r$new_val) && !isTRUE(r$missing)) {
+        r$new_val
+      } else NULL
     }))
     plain_targets <- unique(plain_targets)
+    if (!is.null(tok_mint_code)) {
+      plain_targets <- setdiff(plain_targets, tok_mint_code)
+    }
     if (length(plain_targets) > 0) {
       susp    <- .jst_detect_suspicious_values(new_num, var_name)
       flagged <- sort(intersect(susp, plain_targets))
@@ -2598,15 +2975,26 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
           })
         }
         codes <- vapply(flagged, .jst_fmt_code, character(1))
+        one   <- length(flagged) == 1L
         msgs <- c(msgs, paste0(
           .jst_wrap_prose(paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
-            if (length(flagged) == 1L) "looks like a coded missing value."
+            if (one) "looks like a coded missing value."
             else "look like coded missing values.")), "\n",
           .jst_wrap_prose(paste0(
-            "Declare ", .jst_and_list(codes), " with jdeclare_udm() so ",
-            "analyses exclude ",
-            if (length(flagged) == 1L) "it." else "them."))))
+            "To make the value", if (one) "" else "s",
+            " missing under your current convention, map ",
+            if (one) "it" else "them", " directly:")), "\n",
+          "  ", .jst_data_name, "$", var_name, "R <- jencode(",
+          .jst_data_name, ", ", var_name, ", map = \"",
+          .jst_render_map_string(parsed_map,
+                                 lhs_render = .jst_jencode_lhs_render,
+                                 targets_to_missing = flagged),
+          "\")\n",
+          .jst_wrap_prose(paste0(
+            "Or declare ", .jst_and_list(codes),
+            " with jdeclare_udm() so analyses exclude ",
+            if (one) "it." else "them."))))
       }
     }
   }
@@ -2614,7 +3002,14 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   # =========================================================================
   # RESULT
   # =========================================================================
-  result <- labelled::labelled(new_num)
+  # The missing token's spss-arm mint is declared on the fresh column
+  # (Decision 14); otherwise a plain labelled vector, with any tagged
+  # mints already in the double payload.
+  if (!is.null(tok_mint_code) && isTRUE(tok_minted_any)) {
+    result <- haven::labelled_spss(new_num, na_values = tok_mint_code)
+  } else {
+    result <- labelled::labelled(new_num)
+  }
 
   orig_var_label <- if (inherits(orig, "haven_labelled")) {
     labelled::var_label(orig)
@@ -3753,6 +4148,29 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
     assign(modify_target, data, envir = parent.frame())
   }
 
+  # --- Column-vs-option override notes (D2, S239; consequential) -----------
+  # Fires when the column's own form (resolver level 1) overrode an
+  # EXPLICITLY SET missing.convention (level 3). A per-call convention or
+  # range is the user answering the question -- level 2 -- so those calls
+  # are out; the "none" default already distinguishes chose from
+  # never-chose. Fires each call: a jdeclare_udm call is a deliberate
+  # convention choice, so the once-per-session gate was declined.
+  override_notes <- list()
+  d2_opt <- getOption(".jst_options_missing_convention",
+                      .jst_options_defaults$missing.convention)
+  if (is.null(convention) && is.null(range) &&
+      d2_opt %in% c("spss", "stata", "sas")) {
+    for (ti in seq_len(n_targets)) {
+      ex <- results[[ti]]$existing_info
+      ex_conv <- if (is.null(ex)) NULL else ex$convention
+      if (!is.null(ex_conv) && !is.na(ex_conv) &&
+          !identical(ex_conv, d2_opt)) {
+        override_notes[[length(override_notes) + 1L]] <-
+          list(var = target_vars[ti], col_conv = ex_conv)
+      }
+    }
+  }
+
   # --- Build and emit notification -----------------------------------------
   if (isTRUE(udm.notice)) {
     if (n_targets == 1L) {
@@ -3780,6 +4198,36 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       )
     }
     cat(notif, sep = "")
+  }
+
+  # D2 override notes, grouped by the column form. The primary
+  # notification above already names the resolved form, so the note goes
+  # straight to the mismatch and the two remedies (Rule R's
+  # otherwise-evident carve-out).
+  if (length(override_notes) > 0L && isTRUE(udm.notice)) {
+    cat("\n")   # Rule F: a blank line off the notification block above
+    convs   <- unique(vapply(override_notes, `[[`, character(1),
+                             "col_conv"))
+    d2_msgs <- character(0)
+    for (cv in convs) {
+      vars_cv <- vapply(Filter(function(o) identical(o$col_conv, cv),
+                               override_notes),
+                        `[[`, character(1), "var")
+      verb <- if (length(vars_cv) == 1L) "uses" else "use"
+      d2_msgs <- c(d2_msgs, paste0(
+        .jst_wrap_prose(paste0(
+          "Note: ", .jst_format_var_list(vars_cv, and = TRUE), " ", verb,
+          " ", .jst_convention_label(cv), " missing values, but your ",
+          "missing.convention setting is ",
+          .jst_convention_label(d2_opt), ".")), "\n",
+        "To convert the data frame, run:\n",
+        "  jconvert(", data_name, ", to = \"", d2_opt,
+        "\", modify = TRUE)\n",
+        "To keep ", .jst_convention_label(cv),
+        " instead, change the setting:\n",
+        "  joptions(missing.convention = \"", cv, "\")"))
+    }
+    cat(paste(d2_msgs, collapse = "\n\n"), "\n", sep = "")
   }
 
   # Drop notices fire after the main notification (consistent with the
@@ -4617,7 +5065,7 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 #' value labels matching the package's missing-label wordlist (e.g.
 #' \code{"Refused"}, \code{"Don't know"}, \code{"Not applicable"}),
 #' \code{jconvert()} skips the column and surfaces it in the
-#' notification with the affected value/label pairs. To formalise these
+#' notification with the affected value/label pairs. To formalize these
 #' as UDMs use \code{jdeclare_udm()}; to leave them as ordinary data, no
 #' action is needed.
 #'
@@ -5458,7 +5906,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       }
       msg_lines <- c(msg_lines,
                      "",
-                     "  To formalise these as user-defined missing values, see jdeclare_udm().",
+                     "  To formalize these as user-defined missing values, see jdeclare_udm().",
                      "  To leave them as ordinary data, no action is needed.")
     }
 
