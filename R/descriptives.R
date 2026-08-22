@@ -1649,6 +1649,25 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
                      row.names = FALSE)
   }
 
+  # -- SPSS-style live-codes line (Decision 11 steering; S240 design, --------
+  # S244 build). Condition-only, no remedy (S240 ruling: the steering
+  # lives in the choose-first gate's menu copy and the book/guide
+  # passages, and a rider here would re-import the S227 mechanics the
+  # ruling kept out). Fires whenever a screened column carries
+  # SPSS-form declarations -- codes and/or a range -- because base R
+  # sees those values as live numbers.
+  spss_live <- var_names[vapply(var_names, function(v) {
+    info <- .jst_missing_info(data[[v]])
+    !is.null(info) && identical(info$representation, "spss")
+  }, logical(1))]
+  if (length(spss_live) > 0L) {
+    cat("\n", .jst_wrap_prose(paste0(
+      "Note: SPSS-style declared codes on: ",
+      paste(spss_live, collapse = ", "),
+      ". jstats treats these as missing; base R functions do not.")),
+      "\n", sep = "")
+  }
+
   # -- Variable label legend (last; only under "legend"/"legend.bottom") -----
   if (vlmode %in% c("legend", "legend.bottom")) {
     cat("\n")

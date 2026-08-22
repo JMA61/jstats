@@ -1229,8 +1229,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     Case 1 guidance lines dropped.
 #' }
 #' The setting-MISMATCH notice is gated on an explicitly set
-#' \code{missing.convention}: the resolver's SPSS fallback must never
-#' nag a user who stated no preference (S226). Mixed-frame ALIGN lines
+#' \code{missing.convention}: a user who stated no preference must
+#' never be nagged about a mismatch with it (S226). Mixed-frame ALIGN lines
 #' are not so gated -- each carries a
 #' \code{joptions(missing.convention = ...)} rider whenever running it
 #' would leave the setting not matching the result, which under
@@ -1455,9 +1455,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                ", and ", mix_labels[length(mix_labels)])
       }
       # S227: BOTH align lines carry the joptions rider here. Running
-      # either one leaves missing.convention at "none", so the resolver
-      # falls back to SPSS and the next fresh declaration re-mixes the
-      # frame -- the same bite the Case 7 rider prevents. Governing rule:
+      # either one leaves missing.convention at "none", so the next
+      # fresh evidence-free declaration hits the Decision 11
+      # choose-first gate (S244; pre-S244, it silently re-mixed the
+      # frame) -- the same class of bite the Case 7 rider prevents.
+      # Governing rule:
       # an align line carries a rider whenever running it would leave the
       # setting not matching the result. Scoped to mixed-frame align
       # lines; Case 1's jconvert line answers a different question

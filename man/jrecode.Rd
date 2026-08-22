@@ -239,7 +239,10 @@ df$EducR2 <- jrecode(df, Education,
 # Convert a specific coded missing value to system NA
 df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
 
-# Give plain NA cells a codable value, then declare it
+# Give plain NA cells a codable value, then declare it. Declaring on a
+# plain column needs a chosen missing-value convention (the package
+# never infers one), so choose it first:
+joptions(missing.convention = "spss")
 df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
 df <- jdeclare_udm(df, AgeR, codes = c("Not recorded" = -98))
 

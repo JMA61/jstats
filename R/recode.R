@@ -1071,7 +1071,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' # Convert a specific coded missing value to system NA
 #' df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
 #'
-#' # Give plain NA cells a codable value, then declare it
+#' # Give plain NA cells a codable value, then declare it. Declaring on a
+#' # plain column needs a chosen missing-value convention (the package
+#' # never infers one), so choose it first:
+#' joptions(missing.convention = "spss")
 #' df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
 #' df <- jdeclare_udm(df, AgeR, codes = c("Not recorded" = -98))
 #'
@@ -1223,10 +1226,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # setting against a column already carrying the other form. That
   # conflict ERRORS (the set-but-contradicted teach-gate, S239 closing
   # audit) with the per-call convention argument as the one-call escape.
-  # The unset-state behavior stays inside .jst_resolve_convention(): this
+  # The unset-state behavior lives inside .jst_resolve_convention(): this
   # block never branches on "no setting chosen", so the Decision 11
-  # choose-first gate drops in at the resolver without re-touching the
-  # token.
+  # choose-first gate (shipped S244) fires at the resolver without this
+  # block knowing about it.
   tok_rule_idx <- which(vapply(parsed_map$mappings,
                                function(r) isTRUE(r$missing), logical(1)))
   tok_in_na    <- !is.null(parsed_map$na_rule) &&
@@ -1279,7 +1282,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         "\", modify = TRUE)")
     }
 
-    tok_conv <- .jst_resolve_convention(convention)
+    tok_conv <- .jst_resolve_convention(convention, act = "token",
+                                        fn = "jrecode")
     if (identical(tok_conv, "spss")) {
       cc <- getOption(".jst_options_udm_convention_codes",
                       .jst_options_defaults$udm.convention.codes)
@@ -1372,7 +1376,30 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   } else FALSE
 
   if (map_has_tag || labels_has_tag) {
-    resolved_convention <- .jst_resolve_convention(convention)
+    # First tagged spelling in the user's call, for the choose-first
+    # gate's head echo (parser-normalized lowercase; input case is
+    # accepted either way per Decision 13). Token-minted tags cannot
+    # reach the gate: minting them required a resolution, so a second
+    # resolution here cannot fall to level 4.
+    gate_marker <- NULL
+    for (r in parsed_map$mappings) {
+      if (!is.null(r$tagged)) { gate_marker <- paste0(".", r$tagged); break }
+    }
+    if (is.null(gate_marker) && identical(parsed_map$else_action, "tagged")) {
+      gate_marker <- paste0(".", parsed_map$else_tag)
+    }
+    if (is.null(gate_marker) && !is.null(parsed_map$na_rule) &&
+        !is.null(parsed_map$na_rule$tagged)) {
+      gate_marker <- paste0(".", parsed_map$na_rule$tagged)
+    }
+    if (is.null(gate_marker) && labels_has_tag) {
+      lt <- haven::na_tag(parsed_labels)
+      gate_marker <- paste0(".", lt[!is.na(lt)][1L])
+    }
+    resolved_convention <- .jst_resolve_convention(convention,
+                                                   act    = "tagged",
+                                                   fn     = "jrecode",
+                                                   marker = gate_marker)
     if (identical(resolved_convention, "spss")) {
       err_msg <- .jst_jrecode_convention_error(
         parsed_map          = parsed_map,
@@ -2531,7 +2558,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 
     tok_tag <- NULL
     if (has_missing_token) {
-      tok_conv <- .jst_resolve_convention(convention)
+      tok_conv <- .jst_resolve_convention(convention, act = "token",
+                                          fn = "jencode")
       if (identical(tok_conv, "spss")) {
         cc <- getOption(".jst_options_udm_convention_codes",
                         .jst_options_defaults$udm.convention.codes)
@@ -2575,7 +2603,29 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     } else FALSE
 
     if (map_has_tag || labels_has_tag) {
-      resolved_convention <- .jst_resolve_convention(convention)
+      # First tagged spelling in the user's call, for the choose-first
+      # gate's head echo (parser-normalized lowercase; see jrecode's
+      # tagged site for the token-minted-tags argument).
+      gate_marker <- NULL
+      for (r in parsed_map$mappings) {
+        if (!is.null(r$tagged)) { gate_marker <- paste0(".", r$tagged); break }
+      }
+      if (is.null(gate_marker) &&
+          identical(parsed_map$else_action, "tagged")) {
+        gate_marker <- paste0(".", parsed_map$else_tag)
+      }
+      if (is.null(gate_marker) && !is.null(parsed_map$na_rule) &&
+          !is.null(parsed_map$na_rule$tagged)) {
+        gate_marker <- paste0(".", parsed_map$na_rule$tagged)
+      }
+      if (is.null(gate_marker) && labels_has_tag) {
+        lt <- haven::na_tag(parsed_labels)
+        gate_marker <- paste0(".", lt[!is.na(lt)][1L])
+      }
+      resolved_convention <- .jst_resolve_convention(convention,
+                                                     act    = "tagged",
+                                                     fn     = "jencode",
+                                                     marker = gate_marker)
       if (identical(resolved_convention, "spss")) {
         err_msg <- .jst_jrecode_convention_error(
           parsed_map          = parsed_map,
@@ -3229,9 +3279,16 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   every value from the first bound through the second is treated as
 #'   missing. The SPSS parallel is \code{MISSING VALUES X (-99 THRU
 #'   -51)}. Bounds may be non-integer, and one bound may be infinite
-#'   (\code{c(-Inf, -51)} is SPSS's \code{LO THRU -51}). Ranges exist
-#'   only under SPSS convention; combining \code{range} with the Stata
-#'   or SAS convention or with tagged tokens is refused. SPSS allows at
+#'   (\code{c(-Inf, -51)} is SPSS's \code{LO THRU -51}). A
+#'   missing-value range can exist only under SPSS convention:
+#'   combining \code{range} with the Stata or SAS convention -- as a
+#'   per-call argument or as the \code{joptions()} setting -- or with
+#'   tagged tokens is refused, and the refusal teaches the two-step
+#'   route (declare the range under SPSS convention, then
+#'   \code{jconvert()} the column) when the range covers few enough
+#'   values to convert. When no convention is selected anywhere, a
+#'   range declaration stops and asks for \code{convention = "spss"}
+#'   on the call. SPSS allows at
 #'   most ONE discrete code alongside a range, and the check applies to
 #'   the column's composed result (what this call supplies plus what
 #'   already survives on the column), so a declaration that a
@@ -3247,8 +3304,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   convention resolution for this call. When
 #'   \code{NULL} (the default), the convention is resolved from the
 #'   column's existing UDM declaration (if any), then from
-#'   \code{joptions("missing.convention")}, then from the SPSS-form
-#'   default. A \code{range} forces SPSS convention (see \code{range}).
+#'   \code{joptions("missing.convention")}; when neither supplies one,
+#'   the call stops with a guided error asking you to choose -- the
+#'   package never infers a convention for a fresh declaration. A
+#'   \code{range} requires SPSS convention (see \code{range}).
 #'   The SAS convention behaves as the Stata convention with uppercase
 #'   markers: markers mint and label as \code{.A}-\code{.Z}. Token
 #'   input is case-insensitive under both tagged conventions; the case
@@ -3355,6 +3414,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   \code{\link{joptions}}, \code{\link{jstats}}
 #'
 #' @examples
+#' # A fresh declaration needs a chosen missing-value convention; the
+#' # package never infers one. Choose SPSS convention for these examples:
+#' joptions(missing.convention = "spss")
+#'
 #' # clinic$MoodRating arrives "dirty": -99/-98 sit in the data as
 #' # ordinary numbers (the state after a CSV or Excel import), so summary
 #' # statistics are poisoned until the codes are declared missing.
@@ -3588,16 +3651,64 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
            "Use one finite bound, for example range = c(-Inf, -51).")
     }
     range <- sort(as.numeric(range))
-    # A missing-value range exists only in the SPSS representation
-    # (haven's na_range); written as != "spss" so any future non-SPSS
-    # convention token is covered without edits here.
+
+    # --- Guards E and D: a range against a non-SPSS convention (S244) ------
+    # A missing-value range can exist only in the SPSS representation
+    # (haven's na_range). Guard E refuses the per-call pair (range +
+    # convention = "stata"/"sas"; the reworded and relocated successor
+    # of the S219 call-level guard -- same refusal set, new render).
+    # Guard D refuses the setting-level conflict the removed forcing
+    # line used to override silently: a live S243 run showed a stata
+    # setting + range declaring SPSS-form. Both guards sit after
+    # variable resolution so the in-band count is computable, and both
+    # are DATA-AWARE (one builder, head parameter x fits/over-cap
+    # fork): the two-step stay-tagged recipe renders only when EVERY
+    # targeted column's range covers 26 or fewer values (jconvert's
+    # cap); over the cap, the count line, the SPSS remedy, and the
+    # Rule X requirement sentence. Guard D leaves columns that carry
+    # their own convention alone: an SPSS-form column resolves itself
+    # at Level 1 (Decision 11 precedence, unchanged), and a
+    # tagged-form column falls to the per-column range guard below,
+    # whose convert-first remedy is the right one there. Both written
+    # as != "spss" so any future non-SPSS convention token is covered
+    # without edits here.
     if (!is.null(convention) && convention != "spss") {
-      .jst_stop("a missing-value `range` exists only under SPSS ",
-           "convention; it cannot be combined with convention = \"",
-           convention, "\".\n",
-           "Drop the convention argument, or declare discrete codes ",
-           "instead of a range.",
-           fn = "jdeclare_udm")
+      nb <- .jst_gate_inband_counts(data, target_vars, range)
+      ov <- which(nb > 26L)
+      .jst_stop(.jst_choose_convention_error(
+                  variant   = "conflict_call",
+                  fn        = "jdeclare_udm",
+                  conv      = convention,
+                  fits      = length(ov) == 0L,
+                  data_name = data_name,
+                  var_names = target_vars,
+                  range     = range,
+                  over_var  = if (length(ov) > 0L) target_vars[ov[1L]],
+                  over_n    = if (length(ov) > 0L) nb[ov[1L]]),
+                fn = "jdeclare_udm")
+    }
+    if (is.null(convention)) {
+      opt_conv <- getOption(".jst_options_missing_convention",
+                            .jst_options_defaults$missing.convention)
+      if (opt_conv %in% c("stata", "sas")) {
+        settable <- vapply(target_vars, function(v)
+          is.null(.jst_missing_info(data[[v]])), logical(1))
+        if (any(settable)) {
+          nb <- .jst_gate_inband_counts(data, target_vars, range)
+          ov <- which(nb > 26L)
+          .jst_stop(.jst_choose_convention_error(
+                      variant   = "conflict_setting",
+                      fn        = "jdeclare_udm",
+                      conv      = opt_conv,
+                      fits      = length(ov) == 0L,
+                      data_name = data_name,
+                      var_names = target_vars,
+                      range     = range,
+                      over_var  = if (length(ov) > 0L) target_vars[ov[1L]],
+                      over_n    = if (length(ov) > 0L) nb[ov[1L]]),
+                    fn = "jdeclare_udm")
+        }
+      }
     }
   }
 
@@ -3740,6 +3851,13 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   has_tagged     <- length(tag_idx) > 0L
   has_numeric    <- length(num_idx) > 0L
 
+  # First tagged token in the call, for the choose-first gate's head
+  # echo (S244; parser-normalized lowercase). Reachable at level 4 only
+  # from an ambiguous mixed-case column: a clean tagged column resolves
+  # itself at level 1, and tokens on a plain or SPSS-form column are
+  # refused at sign-off 3 before resolution.
+  gate_marker <- if (has_tagged) paste0(".", c_tags[tag_idx[1L]]) else NULL
+
   # A range is SPSS-only; tagged tokens are Stata-form. The two cannot
   # appear in one declaration.
   if (!is.null(range) && has_tagged) {
@@ -3843,7 +3961,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         # at the tools that create them. Phrased in the display-time
         # convention (S240) with gate-ready remedies: both suggested calls
         # carry an explicit convention =, so pasting them verbatim survives
-        # the unset state once the Decision 11 choose-first gate ships.
+        # the unset state under the Decision 11 choose-first gate
+        # (shipped S244).
         phr       <- .jst_phrasing_convention(convention)
         tok_style <- .jst_convention_label(phr)
         tok_range <- if (identical(phr, "sas")) ".A-.Z" else ".a-.z"
@@ -3905,15 +4024,22 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       }
 
       # --- Resolve convention ----------------------------------------------
-      # A supplied range forces SPSS: the band exists only in that
-      # representation, so neither a joptions() Stata setting nor the
-      # Stata default may route this call to a conversion branch.
-      # (convention = "stata" + range was already refused call-level;
-      # a Stata-form column + range was refused just above.)
-      per_call_conv <- if (!is.null(range)) "spss" else convention
+      # The range-forcing line is GONE (Decision 11 step (4), S244): a
+      # range no longer silently overrides the resolution. Legal range
+      # calls reach SPSS through the column's own form (level 1), a
+      # per-call convention = "spss" (level 2), or an spss setting
+      # (level 3); a stata/sas per-call or setting was refused by
+      # guards E and D above, a tagged-form column + range was refused
+      # just above, and the never-set state gates at level 4 with the
+      # single per-call fix line (act = "range").
       resolved_convention <- .jst_resolve_convention(
-        per_call          = per_call_conv,
-        column_convention = existing_conv
+        per_call          = convention,
+        column_convention = existing_conv,
+        act               = if (!is.null(range)) "range"
+                            else if (has_tagged) "tagged"
+                            else "codes",
+        fn                = "jdeclare_udm",
+        marker            = gate_marker
       )
 
       # --- Canonicalize parsed tag case for THIS column (S240) -------------
@@ -5180,10 +5306,16 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
   data_name <- arg1$name
 
   # --- Resolve `to` -----------------------------------------------------------
-  # Auto-resolve from joptions when to= is NULL. spss/stata flow through;
-  # "none" errors with guidance (Q5 of the Session 28 jconvert design lock).
-  # baseR never auto-resolves — destructive transformations require
-  # explicit intent.
+  # Auto-resolve from joptions when to= is NULL. spss/stata/sas flow
+  # through; "none" gates (Q5 of the Session 28 jconvert design lock,
+  # harmonized to the Rule V choose-first form at S244 -- the four-target
+  # menu decided S243). baseR never auto-resolves -- destructive
+  # transformations require explicit intent, which is also why the menu
+  # must OFFER it (no setting can ever supply it) and lists it last. No
+  # recommendation line: a conversion destination is externally
+  # constrained (the format a collaborator or supervisor needs). The
+  # joptions tail is the gate's permanence-line analogue, teaching the
+  # standing default that makes the bare call work.
   if (is.null(to)) {
     convention <- getOption(".jst_options_missing_convention",
                             .jst_options_defaults$missing.convention)
@@ -5191,8 +5323,33 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       to <- convention
     } else {
       .jst_stop(
-        "A target format is required. Set to = \"baseR\", \"spss\", \"stata\", or \"sas\"."
-      )
+        .jst_wrap_prose(
+          "no target format is selected, so nothing can be converted.",
+          reserve = 12L), "\n",
+        "Choose a target for this call:\n",
+        "  to = \"stata\"\n",
+        .jst_wrap_indent(paste0(
+          "Numeric missing codes become Stata-style missing values ",
+          "(.a-.z); markers behave as true NAs in base R."),
+          indent = 6L), "\n",
+        "  to = \"spss\"\n",
+        .jst_wrap_indent(paste0(
+          "Stata- or SAS-style missing values (.a-.z, .A-.Z) become ",
+          "numeric codes; codes stay visible numbers, as in SPSS."),
+          indent = 6L), "\n",
+        "  to = \"sas\"\n",
+        .jst_wrap_indent(
+          "Like to = \"stata\", with uppercase markers (.A-.Z).",
+          indent = 6L), "\n",
+        "  to = \"baseR\"\n",
+        .jst_wrap_indent(paste0(
+          "All missing-value declarations are removed; declared values ",
+          "become plain NA."),
+          indent = 6L), "\n",
+        "To set a session default so to = is not needed, choose a ",
+        "convention:\n",
+        "  joptions(missing.convention = \"stata\")    (or \"spss\", \"sas\")",
+        fn = "jconvert")
     }
   }
   # Platform specs are case-insensitive: accept "SPSS", "BaseR", "Stata",

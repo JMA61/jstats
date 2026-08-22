@@ -54,8 +54,8 @@ compaction must not silence a new frame's mismatch -- and the
 Case 1 guidance lines dropped.
 }
 The setting-MISMATCH notice is gated on an explicitly set
-\code{missing.convention}: the resolver's SPSS fallback must never
-nag a user who stated no preference (S226). Mixed-frame ALIGN lines
+\code{missing.convention}: a user who stated no preference must
+never be nagged about a mismatch with it (S226). Mixed-frame ALIGN lines
 are not so gated -- each carries a
 \code{joptions(missing.convention = ...)} rider whenever running it
 would leave the setting not matching the result, which under

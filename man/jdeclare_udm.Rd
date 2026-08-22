@@ -56,9 +56,16 @@ missing-value RANGE (band), e.g. \code{range = c(-99, -51)} --
 every value from the first bound through the second is treated as
 missing. The SPSS parallel is \code{MISSING VALUES X (-99 THRU
 -51)}. Bounds may be non-integer, and one bound may be infinite
-(\code{c(-Inf, -51)} is SPSS's \code{LO THRU -51}). Ranges exist
-only under SPSS convention; combining \code{range} with the Stata
-or SAS convention or with tagged tokens is refused. SPSS allows at
+(\code{c(-Inf, -51)} is SPSS's \code{LO THRU -51}). A
+missing-value range can exist only under SPSS convention:
+combining \code{range} with the Stata or SAS convention -- as a
+per-call argument or as the \code{joptions()} setting -- or with
+tagged tokens is refused, and the refusal teaches the two-step
+route (declare the range under SPSS convention, then
+\code{jconvert()} the column) when the range covers few enough
+values to convert. When no convention is selected anywhere, a
+range declaration stops and asks for \code{convention = "spss"}
+on the call. SPSS allows at
 most ONE discrete code alongside a range, and the check applies to
 the column's composed result (what this call supplies plus what
 already survives on the column), so a declaration that a
@@ -76,8 +83,10 @@ either \code{vars} or \code{...}, not both.}
 convention resolution for this call. When
 \code{NULL} (the default), the convention is resolved from the
 column's existing UDM declaration (if any), then from
-\code{joptions("missing.convention")}, then from the SPSS-form
-default. A \code{range} forces SPSS convention (see \code{range}).
+\code{joptions("missing.convention")}; when neither supplies one,
+the call stops with a guided error asking you to choose -- the
+package never infers a convention for a fresh declaration. A
+\code{range} requires SPSS convention (see \code{range}).
 The SAS convention behaves as the Stata convention with uppercase
 markers: markers mint and label as \code{.A}-\code{.Z}. Token
 input is case-insensitive under both tagged conventions; the case
@@ -221,6 +230,10 @@ ends up out of step with the rest of its DF.
 }
 
 \examples{
+# A fresh declaration needs a chosen missing-value convention; the
+# package never infers one. Choose SPSS convention for these examples:
+joptions(missing.convention = "spss")
+
 # clinic$MoodRating arrives "dirty": -99/-98 sit in the data as
 # ordinary numbers (the state after a CSV or Excel import), so summary
 # statistics are poisoned until the codes are declared missing.

@@ -744,13 +744,202 @@
   out
 }
 
+#' Internal helper: build the choose-first gate error family
+#'
+#' The one builder behind every render of the Decision 11 choose-first
+#' gate (step (4) decided INERT at S240; texts approved S243; built
+#' S244), so the variants cannot drift apart. Renders are STATELESS
+#' (identical at every firing), single fixed form across joutput tiers,
+#' and governed by Rule V: real choices as copy-pasteable lines, each
+#' with a one-line consequence, the recommendation carried in the menu
+#' copy (stata, for base-R/AI mixing), and the permanence line stating
+#' the action itself.
+#'
+#' Variants (the S243 approved-text sheet, changelog SESSION 243 (g)):
+#' \describe{
+#'   \item{\code{"menu"}}{A -- the full three-option menu (stata
+#'     recommended, spss contrastive, sas brief), for acts legal under
+#'     all three conventions: numeric-codes declarations and the
+#'     \code{missing} token family. \code{head_tail} completes the
+#'     head ("no missing-value convention is selected, so <tail>").}
+#'   \item{\code{"pair"}}{B -- the stata/sas pair (the spss option
+#'     line omitted), for literal tagged spellings, which the
+#'     paste-and-rerun test fails under spss.}
+#'   \item{\code{"range_unset"}}{C -- the never-set range variant:
+#'     single per-call fix line (\code{convention = "spss"}); its user
+#'     has no convention to stay in, so no menu and no recipe.}
+#'   \item{\code{"conflict_setting"} / \code{"conflict_call"}}{D / E --
+#'     the range-vs-tagged-convention conflicts (setting-level and
+#'     per-call), DATA-AWARE with two renders: when every targeted
+#'     column's range covers 26 or fewer values (\code{fits}), the
+#'     two-step stay-tagged recipe (declare the range under SPSS
+#'     convention, then \code{jconvert()}), each recipe line preceded
+#'     by what it does; over the cap, the count line, the SPSS remedy,
+#'     and the Rule X requirement sentence. Only the head differs
+#'     between D and E (and E's "use" versus D's "stay in": E's user
+#'     may hold no setting), so one code path emits all four renders.}
+#' }
+#'
+#' Recipes echo the caller's actual data-frame name, variables, and
+#' range bounds, in the data, variable(s), named-options teaching form
+#' with flat \code{modify = TRUE}; runnable lines are bare Rule L lines
+#' (2-space indent, never width-wrapped). Prose is Rule U wrapped;
+#' menu consequence lines wrap at their own indent via
+#' \code{.jst_wrap_indent()}.
+#'
+#' @param variant One of \code{"menu"}, \code{"pair"},
+#'   \code{"range_unset"}, \code{"conflict_setting"},
+#'   \code{"conflict_call"}.
+#' @param fn The exported caller's name, for the first line's wrap
+#'   reserve (the \code{.jst_stop()} prefix length).
+#' @param head_tail Menu/pair variants: the clause completing the head.
+#' @param conv Conflict variants: the conflicting convention token
+#'   (\code{"stata"} or \code{"sas"}) -- the per-call value for E, the
+#'   joptions setting for D; flips the style words and the
+#'   \code{to =} target mechanically.
+#' @param fits Conflict variants: TRUE when every targeted column's
+#'   range covers 26 or fewer values (the jconvert cap), so the
+#'   two-step recipe is honest to paste.
+#' @param data_name,var_names,range Conflict variants: the echo pieces
+#'   for the recipe lines (\code{range} already sorted).
+#' @param over_var,over_n Conflict over-cap render: the first targeted
+#'   column over the cap, and its in-band value count.
+#' @return Character scalar: the complete message body (no fn prefix).
+#' @keywords internal
+.jst_choose_convention_error <- function(variant, fn,
+                                         head_tail = NULL,
+                                         conv      = NULL,
+                                         fits      = NULL,
+                                         data_name = NULL,
+                                         var_names = NULL,
+                                         range     = NULL,
+                                         over_var  = NULL,
+                                         over_n    = NULL) {
+
+  reserve <- nchar(fn) + 4L   # the ".jst_stop" prefix: "<fn>(): "
+
+  # --- D / E: the range-vs-tagged-convention conflicts ----------------------
+  if (variant %in% c("conflict_setting", "conflict_call")) {
+    style <- if (identical(conv, "sas")) "SAS" else "Stata"
+    head  <- if (identical(variant, "conflict_setting")) {
+      paste0("a missing-value range can exist only under SPSS convention, ",
+             "and your missing.convention setting is \"", conv, "\".")
+    } else {
+      paste0("a missing-value range can exist only under SPSS convention; ",
+             "it cannot be combined with convention = \"", conv, "\".")
+    }
+    frv       <- function(x) format(x, trim = TRUE, scientific = FALSE)
+    vars_txt  <- paste(var_names, collapse = ", ")
+    decl_line <- paste0("  jdeclare_udm(", data_name, ", ", vars_txt,
+                        ", range = c(", frv(range[1L]), ", ", frv(range[2L]),
+                        "), convention = \"spss\", modify = TRUE)")
+    if (isTRUE(fits)) {
+      lead <- paste0(
+        if (identical(variant, "conflict_setting")) {
+          paste0("To stay in ", style, " convention, ")
+        } else {
+          paste0("To use ", style, " convention, ")
+        },
+        "first declare the range using SPSS convention:")
+      conv_lead <- paste0("Then convert the ",
+                          if (length(var_names) > 1L) "columns" else "column",
+                          " to ", style, " convention:")
+      conv_line <- paste0("  jconvert(", data_name, ", ", vars_txt,
+                          ", to = \"", conv, "\", modify = TRUE)")
+      return(paste0(.jst_wrap_prose(head, reserve = reserve), "\n",
+                    .jst_wrap_prose(lead), "\n",
+                    decl_line, "\n",
+                    .jst_wrap_prose(conv_lead), "\n",
+                    conv_line))
+    }
+    over_par <- paste0("In ", over_var, " the range covers ", over_n,
+                       " values; ", style, "-style missing values support ",
+                       "at most 26 per variable, so this range cannot ",
+                       "become ", style, "-style. To declare the range ",
+                       "using SPSS convention:")
+    close_par <- paste0("To use ", style, " convention with jconvert(), ",
+                        "you must first reduce these to 26 or fewer.")
+    return(paste0(.jst_wrap_prose(head, reserve = reserve), "\n",
+                  .jst_wrap_prose(over_par), "\n",
+                  decl_line, "\n",
+                  .jst_wrap_prose(close_par)))
+  }
+
+  # --- C: the never-set range variant ---------------------------------------
+  if (identical(variant, "range_unset")) {
+    return(paste0(
+      .jst_wrap_prose(paste0(
+        "no missing-value convention is selected, and a missing-value ",
+        "range can exist only under SPSS convention."),
+        reserve = reserve), "\n",
+      "To declare it, set convention = \"spss\" on this call."))
+  }
+
+  # --- A / B: the menu and the pair -----------------------------------------
+  head  <- paste0("no missing-value convention is selected, so ", head_tail)
+  parts <- c(
+    "Choose one for this session:",
+    "  joptions(missing.convention = \"stata\")",
+    .jst_wrap_indent(paste0(
+      "Markers behave as true NAs in base R; recommended if you mix ",
+      "jstats with base R or AI-generated code."), indent = 6L))
+  if (identical(variant, "menu")) {
+    parts <- c(parts,
+      "  joptions(missing.convention = \"spss\")",
+      .jst_wrap_indent(paste0(
+        "Codes stay visible numbers, as in SPSS. jstats treats them as ",
+        "missing; base R does not."), indent = 6L))
+  }
+  parts <- c(parts,
+    "  joptions(missing.convention = \"sas\")",
+    .jst_wrap_indent("Like Stata, with uppercase markers (.A-.Z).",
+                     indent = 6L),
+    "To make the choice permanent, put the same line in your .Rprofile.")
+  paste0(.jst_wrap_prose(head, reserve = reserve), "\n",
+         paste(parts, collapse = "\n"))
+}
+
+
+#' Internal helper: in-band value counts for the range-conflict guards
+#'
+#' The data-aware half of the Decision 11 gate's D/E guards (S243
+#' design; S244 build): for each targeted column, how many values would
+#' a candidate missing-value range cover -- the count \code{jconvert()}
+#' would enumerate when converting the declared range to tagged form.
+#' Delegates to the shared counter (\code{.jst_missing_info(observed =
+#' TRUE)}) by attaching the candidate range to a throwaway copy of the
+#' column, so the guard and the converter cannot disagree about what
+#' "inside the range" means (distinct observed in-band values,
+#' excluding any discretely declared codes).
+#'
+#' @param data The data frame.
+#' @param vars Character vector of target column names.
+#' @param range Length-2 numeric, sorted: the candidate range.
+#' @return Integer vector, one count per element of \code{vars}.
+#' @keywords internal
+.jst_gate_inband_counts <- function(data, vars, range) {
+  vapply(vars, function(v) {
+    tmp <- data[[v]]
+    attr(tmp, "na_range") <- range
+    info <- .jst_missing_info(tmp, observed = TRUE)
+    if (is.null(info) || is.null(info$range_values)) 0L
+    else nrow(info$range_values)
+  }, integer(1), USE.NAMES = FALSE)
+}
+
+
 #' Internal helper: resolve the active missing-value convention
 #'
 #' Implements Decision 11's four-step precedence rule for determining
 #' which UDM convention (SPSS-form, Stata-form, or SAS-form; Decision
 #' 13 added "sas") applies to a fresh UDM declaration or
-#' convention-conditional recode. Returns \code{"spss"},
-#' \code{"stata"}, or \code{"sas"} -- never \code{NULL}.
+#' convention-conditional recode. RESOLVES OR STOPS: returns
+#' \code{"spss"}, \code{"stata"}, or \code{"sas"} when any of levels
+#' 1-3 supplies a convention, and otherwise -- level 4, no convention
+#' anywhere -- signals the Decision 11 choose-first gate (step (4)
+#' decided INERT at S240; built S244) instead of defaulting. The
+#' package never infers a convention for a minting act; an unset
+#' option and an explicit \code{"none"} are identical.
 #'
 #' The four levels of the precedence rule, in order:
 #' \enumerate{
@@ -766,8 +955,18 @@
 #'     \code{"sas"}, use that.
 #'   \item If \code{joptions("missing.convention")} is \code{"spss"},
 #'     \code{"stata"}, or \code{"sas"}, use that.
-#'   \item Else default to SPSS-form.
+#'   \item Else STOP with the act-shaped choose-first guided error,
+#'     rendered by \code{.jst_choose_convention_error()}: the full
+#'     three-option menu for numeric codes and the \code{missing}
+#'     token family, the stata/sas pair for literal tagged spellings,
+#'     and the single \code{convention = "spss"} fix line for a
+#'     range. Variants are assigned per SPELLING by the
+#'     paste-and-rerun test (Rule V, S243 amendment).
 #' }
+#'
+#' All call sites are demand-driven -- the resolver runs only when the
+#' call actually mints a missing form -- so a never-set user doing
+#' ordinary non-minting work never reaches level 4.
 #'
 #' @param per_call The value of the calling function's
 #'   \code{convention} argument (typically NULL, "spss", "stata", or
@@ -776,15 +975,40 @@
 #'   \code{"sas"}, or \code{NULL} (an \code{NA} from an ambiguous
 #'   mixed-case column is treated as \code{NULL}). When non-NULL and
 #'   non-NA, level 1 of the precedence rule applies and the function
-#'   returns this value immediately. Step 5b (\code{jdeclare_udm()})
-#'   will populate this argument from \code{.jst_missing_info()} on
-#'   the operand column.
+#'   returns this value immediately. \code{jdeclare_udm()} populates
+#'   this argument from \code{.jst_missing_info()} on the operand
+#'   column.
+#' @param act REQUIRED. The minting act, so the level-4 gate renders
+#'   the honest variant: \code{"codes"} (numeric-codes declaration,
+#'   full menu), \code{"token"} (the \code{missing} target family,
+#'   full menu), \code{"tagged"} (literal tagged spellings, the
+#'   stata/sas pair), or \code{"range"} (the per-call fix line).
+#' @param fn REQUIRED. The exported caller's name, passed through to
+#'   \code{.jst_stop()} so the gate's prefix names the function the
+#'   user actually called (auto-detection is bypassed deliberately:
+#'   the stop fires inside a shared internal helper).
+#' @param marker Optional. For \code{act = "tagged"}: the first tagged
+#'   spelling in the user's call (e.g. \code{".a"},
+#'   parser-normalized lowercase), echoed in the gate's head.
 #'
 #' @return Single character: \code{"spss"}, \code{"stata"}, or
-#'   \code{"sas"}.
+#'   \code{"sas"} -- or no return (the level-4 stop).
 #'
 #' @keywords internal
-.jst_resolve_convention <- function(per_call = NULL, column_convention = NULL) {
+.jst_resolve_convention <- function(per_call = NULL, column_convention = NULL,
+                                    act, fn, marker = NULL) {
+
+  # Internal invariants (bare stops: these catch package bugs, not user
+  # input -- every call site is package code).
+  if (missing(act) || !is.character(act) || length(act) != 1L ||
+      !act %in% c("codes", "token", "tagged", "range")) {
+    stop(".jst_resolve_convention() requires act = \"codes\", \"token\", ",
+         "\"tagged\", or \"range\".", call. = FALSE)
+  }
+  if (missing(fn) || !is.character(fn) || length(fn) != 1L || !nzchar(fn)) {
+    stop(".jst_resolve_convention() requires the exported caller's name ",
+         "in `fn`.", call. = FALSE)
+  }
 
   # Platform specs are case-insensitive (accept "SPSS", "Stata", ...);
   # canonicalize before validating so every caller inherits the rule.
@@ -815,8 +1039,25 @@
                    .jst_options_defaults$missing.convention)
   if (opt %in% c("spss", "stata", "sas")) return(opt)
 
-  # Level 4: SPSS-form default.
-  return("spss")
+  # Level 4: the choose-first gate (Decision 11 step (4); decided INERT
+  # S240, texts approved S243, built S244). No convention anywhere --
+  # the package refuses to infer one for a minting act. Stateless
+  # single render; the act picks the Rule V variant.
+  head_tail <- switch(act,
+    codes  = "these codes cannot be declared.",
+    token  = "the 'missing' target cannot be applied.",
+    tagged = paste0("the '",
+                    if (is.null(marker)) ".a" else marker,
+                    "' marker cannot be ",
+                    if (identical(fn, "jdeclare_udm")) "declared."
+                    else "applied."),
+    range  = NULL)
+  gate_variant <- switch(act, codes = "menu", token = "menu",
+                         tagged = "pair", range = "range_unset")
+  .jst_stop(.jst_choose_convention_error(variant   = gate_variant,
+                                         fn        = fn,
+                                         head_tail = head_tail),
+            fn = fn)
 }
 
 #' Internal helper: canonical letter case for a tagged-NA marker

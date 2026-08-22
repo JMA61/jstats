@@ -1815,6 +1815,29 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 
+#' Internal helper: wrap message prose at a fixed left indent
+#'
+#' Companion to \code{.jst_wrap_prose()} for indented explanatory text
+#' inside a multi-line message layout -- the consequence lines under a
+#' choose-first gate's menu options (Rule V), where every line of the
+#' wrapped text sits at the same indent. Delegates the wrapping (atom
+#' protection, orphan pull-back) to \code{.jst_wrap_prose()} at a width
+#' reduced by the indent, then prefixes every resulting line with the
+#' indent spaces. (Session 244, the Decision 11 gate build.)
+#'
+#' @param text Character scalar: one sentence/paragraph, no embedded
+#'   newlines.
+#' @param indent Number of spaces every line is indented by.
+#' @param width Target total line width including the indent (default 76).
+#' @return Character scalar; every line starts with \code{indent} spaces.
+#' @keywords internal
+.jst_wrap_indent <- function(text, indent, width = 76L) {
+  pad  <- strrep(" ", indent)
+  body <- .jst_wrap_prose(text, width = width - indent)
+  paste0(pad, gsub("\n", paste0("\n", pad), body, fixed = TRUE))
+}
+
+
 # -----------------------------------------------------------------------------
 # .jst_fmt_n()
 #

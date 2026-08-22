@@ -4,7 +4,13 @@
 \alias{.jst_resolve_convention}
 \title{Internal helper: resolve the active missing-value convention}
 \usage{
-.jst_resolve_convention(per_call = NULL, column_convention = NULL)
+.jst_resolve_convention(
+  per_call = NULL,
+  column_convention = NULL,
+  act,
+  fn,
+  marker = NULL
+)
 }
 \arguments{
 \item{per_call}{The value of the calling function's
@@ -15,20 +21,40 @@
 \code{"sas"}, or \code{NULL} (an \code{NA} from an ambiguous
 mixed-case column is treated as \code{NULL}). When non-NULL and
 non-NA, level 1 of the precedence rule applies and the function
-returns this value immediately. Step 5b (\code{jdeclare_udm()})
-will populate this argument from \code{.jst_missing_info()} on
-the operand column.}
+returns this value immediately. \code{jdeclare_udm()} populates
+this argument from \code{.jst_missing_info()} on the operand
+column.}
+
+\item{act}{REQUIRED. The minting act, so the level-4 gate renders
+the honest variant: \code{"codes"} (numeric-codes declaration,
+full menu), \code{"token"} (the \code{missing} target family,
+full menu), \code{"tagged"} (literal tagged spellings, the
+stata/sas pair), or \code{"range"} (the per-call fix line).}
+
+\item{fn}{REQUIRED. The exported caller's name, passed through to
+\code{.jst_stop()} so the gate's prefix names the function the
+user actually called (auto-detection is bypassed deliberately:
+the stop fires inside a shared internal helper).}
+
+\item{marker}{Optional. For \code{act = "tagged"}: the first tagged
+spelling in the user's call (e.g. \code{".a"},
+parser-normalized lowercase), echoed in the gate's head.}
 }
 \value{
 Single character: \code{"spss"}, \code{"stata"}, or
-\code{"sas"}.
+\code{"sas"} -- or no return (the level-4 stop).
 }
 \description{
 Implements Decision 11's four-step precedence rule for determining
 which UDM convention (SPSS-form, Stata-form, or SAS-form; Decision
 13 added "sas") applies to a fresh UDM declaration or
-convention-conditional recode. Returns \code{"spss"},
-\code{"stata"}, or \code{"sas"} -- never \code{NULL}.
+convention-conditional recode. RESOLVES OR STOPS: returns
+\code{"spss"}, \code{"stata"}, or \code{"sas"} when any of levels
+1-3 supplies a convention, and otherwise -- level 4, no convention
+anywhere -- signals the Decision 11 choose-first gate (step (4)
+decided INERT at S240; built S244) instead of defaulting. The
+package never infers a convention for a minting act; an unset
+option and an explicit \code{"none"} are identical.
 }
 \details{
 The four levels of the precedence rule, in order:
@@ -45,7 +71,17 @@ ambiguous rule) and does not engage this level.
 \code{"sas"}, use that.
 \item If \code{joptions("missing.convention")} is \code{"spss"},
 \code{"stata"}, or \code{"sas"}, use that.
-\item Else default to SPSS-form.
+\item Else STOP with the act-shaped choose-first guided error,
+rendered by \code{.jst_choose_convention_error()}: the full
+three-option menu for numeric codes and the \code{missing}
+token family, the stata/sas pair for literal tagged spellings,
+and the single \code{convention = "spss"} fix line for a
+range. Variants are assigned per SPELLING by the
+paste-and-rerun test (Rule V, S243 amendment).
 }
+
+All call sites are demand-driven -- the resolver runs only when the
+call actually mints a missing form -- so a never-set user doing
+ordinary non-minting work never reaches level 4.
 }
 \keyword{internal}
