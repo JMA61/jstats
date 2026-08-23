@@ -182,6 +182,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                       conditionMessage(e)))
     )
+    # S249: jrelabel does not quote markers back, and this vector becomes the
+    # column's value labels on the very next line. Drop the raw-spelling
+    # record at the parse so it cannot reach a column.
+    attr(parsed_labels, "tagged_raw") <- NULL
     labelled::val_labels(result) <- parsed_labels
   }
 
@@ -408,13 +412,28 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' @param data_name Character. Name of the data frame in the user's
 #'   call (used to reconstruct the example).
 #' @param var_name Character. Name of the variable being declared.
+#' @param col The column being declared. Its own declared codes supply
+#'   the substituted values in the example call.
+#' @param per_call_convention Character or \code{NULL}. The caller's raw
+#'   per-call \code{convention} argument. It seeds the display convention
+#'   for the prescriptive positions; it plays no part in whether the error
+#'   fires.
+#' @param tagged_raw Named character vector or \code{NULL}, as recorded by
+#'   \code{.jst_parse_code_tokens()}: canonical lowercase marker letter to
+#'   the spelling the caller typed. Seeds the quoted positions. A letter
+#'   absent from it falls back to the display case.
+#' @param arg_label Character. Which argument the markers arrived in --
+#'   \code{"codes"} normally, \code{"labels"} on the labels-only form.
+#'   The message names the argument the caller actually used.
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
 .jst_jdeclare_udm_convention_error <- function(parsed_codes,
                                                data_name, var_name, col,
-                                               per_call_convention = NULL) {
+                                               per_call_convention = NULL,
+                                               tagged_raw = NULL,
+                                               arg_label = "codes") {
 
   # S218 rewrite. Sole caller is the hoisted tagged-token gate, and the
   # sole case is a column that carries SPSS-STYLE declarations while the
@@ -431,6 +450,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # else stata) -- token case, style word, and the jconvert target all
   # follow it, so a sas-setting user reads '.A' / "SAS-style" /
   # to = "sas". Firing conditions and both remedies are unchanged.
+  #
+  # S249: that phrasing was applied to the QUOTED positions too, so a user
+  # who typed codes = c(Refused = ".a") under a sas setting was told the
+  # call contains '.A'. S245 had already settled the split for the jrecode
+  # sibling -- quote what was typed, prescribe in the convention -- and this
+  # applies it here. The three quoted positions (head, cap-note marker
+  # list, unsubstituted-marker render) now echo the typed spelling and drop
+  # the style word; the two jconvert() remedy lines are unchanged.
 
   # --- Identify tagged-NA elements ------------------------------------------
   tags_in_codes <- haven::na_tag(parsed_codes)
@@ -439,7 +466,32 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   phr           <- .jst_phrasing_convention(per_call_convention)
   phr_style     <- .jst_convention_label(phr)
   disp_tags     <- .jst_canonical_tag(all_tags, phr)
-  first_tag     <- disp_tags[1]
+
+  # S249: the S245 split, applied here. Two kinds of position, taking
+  # opposite treatments:
+  #   QUOTE        - the head's marker, the cap note's marker list, and the
+  #                  unsubstituted-marker render all echo the user's own
+  #                  call, so they carry the letter AS TYPED and no
+  #                  convention style word. Recasing a quote reads as a
+  #                  misread of the call in both directions, and calling a
+  #                  typed '.a' "SAS-style" equates two spellings a reader
+  #                  sees as different things.
+  #   PRESCRIPTIVE - the jconvert() remedy lines are meant to be pasted, so
+  #                  they stay in the phrasing convention's case and keep
+  #                  their style word.
+  # Spellings arrive already resolved per route in `tagged_raw` (the caller
+  # knows the route; this builder does not). A letter absent from it carries
+  # no knowable spelling -- the labels-only form -- and falls back to the
+  # display case, as the jrecode sibling's labels side does. Logic below
+  # stays on the lowercase parsed letters (all_tags).
+  quote_tags <- disp_tags
+  if (!is.null(tagged_raw) && length(tagged_raw) > 0L) {
+    hit <- all_tags %in% names(tagged_raw)
+    if (any(hit)) {
+      quote_tags[hit] <- unname(tagged_raw[all_tags[hit]])
+    }
+  }
+  first_tag <- quote_tags[1]
 
   na_vals <- attr(col, "na_values")
   na_vals <- if (is.null(na_vals)) numeric(0)
@@ -466,8 +518,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (identical(output_level, "minimal")) {
     return(paste0(
       .jst_wrap_prose(paste0(
-        "codes for ", var_name, " contains '.", first_tag,
-        "', a ", phr_style, " missing-value marker, but ", var_name,
+        arg_label, " for ", var_name, " contains '.", first_tag,
+        "', a missing-value marker, but ", var_name,
         " carries SPSS-style missing values."), reserve = 16L),
       "\n",
       "Name the numeric codes directly, or convert first:\n",
@@ -479,8 +531,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   msg_parts <- c(
     .jst_wrap_prose(paste0(
-      "codes for ", var_name, " contains '.", first_tag,
-      "', a ", phr_style, " missing-value marker, but ", var_name,
+      arg_label, " for ", var_name, " contains '.", first_tag,
+      "', a missing-value marker, but ", var_name,
       " carries SPSS-style missing values (", decl_disp, ")."),
       reserve = 16L))
 
@@ -546,25 +598,25 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
         paste0("    jdeclare_udm(", data_name, ", ", var_name,
                ", codes = ", codes_arg, ")"),
         "",
-        paste0("The numeric code",
+        .jst_wrap_prose(paste0("The numeric code",
                if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
                " above ",
                if (sum(!is.na(letter_to_code)) > 1L) "are" else "is",
                " ", var_name, "'s declared missing value",
                if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
                ", matched largest magnitude first (the ordering ",
-               "jconvert() uses)."))
+               "jconvert() uses).")))
     }
 
     if (length(unmapped) > 0L) {
-      unmapped_render <- paste0("'.", .jst_canonical_tag(unmapped, phr),
+      unmapped_render <- paste0("'.", quote_tags[match(unmapped, all_tags)],
                                 "'", collapse = ", ")
       were_was <- if (length(unmapped) == 1L) "was" else "were"
       msg_parts <- c(msg_parts, "",
         .jst_wrap_prose(paste0(
-          "Note: `codes` uses ", length(all_tags),
-          " ", phr_style, " markers (",
-          paste0(".", disp_tags, collapse = ", "),
+          "Note: `", arg_label, "` uses ", length(all_tags),
+          " markers (",
+          paste0(".", quote_tags, collapse = ", "),
           ") but ", var_name, " declares only ", length(na_vals),
           " numeric code", if (length(na_vals) > 1L) "s" else "",
           "; ", unmapped_render, " ", were_was,
@@ -593,7 +645,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
 #' @keywords internal
 .jst_jdeclare_udm_mixed_error <- function(parsed_codes, data_name, var_name,
-                                          per_call_convention = NULL) {
+                                          per_call_convention = NULL,
+                                          arg_label = "codes") {
+
+  # S249: the head names the argument the caller actually used. The
+  # labels-only form reaches this builder too (labels = "-99=Refused;
+  # .a=DK" mixes a numeric and a tagged entry), and until S249 it was
+  # told its `codes` argument was at fault on a call that had none.
+  # Same correction as the convention-error sibling, same session.
 
   tags_in_codes <- haven::na_tag(parsed_codes)
   tag_idx       <- which(!is.na(tags_in_codes))
@@ -609,7 +668,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   if (identical(output_level, "minimal")) {
     return(paste0(
-      "codes for ", var_name, " mixes ", phr_style, " missing values and ",
+      arg_label, " for ", var_name, " mixes ", phr_style,
+      " missing values and ",
       "SPSS-style numeric codes. Issue these as separate jdeclare_udm() calls."
     ))
   }
@@ -661,7 +721,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
                      "\", modify = TRUE)")
 
   msg_parts <- c(
-    .jst_wrap_prose(paste0("codes for ", var_name,
+    .jst_wrap_prose(paste0(arg_label, " for ", var_name,
                            " mixes ", phr_style, " missing values ",
                            "and SPSS-style numeric codes."),
                     reserve = 16L),
@@ -1099,6 +1159,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                       conditionMessage(e)))
     )
+    # S249: jrecode does not quote markers back (Rule Y retired its echo-back
+    # at S246), and these labels become the column's value labels. Drop the
+    # raw-spelling record at the parse so it cannot reach a column.
+    attr(parsed_labels, "tagged_raw") <- NULL
   }
 
   # --- The missing token (Decision 14, Session 241) -------------------------
@@ -1980,6 +2044,16 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' @keywords internal
 .jst_jencode_map_call <- function(data_name, var_name, rules_text,
                                   indent = "  ") {
+  # S249: .jst_jencode_lhs_render re-quotes any word containing ; = or ,
+  # with DOUBLE quotes, and this builder wraps the whole map in double
+  # quotes -- so an unescaped inner quote closed the string early and the
+  # suggested line did not parse. Escaping is the form that survives BOTH
+  # hazards at once: switching the outer quote to ' looks equivalent but
+  # breaks the moment the map also carries an apostrophe, and a map can
+  # easily hold both (an apostrophe word alongside a quoted phrase).
+  # Escape before any width measurement, so the packing below counts the
+  # characters the user will actually see.
+  rules_text <- gsub("\"", "\\\"", rules_text, fixed = TRUE)
   new_name <- paste0(var_name, "R")
   head_str <- paste0(indent, data_name, "$", new_name, " <- jencode(")
   one_line <- paste0(head_str, data_name, ", ", var_name,
@@ -2414,6 +2488,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                              conditionMessage(e)))
       )
+      # S249: jencode shares jrecode's builder and likewise does not quote
+      # markers back; these labels become the column's value labels. Drop the
+      # raw-spelling record at the parse so it cannot reach a column.
+      attr(parsed_labels, "tagged_raw") <- NULL
     }
 
     # --- The missing token (Decision 14, Session 241) ----------------------
@@ -2947,11 +3025,27 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
             "To make the value", if (one) "" else "s",
             " missing under your current convention, map ",
             if (one) "it" else "them", " directly:")), "\n",
+          # S249: the rendered map is escaped before it goes inside the
+          # double-quoted map = argument. .jst_jencode_lhs_render re-quotes
+          # any word containing ; = or , with double quotes, and an
+          # unescaped inner quote closed the argument early -- the suggested
+          # line did not parse. Escaping, rather than switching the outer
+          # quote to ', is the form that survives both hazards at once: a
+          # map can carry an apostrophe word and a quoted phrase together,
+          # and single outer quotes break on the apostrophe.
+          #
+          # Deliberately NOT routed through .jst_jencode_map_call(): that
+          # builder packs long maps across lines by splitting on ";", which
+          # is quote-naive, so a quoted phrase holding a semicolon would be
+          # broken across the split and the pasted word would no longer
+          # match the data. This line stays whole.
           "  ", .jst_data_name, "$", var_name, "R <- jencode(",
           .jst_data_name, ", ", var_name, ", map = \"",
-          .jst_render_map_string(parsed_map,
-                                 lhs_render = .jst_jencode_lhs_render,
-                                 targets_to_missing = flagged),
+          gsub("\"", "\\\"",
+               .jst_render_map_string(parsed_map,
+                                      lhs_render = .jst_jencode_lhs_render,
+                                      targets_to_missing = flagged),
+               fixed = TRUE),
           "\")\n",
           .jst_wrap_prose(paste0(
             "Or declare ", .jst_and_list(codes),
@@ -3608,7 +3702,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   }
 
   # --- Parse labels (Option A path and the labels-only form) ---------------
-  parsed_labels <- NULL
+  parsed_labels     <- NULL
+  labels_tagged_raw <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1L) {
       .jst_stop("The labels argument must be a single quoted string, e.g. ",
@@ -3619,6 +3714,12 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                        conditionMessage(e)))
     )
+    # S249: jdeclare_udm IS the caller that quotes markers back, so it keeps
+    # the raw-spelling record -- but in a local, not on the vector. Stripping
+    # here rather than downstream means parsed_labels flows on exactly as it
+    # did before, including into label_residue and the in-range label path.
+    labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
+    attr(parsed_labels, "tagged_raw") <- NULL
   }
 
   # --- Argument disambiguation (Option A vs Option C) ----------------------
@@ -3717,6 +3818,38 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
     }
   }
 
+  # --- Harvest the typed marker spellings, then strip (S249) ----------------
+  # .jst_parse_code_tokens() records the letter AS TYPED on a tagged_raw
+  # attribute, because the parse normalizes token case and the refusal below
+  # quotes the call back. Take it off parsed_codes immediately: from here
+  # parsed_codes flows into val_labels() on the label branches, and an
+  # internal bookkeeping attribute has no business riding into a column's
+  # value labels. Everything downstream therefore sees exactly what it saw
+  # before this change.
+  #
+  # The route decides whether a spelling is knowable, and only here is the
+  # route known, so the map is completed here rather than in the builder:
+  #   character `codes`  - the parser normalized the case and recorded it;
+  #   numeric `codes`    - written with haven::tagged_na(), no parser ran, so
+  #                        the tag's own case IS the spelling chosen;
+  #   labels-only form   - the labels parser recorded it (S249), harvested
+  #                        above at the same point and for the same reason.
+  # A letter with no record anywhere falls back to the display case in the
+  # builder, which is what the jrecode sibling's labels side does.
+  codes_tagged_raw <- attr(parsed_codes, "tagged_raw", exact = TRUE)
+  attr(parsed_codes, "tagged_raw") <- NULL
+  if (is.null(codes_tagged_raw)) {
+    if (labels_only) {
+      codes_tagged_raw <- labels_tagged_raw
+    } else if (has_codes_arg) {
+      intrinsic <- haven::na_tag(parsed_codes)
+      intrinsic <- unname(intrinsic[!is.na(intrinsic)])
+      if (length(intrinsic) > 0L) {
+        codes_tagged_raw <- stats::setNames(intrinsic, tolower(intrinsic))
+      }
+    }
+  }
+
   # Residue entries written as Stata-style tokens can never be in-range
   # labels (a band is an SPSS-form structure; tokens are Stata-form), so
   # they are refused here rather than per column.
@@ -3767,9 +3900,10 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 
   # --- Sign-off 4: reject mixed tagged + numeric ---------------------------
   if (has_tagged && has_numeric) {
-    .jst_stop(.jst_jdeclare_udm_mixed_error(parsed_codes, data_name,
-                                            target_vars[1],
-                                            per_call_convention = convention))
+    .jst_stop(.jst_jdeclare_udm_mixed_error(
+      parsed_codes, data_name, target_vars[1],
+      per_call_convention = convention,
+      arg_label           = if (labels_only) "labels" else "codes"))
   }
 
   # ==========================================================================
@@ -3848,7 +3982,9 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
             data_name           = data_name,
             var_name            = vn,
             col                 = col,
-            per_call_convention = convention
+            per_call_convention = convention,
+            tagged_raw          = codes_tagged_raw,
+            arg_label           = if (labels_only) "labels" else "codes"
           )
           .jst_stop(err_msg)
         }
@@ -4773,8 +4909,10 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 # why bare does nothing on this branch and shows the naming form.
 #
 # Consequential (the user asked for something and got nothing), so it prints
-# at every tier above minimal. No durability note follows: nothing changed,
-# and there is nothing to make durable.
+# at EVERY tier, minimal included -- which is what a consequential message is
+# for, and what it does (verified live, S248; the header claimed "above
+# minimal" until S249). No durability note follows: nothing changed, and
+# there is nothing to make durable.
 # -----------------------------------------------------------------------------
 
 #' @keywords internal

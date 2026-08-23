@@ -9,7 +9,9 @@
   data_name,
   var_name,
   col,
-  per_call_convention = NULL
+  per_call_convention = NULL,
+  tagged_raw = NULL,
+  arg_label = "codes"
 )
 }
 \arguments{
@@ -21,6 +23,23 @@ any tagged-NA elements.}
 call (used to reconstruct the example).}
 
 \item{var_name}{Character. Name of the variable being declared.}
+
+\item{col}{The column being declared. Its own declared codes supply
+the substituted values in the example call.}
+
+\item{per_call_convention}{Character or \code{NULL}. The caller's raw
+per-call \code{convention} argument. It seeds the display convention
+for the prescriptive positions; it plays no part in whether the error
+fires.}
+
+\item{tagged_raw}{Named character vector or \code{NULL}, as recorded by
+\code{.jst_parse_code_tokens()}: canonical lowercase marker letter to
+the spelling the caller typed. Seeds the quoted positions. A letter
+absent from it falls back to the display case.}
+
+\item{arg_label}{Character. Which argument the markers arrived in --
+\code{"codes"} normally, \code{"labels"} on the labels-only form.
+The message names the argument the caller actually used.}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.

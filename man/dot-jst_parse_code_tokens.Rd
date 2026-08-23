@@ -12,7 +12,11 @@ missing-value token (\code{.a} through \code{.z}) or a numeric string.}
 }
 \value{
 A numeric vector (with tagged-NA values for token entries),
-carrying the names of \code{codes}.
+carrying the names of \code{codes}. When any token was seen, a
+\code{tagged_raw} attribute records the marker letters as the caller
+typed them: a named character vector keyed by the canonical lowercase
+letter, whose values are the typed spellings. Read only by message
+builders that quote the call back; every other consumer ignores it.
 }
 \description{
 Converts a character \code{codes} vector (as accepted by

@@ -2034,7 +2034,11 @@
 #'   missing-value token (\code{.a} through \code{.z}) or a numeric string.
 #'
 #' @return A numeric vector (with tagged-NA values for token entries),
-#'   carrying the names of \code{codes}.
+#'   carrying the names of \code{codes}. When any token was seen, a
+#'   \code{tagged_raw} attribute records the marker letters as the caller
+#'   typed them: a named character vector keyed by the canonical lowercase
+#'   letter, whose values are the typed spellings. Read only by message
+#'   builders that quote the call back; every other consumer ignores it.
 #'
 #' @keywords internal
 .jst_parse_code_tokens <- function(codes) {
@@ -2042,13 +2046,26 @@
   # form, so callers can write codes = c("Refused" = ".a") or c(".a", ".b")
   # without haven::tagged_na(). ".a" -> tagged_na("a"); "-99" -> -99. Names
   # (labels, when present) are preserved.
+  #
+  # S249: marker-letter input is case-insensitive (Decision 13), and this
+  # parse normalizes to lowercase, so the letter AS TYPED is lost the moment
+  # it is read -- which is how a typed '.a' came to be quoted back as '.A'.
+  # The typed spelling is therefore recorded on a tagged_raw attribute, the
+  # codes-side counterpart of the per-mapping tagged_raw slot .jst_parse_map()
+  # keeps for the map side. jdeclare_udm harvests it and strips it straight
+  # away, so it travels no further than the message builder that quotes it.
+  # Last spelling wins where one letter is typed twice in different cases,
+  # matching the map side's behavior.
   nm  <- names(codes)
   out <- rep(NA_real_, length(codes))
+  raw <- character(0)
   for (i in seq_along(codes)) {
     tok <- trimws(as.character(codes[[i]]))
     low <- tolower(tok)
     if (grepl("^\\.[a-z]$", low)) {
-      out[i] <- haven::tagged_na(substr(low, 2L, 2L))
+      letter      <- substr(low, 2L, 2L)
+      out[i]      <- haven::tagged_na(letter)
+      raw[letter] <- substr(tok, 2L, 2L)
     } else if (grepl("^\\.", low) || grepl("^na\\(", low)) {
       stop(paste0("Invalid code '", tok, "'. Stata-style missing-value ",
                   "tokens must be '.a' through '.z' (a single lowercase ",
@@ -2064,6 +2081,7 @@
     }
   }
   names(out) <- nm
+  if (length(raw) > 0L) attr(out, "tagged_raw") <- raw
   out
 }
 
@@ -2086,9 +2104,27 @@
 #'
 #' @return Invisibly, a named numeric vector. Names are label strings;
 #'   values are numeric codes, or Stata-style missing values for tagged entries.
+#'   When any token was seen, a \code{tagged_raw} attribute records the marker
+#'   letters as the caller typed them: a named character vector keyed by the
+#'   canonical lowercase letter. Read only by message builders that quote the
+#'   call back. Callers that do not quote must strip it immediately (see
+#'   below); it must never reach a column.
 #'
 #' @keywords internal
 .jst_parse_labels <- function(labels_str) {
+
+  # S249: token case is accepted either way (Decision 13) and this parse
+  # normalizes to lowercase, so the letter AS TYPED is recorded on a
+  # tagged_raw attribute for the one caller that quotes it back
+  # (jdeclare_udm's cross-convention refusal). The counterpart on the codes
+  # side is .jst_parse_code_tokens(); the map side keeps a per-mapping slot
+  # in .jst_parse_map().
+  #
+  # STRIP IT IF YOU DO NOT QUOTE IT. jrelabel, jrecode, and jencode all feed
+  # this return to labelled::val_labels(), which would attach an internal
+  # bookkeeping attribute to a user's column. Each of those three drops the
+  # attribute on the line after the parse; jdeclare_udm harvests it and drops
+  # it at the same point it harvests the codes-side record.
 
   rules <- trimws(strsplit(labels_str, ";")[[1]])
   rules <- rules[nchar(rules) > 0]
@@ -2099,6 +2135,7 @@
 
   result        <- c()
   missing_label <- NULL
+  tagged_raw    <- character(0)
 
   for (rule in rules) {
 
@@ -2137,8 +2174,11 @@
     }
 
     if (grepl("^\\.[a-z]$", val_lower)) {
-      # Stata-style missing-value token: .a through .z.
-      val <- haven::tagged_na(substr(val_lower, 2L, 2L))
+      # Stata-style missing-value token: .a through .z. Parsing stays on the
+      # lowercase letter; the typed spelling is recorded alongside (S249).
+      letter             <- substr(val_lower, 2L, 2L)
+      val                <- haven::tagged_na(letter)
+      tagged_raw[letter] <- substr(val_str, 2L, 2L)
     } else if (grepl("^\\.", val_lower) || grepl("^na\\(", val_lower)) {
       stop(paste0(
         "Invalid value '", val_str, "' in label rule '", rule, "'. ",
@@ -2172,6 +2212,11 @@
   if (!is.null(missing_label)) {
     if (is.null(result)) result <- numeric(0)
     attr(result, "missing_label") <- missing_label
+  }
+
+  if (length(tagged_raw) > 0L) {
+    if (is.null(result)) result <- numeric(0)
+    attr(result, "tagged_raw") <- tagged_raw
   }
 
   return(invisible(result))
