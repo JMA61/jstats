@@ -289,27 +289,88 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   all_tags <- sort(unique(c(map_tags, label_tags)))
 
-  # S242 (audit F2): display-time phrasing convention -- token case and
-  # style word follow the user's tagged convention (.jst_phrasing_convention:
-  # per-call, else a sas setting, else stata), matching the S240 treatment
-  # of the jdeclare_udm builders. Firing condition and remedies unchanged.
-  # Logic below stays on the lowercase parsed letters (all_tags);
-  # disp_tags and first_tag are display-only.
+  # S245: two token positions, two rules.
+  #   QUOTE positions (the head, the cap note's marker list) echo the
+  #   letter AS THE USER TYPED IT -- tagged_raw from the parsers, which
+  #   accept either case per Decision 13. Recasing a quote reads as a
+  #   misread of the call, in both directions: a typed '.a' rendered
+  #   '.A' under a sas setting, a typed '.A' rendered '.a' otherwise.
+  #   PRESCRIPTIVE positions (the rewritten map's unsubstituted tokens)
+  #   keep the display case for the phrasing convention -- the user is
+  #   meant to paste those.
+  # No style word is attached to a quoted token (S245, superseding the
+  # S242 F2 treatment HERE only): under case-insensitive input a typed
+  # '.a' would otherwise be labeled "SAS-style", equating two spellings
+  # that a reader sees as different things. The style contrast moves to
+  # the conflict sentence below, as surface form -- lettered markers
+  # against numeric codes -- which is what a migrant actually sees.
+  # .jst_phrasing_convention() is unchanged and still governs its seven
+  # other callers; phr survives here for the prescriptive positions.
+  # The labels side stores real tagged NAs and carries no raw spelling,
+  # so a letter seen ONLY in labels falls back to the display case.
+  # Logic below stays on the lowercase parsed letters (all_tags).
   phr       <- .jst_phrasing_convention(per_call_convention)
-  phr_style <- .jst_convention_label(phr)
   disp_tags <- .jst_canonical_tag(all_tags, phr)
-  first_tag <- disp_tags[1]
+
+  raw_by_letter <- character(0)
+  for (r in parsed_map$mappings) {
+    if (!is.null(r$tagged) && !is.null(r$tagged_raw)) {
+      raw_by_letter[r$tagged] <- r$tagged_raw
+    }
+  }
+  if (isTRUE(parsed_map$else_action == "tagged") &&
+      !is.null(parsed_map$else_tag_raw)) {
+    raw_by_letter[parsed_map$else_tag] <- parsed_map$else_tag_raw
+  }
+  if (!is.null(parsed_map$na_rule) &&
+      !is.null(parsed_map$na_rule$tagged) &&
+      !is.null(parsed_map$na_rule$tagged_raw)) {
+    raw_by_letter[parsed_map$na_rule$tagged] <- parsed_map$na_rule$tagged_raw
+  }
+  quote_tags <- disp_tags
+  hit        <- all_tags %in% names(raw_by_letter)
+  if (any(hit)) {
+    quote_tags[hit] <- unname(raw_by_letter[all_tags[hit]])
+  }
+  first_tag <- quote_tags[1]
+
+  # Where the SPSS resolution came from. This call site passes no column
+  # to the resolver, so exactly two routes reach an spss resolution: the
+  # per-call argument (level 2) or the setting (level 3). Saying "the
+  # package is currently set to SPSS convention" on the per-call route
+  # was false -- the CALL forced spss -- and it pointed the remedy at
+  # joptions(), which a per-call argument outranks (S245).
+  by_call  <- !is.null(per_call_convention)
+  conv_txt <- if (by_call) as.character(per_call_convention)[1L] else "spss"
+  conflict <- if (by_call) {
+    paste0("Lettered markers can exist only under Stata or SAS convention; ",
+           "they cannot be combined with convention = \"", conv_txt,
+           "\", which uses numeric codes.")
+  } else {
+    paste0("Lettered markers can exist only under Stata or SAS convention, ",
+           "and your missing.convention setting is \"spss\", which uses ",
+           "numeric codes.")
+  }
 
   # --- Verbosity gate -------------------------------------------------------
   output_level <- getOption(".jst_output_level", "standard")
 
   if (identical(output_level, "minimal")) {
+    tail_min <- if (by_call) {
+      .jst_wrap_prose(paste0(
+        "To switch conventions, change convention = \"", conv_txt,
+        "\" on this call to \"stata\" or \"sas\"."))
+    } else {
+      paste0("To switch conventions, run one of:\n",
+             "  joptions(missing.convention = \"stata\")\n",
+             "  joptions(missing.convention = \"sas\")")
+    }
     return(paste0(
-      "the map uses '.", first_tag, "', a ", phr_style,
-      " missing-value marker.\nThe package is currently set to SPSS convention.\n",
-      "To switch conventions, run one of:\n",
-      "  joptions(missing.convention = \"stata\")\n",
-      "  joptions(missing.convention = \"sas\")"
+      .jst_wrap_prose(paste0("the map uses '.", first_tag,
+                             "', a missing-value marker."),
+                      reserve = 11L), "\n",
+      .jst_wrap_prose(conflict), "\n",
+      tail_min
     ))
   }
 
@@ -432,9 +493,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # Assemble the message.
   msg_parts <- c(
     .jst_wrap_prose(paste0("the map uses '.", first_tag,
-                           "', a ", phr_style, " missing-value marker."),
+                           "', a missing-value marker."),
                     reserve = 11L),
-    "The package is currently set to SPSS convention, which uses numeric codes.",
+    .jst_wrap_prose(conflict),
     "Here is the equivalent recode in SPSS style:",
     "",
     jrecode_line
@@ -452,7 +513,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (length(unmapped) > 0L) {
     n_tags  <- length(all_tags)
     n_codes <- length(letter_to_code)
-    unmapped_render <- paste0("'.", .jst_canonical_tag(unmapped, phr),
+    unmapped_render <- paste0("'.", quote_tags[match(unmapped, all_tags)],
                               "'", collapse = ", ")
     were_was <- if (length(unmapped) == 1L) "was" else "were"
     # SPSS-side cap on udm.convention.codes (joptions enforces length 1-3).
@@ -461,8 +522,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     if (n_tags > 3L) {
       msg_parts <- c(msg_parts, "",
         .jst_wrap_prose(paste0(
-          "Note: `map` uses ", n_tags, " ", phr_style, " markers (",
-          paste0(".", disp_tags, collapse = ", "),
+          "Note: `map` uses ", n_tags, " lettered markers (",
+          paste0(".", quote_tags, collapse = ", "),
           ") but SPSS convention supports at most 3 user-defined missing ",
           "values; ", unmapped_render, " ", were_was,
           " not substituted in the example above."))
@@ -470,8 +531,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     } else {
       msg_parts <- c(msg_parts, "",
         .jst_wrap_prose(paste0(
-          "Note: `map` uses ", n_tags, " ", phr_style, " markers (",
-          paste0(".", disp_tags, collapse = ", "),
+          "Note: `map` uses ", n_tags, " lettered markers (",
+          paste0(".", quote_tags, collapse = ", "),
           ") but joptions(\"udm.convention.codes\") currently holds only ",
           n_codes, " values; ", unmapped_render, " ", were_was,
           " not substituted in the example above.")),
@@ -482,10 +543,17 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     }
   }
 
-  msg_parts <- c(msg_parts, "",
-    "To switch conventions instead, run one of:",
-    "  joptions(missing.convention = \"stata\")",
-    "  joptions(missing.convention = \"sas\")")
+  msg_parts <- if (by_call) {
+    c(msg_parts, "",
+      .jst_wrap_prose(paste0(
+        "To switch conventions instead, change convention = \"", conv_txt,
+        "\" on this call to \"stata\" or \"sas\".")))
+  } else {
+    c(msg_parts, "",
+      "To switch conventions instead, run one of:",
+      "  joptions(missing.convention = \"stata\")",
+      "  joptions(missing.convention = \"sas\")")
+  }
 
   paste(msg_parts, collapse = "\n")
 }

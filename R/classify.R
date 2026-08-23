@@ -1907,6 +1907,7 @@
       } else if (grepl("^\\.[a-z]$", rhs_lower)) {
         result$else_action   <- "tagged"
         result$else_tag      <- substr(rhs_lower, 2L, 2L)
+        result$else_tag_raw  <- substr(rhs, 2L, 2L)   # as typed (S245)
         result$else_explicit <- TRUE
       } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
         stop(paste0(
@@ -1979,9 +1980,11 @@
     if (!is.null(rhs_parsed)) {
       new_val     <- rhs_parsed$new_val
       tagged      <- rhs_parsed$tagged
+      tagged_raw  <- rhs_parsed$tagged_raw
       tok_missing <- isTRUE(rhs_parsed$missing)
     } else {
       tagged      <- NULL
+      tagged_raw  <- NULL
       tok_missing <- FALSE
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
@@ -2002,10 +2005,11 @@
     }
 
     result$mappings[[length(result$mappings) + 1]] <- list(
-      old_vals = old_vals,
-      new_val  = new_val,
-      tagged   = tagged,
-      missing  = tok_missing
+      old_vals   = old_vals,
+      new_val    = new_val,
+      tagged     = tagged,
+      tagged_raw = tagged_raw,
+      missing    = tok_missing
     )
   }
 
@@ -2196,7 +2200,9 @@
 #'
 #' @return A list with \code{new_val} (numeric; \code{NA_real_} for
 #'   system-NA and tagged-NA targets), \code{tagged} (\code{NULL},
-#'   or a single lowercase letter), and -- for the \code{missing}
+#'   or a single lowercase letter), \code{tagged_raw} (present with
+#'   \code{tagged}: the same letter in the case the user typed, for
+#'   quoting the call back in messages), and -- for the \code{missing}
 #'   token only -- \code{missing = TRUE}, a marker the caller resolves
 #'   after its convention gate; or \code{NULL} when the token is
 #'   not recognized.
@@ -2211,9 +2217,15 @@
   }
 
   # Stata-style missing-value token: .a through .z.
+  # tagged is the parser-normalized lowercase letter every downstream
+  # code path uses; tagged_raw preserves the letter AS THE USER TYPED IT,
+  # for message positions that QUOTE the call rather than prescribe a
+  # form (S245). Input case is accepted either way per Decision 13, so
+  # the two differ whenever a user types against the convention's case.
   if (grepl("^\\.[a-z]$", rhs_lower)) {
-    return(list(new_val = NA_real_,
-                tagged = substr(rhs_lower, 2L, 2L)))
+    return(list(new_val    = NA_real_,
+                tagged     = substr(rhs_lower, 2L, 2L),
+                tagged_raw = substr(trimws(rhs_str), 2L, 2L)))
   }
 
   # ======================= THE "missing" TOKEN =============================
@@ -2505,6 +2517,7 @@
       } else if (grepl("^\\.[a-z]$", rhs_lower)) {
         result$else_action   <- "tagged"
         result$else_tag      <- substr(rhs_lower, 2L, 2L)
+        result$else_tag_raw  <- substr(rhs, 2L, 2L)   # as typed (S245)
         result$else_explicit <- TRUE
       } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
         stop(paste0(
@@ -2585,9 +2598,11 @@
     if (!is.null(rhs_parsed)) {
       new_val     <- rhs_parsed$new_val
       tagged      <- rhs_parsed$tagged
+      tagged_raw  <- rhs_parsed$tagged_raw
       tok_missing <- isTRUE(rhs_parsed$missing)
     } else {
       tagged      <- NULL
+      tagged_raw  <- NULL
       tok_missing <- FALSE
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
@@ -2596,10 +2611,11 @@
     }
 
     result$mappings[[length(result$mappings) + 1]] <- list(
-      old_vals = old_vals,
-      new_val  = new_val,
-      tagged   = tagged,
-      missing  = tok_missing
+      old_vals   = old_vals,
+      new_val    = new_val,
+      tagged     = tagged,
+      tagged_raw = tagged_raw,
+      missing    = tok_missing
     )
   }
 

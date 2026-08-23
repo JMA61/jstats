@@ -15,7 +15,9 @@ message so the user can find it in the map string.}
 \value{
 A list with \code{new_val} (numeric; \code{NA_real_} for
 system-NA and tagged-NA targets), \code{tagged} (\code{NULL},
-or a single lowercase letter), and -- for the \code{missing}
+or a single lowercase letter), \code{tagged_raw} (present with
+\code{tagged}: the same letter in the case the user typed, for
+quoting the call back in messages), and -- for the \code{missing}
 token only -- \code{missing = TRUE}, a marker the caller resolves
 after its convention gate; or \code{NULL} when the token is
 not recognized.
