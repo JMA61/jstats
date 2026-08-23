@@ -197,72 +197,61 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # -----------------------------------------------------------------------------
 # .jst_jrecode_convention_error()
 #
-# Builds the error message emitted by jrecode() when the user's map or
-# labels argument contains Stata-style missing-value tokens but the
-# resolved convention is SPSS. Constructs a dynamic echo-back of the
-# user's actual map and labels with tagged-NA tokens replaced by
-# equivalent numeric UDM codes drawn from
-# joptions("udm.convention.codes"), plus the canonical two-call
-# SPSS-style pattern (jrecode then jdeclare_udm) per Decision 10's
-# worked example.
+# Builds the error message emitted by jrecode() and jencode() when the
+# user's map or labels argument contains lettered missing-value markers
+# but the resolved convention is SPSS. States the mismatch and names
+# the two settings-level ways out. It does NOT translate the call.
 #
-# joutput-level gating:
-#   minimal  - the marker line, the convention line, and the three-way
-#              switch recipe (Rule L form). No dynamic echo-back.
-#   standard - full block with the rewritten jrecode (assignment form,
-#   full       per Rule G) and jdeclare_udm lines, plus the three-way
-#              switch recipe at the end.
+# S246 (Rule Y, the mint test): the SPSS-style echo-back is RETIRED.
+# The rewrite substituted codes minted from
+# joptions("udm.convention.codes") -- a pool blind to the column -- so
+# a minted code could collide with a value already present in the data
+# or with one of the user's own map targets, silently merging two
+# distinct values and then declaring the result missing. Detecting that
+# would have meant reimplementing jrecode's survival semantics inside a
+# message builder. The rule drawn from it: a message may NAME values
+# that already exist in the user's data or declaration, and may not
+# MINT values the user never supplied. The sibling
+# .jst_jdeclare_udm_convention_error reads the column's own na_values
+# rather than the pool, so it passes the test and is unchanged.
 #
-# Cap behavior: when tagged-NA token count exceeds the convention
-# code count, the helper substitutes the mappable subset and leaves
-# unmapped tokens in their original .x form. A plain-language cap
-# note explaining the situation is appended between the example
-# block and the switch-convention line.
+# Retired with the echo-back: the rebuilt map and labels, the
+# jdeclare_udm follow-up line, the convention-codes provenance line,
+# the cap note, and the joutput tier gate -- one form at every level,
+# being what minimal already rendered plus the keep-SPSS line.
 #
-# S242 (audit F2): display only, the message phrases in the user's
-# tagged convention (.jst_phrasing_convention: per-call, else a sas
-# setting, else stata) -- token case and style word follow it, so a
-# sas-setting user reads '.A' / "SAS-style". Firing conditions and
-# both remedies are unchanged; the code-substitution logic stays on
-# the lowercase parsed letters.
+# Retained from S245: the head QUOTES the marker as the user typed it
+# (tagged_raw, carried out of the parsers) and attaches no convention
+# style word to it. The PRESCRIPTIVE positions S245 split off went with
+# the echo-back. A letter seen ONLY in labels carries no raw spelling
+# and still falls back to the display case.
 # -----------------------------------------------------------------------------
 
-#' Internal helper: build jrecode's cross-convention error message
+#' Internal helper: build the cross-convention error message
 #'
-#' Produces the error message used by \code{jrecode()} when Stata-style
-#' missing-value tokens appear in the map or labels argument but the
-#' resolved convention is SPSS. Verbosity is controlled by the active
+#' Produces the error message used by \code{jrecode()} and
+#' \code{jencode()} when lettered missing-value markers appear in the
+#' map or labels argument but the resolved convention is SPSS. The
+#' message states the mismatch and names the settings-level remedies;
+#' per Rule Y it does not rewrite the user's call. One form at every
 #' \code{joutput()} level.
 #'
-#' @param parsed_map List returned by \code{.jst_parse_map()}.
+#' @param parsed_map List returned by \code{.jst_parse_map()}, or by
+#'   \code{.jst_parse_text_map()} for the \code{jencode()} caller.
 #' @param parsed_labels Named numeric vector returned by
 #'   \code{.jst_parse_labels()}, or \code{NULL} if no labels argument
 #'   was supplied.
-#' @param data_name Character. Name of the data frame in the user's
-#'   call (used to reconstruct the example).
-#' @param orig_name Character. Name of the variable being recoded.
-#' @param fn_name Character. The user-facing function the echo-back
-#'   should name. Defaults to \code{"jrecode"}; \code{jencode()}
-#'   passes its own name. Parameterized rather than forked (S236 ruling
-#'   6): a sibling copy of this helper would be some two hundred lines
-#'   of drifting duplicate.
-#' @param lhs_render Optional function taking one rule's
-#'   \code{old_vals} and returning the rendered left-hand side. Default
-#'   \code{NULL} uses the numeric rendering, so jrecode's output is
-#'   unchanged; jencode passes a word renderer.
 #' @param per_call_convention Character or \code{NULL}. The caller's raw
-#'   per-call \code{convention} argument, forwarded for display-time
-#'   phrasing only (token case and style word via
-#'   \code{.jst_phrasing_convention()}); it plays no part in whether the
-#'   error fires.
+#'   per-call \code{convention} argument. It selects which of the two
+#'   routes to an SPSS resolution the message describes -- the call or
+#'   the setting -- and therefore which remedy is offered; it plays no
+#'   part in whether the error fires. It also seeds the display case for
+#'   a marker that carries no recorded raw spelling.
 #'
-#' @return Character scalar suitable for passing to \code{stop()}.
+#' @return Character scalar suitable for passing to \code{.jst_stop()}.
 #'
 #' @keywords internal
 .jst_jrecode_convention_error <- function(parsed_map, parsed_labels,
-                                          data_name, orig_name,
-                                          fn_name    = "jrecode",
-                                          lhs_render = NULL,
                                           per_call_convention = NULL) {
 
   # --- Gather every tagged-NA letter that appeared --------------------------
@@ -275,40 +264,26 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     map_tags <- c(map_tags, parsed_map$na_rule$tagged)
   }
 
-  label_tags_lookup <- character(0)  # letter -> label, for jdeclare_udm
+  label_tags <- character(0)
   if (!is.null(parsed_labels)) {
     tags_in_labels <- haven::na_tag(parsed_labels)
-    for (i in seq_along(parsed_labels)) {
-      if (!is.na(tags_in_labels[i])) {
-        letter <- tags_in_labels[i]
-        label_tags_lookup[letter] <- names(parsed_labels)[i]
-      }
-    }
+    label_tags     <- unique(tags_in_labels[!is.na(tags_in_labels)])
   }
-  label_tags <- names(label_tags_lookup)
 
   all_tags <- sort(unique(c(map_tags, label_tags)))
 
-  # S245: two token positions, two rules.
-  #   QUOTE positions (the head, the cap note's marker list) echo the
-  #   letter AS THE USER TYPED IT -- tagged_raw from the parsers, which
-  #   accept either case per Decision 13. Recasing a quote reads as a
-  #   misread of the call, in both directions: a typed '.a' rendered
-  #   '.A' under a sas setting, a typed '.A' rendered '.a' otherwise.
-  #   PRESCRIPTIVE positions (the rewritten map's unsubstituted tokens)
-  #   keep the display case for the phrasing convention -- the user is
-  #   meant to paste those.
-  # No style word is attached to a quoted token (S245, superseding the
-  # S242 F2 treatment HERE only): under case-insensitive input a typed
-  # '.a' would otherwise be labeled "SAS-style", equating two spellings
-  # that a reader sees as different things. The style contrast moves to
-  # the conflict sentence below, as surface form -- lettered markers
-  # against numeric codes -- which is what a migrant actually sees.
-  # .jst_phrasing_convention() is unchanged and still governs its seven
-  # other callers; phr survives here for the prescriptive positions.
-  # The labels side stores real tagged NAs and carries no raw spelling,
-  # so a letter seen ONLY in labels falls back to the display case.
-  # Logic below stays on the lowercase parsed letters (all_tags).
+  # The head QUOTES the marker as the user typed it -- tagged_raw from the
+  # parsers, which accept either case per Decision 13. Recasing a quote
+  # reads as a misread of the call, in both directions: a typed '.a' shown
+  # as '.A' under a sas setting, a typed '.A' shown as '.a' otherwise. No
+  # convention style word attaches to a quoted token (S245): under
+  # case-insensitive input, labeling a typed '.a' "SAS-style" would equate
+  # two spellings that a reader sees as different things. The style
+  # contrast lives in the conflict sentence instead, as surface form --
+  # lettered markers against numeric codes -- which is what a migrant
+  # actually sees. The labels side stores real tagged NAs and carries no
+  # raw spelling, so a letter seen ONLY in labels falls back to the display
+  # case. Logic below stays on the lowercase parsed letters (all_tags).
   phr       <- .jst_phrasing_convention(per_call_convention)
   disp_tags <- .jst_canonical_tag(all_tags, phr)
 
@@ -352,210 +327,39 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
            "numeric codes.")
   }
 
-  # --- Verbosity gate -------------------------------------------------------
-  output_level <- getOption(".jst_output_level", "standard")
-
-  if (identical(output_level, "minimal")) {
-    tail_min <- if (by_call) {
-      .jst_wrap_prose(paste0(
-        "To switch conventions, change convention = \"", conv_txt,
-        "\" on this call to \"stata\" or \"sas\"."))
-    } else {
-      paste0("To switch conventions, run one of:\n",
-             "  joptions(missing.convention = \"stata\")\n",
-             "  joptions(missing.convention = \"sas\")")
-    }
-    return(paste0(
-      .jst_wrap_prose(paste0("the map uses '.", first_tag,
-                             "', a missing-value marker."),
-                      reserve = 11L), "\n",
-      .jst_wrap_prose(conflict), "\n",
-      tail_min
-    ))
+  # Rule Y: state the mismatch, do not translate the call. The stay-put
+  # remedy names the state to reach (Rule X's requirement form) rather
+  # than writing the user's codes for them. "markers" rather than "the
+  # map" because the marker may have arrived through labels.
+  keep_spss <- if (length(all_tags) == 1L) {
+    "To keep SPSS convention, restate the marker as a numeric code."
+  } else {
+    "To keep SPSS convention, restate the markers as numeric codes."
   }
 
-  # --- Standard / full block ------------------------------------------------
-
-  letter_to_code <- .jst_tag_letters_to_codes(all_tags)
-  unmapped       <- attr(letter_to_code, "unmapped")
-  if (is.null(unmapped)) unmapped <- character(0)
-
-  # Reconstruct the user's map with tagged-NA tokens replaced by their
-  # equivalent SPSS-form numeric codes. Tokens that couldn't be mapped
-  # (cap exceeded) are left in their original .x form.
-  format_num <- function(x) {
-    if (is.na(x)) return("NA")
-    # Render integers without a trailing ".0".
-    if (x == floor(x)) format(as.integer(x)) else format(x)
+  # The switch remedy follows the same route fork as the conflict
+  # sentence: a per-call convention outranks the setting, so joptions()
+  # would be inert advice on that route.
+  switch_txt <- if (by_call) {
+    .jst_wrap_prose(paste0(
+      "To switch conventions instead, change convention = \"", conv_txt,
+      "\" on this call to \"stata\" or \"sas\"."))
+  } else {
+    paste0("To switch conventions instead, run one of:\n",
+           "  joptions(missing.convention = \"stata\")\n",
+           "  joptions(missing.convention = \"sas\")")
   }
 
-  rebuilt_map_parts <- character(0)
-  for (rule in parsed_map$mappings) {
-    lhs <- if (is.null(lhs_render)) {
-      paste(vapply(rule$old_vals, format_num, character(1)),
-            collapse = ",")
-    } else {
-      lhs_render(rule$old_vals)
-    }
-    if (!is.null(rule$tagged)) {
-      code <- letter_to_code[rule$tagged]
-      rhs  <- if (is.na(code)) {
-        paste0(".", .jst_canonical_tag(rule$tagged, phr))
-      } else format_num(code)
-    } else if (is.na(rule$new_val)) {
-      rhs <- "NA"
-    } else {
-      rhs <- format_num(rule$new_val)
-    }
-    rebuilt_map_parts <- c(rebuilt_map_parts, paste0(lhs, "=", rhs))
-  }
-  if (!is.null(parsed_map$na_rule)) {
-    if (!is.null(parsed_map$na_rule$tagged)) {
-      code   <- letter_to_code[parsed_map$na_rule$tagged]
-      na_rhs <- if (is.na(code)) {
-        paste0(".", .jst_canonical_tag(parsed_map$na_rule$tagged, phr))
-      } else {
-        format_num(code)
-      }
-    } else {
-      na_rhs <- format_num(parsed_map$na_rule$new_val)
-    }
-    rebuilt_map_parts <- c(rebuilt_map_parts, paste0("NA=", na_rhs))
-  }
-  if (isTRUE(parsed_map$else_explicit)) {
-    if (identical(parsed_map$else_action, "tagged")) {
-      code <- letter_to_code[parsed_map$else_tag]
-      else_rhs <- if (is.na(code)) {
-        paste0(".", .jst_canonical_tag(parsed_map$else_tag, phr))
-      } else format_num(code)
-    } else if (identical(parsed_map$else_action, "copy")) {
-      else_rhs <- "copy"
-    } else {
-      else_rhs <- "NA"
-    }
-    rebuilt_map_parts <- c(rebuilt_map_parts, paste0("else=", else_rhs))
-  }
-  rebuilt_map <- paste(rebuilt_map_parts, collapse = "; ")
-
-  # Rebuild the labels argument without tagged-NA entries; those move
-  # to the jdeclare_udm call per Decision 10's worked example.
-  rebuilt_labels <- NULL
-  if (!is.null(parsed_labels)) {
-    tags_in_labels <- haven::na_tag(parsed_labels)
-    non_tag_idx <- which(is.na(tags_in_labels))
-    if (length(non_tag_idx) > 0L) {
-      label_parts <- character(0)
-      for (i in non_tag_idx) {
-        label_parts <- c(label_parts,
-          paste0(format_num(parsed_labels[i]), "=", names(parsed_labels)[i]))
-      }
-      rebuilt_labels <- paste(label_parts, collapse = "; ")
-    }
-  }
-
-  # Compose the rewritten jrecode call. Rule G: the suggested transform
-  # is non-destructive -- it assigns to a NEW column named <original>R,
-  # and the follow-up declaration targets that new column. (Session 231;
-  # closes the S223 echo-back recipe defect: the earlier form had no
-  # assignment and aimed the declaration at the original column.)
-  new_name    <- paste0(orig_name, "R")
-  call_prefix <- paste0("    ", data_name, "$", new_name, " <- ",
-                        fn_name, "(")
-  jrecode_line <- paste0(call_prefix, data_name, ", ", orig_name,
-                         ", map = \"", rebuilt_map, "\"")
-  if (!is.null(rebuilt_labels)) {
-    indent <- paste(rep(" ", nchar(call_prefix)), collapse = "")
-    jrecode_line <- paste0(jrecode_line, ",\n", indent,
-                           "labels = \"", rebuilt_labels, "\"")
-  }
-  jrecode_line <- paste0(jrecode_line, ")")
-
-  # Compose the jdeclare_udm follow-up call, covering only the mapped
-  # (non-unmapped) tags so the example is syntactically valid.
-  mapped_tags <- setdiff(all_tags, unmapped)
-  jdeclare_line <- NULL
-  if (length(mapped_tags) > 0L) {
-    codes_parts <- character(0)
-    for (letter in mapped_tags) {
-      code  <- letter_to_code[letter]
-      label <- if (letter %in% names(label_tags_lookup)) {
-        label_tags_lookup[[letter]]
-      } else "Missing"
-      codes_parts <- c(codes_parts,
-                       paste0(label, " = ", format_num(code)))
-    }
-    jdeclare_line <- paste0("    jdeclare_udm(", data_name, ", ",
-                            new_name, ", codes = c(",
-                            paste(codes_parts, collapse = ", "),
-                            "), modify = TRUE)")
-  }
-
-  # Assemble the message.
-  msg_parts <- c(
+  # One form at every joutput level (S246): the tier gate went with the
+  # echo-back, since what remains is the tier-independent statement.
+  paste0(
     .jst_wrap_prose(paste0("the map uses '.", first_tag,
                            "', a missing-value marker."),
-                    reserve = 11L),
-    .jst_wrap_prose(conflict),
-    "Here is the equivalent recode in SPSS style:",
-    "",
-    jrecode_line
+                    reserve = 11L), "\n",
+    .jst_wrap_prose(conflict), "\n",
+    .jst_wrap_prose(keep_spss), "\n",
+    switch_txt
   )
-  if (!is.null(jdeclare_line)) {
-    msg_parts <- c(msg_parts, jdeclare_line)
-  }
-  msg_parts <- c(msg_parts, "",
-    paste0("The numeric code",
-           if (length(mapped_tags) > 1L) "s" else "",
-           " above came from joptions(\"udm.convention.codes\")."))
-
-  # Cap note: appended when one or more tags exceeded the convention
-  # code count. Plain-language explanation; no jargon.
-  if (length(unmapped) > 0L) {
-    n_tags  <- length(all_tags)
-    n_codes <- length(letter_to_code)
-    unmapped_render <- paste0("'.", quote_tags[match(unmapped, all_tags)],
-                              "'", collapse = ", ")
-    were_was <- if (length(unmapped) == 1L) "was" else "were"
-    # SPSS-side cap on udm.convention.codes (joptions enforces length 1-3).
-    # Above the cap, adding a code cannot cover the markers, so steer to
-    # a tag convention (the switch recipe below) rather than advising a code.
-    if (n_tags > 3L) {
-      msg_parts <- c(msg_parts, "",
-        .jst_wrap_prose(paste0(
-          "Note: `map` uses ", n_tags, " lettered markers (",
-          paste0(".", quote_tags, collapse = ", "),
-          ") but SPSS convention supports at most 3 user-defined missing ",
-          "values; ", unmapped_render, " ", were_was,
-          " not substituted in the example above."))
-      )
-    } else {
-      msg_parts <- c(msg_parts, "",
-        .jst_wrap_prose(paste0(
-          "Note: `map` uses ", n_tags, " lettered markers (",
-          paste0(".", quote_tags, collapse = ", "),
-          ") but joptions(\"udm.convention.codes\") currently holds only ",
-          n_codes, " values; ", unmapped_render, " ", were_was,
-          " not substituted in the example above.")),
-        .jst_wrap_prose(paste0(
-          "To add another code, run something like ",
-          "joptions(udm.convention.codes = c(-99, -98, -97))."))
-      )
-    }
-  }
-
-  msg_parts <- if (by_call) {
-    c(msg_parts, "",
-      .jst_wrap_prose(paste0(
-        "To switch conventions instead, change convention = \"", conv_txt,
-        "\" on this call to \"stata\" or \"sas\".")))
-  } else {
-    c(msg_parts, "",
-      "To switch conventions instead, run one of:",
-      "  joptions(missing.convention = \"stata\")",
-      "  joptions(missing.convention = \"sas\")")
-  }
-
-  paste(msg_parts, collapse = "\n")
 }
 
 
@@ -564,11 +368,20 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #
 # Builds the cross-convention error message for jdeclare_udm. Fires
 # when the user passes Stata-style missing-value tokens in the codes vector
-# but the resolved convention is SPSS. Mirrors the structure of
-# .jst_jrecode_convention_error() (Session 31) with two simplifications:
-# the rewrite is a single jdeclare_udm call (not two calls), and there
-# is no separate labels argument to rebuild (labels live as names on
-# the codes vector when present).
+# but the resolved convention is SPSS. Modeled on the structure
+# .jst_jrecode_convention_error() had at Session 31, with two
+# simplifications: the rewrite is a single jdeclare_udm call (not two
+# calls), and there is no separate labels argument to rebuild (labels
+# live as names on the codes vector when present).
+#
+# S246: this builder KEEPS its rewritten call, where the jrecode/jencode
+# one lost its echo-back. The two are not alike where Rule Y's mint test
+# bites. This one substitutes the column's OWN declared codes
+# (attr(col, "na_values"), largest-magnitude-first), so whatever it names
+# is already declared missing on that column -- reading, not minting.
+# The worst case is a label on the wrong declared marker, which is
+# visible and reversible. The jrecode echo-back minted from
+# joptions("udm.convention.codes"), which knows nothing about the column.
 #
 # joutput-level gating:
 #   minimal  - three lines: what went wrong, see ?jdeclare_udm, the
@@ -1109,10 +922,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' under SAS convention.
 #'
 #' Writing these missing-value tokens while the active convention is
-#' SPSS raises an informative error that echoes the user's call
-#' rewritten in SPSS-style syntax; the error also names the one-line
-#' \code{joptions(missing.convention = ...)} switch to Stata or SAS
-#' convention.
+#' SPSS raises an error naming the mismatch and the two ways out:
+#' restate the markers as numeric codes to stay in SPSS convention, or
+#' switch convention with \code{joptions(missing.convention = ...)} (or
+#' with this call's \code{convention} argument). The error does not
+#' rewrite the call for you: the SPSS-form codes would have to be minted
+#' from \code{joptions("udm.convention.codes")}, which cannot be known
+#' to be free of collision with values already in the column. The
+#' two-call SPSS-style pattern is documented above.
 #'
 #' @examples
 #' # Recode with explicit labels (a 1/2 dichotomy to 0/1)
@@ -1431,9 +1248,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # --- Cross-convention validation ---
   # Gather tagged-NA tokens from map and labels. If any are present,
   # resolve the active convention; under SPSS convention, raise the
-  # cross-convention error with a dynamic echo-back of the user's
-  # call rewritten in SPSS-style syntax. Under Stata convention the
-  # tokens are accepted and flow through to the recode loop.
+  # cross-convention error, which states the mismatch and the two ways
+  # out without rewriting the call (Rule Y, S246). Under Stata
+  # convention the tokens are accepted and flow through to the recode
+  # loop.
   map_has_tag <- any(!vapply(parsed_map$mappings,
                              function(r) is.null(r$tagged), logical(1))) ||
                  identical(parsed_map$else_action, "tagged") ||
@@ -1472,8 +1290,6 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       err_msg <- .jst_jrecode_convention_error(
         parsed_map          = parsed_map,
         parsed_labels       = parsed_labels,
-        data_name           = .jst_data_name,
-        orig_name           = orig_name,
         per_call_convention = convention
       )
       .jst_stop(err_msg)
@@ -2698,10 +2514,6 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         err_msg <- .jst_jrecode_convention_error(
           parsed_map          = parsed_map,
           parsed_labels       = parsed_labels,
-          data_name           = .jst_data_name,
-          orig_name           = var_name,
-          fn_name             = "jencode",
-          lhs_render          = .jst_jencode_lhs_render,
           per_call_convention = convention
         )
         .jst_stop(err_msg)
@@ -3255,13 +3067,16 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 }
 
 
-#' Internal helper: render a text map's left-hand side for the echo-back
+#' Internal helper: render a text map's left-hand side
 #'
 #' The left-hand-side renderer \code{jencode()} hands to
-#' \code{.jst_jrecode_convention_error()}. Words render as themselves,
-#' quoted when they contain a map separator; the empty string renders as
-#' the taught \code{blank} token rather than as a pair of quotes, since
-#' the quotes-around-nothing form is deliberately never shown to users.
+#' \code{.jst_render_map_string()} when the word-evidence nudge shows
+#' the user a map built from values found in their own column. (It also
+#' fed the cross-convention echo-back until S246, when that echo-back
+#' was retired under Rule Y.) Words render as themselves, quoted when
+#' they contain a map separator; the empty string renders as the taught
+#' \code{blank} token rather than as a pair of quotes, since the
+#' quotes-around-nothing form is deliberately never shown to users.
 #'
 #' @param old_vals Character vector of old values from one parsed rule.
 #'
@@ -4880,13 +4695,25 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   # "SAS-style" and its body lines carry the uppercase markers actually
   # minted. parsed_codes here is the caller's CANONICALIZED per-column
   # copy, so the stata_canonical body renders the case that was written.
+  #
+  # S246: the stata_canonical branch reads "Named ... " where it once read
+  # "Labeled ... ", and its body line reads '<marker> is now "<label>"'
+  # rather than the shared 'code ["label"]' form. On an already-tagged
+  # column there is nothing to declare -- the cells are already missing --
+  # so the only act available is naming a marker, and the old wording did
+  # not say that: a reader took "Labeled SAS-style missing values on Score"
+  # to mean something had happened to the values. The state form
+  # '.A ["Changed"]' reinforced it. The pairing form states the change.
+  # This branch alone diverges from the shared body format, deliberately:
+  # the other two report a list of what was declared, this one reports a
+  # renaming.
   style_word <- .jst_convention_label(
     if (identical(branch, "spss_canonical")) "spss" else resolved_convention)
   header <- switch(
     branch,
     spss_canonical    = paste0("Declared ", style_word,
                                " missing values on "),
-    stata_canonical   = paste0("Labeled ", style_word,
+    stata_canonical   = paste0("Named ", style_word,
                                " missing values on "),
     stata_conversion  = paste0("Declared and converted to ", style_word,
                                " missing values on ")
@@ -4918,12 +4745,15 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       }
     }
   } else if (branch == "stata_canonical") {
+    # S246: the pairing form. A bare marker (no label given) keeps its
+    # existing label, so there is no renaming to report -- it renders as
+    # the marker alone.
     c_tags <- haven::na_tag(parsed_codes)
     for (i in seq_along(parsed_codes)) {
       lbl <- names(parsed_codes)[i]
       if (nzchar(lbl)) {
         body_lines <- c(body_lines,
-                        sprintf("  .%s [\"%s\"]", c_tags[i], lbl))
+                        sprintf("  .%s is now \"%s\"", c_tags[i], lbl))
       } else {
         body_lines <- c(body_lines, sprintf("  .%s", c_tags[i]))
       }
@@ -5060,7 +4890,7 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       br,
       spss_canonical    = paste0("Declared ", style_word,
                                  " missing values on "),
-      stata_canonical   = paste0("Labeled ", style_word,
+      stata_canonical   = paste0("Named ", style_word,
                                  " missing values on "),
       stata_conversion  = paste0("Declared and converted to ", style_word,
                                  " missing values on ")
@@ -5097,14 +4927,15 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       }
     } else if (br == "stata_canonical") {
       # Subgroup-local canonicalized copy: carries the letter case this
-      # subgroup's columns actually got (S240).
+      # subgroup's columns actually got (S240). Pairing form per S246 --
+      # see the single-variable builder for the rationale.
       pc_grp <- results[[idx[1]]]$parsed_codes_used
       c_tags <- haven::na_tag(pc_grp)
       for (i in seq_along(pc_grp)) {
         lbl <- names(pc_grp)[i]
         if (nzchar(lbl)) {
           body_lines <- c(body_lines,
-                          sprintf("  .%s [\"%s\"]", c_tags[i], lbl))
+                          sprintf("  .%s is now \"%s\"", c_tags[i], lbl))
         } else {
           body_lines <- c(body_lines, sprintf("  .%s", c_tags[i]))
         }

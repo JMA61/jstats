@@ -2423,7 +2423,7 @@
 #' the right -- and returns the SAME list shape \code{.jst_parse_map()}
 #' returns, with \code{old_vals} character rather than numeric, so the
 #' convention gate, the tag canonicalization, and the cross-convention
-#' echo-back consume one structure from either parser.
+#' error consume one structure from either parser.
 #'
 #' Differences from the numeric parser, all of them consequences of the
 #' left-hand side being text:

@@ -209,10 +209,14 @@ convention's letter case: lowercase under Stata convention, uppercase
 under SAS convention.
 
 Writing these missing-value tokens while the active convention is
-SPSS raises an informative error that echoes the user's call
-rewritten in SPSS-style syntax; the error also names the one-line
-\code{joptions(missing.convention = ...)} switch to Stata or SAS
-convention.
+SPSS raises an error naming the mismatch and the two ways out:
+restate the markers as numeric codes to stay in SPSS convention, or
+switch convention with \code{joptions(missing.convention = ...)} (or
+with this call's \code{convention} argument). The error does not
+rewrite the call for you: the SPSS-form codes would have to be minted
+from \code{joptions("udm.convention.codes")}, which cannot be known
+to be free of collision with values already in the column. The
+two-call SPSS-style pattern is documented above.
 }
 \examples{
 # Recode with explicit labels (a 1/2 dichotomy to 0/1)

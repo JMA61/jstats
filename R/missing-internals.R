@@ -423,10 +423,12 @@
 # (default c(-99, -98, -97)). Mapping is positional: .a -> codes[1],
 # .b -> codes[2], etc. Per Decision 4 of
 # JStats_Missing_Values_Reference.txt Part 4 (Session 25 walk-through
-# lock), this is the convention-based direction shared between
-# jconvert's Stata-to-SPSS conversion path and jrecode's cross-
-# convention error echo-back. jdeclare_udm in Step 5b will consume
-# the same helper.
+# lock), this is the convention-based direction used by jconvert's
+# Stata-to-SPSS conversion path -- which guards it with a collision
+# check against the column's real values before converting. The
+# jrecode/jencode cross-convention error was a second consumer until
+# S246, when the echo-back it fed was retired: minting codes from the
+# pool inside a message could not be made safe (Rule Y, the mint test).
 #
 # When the input letter count exceeds the convention code count, the
 # return covers only the mappable subset (in order) and

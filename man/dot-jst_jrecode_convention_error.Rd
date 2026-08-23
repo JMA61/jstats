@@ -2,54 +2,38 @@
 % Please edit documentation in R/recode.R
 \name{.jst_jrecode_convention_error}
 \alias{.jst_jrecode_convention_error}
-\title{Internal helper: build jrecode's cross-convention error message}
+\title{Internal helper: build the cross-convention error message}
 \usage{
 .jst_jrecode_convention_error(
   parsed_map,
   parsed_labels,
-  data_name,
-  orig_name,
-  fn_name = "jrecode",
-  lhs_render = NULL,
   per_call_convention = NULL
 )
 }
 \arguments{
-\item{parsed_map}{List returned by \code{.jst_parse_map()}.}
+\item{parsed_map}{List returned by \code{.jst_parse_map()}, or by
+\code{.jst_parse_text_map()} for the \code{jencode()} caller.}
 
 \item{parsed_labels}{Named numeric vector returned by
 \code{.jst_parse_labels()}, or \code{NULL} if no labels argument
 was supplied.}
 
-\item{data_name}{Character. Name of the data frame in the user's
-call (used to reconstruct the example).}
-
-\item{orig_name}{Character. Name of the variable being recoded.}
-
-\item{fn_name}{Character. The user-facing function the echo-back
-should name. Defaults to \code{"jrecode"}; \code{jencode()}
-passes its own name. Parameterized rather than forked (S236 ruling
-6): a sibling copy of this helper would be some two hundred lines
-of drifting duplicate.}
-
-\item{lhs_render}{Optional function taking one rule's
-\code{old_vals} and returning the rendered left-hand side. Default
-\code{NULL} uses the numeric rendering, so jrecode's output is
-unchanged; jencode passes a word renderer.}
-
 \item{per_call_convention}{Character or \code{NULL}. The caller's raw
-per-call \code{convention} argument, forwarded for display-time
-phrasing only (token case and style word via
-\code{.jst_phrasing_convention()}); it plays no part in whether the
-error fires.}
+per-call \code{convention} argument. It selects which of the two
+routes to an SPSS resolution the message describes -- the call or
+the setting -- and therefore which remedy is offered; it plays no
+part in whether the error fires. It also seeds the display case for
+a marker that carries no recorded raw spelling.}
 }
 \value{
-Character scalar suitable for passing to \code{stop()}.
+Character scalar suitable for passing to \code{.jst_stop()}.
 }
 \description{
-Produces the error message used by \code{jrecode()} when Stata-style
-missing-value tokens appear in the map or labels argument but the
-resolved convention is SPSS. Verbosity is controlled by the active
+Produces the error message used by \code{jrecode()} and
+\code{jencode()} when lettered missing-value markers appear in the
+map or labels argument but the resolved convention is SPSS. The
+message states the mismatch and names the settings-level remedies;
+per Rule Y it does not rewrite the user's call. One form at every
 \code{joutput()} level.
 }
 \keyword{internal}

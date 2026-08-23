@@ -2,7 +2,7 @@
 % Please edit documentation in R/recode.R
 \name{.jst_jencode_lhs_render}
 \alias{.jst_jencode_lhs_render}
-\title{Internal helper: render a text map's left-hand side for the echo-back}
+\title{Internal helper: render a text map's left-hand side}
 \usage{
 .jst_jencode_lhs_render(old_vals)
 }
@@ -14,9 +14,12 @@ Character scalar: the rule's left-hand side.
 }
 \description{
 The left-hand-side renderer \code{jencode()} hands to
-\code{.jst_jrecode_convention_error()}. Words render as themselves,
-quoted when they contain a map separator; the empty string renders as
-the taught \code{blank} token rather than as a pair of quotes, since
-the quotes-around-nothing form is deliberately never shown to users.
+\code{.jst_render_map_string()} when the word-evidence nudge shows
+the user a map built from values found in their own column. (It also
+fed the cross-convention echo-back until S246, when that echo-back
+was retired under Rule Y.) Words render as themselves, quoted when
+they contain a map separator; the empty string renders as the taught
+\code{blank} token rather than as a pair of quotes, since the
+quotes-around-nothing form is deliberately never shown to users.
 }
 \keyword{internal}
