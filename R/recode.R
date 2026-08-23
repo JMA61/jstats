@@ -3149,6 +3149,18 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   accepted either way and canonicalized to the column's convention).
 #'   Tokens are refused on columns with no tagged missing values to
 #'   label (see the Missing-Values Convention section).
+#'
+#'   A token may name a marker that no case currently carries -- useful
+#'   for FORWARD-DECLARING a label before recoding values into it. The
+#'   label attaches, nothing in the data changes, and the notification
+#'   says the marker is not present in the data. Such a label survives
+#'   both a Stata and an SPSS round trip.
+#'
+#'   A token given with no label is a no-op on an already-tagged
+#'   column: the cells are already missing, so the only act available
+#'   is naming a marker, and the call reports that it changed nothing.
+#'   This differs from the numeric form, where a bare code IS the
+#'   declaration.
 #' @param labels Optional. A quoted string in the form
 #'   \code{"value=label; value=label"} pairing labels with codes
 #'   (Option A only). Must be \code{NULL} when \code{codes} is named
@@ -4009,6 +4021,10 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       # Tagged branches consume the canonicalized per-column copy (pc);
       # the SPSS branch takes the original (no tags can reach it).
       conversion_info <- NULL
+      # S247: per-marker truthfulness annotations, filled by the tagged
+      # canonical branch only -- the other two report what they declared,
+      # which is what they did.
+      marker_notes <- NULL
       if (resolved_convention == "spss") {
         # ---------- Branch D1: SPSS canonical (numeric codes / range) ------
         new_col <- .jst_jdeclare_udm_spss(col, parsed_codes, vn,
@@ -4020,6 +4036,7 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         # ---------- Branch D3: Stata/SAS canonical (tagged-NA labeling) ----
         new_col <- .jst_jdeclare_udm_stata_label(col, pc)
         branch  <- "stata_canonical"
+        marker_notes <- .jst_jdeclare_udm_marker_notes(col, new_col, pc)
 
       } else {
         # ---------- Branch D4: Stata/SAS conversion (numeric -> tagged) ----
@@ -4035,7 +4052,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
            conversion_info = conversion_info,
            existing_info = existing_info,
            resolved_convention = resolved_convention,
-           parsed_codes_used = pc)
+           parsed_codes_used = pc,
+           marker_notes = marker_notes)
     }, error = function(e) {
       structure(list(msg = conditionMessage(e)), class = "jst_build_err")
     })
@@ -4225,7 +4243,8 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         modify              = modify,
         range               = range,
         inband_labels       = if (has_residue) label_residue else NULL,
-        resolved_convention = results[[1L]]$resolved_convention
+        resolved_convention = results[[1L]]$resolved_convention,
+        marker_notes        = results[[1L]]$marker_notes
       )
     } else {
       notif <- .jst_jdeclare_udm_bulk_notification(
@@ -4673,6 +4692,118 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 
 
 # -----------------------------------------------------------------------------
+# .jst_jdeclare_udm_marker_notes()
+#
+# Per-marker truthfulness annotations for the stata_canonical body lines
+# (S247). That branch renders from the CODES ARGUMENT rather than from what
+# changed on the column, so it reported acts that did not happen: a label
+# attached to a marker in no cell, a bare marker that changes nothing, and
+# a rename that silently dropped the old label. Each body line now carries
+# what actually happened to that marker on the resulting column.
+#
+# Three facts, combinable, rendered in this order:
+#   "no change"               - the marker's label is what it already was
+#                               (a bare entry, or the same name re-asserted)
+#   was "<old>"               - the entry replaced an existing label
+#   "not present in the data" - no cell carries the marker
+#
+# Absence is judged on CELLS ONLY, deliberately: a marker living just in the
+# value labels is precisely the case being reported. Forward-declaring one is
+# permitted (Option A, S247) -- haven accepts it, it survives both a Stata and
+# an SPSS round trip, and sign-off 5 already counts a label-only marker as a
+# real declaration when deciding what was dropped. Case is significant, since
+# .a and .A are different markers, so a canonicalized code whose cells carry
+# the other case reads as absent -- which is true, and is the mixed-marker
+# state the census reports separately.
+# -----------------------------------------------------------------------------
+
+#' @keywords internal
+.jst_jdeclare_udm_marker_notes <- function(col, new_col, parsed_codes) {
+  tags <- haven::na_tag(parsed_codes)
+  lbls <- names(parsed_codes)
+  if (is.null(lbls)) lbls <- rep("", length(parsed_codes))
+
+  cell_tags <- haven::na_tag(new_col)
+  cell_tags <- cell_tags[!is.na(cell_tags)]
+
+  old_labs <- if (haven::is.labelled(col)) labelled::val_labels(col) else NULL
+  if (is.null(old_labs) || length(old_labs) == 0L) {
+    old_labs <- NULL
+    old_tags <- character(0)
+  } else {
+    old_tags <- haven::na_tag(old_labs)
+  }
+
+  vapply(seq_along(parsed_codes), function(i) {
+    prior <- NA_character_
+    if (length(old_tags) > 0L) {
+      hit <- which(!is.na(old_tags) & old_tags == tags[i])
+      if (length(hit) > 0L) prior <- names(old_labs)[hit[1L]]
+    }
+
+    parts <- character(0)
+    if (!nzchar(lbls[i]) || identical(prior, lbls[i])) {
+      parts <- c(parts, "no change")
+    } else if (!is.na(prior) && nzchar(prior)) {
+      parts <- c(parts, paste0("was \"", prior, "\""))
+    }
+    if (!(tags[i] %in% cell_tags)) {
+      parts <- c(parts, "not present in the data")
+    }
+
+    if (length(parts) == 0L) "" else
+      paste0(" (", paste(parts, collapse = "; "), ")")
+  }, character(1))
+}
+
+
+# -----------------------------------------------------------------------------
+# .jst_jdeclare_udm_no_naming_note()
+#
+# Replaces the stata_canonical block when EVERY entry in codes is bare
+# (S247). On this branch the cells are already tagged NAs -- already missing,
+# which is what put the column on the branch -- so the only act available is
+# naming a marker, and a call that names none does nothing at all. The old
+# rendering printed a "Named ..." header over a list of markers, asserting an
+# act that never occurred.
+#
+# The likely cause is worth teaching to, not just reporting: a migrant who
+# learned codes = -99 on the SPSS side, where a bare code IS the declaration,
+# reasonably writes codes = ".a" here and expects the same. So the note names
+# why bare does nothing on this branch and shows the naming form.
+#
+# Consequential (the user asked for something and got nothing), so it prints
+# at every tier above minimal. No durability note follows: nothing changed,
+# and there is nothing to make durable.
+# -----------------------------------------------------------------------------
+
+#' @keywords internal
+.jst_jdeclare_udm_no_naming_note <- function(data_name, var_phrase,
+                                             parsed_codes, scaffold_var,
+                                             modify = FALSE,
+                                             plural = FALSE) {
+  tag1 <- haven::na_tag(parsed_codes)[1L]
+  code_arg <- paste0("codes = c(Refused = \".", tag1, "\")")
+  scaffold <- if (isTRUE(modify)) {
+    paste0("    jdeclare_udm(", data_name, ", ", scaffold_var, ", ",
+           code_arg, ", modify = TRUE)")
+  } else {
+    paste0("    ", data_name, " <- jdeclare_udm(", data_name, ", ",
+           scaffold_var, ", ", code_arg, ")")
+  }
+  paste0(
+    .jst_wrap_prose(paste0(
+      "Note: jdeclare_udm made no change to ", var_phrase, ". ",
+      if (isTRUE(plural)) "Their" else "Its",
+      " markers are already missing values, so a bare marker has ",
+      "nothing to name."), reserve = 0L), "\n",
+    "  To name one:\n",
+    scaffold, "\n"
+  )
+}
+
+
+# -----------------------------------------------------------------------------
 # Notification builder
 # -----------------------------------------------------------------------------
 
@@ -4683,9 +4814,23 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
                                            modify = FALSE,
                                            range = NULL,
                                            inband_labels = NULL,
-                                           resolved_convention = "stata") {
+                                           resolved_convention = "stata",
+                                           marker_notes = NULL) {
 
   output_level <- getOption(".jst_output_level", "standard")
+
+  # S247: an all-bare codes argument names nothing on the tagged branch, so
+  # the naming header is replaced outright rather than annotated. Checked
+  # before the header is built -- there is no header to build.
+  if (identical(branch, "stata_canonical") &&
+      !any(nzchar(names(parsed_codes)))) {
+    return(.jst_jdeclare_udm_no_naming_note(
+      data_name    = data_name,
+      var_phrase   = var_name,
+      parsed_codes = parsed_codes,
+      scaffold_var = var_name,
+      modify       = modify))
+  }
 
   # Two-branch header (assignment-accuracy rule): the frame name appears
   # only in the modify branch, where the claim that the frame changed is
@@ -4747,15 +4892,21 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   } else if (branch == "stata_canonical") {
     # S246: the pairing form. A bare marker (no label given) keeps its
     # existing label, so there is no renaming to report -- it renders as
-    # the marker alone.
+    # the marker alone. S247: each line carries its truthfulness annotation
+    # (what actually happened to that marker), built by
+    # .jst_jdeclare_udm_marker_notes(). An all-bare call never reaches here.
     c_tags <- haven::na_tag(parsed_codes)
+    notes  <- if (is.null(marker_notes)) rep("", length(parsed_codes))
+              else marker_notes
     for (i in seq_along(parsed_codes)) {
       lbl <- names(parsed_codes)[i]
       if (nzchar(lbl)) {
         body_lines <- c(body_lines,
-                        sprintf("  .%s is now \"%s\"", c_tags[i], lbl))
+                        sprintf("  .%s is now \"%s\"%s",
+                                c_tags[i], lbl, notes[i]))
       } else {
-        body_lines <- c(body_lines, sprintf("  .%s", c_tags[i]))
+        body_lines <- c(body_lines,
+                        sprintf("  .%s%s", c_tags[i], notes[i]))
       }
     }
   } else {
@@ -4877,8 +5028,24 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   # (branch, convention) subgroup the canonicalized copies are identical,
   # so the subgroup's first result renders for all of it.
   convs    <- vapply(results, function(r) r$resolved_convention, character(1))
-  grp_keys <- paste(branches, convs, sep = "|")
+  # S247: the key gains a marker-note signature, extending the same widening
+  # S240 made when it added the convention. Presence and prior labels are
+  # properties of the COLUMN, not of the codes argument, so two columns can
+  # sit in one (branch, convention) subgroup and still need different body
+  # lines -- one carrying a marker the other lacks. Rendering the subgroup's
+  # first result for both would state a falsehood about one of them. The
+  # split is bounded: the signature ranges over the markers named in the
+  # call, so a 52-column call naming one marker yields at most two blocks.
+  sigs <- vapply(results, function(r) {
+    if (is.null(r$marker_notes)) "" else paste(r$marker_notes, collapse = "\r")
+  }, character(1))
+  grp_keys <- paste(branches, convs, sigs, sep = "|")
   msg <- character(0)
+  # S247: a group that named nothing changed nothing. If EVERY group is such
+  # a group the call left the frame untouched, so the durability note must
+  # not follow -- there is nothing to make durable, and saying otherwise
+  # repeats the defect this session removes. A mixed call still gets it.
+  no_change_only <- logical(0)
 
   for (gk in unique(grp_keys)) {
     idx    <- which(grp_keys == gk)
@@ -4927,17 +5094,44 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       }
     } else if (br == "stata_canonical") {
       # Subgroup-local canonicalized copy: carries the letter case this
-      # subgroup's columns actually got (S240). Pairing form per S246 --
-      # see the single-variable builder for the rationale.
+      # subgroup's columns actually got (S240). Pairing form per S246, with
+      # the S247 annotations -- the group key above guarantees every column
+      # in this subgroup shares one signature, so the first result's notes
+      # are true of all of them.
       pc_grp <- results[[idx[1]]]$parsed_codes_used
+      # All-bare names nothing: the whole block becomes the no-change note
+      # (S247). Bare-ness comes from the codes argument, so it is call-level
+      # -- but the BRANCH is per column, so other groups keep their blocks.
+      if (!any(nzchar(names(pc_grp)))) {
+        nn <- .jst_jdeclare_udm_no_naming_note(
+          data_name    = data_name,
+          var_phrase   = paste0(length(vn_set),
+                                if (length(vn_set) == 1L) " variable"
+                                else " variables"),
+          parsed_codes = pc_grp,
+          scaffold_var = vn_set[1L],
+          modify       = modify,
+          plural       = length(vn_set) > 1L)
+        no_change_only <- c(no_change_only, TRUE)
+        # Splice the variable echo under the first sentence: "no change to 3
+        # variables" is not actionable without naming them.
+        nn_parts <- strsplit(nn, "\n  To name one:\n", fixed = TRUE)[[1]]
+        msg <- c(msg, paste0(nn_parts[1], "\n", var_line,
+                             "\n  To name one:\n", nn_parts[2]))
+        next
+      }
       c_tags <- haven::na_tag(pc_grp)
+      notes  <- results[[idx[1]]]$marker_notes
+      if (is.null(notes)) notes <- rep("", length(pc_grp))
       for (i in seq_along(pc_grp)) {
         lbl <- names(pc_grp)[i]
         if (nzchar(lbl)) {
           body_lines <- c(body_lines,
-                          sprintf("  .%s is now \"%s\"", c_tags[i], lbl))
+                          sprintf("  .%s is now \"%s\"%s",
+                                  c_tags[i], lbl, notes[i]))
         } else {
-          body_lines <- c(body_lines, sprintf("  .%s", c_tags[i]))
+          body_lines <- c(body_lines,
+                          sprintf("  .%s%s", c_tags[i], notes[i]))
         }
       }
     } else {
@@ -4968,11 +5162,12 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 
     msg <- c(msg, paste0(header, "\n", var_line, "\n",
                          paste(body_lines, collapse = "\n"), "\n"))
+    no_change_only <- c(no_change_only, FALSE)
   }
 
   out <- paste(msg, collapse = "\n")
 
-  if (!identical(output_level, "minimal")) {
+  if (!identical(output_level, "minimal") && !all(no_change_only)) {
     out <- paste0(out, "\n",
                   .jst_durability_note("frame", data_name,
                                        verb = "jdeclare_udm",

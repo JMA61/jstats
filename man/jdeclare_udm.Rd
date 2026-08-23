@@ -40,7 +40,19 @@ values, codes may name the markers directly as quoted tokens, e.g.
 \code{.a} marker (or \code{.A} on a SAS-style column: token case is
 accepted either way and canonicalized to the column's convention).
 Tokens are refused on columns with no tagged missing values to
-label (see the Missing-Values Convention section).}
+label (see the Missing-Values Convention section).
+
+A token may name a marker that no case currently carries -- useful
+for FORWARD-DECLARING a label before recoding values into it. The
+label attaches, nothing in the data changes, and the notification
+says the marker is not present in the data. Such a label survives
+both a Stata and an SPSS round trip.
+
+A token given with no label is a no-op on an already-tagged
+column: the cells are already missing, so the only act available
+is naming a marker, and the call reports that it changed nothing.
+This differs from the numeric form, where a bare code IS the
+declaration.}
 
 \item{labels}{Optional. A quoted string in the form
 \code{"value=label; value=label"} pairing labels with codes
