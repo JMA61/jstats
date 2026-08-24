@@ -21,4 +21,10 @@ from fn when supplied, otherwise auto-detected from the call stack via
 .jst_caller_fn(); if detection fails the message is emitted without a prefix
 rather than erroring. Always signals with call. = FALSE.
 }
+\details{
+The assembled message is width-wrapped here via .jst_wrap_message(), with the
+prefix length passed as the first-line reserve. Builders therefore need not
+wrap their own prose, and a builder that already wrapped is unaffected: the
+wrapper is idempotent at a given width.
+}
 \keyword{internal}

@@ -10,6 +10,7 @@ joptions(
   data.dir = NULL,
   corr.layout = NULL,
   missing.detail = NULL,
+  message.width = NULL,
   quiet = FALSE
 )
 }
@@ -27,6 +28,10 @@ See Slots.}
 
 \item{missing.detail}{One of \code{"totals"}, \code{"per_code"}, or
 \code{"all"}, or \code{NULL}. See Slots.}
+
+\item{message.width}{One of \code{"auto"}, \code{"narrow"},
+\code{"medium"}, \code{"wide"}, a whole number between 40 and 120,
+or \code{NULL}. See Slots.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, joptions() applies the
 change silently, suppressing the settings echo, its pointer, and the
@@ -46,7 +51,8 @@ complements \code{\link{joutput}}: joutput governs output verbosity and
 tiering, while joptions holds session-wide conventions plus a small number
 of per-function display defaults (the \code{jcorr()} cell layout via
 \code{corr.layout}, and the \code{jfreq()} missing-value range detail
-via \code{missing.detail}). Settings are read fresh on each function call:
+via \code{missing.detail}), and the width at which runtime message prose
+wraps (\code{message.width}). Settings are read fresh on each function call:
 changing a setting after data has been loaded does not retroactively
 transform data already in memory. \code{\link{jconvert}} is the
 explicit transform path for data already in the workspace.
@@ -109,6 +115,17 @@ range. A per-call \code{missing.detail} argument to
 \code{jfreq()} overrides this. Like \code{corr.layout} it lives
 here rather than in \code{\link{joutput}} because it is specific
 to one function's output.}
+\item{message.width}{Character or numeric, length 1. One of
+\code{"auto"}, \code{"narrow"} (50 columns), \code{"medium"} (76),
+\code{"wide"} (90), or a whole number between 40 and 120. Default:
+\code{"medium"}. The target width at which the package wraps runtime
+MESSAGE prose -- errors, warnings and notes. \code{"auto"} follows the
+console pane, which R keeps current as the pane is resized, so it is
+resolved afresh for each message rather than fixed when it is set. A
+width outside 40 to 120 is refused rather than quietly adjusted.
+Analysis TABLES are not affected and do not reflow: prose can be
+re-wrapped without losing information, whereas breaking a correlation
+matrix mid-row would destroy the alignment that makes it readable.}
 }
 }
 

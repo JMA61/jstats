@@ -397,12 +397,24 @@
 #                          "all" prints every observed in-band value.
 #                          Discrete declared codes always print in full at
 #                          every setting.
+#   message.width        - "auto", one of the shared width tokens "narrow"
+#                          (50), "medium" (76) or "wide" (90), or a whole
+#                          number in 40-120. Target width for wrapped
+#                          runtime MESSAGE prose; tables are unaffected.
+#                          "auto" tracks the console pane live, so it is
+#                          resolved per emission rather than cached.
+#                          Default is "medium" in this version. The default
+#                          moves to "auto" once EVERY emitter wraps: with
+#                          only .jst_stop() hooked, an adaptive default
+#                          would leave errors adapting to the pane while
+#                          warnings and notes stayed at 76 (Session 253).
 .jst_options_defaults <- list(
   missing.convention   = "none",
   udm.convention.codes = c(-99, -98, -97),
   data.dir             = NULL,
   corr.layout          = "wide",
-  missing.detail       = "per_code"
+  missing.detail       = "per_code",
+  message.width        = "medium"
 )
 
 # Row cap applied to IN-BAND rows at missing.detail = "per_code". Declared

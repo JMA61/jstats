@@ -1732,6 +1732,155 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 
+# -----------------------------------------------------------------------------
+# Console width: the message.width foundation
+#
+# Three helpers rather than one, so that a future table.width slot is an
+# ADDITION here and not a rewrite:
+#
+#   .jst_console_width()  the raw console width, UNCLAMPED. Tables will want
+#                         the true value even below the message floor -- a
+#                         35-column console is exactly when jcorr should
+#                         consider its stacked layout -- so clamping belongs
+#                         to the consumer, not to the reading.
+#   .jst_width_tokens     the token -> number map, ONE shared constant. NOT
+#                         per-consumer: a token names a width, and a future
+#                         joptions(width = "narrow") setting two slots at
+#                         once is incoherent if "narrow" means two different
+#                         numbers in two places.
+#   .jst_resolve_width()  the precedence resolver, with the BAND as an
+#                         argument so each consumer passes its own bounds.
+#
+# SCOPE IS PROSE. Nothing in the package reads getOption("width") for table
+# rendering, and the slot is named message.width for exactly that reason: a
+# broader name would promise a reflow that does not happen. Prose can reflow
+# without losing information; a table cannot. (Session 253.)
+# -----------------------------------------------------------------------------
+
+#' Internal helper: the current console width, unclamped
+#'
+#' Returns \code{getOption("width")} as an integer, with no clamping to any
+#' consumer band. R keeps this value current with the console pane, so it is
+#' read at the point of use rather than cached: a message renders to the pane
+#' it prints into. Falls back to R's own documented default of 80 when the
+#' option is missing or malformed -- a validity fallback, not a clamp.
+#'
+#' @return Integer: the console width in columns.
+#' @keywords internal
+.jst_console_width <- function() {
+  w <- getOption("width")
+  if (is.null(w) || length(w) != 1L || !is.numeric(w) || is.na(w)) return(80L)
+  as.integer(w)
+}
+
+
+# -- Internal: the shared width tokens ----------------------------------------
+#
+# The token to column-count map, shared by every width consumer. "narrow" is
+# the floor of the online-teaching range, "medium" is Rule U's established
+# value (safe under an 80-column terminal and a Quarto render), "wide" is a
+# comfortable modern pane.
+#
+# Plain comments rather than roxygen, matching .jst_options_related: roxygen
+# on a non-function object generates a \docType{data} Rd, which this package
+# does not carry for internal constants.
+
+#' @keywords internal
+.jst_width_tokens <- c(narrow = 50L, medium = 76L, wide = 90L)
+
+
+#' Internal helper: resolve a width setting to a number of columns
+#'
+#' Precedence follows \code{.jst_resolve_corr_layout()}: an explicit per-call
+#' value wins, else the supplied joptions slot value, else a last-ditch
+#' fallback. Five forms are accepted -- \code{"auto"} (the live console width
+#' less one column), the three tokens in \code{.jst_width_tokens}, or a whole
+#' number within the band.
+#'
+#' TWO BEHAVIORS BY PROVENANCE, deliberately. A NUMBER the user typed is
+#' honored or REFUSED, because a silent clamp reports success and does
+#' something else. A WORD -- a token, or \code{"auto"} -- is FITTED to the
+#' band, because refusing \code{"auto"} would punish a user for resizing a
+#' pane they never typed a number into.
+#'
+#' Like \code{corr.layout} and \code{missing.detail}, these tokens name no
+#' statistical platform, so they are matched EXACTLY and are outside the
+#' platform-spec case-insensitivity rule.
+#'
+#' Validation is strict on \code{per_call} ONLY. An invalid slot falls back
+#' silently, matching \code{.jst_resolve_corr_layout()} -- and here that is
+#' required rather than merely consistent: this resolver is read by the
+#' message emitters, so a slot corrupted by a direct \code{options()} write
+#' must not raise an error from inside the error path.
+#'
+#' @param per_call A per-call width value, or NULL to defer to the slot.
+#' @param slot The joptions slot value. Defaults to the \code{message.width}
+#'   slot, the only consumer in this version; a future \code{table.width}
+#'   passes its own.
+#' @param min,max The consumer's band, inclusive.
+#' @param arg,fn Names used in the per-call validation error.
+#'
+#' @return Integer: the resolved width in columns.
+#' @keywords internal
+.jst_resolve_width <- function(per_call = NULL,
+                               slot = getOption(
+                                 ".jst_options_message_width",
+                                 .jst_options_defaults$message.width),
+                               min = 40L, max = 120L,
+                               arg = "message.width", fn = NULL) {
+  # Clamp written with comparisons rather than base min()/max(): the band
+  # parameters are NAMED min and max to match the agreed signature, and
+  # calling the base functions in their shadow, while legal, reads as a bug.
+  fit <- function(w) {
+    w <- as.integer(w)
+    if (w < min) w <- as.integer(min)
+    if (w > max) w <- as.integer(max)
+    w
+  }
+
+  # Interpret one accepted form: the resolved integer, or NA carrying a
+  # "why" the strict path turns into an error.
+  interpret <- function(x) {
+    if (is.character(x) && length(x) == 1L && !is.na(x)) {
+      if (identical(x, "auto")) return(fit(.jst_console_width() - 1L))
+      if (x %in% names(.jst_width_tokens)) return(fit(.jst_width_tokens[[x]]))
+      return(structure(NA_integer_, why = "form"))
+    }
+    if (is.numeric(x) && length(x) == 1L && !is.na(x) &&
+        x == as.integer(x)) {
+      x <- as.integer(x)
+      if (x < min || x > max) return(structure(NA_integer_, why = "band"))
+      return(x)
+    }
+    structure(NA_integer_, why = "form")
+  }
+
+  if (!is.null(per_call)) {
+    got <- interpret(per_call)
+    if (!is.na(got)) return(got)
+    if (identical(attr(got, "why"), "band")) {
+      .jst_stop_arg(fn, arg,
+                    paste0("between ", min, " and ", max,
+                           ". Out-of-range widths are refused rather than ",
+                           "quietly adjusted."))
+    }
+    .jst_stop_arg(fn, arg,
+                  paste0("\"auto\", ",
+                         paste0("\"", names(.jst_width_tokens), "\"",
+                                collapse = ", "),
+                         ", or a whole number between ", min, " and ",
+                         max, "."))
+  }
+
+  got <- interpret(slot)
+  if (!is.na(got)) return(got)
+  # Last-ditch only: the slot has been corrupted by a direct options() write.
+  # Not any consumer's default -- a consumer's default reaches this function
+  # as `slot`, via getOption(name, .jst_options_defaults$name).
+  fit(.jst_width_tokens[["medium"]])
+}
+
+
 #' Internal: width-aware wrapping for runtime-message prose
 #'
 #' Wraps ONE prose sentence (or short paragraph) at word boundaries to a
@@ -1757,13 +1906,15 @@ jai <- function(setup = NULL, path = NULL) {
 #' the S230 sites; other messages adopt it as they are touched.
 #'
 #' @param text Character scalar: one sentence/paragraph, no embedded newlines.
-#' @param width Target line width (default 76).
+#' @param width Target line width. Defaults to the resolved
+#'   \code{message.width} setting (see \code{\link{joptions}}); the shipped
+#'   default resolves to 76.
 #' @param min_last Minimum last-line length before pull-back stops.
 #' @param reserve Characters the emitter will prepend to line 1.
 #' @return Character scalar with newline characters at the break points.
 #' @keywords internal
-.jst_wrap_prose <- function(text, width = 76L, min_last = 20L,
-                            reserve = 0L) {
+.jst_wrap_prose <- function(text, width = .jst_resolve_width(),
+                            min_last = 20L, reserve = 0L) {
   if (!nzchar(text)) return(text)
   # Protect atomic tokens: swap internal spaces for \x01 so they travel
   # as single words, restored after line assembly.
@@ -1828,10 +1979,11 @@ jai <- function(setup = NULL, path = NULL) {
 #' @param text Character scalar: one sentence/paragraph, no embedded
 #'   newlines.
 #' @param indent Number of spaces every line is indented by.
-#' @param width Target total line width including the indent (default 76).
+#' @param width Target total line width including the indent. Defaults to
+#'   the resolved \code{message.width} setting (see \code{\link{joptions}}).
 #' @return Character scalar; every line starts with \code{indent} spaces.
 #' @keywords internal
-.jst_wrap_indent <- function(text, indent, width = 76L) {
+.jst_wrap_indent <- function(text, indent, width = .jst_resolve_width()) {
   pad  <- strrep(" ", indent)
   body <- .jst_wrap_prose(text, width = width - indent)
   paste0(pad, gsub("\n", paste0("\n", pad), body, fixed = TRUE))
@@ -1873,32 +2025,97 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 
-#' Internal helper: width-wrap a multi-line message, sparing runnable lines
+#' Internal helper: classify one physical line of a runtime message
 #'
-#' Applies \code{.jst_wrap_prose()} line by line, leaving indented lines
-#' untouched: under Rule U a runnable command line takes Rule L form on
-#' its own indented line and is never wrapped, while the prose around it
-#' is. Used where a message is assembled from a caught error whose text
-#' may already contain a Rule L line, so the surfacing wrap cannot know in
-#' advance whether it is wrapping prose or a command.
+#' The three-category classifier behind \code{.jst_wrap_message()}. Replaces
+#' the former two-category \code{.jst_wrap_lines()}, whose "any indented line
+#' passes" rule let indented PROSE through unwrapped -- the jai status panel
+#' rendered such lines at 97 and 81 characters.
+#'
+#' \describe{
+#'   \item{pass}{Byte-identical. Blank lines, anything already fitting, Rule L
+#'     runnable command lines, Rule V menu options, and column-aligned layout.}
+#'   \item{prose}{Wrapped by \code{.jst_wrap_prose()} at the full width.}
+#'   \item{indent}{Wrapped by \code{.jst_wrap_indent()} at its own indent, so
+#'     every continuation line keeps the indent it started with.}
+#' }
+#'
+#' The fits test is protective rather than cosmetic: \code{.jst_wrap_prose()}
+#' rejoins on single spaces, so a column-aligned line that already fits must
+#' never reach it.
+#'
+#' Derived from, and verified against, the Session 252 dry-run corpus: of the
+#' over-width lines in the 282 messages that change under this wrapper alone,
+#' all 305 unindented ones wrap and none pass, which is why an unindented line
+#' is prose without further tests.
+#'
+#' @param line Character scalar: one physical line, no newlines.
+#' @param width The width in force for this line (the caller subtracts any
+#'   first-line reserve before calling).
+#'
+#' @return One of "pass", "prose", or "indent".
+#' @keywords internal
+.jst_seg_category <- function(line, width = 76L) {
+  if (!nzchar(trimws(line))) return("pass")
+  if (nchar(line) <= width) return("pass")
+
+  indent <- nchar(line) - nchar(sub("^ +", "", line))
+  if (indent == 0L) return("prose")
+
+  body <- substring(line, indent + 1L)
+
+  # Runnable: the line STARTS with a call or an assignment. "Starts with" is
+  # load-bearing -- both indented prose lines in the corpus CONTAIN a call
+  # (jai("project")), so a contains-a-call test would misclassify them.
+  #
+  # The character classes below carry no backslashes on purpose. Inside a
+  # POSIX bracket expression a backslash is literal and "]" closes the class
+  # early; that is exactly the defect that split runnable lines mid-command
+  # in the S252 prototype, and it fails silently.
+  if (grepl("^[A-Za-z._][A-Za-z0-9._:]*\\(", body)) return("pass")
+  if (grepl("^[^ ]+ *<- ", body)) return("pass")
+
+  # An interior column gap means table layout or a trailing comment column,
+  # where respacing would destroy the alignment.
+  if (grepl("  ", body)) return("pass")
+
+  "indent"
+}
+
+
+#' Internal helper: width-wrap a whole multi-line runtime message
+#'
+#' Applies \code{.jst_seg_category()} line by line and wraps each line the way
+#' its category requires. Idempotent: wrapping twice equals wrapping once.
+#'
+#' Called by the emitters rather than at the builder site, so that a message
+#' whose prose was never wrapped by hand still lands within the width, and so
+#' that the first-line \code{reserve} can be the REAL prefix length -- the
+#' emitter knows it, a builder can only guess.
 #'
 #' @param text Character scalar, possibly containing newlines.
-#' @param reserve Integer. Characters to reserve on the FIRST line for a
-#'   prefix the caller will prepend (e.g. \code{"jencode(): "}).
+#' @param width Target line width. Defaults to the resolved
+#'   \code{message.width} setting (see \code{\link{joptions}}).
+#' @param reserve Integer. Characters the emitter will prepend to line 1.
 #'
 #' @return Character scalar.
-#'
 #' @keywords internal
-.jst_wrap_lines <- function(text, reserve = 0L) {
+.jst_wrap_message <- function(text, width = .jst_resolve_width(),
+                              reserve = 0L) {
   lines <- strsplit(text, "\n", fixed = TRUE)[[1]]
-  out   <- character(length(lines))
+  if (length(lines) == 0L) return(text)
+  out <- character(length(lines))
   for (i in seq_along(lines)) {
-    ln <- lines[i]
-    out[i] <- if (grepl("^\\s\\s", ln) || !nzchar(trimws(ln))) {
-      ln
-    } else {
-      .jst_wrap_prose(ln, reserve = if (i == 1L) reserve else 0L)
-    }
+    ln  <- lines[i]
+    res <- if (i == 1L) reserve else 0L
+    switch(.jst_seg_category(ln, width = width - res),
+      pass   = { out[i] <- ln },
+      prose  = { out[i] <- .jst_wrap_prose(ln, width = width, reserve = res) },
+      indent = {
+        ind    <- nchar(ln) - nchar(sub("^ +", "", ln))
+        out[i] <- .jst_wrap_indent(sub("^ +", "", ln), indent = ind,
+                                   width = width)
+      })
   }
   paste(out, collapse = "\n")
 }

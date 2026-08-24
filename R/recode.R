@@ -1141,8 +1141,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   parsed_map <- tryCatch(
     .jst_parse_map(map),
     error = function(e) .jst_stop(
-      .jst_wrap_lines(paste0("Error in map argument: ", conditionMessage(e)),
-                      reserve = 11L))
+      "Error in map argument: ", conditionMessage(e))
   )
 
   # --- Parse labels string (if supplied) ---
@@ -2489,8 +2488,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     parsed_map <- tryCatch(
       .jst_parse_text_map(map),
       error = function(e) .jst_stop(
-        .jst_wrap_lines(paste0("Error in map argument: ",
-                               conditionMessage(e)), reserve = 11L))
+        "Error in map argument: ", conditionMessage(e))
     )
 
     # else=copy is refused wholesale: words cannot live in a numeric column,

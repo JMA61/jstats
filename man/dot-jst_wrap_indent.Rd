@@ -4,7 +4,7 @@
 \alias{.jst_wrap_indent}
 \title{Internal helper: wrap message prose at a fixed left indent}
 \usage{
-.jst_wrap_indent(text, indent, width = 76L)
+.jst_wrap_indent(text, indent, width = .jst_resolve_width())
 }
 \arguments{
 \item{text}{Character scalar: one sentence/paragraph, no embedded
@@ -12,7 +12,8 @@ newlines.}
 
 \item{indent}{Number of spaces every line is indented by.}
 
-\item{width}{Target total line width including the indent (default 76).}
+\item{width}{Target total line width including the indent. Defaults to
+the resolved \code{message.width} setting (see \code{\link{joptions}}).}
 }
 \value{
 Character scalar; every line starts with \code{indent} spaces.

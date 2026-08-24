@@ -649,6 +649,11 @@
 #' from fn when supplied, otherwise auto-detected from the call stack via
 #' .jst_caller_fn(); if detection fails the message is emitted without a prefix
 #' rather than erroring. Always signals with call. = FALSE.
+#'
+#' The assembled message is width-wrapped here via .jst_wrap_message(), with the
+#' prefix length passed as the first-line reserve. Builders therefore need not
+#' wrap their own prose, and a builder that already wrapped is unaffected: the
+#' wrapper is idempotent at a given width.
 #' @param ... Message parts, concatenated with paste0().
 #' @param fn Optional function name (without parentheses); auto-detected when NULL.
 #' @return Never returns; always signals an error.
@@ -656,7 +661,14 @@
 .jst_stop <- function(..., fn = NULL) {
   if (is.null(fn)) fn <- tryCatch(.jst_caller_fn(), error = function(e) NULL)
   prefix <- if (is.null(fn) || !nzchar(fn)) "" else paste0(fn, "(): ")
-  stop(paste0(prefix, ...), call. = FALSE)
+  body   <- paste0(...)
+  # Wrap here rather than at the builder: the emitter is the only place that
+  # knows the real prefix length, so reserve is correct rather than guessed.
+  # Guarded because an error emitter must never fail to emit -- if the
+  # wrapper raises, the unwrapped message still reaches the user.
+  body <- tryCatch(.jst_wrap_message(body, reserve = nchar(prefix)),
+                   error = function(e) body)
+  stop(paste0(prefix, body), call. = FALSE)
 }
 
 

@@ -296,9 +296,12 @@ joutput <- function(level, effect.size = NULL,
 # B's value should be read. Exactly one pair qualifies --
 # missing.convention and udm.convention.codes, because the codes are the
 # Stata-tag -> SPSS-code mapping set and are dormant off "spss", so the
-# convention is what tells you how to read them. data.dir, corr.layout and
-# missing.detail are singletons and are absent from the map entirely
-# (missing.detail is a display tier, not convention-coupled).
+# convention is what tells you how to read them. data.dir, corr.layout,
+# missing.detail and message.width are singletons and are absent from the
+# map entirely (missing.detail is a display tier, not convention-coupled;
+# message.width governs prose rendering and is coupled to nothing here --
+# a future table.width would be its partner, and this is where that pair
+# would be declared).
 #
 # Only a slot actually WRITTEN pulls its partner. A named-NULL leave-alone
 # call echoes the slot's own current value but changes nothing, so nothing
@@ -317,7 +320,7 @@ joutput <- function(level, effect.size = NULL,
 # and prints the Options Settings panel. Called at the end of every
 # joptions() call (including reset).
 #
-# slots = NULL (the default) prints the FULL five-slot panel: the shape a
+# slots = NULL (the default) prints the FULL six-slot panel: the shape a
 # bare joptions() status query wants, and the shape the joptions(NULL) reset
 # wants because everything changed. A character vector of slot names instead
 # prints a PARTIAL panel -- the same red title, only the named lines, then
@@ -338,6 +341,8 @@ joutput <- function(level, effect.size = NULL,
                   .jst_options_defaults$corr.layout)
   md <- getOption(".jst_options_missing_detail",
                   .jst_options_defaults$missing.detail)
+  mw <- getOption(".jst_options_message_width",
+                  .jst_options_defaults$message.width)
 
   # Map the slot value to a user-facing label. "none" reads as "None
   # selected" so users understand they're in the no-auto-conversion
@@ -364,6 +369,25 @@ joutput <- function(level, effect.size = NULL,
     dd
   }
 
+  # message.width: unlike corr.layout and missing.detail, whose tokens name
+  # a SHAPE and print raw, a width token names a NUMBER the user cannot
+  # otherwise see -- so the panel shows both. The panel already splits this
+  # way: slots printing a raw token show it as typed ("wide", "per_code"),
+  # slots rendering a PHRASE take sentence case ("None selected", "Working
+  # directory"), and this is a phrase. "currently" in the auto form is doing
+  # real work: the width tracks the console pane, so the number is a
+  # snapshot that is true when printed and may not be a minute later.
+  mw_cols <- .jst_resolve_width(slot = mw)
+  mw_label <- if (identical(mw, "auto")) {
+    paste0("Auto (currently ", mw_cols, ")")
+  } else if (is.character(mw) && length(mw) == 1L && !is.na(mw) &&
+             mw %in% names(.jst_width_tokens)) {
+    paste0(toupper(substring(mw, 1L, 1L)), substring(mw, 2L),
+           " (", mw_cols, ")")
+  } else {
+    as.character(mw_cols)
+  }
+
   # Build every line first, named by slot, then subset. One construction
   # path serves both shapes, so a partial panel cannot word a line
   # differently from the full one; the vector's own order IS the canonical
@@ -375,7 +399,8 @@ joutput <- function(level, effect.size = NULL,
       "UDM convention codes: ", paste(cc, collapse = ", "), "\n"),
     data.dir             = paste0("Data folder: ", dd_label, "\n"),
     corr.layout          = paste0("Correlation layout: ", cl, "\n"),
-    missing.detail       = paste0("Missing-value detail: ", md, "\n")
+    missing.detail       = paste0("Missing-value detail: ", md, "\n"),
+    message.width        = paste0("Message width: ", mw_label, "\n")
   )
 
   partial <- !is.null(slots)
@@ -528,7 +553,8 @@ joutput <- function(level, effect.size = NULL,
 #' tiering, while joptions holds session-wide conventions plus a small number
 #' of per-function display defaults (the \code{jcorr()} cell layout via
 #' \code{corr.layout}, and the \code{jfreq()} missing-value range detail
-#' via \code{missing.detail}). Settings are read fresh on each function call:
+#' via \code{missing.detail}), and the width at which runtime message prose
+#' wraps (\code{message.width}). Settings are read fresh on each function call:
 #' changing a setting after data has been loaded does not retroactively
 #' transform data already in memory. \code{\link{jconvert}} is the
 #' explicit transform path for data already in the workspace.
@@ -590,6 +616,17 @@ joutput <- function(level, effect.size = NULL,
 #'     \code{jfreq()} overrides this. Like \code{corr.layout} it lives
 #'     here rather than in \code{\link{joutput}} because it is specific
 #'     to one function's output.}
+#'   \item{message.width}{Character or numeric, length 1. One of
+#'     \code{"auto"}, \code{"narrow"} (50 columns), \code{"medium"} (76),
+#'     \code{"wide"} (90), or a whole number between 40 and 120. Default:
+#'     \code{"medium"}. The target width at which the package wraps runtime
+#'     MESSAGE prose -- errors, warnings and notes. \code{"auto"} follows the
+#'     console pane, which R keeps current as the pane is resized, so it is
+#'     resolved afresh for each message rather than fixed when it is set. A
+#'     width outside 40 to 120 is refused rather than quietly adjusted.
+#'     Analysis TABLES are not affected and do not reflow: prose can be
+#'     re-wrapped without losing information, whereas breaking a correlation
+#'     matrix mid-row would destroy the alignment that makes it readable.}
 #' }
 #'
 #' @section Call patterns:
@@ -634,6 +671,9 @@ joutput <- function(level, effect.size = NULL,
 #'   \code{NULL}. See Slots.
 #' @param missing.detail One of \code{"totals"}, \code{"per_code"}, or
 #'   \code{"all"}, or \code{NULL}. See Slots.
+#' @param message.width One of \code{"auto"}, \code{"narrow"},
+#'   \code{"medium"}, \code{"wide"}, a whole number between 40 and 120,
+#'   or \code{NULL}. See Slots.
 #'
 #' @return Invisibly returns \code{NULL}. Called for the side effect of
 #'   updating session options and printing the settings panel -- in full
@@ -666,7 +706,8 @@ joutput <- function(level, effect.size = NULL,
 #'   regardless of quiet.
 joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
                      data.dir = NULL, corr.layout = NULL,
-                     missing.detail = NULL, quiet = FALSE) {
+                     missing.detail = NULL, message.width = NULL,
+                     quiet = FALSE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(quiet, "quiet")
 
@@ -675,10 +716,11 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   dd_supplied <- !missing(data.dir)
   cl_supplied <- !missing(corr.layout)
   md_supplied <- !missing(missing.detail)
+  mw_supplied <- !missing(message.width)
 
   # joptions() -- no args, status only
   if (!mc_supplied && !cc_supplied && !dd_supplied && !cl_supplied &&
-      !md_supplied) {
+      !md_supplied && !mw_supplied) {
     .jst_options_status()
     return(invisible(NULL))
   }
@@ -707,6 +749,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     options(.jst_options_data_dir             = NULL)
     options(.jst_options_corr_layout          = NULL)
     options(.jst_options_missing_detail       = NULL)
+    options(.jst_options_message_width        = NULL)
     if (!quiet) .jst_options_status()
     return(invisible(NULL))
   }
@@ -767,6 +810,14 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
                     choices = c("totals", "per_code", "all"))
     }
   }
+  if (mw_supplied && !is.null(message.width)) {
+    # Validate by RESOLVING: one implementation of the five accepted forms
+    # and the band, shared with the read path, so the two cannot drift.
+    # The resolved number is discarded -- the slot stores the TOKEN, so
+    # "auto" stays live and re-reads the pane on every message.
+    invisible(.jst_resolve_width(per_call = message.width,
+                                 arg = "message.width", fn = "joptions"))
+  }
 
   # Write -- only supplied non-NULL args; NULL means "leave alone"
   trigger_nudge <- FALSE
@@ -803,6 +854,10 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     options(.jst_options_missing_detail = missing.detail)
     written <- c(written, "missing.detail")
   }
+  if (mw_supplied && !is.null(message.width)) {
+    options(.jst_options_message_width = message.width)
+    written <- c(written, "message.width")
+  }
 
   # Partial panel, then nudge. S233 revisit of the Session 28 Item 1
   # full-panel-on-every-call decision: a setting call now echoes only what
@@ -824,7 +879,8 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
                   if (cc_supplied) "udm.convention.codes",
                   if (dd_supplied) "data.dir",
                   if (cl_supplied) "corr.layout",
-                  if (md_supplied) "missing.detail")
+                  if (md_supplied) "missing.detail",
+                  if (mw_supplied) "message.width")
     .jst_options_status(c(supplied,
                           unlist(.jst_options_related[written],
                                  use.names = FALSE)))

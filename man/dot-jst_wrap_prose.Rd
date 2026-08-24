@@ -4,12 +4,19 @@
 \alias{.jst_wrap_prose}
 \title{Internal: width-aware wrapping for runtime-message prose}
 \usage{
-.jst_wrap_prose(text, width = 76L, min_last = 20L, reserve = 0L)
+.jst_wrap_prose(
+  text,
+  width = .jst_resolve_width(),
+  min_last = 20L,
+  reserve = 0L
+)
 }
 \arguments{
 \item{text}{Character scalar: one sentence/paragraph, no embedded newlines.}
 
-\item{width}{Target line width (default 76).}
+\item{width}{Target line width. Defaults to the resolved
+\code{message.width} setting (see \code{\link{joptions}}); the shipped
+default resolves to 76.}
 
 \item{min_last}{Minimum last-line length before pull-back stops.}
 
