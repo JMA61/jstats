@@ -804,6 +804,13 @@
 #'   for the recipe lines (\code{range} already sorted).
 #' @param over_var,over_n Conflict over-cap render: the first targeted
 #'   column over the cap, and its in-band value count.
+#' @param prefixed TRUE (default) when the body will be passed to
+#'   \code{.jst_stop()}, which prepends "<fn>(): " -- the head reserves
+#'   that width and reads on from the prefix. FALSE for a
+#'   \code{message()} caller, where no prefix is prepended: the head
+#'   capitalizes and wraps at full width. Only the head is affected;
+#'   every other line is identical, so the two paths share one copy of
+#'   the menu.
 #' @return Character scalar: the complete message body (no fn prefix).
 #' @keywords internal
 .jst_choose_convention_error <- function(variant, fn,
@@ -814,9 +821,14 @@
                                          var_names = NULL,
                                          range     = NULL,
                                          over_var  = NULL,
-                                         over_n    = NULL) {
+                                         over_n    = NULL,
+                                         prefixed  = TRUE) {
 
-  reserve <- nchar(fn) + 4L   # the ".jst_stop" prefix: "<fn>(): "
+  # prefixed = FALSE is the message() caller's contract (S250): no
+  # "<fn>(): " is prepended, so the head neither reserves width for it
+  # nor starts mid-sentence. Body text is otherwise identical, which is
+  # the point -- one menu copy, two emission paths.
+  reserve <- if (isTRUE(prefixed)) nchar(fn) + 4L else 0L
 
   # --- D / E: the range-vs-tagged-convention conflicts ----------------------
   if (variant %in% c("conflict_setting", "conflict_call")) {
@@ -869,14 +881,16 @@
   if (identical(variant, "range_unset")) {
     return(paste0(
       .jst_wrap_prose(paste0(
-        "no missing-value convention is selected, and a missing-value ",
+        if (isTRUE(prefixed)) "no" else "No",
+        " missing-value convention is selected, and a missing-value ",
         "range can exist only under SPSS convention."),
         reserve = reserve), "\n",
       "To declare it, set convention = \"spss\" on this call."))
   }
 
   # --- A / B: the menu and the pair -----------------------------------------
-  head  <- paste0("no missing-value convention is selected, so ", head_tail)
+  head  <- paste0(if (isTRUE(prefixed)) "no" else "No",
+                  " missing-value convention is selected, so ", head_tail)
   parts <- c(
     "Choose one for this session:",
     "  joptions(missing.convention = \"stata\")",
@@ -885,9 +899,12 @@
       "jstats with base R or AI-generated code."), indent = 6L))
   if (identical(variant, "menu")) {
     parts <- c(parts,
+      # S250 (Rule H): ", as in SPSS" dropped -- the option line above
+      # already names the convention, so the clause echoed a fact two
+      # characters old.
       "  joptions(missing.convention = \"spss\")",
       .jst_wrap_indent(paste0(
-        "Codes stay visible numbers, as in SPSS. jstats treats them as ",
+        "Codes stay visible numbers. jstats treats them as ",
         "missing; base R does not."), indent = 6L))
   }
   parts <- c(parts,

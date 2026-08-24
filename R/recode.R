@@ -1743,15 +1743,39 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         }
         one   <- length(flagged) == 1L
         codes <- vapply(flagged, .jst_fmt_code, character(1))
+        # S250: the remedy used to claim "your current convention" and
+        # offer a call with no convention =. Under an unset session both
+        # halves were false -- there is no current convention, and the
+        # missing token is exactly the construct the Decision 11 gate
+        # refuses. The unset branch now carries the gate's own menu, via
+        # the same builder the gate uses (prefixed = FALSE, since this is
+        # a message() not a .jst_stop()), so the user chooses once and
+        # both remedies below then run. No convention is inferred here:
+        # Decision 11 step (4) forbids it, and the conditional Stata
+        # recommendation lives in the menu copy, not in this note.
+        d1_conv <- getOption(".jst_options_missing_convention",
+                             .jst_options_defaults$missing.convention)
+        d1_unset <- !isTRUE(d1_conv %in% c("spss", "stata", "sas"))
+        d1_lead <- if (d1_unset) {
+          paste0(.jst_choose_convention_error(
+                   variant   = "menu",
+                   fn        = "jrecode",
+                   head_tail = paste0("the value", if (one) "" else "s",
+                                      " cannot be made missing yet."),
+                   prefixed  = FALSE), "\n",
+                 "Then map ", if (one) "it" else "them", " directly:")
+        } else {
+          .jst_wrap_prose(paste0(
+            "To make the value", if (one) "" else "s",
+            " missing under ", .jst_convention_label(d1_conv),
+            " convention, map ", if (one) "it" else "them", " directly:"))
+        }
         message(paste0(
           .jst_wrap_prose(paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
             if (one) "looks like a coded missing value."
             else "look like coded missing values.")), "\n",
-          .jst_wrap_prose(paste0(
-            "To make the value", if (one) "" else "s",
-            " missing under your current convention, map ",
-            if (one) "it" else "them", " directly:")), "\n",
+          d1_lead, "\n",
           "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
           .jst_data_name, ", ", orig_name, ", map = \"",
           .jst_render_map_string(parsed_map, targets_to_missing = flagged),
@@ -3016,15 +3040,32 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         }
         codes <- vapply(flagged, .jst_fmt_code, character(1))
         one   <- length(flagged) == 1L
+        # S250: see the jrecode twin (~20700) for the reasoning. Same
+        # two branches, same builder, same no-inference constraint; only
+        # the suggested call below differs between the two homes.
+        d1_conv <- getOption(".jst_options_missing_convention",
+                             .jst_options_defaults$missing.convention)
+        d1_unset <- !isTRUE(d1_conv %in% c("spss", "stata", "sas"))
+        d1_lead <- if (d1_unset) {
+          paste0(.jst_choose_convention_error(
+                   variant   = "menu",
+                   fn        = "jencode",
+                   head_tail = paste0("the value", if (one) "" else "s",
+                                      " cannot be made missing yet."),
+                   prefixed  = FALSE), "\n",
+                 "Then map ", if (one) "it" else "them", " directly:")
+        } else {
+          .jst_wrap_prose(paste0(
+            "To make the value", if (one) "" else "s",
+            " missing under ", .jst_convention_label(d1_conv),
+            " convention, map ", if (one) "it" else "them", " directly:"))
+        }
         msgs <- c(msgs, paste0(
           .jst_wrap_prose(paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
             if (one) "looks like a coded missing value."
             else "look like coded missing values.")), "\n",
-          .jst_wrap_prose(paste0(
-            "To make the value", if (one) "" else "s",
-            " missing under your current convention, map ",
-            if (one) "it" else "them", " directly:")), "\n",
+          d1_lead, "\n",
           # S249: the rendered map is escaped before it goes inside the
           # double-quoted map = argument. .jst_jencode_lhs_render re-quotes
           # any word containing ; = or , with double quotes, and an
@@ -5565,9 +5606,14 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
           "(.a-.z); markers behave as true NAs in base R."),
           indent = 6L), "\n",
         "  to = \"spss\"\n",
+        # S250 (Rule H): the second clause paraphrased the first instead
+        # of giving the consequence its three siblings give, which is why
+        # this target never stated the base-R asymmetry. Replaced, not
+        # trimmed.
         .jst_wrap_indent(paste0(
           "Stata- or SAS-style missing values (.a-.z, .A-.Z) become ",
-          "numeric codes; codes stay visible numbers, as in SPSS."),
+          "numeric codes; jstats still treats them as missing, but ",
+          "base R does not."),
           indent = 6L), "\n",
         "  to = \"sas\"\n",
         .jst_wrap_indent(

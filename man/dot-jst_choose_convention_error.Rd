@@ -14,7 +14,8 @@
   var_names = NULL,
   range = NULL,
   over_var = NULL,
-  over_n = NULL
+  over_n = NULL,
+  prefixed = TRUE
 )
 }
 \arguments{
@@ -41,6 +42,14 @@ for the recipe lines (\code{range} already sorted).}
 
 \item{over_var, over_n}{Conflict over-cap render: the first targeted
 column over the cap, and its in-band value count.}
+
+\item{prefixed}{TRUE (default) when the body will be passed to
+\code{.jst_stop()}, which prepends "\if{html}{\out{<fn>}}(): " -- the head reserves
+that width and reads on from the prefix. FALSE for a
+\code{message()} caller, where no prefix is prepended: the head
+capitalizes and wraps at full width. Only the head is affected;
+every other line is identical, so the two paths share one copy of
+the menu.}
 }
 \value{
 Character scalar: the complete message body (no fn prefix).
