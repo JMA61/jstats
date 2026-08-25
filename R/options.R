@@ -620,7 +620,7 @@ joutput <- function(level, effect.size = NULL,
 #'   \item{message.width}{Character or numeric, length 1. One of
 #'     \code{"auto"}, \code{"narrow"} (50 columns), \code{"medium"} (76),
 #'     \code{"wide"} (90), or a whole number between 40 and 120. Default:
-#'     \code{"medium"}. The target width at which the package wraps runtime
+#'     \code{"auto"}. The target width at which the package wraps runtime
 #'     MESSAGE prose -- errors, warnings and notes. \code{"auto"} follows the
 #'     console pane, which R keeps current as the pane is resized, so it is
 #'     resolved afresh for each message rather than fixed when it is set. A

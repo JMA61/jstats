@@ -410,18 +410,18 @@
 #                          runtime MESSAGE prose; tables are unaffected.
 #                          "auto" tracks the console pane live, so it is
 #                          resolved per emission rather than cached.
-#                          Default is "medium" in this version. The default
-#                          moves to "auto" once EVERY emitter wraps: with
-#                          only .jst_stop() hooked, an adaptive default
-#                          would leave errors adapting to the pane while
-#                          warnings and notes stayed at 76 (Session 253).
+#                          Default is "auto" (Session 256): every emitter
+#                          wraps as of the Session 254-255 rollout, and the
+#                          emitters reserve for R's own inline chrome, so
+#                          adapting to the pane is safe on every route. The
+#                          Session 253 hold (errors-only hooking) is over.
 .jst_options_defaults <- list(
   missing.convention   = "none",
   udm.convention.codes = c(-99, -98, -97),
   data.dir             = NULL,
   corr.layout          = "wide",
   missing.detail       = "per_code",
-  message.width        = "medium"
+  message.width        = "auto"
 )
 
 # Row cap applied to IN-BAND rows at missing.detail = "per_code". Declared

@@ -1898,8 +1898,9 @@ jai <- function(setup = NULL, path = NULL) {
 #'   - PREFIX RESERVE: for strings surfaced through .jst_stop(), the
 #'     emitter prepends a `fn(): ` prefix AFTER the builder returns;
 #'     `reserve` narrows the first line by that many characters so the
-#'     rendered first line still lands within width. (R's own `Error: `
-#'     is not counted, matching the S230 agreed renders.)
+#'     rendered first line still lands within width. (Since Session 256
+#'     the emitters also count R's own inline chrome in reserve; see
+#'     .jst_stop() and .jst_warn() for the per-route budgets.)
 #'
 #' Scope: prose only. Runnable command lines follow Rule L (their own
 #' indented line) and are never passed through this helper. Applied at
@@ -1908,7 +1909,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' @param text Character scalar: one sentence/paragraph, no embedded newlines.
 #' @param width Target line width. Defaults to the resolved
 #'   \code{message.width} setting (see \code{\link{joptions}}); the shipped
-#'   default resolves to 76.
+#'   default is "auto", which resolves to the live console width less one.
 #' @param min_last Minimum last-line length before pull-back stops.
 #' @param reserve Characters the emitter will prepend to line 1.
 #' @param tol Rule 2 tolerance: when a sentence boundary sits within this

@@ -650,10 +650,17 @@
 #' .jst_caller_fn(); if detection fails the message is emitted without a prefix
 #' rather than erroring. Always signals with call. = FALSE.
 #'
-#' The assembled message is width-wrapped here via .jst_wrap_message(), with the
-#' prefix length passed as the first-line reserve. Builders therefore need not
-#' wrap their own prose, and a builder that already wrapped is unaffected: the
-#' wrapper is idempotent at a given width.
+#' The assembled message is width-wrapped here via .jst_wrap_message(). The
+#' first-line reserve is nchar(prefix) + 8: the emitter's own "fn(): " tag
+#' plus the widest inline chrome R can attach to the error route -- "Error : "
+#' under try() is 8 columns; the top-level "Error: " is 7. Reserving the wider
+#' form means the RENDERED first line fits the message width in every R
+#' configuration, not just the console default. Policy (Session 256): each
+#' emitter reserves the widest inline prefix R can attach to its route --
+#' stop 8 plus the fn tag, warn 9, msg / msg_out 0. Builders must not wrap
+#' their own prose ahead of this emitter (receive_package()'s structural gate
+#' refuses the file): only the emitter knows the real prefix and chrome, so
+#' only its reserve can be correct rather than guessed.
 #' @param ... Message parts, concatenated with paste0().
 #' @param fn Optional function name (without parentheses); auto-detected when NULL.
 #' @return Never returns; always signals an error.
@@ -664,9 +671,11 @@
   body   <- paste0(...)
   # Wrap here rather than at the builder: the emitter is the only place that
   # knows the real prefix length, so reserve is correct rather than guessed.
-  # Guarded because an error emitter must never fail to emit -- if the
-  # wrapper raises, the unwrapped message still reaches the user.
-  body <- tryCatch(.jst_wrap_message(body, reserve = nchar(prefix)),
+  # The + 8L is R's own chrome on this route ("Error : " under try(); see
+  # the roxygen above). Guarded because an error emitter must never fail to
+  # emit -- if the wrapper raises, the unwrapped message still reaches the
+  # user.
+  body <- tryCatch(.jst_wrap_message(body, reserve = nchar(prefix) + 8L),
                    error = function(e) body)
   stop(paste0(prefix, body), call. = FALSE)
 }
@@ -813,20 +822,26 @@
 #' suppresses R's automatic call context throughout, and the emitter owns that
 #' choice so the call sites do not each repeat it.
 #'
-#' The assembled text is width-wrapped here via .jst_wrap_message(). R prints
-#' its own "Warning message:" header on a separate line, so the wrapped body
-#' starts at column one and no first-line reserve is needed. Note that when
-#' several warnings are deferred to the end of a call R numbers them, which
-#' shifts the first line right by a few characters relative to the
-#' continuation lines; that is R's display, not something the wrapper can
-#' anticipate. (Session 254, the Session B emitter pass.)
+#' The assembled text is width-wrapped here via .jst_wrap_message() with a
+#' flat first-line reserve of 9: the widest inline chrome R can attach to the
+#' warning route, "Warning: " under options(warn = 1). The default deferred
+#' single-warning display puts "Warning message:" on its own line (cost 0)
+#' and numbered deferred warnings cost 3-4 ("1: "), so both land inside the
+#' 9-column budget. A conditional reserve reading getOption("warn") was
+#' considered and rejected: it would make the same message wrap differently
+#' across sessions, forking the walks (which set warn = 1) from a user's
+#' default session. warn = 2 converts warnings to errors with R's own
+#' "converted from warning" chrome; that is a developer setting and is out
+#' of scope -- recorded here, not budgeted. (Session 256; supersedes the
+#' Session 254 reserve-0 rationale.)
 #'
 #' @param ... Message parts, concatenated with paste0().
 #' @return Invisibly NULL; called for the warning it signals.
 #' @keywords internal
 .jst_warn <- function(...) {
   body <- paste0(...)
-  body <- tryCatch(.jst_wrap_message(body), error = function(e) body)
+  body <- tryCatch(.jst_wrap_message(body, reserve = 9L),
+                   error = function(e) body)
   warning(body, call. = FALSE)
   invisible(NULL)
 }

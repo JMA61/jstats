@@ -17,7 +17,7 @@
 
 \item{width}{Target line width. Defaults to the resolved
 \code{message.width} setting (see \code{\link{joptions}}); the shipped
-default resolves to 76.}
+default is "auto", which resolves to the live console width less one.}
 
 \item{min_last}{Minimum last-line length before pull-back stops.}
 
@@ -49,8 +49,9 @@ tail such as \verb{to "spss".} reads as an accident).
 \item PREFIX RESERVE: for strings surfaced through .jst_stop(), the
 emitter prepends a \verb{fn(): } prefix AFTER the builder returns;
 \code{reserve} narrows the first line by that many characters so the
-rendered first line still lands within width. (R's own \verb{Error: }
-is not counted, matching the S230 agreed renders.)
+rendered first line still lands within width. (Since Session 256
+the emitters also count R's own inline chrome in reserve; see
+.jst_stop() and .jst_warn() for the per-route budgets.)
 }
 }
 \details{

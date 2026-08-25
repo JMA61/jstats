@@ -19,12 +19,17 @@ suppresses R's automatic call context throughout, and the emitter owns that
 choice so the call sites do not each repeat it.
 }
 \details{
-The assembled text is width-wrapped here via .jst_wrap_message(). R prints
-its own "Warning message:" header on a separate line, so the wrapped body
-starts at column one and no first-line reserve is needed. Note that when
-several warnings are deferred to the end of a call R numbers them, which
-shifts the first line right by a few characters relative to the
-continuation lines; that is R's display, not something the wrapper can
-anticipate. (Session 254, the Session B emitter pass.)
+The assembled text is width-wrapped here via .jst_wrap_message() with a
+flat first-line reserve of 9: the widest inline chrome R can attach to the
+warning route, "Warning: " under options(warn = 1). The default deferred
+single-warning display puts "Warning message:" on its own line (cost 0)
+and numbered deferred warnings cost 3-4 ("1: "), so both land inside the
+9-column budget. A conditional reserve reading getOption("warn") was
+considered and rejected: it would make the same message wrap differently
+across sessions, forking the walks (which set warn = 1) from a user's
+default session. warn = 2 converts warnings to errors with R's own
+"converted from warning" chrome; that is a developer setting and is out
+of scope -- recorded here, not budgeted. (Session 256; supersedes the
+Session 254 reserve-0 rationale.)
 }
 \keyword{internal}
