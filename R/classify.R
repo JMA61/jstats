@@ -768,6 +768,44 @@
 }
 
 
+#' Internal helper: emit a note to stdout in the package house voice
+#'
+#' The stdout sibling of \code{.jst_msg()}: same assembly, same width
+#' wrapping, different sink. Some notes belong on stdout rather than the
+#' message connection -- the status panels, and the note builders that have
+#' always printed rather than signalled. Those call this instead of
+#' \code{cat()} so that they participate in the message.width setting like
+#' every other emitter, rather than depending on each builder remembering to
+#' wrap its own prose.
+#'
+#' NOT a general \code{cat()} replacement, and deliberately not named as one.
+#' The analysis functions render column-aligned tables through \code{cat()};
+#' wrapping those would destroy the alignment. This emitter is for prose.
+#'
+#' Trailing newlines are normalized away and exactly one is emitted.
+#' \code{message()} supplies its own line ending and \code{cat()} does not, so
+#' the call sites converted to this emitter all wrote their own; normalizing
+#' means a converted site cannot emit a stray blank line and a new site cannot
+#' forget. Leading blank lines are PRESERVED: a builder that opens with one is
+#' spacing itself off the output above, which is a layout choice the emitter
+#' has no business overriding.
+#'
+#' @param ... Message parts, concatenated with paste0().
+#' @return Invisibly NULL; called for the text it prints.
+#' @keywords internal
+.jst_msg_out <- function(...) {
+  body <- paste0(...)
+  # Strip trailing line endings before wrapping: a trailing empty segment
+  # would otherwise survive the wrap and print as a stray blank line.
+  body <- sub("\n+$", "", body)
+  # Guarded for the same reason .jst_stop() and .jst_msg() are: a failure
+  # inside the wrapper must not cost the user the text itself.
+  body <- tryCatch(.jst_wrap_message(body), error = function(e) body)
+  cat(body, "\n", sep = "")
+  invisible(NULL)
+}
+
+
 #' Internal helper: signal a warning in the package house voice
 #'
 #' Concatenates its ... arguments into a message and signals a warning().

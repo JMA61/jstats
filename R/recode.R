@@ -345,9 +345,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # sentence: a per-call convention outranks the setting, so joptions()
   # would be inert advice on that route.
   switch_txt <- if (by_call) {
-    .jst_wrap_prose(paste0(
+    paste0(
       "To switch conventions instead, change convention = \"", conv_txt,
-      "\" on this call to \"stata\" or \"sas\"."))
+      "\" on this call to \"stata\" or \"sas\".")
   } else {
     paste0("To switch conventions instead, run one of:\n",
            "  joptions(missing.convention = \"stata\")\n",
@@ -357,11 +357,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # One form at every joutput level (S246): the tier gate went with the
   # echo-back, since what remains is the tier-independent statement.
   paste0(
-    .jst_wrap_prose(paste0("the map uses '.", first_tag,
-                           "', a missing-value marker."),
-                    reserve = 11L), "\n",
-    .jst_wrap_prose(conflict), "\n",
-    .jst_wrap_prose(keep_spss), "\n",
+    paste0("the map uses '.", first_tag,
+                           "', a missing-value marker."), "\n",
+    conflict, "\n",
+    keep_spss, "\n",
     switch_txt
   )
 }
@@ -517,10 +516,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   if (identical(output_level, "minimal")) {
     return(paste0(
-      .jst_wrap_prose(paste0(
+      paste0(
         arg_label, " for ", var_name, " contains '.", first_tag,
         "', a missing-value marker, but ", var_name,
-        " carries SPSS-style missing values."), reserve = 16L),
+        " carries SPSS-style missing values."),
       "\n",
       "Name the numeric codes directly, or convert first:\n",
       "  jconvert(", data_name, ", to = \"", phr, "\", modify = TRUE)"
@@ -530,11 +529,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # --- Standard / full block ------------------------------------------------
 
   msg_parts <- c(
-    .jst_wrap_prose(paste0(
+    paste0(
       arg_label, " for ", var_name, " contains '.", first_tag,
       "', a missing-value marker, but ", var_name,
-      " carries SPSS-style missing values (", decl_disp, ")."),
-      reserve = 16L))
+      " carries SPSS-style missing values (", decl_disp, ")."))
 
   # Equivalent-call block: substitute each tagged element with the
   # column's own declared codes, matched largest-magnitude-first (ties
@@ -598,14 +596,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
         paste0("    jdeclare_udm(", data_name, ", ", var_name,
                ", codes = ", codes_arg, ")"),
         "",
-        .jst_wrap_prose(paste0("The numeric code",
+        paste0("The numeric code",
                if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
                " above ",
                if (sum(!is.na(letter_to_code)) > 1L) "are" else "is",
                " ", var_name, "'s declared missing value",
                if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
                ", matched largest magnitude first (the ordering ",
-               "jconvert() uses).")))
+               "jconvert() uses)."))
     }
 
     if (length(unmapped) > 0L) {
@@ -613,14 +611,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
                                 "'", collapse = ", ")
       were_was <- if (length(unmapped) == 1L) "was" else "were"
       msg_parts <- c(msg_parts, "",
-        .jst_wrap_prose(paste0(
+        paste0(
           "Note: `", arg_label, "` uses ", length(all_tags),
           " markers (",
           paste0(".", quote_tags, collapse = ", "),
           ") but ", var_name, " declares only ", length(na_vals),
           " numeric code", if (length(na_vals) > 1L) "s" else "",
           "; ", unmapped_render, " ", were_was,
-          " not substituted in the example above.")))
+          " not substituted in the example above."))
     }
   }
 
@@ -721,15 +719,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
                      "\", modify = TRUE)")
 
   msg_parts <- c(
-    .jst_wrap_prose(paste0(arg_label, " for ", var_name,
+    paste0(arg_label, " for ", var_name,
                            " mixes ", phr_style, " missing values ",
                            "and SPSS-style numeric codes."),
-                    reserve = 16L),
-    .jst_wrap_prose(paste0(
+    paste0(
       "The two operations are different -- labeling existing ", phr_style, " ",
       "missing-value cells (tagged input) and converting numeric cells to ",
       phr_style, " missing values (numeric input) -- and must be issued ",
-      "as separate calls.")),
+      "as separate calls."),
     "For your input, that would be:",
     "",
     tag_line,
@@ -759,9 +756,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   if (identical(output_level, "minimal")) {
     dropped_render <- paste(dropped_df$code, collapse = ", ")
-    return(.jst_wrap_prose(paste0(
+    return(paste0(
       "Note: jdeclare_udm replaced existing user-defined missing values on ",
-      var_name, ". Dropped: ", dropped_render, ".")))
+      var_name, ". Dropped: ", dropped_render, "."))
   }
 
   # Standard / full tier: include labels where available.
@@ -778,10 +775,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # Wrapped here, not by an emitter: this note is collected into a vector and
   # cat()ed by jdeclare_udm, a route .jst_msg() never sees. Unwrapped it ran
   # to 163 characters. (S254)
-  .jst_wrap_prose(paste0(
+  paste0(
     "Note: jdeclare_udm replaced the existing user-defined missing values for ",
     var_name, ". Previously declared codes dropped: ",
-    paste(parts, collapse = ", "), "."))
+    paste(parts, collapse = ", "), ".")
 }
 
 
@@ -1193,12 +1190,12 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   if (!is.null(tok_missing_label) && !has_missing_token) {
     .jst_stop(
-      .jst_wrap_prose(paste0(
+      paste0(
         "labels names missing, but the map has no target for it ",
-        "to label."), reserve = 11L), "\n",
-      .jst_wrap_prose(paste0(
+        "to label."), "\n",
+      paste0(
         "Add missing to the map (for example 8=missing), or label the ",
-        "value directly.")))
+        "value directly."))
   }
 
   tok_mint_code  <- NULL     # numeric; spss arm only
@@ -1221,11 +1218,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         !is.null(src_conv) && !is.na(src_conv) &&
         !identical(src_conv, opt_conv)) {
       .jst_stop(
-        .jst_wrap_prose(paste0(
+        paste0(
           "'missing' is ambiguous for ", orig_name, ". The column uses ",
           .jst_convention_label(src_conv), " missing values, but your ",
           "missing.convention setting is ",
-          .jst_convention_label(opt_conv), "."), reserve = 11L), "\n",
+          .jst_convention_label(opt_conv), "."), "\n",
         "To follow the column's form for this call:\n",
         "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
         .jst_data_name, ", ", orig_name, ", map = \"",
@@ -1265,11 +1262,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
             "; SPSS allows at most 3"
           }
           .jst_stop(
-            .jst_wrap_prose(paste0(
+            paste0(
               orig_name, " already declares ", length(survivors),
               " SPSS-style missing values (", surv_txt, ")", cap_txt,
               ". 'missing' would add ", .jst_fmt_code(tok_mint_code),
-              " as a fourth."), reserve = 11L), "\n",
+              " as a fourth."), "\n",
             "Use one of the declared codes instead:\n",
             "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
             .jst_data_name, ", ", orig_name, ", map = \"",
@@ -2424,15 +2421,15 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       # --- Mixed column: refuse, with the two real routes ------------------
       word_only <- words_u[!num_like]
       .jst_stop(paste0(
-        .jst_wrap_prose(paste0(
+        paste0(
           "'", var_name, "' mixes numbers stored as text with words: ",
-          .jst_jencode_show_words(word_only), "."), reserve = 11L), "\n",
-        .jst_wrap_prose(paste0(
+          .jst_jencode_show_words(word_only), "."), "\n",
+        paste0(
           "The numbers convert to their own values, so the words cannot ",
-          "be numbered automatically.")), "\n",
-        .jst_wrap_prose(paste0(
+          "be numbered automatically."), "\n",
+        paste0(
           "Map the words (for example ", word_only[length(word_only)],
-          "=-99), or send them all to missing:")), "\n",
+          "=-99), or send them all to missing:"), "\n",
         "  map = \"else=NA\""))
 
     } else {
@@ -2501,12 +2498,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     # so there is no partial case where copying makes sense.
     if (identical(parsed_map$else_action, "copy")) {
       .jst_stop(paste0(
-        .jst_wrap_prose(paste0(
+        paste0(
           "else=copy cannot be used here - words cannot be kept in a ",
-          "numeric column."), reserve = 11L), "\n",
-        .jst_wrap_prose(paste0(
+          "numeric column."), "\n",
+        paste0(
           "Add the remaining words to the map, or set else=NA to ",
-          "convert them to missing."))))
+          "convert them to missing.")))
     }
 
     parsed_labels <- NULL
@@ -2538,12 +2535,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 
     if (!is.null(tok_missing_label) && !has_missing_token) {
       .jst_stop(
-        .jst_wrap_prose(paste0(
+        paste0(
           "labels names missing, but the map has no target for ",
-          "it to label."), reserve = 11L), "\n",
-        .jst_wrap_prose(paste0(
+          "it to label."), "\n",
+        paste0(
           "Add missing to the map (for example Refused=missing), or ",
-          "label the value directly.")))
+          "label the value directly."))
     }
 
     tok_tag <- NULL
@@ -4044,16 +4041,16 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
         tok_range <- if (identical(phr, "sas")) ".A-.Z" else ".a-.z"
         tok_ex    <- .jst_canonical_tag("a", phr)
         .jst_stop(
-          .jst_wrap_prose(paste0(
+          paste0(
             "'", vn, "' has no tagged missing values to label, so ",
             tok_style, " tokens (", tok_range, ") cannot be applied ",
-            "here."), reserve = 16L),
+            "here."),
           "\n",
-          .jst_wrap_prose(paste0(
+          paste0(
             "To turn numeric codes into tagged missings, use jrecode() ",
             "(for example map = \"-99=.", tok_ex, "\", convention = \"",
             phr, "\"); or declare the numbers directly with ",
-            "codes = c(-99), convention = \"", phr, "\".")))
+            "codes = c(-99), convention = \"", phr, "\"."))
       }
 
       # A range cannot land on a tagged-form column: the band is an
@@ -4068,10 +4065,9 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
           .jst_convention_label(existing_conv)
         }
         .jst_stop(
-          .jst_wrap_prose(paste0(
+          paste0(
             "'", vn, "' carries ", carried, " missing values; a ",
             "missing-value range exists only under SPSS convention."),
-            reserve = 16L),
           "\n",
           "Use jconvert() to convert the column to SPSS form first.",
           fn = "jdeclare_udm")
@@ -4089,14 +4085,14 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
           !is.na(existing_conv) && existing_conv != convention) {
         other_form <- .jst_convention_label(existing_conv)
         .jst_stop(
-          .jst_wrap_prose(paste0(
+          paste0(
             "Column '", vn, "' already carries ", other_form,
             " missing values; cannot use convention = \"", convention,
-            "\" here."), reserve = 16L),
+            "\" here."),
           "\n",
-          .jst_wrap_prose(paste0(
+          paste0(
             "Use jconvert() to convert the column first, or omit the ",
-            "convention argument.")))
+            "convention argument."))
       }
 
       # --- Resolve convention ----------------------------------------------
@@ -4152,10 +4148,9 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
       if (resolved_convention == "spss" && !is.null(existing_conv) &&
           is.na(existing_conv)) {
         .jst_stop(
-          .jst_wrap_prose(paste0(
+          paste0(
             "'", vn, "' carries tagged missing values in both letter ",
             "cases, which the resolved convention (SPSS) cannot act on."),
-            reserve = 16L),
           "\n",
           "Set convention = \"stata\" or convention = \"sas\" on this ",
           "call.")
@@ -4475,7 +4470,7 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
   # established pattern of placing follow-on notes after the primary
   # output block).
   if (length(drop_notices) > 0L && isTRUE(udm.notice)) {
-    cat(paste(drop_notices, collapse = "\n"), "\n", sep = "")
+    .jst_msg_out(paste(drop_notices, collapse = "\n"))
   }
 
   # Mixed-marker notes (S240): consequential level, so always shown when
@@ -4533,12 +4528,12 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
                   data_name, other_verb, other_form)
         }
         align_obj <- if (length(mismatched) == 1L) mismatched[1L] else "them"
-        cat(paste0(
-          .jst_wrap_prose(head_line), "\n",
+        .jst_msg_out(
+          head_line, "\n",
           "Mixing forms is allowed. To align ", align_obj,
           " with the rest, run:\n",
           "  jconvert(", data_name, ", to = \"", df_predominant,
-          "\", vars = ", vars_arg, ", modify = TRUE)\n"))
+          "\", vars = ", vars_arg, ", modify = TRUE)")
       }
     }
   }
@@ -5600,9 +5595,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       to <- convention
     } else {
       .jst_stop(
-        .jst_wrap_prose(
-          "no target format is selected, so nothing can be converted.",
-          reserve = 12L), "\n",
+        "no target format is selected, so nothing can be converted.", "\n",
         "Choose a target for this call:\n",
         "  to = \"stata\"\n",
         .jst_wrap_indent(paste0(

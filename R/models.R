@@ -3116,15 +3116,15 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                                     character(1)), collapse = ", "), ")")
         }
         .jst_stop(
-          .jst_wrap_prose(paste0(
+          paste0(
             dv_name, " has ", n_unique, " unique values (",
             paste(vapply(unique_vals, .jst_fmt_code, character(1)),
-                  collapse = ", "), ")."), reserve = 13L), "\n",
+                  collapse = ", "), ")."), "\n",
           "The dependent variable must have exactly 2 categories coded 0/1.\n",
-          .jst_wrap_prose(paste0(
+          paste0(
             miss_txt,
             if (one) " looks like a coded missing value."
-            else " look like coded missing values.")), "\n",
+            else " look like coded missing values."), "\n",
           "Declare ", if (one) "it" else "them",
           " so analyses exclude ", if (one) "it" else "them", ":\n",
           "  jdeclare_udm(", .jst_data_name, ", ", dv_name, ", codes = ",

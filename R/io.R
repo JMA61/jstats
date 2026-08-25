@@ -1938,26 +1938,45 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
 
     cat("\n")
+    # Assembled as one string per branch and handed to the emitter, rather
+    # than one cat() per line. These lines were hand-broken at a fixed width
+    # when they were written, which is the one shape no message.width setting
+    # can reach: there was no wrapper in the path to reach. (Session 255)
     if (single_source) {
       # One source type present: the legend reads as plain prose with no
       # bracket tag, since there is nothing to disambiguate.
       if (has_label_only) {
-        cat("These codes are not formally declared, so they are not treated as missing,\n")
-        cat("but their value labels look like user-defined missing values.\n")
-        cat("Declare them as missing if they are; leave as-is if real.\n")
+        .jst_msg_out(
+          "These codes are not formally declared, so they are not treated ",
+          "as missing, but their value labels look like user-defined ",
+          "missing values. Declare them as missing if they are; leave ",
+          "as-is if real.")
       } else {
-        cat("These codes are not formally defined, so they are not treated as missing.\n")
-        cat("Declare them as missing if they are; leave as-is if real.\n")
+        .jst_msg_out(
+          "These codes are not formally defined, so they are not treated ",
+          "as missing. Declare them as missing if they are; leave as-is ",
+          "if real.")
       }
     } else {
+      # The bracket tag takes a line of its own and the whole explanation
+      # hangs under it at indent two, so every line of the block aligns.
+      # The tag CANNOT share the first line with re-flowable prose: the
+      # emitter classifies line by line, so the hang has to live in leading
+      # spaces on lines the wrapper will keep indented. Merging the tag line
+      # and the sentence below it is what cost this block its hang at S255,
+      # caught in the modify_form_walk read the same session.
       if (has_label_only) {
-        cat("[", src_display[["label_only"]], "]: not automatically treated as NA, but\n", sep = "")
-        cat("  value labels look like user-defined missing values.\n")
-        cat("  Declare them as missing if they are; leave as-is if real.\n")
+        .jst_msg_out(
+          "[", src_display[["label_only"]], "]:\n",
+          "  not automatically treated as NA, but value labels look like ",
+          "user-defined missing values.\n",
+          "  Declare them as missing if they are; leave as-is if real.")
       }
       if (has_heur) {
-        cat("[", src_display[["suspected"]], "]: not automatically treated as NA.\n", sep = "")
-        cat("  Declare them as missing if they are; leave as-is if real.\n")
+        .jst_msg_out(
+          "[", src_display[["suspected"]], "]:\n",
+          "  not automatically treated as NA.\n",
+          "  Declare them as missing if they are; leave as-is if real.")
       }
     }
 
@@ -2044,14 +2063,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      .jst_wrap_prose(paste0(
+      paste0(
         n_total, " ", noun, " ", verb_carry,
         " SPSS-style missing values, incompatible with the .dta format."),
-        reserve = 9L),
       "\n",
-      .jst_wrap_prose(paste0(
+      paste0(
         "Run jconvert(", data_name, ", to = \"stata\", modify = TRUE) ",
-        "first, then save again."))
+        "first, then save again.")
     ))
   }
 
@@ -2125,14 +2143,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "to drop them, or save as Stata format (.dta) to preserve them."
     }
     return(paste0(
-      .jst_wrap_prose(paste0(
+      paste0(
         n, " ", noun, " ", verb_contain,
         " missing-value codes, incompatible with the .xpt format."),
-        reserve = 9L),
       "\n",
-      .jst_wrap_prose(paste0(
+      paste0(
         "Run jconvert(", data_name, ", to = \"baseR\", modify = TRUE) ",
-        tail))
+        tail)
     ))
   }
 
@@ -2221,14 +2238,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      .jst_wrap_prose(paste0(
+      paste0(
         n, " ", noun, " ", verb_contain, " ",
         style_phrase, ", incompatible with the .sav format."),
-        reserve = 9L),
       "\n",
-      .jst_wrap_prose(paste0(
+      paste0(
         "Before saving, convert with ",
-        "jconvert(", data_name, ", to = \"spss\", modify = TRUE)."))
+        "jconvert(", data_name, ", to = \"spss\", modify = TRUE).")
     ))
   }
 

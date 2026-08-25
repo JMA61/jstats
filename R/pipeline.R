@@ -496,8 +496,8 @@ jsubset <- function(data, expr) {
     n_show <- if (want_console) console_n else 10L
     .cat_red("jcomplete Preview \u2014 rows scheduled for deletion\n")
     if (nrow(deleted_df) == 0L) {
-      cat("  No cases will be dropped",
-          " (no missing values on the registered variables).\n", sep = "")
+      .jst_msg_out("  No cases will be dropped",
+                   " (no missing values on the registered variables).")
     } else {
       .jst_print_table(utils::head(deleted_df, n_show), row.names = FALSE)
       if (nrow(deleted_df) > n_show) {
@@ -845,15 +845,17 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   cat("\n  Complete cases: ", n_complete, " of ", n_total,
       " (", sprintf("%.1f", n_complete / n_total * 100), "%)\n", sep = "")
   if (n_excluded > 0) {
-    cat("  Listwise filter activated \u2014 ", n_excluded,
-        " cases will be excluded from subsequent analyses.\n", sep = "")
+    .jst_msg_out("  Listwise filter activated \u2014 ", n_excluded,
+                 " cases will be excluded from subsequent analyses.")
   } else {
-    cat("  Listwise filter activated \u2014 no cases will be excluded (no missing values).\n")
+    .jst_msg_out("  Listwise filter activated \u2014 no cases will be ",
+                 "excluded (no missing values).")
   }
   if (!is.null(prior_complete) &&
       !identical(prior_complete$vars, variable_names)) {
-    cat("  Replaced the previous jcomplete on ", .jst_data_name, " (was: ",
-        paste(prior_complete$vars, collapse = ", "), ").\n", sep = "")
+    .jst_msg_out("  Replaced the previous jcomplete on ", .jst_data_name,
+                 " (was: ",
+                 paste(prior_complete$vars, collapse = ", "), ").")
   }
 
   # Optional row-level preview of what the filter will drop. `masked` and

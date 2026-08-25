@@ -877,10 +877,10 @@
                           " to ", style, " convention:")
       conv_line <- paste0("  jconvert(", data_name, ", ", vars_txt,
                           ", to = \"", conv, "\", modify = TRUE)")
-      return(paste0(.jst_wrap_prose(head, reserve = reserve), "\n",
-                    .jst_wrap_prose(lead), "\n",
+      return(paste0(head, "\n",
+                    lead, "\n",
                     decl_line, "\n",
-                    .jst_wrap_prose(conv_lead), "\n",
+                    conv_lead, "\n",
                     conv_line))
     }
     over_par <- paste0("In ", over_var, " the range covers ", over_n,
@@ -890,20 +890,19 @@
                        "using SPSS convention:")
     close_par <- paste0("To use ", style, " convention with jconvert(), ",
                         "you must first reduce these to 26 or fewer.")
-    return(paste0(.jst_wrap_prose(head, reserve = reserve), "\n",
-                  .jst_wrap_prose(over_par), "\n",
+    return(paste0(head, "\n",
+                  over_par, "\n",
                   decl_line, "\n",
-                  .jst_wrap_prose(close_par)))
+                  close_par))
   }
 
   # --- C: the never-set range variant ---------------------------------------
   if (identical(variant, "range_unset")) {
     return(paste0(
-      .jst_wrap_prose(paste0(
+      paste0(
         if (isTRUE(prefixed)) "no" else "No",
         " missing-value convention is selected, and a missing-value ",
-        "range can exist only under SPSS convention."),
-        reserve = reserve), "\n",
+        "range can exist only under SPSS convention."), "\n",
       "To declare it, set convention = \"spss\" on this call."))
   }
 
@@ -931,7 +930,7 @@
     .jst_wrap_indent("Like Stata, with uppercase markers (.A-.Z).",
                      indent = 6L),
     "To make the choice permanent, put the same line in your .Rprofile.")
-  paste0(.jst_wrap_prose(head, reserve = reserve), "\n",
+  paste0(head, "\n",
          paste(parts, collapse = "\n"))
 }
 

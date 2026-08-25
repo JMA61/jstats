@@ -153,7 +153,8 @@ joutput <- function(level, effect.size = NULL,
     options(.jst_output_toggles = NULL)
     if (!quiet) {
       .cat_red("Output Settings\n")
-      cat("Reset to defaults (standard, no toggle overrides).\n\n")
+      .jst_msg_out("Reset to defaults (standard, no toggle overrides).")
+      cat("\n")
     }
     return(invisible(NULL))
   }
@@ -417,7 +418,7 @@ joutput <- function(level, effect.size = NULL,
   # rather than trailing the whole emission: it explains the lines directly
   # above it, and closing here leaves the last line on screen for the
   # environment-scan notice's remedy whenever that fires.
-  if (partial) cat("Run joptions() to see all settings.\n")
+  if (partial) .jst_msg_out("Run joptions() to see all settings.")
   cat("\n")
 }
 

@@ -112,6 +112,61 @@
 }
 
 # List the sentinel-managed .R files currently in R/ (first line is a sentinel).
+.jdev_wrap_violations <- function(exprs) {
+  # Structural gate (Session 255). A builder must not wrap its own prose when
+  # the assembled text is handed to something that wraps it again:
+  #   - .jst_stop() / .jst_stop_arg() wrap with a reserve computed from the
+  #     real "<fn>(): " prefix, which the builder cannot know;
+  #   - cat() has an emitter now, .jst_msg_out(), so a builder wrapping ahead
+  #     of a cat() is wrapping on a route that no longer needs it.
+  # .jst_wrap_indent() is deliberately NOT checked: at those sites the call
+  # supplies the indent, not just the wrap, so the emitter cannot replace it.
+  # Walks the parse tree rather than the text, so a call split across lines is
+  # caught and a mention inside a string or comment is not. (A line-based grep
+  # missed exactly one multi-line cat(paste0(.jst_wrap_prose(...))) site while
+  # this was being written, which is why it is an AST walk.)
+  wrapper  <- ".jst_wrap_prose"
+  emitters <- c(".jst_stop", ".jst_stop_arg", "cat")
+  empty    <- list(quote(expr = ))
+  found    <- character(0)
+
+  walk <- function(e, fn, inside) {
+    if (is.call(e)) {
+      head_nm <- if (is.name(e[[1L]])) as.character(e[[1L]]) else ""
+      if (nzchar(inside) && identical(head_nm, wrapper)) {
+        found <<- c(found,
+                    paste0(fn, ": ", wrapper, "() inside ", inside, "()"))
+      }
+      nxt   <- if (head_nm %in% emitters) head_nm else inside
+      parts <- as.list(e)
+      for (i in seq_along(parts)) {
+        # An omitted argument (as in x[i, ]) parses to the empty symbol. Test
+        # it in place: binding it to a variable makes every later use of that
+        # variable raise "argument is missing, with no default".
+        if (identical(parts[i], empty)) next
+        walk(parts[[i]], fn, nxt)
+      }
+    } else if (is.pairlist(e) || is.list(e)) {
+      parts <- as.list(e)
+      for (i in seq_along(parts)) {
+        if (identical(parts[i], empty)) next
+        walk(parts[[i]], fn, inside)
+      }
+    }
+    invisible(NULL)
+  }
+
+  for (ex in exprs) {
+    fn <- "<top level>"
+    if (is.call(ex) && length(ex) >= 3L &&
+        as.character(ex[[1L]])[1L] %in% c("<-", "=") && is.name(ex[[2L]])) {
+      fn <- as.character(ex[[2L]])
+    }
+    walk(ex, fn, "")
+  }
+  unique(found)
+}
+
 .jdev_managed_files <- function() {
   fs <- list.files("R", pattern = "\\.R$", full.names = FALSE)
   keep <- vapply(fs, function(f) {
@@ -170,6 +225,17 @@ receive_package <- function(file = "jstats_source.R") {
   cat("Anchor checks:      OK ( lines:", n_lines,
       "| sentinels:", length(chunks),
       "| marker occurrences:", n_marker, ")\n")
+
+  ## -- 2b. structural gate: no builder wrap ahead of a wrapping emitter -------
+  wrap_bad <- .jdev_wrap_violations(parsed)
+  if (length(wrap_bad)) {
+    stop("Structural gate failed -- ", length(wrap_bad),
+         " builder wrap(s) sit inside an emitter that already wraps:\n  ",
+         paste(wrap_bad, collapse = "\n  "),
+         "\nStrip the .jst_wrap_prose() call and let the emitter wrap.",
+         call. = FALSE)
+  }
+  cat("Structural gate:    OK ( no builder wrap inside a wrapping emitter )\n")
 
   ## -- 3. one-time migration guard ---------------------------------------------
   # if a sentinel-less copy of the monolith is still in R/, every function

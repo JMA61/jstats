@@ -1661,11 +1661,13 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     !is.null(info) && identical(info$representation, "spss")
   }, logical(1))]
   if (length(spss_live) > 0L) {
-    cat("\n", .jst_wrap_prose(paste0(
-      "Note: SPSS-style declared codes on: ",
+    # Was the package's one cat()-routed wrap site, kept only because
+    # stripping the builder wrap would have meant never wrapping at all.
+    # With a stdout emitter in the family it strips like the rest. (S255)
+    .jst_msg_out(
+      "\nNote: SPSS-style declared codes on: ",
       paste(spss_live, collapse = ", "),
-      ". jstats treats these as missing; base R functions do not.")),
-      "\n", sep = "")
+      ". jstats treats these as missing; base R functions do not.")
   }
 
   # -- Variable label legend (last; only under "legend"/"legend.bottom") -----
