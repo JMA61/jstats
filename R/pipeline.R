@@ -48,9 +48,9 @@ juse <- function(data) {
     # juse() with no arguments — print current default
     current <- getOption(".jst_default_data", default = NULL)
     if (is.null(current)) {
-      message("No default data frame set. Use juse(DataFrameName) to set one.")
+      .jst_msg("No default data frame set. Use juse(DataFrameName) to set one.")
     } else {
-      message("Current default data frame: ", current)
+      .jst_msg("Current default data frame: ", current)
     }
     return(invisible(NULL))
   }
@@ -64,7 +64,7 @@ juse <- function(data) {
   # juse(NULL) — a literal NULL clears the default.
   if (is.null(data_sub)) {
     options(.jst_default_data = NULL)
-    message("Default data frame cleared.")
+    .jst_msg("Default data frame cleared.")
     return(invisible(NULL))
   }
 
@@ -80,7 +80,7 @@ juse <- function(data) {
   # behaviour where the is.null(data) guard caught this case.
   if (is.null(data_val)) {
     options(.jst_default_data = NULL)
-    message("Default data frame cleared.")
+    .jst_msg("Default data frame cleared.")
     return(invisible(NULL))
   }
   if (!is.data.frame(data_val)) {
@@ -88,7 +88,7 @@ juse <- function(data) {
   }
 
   options(.jst_default_data = data_name)
-  message("Default data frame set to: ", data_name)
+  .jst_msg("Default data frame set to: ", data_name)
   invisible(NULL)
 }
 
@@ -160,7 +160,7 @@ jsubset <- function(data, expr) {
     reg <- getOption(".jst_filter", default = list())
     reg <- reg[!vapply(reg, is.null, logical(1))]
     if (length(reg) == 0L) {
-      message("No jsubset settings in this session.")
+      .jst_msg("No jsubset settings in this session.")
       return(invisible(NULL))
     }
     default_name <- getOption(".jst_default_data", default = NULL)
@@ -168,9 +168,9 @@ jsubset <- function(data, expr) {
     if (length(reg) == 1L) {
       fs <- reg[[1L]]
       if (isTRUE(fs$active)) {
-        message("jsubset active for ", dnames[1L], ": ", fs$expr_str)
+        .jst_msg("jsubset active for ", dnames[1L], ": ", fs$expr_str)
       } else {
-        message("jsubset set but inactive for ", dnames[1L], ": ", fs$expr_str)
+        .jst_msg("jsubset set but inactive for ", dnames[1L], ": ", fs$expr_str)
       }
       return(invisible(NULL))
     }
@@ -193,7 +193,7 @@ jsubset <- function(data, expr) {
   if (!missing(data) && is.null(raw_data)) {
     all_filters <- getOption(".jst_filter", default = list())
     if (length(all_filters) == 0) {
-      message("No jsubset settings to clear.")
+      .jst_msg("No jsubset settings to clear.")
       return(invisible(NULL))
     }
     dnames <- names(all_filters)
@@ -214,32 +214,32 @@ jsubset <- function(data, expr) {
     default_name <- getOption(".jst_default_data", default = NULL)
     if (sym_name == "off") {
       if (is.null(default_name)) {
-        message("No default data frame set.")
+        .jst_msg("No default data frame set.")
         return(invisible(NULL))
       }
       fs <- .jst_get_filter(default_name)
       if (is.null(fs)) {
-        message("No jsubset set for ", default_name, ". Nothing to deactivate.")
+        .jst_msg("No jsubset set for ", default_name, ". Nothing to deactivate.")
       } else {
         fs$active <- FALSE
         .jst_set_filter(default_name, fs)
-        message("jsubset deactivated for ", default_name, ".")
+        .jst_msg("jsubset deactivated for ", default_name, ".")
       }
       return(invisible(NULL))
     }
     if (sym_name == "on") {
       if (is.null(default_name)) {
-        message("No default data frame set.")
+        .jst_msg("No default data frame set.")
         return(invisible(NULL))
       }
       fs <- .jst_get_filter(default_name)
       if (is.null(fs)) {
-        message("No jsubset set for ", default_name,
-                ". Use jsubset(expression) to set one.")
+        .jst_msg("No jsubset set for ", default_name,
+                 ". Use jsubset(expression) to set one.")
       } else {
         fs$active <- TRUE
         .jst_set_filter(default_name, fs)
-        message("jsubset reactivated for ", default_name, ": ", fs$expr_str)
+        .jst_msg("jsubset reactivated for ", default_name, ": ", fs$expr_str)
       }
       return(invisible(NULL))
     }
@@ -292,10 +292,10 @@ jsubset <- function(data, expr) {
     active   = TRUE
   ))
   if (!is.null(prior) && !identical(prior$expr_str, expr_str)) {
-    message("jsubset replaced for ", target_name, ": ", expr_str,
-            " (was: ", prior$expr_str, ")")
+    .jst_msg("jsubset replaced for ", target_name, ": ", expr_str,
+             " (was: ", prior$expr_str, ")")
   } else {
-    message("jsubset activated for ", target_name, ": ", expr_str)
+    .jst_msg("jsubset activated for ", target_name, ": ", expr_str)
   }
   invisible(NULL)
 }
@@ -508,8 +508,8 @@ jsubset <- function(data, expr) {
       }
     }
     if (fallback) {
-      message("(The preview viewer needs an interactive RStudio session; ",
-              "showing the first ", n_show, " in the console instead.)")
+      .jst_msg("(The preview viewer needs an interactive RStudio session; ",
+               "showing the first ", n_show, " in the console instead.)")
     }
   }
 
@@ -624,8 +624,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     # Preview an already-registered filter without re-listing variables.
     if (.preview_on) {
       if (length(reg) == 0L) {
-        message("No jcomplete filter set. ",
-                "Run jcomplete(var1, var2, ...) first.")
+        .jst_msg("No jcomplete filter set. ",
+                 "Run jcomplete(var1, var2, ...) first.")
         return(invisible(NULL))
       }
       target <- default_name
@@ -633,24 +633,24 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
         if (length(reg) == 1L) {
           target <- names(reg)[1L]
         } else {
-          message("Multiple jcomplete filters are set and no juse() default ",
-                  "is active; set a default with juse() to choose which to ",
-                  "preview.")
+          .jst_msg("Multiple jcomplete filters are set and no juse() default ",
+                   "is active; set a default with juse() to choose which to ",
+                   "preview.")
           return(invisible(NULL))
         }
       }
       cs          <- reg[[target]]
       calling_env <- parent.frame()
       if (!exists(target, envir = calling_env)) {
-        message("Data frame ", target,
-                " is not reachable here to build the preview.")
+        .jst_msg("Data frame ", target,
+                 " is not reachable here to build the preview.")
         return(invisible(NULL))
       }
       df         <- get(target, envir = calling_env)
       valid_vars <- cs$vars[cs$vars %in% names(df)]
       if (length(valid_vars) == 0L) {
-        message("None of the registered variables are present in ",
-                target, ".")
+        .jst_msg("None of the registered variables are present in ",
+                 target, ".")
         return(invisible(NULL))
       }
       masked <- .jst_apply_declared_udms_as_na(
@@ -664,7 +664,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     }
 
     if (length(reg) == 0L) {
-      message("No jcomplete settings in this session.")
+      .jst_msg("No jcomplete settings in this session.")
       return(invisible(NULL))
     }
     dnames <- names(reg)
@@ -688,9 +688,9 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
         }
       }
       if (isTRUE(cs$active)) {
-        message("jcomplete active for ", dnames[1L], ": ", vars_str, count_str)
+        .jst_msg("jcomplete active for ", dnames[1L], ": ", vars_str, count_str)
       } else {
-        message("jcomplete set but inactive for ", dnames[1L], ": ", vars_str)
+        .jst_msg("jcomplete set but inactive for ", dnames[1L], ": ", vars_str)
       }
       return(invisible(NULL))
     }
@@ -715,7 +715,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   if (!missing(data) && is.null(raw_data)) {
     all_complete <- getOption(".jst_complete", default = list())
     if (length(all_complete) == 0) {
-      message("No jcomplete settings to clear.")
+      .jst_msg("No jcomplete settings to clear.")
       return(invisible(NULL))
     }
     dnames <- names(all_complete)
@@ -738,33 +738,33 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     sym_name <- tolower(as.character(raw_data))
     if (sym_name == "off") {
       if (is.null(default_name)) {
-        message("No default data frame set.")
+        .jst_msg("No default data frame set.")
         return(invisible(NULL))
       }
       cs <- .jst_get_complete(default_name)
       if (is.null(cs)) {
-        message("No jcomplete filter set for ", default_name, ".")
+        .jst_msg("No jcomplete filter set for ", default_name, ".")
       } else {
         cs$active <- FALSE
         .jst_set_complete(default_name, cs)
-        message("jcomplete deactivated for ", default_name, ".")
+        .jst_msg("jcomplete deactivated for ", default_name, ".")
       }
       return(invisible(NULL))
     }
     if (sym_name == "on") {
       if (is.null(default_name)) {
-        message("No default data frame set.")
+        .jst_msg("No default data frame set.")
         return(invisible(NULL))
       }
       cs <- .jst_get_complete(default_name)
       if (is.null(cs)) {
-        message("No jcomplete filter set for ", default_name,
-                ". Use jcomplete(var1, var2, ...) to set one.")
+        .jst_msg("No jcomplete filter set for ", default_name,
+                 ". Use jcomplete(var1, var2, ...) to set one.")
       } else {
         cs$active <- TRUE
         .jst_set_complete(default_name, cs)
-        message("jcomplete reactivated for ", default_name, ": ",
-                paste(cs$vars, collapse = ", "))
+        .jst_msg("jcomplete reactivated for ", default_name, ": ",
+                 paste(cs$vars, collapse = ", "))
       }
       return(invisible(NULL))
     }
@@ -1039,7 +1039,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     reg <- reg[vapply(reg, function(x) !is.null(x) && length(x) > 0L,
                       logical(1))]
     if (length(reg) == 0L) {
-      message("No dummy registrations in this session.")
+      .jst_msg("No dummy registrations in this session.")
       return(invisible(NULL))
     }
     dnames <- names(reg)
@@ -1049,8 +1049,8 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
         tag <- if (identical(dnames[i], default_name)) "  [default]" else ""
         paste0("  - ", dnames[i], ": ", paste(vn, collapse = ", "), tag)
       }, character(1))
-      message("jdummy registrations (", length(reg), " data frames):\n",
-              paste(lines, collapse = "\n"))
+      .jst_msg("jdummy registrations (", length(reg), " data frames):\n",
+               paste(lines, collapse = "\n"))
       return(invisible(NULL))
     }
     # Single frame: full per-registration rendering.
@@ -1194,13 +1194,13 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
       .jst_set_dummy(.jst_data_name, ds)
     }
     if (length(removed) > 0) {
-      message("Dummy registration removed for ",
-              paste0("'", removed, "'", collapse = ", "), " in ",
-              .jst_data_name, ".")
+      .jst_msg("Dummy registration removed for ",
+               paste0("'", removed, "'", collapse = ", "), " in ",
+               .jst_data_name, ".")
     } else {
-      message("No dummy registration to remove for ",
-              paste0("'", var_names, "'", collapse = ", "), " in ",
-              .jst_data_name, ".")
+      .jst_msg("No dummy registration to remove for ",
+               paste0("'", var_names, "'", collapse = ", "), " in ",
+               .jst_data_name, ".")
     }
     return(invisible(NULL))
   }
@@ -1255,8 +1255,8 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     # .jst_dummy and .jst_registry stores stay disjoint per variable.
     .cleared_kind <- .jst_clear_intent_var(.jst_data_name, var_name)
     if (!is.null(.cleared_kind)) {
-      message("Reclassified: '", var_name, "' (",
-              .jst_intent_label(.cleared_kind), " -> dummy).")
+      .jst_msg("Reclassified: '", var_name, "' (",
+               .jst_intent_label(.cleared_kind), " -> dummy).")
     }
 
     cat("  Variable: ", var_name, " (", built$var_type, ")\n", sep = "")
@@ -1276,7 +1276,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 
   # Persist reminder (standard-tier; suppressed at minimal output).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message(.jst_durability_note("session", .jst_data_name,
+    .jst_msg(.jst_durability_note("session", .jst_data_name,
                                  count = length(var_names)))
   }
 
@@ -1284,7 +1284,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   # dummy variables (flags a many-category declaration). (Session 91)
   .jst_declaration_note(data, var_names, "dummy")
 
-  for (w in deferred) warning(w, call. = FALSE)
+  for (w in deferred) .jst_warn(w)
 
   invisible(NULL)
 }
@@ -1310,7 +1310,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   all_reg <- all_reg[vapply(all_reg, function(x) !is.null(x) && length(x) > 0L,
                             logical(1))]
   if (length(all_reg) == 0L) {
-    message("No variable registrations in this session.")
+    .jst_msg("No variable registrations in this session.")
     return(invisible(NULL))
   }
   dnames <- names(all_reg)
@@ -1328,8 +1328,8 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
       tag   <- if (identical(dnames[i], default_name)) "  [default]" else ""
       paste0("  - ", dnames[i], ": ", paste(items, collapse = ", "), tag)
     }, character(1))
-    message("jstats registrations (", length(all_reg), " data frames):\n",
-            paste(lines, collapse = "\n"))
+    .jst_msg("jstats registrations (", length(all_reg), " data frames):\n",
+             paste(lines, collapse = "\n"))
     return(invisible(NULL))
   }
 

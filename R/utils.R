@@ -195,7 +195,7 @@ jupdate <- function(ask = FALSE) {
     if (!is.null(hint) && nzchar(hint)) {
       msg <- paste0(msg, "\nTo switch, run:\n  ", hint)
     }
-    message(msg)
+    .jst_msg(msg)
     return(invisible(NULL))
   }
 
@@ -204,7 +204,7 @@ jupdate <- function(ask = FALSE) {
 
   if (!is.na(latest_ver) &&
       package_version(latest_ver) <= package_version(installed_ver)) {
-    message("jstats v", installed_ver, " is already up to date.")
+    .jst_msg("jstats v", installed_ver, " is already up to date.")
     return(invisible(NULL))
   }
 
@@ -224,12 +224,12 @@ jupdate <- function(ask = FALSE) {
       )
     }
     if (utils::menu(c("Yes", "No"), title = prompt) != 1L) {
-      message("Update canceled.")
+      .jst_msg("Update canceled.")
       return(invisible(NULL))
     }
   }
 
-  message("Updating jstats ... (this may take a moment)")
+  .jst_msg("Updating jstats ... (this may take a moment)")
 
   # Install in a clean, separate R process (via callr, an Imports dependency, so
   # always available). Because that process never loads jstats, the package
@@ -251,7 +251,7 @@ jupdate <- function(ask = FALSE) {
     .jst_stop("the update did not complete. The error was: ", err)
   }
 
-  message(
+  .jst_msg(
     "jstats has been updated.\n",
     "\n",
     "Restart R to load it in RStudio:\n",
@@ -332,7 +332,7 @@ jai <- function(setup = NULL, path = NULL) {
   }
   if (is.null(setup)) {
     if (!is.null(path)) {
-      message("Note: `path` is used only when writing a file and was ignored.")
+      .jst_msg("Note: `path` is used only when writing a file and was ignored.")
     }
     .jst_jai_print()
     return(invisible(NULL))
@@ -348,7 +348,7 @@ jai <- function(setup = NULL, path = NULL) {
                   choices = c("project", "machine", "chat", "status"))
   }
   if (setup %in% c("chat", "status") && !is.null(path)) {
-    message("Note: `path` is used only when writing a file and was ignored.")
+    .jst_msg("Note: `path` is used only when writing a file and was ignored.")
   }
   switch(setup,
     project = .jst_jai_project(path),
@@ -715,8 +715,8 @@ jai <- function(setup = NULL, path = NULL) {
 #' Internal helper: the declined-write note
 #' @keywords internal
 .jst_jai_declined <- function() {
-  message("Nothing was written.\n",
-          "To write to a different folder, rerun with path = \"<folder>\".")
+  .jst_msg("Nothing was written.\n",
+           "To write to a different folder, rerun with path = \"<folder>\".")
 }
 
 #' Internal helper: jai("project") -- write the AGENTS.md block
@@ -763,8 +763,8 @@ jai <- function(setup = NULL, path = NULL) {
       }
     }
     writeLines(block, target)
-    message("Created the jstats orientation block in:\n  ", target, "\n",
-            keep_note)
+    .jst_msg("Created the jstats orientation block in:\n  ", target, "\n",
+             keep_note)
     return(invisible(NULL))
   }
 
@@ -784,10 +784,10 @@ jai <- function(setup = NULL, path = NULL) {
       }
     }
     writeLines(c(lines, "", block), target)
-    message("Appended the jstats orientation block to:\n  ", target, "\n",
-            "Your existing content was not changed.\n",
-            "Review any other instructions in this file alongside the ",
-            "jstats block.\n", keep_note)
+    .jst_msg("Appended the jstats orientation block to:\n  ", target, "\n",
+             "Your existing content was not changed.\n",
+             "Review any other instructions in this file alongside the ",
+             "jstats block.\n", keep_note)
     return(invisible(NULL))
   }
 
@@ -824,11 +824,11 @@ jai <- function(setup = NULL, path = NULL) {
              if (b$end < length(lines)) lines[(b$end + 1L):length(lines)])
     writeLines(out, target)
     if (edited && !interactive()) {
-      warning("The previous jstats orientation block had been edited; ",
-              "those edits were discarded.", call. = FALSE)
+      .jst_warn("The previous jstats orientation block had been edited; ",
+                "those edits were discarded.")
     }
-    message("Replaced the jstats orientation block", vers, " in:\n  ",
-            target)
+    .jst_msg("Replaced the jstats orientation block", vers, " in:\n  ",
+             target)
     return(invisible(NULL))
   }
 
@@ -841,10 +841,10 @@ jai <- function(setup = NULL, path = NULL) {
   } else {
     "more than one set of markers"
   }
-  message("Found ", which_msg, " in:\n  ", target, "\n",
-          "Repair the file by hand, or delete the damaged markers and ",
-          "rerun.\n",
-          "A fresh orientation block is printed below for reference.")
+  .jst_msg("Found ", which_msg, " in:\n  ", target, "\n",
+           "Repair the file by hand, or delete the damaged markers and ",
+           "rerun.\n",
+           "A fresh orientation block is printed below for reference.")
   cat(block, sep = "\n")
   cat("\n")
   .jst_stop("nothing was written.")
@@ -964,14 +964,14 @@ jai <- function(setup = NULL, path = NULL) {
              content)
   if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
   writeLines(skill, target)
-  message(if (had) "Replaced" else "Created",
-          " the jstats skill file:\n  ", target, "\n",
-          "Assistants that support skills find it automatically; the ",
-          "first use may ask for permission.")
+  .jst_msg(if (had) "Replaced" else "Created",
+           " the jstats skill file:\n  ", target, "\n",
+           "Assistants that support skills find it automatically; the ",
+           "first use may ask for permission.")
   if (explicit) {
-    message("To be found automatically, the file must sit in a folder ",
-            "named jstats inside your assistant's skills folder, e.g.:\n  ",
-            .jst_skill_default_dir())
+    .jst_msg("To be found automatically, the file must sit in a folder ",
+             "named jstats inside your assistant's skills folder, e.g.:\n  ",
+             .jst_skill_default_dir())
   }
   invisible(NULL)
 }
@@ -1911,17 +1911,22 @@ jai <- function(setup = NULL, path = NULL) {
 #'   default resolves to 76.
 #' @param min_last Minimum last-line length before pull-back stops.
 #' @param reserve Characters the emitter will prepend to line 1.
+#' @param tol Rule 2 tolerance: when a sentence boundary sits within this
+#'   many characters of the fill point, the break relocates to the boundary
+#'   so the sentence stays whole. 12 is the S252-measured value (the
+#'   smallest catching the jsubset case, the largest costing no extra
+#'   lines); 0 disables the rule and restores plain word-fill exactly.
 #' @return Character scalar with newline characters at the break points.
 #' @keywords internal
 .jst_wrap_prose <- function(text, width = .jst_resolve_width(),
-                            min_last = 20L, reserve = 0L) {
+                            min_last = 20L, reserve = 0L, tol = 12L) {
   if (!nzchar(text)) return(text)
   # Protect atomic tokens: swap internal spaces for \x01 so they travel
   # as single words, restored after line assembly.
   protected <- text
   atom_re <- paste0(
     "[A-Za-z_.][A-Za-z0-9_.]*\\([^()]*\\)",              # calls
-    "|[A-Za-z][A-Za-z0-9._]*\\.[A-Za-z0-9._]+ = [^ ]+",  # dotted arg = value
+    "|[A-Za-z][A-Za-z0-9._]* = [^ ]+",                   # arg = value (S254)
     "|\"[^\"\n]{1,60}\""                                # quoted phrases (S238)
   )
   m <- gregexpr(atom_re, protected)[[1]]
@@ -1940,22 +1945,71 @@ jai <- function(setup = NULL, path = NULL) {
   lines <- character(0)
   cur   <- ""
   avail <- width - reserve
+  # Rule 2 (S252 design, built S254): a word ends a sentence if it closes
+  # with terminal punctuation, is not a letter-dot abbreviation (e.g., i.e.),
+  # and the next word opens a sentence. Conservative by construction: the
+  # dotted tokens preserve.udm, .a, .sav, 0.9.141 end in letters or digits
+  # without terminal punctuation, so none can fire.
+  ends_sentence <- function(a, b) {
+    grepl("[.!?]$", a) && !grepl("^([A-Za-z]\\.)+$", a) && grepl("^[A-Z0-9\"]", b)
+  }
   for (w in words) {
     cand <- if (nzchar(cur)) paste(cur, w) else w
     if (nchar(cand) <= avail) {
       cur <- cand
     } else {
-      lines <- c(lines, cur)
-      cur   <- w
-      avail <- width   # reserve applies to the first line only
+      # Rule 2: sentence-aware break. If a sentence boundary sits within
+      # `tol` characters of the fill point, break there so the sentence
+      # stays whole; the words after the boundary open the next line. Only
+      # taken when the relocated tail still fits the width, so the rule can
+      # relocate a break but never widen a line. At tol = 0 this block is
+      # inert and the loop is byte-identical to plain word-fill.
+      moved <- FALSE
+      if (tol > 0L) {
+        cw <- strsplit(cur, " ", fixed = TRUE)[[1]]
+        k  <- length(cw)
+        if (k > 1L) {
+          tail_len <- 0L
+          i <- k - 1L
+          while (i >= 1L) {
+            tail_len <- tail_len + nchar(cw[i + 1L]) + 1L
+            if (tail_len > tol) break
+            if (ends_sentence(cw[i], cw[i + 1L]) &&
+                tail_len + nchar(w) <= width) {
+              lines <- c(lines, paste(cw[seq_len(i)], collapse = " "))
+              cur   <- paste(c(cw[seq(i + 1L, k)], w), collapse = " ")
+              avail <- width
+              moved <- TRUE
+              break
+            }
+            i <- i - 1L
+          }
+        }
+      }
+      if (!moved) {
+        # Do not push an empty first line when the very first word is itself
+        # wider than the available space. An over-long token -- a path, a long
+        # variable name, a long c(...) atom -- belongs on its own line, not
+        # under a blank one. Latent at width 76 (nothing in the source is that
+        # long); visible as soon as the resolved width narrows. (S254)
+        if (nzchar(cur)) lines <- c(lines, cur)
+        cur   <- w
+        avail <- width   # reserve applies to the first line only
+      }
     }
   }
   lines <- c(lines, cur)
   # Orphan pull-back: iterate until the last line reaches min_last or a
-  # move would overflow the width.
+  # move would overflow the width. Rule 2's second half (S254, demonstrated
+  # in the S252 Appendix A trials): the pull-back never drags words across
+  # a sentence boundary -- a last line that is itself a complete sentence
+  # stays short rather than stealing the tail of the sentence above it.
+  # Inert at tol = 0, like the break relocation.
   while (length(lines) > 1L && nchar(lines[length(lines)]) < min_last) {
     prev <- strsplit(lines[length(lines) - 1L], " ", fixed = TRUE)[[1]]
     if (length(prev) < 2L) break
+    first_last <- strsplit(lines[length(lines)], " ", fixed = TRUE)[[1]][1L]
+    if (tol > 0L && ends_sentence(prev[length(prev)], first_last)) break
     moved <- prev[length(prev)]
     cand  <- paste(moved, lines[length(lines)])
     if (nchar(cand) > width) break
@@ -2074,6 +2128,20 @@ jai <- function(setup = NULL, path = NULL) {
   # in the S252 prototype, and it fails silently.
   if (grepl("^[A-Za-z._][A-Za-z0-9._:]*\\(", body)) return("pass")
   if (grepl("^[^ ]+ *<- ", body)) return("pass")
+
+  # A filesystem path displayed on its own line -- jai() emits one after
+  # "in:", and jsave/jload echo targets the same way. Word-filling a path
+  # makes it un-copyable, and a Windows path containing spaces (C:/Users/Jane
+  # Smith/My Project/data.sav) is exactly what a word-fill would break.
+  # Tested with substr() rather than a bracket expression, for the backslash
+  # reason noted above. (S254)
+  c1 <- substr(body, 1L, 1L)
+  if (c1 == "/" || c1 == "~") return("pass")
+  if (substr(body, 1L, 2L) == "./" || substr(body, 1L, 3L) == "../")
+    return("pass")
+  if (substr(body, 1L, 2L) == "\\\\") return("pass")
+  if (grepl("^[A-Za-z]:", body) &&
+      substr(body, 3L, 3L) %in% c("/", "\\")) return("pass")
 
   # An interior column gap means table layout or a trailing comment column,
   # where respacing would destroy the alignment.

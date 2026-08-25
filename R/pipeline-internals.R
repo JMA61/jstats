@@ -36,7 +36,7 @@
       msg <- paste0(stage_label, " expression could not be evaluated: ",
                     conditionMessage(e))
       if (on_error == "warn") {
-        warning(msg, call. = FALSE)
+        .jst_warn(msg)
         rep(TRUE, nrow(data))
       } else {
         stop(msg, call. = FALSE)
@@ -256,11 +256,18 @@
   # keeps a single blank line above pipeline messages.
   if (length(msgs) > 0) cat("\n")
   for (m in msgs) {
-    if (startsWith(m, "[YELLOW]")) {
-      .cat_yellow(sub("^\\[YELLOW\\]", "", m))
+    yellow <- startsWith(m, "[YELLOW]")
+    body   <- if (yellow) sub("^\\[YELLOW\\]", "", m) else m
+    # Wrap AFTER the tag is stripped and BEFORE the color is applied: the
+    # tag is eight characters that never reach the console, and .cat_yellow()
+    # adds nine bytes of ANSI escape that nchar() would count but the user
+    # cannot see. Measuring with either attached mis-sizes every line. (S254)
+    body <- tryCatch(.jst_wrap_message(body), error = function(e) body)
+    if (yellow) {
+      .cat_yellow(body)
       cat("\n")
     } else {
-      cat(m, "\n")
+      cat(body, "\n")
     }
   }
 }

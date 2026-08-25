@@ -7,7 +7,7 @@
 .jst_advisory_note(...)
 }
 \arguments{
-\item{...}{Parts of the message, passed through to \code{message()}.}
+\item{...}{Parts of the message, passed through to \code{.jst_msg()}.}
 }
 \value{
 Invisibly NULL.
@@ -18,7 +18,7 @@ the note just reports a benign detail (a no-op recode, a silent text-to-
 numeric coercion). They are shown only at \code{joutput("full")} and stay
 hidden at "standard" and "minimal". Consequential notes -- an overwrite, an
 override taking precedence, a skipped variable, a diagnostic that could not
-be computed -- use a plain \code{message()} instead and are always visible.
+be computed -- call \code{.jst_msg()} directly and are always visible.
 }
 \details{
 This is the tier-gating primitive for the note layer; a broader joutput

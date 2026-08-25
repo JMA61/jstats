@@ -212,7 +212,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     for (v in var_names) {
       if (any(vapply(.dummy_regs,
                      function(r) identical(r$var_name, v), logical(1)))) {
-        warning(.jst_assumption_warning(v, "jsum"), call. = FALSE)
+        .jst_warn(.jst_assumption_warning(v, "jsum"))
       }
     }
   }
@@ -309,7 +309,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     msg_parts <- paste0(msg_parts,
                         "\nMean of the new variable: ", headline_mean, ".")
   }
-  message(msg_parts)
+  .jst_msg(msg_parts)
 
   # Default-silent FYI (joutput "full" only): if declared SPSS-style
   # missing values were masked above, report where, mirroring how the
@@ -330,7 +330,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   # invisibly, so an unassigned top-level call silently drops them. The
   # leading blank line keeps it clear of any advisory note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message(
+    .jst_msg(
       "\nNote: jsum() returns the totals; assign them to a column to keep them:\n",
       "  ", .jst_data_name, "$<name> <- jsum(...)\n",
       "For the full distribution (min, max, SD), run jdesc() on the new column."
@@ -478,7 +478,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     for (v in var_names) {
       if (any(vapply(.dummy_regs,
                      function(r) identical(r$var_name, v), logical(1)))) {
-        warning(.jst_assumption_warning(v, "javg"), call. = FALSE)
+        .jst_warn(.jst_assumption_warning(v, "javg"))
       }
     }
   }
@@ -583,7 +583,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     msg_parts <- paste0(msg_parts,
                         "\nMean of the new variable: ", headline_mean, ".")
   }
-  message(msg_parts)
+  .jst_msg(msg_parts)
 
   # Default-silent FYI (joutput "full" only): if declared SPSS-style
   # missing values were masked above, report where, mirroring how the
@@ -604,7 +604,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   # invisibly, so an unassigned top-level call silently drops them. The
   # leading blank line keeps it clear of any advisory note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message(
+    .jst_msg(
       "\nNote: javg() returns the scores; assign them to a column to keep them:\n",
       "  ", .jst_data_name, "$<name> <- javg(...)\n",
       "For the full distribution (min, max, SD), run jdesc() on the new column."

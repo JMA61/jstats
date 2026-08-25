@@ -759,8 +759,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
   if (identical(output_level, "minimal")) {
     dropped_render <- paste(dropped_df$code, collapse = ", ")
-    return(paste0("Note: jdeclare_udm replaced existing user-defined missing values on ",
-                  var_name, ". Dropped: ", dropped_render, "."))
+    return(.jst_wrap_prose(paste0(
+      "Note: jdeclare_udm replaced existing user-defined missing values on ",
+      var_name, ". Dropped: ", dropped_render, ".")))
   }
 
   # Standard / full tier: include labels where available.
@@ -774,8 +775,13 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       parts <- c(parts, code)
     }
   }
-  paste0("Note: jdeclare_udm replaced the existing user-defined missing values for ", var_name,
-         ". Previously declared codes dropped: ", paste(parts, collapse = ", "), ".")
+  # Wrapped here, not by an emitter: this note is collected into a vector and
+  # cat()ed by jdeclare_udm, a route .jst_msg() never sees. Unwrapped it ran
+  # to 163 characters. (S254)
+  .jst_wrap_prose(paste0(
+    "Note: jdeclare_udm replaced the existing user-defined missing values for ",
+    var_name, ". Previously declared codes dropped: ",
+    paste(parts, collapse = ", "), "."))
 }
 
 
@@ -1551,13 +1557,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     rendered <- paste(vapply(preserved_udm_codes, .code_with_label,
                              character(1)), collapse = ", ")
     if (length(preserved_udm_codes) == 1L) {
-      message(paste0(
+      .jst_msg(paste0(
         "Note: ", rendered, " is a declared missing value and was kept on ",
         "the recoded variable.\n",
         "To convert it to a plain NA instead, add ", preserved_udm_codes[1],
         "=NA to the map."))
     } else {
-      message(paste0(
+      .jst_msg(paste0(
         "Note: ", rendered, " are declared missing values and were kept on ",
         "the recoded variable.\n",
         "To convert them to plain NA instead, map them to NA ",
@@ -1608,13 +1614,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         format(na_code)
       }
       if (n_plain_na == 1L) {
-        message(paste0(
+        .jst_msg(paste0(
           "Note: 1 NA value in '", orig_name, "' was recoded to ",
           code_txt, ".\n",
           "Declare ", code_txt, " with jdeclare_udm() so analyses ",
           "exclude it."))
       } else {
-        message(paste0(
+        .jst_msg(paste0(
           "Note: ", n_plain_na, " NA values in '", orig_name,
           "' were recoded to ", code_txt, ".\n",
           "Declare ", code_txt, " with jdeclare_udm() so analyses ",
@@ -1684,7 +1690,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # declaration rather than adding a fourth code.
   if (!is.null(tok_mint_code) && isTRUE(tok_minted_any)) {
     if (isTRUE(tok_reused)) {
-      message(paste0(
+      .jst_msg(paste0(
         .jst_wrap_prose(paste0(
           "Note: ", .jst_fmt_code(tok_mint_code), " was used for ",
           "missing, from your udm.convention.codes setting.")), "\n",
@@ -1693,7 +1699,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
           " as a missing value, so the recoded variable carries the ",
           "existing declaration."))))
     } else {
-      message(.jst_wrap_prose(paste0(
+      .jst_msg(.jst_wrap_prose(paste0(
         "Note: ", .jst_fmt_code(tok_mint_code), " was used for missing, ",
         "from your udm.convention.codes setting, and declared as a ",
         "missing value on the recoded variable.")))
@@ -1769,7 +1775,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
             " missing under ", .jst_convention_label(d1_conv),
             " convention, map ", if (one) "it" else "them", " directly:"))
         }
-        message(paste0(
+        .jst_msg(paste0(
           .jst_wrap_prose(paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
             if (one) "looks like a coded missing value."
@@ -1842,8 +1848,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       }
 
       if (is_collapsing) {
-        message("Note: Categories were collapsed.\n",
-                "Use labels argument or jrelabel() to assign new value labels.")
+        .jst_msg("Note: Categories were collapsed.\n",
+                 "Use labels argument or jrelabel() to assign new value labels.")
         # The collapse note covers the recoded categories only. Preserved
         # declared UDM codes are never part of a collapse, so carry their
         # labels through here; otherwise a kept code would show as
@@ -1913,7 +1919,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                                  function(r) !is.na(r$new_val),
                                  logical(1)))
       if (mints_non_na) {
-        message("Note: No value labels assigned. To add labels, use jrelabel().")
+        .jst_msg("Note: No value labels assigned. To add labels, use jrelabel().")
       }
     }
   }
@@ -1922,7 +1928,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # values invisibly, so an unassigned top-level call silently drops them. The
   # leading blank line keeps it clear of any label note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message(
+    .jst_msg(
       "\nNote: jrecode() returns the recoded values; assign them to a column to keep them:\n",
       "  ", .jst_data_name, "$<name> <- jrecode(...)\n",
       "To check the recode landed correctly, compare jfreq() on the original and the new column."
@@ -3122,13 +3128,13 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   }
 
   # --- Messages, in order ---------------------------------------------------
-  for (m in msgs) message(m)
+  for (m in msgs) .jst_msg(m)
 
   # Assign-or-lose reminder (standard + full): jencode() returns the encoded
   # values invisibly, so an unassigned top-level call silently drops them.
   # The leading blank line keeps it clear of any note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message(
+    .jst_msg(
       "\n",
       .jst_wrap_prose(paste0(
         "Note: jencode() returns the encoded values; assign them to a ",
@@ -6297,16 +6303,16 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
 
     if (genuinely_empty) {
       if (user_specified) {
-        message("No user-defined missing values found in: ",
-                paste(target_vars, collapse = ", "), ".")
+        .jst_msg("No user-defined missing values found in: ",
+                 paste(target_vars, collapse = ", "), ".")
       } else {
-        message("No user-defined missing values found in '", data_name, "'.")
+        .jst_msg("No user-defined missing values found in '", data_name, "'.")
       }
       return(invisible(data))
     }
 
     if (all_already_in_target && !user_specified) {
-      message(sprintf(
+      .jst_msg(sprintf(
         "All variables with user-defined missing values in '%s' are already in %s-form representation.",
         data_name, to))
       return(invisible(data))
@@ -6411,7 +6417,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, udm.notice = TRUE,
       }
     }
 
-    message(paste(msg_lines, collapse = "\n"))
+    .jst_msg(paste(msg_lines, collapse = "\n"))
   }
 
   invisible(data)

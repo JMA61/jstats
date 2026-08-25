@@ -647,10 +647,10 @@
   report_one <- function(frame, cleared, default = FALSE) {
     tag <- if (isTRUE(default)) " (the default data frame)" else ""
     if (length(cleared) == 0) {
-      message("No ", klab, " registrations to clear for ", frame, tag, ".")
+      .jst_msg("No ", klab, " registrations to clear for ", frame, tag, ".")
     } else {
-      message(Klab, " registrations cleared for ", frame, tag, ": ",
-              paste(cleared, collapse = ", "), ".")
+      .jst_msg(Klab, " registrations cleared for ", frame, tag, ": ",
+               paste(cleared, collapse = ", "), ".")
     }
   }
 
@@ -658,12 +658,12 @@
   if (isTRUE(clear.all)) {
     frames <- .jst_frames_with_registrations(kind)
     if (length(frames) == 0) {
-      message("No ", klab, " registrations to clear.")
+      .jst_msg("No ", klab, " registrations to clear.")
       return(invisible(NULL))
     }
     for (fr in frames) .jst_clear_one_frame(kind, fr)
-    message(Klab, " registrations cleared across all data frames (",
-            paste(frames, collapse = ", "), ").")
+    .jst_msg(Klab, " registrations cleared across all data frames (",
+             paste(frames, collapse = ", "), ").")
     return(invisible(NULL))
   }
 
@@ -684,7 +684,7 @@
   # else ask rather than wipe several silently.
   frames <- .jst_frames_with_registrations(kind)
   if (length(frames) == 0) {
-    message("No ", klab, " registrations to clear.")
+    .jst_msg("No ", klab, " registrations to clear.")
     return(invisible(NULL))
   }
   if (length(frames) == 1) {
@@ -734,11 +734,11 @@
     if (!is.null(reg) && length(reg) == 0) reg <- NULL
     .jst_set_registry(data_name, reg)
     if (length(removed) > 0) {
-      message(.jst_intent_label(kind, cap = TRUE), " registration removed for ",
-              paste0("'", removed, "'", collapse = ", "), " in ", data_name, ".")
+      .jst_msg(.jst_intent_label(kind, cap = TRUE), " registration removed for ",
+               paste0("'", removed, "'", collapse = ", "), " in ", data_name, ".")
     } else {
-      message("No ", .jst_intent_label(kind), " registration to remove for ",
-              paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
+      .jst_msg("No ", .jst_intent_label(kind), " registration to remove for ",
+               paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
     }
     return(invisible(NULL))
   }
@@ -761,13 +761,13 @@
   .jst_set_registry(data_name, reg)
 
   if (isTRUE(default_used)) .jst_default_note(data_name)
-  message(.jst_intent_label(kind, cap = TRUE), " registration set for ",
-          paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
+  .jst_msg(.jst_intent_label(kind, cap = TRUE), " registration set for ",
+           paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
   if (length(reclass) > 0) {
-    message("  Reclassified: ", paste(reclass, collapse = "; "), ".")
+    .jst_msg("  Reclassified: ", paste(reclass, collapse = "; "), ".")
   }
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    message(.jst_durability_note("session", data_name, count = length(var_names)))
+    .jst_msg(.jst_durability_note("session", data_name, count = length(var_names)))
   }
 
   # Non-blocking declaration-plausibility heads-up for the just-registered
@@ -798,11 +798,11 @@
 .jst_render_clear <- function(fn_label, dnames, payloads) {
   n <- length(dnames)
   if (n == 1L) {
-    message(fn_label, " cleared for ", dnames[1L], " (", payloads[1L], ").")
+    .jst_msg(fn_label, " cleared for ", dnames[1L], " (", payloads[1L], ").")
   } else {
     lines <- paste0("  - ", dnames, " (", payloads, ")")
-    message(fn_label, " cleared (", n, " data frames):\n",
-            paste(lines, collapse = "\n"))
+    .jst_msg(fn_label, " cleared (", n, " data frames):\n",
+             paste(lines, collapse = "\n"))
   }
   invisible(NULL)
 }
@@ -839,8 +839,8 @@
               dnames == default_name
   tags   <- ifelse(is_def, paste0(tags, ", default"), tags)
   lines  <- paste0("  - ", dnames, ": ", payloads, "  [", tags, "]")
-  message(fn_label, " settings (", length(dnames), " data frames):\n",
-          paste(lines, collapse = "\n"))
+  .jst_msg(fn_label, " settings (", length(dnames), " data frames):\n",
+           paste(lines, collapse = "\n"))
   invisible(NULL)
 }
 
@@ -1297,7 +1297,7 @@
           # jscreen always agree on a given variable.
           if (.jst_is_dichotomy(data[[reg$var_name]])$is_dichotomy) {
             # Registered dichotomy -> mild consequential note (always shown).
-            message(
+            .jst_msg(
               arg_label, " = takes precedence for ", reg$var_name,
               " (registered as a dummy via jdummy); entering it as numeric ",
               "for this model. The registration is unchanged."
@@ -1305,13 +1305,12 @@
           } else {
             # Registered multi-category dummy -> real warning: collapsing its
             # category codes into one slope is an interval-scale assumption.
-            warning(
+            .jst_warn(
               arg_label, " = takes precedence for ", reg$var_name,
               " (registered as a dummy via jdummy); entering it as numeric ",
               "for this model, so its category codes enter as a single ",
               "numeric predictor -- treating them as an interval scale. ",
-              "The registration is unchanged.",
-              call. = FALSE
+              "The registration is unchanged."
             )
           }
           next

@@ -962,7 +962,7 @@ jdata_dir <- function(default = ".") {
   if (!(want %in% entries)) {
     hit <- entries[tolower(entries) == tolower(want)]
     if (length(hit) > 0) {
-      message(
+      .jst_msg(
         "Note: data.dir was set to '", want, "', but a folder named '",
         hit[1], "' already exists and your filesystem treats the two as the ",
         "same folder. Saves and loads will use the existing '", hit[1],

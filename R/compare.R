@@ -278,7 +278,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # continuous outcome is expected. Likert outcomes and an asserted numeric
   # role are exempt (handled inside .jst_warns_seems_categorical).
   if (.jst_warns_seems_categorical(data[[dv_name]], dv_name, .jst_data_name)) {
-    warning(.jst_assumption_warning(dv_name, "jt"), call. = FALSE)
+    .jst_warn(.jst_assumption_warning(dv_name, "jt"))
   }
 
   if (haven::is.labelled(data[[dv_name]])) {
@@ -321,9 +321,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     }
 
     if (n_pairs_dropped > 0) {
-      message("Note: ", n_pairs_dropped,
-              if (n_pairs_dropped == 1) " pair" else " pairs",
-              " removed because a measurement was missing.")
+      .jst_msg("Note: ", n_pairs_dropped,
+               if (n_pairs_dropped == 1) " pair" else " pairs",
+               " removed because a measurement was missing.")
     }
   } else {
     group1_data <- group1_data[!is.na(group1_data)]
@@ -798,7 +798,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # continuous outcome is expected. Likert outcomes and an asserted numeric
   # role are exempt (handled inside .jst_warns_seems_categorical).
   if (.jst_warns_seems_categorical(data[[dv_name]], dv_name, .jst_data_name)) {
-    warning(.jst_assumption_warning(dv_name, "jaov"), call. = FALSE)
+    .jst_warn(.jst_assumption_warning(dv_name, "jaov"))
   }
 
   if (haven::is.labelled(data[[dv_name]])) {

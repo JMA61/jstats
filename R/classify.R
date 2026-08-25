@@ -738,6 +738,62 @@
 }
 
 
+#' Internal helper: emit a note in the package house voice
+#'
+#' Concatenates its ... arguments into a message and emits it via message().
+#' The assembled text is width-wrapped here via .jst_wrap_message(), so a
+#' builder need not wrap its own prose, and a builder that already wrapped is
+#' unaffected: the wrapper is idempotent at a given width.
+#'
+#' Notes carry no function-name prefix. An error attributes a failure to a
+#' call and needs the "fn(): " tag that .jst_stop() adds; a note is reporting
+#' what happened, and the house form already opens with "Note: " where that
+#' reading matters. The first-line reserve is therefore zero.
+#'
+#' Consequential notes -- an overwrite, an override taking precedence, a
+#' skipped variable -- call this directly and are always visible. Advisory
+#' notes reach it through .jst_advisory_note(), which adds the joutput tier
+#' gate. (Session 254, the Session B emitter pass.)
+#'
+#' @param ... Message parts, concatenated with paste0().
+#' @return Invisibly NULL; called for the message it emits.
+#' @keywords internal
+.jst_msg <- function(...) {
+  body <- paste0(...)
+  # Guarded for the same reason .jst_stop() is: a failure inside the wrapper
+  # must not cost the user the message itself.
+  body <- tryCatch(.jst_wrap_message(body), error = function(e) body)
+  message(body)
+  invisible(NULL)
+}
+
+
+#' Internal helper: signal a warning in the package house voice
+#'
+#' Concatenates its ... arguments into a message and signals a warning().
+#' Always signals with call. = FALSE, matching .jst_stop(): the package
+#' suppresses R's automatic call context throughout, and the emitter owns that
+#' choice so the call sites do not each repeat it.
+#'
+#' The assembled text is width-wrapped here via .jst_wrap_message(). R prints
+#' its own "Warning message:" header on a separate line, so the wrapped body
+#' starts at column one and no first-line reserve is needed. Note that when
+#' several warnings are deferred to the end of a call R numbers them, which
+#' shifts the first line right by a few characters relative to the
+#' continuation lines; that is R's display, not something the wrapper can
+#' anticipate. (Session 254, the Session B emitter pass.)
+#'
+#' @param ... Message parts, concatenated with paste0().
+#' @return Invisibly NULL; called for the warning it signals.
+#' @keywords internal
+.jst_warn <- function(...) {
+  body <- paste0(...)
+  body <- tryCatch(.jst_wrap_message(body), error = function(e) body)
+  warning(body, call. = FALSE)
+  invisible(NULL)
+}
+
+
 #' Internal helper: emit a default-silent advisory note
 #'
 #' Advisory notes are pure FYI: the function did exactly what was asked, and
@@ -745,17 +801,17 @@
 #' numeric coercion). They are shown only at \code{joutput("full")} and stay
 #' hidden at "standard" and "minimal". Consequential notes -- an overwrite, an
 #' override taking precedence, a skipped variable, a diagnostic that could not
-#' be computed -- use a plain \code{message()} instead and are always visible.
+#' be computed -- call \code{.jst_msg()} directly and are always visible.
 #'
 #' This is the tier-gating primitive for the note layer; a broader joutput
 #' note-gating framework would build on it.
 #'
-#' @param ... Parts of the message, passed through to \code{message()}.
+#' @param ... Parts of the message, passed through to \code{.jst_msg()}.
 #' @return Invisibly NULL.
 #' @keywords internal
 .jst_advisory_note <- function(...) {
   if (identical(getOption(".jst_output_level", "standard"), "full")) {
-    message(...)
+    .jst_msg(...)
   }
   invisible(NULL)
 }
@@ -1082,10 +1138,10 @@
     if (n_nf > 0L) {
       res[non_finite] <- NA
       introduced_na[[term_txt]] <- n_nf
-      message("Note: ", term_txt, ": ", n_nf,
-              if (n_nf == 1L) " value became infinite or undefined and was"
-              else            " values became infinite or undefined and were",
-              " set to missing.")
+      .jst_msg("Note: ", term_txt, ": ", n_nf,
+               if (n_nf == 1L) " value became infinite or undefined and was"
+               else            " values became infinite or undefined and were",
+               " set to missing.")
     }
 
     data[[term_txt]] <- res
@@ -1573,8 +1629,8 @@
     if (nzchar(r)) flagged <- c(flagged, paste0("  ", v, " ", r))
   }
   if (length(flagged) > 0L) {
-    message("! Unusual declaration for this variable's data:\n",
-            paste(flagged, collapse = "\n"))
+    .jst_msg("! Unusual declaration for this variable's data:\n",
+             paste(flagged, collapse = "\n"))
   }
   invisible(NULL)
 }

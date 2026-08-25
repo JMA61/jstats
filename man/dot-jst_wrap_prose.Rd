@@ -8,7 +8,8 @@
   text,
   width = .jst_resolve_width(),
   min_last = 20L,
-  reserve = 0L
+  reserve = 0L,
+  tol = 12L
 )
 }
 \arguments{
@@ -21,6 +22,12 @@ default resolves to 76.}
 \item{min_last}{Minimum last-line length before pull-back stops.}
 
 \item{reserve}{Characters the emitter will prepend to line 1.}
+
+\item{tol}{Rule 2 tolerance: when a sentence boundary sits within this
+many characters of the fill point, the break relocates to the boundary
+so the sentence stays whole. 12 is the S252-measured value (the
+smallest catching the jsubset case, the largest costing no extra
+lines); 0 disables the rule and restores plain word-fill exactly.}
 }
 \value{
 Character scalar with newline characters at the break points.

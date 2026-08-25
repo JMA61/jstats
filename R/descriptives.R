@@ -225,7 +225,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
     if (.jst_warns_seems_categorical(dat[[v]], v, .jst_data_name,
                                      override = .ov)) {
-      warning(.jst_assumption_warning(v, "jdesc"), call. = FALSE)
+      .jst_warn(.jst_assumption_warning(v, "jdesc"))
     }
     if (!is.null(desc_class[[v]]$note)) {
       # Numbers-as-text coercion is pure FYI -- the variable IS summarized as
@@ -235,7 +235,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   }
   # Mixed case: one consequential note per variable that was skipped.
   .emit_bad_refusals <- function() {
-    for (v in bad_vars) message(desc_class[[v]]$refusal)
+    for (v in bad_vars) .jst_msg(desc_class[[v]]$refusal)
   }
 
   # -- Grouped descriptives ---------------------------------------------------

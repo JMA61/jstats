@@ -207,7 +207,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # note, file found, load summary, default-data note, and the UDM
   # narrative). Errors, warnings, the multi-sheet advisory, the
   # shadowed-dataset note, and the overwrite prompt are never muted.
-  say <- function(...) if (!quiet) message(...)
+  say <- function(...) if (!quiet) .jst_msg(...)
 
   # Rule F: consecutive load-time notes are separated by a blank line so
   # they do not run together. The "Loaded ..." summary is a status line,
@@ -323,7 +323,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # name, the file shadowed it (disk wins) -- say so, and how to force the
       # dataset. Consequential and never muted, like the multi-sheet advisory.
       if (.jst_is_package_dataset(requested_name)) {
-        message(
+        .jst_msg(
           "A local file and a jstats example dataset are both named '",
           requested_name, "'.\n",
           "The local file was loaded.\n",
@@ -409,11 +409,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         "Add overwrite = TRUE to the call, then run it again."
       )
       if (!ok) {
-        message("Load cancelled.")
+        .jst_msg("Load cancelled.")
         return(invisible(NULL))
       }
     } else {
-      message(
+      .jst_msg(
         "'", obj_name, "' already existed and has been replaced."
       )
     }
@@ -421,10 +421,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- Validate sheet argument for non-Excel files ----------------------------
   if (!is.null(sheet) && !ext %in% c("xlsx", "xls")) {
-    warning(
+    .jst_warn(
       "`sheet` is only used for Excel format (.xlsx, .xls). ",
-      "Ignoring it for this .", ext, " file.",
-      call. = FALSE
+      "Ignoring it for this .", ext, " file."
     )
   }
 
@@ -486,7 +485,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
                  # Multi-sheet message (only when sheet not specified)
                  if (is.null(sheet) && length(all_sheets) > 1) {
-                   message(
+                   .jst_msg(
                      "This file has ", length(all_sheets), " sheets: ",
                      paste(all_sheets, collapse = ", "), "\n",
                      "Reading the first sheet (\"", all_sheets[1], "\"). ",
@@ -599,7 +598,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     if (show_notice && !quiet) {
       compact <- isTRUE(getOption(".jst_udm_notice_shown", FALSE)) &&
         !isTRUE(udm.notice)
-      message(.jst_format_udm_narrative(udm_info, preserve.udm,
+      .jst_msg(.jst_format_udm_narrative(udm_info, preserve.udm,
                                         data_name = obj_name,
                                         compact = compact))
       .jst_note_fired <- TRUE
@@ -1654,8 +1653,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 .jst_missing_data_dir_note <- function() {
   data_dir <- getOption(".jst_options_data_dir", .jst_options_defaults$data.dir)
   if (!is.null(data_dir) && !dir.exists(data_dir)) {
-    paste0("\nNote: the configured data folder '", data_dir,
-           "' does not exist (set via joptions(data.dir = ...)).")
+    # The path goes on its own line rather than inline: a folder name with
+    # spaces in it -- C:/Users/Jane Smith/My Project -- is word-filled apart
+    # by any wrap, and a broken path cannot be copied. On its own line it is
+    # classified "pass" and travels whole. Same shape jai() uses. (S254)
+    .jst_wrap_message(paste0(
+      "\nNote: the configured data folder does not exist:\n  ", data_dir,
+      "\nThe folder is set with joptions(data.dir = ...)."))
   } else {
     ""
   }
@@ -1689,7 +1693,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     candidate <- file.path(d, filename)
     if (file.exists(candidate)) {
       if (d != "." && !quiet) {
-        message("Reading from ", .jst_norm_path(d))
+        .jst_msg("Reading from ", .jst_norm_path(d))
       }
       return(candidate)
     }
@@ -2463,11 +2467,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   is_sg <- (n_changed == 1)
   noun  <- if (is_sg) "variable" else "variables"
 
-  paste0(
+  .jst_wrap_prose(paste0(
     "Note: ", n_changed, " ", noun, " had SAS-style missing values ",
     "(.A, .B, ...) converted to Stata-style missing values ",
     "(.a, .b, ...) for .dta files."
-  )
+  ))
 }
 
 #' Internal: convert SAS-style missing values to Stata-style in a data frame
@@ -2703,40 +2707,40 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # preserve.udm = FALSE that actually blanked SPSS-style codes -> confirm.
   if (!preserve.udm && has_spss && n_blanked > 0) {
-    return(paste0(
+    return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels or value labels. ",
       n_blanked, " missing-value codes were blanked to empty cells ",
-      "(preserve.udm = FALSE)."))
+      "(preserve.udm = FALSE).")))
   }
 
   # Both forms present: one generic note, no platform names.
   if (has_spss && has_stata) {
-    return(paste0(
+    return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
       "missing-value metadata.\n",
       "Declared missing-value codes lose their missing status, which may ",
       "result in them being written as ordinary numbers.\n",
       "Alternatively, use jsave(..., preserve.udm = FALSE) to blank them to ",
-      "empty cells instead."))
+      "empty cells instead.")))
   }
 
   # SPSS-style only: literal-numbers warning + suggestion.
   if (has_spss) {
-    return(paste0(
+    return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
       "missing-value metadata.\n",
       "Any SPSS-style missing-value codes (e.g. -99) are written as literal ",
       "numbers and will read back as ordinary values.\n",
       "Alternatively, use jsave(..., preserve.udm = FALSE) to blank them to ",
-      "empty cells instead."))
+      "empty cells instead.")))
   }
 
   # Stata-style only: brief flatten note.
   if (has_stata) {
-    return(paste0(
+    return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
       "missing-value metadata. Stata-style missing values (.a, .b, ...) are ",
-      "written as blank cells; the distinction between them is not preserved."))
+      "written as blank cells; the distinction between them is not preserved.")))
   }
 
   # Neither: labels-only.
@@ -3046,7 +3050,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
       # Explicit data.dir — write to that folder, creating it if needed.
       if (!dir.exists(data_dir)) {
         dir.create(data_dir, recursive = TRUE)
-        message("Created '", data_dir, "' folder in working directory.")
+        .jst_msg("Created '", data_dir, "' folder in working directory.")
       }
       out_path <- file.path(data_dir, file)
     }
@@ -3061,7 +3065,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
         "Add overwrite = TRUE to the call, then run it again."
       )
       if (!ok) {
-        message("Save cancelled.")
+        .jst_msg("Save cancelled.")
         return(invisible(NULL))
       }
     } else {
@@ -3177,7 +3181,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
       data <- conv$data
       if (conv$n_changed > 0) {
         note <- .jst_jsave_dta_case_correction_note(conv$n_changed)
-        if (!is.null(note)) message(note)
+        if (!is.null(note)) .jst_msg(note)
       }
     }
   }
@@ -3340,13 +3344,13 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
     if (!is.null(release_note)) loss_notes <- c(loss_notes, release_note)
   }
 
-  if (length(loss_notes) > 0) message(paste(loss_notes, collapse = "\n\n"))
+  if (length(loss_notes) > 0) .jst_msg(paste(loss_notes, collapse = "\n\n"))
 
   # --- Confirmation message --------------------------------------------------
   # Two lines (S230): the parenthetical (format, cases, variables) is the
   # verification payload and gets its own flush-left line regardless of
   # path length, so it is never hostage to a long path's console wrap.
-  message(
+  .jst_msg(
     "Saved ", data_name, " to ", .jst_norm_path(out_path),
     "\n(", .jst_format_label(ext), "; ",
     format(nrow(data), big.mark = ","),
@@ -3413,7 +3417,7 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(overwrite, "overwrite")
   .jst_check_flag(quiet, "quiet")
-  say <- function(...) if (!quiet) message(...)
+  say <- function(...) if (!quiet) .jst_msg(...)
 
   # Resolve source and destination. The destination name is unquoted and is
   # never evaluated -- it may not exist yet. A single supplied name is the
@@ -3474,11 +3478,11 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
         "Add overwrite = TRUE to the call, then run it again."
       )
       if (!ok) {
-        message("Copy cancelled.")
+        .jst_msg("Copy cancelled.")
         return(invisible(NULL))
       }
     } else {
-      message("'", dest_name, "' already existed and has been replaced.")
+      .jst_msg("'", dest_name, "' already existed and has been replaced.")
     }
   }
 

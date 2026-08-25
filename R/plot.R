@@ -1649,7 +1649,7 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
   if ("vif" %in% plot_set) {
     vifs <- x$vif
     if (is.null(vifs)) {
-      message("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
+      .jst_msg("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
     } else {
       vif_df <- data.frame(
         term = factor(names(vifs), levels = names(vifs)[order(vifs)]),
@@ -1829,7 +1829,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   if ("vif" %in% plot_set) {
     vifs <- x$vif
     if (is.null(vifs)) {
-      message("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
+      .jst_msg("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
     } else {
       vif_df <- data.frame(
         term = factor(names(vifs), levels = names(vifs)[order(vifs)]),

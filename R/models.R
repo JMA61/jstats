@@ -251,7 +251,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
     if (.jst_warns_seems_categorical(data[[v]], v, .jst_data_name,
                                      override = .ov)) {
-      warning(.jst_assumption_warning(v, "jcorr"), call. = FALSE)
+      .jst_warn(.jst_assumption_warning(v, "jcorr"))
     }
   }
 
@@ -795,7 +795,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     names(vif_values) <- .jst_unbacktick(colnames(X))
     vif_values
   }, error = function(e) {
-    message("VIF could not be computed (possible perfect collinearity).")
+    .jst_msg("VIF could not be computed (possible perfect collinearity).")
     NULL
   })
 }
@@ -1644,10 +1644,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   dv_dich <- .jst_is_dichotomy(data[[dv_name]])
   if (dv_dich$is_dichotomy) {
     # Dichotomy used as a linear-regression DV: short, definitive caution.
-    warning(
+    .jst_warn(
       "'", dv_name, "' is the outcome variable but looks categorical (a ",
-      dv_dich$coding, " dichotomy). Linear regression expects an interval outcome.",
-      call. = FALSE
+      dv_dich$coding, " dichotomy). Linear regression expects an interval outcome."
     )
   } else if (.jst_is_count(data[[dv_name]], dv_name, .jst_data_name,
                            override = dv_override)) {
@@ -1658,17 +1657,15 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     #   asserted numeric -> suppressed (user declared continuous intent);
     #   structural       -> today's hedged "looks like a count" warning.
     if (dv_asserted_count) {
-      warning(
+      .jst_warn(
         "'", dv_name, "' is registered as a count variable. Linear ",
-        "regression expects an interval outcome.",
-        call. = FALSE
+        "regression expects an interval outcome."
       )
     } else if (!dv_asserted_numeric) {
-      warning(
+      .jst_warn(
         "'", dv_name, "' is the outcome variable but looks like a count ",
         "(small-range non-negative integers). Linear regression expects an ",
-        "interval outcome.",
-        call. = FALSE
+        "interval outcome."
       )
     }
     # asserted numeric: hedge suppressed, no warning.
@@ -1678,11 +1675,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     # Non-dichotomous but categorical-like (e.g. a Likert item used as DV).
     # Suppressed when the DV's numeric role is user-asserted (jnumeric /
     # per-call numeric=).
-    warning(
+    .jst_warn(
       "'", dv_name, "' is the outcome variable but looks categorical (few ",
       "distinct or labelled values). Linear regression expects an interval ",
-      "outcome.",
-      call. = FALSE
+      "outcome."
     )
   }
 
@@ -1719,7 +1715,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     # Check if any categorical overrides refer to the DV
     dv_in_cat <- intersect(categorical, dv_name)
     if (length(dv_in_cat) > 0) {
-      message(
+      .jst_msg(
         "Note: '", dv_in_cat, "' is the dependent variable and is always ",
         "treated as numeric.\n",
         "The categorical argument is only needed for independent variables."
@@ -1764,12 +1760,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       bad_registered <- intersect(bad, expanded_originals)
       bad_unknown    <- setdiff(bad, expanded_originals)
       if (length(bad_registered) > 0) {
-        warning(
+        .jst_warn(
           "categorical = was ignored for ",
           paste0(bad_registered, collapse = ", "),
           " (already registered as a dummy via jdummy; categorical ",
-          "treatment is automatic).",
-          call. = FALSE
+          "treatment is automatic)."
         )
       }
       if (length(bad_unknown) > 0) {
@@ -1860,7 +1855,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
-      for (w in reg$warnings_msg) warning(w, call. = FALSE)
+      for (w in reg$warnings_msg) .jst_warn(w)
       auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
       next
     }
@@ -1891,7 +1886,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
-      for (w in reg$warnings_msg) warning(w, call. = FALSE)
+      for (w in reg$warnings_msg) .jst_warn(w)
       auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
     } else {
       # Not intent-categorical. Strip haven class if present, leave as
@@ -1912,14 +1907,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       if (iv_dich$is_dichotomy) {
         if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
           if (iv_dich$coding == "1/2") {
-            message(
+            .jst_msg(
               "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
               "registering ", v, " as a dummy can help interpret the intercept:\n",
               "  jdummy(", .jst_data_name, ", ", v, ")\n",
               "Or recode to a permanent 0/1 variable with jrecode()."
             )
           } else if (iv_dich$coding == "other") {
-            message(
+            .jst_msg(
               "Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
               "correctly, but registering ", v, " as a dummy can help interpret ",
               "the intercept:\n",
@@ -1940,14 +1935,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         # The formula deparses in its post-resolve form, where a computed
         # transform is a backticked column name; strip the backticks so
         # the suggested rerun reads as what the user typed (AUDIT-030).
-        warning(
+        .jst_warn(
           v, " seems categorical. To treat it that way, register it with ",
           "jdummy() and rerun:\n\n",
           "  jdummy(", .jst_data_name, ", ", v, ")\n",
           "  jlm(", .jst_unbacktick(deparse(formula)), ")\n\n",
           "Or: jlm(", .jst_unbacktick(deparse(formula)),
-          ", categorical = \"", v, "\")",
-          call. = FALSE
+          ", categorical = \"", v, "\")"
         )
       }
     }
@@ -2877,7 +2871,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
-      for (w in reg$warnings_msg) warning(w, call. = FALSE)
+      for (w in reg$warnings_msg) .jst_warn(w)
       auto_ref_cats <- c(auto_ref_cats,
                          paste0(v, " = ", reg$ref_label))
       next
@@ -2896,7 +2890,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
       for (n in reg$notes) cat(n, "\n", sep = "")
-      for (w in reg$warnings_msg) warning(w, call. = FALSE)
+      for (w in reg$warnings_msg) .jst_warn(w)
       auto_detected <- c(auto_detected, v)
       auto_ref_cats <- c(auto_ref_cats,
                          paste0(v, " = ", reg$ref_label))
@@ -2919,14 +2913,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       if (iv_dich$is_dichotomy) {
         if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
           if (iv_dich$coding == "1/2") {
-            message(
+            .jst_msg(
               "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
               "registering ", v, " as a dummy can help interpret the intercept:\n",
               "  jdummy(", .jst_data_name, ", ", v, ")\n",
               "Or recode to a permanent 0/1 variable with jrecode()."
             )
           } else if (iv_dich$coding == "other") {
-            message(
+            .jst_msg(
               "Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
               "correctly, but registering ", v, " as a dummy can help interpret ",
               "the intercept:\n",
@@ -2945,14 +2939,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         # The formula deparses in its post-resolve form, where a computed
         # transform is a backticked column name; strip the backticks so
         # the suggested rerun reads as what the user typed (AUDIT-030).
-        warning(
+        .jst_warn(
           v, " seems categorical. To treat it that way, register it with ",
           "jdummy() and rerun:\n\n",
           "  jdummy(", .jst_data_name, ", ", v, ")\n",
           "  jlogistic(", .jst_unbacktick(deparse(formula)), ")\n\n",
           "Or: jlogistic(", .jst_unbacktick(deparse(formula)),
-          ", categorical = \"", v, "\")",
-          call. = FALSE
+          ", categorical = \"", v, "\")"
         )
       }
     }
@@ -3406,7 +3399,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         names(vif_vals) <- .jst_unbacktick(colnames(X))
         vif_vals
       }, error = function(e) {
-        message("VIF could not be computed (possible perfect collinearity).")
+        .jst_msg("VIF could not be computed (possible perfect collinearity).")
         NULL
       })
 
@@ -3696,7 +3689,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     for (v in variable_names) {
       if (any(vapply(.dummy_regs,
                      function(r) identical(r$var_name, v), logical(1)))) {
-        warning(.jst_assumption_warning(v, "jalpha"), call. = FALSE)
+        .jst_warn(.jst_assumption_warning(v, "jalpha"))
       }
     }
   }
@@ -3815,20 +3808,18 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     n_pos <- length(pos_items)
 
     if (n_neg <= n_pos) {
-      warning(paste0(
+      .jst_warn(paste0(
         "The following item(s) are negatively correlated with the rest ",
         "of the scale: ", paste(neg_items, collapse = ", "),
         ".\nThey may need reverse-coding, or may not belong in the scale ",
-        "- check the item-total table and the item wording."),
-        call. = FALSE)
+        "- check the item-total table and the item wording."))
     } else {
-      warning(paste0(
+      .jst_warn(paste0(
         "Most items are negatively correlated with the scale total - ",
         "usually a sign the scale is keyed in the opposite direction, or ",
         "some items don't belong.\nThe item(s) that are positively ",
         "correlated while most aren't: ",
-        paste(pos_items, collapse = ", ")),
-        call. = FALSE)
+        paste(pos_items, collapse = ", ")))
     }
     cat("\n")
   }
