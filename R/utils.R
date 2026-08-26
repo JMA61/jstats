@@ -1891,7 +1891,18 @@ jai <- function(setup = NULL, path = NULL) {
 #'   - ATOMIC TOKENS: function calls (jconvert(...), joptions(...)) and
 #'     dotted argument references (preserve.udm = FALSE) are never split
 #'     across lines -- a break inside a runnable token is worse than a
-#'     long line.
+#'     long line. Protection is limited to tokens it would be WRONG to
+#'     break, which excludes code slates -- the parenthesized comma
+#'     lists of declared codes built at runtime, which can break as
+#'     "(-1, -2," / "-3)". Considered and rejected in Session 259. A
+#'     slate is ugly to break, not wrong: breaks fall at spaces, so an
+#'     open paren is never orphaned and a code is never split. Making
+#'     it an atom makes it unbreakable, so a long slate -- 17 declared
+#'     codes is a real administrative-data case -- lands on its own
+#'     line past the width, converting a cosmetic break into the
+#'     over-width line this helper exists to prevent. Capping the atom
+#'     to slates that fit the width avoids that, but then it fires only
+#'     where the render is mildest. See the Session 259 changelog.
 #'   - ORPHAN PULL-BACK: words are pulled down from the line above while
 #'     the last line reads as an accident -- either shorter than min_tail
 #'     outright, or shorter than min_last AND a single word. Session 257
