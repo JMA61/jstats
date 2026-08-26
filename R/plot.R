@@ -439,7 +439,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       "(Note: ", paste(ignored, collapse = ", "),
       " not applicable to ", resolved_type,
       if (resolved_type == "scatter") " without line = \"lm\"" else "",
-      " \u2014 ignored)\n"
+      " -- ignored)\n"
     ))
   }
 
@@ -785,7 +785,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       "(Note: ", paste(ignored, collapse = ", "),
       " not applicable to ", resolved_type,
       if (resolved_type == "scatter") " without line = \"lm\"" else "",
-      " \u2014 ignored)\n"
+      " -- ignored)\n"
     ))
   }
 
@@ -1610,8 +1610,8 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       plots[[paste0("effect_", iv)]] <- p
       n_effects <- n_effects + 1
     }
-    cat("\n(", n_effects,
-        " effect plots produced, one per predictor)\n", sep = "")
+    .jst_msg_out("\n(", n_effects,
+                 " effect plots produced, one per predictor)")
   }
 
   # ---- coef forest plot ----------------------------------------------------

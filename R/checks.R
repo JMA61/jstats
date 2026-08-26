@@ -32,7 +32,7 @@
     if (is.character(data) && length(data) == 1) {
       .jst_stop(
         "'", data, "' (passed as a character string) is not a data frame. ",
-        "Remove the quotes - e.g., ", data, " instead of \"", data, "\"."
+        "Remove the quotes -- e.g., ", data, " instead of \"", data, "\"."
       )
     }
     if (is.null(data)) {
@@ -86,7 +86,7 @@
     # (Session 106.) The hint needs a real name to point at, so it is also
     # gated on data_name being available.
     default_hint <- if (isTRUE(default_used) && !is.null(data_name)) {
-      paste0("\n", data_name, " is the juse() default - if you meant a ",
+      paste0("\n", data_name, " is the juse() default -- if you meant a ",
              "different data frame, name it in the call.")
     } else {
       ""
@@ -173,7 +173,7 @@
     # Leading-comma habit carried over from the data-first functions:
     # an empty first slot pushes the formula into the data position.
     .jst_stop(
-      "The formula goes first - e.g. ", fn, "(", f_text, ", SampleData).\n",
+      "The formula goes first -- e.g. ", fn, "(", f_text, ", SampleData).\n",
       "With a juse() default set, no comma is needed: ",
       fn, "(", f_text, ").",
       fn = fn
@@ -190,7 +190,7 @@
       "SampleData"
     }
     .jst_stop(
-      "The formula goes first, then the data - e.g. ",
+      "The formula goes first, then the data -- e.g. ",
       fn, "(", f_text, ", ", d_token, ").",
       fn = fn
     )
@@ -202,13 +202,13 @@
     # for users arriving from syntax-as-strings environments.
     .jst_stop(
       "The formula should not be in quotes.\n",
-      "Remove them - e.g. ", fn, "(", formula, ", SampleData).",
+      "Remove them -- e.g. ", fn, "(", formula, ", SampleData).",
       fn = fn
     )
   }
 
   .jst_stop(
-    "The first input must be a formula - e.g. ",
+    "The first input must be a formula -- e.g. ",
     fn, "(", example, ", SampleData).",
     fn = fn
   )

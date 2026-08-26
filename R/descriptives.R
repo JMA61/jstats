@@ -1019,9 +1019,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     anchor <- .jst_combine_id(variable_name, .jst_label_or_name(data, variable_name), vlmode)
     cat(anchor, "\n", sep = "")
     if (n_distinct_vals > card_warn_threshold) {
-      cat("  Note: '", variable_name, "' has ", n_distinct_vals,
-          " distinct values; a frequency table may not be informative.\n",
-          sep = "")
+      .jst_msg_out("  Note: '", variable_name, "' has ", n_distinct_vals,
+                   " distinct values; a frequency table may not be ",
+                   "informative.\n  Consider jdesc() instead.")
     }
     cat("\n")
 

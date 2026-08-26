@@ -494,7 +494,7 @@ jsubset <- function(data, expr) {
 
   if (want_console || fallback) {
     n_show <- if (want_console) console_n else 10L
-    .cat_red("jcomplete Preview \u2014 rows scheduled for deletion\n")
+    .cat_red("jcomplete Preview -- rows scheduled for deletion\n")
     if (nrow(deleted_df) == 0L) {
       .jst_msg_out("  No cases will be dropped",
                    " (no missing values on the registered variables).")
@@ -845,10 +845,10 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   cat("\n  Complete cases: ", n_complete, " of ", n_total,
       " (", sprintf("%.1f", n_complete / n_total * 100), "%)\n", sep = "")
   if (n_excluded > 0) {
-    .jst_msg_out("  Listwise filter activated \u2014 ", n_excluded,
+    .jst_msg_out("  Listwise filter activated -- ", n_excluded,
                  " cases will be excluded from subsequent analyses.")
   } else {
-    .jst_msg_out("  Listwise filter activated \u2014 no cases will be ",
+    .jst_msg_out("  Listwise filter activated -- no cases will be ",
                  "excluded (no missing values).")
   }
   if (!is.null(prior_complete) &&
@@ -926,8 +926,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 
   cat("\n    * Reference category\n")
   if (n_cats > 5 && !show_all) {
-    cat("    (Showing first 5 of ", n_cats,
-        " categories \u2014 use show = \"all\" for complete table)\n", sep = "")
+    .jst_msg_out("    (Showing first 5 of ", n_cats,
+                 " categories -- use show = \"all\" for complete table)")
   }
   invisible(NULL)
 }

@@ -298,8 +298,8 @@ glance.jst_anova <- function(x, ...) {
 
 tidy.jst_crosstab <- function(x, ...) {
   if (is.null(x$chi_square)) {
-    stop("This jcrosstab() result has no chi-square test to tidy. ",
-         "Re-run with jcrosstab(..., chisq = TRUE).", call. = FALSE)
+    .jst_stop("This jcrosstab() result has no chi-square test to tidy.\n",
+              "Re-run with jcrosstab(..., chisq = TRUE).", fn = "tidy")
   }
   data.frame(
     statistic = unname(x$chi_square),

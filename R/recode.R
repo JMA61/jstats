@@ -1423,7 +1423,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       .jst_advisory_note(paste0(
         "Note: '", orig_name, "' contained none of the map values ",
         paste(missing_from_data, collapse = ", "),
-        " - nothing was recoded for them."
+        " -- nothing was recoded for them."
       ))
     }
 
@@ -1596,7 +1596,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     n_plain_na <- sum(is.na(orig_num) & is.na(haven::na_tag(orig_num)))
     if (n_plain_na == 0) {
       .jst_advisory_note(paste0(
-        "Note: '", orig_name, "' contained no NA values - nothing was ",
+        "Note: '", orig_name, "' contained no NA values -- nothing was ",
         "recoded for the NA rule."))
     } else if (is.null(parsed_map$na_rule$tagged) &&
                !is.na(parsed_map$na_rule$new_val) &&
@@ -2388,7 +2388,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   if (is.null(map)) {
 
     if (length(words_u) == 0) {
-      .jst_stop("'", var_name, "' contains no words to encode - every cell ",
+      .jst_stop("'", var_name, "' contains no words to encode -- every cell ",
                 "is blank or missing.")
     }
 
@@ -2499,7 +2499,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     if (identical(parsed_map$else_action, "copy")) {
       .jst_stop(paste0(
         paste0(
-          "else=copy cannot be used here - words cannot be kept in a ",
+          "else=copy cannot be used here -- words cannot be kept in a ",
           "numeric column."), "\n",
         paste0(
           "Add the remaining words to the map, or set else=NA to ",
@@ -2665,7 +2665,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     if (length(absent) > 0) {
       .jst_advisory_note(paste0(
         "Note: '", var_name, "' contained none of the map words ",
-        .jst_quote_words(absent), " - nothing was encoded for them."))
+        .jst_quote_words(absent), " -- nothing was encoded for them."))
     }
 
     # --- The one-line repair for a column of numbers stored as text --------
@@ -2718,7 +2718,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         if (length(hit) > 0) {
           lines <- c(lines, paste0(
             "\"", w, "\" differs from the map's \"", hit[1],
-            "\" only in capitalization - matching is case-sensitive."))
+            "\" only in capitalization -- matching is case-sensitive."))
         }
       }
       if (blank_unhandled) {
@@ -2866,7 +2866,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       n_plain_na <- sum(na_mask)
       if (n_plain_na == 0) {
         .jst_advisory_note(paste0(
-          "Note: '", var_name, "' contained no NA values - nothing was ",
+          "Note: '", var_name, "' contained no NA values -- nothing was ",
           "encoded for the NA rule."))
       } else {
         if (!is.null(parsed_map$na_rule$tagged)) {

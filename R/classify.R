@@ -509,10 +509,10 @@
 
     # Text factor / text character: refuse and redirect to jfreq().
     text_factor    = no(paste0("'", var_name, "' is a factor with text categories and ",
-                               "can't be summarized numerically - use jfreq() for ",
+                               "can't be summarized numerically -- use jfreq() for ",
                                "categorical variables. Skipping it.")),
     text_character = no(paste0("'", var_name, "' is a character (text) variable and ",
-                               "can't be summarized numerically - use jfreq() for ",
+                               "can't be summarized numerically -- use jfreq() for ",
                                "categorical variables. Skipping it.")),
 
     # complex / raw / list / other: refuse with a generic message. Keyed off

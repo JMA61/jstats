@@ -322,7 +322,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     }, character(1))
     .jst_advisory_note(paste0(
       "\nNote: declared SPSS-style missing values were treated as missing ",
-      "for this calculation - ", paste(conv_parts, collapse = ", "), "."
+      "for this calculation -- ", paste(conv_parts, collapse = ", "), "."
     ))
   }
 
@@ -596,7 +596,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     }, character(1))
     .jst_advisory_note(paste0(
       "\nNote: declared SPSS-style missing values were treated as missing ",
-      "for this calculation - ", paste(conv_parts, collapse = ", "), "."
+      "for this calculation -- ", paste(conv_parts, collapse = ", "), "."
     ))
   }
 

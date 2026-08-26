@@ -385,16 +385,12 @@
     has_transform_na = has_transform_na)
 
   fmt1 <- function(x) sprintf("%.1f", x)
-  dash <- "\u2014"
-  # Pad on DISPLAY width, not sprintf's byte-based field width: the em-dash
-  # is one column but three UTF-8 bytes, so sprintf("%Ns", ...) would under-
-  # pad dash cells and shift the row. padl/padr right/left-justify by glyph
-  # width so numeric and dash rows align.
-  padl <- function(x, w) { x <- as.character(x)
-    paste0(strrep(" ", max(0L, w - nchar(x, type = "width"))), x) }
-  padr <- function(x, w) { x <- as.character(x)
-    paste0(x, strrep(" ", max(0L, w - nchar(x, type = "width")))) }
-  dw   <- function(x) nchar(as.character(x), type = "width")
+  dash <- "--"
+  # Columns are still SIZED by display width (dw) so non-ASCII labels align;
+  # cells are padded with formatC() now that the ASCII dash placeholder
+  # needs no glyph-width care (S244 decision; the em-dash-era padl/padr
+  # helpers are retired).
+  dw <- function(x) nchar(as.character(x), type = "width")
 
   if (isTRUE(spec$render)) {
 
@@ -449,8 +445,8 @@
       exc_v  <- c(exc_v, NA_integer_)
       surv_v <- c(surv_v, prior)
 
-      # Column widths sized to content (display width) so the multibyte
-      # em-dash aligns. Pipeline detail (jcomplete variables, jsubset /
+      # Column widths sized to content (display width). Pipeline detail
+      # (jcomplete variables, jsubset /
       # subset = expressions) renders as an UNHEADED trailing column after
       # Remaining, so Excluded/Remaining sit in a stable position no matter
       # how long or numerous the variable names are. Title flush-left (indent
@@ -469,14 +465,16 @@
       g <- "  "
 
       cat("\n")
-      cat(strrep(" ", h_ind), padr("Case Processing", lab_end - h_ind), g,
-          padl("Excluded", exc_w), g, padl("Remaining", surv_w),
-          "\n", sep = "")
+      cat(strrep(" ", h_ind),
+          formatC("Case Processing", width = lab_end - h_ind, flag = "-"), g,
+          formatC("Excluded", width = exc_w), g,
+          formatC("Remaining", width = surv_w), "\n", sep = "")
       for (i in seq_along(labels)) {
         det_str <- if (nzchar(detail[i])) paste0(g, detail[i]) else ""
-        cat(strrep(" ", r_ind), padr(labels[i], lab_end - r_ind), g,
-            padl(exc_strs[i], exc_w), g, padl(surv_strs[i], surv_w),
-            det_str, "\n", sep = "")
+        cat(strrep(" ", r_ind),
+            formatC(labels[i], width = lab_end - r_ind, flag = "-"), g,
+            formatC(exc_strs[i], width = exc_w), g,
+            formatC(surv_strs[i], width = surv_w), det_str, "\n", sep = "")
       }
       base_w  <- lab_end + exc_w + surv_w + 4L
       det_ext <- if (any(nzchar(detail)))
@@ -557,7 +555,7 @@
         # Centre a count under its header: right-justify within the value
         # block, then centre that block within the column width.
         ctr_count <- function(x, block_w, col_w) {
-          s     <- padl(x, block_w)
+          s     <- formatC(x, width = block_w)
           extra <- max(0L, col_w - block_w)
           left  <- extra %/% 2L
           paste0(strrep(" ", left), s, strrep(" ", extra - left))
@@ -570,13 +568,15 @@
         emit <- function(indent, lab, lab_w, c1, p1, c2, p2,
                          centre_counts = TRUE) {
           c1_cell <- if (centre_counts) ctr_count(c1, src_count_w, srcn_w)
-                     else padl(c1, srcn_w)
-          line <- paste0(strrep(" ", indent), padr(lab, lab_w), g,
-                         c1_cell, g, padl(p1, pct_w))
+                     else formatC(c1, width = srcn_w)
+          line <- paste0(strrep(" ", indent),
+                         formatC(lab, width = lab_w, flag = "-"), g,
+                         c1_cell, g, formatC(p1, width = pct_w))
           if (two_cols) {
             c2_cell <- if (centre_counts) ctr_count(c2, pool_count_w, pooln_w)
-                       else padl(c2, pooln_w)
-            line <- paste0(line, g, c2_cell, g, padl(p2, pct_w))
+                       else formatC(c2, width = pooln_w)
+            line <- paste0(line, g, c2_cell, g,
+                           formatC(p2, width = pct_w))
           }
           cat(sub("[ ]+$", "", line), "\n", sep = "")
         }

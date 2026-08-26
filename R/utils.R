@@ -219,7 +219,7 @@ jupdate <- function(ask = FALSE) {
       )
     } else {
       paste0(
-        "jstats v", latest_ver, " is available - you have v", installed_ver,
+        "jstats v", latest_ver, " is available -- you have v", installed_ver,
         ". Update now?"
       )
     }
@@ -982,10 +982,11 @@ jai <- function(setup = NULL, path = NULL) {
 #' drafted; until it lands, this routes the user to the working stopgap.
 #' @keywords internal
 .jst_jai_chat <- function() {
-  cat("\n",
-      "The paste primer for chat assistants is still in development.\n",
-      "For now, run jai() and paste the printed orientation into your ",
-      "chat as your first message.\n\n", sep = "")
+  .jst_msg_out("\nThe paste primer for chat assistants is still in ",
+               "development.\n",
+               "For now, run jai() and paste the printed orientation into ",
+               "your chat as your first message.")
+  cat("\n")
   invisible(NULL)
 }
 

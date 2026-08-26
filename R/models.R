@@ -1167,9 +1167,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   if (length(produced) == 1) {
     cat("(Diagnostic plot produced: ", produced, ")\n", sep = "")
   } else if (length(produced) > 1) {
-    cat("\n", length(produced), " diagnostic plots produced ",
-        "(use the arrow buttons in RStudio's Plots pane to navigate):\n",
-        sep = "")
+    .jst_msg_out("\n", length(produced), " diagnostic plots produced ",
+                 "(use the arrow buttons in RStudio's Plots pane to ",
+                 "navigate):")
     for (i in seq_along(produced)) {
       cat("  ", i, ". ", produced[i], "\n", sep = "")
     }
@@ -2197,7 +2197,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   ss_residual   <- round(ss_residual_raw, digits_n)
 
   if (any(is.na(stats::coef(model)))) {
-    cat("\nWARNING: One or more variables have been removed from the model due to collinearity.\n")
+    .jst_warn("One or more variables have been removed from the model ",
+              "due to collinearity.")
   }
 
   # Perfect-fit guard: when R-squared is 1 and the residual standard error is
@@ -2208,10 +2209,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # error rather than a result; numeric output is retained. (Session 50)
   if (isTRUE(model_summary$r.squared >= 1 - 1e-9) &&
       isTRUE(model_summary$sigma <= 1e-9)) {
-    cat("\nWARNING: Perfect linear fit detected (R-squared = 1, residual SE = 0).\n",
-        "         This usually means a variable was regressed on itself or on an\n",
-        "         exact transformation of itself. The t and F statistics below are\n",
-        "         not meaningful -- check your model specification.\n", sep = "")
+    .jst_warn("Perfect linear fit detected (R-squared = 1, ",
+              "residual SE = 0).\n",
+              "This usually means a variable was regressed on itself or ",
+              "on an exact transformation of itself.\n",
+              "The t and F statistics in the output are not meaningful ",
+              "-- check your model specification.")
   }
 
   cat("\n")
@@ -2319,11 +2322,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
           cat("\n")
           for (nm in names(high_vif)) {
             inflation <- round(sqrt(high_vif[nm]), 1)
-            cat(nm, " (VIF = ", round(high_vif[nm], 1),
-                "): standard error inflated by a factor of ", inflation, ".\n",
-                "  If you need to interpret this coefficient specifically, consider\n",
-                "  whether the collinearity is a concern for your research question.\n",
-                sep = "")
+            .jst_msg_out(nm, " (VIF = ", round(high_vif[nm], 1),
+                         "): standard error inflated by a factor of ",
+                         inflation, ".\n",
+                         "  If you need to interpret this coefficient ",
+                         "specifically, consider whether the collinearity ",
+                         "is a concern for your research question.")
           }
         }
       }
@@ -2343,9 +2347,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         cat("\n(Diagnostic plot produced: ",
             plot_labels[plot_which[1]], ")\n", sep = "")
       } else {
-        cat("\n(", length(plot_which), " diagnostic plots produced",
-            " - use the back arrow in the Plots pane to view all)\n",
-            sep = "")
+        .jst_msg_out("\n(", length(plot_which),
+                     " diagnostic plots produced -- use the back arrow ",
+                     "in the Plots pane to view all)")
         for (i in seq_along(plot_which)) {
           cat("  ", i, ": ", plot_labels[plot_which[i]], "\n", sep = "")
         }
@@ -3421,11 +3425,12 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
           cat("\n")
           for (nm in names(high_vif)) {
             inflation <- round(sqrt(high_vif[nm]), 1)
-            cat(nm, " (VIF = ", round(high_vif[nm], 1),
-                "): standard error inflated by a factor of ", inflation, ".\n",
-                "  If you need to interpret this coefficient specifically, consider\n",
-                "  whether the collinearity is a concern for your research question.\n",
-                sep = "")
+            .jst_msg_out(nm, " (VIF = ", round(high_vif[nm], 1),
+                         "): standard error inflated by a factor of ",
+                         inflation, ".\n",
+                         "  If you need to interpret this coefficient ",
+                         "specifically, consider whether the collinearity ",
+                         "is a concern for your research question.")
           }
         }
       }
@@ -3812,10 +3817,10 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
         "The following item(s) are negatively correlated with the rest ",
         "of the scale: ", paste(neg_items, collapse = ", "),
         ".\nThey may need reverse-coding, or may not belong in the scale ",
-        "- check the item-total table and the item wording."))
+        "-- check the item-total table and the item wording."))
     } else {
       .jst_warn(paste0(
-        "Most items are negatively correlated with the scale total - ",
+        "Most items are negatively correlated with the scale total -- ",
         "usually a sign the scale is keyed in the opposite direction, or ",
         "some items don't belong.\nThe item(s) that are positively ",
         "correlated while most aren't: ",

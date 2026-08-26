@@ -373,19 +373,20 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
       balanced       <- size_ratio <= 1.5
       levene_p_note  <- .jst_fmt_p(levene_p)
       if (balanced) {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), but group sizes are approximately equal\n",
-            "so the standard test remains appropriate.\n", sep = "")
+        .jst_msg_out("Note: Levene's test is significant (p = ",
+                     levene_p_note, "), but group sizes are approximately ",
+                     "equal so the standard test remains appropriate.")
       } else {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), suggesting unequal variances.\n",
-            "With unequal group sizes this may affect results \u2014 consider welch = TRUE.\n",
-            sep = "")
+        .jst_msg_out("Note: Levene's test is significant (p = ",
+                     levene_p_note, "), suggesting unequal variances.\n",
+                     "With unequal group sizes this may affect results ",
+                     "-- consider welch = TRUE.")
       }
     }
     cat("\n")
   } else if (levene && paired) {
-    cat("Note: Levene's test is not applicable for paired samples.\n\n")
+    .jst_msg("Note: Levene's test is not applicable for paired samples.")
+    cat("\n")
   }
 
   # Group descriptives
@@ -790,7 +791,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     .jst_stop(paste0("'", group_name, "' has ", length(grp_sizes),
                 " categories with only 1 case in each.\n",
                 "An ANOVA requires at least one category with 2 or more ",
-                "cases - '", group_name, "' may be a continuous variable ",
+                "cases -- '", group_name, "' may be a continuous variable ",
                 "rather than a grouping variable."))
   }
 
@@ -855,14 +856,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       balanced       <- size_ratio <= 1.5
       levene_p_note  <- .jst_fmt_p(levene_p)
       if (balanced) {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), but group sizes are approximately equal\n",
-            "so the standard test remains appropriate.\n", sep = "")
+        .jst_msg_out("Note: Levene's test is significant (p = ",
+                     levene_p_note, "), but group sizes are approximately ",
+                     "equal so the standard test remains appropriate.")
       } else {
-        cat("Note: Levene's test is significant (p = ", levene_p_note,
-            "), suggesting unequal variances.\n",
-            "With unequal group sizes this may affect results \u2014 consider welch = TRUE.\n",
-            sep = "")
+        .jst_msg_out("Note: Levene's test is significant (p = ",
+                     levene_p_note, "), suggesting unequal variances.\n",
+                     "With unequal group sizes this may affect results ",
+                     "-- consider welch = TRUE.")
       }
     }
     cat("\n")
@@ -1463,9 +1464,12 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     min_expected <- min(exp_table)
     n_below_5    <- sum(exp_table < 5)
     if (n_below_5 > 0) {
-      cat(paste0("\nNote: ", n_below_5, " cell(s) have expected frequencies less than 5 ",
-                 "(minimum expected = ", round(min_expected, 1), "). ",
-                 "Chi-square results may not be reliable.\n"))
+      .jst_msg_out("\nNote: ", n_below_5,
+                   if (n_below_5 == 1L) " cell has an expected frequency"
+                   else " cells have expected frequencies",
+                   " less than 5 (minimum expected = ",
+                   round(min_expected, 1), ").\n",
+                   "Chi-square results may not be reliable.")
     }
   }
 

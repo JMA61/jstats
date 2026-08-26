@@ -1819,8 +1819,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # hazard, and the tag text itself is now ASCII-only per the
     # runtime-string punctuation convention.)
     src_display <- c(
-      label_only = "label-only - not formally declared",
-      suspected  = "suspected - not formally defined"
+      label_only = "label-only -- not formally declared",
+      suspected  = "suspected -- not formally defined"
     )
 
     sources_present <- unique(vapply(findings, function(f) f$source, character(1)))
