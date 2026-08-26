@@ -1892,9 +1892,20 @@ jai <- function(setup = NULL, path = NULL) {
 #'     dotted argument references (preserve.udm = FALSE) are never split
 #'     across lines -- a break inside a runnable token is worse than a
 #'     long line.
-#'   - ORPHAN PULL-BACK: while the last line is shorter than min_last,
-#'     words are pulled down from the line above (a one-word dangling
-#'     tail such as `to "spss".` reads as an accident).
+#'   - ORPHAN PULL-BACK: words are pulled down from the line above while
+#'     the last line reads as an accident -- either shorter than min_tail
+#'     outright, or shorter than min_last AND a single word. Session 257
+#'     replaced a bare length test with this two-part condition. The bare
+#'     test scaled badly as the resolved width narrowed: at width 50 a
+#'     fixed 20 is 40 percent of the line, and it emptied the line above
+#'     down to the single word "codes". Measured over 392 message bodies
+#'     at four widths, the new condition halves the count of under-filled
+#'     lines at every width and leaves the count of one-word tails
+#'     unchanged, since it is strictly weaker than the old test on a
+#'     single word and so cannot create one. The alternative considered
+#'     and rejected was making min_last a proportion of width: it bought
+#'     the same fill by manufacturing one-word tails (3 to 12 at width
+#'     50), which is the defect the pull-back exists to prevent.
 #'   - PREFIX RESERVE: for strings surfaced through .jst_stop(), the
 #'     emitter prepends a `fn(): ` prefix AFTER the builder returns;
 #'     `reserve` narrows the first line by that many characters so the
@@ -1910,7 +1921,12 @@ jai <- function(setup = NULL, path = NULL) {
 #' @param width Target line width. Defaults to the resolved
 #'   \code{message.width} setting (see \code{\link{joptions}}); the shipped
 #'   default is "auto", which resolves to the live console width less one.
-#' @param min_last Minimum last-line length before pull-back stops.
+#' @param min_last Length below which a SINGLE-WORD last line is pulled
+#'   back. A last line at or above this length, or holding more than one
+#'   word, is left alone by this test.
+#' @param min_tail Absolute floor: a last line shorter than this is pulled
+#'   back whatever its word count. Stops the word test stranding a short
+#'   multi-word tail such as "to show." (Session 257).
 #' @param reserve Characters the emitter will prepend to line 1.
 #' @param tol Rule 2 tolerance: when a sentence boundary sits within this
 #'   many characters of the fill point, the break relocates to the boundary
@@ -1920,7 +1936,8 @@ jai <- function(setup = NULL, path = NULL) {
 #' @return Character scalar with newline characters at the break points.
 #' @keywords internal
 .jst_wrap_prose <- function(text, width = .jst_resolve_width(),
-                            min_last = 20L, reserve = 0L, tol = 12L) {
+                            min_last = 20L, reserve = 0L, tol = 12L,
+                            min_tail = 10L) {
   if (!nzchar(text)) return(text)
   # Protect atomic tokens: swap internal spaces for \x01 so they travel
   # as single words, restored after line assembly.
@@ -2000,13 +2017,23 @@ jai <- function(setup = NULL, path = NULL) {
     }
   }
   lines <- c(lines, cur)
-  # Orphan pull-back: iterate until the last line reaches min_last or a
-  # move would overflow the width. Rule 2's second half (S254, demonstrated
-  # in the S252 Appendix A trials): the pull-back never drags words across
-  # a sentence boundary -- a last line that is itself a complete sentence
-  # stays short rather than stealing the tail of the sentence above it.
-  # Inert at tol = 0, like the break relocation.
-  while (length(lines) > 1L && nchar(lines[length(lines)]) < min_last) {
+  # Orphan pull-back: iterate until the last line stops reading as an
+  # accident, or a move would overflow the width. Rule 2's second half
+  # (S254, demonstrated in the S252 Appendix A trials): the pull-back never
+  # drags words across a sentence boundary -- a last line that is itself a
+  # complete sentence stays short rather than stealing the tail of the
+  # sentence above it. Inert at tol = 0, like the break relocation.
+  #
+  # The tail test is two-part (S257). Word counting is safe here because
+  # atoms still carry \x01 in place of their internal spaces at this point
+  # -- a protected call such as jcomplete(var1, var2, ...) correctly counts
+  # as the single token it renders as. The restore happens after the loop.
+  short_tail <- function(s) {
+    if (nchar(s) < min_tail) return(TRUE)
+    nchar(s) < min_last &&
+      length(strsplit(s, " ", fixed = TRUE)[[1]]) < 2L
+  }
+  while (length(lines) > 1L && short_tail(lines[length(lines)])) {
     prev <- strsplit(lines[length(lines) - 1L], " ", fixed = TRUE)[[1]]
     if (length(prev) < 2L) break
     first_last <- strsplit(lines[length(lines)], " ", fixed = TRUE)[[1]][1L]

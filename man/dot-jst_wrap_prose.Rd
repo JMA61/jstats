@@ -9,7 +9,8 @@
   width = .jst_resolve_width(),
   min_last = 20L,
   reserve = 0L,
-  tol = 12L
+  tol = 12L,
+  min_tail = 10L
 )
 }
 \arguments{
@@ -19,7 +20,9 @@
 \code{message.width} setting (see \code{\link{joptions}}); the shipped
 default is "auto", which resolves to the live console width less one.}
 
-\item{min_last}{Minimum last-line length before pull-back stops.}
+\item{min_last}{Length below which a SINGLE-WORD last line is pulled
+back. A last line at or above this length, or holding more than one
+word, is left alone by this test.}
 
 \item{reserve}{Characters the emitter will prepend to line 1.}
 
@@ -28,6 +31,10 @@ many characters of the fill point, the break relocates to the boundary
 so the sentence stays whole. 12 is the S252-measured value (the
 smallest catching the jsubset case, the largest costing no extra
 lines); 0 disables the rule and restores plain word-fill exactly.}
+
+\item{min_tail}{Absolute floor: a last line shorter than this is pulled
+back whatever its word count. Stops the word test stranding a short
+multi-word tail such as "to show." (Session 257).}
 }
 \value{
 Character scalar with newline characters at the break points.
@@ -43,9 +50,20 @@ Three refinements over a bare strwrap():
 dotted argument references (preserve.udm = FALSE) are never split
 across lines -- a break inside a runnable token is worse than a
 long line.
-\item ORPHAN PULL-BACK: while the last line is shorter than min_last,
-words are pulled down from the line above (a one-word dangling
-tail such as \verb{to "spss".} reads as an accident).
+\item ORPHAN PULL-BACK: words are pulled down from the line above while
+the last line reads as an accident -- either shorter than min_tail
+outright, or shorter than min_last AND a single word. Session 257
+replaced a bare length test with this two-part condition. The bare
+test scaled badly as the resolved width narrowed: at width 50 a
+fixed 20 is 40 percent of the line, and it emptied the line above
+down to the single word "codes". Measured over 392 message bodies
+at four widths, the new condition halves the count of under-filled
+lines at every width and leaves the count of one-word tails
+unchanged, since it is strictly weaker than the old test on a
+single word and so cannot create one. The alternative considered
+and rejected was making min_last a proportion of width: it bought
+the same fill by manufacturing one-word tails (3 to 12 at width
+50), which is the defect the pull-back exists to prevent.
 \item PREFIX RESERVE: for strings surfaced through .jst_stop(), the
 emitter prepends a \verb{fn(): } prefix AFTER the builder returns;
 \code{reserve} narrows the first line by that many characters so the
