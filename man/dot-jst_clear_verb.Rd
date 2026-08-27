@@ -7,10 +7,11 @@
 .jst_clear_verb(kind)
 }
 \arguments{
-\item{kind}{One of "numeric", "count", "dummy".}
+\item{kind}{One of "numeric", "count", "likert", "dummy".}
 }
 \value{
-The user-facing function name ("jnumeric"/"jcount"/"jdummy").
+The user-facing function name
+("jnumeric"/"jcount"/"jlikert"/"jdummy").
 }
 \description{
 Internal helper: the registration verb name for a kind

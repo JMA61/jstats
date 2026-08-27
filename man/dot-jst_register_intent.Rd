@@ -2,12 +2,13 @@
 % Please edit documentation in R/registry-internals.R
 \name{.jst_register_intent}
 \alias{.jst_register_intent}
-\title{Internal helper: shared registration engine for jnumeric() / jcount()}
+\title{Internal helper: shared registration engine for jnumeric() / jcount() /
+jlikert()}
 \usage{
 .jst_register_intent(kind, data, data_name, default_used, var_names, remove)
 }
 \arguments{
-\item{kind}{One of "numeric", "count".}
+\item{kind}{One of "numeric", "count", "likert".}
 
 \item{data}{The resolved data frame.}
 

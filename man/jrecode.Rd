@@ -52,7 +52,7 @@ declared on the result automatically. The same map string therefore
 works under every setting: \code{"8=missing; else=copy"}. The NA
 rule composes with it (\code{"NA=missing"} converts plain \code{NA}
 cells the same way), and \code{labels = "missing=Refused"} labels
-whatever the token minted. If the column already carries the other
+whatever the token produced. If the column already carries the other
 convention's markers while your \code{missing.convention} setting
 is set, the call stops and shows both resolutions rather than
 guessing.
@@ -98,10 +98,11 @@ Stata-style under \code{"stata"}, uppercase SAS-style under
 
 When \code{NULL}, the convention is resolved from
 \code{joptions("missing.convention")}; if that is also unset, the
-default is SPSS. Most users set the convention once at the top of a
-session via \code{joptions()} (or in their \code{.Rprofile}) rather
-than supplying this argument on every call. See \code{?joptions} for
-details.}
+call stops with a guided error asking you to choose -- the package
+never infers a convention. Most users set the convention once at
+the top of a session via \code{joptions()} (or in their
+\code{.Rprofile}) rather than supplying this argument on every
+call. See \code{?joptions} for details.}
 }
 \value{
 A \code{haven_labelled} vector with the recoded values, variable
@@ -165,9 +166,12 @@ the map string.
 \strong{Missing values in the map.} The package supports three
 conventions for representing user-defined missing values (UDMs), and
 the syntax for producing UDMs from \code{jrecode()} depends on which
-one is active:
+one is active. A convention becomes active via
+\code{joptions(missing.convention = ...)} or this call's
+\code{convention} argument; with neither set, a call that produces
+UDMs stops with a guided error asking you to choose.
 
-Under \strong{SPSS convention} (the default), UDMs are real numeric
+Under \strong{SPSS convention}, UDMs are real numeric
 codes carrying metadata that flags them as missing. The two-step
 canonical pattern is:
 
@@ -178,14 +182,14 @@ df$EducR <- jrecode(df, Education,
 jdeclare_udm(df, EducR, codes = c(Refused = -99), modify = TRUE)
 }
 
-The \code{jrecode()} call assigns the numeric sentinel \code{-99}; the
+The \code{jrecode()} call assigns the numeric code \code{-99}; the
 subsequent \code{jdeclare_udm()} call attaches the label and flags
 \code{-99} as missing. Labeling \code{-99} inside the \code{labels}
 argument is unnecessary --- \code{jdeclare_udm()} owns that label.
 
 The same two-step pattern serves data whose missingness arrived as
 plain \code{NA} (data born in R, or read from a CSV): \code{map =
-"NA=-98; else=copy"} mints the sentinel from the NA cells, and
+"NA=-98; else=copy"} converts the NA cells to the numeric code, and
 \code{jdeclare_udm()} declares it.
 
 Under \strong{Stata convention}, UDMs are typed missing cells marked
@@ -213,7 +217,7 @@ SPSS raises an error naming the mismatch and the two ways out:
 restate the markers as numeric codes to stay in SPSS convention, or
 switch convention with \code{joptions(missing.convention = ...)} (or
 with this call's \code{convention} argument). The error does not
-rewrite the call for you: the SPSS-form codes would have to be minted
+rewrite the call for you: the SPSS-form codes would have to be taken
 from \code{joptions("udm.convention.codes")}, which cannot be known
 to be free of collision with values already in the column. The
 two-call SPSS-style pattern is documented above.

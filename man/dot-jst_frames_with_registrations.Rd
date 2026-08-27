@@ -7,7 +7,7 @@
 .jst_frames_with_registrations(kind)
 }
 \arguments{
-\item{kind}{One of "numeric", "count", "dummy".}
+\item{kind}{One of "numeric", "count", "likert", "dummy".}
 }
 \value{
 Character vector of data-frame names (possibly empty).

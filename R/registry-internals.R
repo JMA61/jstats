@@ -445,7 +445,7 @@
 
 #' Internal helper: human-readable label for a registered intent kind
 #'
-#' @param kind One of "numeric", "count", "dummy".
+#' @param kind One of "numeric", "count", "likert", "dummy".
 #' @param cap Logical; if TRUE, capitalize the first letter.
 #' @return A character label.
 #' @keywords internal
@@ -554,7 +554,7 @@
 #' has any dummy registration). Used by the clear dispatcher to decide, when no
 #' frame is named and no default is set, whether a bare clear is unambiguous.
 #'
-#' @param kind One of "numeric", "count", "dummy".
+#' @param kind One of "numeric", "count", "likert", "dummy".
 #' @return Character vector of data-frame names (possibly empty).
 #' @keywords internal
 .jst_frames_with_registrations <- function(kind) {
@@ -577,11 +577,12 @@
 #'
 #' Removes the requested kind's registrations for a single named data frame and
 #' returns the variable names that were cleared (empty when there were none).
-#' "dummy" clears the frame's \code{.jst_dummy} entry; "numeric"/"count" remove
-#' only the matching-kind records from the frame's \code{.jst_registry} entry,
-#' leaving any records of the other kind in place.
+#' "dummy" clears the frame's \code{.jst_dummy} entry; "numeric"/"count"/
+#' "likert" remove only the matching-kind records from the frame's
+#' \code{.jst_registry} entry, leaving any records of the other kinds in
+#' place.
 #'
-#' @param kind One of "numeric", "count", "dummy".
+#' @param kind One of "numeric", "count", "likert", "dummy".
 #' @param data_name Character data-frame name.
 #' @return Character vector of cleared variable names (possibly empty).
 #' @keywords internal
@@ -606,8 +607,9 @@
 
 #' Internal helper: the registration verb name for a kind
 #'
-#' @param kind One of "numeric", "count", "dummy".
-#' @return The user-facing function name ("jnumeric"/"jcount"/"jdummy").
+#' @param kind One of "numeric", "count", "likert", "dummy".
+#' @return The user-facing function name
+#'   ("jnumeric"/"jcount"/"jlikert"/"jdummy").
 #' @keywords internal
 .jst_clear_verb <- function(kind) {
   switch(kind, numeric = "jnumeric", count = "jcount", dummy = "jdummy",
@@ -632,7 +634,7 @@
 #' }
 #' Messages are emitted here, not by the callers, so the wording stays uniform.
 #'
-#' @param kind One of "numeric", "count", "dummy".
+#' @param kind One of "numeric", "count", "likert", "dummy".
 #' @param clear.all Logical; clear every frame carrying this kind.
 #' @param explicit_frame Character data-frame name for the \code{verb(data,
 #'   NULL)} form, or NULL.
@@ -698,7 +700,8 @@
        "or clear them all with ", verb, "(clear.all = TRUE).")
 }
 
-#' Internal helper: shared registration engine for jnumeric() / jcount()
+#' Internal helper: shared registration engine for jnumeric() / jcount() /
+#' jlikert()
 #'
 #' Validates the requested variables, then either removes their registrations
 #' of the given kind (\code{remove = TRUE}) or writes them, enforcing mutual
@@ -709,7 +712,7 @@
 #' A standard-tier reminder notes that registrations are session-only and how
 #' to persist them.
 #'
-#' @param kind One of "numeric", "count".
+#' @param kind One of "numeric", "count", "likert".
 #' @param data The resolved data frame.
 #' @param data_name Character data-frame name (the registry key).
 #' @param default_used Logical; whether the \code{juse()} default frame was used.

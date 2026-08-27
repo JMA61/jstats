@@ -96,7 +96,7 @@ between the coefficients and fit blocks; for \code{jfreq} under each
 variable's own table; elsewhere directly after the single table).
 \code{"legend.bottom"} keeps names in place and prints one
 consolidated legend at the very end of the output. The minimal and
-standard tiers default to \code{"none"}; the full tier defaults to
+standard tiers default to \code{"names"}; the full tier defaults to
 \code{"legend"}. Not a logical -- \code{TRUE}/\code{FALSE} are not
 accepted.}
 
@@ -148,11 +148,26 @@ are available, and individual toggles can override specific settings
 within any level. Per-call arguments on analysis functions always take
 precedence over joutput() settings.
 }
+\section{Session options}{
+
+\code{joutput()} stores its settings through R's standard
+\code{options()} / \code{getOption()} mechanism, under two keys:
+\code{.jst_output_level} (the preset level) and
+\code{.jst_output_toggles} (a named list holding any per-slot
+overrides). \code{getOption(".jst_output_level")} returns the raw
+stored level -- \code{NULL} until a level has been set, which the
+package reads as the \code{"standard"} default. \code{joutput(NULL)}
+clears both keys. The same values can be read or set with base R's
+\code{options()} directly; \code{joutput()} is the supported
+interface, adding validation and the settings display.
+}
+
 \examples{
 joutput("standard")                       # effect sizes + means/diff CIs (jt, jaov)
 joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
 joutput("full")                         # everything
 joutput()                               # show current settings
+getOption(".jst_output_level")          # the raw option behind the level
 joutput(NULL)                           # reset to defaults
 
 }

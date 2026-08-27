@@ -58,10 +58,11 @@ Inert when no such tokens appear in the map.
 
 When \code{NULL}, the convention is resolved from
 \code{joptions("missing.convention")}; if that is also unset, the
-default is SPSS. Most users set the convention once at the top of a
-session via \code{joptions()} (or in their \code{.Rprofile}) rather
-than supplying this argument on every call. See \code{?joptions} for
-details.}
+call stops with a guided error asking you to choose -- the package
+never infers a convention. Most users set the convention once at
+the top of a session via \code{joptions()} (or in their
+\code{.Rprofile}) rather than supplying this argument on every
+call. See \code{?joptions} for details.}
 }
 \value{
 A \code{haven_labelled} numeric vector with the encoded values

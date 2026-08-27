@@ -7,7 +7,7 @@
 .jst_intent_label(kind, cap = FALSE)
 }
 \arguments{
-\item{kind}{One of "numeric", "count", "dummy".}
+\item{kind}{One of "numeric", "count", "likert", "dummy".}
 
 \item{cap}{Logical; if TRUE, capitalize the first letter.}
 }

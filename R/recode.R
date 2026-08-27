@@ -841,7 +841,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   works under every setting: \code{"8=missing; else=copy"}. The NA
 #'   rule composes with it (\code{"NA=missing"} converts plain \code{NA}
 #'   cells the same way), and \code{labels = "missing=Refused"} labels
-#'   whatever the token minted. If the column already carries the other
+#'   whatever the token produced. If the column already carries the other
 #'   convention's markers while your \code{missing.convention} setting
 #'   is set, the call stops and shows both resolutions rather than
 #'   guessing.
@@ -887,10 +887,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #'   When \code{NULL}, the convention is resolved from
 #'   \code{joptions("missing.convention")}; if that is also unset, the
-#'   default is SPSS. Most users set the convention once at the top of a
-#'   session via \code{joptions()} (or in their \code{.Rprofile}) rather
-#'   than supplying this argument on every call. See \code{?joptions} for
-#'   details.
+#'   call stops with a guided error asking you to choose -- the package
+#'   never infers a convention. Most users set the convention once at
+#'   the top of a session via \code{joptions()} (or in their
+#'   \code{.Rprofile}) rather than supplying this argument on every
+#'   call. See \code{?joptions} for details.
 #'
 #' @return A \code{haven_labelled} vector with the recoded values, variable
 #'   label, and (if supplied or auto-transferred) value labels applied. Assign
@@ -941,9 +942,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' \strong{Missing values in the map.} The package supports three
 #' conventions for representing user-defined missing values (UDMs), and
 #' the syntax for producing UDMs from \code{jrecode()} depends on which
-#' one is active:
+#' one is active. A convention becomes active via
+#' \code{joptions(missing.convention = ...)} or this call's
+#' \code{convention} argument; with neither set, a call that produces
+#' UDMs stops with a guided error asking you to choose.
 #'
-#' Under \strong{SPSS convention} (the default), UDMs are real numeric
+#' Under \strong{SPSS convention}, UDMs are real numeric
 #' codes carrying metadata that flags them as missing. The two-step
 #' canonical pattern is:
 #'
@@ -954,14 +958,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' jdeclare_udm(df, EducR, codes = c(Refused = -99), modify = TRUE)
 #' }
 #'
-#' The \code{jrecode()} call assigns the numeric sentinel \code{-99}; the
+#' The \code{jrecode()} call assigns the numeric code \code{-99}; the
 #' subsequent \code{jdeclare_udm()} call attaches the label and flags
 #' \code{-99} as missing. Labeling \code{-99} inside the \code{labels}
 #' argument is unnecessary --- \code{jdeclare_udm()} owns that label.
 #'
 #' The same two-step pattern serves data whose missingness arrived as
 #' plain \code{NA} (data born in R, or read from a CSV): \code{map =
-#' "NA=-98; else=copy"} mints the sentinel from the NA cells, and
+#' "NA=-98; else=copy"} converts the NA cells to the numeric code, and
 #' \code{jdeclare_udm()} declares it.
 #'
 #' Under \strong{Stata convention}, UDMs are typed missing cells marked
@@ -989,7 +993,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' restate the markers as numeric codes to stay in SPSS convention, or
 #' switch convention with \code{joptions(missing.convention = ...)} (or
 #' with this call's \code{convention} argument). The error does not
-#' rewrite the call for you: the SPSS-form codes would have to be minted
+#' rewrite the call for you: the SPSS-form codes would have to be taken
 #' from \code{joptions("udm.convention.codes")}, which cannot be known
 #' to be free of collision with values already in the column. The
 #' two-call SPSS-style pattern is documented above.
@@ -2169,10 +2173,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'
 #'   When \code{NULL}, the convention is resolved from
 #'   \code{joptions("missing.convention")}; if that is also unset, the
-#'   default is SPSS. Most users set the convention once at the top of a
-#'   session via \code{joptions()} (or in their \code{.Rprofile}) rather
-#'   than supplying this argument on every call. See \code{?joptions} for
-#'   details.
+#'   call stops with a guided error asking you to choose -- the package
+#'   never infers a convention. Most users set the convention once at
+#'   the top of a session via \code{joptions()} (or in their
+#'   \code{.Rprofile}) rather than supplying this argument on every
+#'   call. See \code{?joptions} for details.
 #'
 #' @return A \code{haven_labelled} numeric vector with the encoded values
 #'   and (unless overridden) the original words as value labels. The
@@ -3340,7 +3345,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   package never infers a convention for a fresh declaration. A
 #'   \code{range} requires SPSS convention (see \code{range}).
 #'   The SAS convention behaves as the Stata convention with uppercase
-#'   markers: markers mint and label as \code{.A}-\code{.Z}. Token
+#'   markers: markers are stored and labeled as \code{.A}-\code{.Z}. Token
 #'   input is case-insensitive under both tagged conventions; the case
 #'   written to the column follows the resolved convention.
 #' @param udm.notice Logical. When \code{TRUE} (the default), the
@@ -3395,7 +3400,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'
 #' Under Stata or SAS convention with numeric input, the function
 #' converts matching cells to tagged missing-value markers (Session 30
-#' design lock; SAS convention mints the same letters uppercase). The
+#' design lock; SAS convention writes the same letters uppercase). The
 #' mapping is ordering-based: codes sorted by absolute value
 #' descending, more-negative-first as tie-breaker, then assigned
 #' \code{.a}, \code{.b}, \code{.c}, \code{.d} in that order (\code{.A},
@@ -3407,7 +3412,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'
 #' @section Missing-value ranges:
 #' A range declares a whole band of values missing at once -- the form
-#' commercial statistical software uses when a study's sentinel codes
+#' commercial statistical software uses when a study's missing-value codes
 #' share a band (e.g. every code from -99 through -51). SPSS accepts at
 #' most three discrete missing values, OR a range, OR a range plus one
 #' discrete value; \code{jdeclare_udm()} enforces the same rule on the
@@ -5184,9 +5189,10 @@ jdeclare_udm <- function(data, ..., codes = NULL, labels = NULL,
 #' One summary block instead of one block per column: a bulk call on 52
 #' variables must not print 52 near-identical notices. Variables are
 #' grouped by resulting branch (a single call CAN split branches -- e.g.
-#' numeric codes applied across a frame where some columns already carry
-#' Stata-form markers resolve to conversion while plain columns resolve
-#' to the SPSS default), each group gets one header plus one body block
+#' numeric codes applied under an active SPSS convention across a frame
+#' where some columns already carry Stata-form markers: the marked
+#' columns resolve to conversion while plain columns resolve to an
+#' SPSS-style declaration), each group gets one header plus one body block
 #' (the declaration is identical within a group by construction), and
 #' the durability note prints once at the end.
 #'

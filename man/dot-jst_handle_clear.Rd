@@ -12,7 +12,7 @@
 )
 }
 \arguments{
-\item{kind}{One of "numeric", "count", "dummy".}
+\item{kind}{One of "numeric", "count", "likert", "dummy".}
 
 \item{clear.all}{Logical; clear every frame carrying this kind.}
 

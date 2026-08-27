@@ -100,7 +100,7 @@ the call stops with a guided error asking you to choose -- the
 package never infers a convention for a fresh declaration. A
 \code{range} requires SPSS convention (see \code{range}).
 The SAS convention behaves as the Stata convention with uppercase
-markers: markers mint and label as \code{.A}-\code{.Z}. Token
+markers: markers are stored and labeled as \code{.A}-\code{.Z}. Token
 input is case-insensitive under both tagged conventions; the case
 written to the column follows the resolved convention.}
 
@@ -190,7 +190,7 @@ happens to data (see the examples).
 
 Under Stata or SAS convention with numeric input, the function
 converts matching cells to tagged missing-value markers (Session 30
-design lock; SAS convention mints the same letters uppercase). The
+design lock; SAS convention writes the same letters uppercase). The
 mapping is ordering-based: codes sorted by absolute value
 descending, more-negative-first as tie-breaker, then assigned
 \code{.a}, \code{.b}, \code{.c}, \code{.d} in that order (\code{.A},
@@ -204,7 +204,7 @@ Stata-style equivalent for future calls.
 \section{Missing-value ranges}{
 
 A range declares a whole band of values missing at once -- the form
-commercial statistical software uses when a study's sentinel codes
+commercial statistical software uses when a study's missing-value codes
 share a band (e.g. every code from -99 through -51). SPSS accepts at
 most three discrete missing values, OR a range, OR a range plus one
 discrete value; \code{jdeclare_udm()} enforces the same rule on the

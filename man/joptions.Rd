@@ -63,8 +63,10 @@ explicit transform path for data already in the workspace.
 \item{missing.convention}{Character, length 1. One of \code{"none"},
 \code{"spss"}, \code{"stata"}, or \code{"sas"}. Default:
 \code{"none"}, meaning no stated preference: loaded data is
-preserved as-is and fresh user-defined missing value (UDM)
-declarations fall back to SPSS-style. A set value states your
+preserved as-is, and a call that would create a fresh
+user-defined missing value (UDM) declaration stops with a
+guided error asking you to choose a convention -- the package
+never infers one. A set value states your
 working convention: it supplies the target for fresh UDM
 declarations on columns with no existing convention, becomes the
 default target for \code{\link{jconvert}} when \code{to} is not
@@ -176,6 +178,9 @@ joptions(missing.convention = "spss")             # set, echo, scan notice
 joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
 joptions(udm.convention.codes = c(-99, -98))      # set, echo, no scan
 joptions(data.dir = "Data")                       # set save/load folder
+joptions(message.width = 60)                      # wrap message prose at 60
+joptions(message.width = "narrow")                # preset width (50 columns)
+joptions(message.width = "auto")                  # follow the console pane
 joptions(missing.convention = "stata",
          udm.convention.codes = c(-99, -98, -97)) # set both
 joptions(missing.convention = "spss",

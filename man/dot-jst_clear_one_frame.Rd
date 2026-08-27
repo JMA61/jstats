@@ -7,7 +7,7 @@
 .jst_clear_one_frame(kind, data_name)
 }
 \arguments{
-\item{kind}{One of "numeric", "count", "dummy".}
+\item{kind}{One of "numeric", "count", "likert", "dummy".}
 
 \item{data_name}{Character data-frame name.}
 }
@@ -17,8 +17,9 @@ Character vector of cleared variable names (possibly empty).
 \description{
 Removes the requested kind's registrations for a single named data frame and
 returns the variable names that were cleared (empty when there were none).
-"dummy" clears the frame's \code{.jst_dummy} entry; "numeric"/"count" remove
-only the matching-kind records from the frame's \code{.jst_registry} entry,
-leaving any records of the other kind in place.
+"dummy" clears the frame's \code{.jst_dummy} entry; "numeric"/"count"/
+"likert" remove only the matching-kind records from the frame's
+\code{.jst_registry} entry, leaving any records of the other kinds in
+place.
 }
 \keyword{internal}

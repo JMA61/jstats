@@ -74,7 +74,7 @@
 #'   variable's own table; elsewhere directly after the single table).
 #'   \code{"legend.bottom"} keeps names in place and prints one
 #'   consolidated legend at the very end of the output. The minimal and
-#'   standard tiers default to \code{"none"}; the full tier defaults to
+#'   standard tiers default to \code{"names"}; the full tier defaults to
 #'   \code{"legend"}. Not a logical -- \code{TRUE}/\code{FALSE} are not
 #'   accepted.
 #' @param value.id Character or NULL. Value-label display mode for the
@@ -108,6 +108,18 @@
 #'   or integer quantities (counts, N, degrees of freedom), which keep
 #'   their own fixed conventions. All three preset levels default to 3.
 #'
+#' @section Session options:
+#' \code{joutput()} stores its settings through R's standard
+#' \code{options()} / \code{getOption()} mechanism, under two keys:
+#' \code{.jst_output_level} (the preset level) and
+#' \code{.jst_output_toggles} (a named list holding any per-slot
+#' overrides). \code{getOption(".jst_output_level")} returns the raw
+#' stored level -- \code{NULL} until a level has been set, which the
+#' package reads as the \code{"standard"} default. \code{joutput(NULL)}
+#' clears both keys. The same values can be read or set with base R's
+#' \code{options()} directly; \code{joutput()} is the supported
+#' interface, adding validation and the settings display.
+#'
 #' @return Invisibly returns NULL. Called for its side effect of setting
 #'   session options.
 #'
@@ -116,6 +128,7 @@
 #' joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
 #' joutput("full")                         # everything
 #' joutput()                               # show current settings
+#' getOption(".jst_output_level")          # the raw option behind the level
 #' joutput(NULL)                           # reset to defaults
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
@@ -262,8 +275,9 @@ joutput <- function(level, effect.size = NULL,
     override_str <- if (!identical(effective, default_val)) " (override)" else ""
 
     # case.processing.detail carries a string tier (none/totals/per_code);
-    # variable.id (none/labels/legend/legend.bottom) and value.id
-    # (both/values/labels) likewise carry string tiers -- show the token,
+    # variable.id (both/names/labels/legend/legend.bottom) and value.id
+    # (both/values/labels/legend/legend.bottom) likewise carry string
+    # tiers -- show the token,
     # not ON/OFF. digits is an integer (0-7) -- show the number. case.processing
     # and udm.notice support three states (TRUE/FALSE/NULL=AUTO); the remaining
     # toggles are binary.
@@ -565,8 +579,10 @@ joutput <- function(level, effect.size = NULL,
 #'   \item{missing.convention}{Character, length 1. One of \code{"none"},
 #'     \code{"spss"}, \code{"stata"}, or \code{"sas"}. Default:
 #'     \code{"none"}, meaning no stated preference: loaded data is
-#'     preserved as-is and fresh user-defined missing value (UDM)
-#'     declarations fall back to SPSS-style. A set value states your
+#'     preserved as-is, and a call that would create a fresh
+#'     user-defined missing value (UDM) declaration stops with a
+#'     guided error asking you to choose a convention -- the package
+#'     never infers one. A set value states your
 #'     working convention: it supplies the target for fresh UDM
 #'     declarations on columns with no existing convention, becomes the
 #'     default target for \code{\link{jconvert}} when \code{to} is not
@@ -691,6 +707,9 @@ joutput <- function(level, effect.size = NULL,
 #' joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
 #' joptions(udm.convention.codes = c(-99, -98))      # set, echo, no scan
 #' joptions(data.dir = "Data")                       # set save/load folder
+#' joptions(message.width = 60)                      # wrap message prose at 60
+#' joptions(message.width = "narrow")                # preset width (50 columns)
+#' joptions(message.width = "auto")                  # follow the console pane
 #' joptions(missing.convention = "stata",
 #'          udm.convention.codes = c(-99, -98, -97)) # set both
 #' joptions(missing.convention = "spss",
