@@ -2133,19 +2133,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # "missing-value codes" wording is the locked Session-36 carve-out for
   # .xpt messages.
   if (identical(output_level, "minimal")) {
-    tail <- if (has_tagged && has_spss) {
-      paste0("to drop them, or convert them to one form with jconvert() ",
-             "and save as SPSS format (.sav) or Stata format (.dta) ",
-             "to preserve them.")
+    preserve <- if (has_tagged && has_spss) {
+      paste0("To preserve them, convert them to one form with jconvert() ",
+             "and save as SPSS format (.sav) or Stata format (.dta).")
     } else if (has_spss) {
-      "to drop them, or save as SPSS format (.sav) to preserve them."
+      "To preserve them, save as SPSS format (.sav)."
     } else {
-      "to drop them, or save as Stata format (.dta) to preserve them."
+      "To preserve them, save as Stata format (.dta)."
     }
     return(paste0(
       n, " ", noun, " ", verb_contain,
       " missing-value codes, incompatible with the .xpt format.\n",
-      "To drop them, run the conversion below; ", tail, "\n",
+      preserve, " To drop them:\n",
       "  jconvert(", data_name, ", to = \"baseR\", modify = TRUE)"))
   }
 
