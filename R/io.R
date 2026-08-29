@@ -1378,7 +1378,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # regards the data or the setting as the truth.
       note_lines <- c(
         .jst_wrap_prose(sprintf(
-          "Note: these variables are %s, but the session's missing convention is set to \"%s\".",
+          "Note: these variables are %s, but your missing.convention setting is \"%s\".",
           disp_label(st), opt)),
         sprintf("To use %s missing values, run:", disp_label(st)),
         sprintf("  joptions(missing.convention = \"%s\")", st),
@@ -1395,9 +1395,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # dead end).
       tail_lines <- c(
         "jstats analyses treat these codes as missing. Base R functions do not.",
-        sprintf(paste0("To make them missing in base R as well, run ",
-                       "jconvert(%s, to = \"stata\", modify = TRUE)."),
-                call_name)
+        "To make them missing in base R as well, convert:",
+        sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", call_name)
       )
     }
     # Uniform Stata-/SAS-style with no conflicting setting (Case 5):
@@ -1421,7 +1420,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 disp_label(g))
       }, character(1))
       note_first <- .jst_wrap_prose(sprintf(
-        "Note: %s, but the session's missing convention is set to \"%s\".",
+        "Note: %s, but your missing.convention setting is \"%s\".",
         paste(seg, collapse = " and "), opt))
       remedy_styles <- c(intersect(opt, styles_present),
                          setdiff(styles_present, opt))
@@ -1948,8 +1947,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (has_label_only) {
         .jst_msg_out(
           "These codes are not formally declared, so they are not treated ",
-          "as missing, but their value labels look like user-defined ",
-          "missing values. Declare them as missing if they are; leave ",
+          "as missing, but the value labels suggest they mark missing ",
+          "values. Declare them as missing if they are; leave ",
           "as-is if real.")
       } else {
         .jst_msg_out(
@@ -1968,8 +1967,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (has_label_only) {
         .jst_msg_out(
           "[", src_display[["label_only"]], "]:\n",
-          "  not automatically treated as NA, but value labels look like ",
-          "user-defined missing values.\n",
+          "  not automatically treated as NA, but the value labels ",
+          "suggest they mark missing values.\n",
           "  Declare them as missing if they are; leave as-is if real.")
       }
       if (has_heur) {
@@ -2006,7 +2005,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       } else {
         paste0("c(", paste(format(ex_codes, trim = TRUE), collapse = ", "), ")")
       }
-      cat("\n# To declare one variable's codes as missing:\n")
+      # S267: intros are plain prose through the stdout emitter -- the
+      # old "#" prefixes made the block read as a script fragment and
+      # left the second call commented out (not directly runnable).
+      .jst_msg_out("\nTo declare one variable's codes as missing:")
       cat(sprintf("  jdeclare_udm(%s, %s, codes = %s, modify = TRUE)\n",
                   obj_name, ex_var, codes_str))
       # For a suspected (unlabelled) target, offer a commented example that
@@ -2018,8 +2020,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         lbl_parts <- paste0("\"label", seq_along(ex_codes), "\" = ",
                             format(ex_codes, trim = TRUE))
         lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
-        cat("# To label them at the same time (example only):\n")
-        cat(sprintf("#   jdeclare_udm(%s, %s, codes = %s, modify = TRUE)\n",
+        .jst_msg_out("To declare and label them in one call, replacing ",
+                     "the placeholder names:")
+        cat(sprintf("  jdeclare_udm(%s, %s, codes = %s, modify = TRUE)\n",
                     obj_name, ex_var, lbl_str))
       }
     }
@@ -2063,22 +2066,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      paste0(
-        n_total, " ", noun, " ", verb_carry,
-        " SPSS-style missing values, incompatible with the .dta format."),
-      "\n",
-      paste0(
-        "Run jconvert(", data_name, ", to = \"stata\", modify = TRUE) ",
-        "first, then save again.")
-    ))
+      n_total, " ", noun, " ", verb_carry,
+      " SPSS-style missing values, incompatible with the .dta format.\n",
+      "Convert first, then save again:\n",
+      "  jconvert(", data_name, ", to = \"stata\", modify = TRUE)"))
   }
 
   # --- Standard / full tier ----------------------------------------------
+  # S267: aligned to the trio's .sav/.xpt shape -- colon head, list glued
+  # to it, blank after the list.
   paste0(
     n_total, " ", noun, " ", verb_carry,
-    " SPSS-style missing values, incompatible with the .dta format.",
-    "\n\n",
-    "  ", .jst_format_var_list(spss_vars), "\n",
+    " SPSS-style missing values, incompatible with the .dta format:\n",
+    "  ", .jst_format_var_list(spss_vars), "\n\n",
     "Before saving to Stata format, convert with:\n",
     "  jconvert(", data_name, ", to = \"stata\", modify = TRUE)"
   )
@@ -2143,14 +2143,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "to drop them, or save as Stata format (.dta) to preserve them."
     }
     return(paste0(
-      paste0(
-        n, " ", noun, " ", verb_contain,
-        " missing-value codes, incompatible with the .xpt format."),
-      "\n",
-      paste0(
-        "Run jconvert(", data_name, ", to = \"baseR\", modify = TRUE) ",
-        tail)
-    ))
+      n, " ", noun, " ", verb_contain,
+      " missing-value codes, incompatible with the .xpt format.\n",
+      "To drop them, run the conversion below; ", tail, "\n",
+      "  jconvert(", data_name, ", to = \"baseR\", modify = TRUE)"))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -2238,14 +2234,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      paste0(
-        n, " ", noun, " ", verb_contain, " ",
-        style_phrase, ", incompatible with the .sav format."),
-      "\n",
-      paste0(
-        "Before saving, convert with ",
-        "jconvert(", data_name, ", to = \"spss\", modify = TRUE).")
-    ))
+      n, " ", noun, " ", verb_contain, " ",
+      style_phrase, ", incompatible with the .sav format.\n",
+      "Convert first, then save again:\n",
+      "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)"))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -2290,36 +2282,37 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      n, " ", noun, " ", verb, " more user-defined missing values than SPSS format (.sav) ",
+      n, " ", noun, " ", verb, " more declared missing values than SPSS format (.sav) ",
       "allows (at most 3, or a range plus one).\n",
       "Save as R format (.rds) or ",
-      "convert to Stata format (.dta) to keep all the codes, or reduce them ",
-      "with jrecode()."
+      "convert to Stata format (.dta) to keep all the codes, or reduce ",
+      "them first."
     ))
   }
 
   # --- Standard / full tier ----------------------------------------------
   var_lines <- .jst_cap_var_lines(vapply(overcap_info, function(e) {
-    if (isTRUE(e$range)) sprintf("    %s: range + %d codes", e$var, e$n)
-    else                 sprintf("    %s: %d codes", e$var, e$n)
+    if (isTRUE(e$range)) sprintf("  %s: range + %d codes", e$var, e$n)
+    else                 sprintf("  %s: %d codes", e$var, e$n)
   }, character(1)))
 
   lead <- sprintf("%s %s in %s %s more:",
                   if (is_sg) "This" else "These", noun, data_name, verb)
 
+  # S267 redraft: family treatment (locked generic term, Rule L
+  # two-space remedies, Rule X, unnumbered alternatives).
   paste(c(
-    "SPSS format (.sav) allows at most 3 user-defined missing values (UDMs) per variable, or a range plus one code.",
+    "SPSS format (.sav) allows at most 3 declared missing values per variable, or a range plus one code.",
     "",
     lead,
     var_lines,
     "",
-    "Resolution options:",
-    "  1. Save in R format (.rds) instead, which keeps all the codes:",
-    sprintf("       jsave(%s, \"%s.rds\")", data_name, data_name),
-    "  2. Convert to Stata and save as Stata format (.dta), which also keeps all the codes:",
-    sprintf("       jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
-    sprintf("       jsave(%s, \"%s.dta\")", data_name, data_name),
-    "  3. Reduce each variable's UDMs to fit with jrecode()."
+    "To save in R format (.rds) instead, keeping all the codes:",
+    sprintf("  jsave(%s, \"%s.rds\")", data_name, data_name),
+    "To convert to Stata and save as Stata format (.dta), also keeping all the codes:",
+    sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
+    sprintf("  jsave(%s, \"%s.dta\")", data_name, data_name),
+    "Or reduce each variable's declared missing values to fit."
   ), collapse = "\n")
 }
 

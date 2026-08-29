@@ -364,9 +364,9 @@ joutput <- function(level, effect.size = NULL,
   # default; "spss" / "stata" surface in their familiar capitalizations.
   mc_label <- switch(mc,
                      none  = "None selected",
-                     spss  = "SPSS",
-                     stata = "Stata",
-                     sas   = "SAS",
+                     spss  = "SPSS-style",
+                     stata = "Stata-style",
+                     sas   = "SAS-style",
                      mc)
 
   # data.dir: NULL displays as "Working directory" for parallelism with
@@ -409,14 +409,26 @@ joutput <- function(level, effect.size = NULL,
   # panel order.
   panel_lines <- c(
     missing.convention   = paste0(
-      "User-defined missing values (UDMs) convention: ", mc_label, "\n"),
+      "Missing-value convention: ", mc_label, "\n"),
     udm.convention.codes = paste0(
-      "UDM convention codes: ", paste(cc, collapse = ", "), "\n"),
+      "SPSS-style missing value codes: ", paste(cc, collapse = ", "),
+      "\n"),
     data.dir             = paste0("Data folder: ", dd_label, "\n"),
     corr.layout          = paste0("Correlation layout: ", cl, "\n"),
     missing.detail       = paste0("Missing-value detail: ", md, "\n"),
     message.width        = paste0("Message width: ", mw_label, "\n")
   )
+
+  # S267: the codes row is SPSS-convention detail; the FULL panel shows
+  # it only when the setting is "spss" (bare-call and per-call spss users
+  # both see the number in the mint note itself). An explicit partial
+  # query (joptions("udm.convention.codes")) always shows it --
+  # suppressing a slot the user asked for by name would read as the
+  # option not existing.
+  if (is.null(slots) && !identical(mc, "spss")) {
+    panel_lines <- panel_lines[names(panel_lines) !=
+                                 "udm.convention.codes"]
+  }
 
   partial <- !is.null(slots)
   if (partial) {
@@ -901,9 +913,20 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
                   if (cl_supplied) "corr.layout",
                   if (md_supplied) "missing.detail",
                   if (mw_supplied) "message.width")
-    .jst_options_status(c(supplied,
-                          unlist(.jst_options_related[written],
-                                 use.names = FALSE)))
+    # S267: the codes row is SPSS-convention detail. When it rides along
+    # only as a RELATED slot (not supplied by this call) and the setting
+    # is not "spss", drop it from the echo -- the same suppression the
+    # full panel applies, with the same explicit-supply exception.
+    echo_slots <- c(supplied,
+                    unlist(.jst_options_related[written],
+                           use.names = FALSE))
+    if (!cc_supplied &&
+        !identical(getOption(".jst_options_missing_convention",
+                             .jst_options_defaults$missing.convention),
+                   "spss")) {
+      echo_slots <- setdiff(echo_slots, "udm.convention.codes")
+    }
+    .jst_options_status(echo_slots)
     if (trigger_nudge) .jst_options_nudge(missing.convention)
   }
 

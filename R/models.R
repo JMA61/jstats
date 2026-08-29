@@ -3814,15 +3814,18 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
 
     if (n_neg <= n_pos) {
       .jst_warn(paste0(
-        "The following item(s) are negatively correlated with the rest ",
+        "The following item", if (n_neg == 1L) " is" else "s are",
+        " negatively correlated with the rest ",
         "of the scale: ", paste(neg_items, collapse = ", "),
-        ".\nThey may need reverse-coding, or may not belong in the scale ",
+        ".\n", if (n_neg == 1L) "It" else "They",
+        " may need reverse-coding, or may not belong in the scale ",
         "-- check the item-total table and the item wording."))
     } else {
       .jst_warn(paste0(
         "Most items are negatively correlated with the scale total -- ",
         "usually a sign the scale is keyed in the opposite direction, or ",
-        "some items don't belong.\nThe item(s) that are positively ",
+        "some items don't belong.\nThe item",
+        if (n_pos == 1L) " that is" else "s that are", " positively ",
         "correlated while most aren't: ",
         paste(pos_items, collapse = ", ")))
     }

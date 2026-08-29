@@ -909,21 +909,30 @@
   # --- A / B: the menu and the pair -----------------------------------------
   head  <- paste0(if (isTRUE(prefixed)) "no" else "No",
                   " missing-value convention is selected, so ", head_tail)
+  # S267: descriptors are two pre-broken .jst_wrap_indent lines each, with
+  # "base R" anchored at a line edge. Rationale: the wrapper can sever the
+  # locked term "base R" mid-phrase (short_tail rescues only sub-10-col or
+  # single-word tails), and these lines are the migrant's first contact.
+  # The pair below is sever-swept clean across widths 40-120.
   parts <- c(
     "Choose one for this session:",
     "  joptions(missing.convention = \"stata\")",
-    .jst_wrap_indent(paste0(
-      "Markers behave as true NAs in base R; recommended if you mix ",
-      "jstats with base R or AI-generated code."), indent = 6L))
+    paste0(
+      .jst_wrap_indent("Lowercase markers behave as true NAs in base R.",
+                       indent = 6L), "\n",
+      .jst_wrap_indent(paste0("Recommended if you also run base R or ",
+                              "AI-generated code."), indent = 6L)))
   if (identical(variant, "menu")) {
     parts <- c(parts,
       # S250 (Rule H): ", as in SPSS" dropped -- the option line above
       # already names the convention, so the clause echoed a fact two
       # characters old.
       "  joptions(missing.convention = \"spss\")",
-      .jst_wrap_indent(paste0(
-        "Codes stay visible numbers. jstats treats them as ",
-        "missing; base R does not."), indent = 6L))
+      paste0(
+        .jst_wrap_indent(paste0("Codes stay visible numbers; jstats ",
+                                "treats them as missing."), indent = 6L),
+        "\n",
+        .jst_wrap_indent("Base R does not.", indent = 6L)))
   }
   parts <- c(parts,
     "  joptions(missing.convention = \"sas\")",

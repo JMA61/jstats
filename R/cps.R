@@ -604,7 +604,10 @@
       }
     }
     if (rule_w > 0L) {
-      cat("\n", strrep("\u2500", rule_w), "\n", sep = "")
+      # S267: ASCII hyphen rule (Sec. 3 sweep); the box-drawing glyph
+      # mojibakes on non-UTF-8 Windows consoles. Lockstep edit recorded in
+      # the CPS reference.
+      cat("\n", strrep("-", rule_w), "\n", sep = "")
     }
     cat("\n")
   }

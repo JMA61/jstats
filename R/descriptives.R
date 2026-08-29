@@ -1627,18 +1627,21 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       pct  <- st$Pct_Missing
       pct[miss == 0]  <- NA_real_
       miss[miss == 0] <- NA_integer_
-      t2$Missing     <- miss
-      # Format % Missing at a fixed 1 dp as a string so an all-integer-valued
-      # column still shows the decimal place (e.g. "5.0", not "5"); the
-      # returned screen_table keeps the numeric Pct_Missing. (Session 63)
-      t2$Pct_Missing <- ifelse(is.na(pct), "", sprintf("%.1f", pct))
+      # S267: empty cells render as "--", matching the CPS convention, so
+      # a blank cannot read as "not computed". Format % Missing at a fixed
+      # 1 dp as a string so an all-integer-valued column still shows the
+      # decimal place (e.g. "5.0", not "5"); the returned screen_table
+      # keeps the numeric Pct_Missing. (Session 63)
+      t2$Missing     <- ifelse(is.na(miss), "--",
+                               format(miss, trim = TRUE))
+      t2$Pct_Missing <- ifelse(is.na(pct), "--", sprintf("%.1f", pct))
       heads  <- c(heads, "Missing", "% Missing")
       aligns <- c(aligns, "r", "r")
     }
     if (any_outliers) {
       out <- st$Outliers
       out[!is.na(out) & out == 0] <- NA_integer_
-      t2$Outliers <- out
+      t2$Outliers <- ifelse(is.na(out), "--", format(out, trim = TRUE))
       heads  <- c(heads, "Outliers")
       aligns <- c(aligns, "r")
     }
@@ -1671,10 +1674,13 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     # Was the package's one cat()-routed wrap site, kept only because
     # stripping the builder wrap would have meant never wrapping at all.
     # With a stdout emitter in the family it strips like the rest. (S255)
+    # S267: "declared missing values" covers codes AND a range (the old
+    # "declared codes" misdescribed range-bearing columns); the base-R
+    # sentence is pre-broken to its own line so the term cannot sever.
     .jst_msg_out(
-      "\nNote: SPSS-style declared codes on: ",
-      paste(spss_live, collapse = ", "),
-      ". jstats treats these as missing; base R functions do not.")
+      "\nNote: SPSS-style declared missing values on: ",
+      paste(spss_live, collapse = ", "), ".\n",
+      "jstats treats these as missing; base R functions do not.")
   }
 
   # -- Variable label legend (last; only under "legend"/"legend.bottom") -----
