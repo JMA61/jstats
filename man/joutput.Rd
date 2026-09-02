@@ -17,7 +17,7 @@ joutput(
   variable.id = NULL,
   value.id = NULL,
   ref.categories = NULL,
-  udm.notice = NULL,
+  missing.notice = NULL,
   digits = NULL,
   quiet = FALSE
 )
@@ -120,7 +120,7 @@ label. Not a logical.}
 \item{ref.categories}{Logical or NULL. Override the level's default
 for the reference categories block (registered dummies).}
 
-\item{udm.notice}{Logical or NULL. Controls the user-defined
+\item{missing.notice}{Logical or NULL. Controls the user-defined
 missing-value (UDM) notification emitted by \code{jload()} for
 files with UDM-bearing variables. \code{TRUE} prints it on every
 such load; \code{FALSE} suppresses it; \code{NULL} (the default)

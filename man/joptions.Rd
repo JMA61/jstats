@@ -6,7 +6,7 @@
 \usage{
 joptions(
   missing.convention = NULL,
-  udm.convention.codes = NULL,
+  missing.convention.codes = NULL,
   data.dir = NULL,
   corr.layout = NULL,
   missing.detail = NULL,
@@ -19,7 +19,7 @@ joptions(
 \code{"stata"}, or \code{"sas"} (any capitalization is accepted).
 See Slots.}
 
-\item{udm.convention.codes}{Numeric vector, length 1 to 3. See Slots.}
+\item{missing.convention.codes}{Numeric vector, length 1 to 3. See Slots.}
 
 \item{data.dir}{Character string (length 1), or \code{NULL}. See Slots.}
 
@@ -74,7 +74,7 @@ given, and is the reference point for the environment-scan
 notice (see below). Data already loaded is never changed by
 setting this; \code{\link{jconvert}} is the explicit transform
 path.}
-\item{udm.convention.codes}{Numeric vector, length 1 to 3, whole
+\item{missing.convention.codes}{Numeric vector, length 1 to 3, whole
 numbers, no duplicates. Sign unconstrained. Default:
 \code{c(-99, -98, -97)}. The recommended UDM code set used
 by \code{\link{jconvert}} when translating Stata-style missing values
@@ -139,7 +139,7 @@ matrix mid-row would destroy the alignment that makes it readable.}
 the full panel -- everything changed.}
 \item{\code{joptions(slot = value, ...)}}{Set one or more slots, then
 echo only what the call touched: the slots named, plus
-\code{udm.convention.codes} whenever \code{missing.convention} is
+\code{missing.convention.codes} whenever \code{missing.convention} is
 set and vice versa (the codes are read in light of the convention),
 closed by a pointer to \code{joptions()} for the full panel. The
 other three slots are independent and are not pulled in.
@@ -176,15 +176,15 @@ joptions()                                        # show current settings
 # (see the Environment-scan notice section):
 joptions(missing.convention = "spss")             # set, echo, scan notice
 joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
-joptions(udm.convention.codes = c(-99, -98))      # set, echo, no scan
+joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 joptions(data.dir = "Data")                       # set save/load folder
 joptions(message.width = 60)                      # wrap message prose at 60
 joptions(message.width = "narrow")                # preset width (50 columns)
 joptions(message.width = "auto")                  # follow the console pane
 joptions(missing.convention = "stata",
-         udm.convention.codes = c(-99, -98, -97)) # set both
+         missing.convention.codes = c(-99, -98, -97)) # set both
 joptions(missing.convention = "spss",
-         udm.convention.codes = NULL)             # set mc, leave codes
+         missing.convention.codes = NULL)             # set mc, leave codes
 joptions(NULL)                                    # reset all to defaults
 
 }

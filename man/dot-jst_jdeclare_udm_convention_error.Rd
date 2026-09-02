@@ -2,7 +2,7 @@
 % Please edit documentation in R/recode.R
 \name{.jst_jdeclare_udm_convention_error}
 \alias{.jst_jdeclare_udm_convention_error}
-\title{Internal helper: build jdeclare_udm's cross-convention error message}
+\title{Internal helper: build jdeclare_missing's cross-convention error message}
 \usage{
 .jst_jdeclare_udm_convention_error(
   parsed_codes,
@@ -45,7 +45,7 @@ The message names the argument the caller actually used.}
 Character scalar suitable for passing to \code{stop()}.
 }
 \description{
-Produces the error message used by \code{jdeclare_udm()} when
+Produces the error message used by \code{jdeclare_missing()} when
 Stata-style missing-value tokens appear in the \code{codes} argument but
 the resolved convention is SPSS. Verbosity is controlled by the
 active \code{joutput()} level.

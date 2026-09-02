@@ -16,7 +16,7 @@
 \arguments{
 \item{rung}{One of \code{"session"} (registry registrations -- jnumeric,
 jcount, jlikert, jdummy), \code{"frame"} (a UDM declaration --
-jdeclare_udm), or \code{"convert"} (a missing-value conversion --
+jdeclare_missing), or \code{"convert"} (a missing-value conversion --
 jconvert).}
 
 \item{data_name}{Character string name of the data frame, used to build the
@@ -38,15 +38,15 @@ it last" note shared by every state-setting verb. The note states which
 durability rung the just-applied state reached and the action to climb to
 the next rung. The mechanics deliberately differ by verb -- the registry
 verbs (jnumeric, jcount, jlikert, jdummy) annotate the session through a
-notebook, while jdeclare_udm writes a missing-value declaration onto the
+notebook, while jdeclare_missing writes a missing-value declaration onto the
 data frame -- so the rung argument selects the wording rather than the
 helper inferring it.
 }
 \details{
 Returns the note as a single string with NO trailing newline. The "session"
-rung carries a "Note:" prefix; the "frame" rung follows jdeclare_udm's
+rung carries a "Note:" prefix; the "frame" rung follows jdeclare_missing's
 declaration block, so it has none. Callers emit it however they already do: the
-registry verbs message() it; jdeclare_udm appends it to its larger
+registry verbs message() it; jdeclare_missing appends it to its larger
 notification string. Visibility (standard and full, suppressed at minimal)
 is the caller's gate, not this helper's.
 

@@ -4,7 +4,14 @@
 \alias{jconvert}
 \title{Convert user-defined missing value (UDM) declarations between formats}
 \usage{
-jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
+jconvert(
+  data,
+  to = NULL,
+  ...,
+  vars = NULL,
+  missing.notice = TRUE,
+  modify = FALSE
+)
 }
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{juse()} default.}
@@ -28,7 +35,7 @@ variable names. Mutually exclusive with \code{...}. When both
 \code{...} and \code{vars} are empty, \code{jconvert()} operates on
 the whole data frame.}
 
-\item{udm.notice}{Logical; \code{TRUE} (default) prints a notification
+\item{missing.notice}{Logical; \code{TRUE} (default) prints a notification
 summarizing what was converted (and what was skipped) along with a
 reminder of how to keep the result. \code{FALSE} suppresses the
 message. Always-on by default; does not consult \code{joutput()}
@@ -75,7 +82,7 @@ labeling. For columns carrying Stata-style missing values
 convert them to plain \code{NA}s.}
 \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
 values to SPSS-form numeric codes. Letter tags map to numeric
-codes via \code{joptions("udm.convention.codes")} (default
+codes via \code{joptions("missing.convention.codes")} (default
 \code{-99}, \code{-98}, \code{-97}):
 \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
 (uppercase) tags are case-corrected to Stata-style (lowercase)
@@ -137,7 +144,7 @@ if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
 present as genuine data in the column, the call errors before any
 data is touched. The error message lists every colliding column and
 presents three resolution paths: change the convention codes via
-\code{joptions(udm.convention.codes = ...)}, scope the call via
+\code{joptions(missing.convention.codes = ...)}, scope the call via
 \code{vars = c(...)} to exclude affected columns, or recode the real-
 data values via \code{jrecode()} first. Atomicity applies to every
 error mode -- the entire \code{jconvert()} call either succeeds or
@@ -149,7 +156,7 @@ value labels matching the package's missing-label wordlist (e.g.
 \code{"Refused"}, \code{"Don't know"}, \code{"Not applicable"}),
 \code{jconvert()} skips the column and surfaces it in the
 notification with the affected value/label pairs. To formalize these
-as UDMs use \code{jdeclare_udm()}; to leave them as ordinary data, no
+as UDMs use \code{jdeclare_missing()}; to leave them as ordinary data, no
 action is needed.
 }
 \examples{
@@ -178,7 +185,7 @@ df4 <- jconvert(community, to = "baseR", Income, Education)
 df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 
 # Suppress the notification (e.g. inside a script):
-df6 <- jconvert(community, to = "baseR", udm.notice = FALSE)
+df6 <- jconvert(community, to = "baseR", missing.notice = FALSE)
 
 \dontrun{
 # Convert with target inferred from joptions:
@@ -189,6 +196,6 @@ df <- jconvert(df)   # converts any Stata-form columns to SPSS
 }
 \seealso{
 \code{\link{jload}} for the load-time strip alternative
-(\code{preserve.udm = FALSE}); \code{\link{joptions}} for setting
+(\code{preserve.declarations = FALSE}); \code{\link{joptions}} for setting
 the default convention and convention codes session-wide.
 }

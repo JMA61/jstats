@@ -21,7 +21,7 @@
 \code{"sas"}, or \code{NULL} (an \code{NA} from an ambiguous
 mixed-case column is treated as \code{NULL}). When non-NULL and
 non-NA, level 1 of the precedence rule applies and the function
-returns this value immediately. \code{jdeclare_udm()} populates
+returns this value immediately. \code{jdeclare_missing()} populates
 this argument from \code{.jst_missing_info()} on the operand
 column.}
 

@@ -12,8 +12,8 @@ jload(
   package = FALSE,
   check.missing = TRUE,
   sheet = NULL,
-  preserve.udm = TRUE,
-  udm.notice = NULL,
+  preserve.declarations = TRUE,
+  missing.notice = NULL,
   quiet = FALSE
 )
 }
@@ -56,7 +56,7 @@ name (character) or sheet number (integer). Defaults to the first sheet.
 If the file has multiple sheets and \code{sheet} is not specified,
 a message lists the available sheets.}
 
-\item{preserve.udm}{Logical. If \code{TRUE} (default), user-defined
+\item{preserve.declarations}{Logical. If \code{TRUE} (default), user-defined
 missing values arriving with the file are preserved: SPSS-style
 codes such as -99 keep their original numeric values in the data
 frame, with metadata attached so the package's analysis functions
@@ -69,7 +69,7 @@ carry missing-value declarations --- typically \code{.sav},
 saved from such data. For \code{.sav} files, \code{TRUE}
 corresponds to haven's \code{user_na = TRUE}.}
 
-\item{udm.notice}{Per-call override for the missing-value notification.
+\item{missing.notice}{Per-call override for the missing-value notification.
 \code{NULL} (default) defers to the setting from \code{joutput()}.
 \code{TRUE} prints the notification, in its full form, on any load
 with declared missing values; \code{FALSE} suppresses it. Under the
@@ -82,7 +82,7 @@ notification. See \code{?joutput} for the full toggle behavior.}
 \item{quiet}{Logical; default FALSE. When TRUE, suppresses jload()'s
 informational messages (the directory-resolution note, file found,
 load summary, default-data note, and the UDM narrative, overriding
-udm.notice). Errors, warnings, the multi-sheet advisory, and the
+missing.notice). Errors, warnings, the multi-sheet advisory, and the
 overwrite prompt are still shown.}
 }
 \value{

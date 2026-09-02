@@ -97,7 +97,7 @@
 # only, no formal declaration) variables in jconvert, and to narrow
 # .jst_scan_coded_missing's label-only branch so generic labels on
 # suspicious values fall through to the "suspected" classification while
-# missing-suggestive labels surface for jdeclare_udm action.
+# missing-suggestive labels surface for jdeclare_missing action.
 #
 # All entries are lower-case and whitespace-trimmed; .jst_label_suggests_
 # missing() applies tolower(trimws(...)) before matching. Apostrophe
@@ -419,7 +419,7 @@
 # .jst_tag_letters_to_codes()
 #
 # Translates Stata-style tagged-NA letter tags (.a, .b, ...) into the
-# equivalent numeric UDM codes drawn from joptions("udm.convention.codes")
+# equivalent numeric UDM codes drawn from joptions("missing.convention.codes")
 # (default c(-99, -98, -97)). Mapping is positional: .a -> codes[1],
 # .b -> codes[2], etc. Per Decision 4 of
 # JStats_Missing_Values_Reference.txt Part 4 (Session 25 walk-through
@@ -441,7 +441,7 @@
 #'
 #' Translates a vector of lowercase letter tags (e.g.
 #' \code{c("a", "b")}) into the equivalent numeric UDM codes drawn
-#' from \code{joptions("udm.convention.codes")}. Mapping is positional:
+#' from \code{joptions("missing.convention.codes")}. Mapping is positional:
 #' \code{.a} maps to the first code, \code{.b} to the second, etc.
 #'
 #' When \code{length(letters_in) > length(convention_codes)}, the
@@ -456,7 +456,7 @@
 #'   period before calling.
 #' @param convention_codes Optional numeric vector of UDM codes. When
 #'   \code{NULL} (the default), the helper sources the value of
-#'   \code{joptions("udm.convention.codes")} via the standard
+#'   \code{joptions("missing.convention.codes")} via the standard
 #'   \code{getOption()} fallback.
 #'
 #' @return Named numeric vector. Names are the input letters; values
@@ -469,7 +469,7 @@
 
   if (is.null(convention_codes)) {
     convention_codes <- getOption(".jst_options_udm_convention_codes",
-                                  .jst_options_defaults$udm.convention.codes)
+                                  .jst_options_defaults$missing.convention.codes)
   }
 
   if (length(letters_in) == 0L) {

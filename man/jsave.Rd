@@ -4,7 +4,7 @@
 \alias{jsave}
 \title{Save a data frame to a file}
 \usage{
-jsave(data, file, overwrite = FALSE, preserve.udm = TRUE)
+jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
 }
 \arguments{
 \item{data}{A data frame (unquoted). If omitted, uses the default set by
@@ -22,12 +22,12 @@ error. In a script, state it explicitly:
 the file already exists and the script was run by pasting or with
 RStudio's Run button, the call stops with an error.}
 
-\item{preserve.udm}{Logical. If \code{TRUE} (the default), missing-value
+\item{preserve.declarations}{Logical. If \code{TRUE} (the default), missing-value
 declarations are written as they stand; formats that cannot store them
 (notably Excel and CSV) drop the metadata, and SPSS-style codes such as
 -99 then read back as ordinary numbers. If \code{FALSE}, those codes are
 blanked to plain NA before writing, so they become empty cells. Mirrors
-the \code{preserve.udm} argument of \code{\link{jload}}. The pre-flight
+the \code{preserve.declarations} argument of \code{\link{jload}}. The pre-flight
 checks for the .sav, .dta, and .xpt formats run before this step, so a
 missing-value form a target format cannot represent is still reported
 and blocked rather than silently dropped.}

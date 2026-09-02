@@ -47,7 +47,7 @@ those breaks failing in both directions as variable content changed).
 Three refinements over a bare strwrap():
 \itemize{
 \item ATOMIC TOKENS: function calls (jconvert(...), joptions(...)) and
-dotted argument references (preserve.udm = FALSE) are never split
+dotted argument references (preserve.declarations = FALSE) are never split
 across lines -- a break inside a runnable token is worse than a
 long line. Protection is limited to tokens it would be WRONG to
 break, which excludes code slates -- the parenthesized comma

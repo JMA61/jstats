@@ -18,7 +18,7 @@ Character scalar, or \code{character(0)}.
 Runs the shipped looks-like-a-coded-missing heuristic over values
 \code{jencode()} minted by FACE VALUE (a text \code{"-99"} becoming
 the number -99) and returns the nudge toward
-\code{jdeclare_udm()}, or \code{character(0)} when nothing is
+\code{jdeclare_missing()}, or \code{character(0)} when nothing is
 flagged. Shared by the all-numeric automatic path and the
 numbers-stored-as-text repair path so the two read identically.
 }

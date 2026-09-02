@@ -36,11 +36,12 @@ reference:
       - javg
 
   - title: Prepare and manage your data
-    desc: Recode, relabel, declare missing values, and select cases.
+    desc: Recode, encode text, relabel, declare missing values, and select cases.
     contents:
       - jrecode
+      - jencode
       - jrelabel
-      - jdeclare_udm
+      - jdeclare_missing
       - jsubset
       - jcomplete
       - jcopy

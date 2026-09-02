@@ -26,7 +26,7 @@ setting; this helper governs minting only.
 }
 \details{
 Foundation-session machinery (S226): the mint sites (jrecode,
-jdeclare_udm) adopt it at their parity-worklist touches; until
+jdeclare_missing) adopt it at their parity-worklist touches; until
 then they mint lowercase regardless of convention (the documented
 piecewise lag).
 }

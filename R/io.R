@@ -53,7 +53,7 @@
 #'   name (character) or sheet number (integer). Defaults to the first sheet.
 #'   If the file has multiple sheets and \code{sheet} is not specified,
 #'   a message lists the available sheets.
-#' @param preserve.udm Logical. If \code{TRUE} (default), user-defined
+#' @param preserve.declarations Logical. If \code{TRUE} (default), user-defined
 #'   missing values arriving with the file are preserved: SPSS-style
 #'   codes such as -99 keep their original numeric values in the data
 #'   frame, with metadata attached so the package's analysis functions
@@ -65,7 +65,7 @@
 #'   \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
 #'   saved from such data. For \code{.sav} files, \code{TRUE}
 #'   corresponds to haven's \code{user_na = TRUE}.
-#' @param udm.notice Per-call override for the missing-value notification.
+#' @param missing.notice Per-call override for the missing-value notification.
 #'   \code{NULL} (default) defers to the setting from \code{joutput()}.
 #'   \code{TRUE} prints the notification, in its full form, on any load
 #'   with declared missing values; \code{FALSE} suppresses it. Under the
@@ -188,20 +188,20 @@
 #' @param quiet Logical; default FALSE. When TRUE, suppresses jload()'s
 #'   informational messages (the directory-resolution note, file found,
 #'   load summary, default-data note, and the UDM narrative, overriding
-#'   udm.notice). Errors, warnings, the multi-sheet advisory, and the
+#'   missing.notice). Errors, warnings, the multi-sheet advisory, and the
 #'   overwrite prompt are still shown.
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
-                  preserve.udm = TRUE, udm.notice = NULL, quiet = FALSE) {
+                  preserve.declarations = TRUE, missing.notice = NULL, quiet = FALSE) {
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(use, "use")
   .jst_check_flag(overwrite, "overwrite")
   .jst_check_flag(package, "package")
   .jst_check_flag(check.missing, "check.missing")
-  .jst_check_flag(preserve.udm, "preserve.udm")
+  .jst_check_flag(preserve.declarations, "preserve.declarations")
   .jst_check_flag(quiet, "quiet")
-  .jst_check_flag(udm.notice, "udm.notice", null.ok = TRUE)
+  .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
 
   # quiet = TRUE mutes informational messages (the directory-resolution
   # note, file found, load summary, default-data note, and the UDM
@@ -469,8 +469,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- Read the file ---------------------------------------------------------
   # For .sav: always pass user_na = TRUE so UDM metadata is available for
-  # the .jst_handle_udms step below, regardless of preserve.udm. The package
-  # then decides whether to preserve or convert based on preserve.udm.
+  # the .jst_handle_udms step below, regardless of preserve.declarations. The package
+  # then decides whether to preserve or convert based on preserve.declarations.
   df <- if (from_package) df else switch(ext,
                sav      = haven::read_sav(resolved_path, user_na = TRUE),
                dta      = haven::read_dta(resolved_path),
@@ -528,10 +528,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # .jst_handle_udms iterates columns and uses .jst_missing_info() to detect
   # formal declarations in either representation. For UDM-free data the
   # call is cheap and returns an empty udm_info; no narrative is emitted.
-  # Either preserve the metadata (preserve.udm = TRUE, the default) or
-  # convert UDM cells to plain NA and strip the metadata (preserve.udm
+  # Either preserve the metadata (preserve.declarations = TRUE, the default) or
+  # convert UDM cells to plain NA and strip the metadata (preserve.declarations
   # = FALSE). Either way we capture per-variable info for the narrative.
-  udm_result <- .jst_handle_udms(df, preserve.udm)
+  udm_result <- .jst_handle_udms(df, preserve.declarations)
   df         <- udm_result$df
   udm_info   <- udm_result$udm_info
 
@@ -574,19 +574,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- UDM narrative notification --------------------------------------------
-  # Toggle resolution: per-call udm.notice arg > joutput global toggle >
+  # Toggle resolution: per-call missing.notice arg > joutput global toggle >
   # joutput level default. Standard and full both default to TRUE (show on
   # every UDM-bearing load); minimal is FALSE. The NULL/"auto" branch below
   # (show once per session, tracked via .jst_udm_notice_shown) is retained
   # but no preset level now selects it.
   # Form (S227, E17): the first showing in a session uses the full form;
   # later showings use the compact form (inventory plus any convention
-  # note, guidance lines dropped). An explicitly passed udm.notice = TRUE
+  # note, guidance lines dropped). An explicitly passed missing.notice = TRUE
   # forces the full form, giving a way to recall the guidance later in a
   # session. The narrative follows the Loaded line directly with no blank
   # line, so the pre-narrative Rule F spacer is gone by design.
   if (length(udm_info) > 0) {
-    notice_setting <- .jst_resolve_toggle("udm.notice", udm.notice)
+    notice_setting <- .jst_resolve_toggle("missing.notice", missing.notice)
     show_notice <- if (isTRUE(notice_setting)) {
       TRUE
     } else if (identical(notice_setting, FALSE)) {
@@ -597,8 +597,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     if (show_notice && !quiet) {
       compact <- isTRUE(getOption(".jst_udm_notice_shown", FALSE)) &&
-        !isTRUE(udm.notice)
-      .jst_msg(.jst_format_udm_narrative(udm_info, preserve.udm,
+        !isTRUE(missing.notice)
+      .jst_msg(.jst_format_udm_narrative(udm_info, preserve.declarations,
                                         data_name = obj_name,
                                         compact = compact))
       .jst_note_fired <- TRUE
@@ -826,7 +826,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @section Why codes is not extended:
 #' \code{codes} carries DECLARATION-SLOT semantics -- consumers such as
 #' jsave's .sav pre-flight, jconvert's letter cap and its SPSS-to-Stata
-#' ordering, and jdeclare_udm's drop notice read \code{nrow(codes)} as
+#' ordering, and jdeclare_missing's drop notice read \code{nrow(codes)} as
 #' "how many discrete codes has the user declared". Folding observed
 #' in-band values into \code{codes} would take a range-bearing column
 #' from zero declared codes to however many happen to be present, and
@@ -847,7 +847,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # EITHER kind of evidence: tagged cells in the data, or markers
   # declared through tagged value labels with no tagged cells yet -- the
   # forward-declaration pattern (a marker labeled before any cases carry
-  # it; the same evidence rule jdeclare_udm applies since S218). Without
+  # it; the same evidence rule jdeclare_missing applies since S218). Without
   # the label arm, a forward-declared column returned NULL here and its
   # declarations were invisible to every consumer of this abstraction,
   # including jload's narrative.
@@ -1047,7 +1047,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #
 # Scans the columns of a data frame and classifies its UDM convention
 # make-up. Per Sign-off 6b (Session 32), extracted from the body of
-# .jst_options_nudge so both that helper and jdeclare_udm's post-
+# .jst_options_nudge so both that helper and jdeclare_missing's post-
 # declaration mismatch notice consume the same logic; generalized to
 # the three-way census at S226 (Decision 13).
 #
@@ -1222,7 +1222,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     get no align line of their own -- any align target collapses
 #'     them.
 #'   \item Compact form (second and later showings in a session, unless
-#'     the call passed \code{udm.notice = TRUE}): header + inventory,
+#'     the call passed \code{missing.notice = TRUE}): header + inventory,
 #'     with the convention note retained -- it is frame-specific, and
 #'     compaction must not silence a new frame's mismatch -- and the
 #'     Case 1 guidance lines dropped.
@@ -1343,16 +1343,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (!preserve.udm) {
     head_str <- if (uniform) {
       .jst_wrap_prose(sprintf(
-        "%d %s had %s missing values, converted to plain NA per preserve.udm = FALSE:",
+        "%d %s had %s missing values, converted to plain NA per preserve.declarations = FALSE:",
         n_vars, verb_noun, disp_label(present)))
     } else {
       .jst_wrap_prose(sprintf(
-        "%d %s had missing values (%s), converted to plain NA per preserve.udm = FALSE:",
+        "%d %s had missing values (%s), converted to plain NA per preserve.declarations = FALSE:",
         n_vars, verb_noun, count_parens))
     }
     return(paste0(
       head_str, "\n", list_str,
-      "\nTo keep the declarations instead, reload with preserve.udm = TRUE."
+      "\nTo keep the declarations instead, reload with preserve.declarations = TRUE."
     ))
   }
 
@@ -1980,7 +1980,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
 
     # Suggestion example: lead with the non-destructive declaration
-    # (jdeclare_udm) rather than a destructive recode-to-NA, per the
+    # (jdeclare_missing) rather than a destructive recode-to-NA, per the
     # message-suggestion convention (Session-113 addendum in the missing-
     # values reference). Target preference: label-only first (it
     # typically has several labelled codes, the most informative
@@ -2009,7 +2009,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # old "#" prefixes made the block read as a script fragment and
       # left the second call commented out (not directly runnable).
       .jst_msg_out("\nTo declare one variable's codes as missing:")
-      cat(sprintf("  jdeclare_udm(%s, %s, codes = %s, modify = TRUE)\n",
+      cat(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)\n",
                   obj_name, ex_var, codes_str))
       # For a suspected (unlabelled) target, offer a commented example that
       # also attaches labels in the same call. Placeholder label strings, not
@@ -2022,7 +2022,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
         .jst_msg_out("To declare and label them in one call, replacing ",
                      "the placeholder names:")
-        cat(sprintf("  jdeclare_udm(%s, %s, codes = %s, modify = TRUE)\n",
+        cat(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)\n",
                     obj_name, ex_var, lbl_str))
       }
     }
@@ -2567,7 +2567,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Groups by column when codes differ; the remedy is a runnable
 #' declare-then-resave pair.
 #'
-#' @param data The data frame as written (post any preserve.udm
+#' @param data The data frame as written (post any preserve.declarations
 #'   collapse, so a stripped frame has no evidence and stays silent).
 #' @param data_name Character. The frame's display name.
 #' @param file_arg Character. The normalized (forward-slash) target
@@ -2647,7 +2647,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       paste0("c(", paste(vapply(cs, .jst_fmt_code, character(1)),
                          collapse = ", "), ")")
     }
-    paste0("  jdeclare_udm(", data_name, ", ", vn, ", codes = ", ct,
+    paste0("  jdeclare_missing(", data_name, ", ", vn, ", codes = ", ct,
            ", modify = TRUE)")
   }, character(1))
   jsave_line <- paste0("  jsave(", data_name, ", \"", file_arg,
@@ -2718,7 +2718,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels or value labels. ",
       n_blanked, " missing-value codes were blanked to empty cells ",
-      "(preserve.udm = FALSE).")))
+      "(preserve.declarations = FALSE).")))
   }
 
   # Both forms present: one generic note, no platform names.
@@ -2728,7 +2728,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "missing-value metadata.\n",
       "Declared missing-value codes lose their missing status, which may ",
       "result in them being written as ordinary numbers.\n",
-      "Alternatively, use jsave(..., preserve.udm = FALSE) to blank them to ",
+      "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
       "empty cells instead.")))
   }
 
@@ -2739,7 +2739,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "missing-value metadata.\n",
       "Any SPSS-style missing-value codes (e.g. -99) are written as literal ",
       "numbers and will read back as ordinary values.\n",
-      "Alternatively, use jsave(..., preserve.udm = FALSE) to blank them to ",
+      "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
       "empty cells instead.")))
   }
 
@@ -2790,12 +2790,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{jsave(mydata, "mydata.rds", overwrite = TRUE)}. Otherwise, if
 #'   the file already exists and the script was run by pasting or with
 #'   RStudio's Run button, the call stops with an error.
-#' @param preserve.udm Logical. If \code{TRUE} (the default), missing-value
+#' @param preserve.declarations Logical. If \code{TRUE} (the default), missing-value
 #'   declarations are written as they stand; formats that cannot store them
 #'   (notably Excel and CSV) drop the metadata, and SPSS-style codes such as
 #'   -99 then read back as ordinary numbers. If \code{FALSE}, those codes are
 #'   blanked to plain NA before writing, so they become empty cells. Mirrors
-#'   the \code{preserve.udm} argument of \code{\link{jload}}. The pre-flight
+#'   the \code{preserve.declarations} argument of \code{\link{jload}}. The pre-flight
 #'   checks for the .sav, .dta, and .xpt formats run before this step, so a
 #'   missing-value form a target format cannot represent is still reported
 #'   and blocked rather than silently dropped.
@@ -2862,10 +2862,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
+jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(overwrite, "overwrite")
-  .jst_check_flag(preserve.udm, "preserve.udm")
+  .jst_check_flag(preserve.declarations, "preserve.declarations")
 
   # --- Pre-check: first argument must be a data frame -----------------------
   # The shared resolver (.jst_resolve_first_arg) frames a non-evaluating
@@ -3194,23 +3194,23 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
     }
   }
 
-  # --- Detect UDM forms and apply preserve.udm (collapse) --------------------
+  # --- Detect UDM forms and apply preserve.declarations (collapse) --------------------
   # Detection is captured here, on the frame as it stands after the ReadStat
   # pre-flight, so the post-write note (Excel/CSV) can describe what was
   # present. Option Y: the collapse runs AFTER the pre-flight, so a
   # missing-value form a target format cannot represent is blocked above
-  # rather than silently dropped here. preserve.udm = FALSE then bites on the
+  # rather than silently dropped here. preserve.declarations = FALSE then bites on the
   # ungated formats (Excel, CSV, rds) and on same-platform codes that passed
   # the pre-flight; on Excel/CSV it converts the post-write note from a
   # warning to a confirmation. The .jst_handle_udms() call is shared with
-  # jload's preserve.udm path, so collapse semantics stay identical both ways.
+  # jload's preserve.declarations path, so collapse semantics stay identical both ways.
   spss_udm_vars  <- character(0)
   stata_udm_vars <- character(0)
   n_udm_blanked  <- 0L
-  if (ext %in% c("xlsx", "csv") || !preserve.udm) {
+  if (ext %in% c("xlsx", "csv") || !preserve.declarations) {
     spss_udm_vars  <- .jst_has_spss_udm(data)
     stata_udm_vars <- .jst_has_tagged_na(data)
-    if (!preserve.udm &&
+    if (!preserve.declarations &&
         (length(spss_udm_vars) > 0 || length(stata_udm_vars) > 0)) {
       collapsed <- .jst_handle_udms(data, preserve.udm = FALSE)
       if (length(spss_udm_vars) > 0) {
@@ -3302,11 +3302,11 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   loss_notes <- character(0)
 
   # Excel and CSV cannot store labels or missing-value metadata; the note
-  # describes the loss (and, when preserve.udm = FALSE blanked SPSS-style
+  # describes the loss (and, when preserve.declarations = FALSE blanked SPSS-style
   # codes, confirms it).
   if (ext %in% c("xlsx", "csv")) {
     label_note <- .jst_jsave_label_loss_note(
-      ext, spss_udm_vars, stata_udm_vars, preserve.udm, n_udm_blanked)
+      ext, spss_udm_vars, stata_udm_vars, preserve.declarations, n_udm_blanked)
     if (!is.null(label_note)) loss_notes <- c(loss_notes, label_note)
   }
 
@@ -3338,7 +3338,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.udm = TRUE) {
   # declaration-carrying format, with same-style evidence elsewhere in
   # the frame. Silent on formats with no declaration slot (.csv/.xlsx
   # keep their own label-loss note above) and when the frame declares
-  # nothing anywhere. Runs on the frame AS WRITTEN, so preserve.udm =
+  # nothing anywhere. Runs on the frame AS WRITTEN, so preserve.declarations =
   # FALSE (declarations stripped above) leaves no evidence and stays
   # silent by the same rule. Consequential level: loss_notes is plain
   # message(), never joutput-gated.

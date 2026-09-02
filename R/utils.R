@@ -406,7 +406,7 @@ jai <- function(setup = NULL, path = NULL) {
     "",
     "Note for AI assistants: jstats is newer than your training data. Do not",
     "rely on remembered or inferred jstats syntax. When unsure of a function's",
-    "arguments, check them with `args()` (for example `args(jdeclare_udm)`) or",
+    "arguments, check them with `args()` (for example `args(jdeclare_missing)`) or",
     "the function's help page instead of guessing.",
     "",
     "- Start each session with `library(jstats)`. If the package is not",
@@ -445,7 +445,7 @@ jai <- function(setup = NULL, path = NULL) {
     "  keeps the analysis easy to follow.",
     "",
     "- Declare stray codes such as -99 with",
-    "  `jdeclare_udm(data, var, codes = c(-99, -98))` -- the argument is",
+    "  `jdeclare_missing(data, var, codes = c(-99, -98))` -- the argument is",
     "  `codes`. Do not filter such values out by hand. jstats functions honor",
     "  declared UDM codes; base functions such as `mean()` ignore them and",
     "  return wrong answers with no warning.",
@@ -462,18 +462,18 @@ jai <- function(setup = NULL, path = NULL) {
     "  function list before reaching for another package.",
     "",
     "- Analysis functions print their results directly; nothing needs to be",
-    "  stored. The few functions that change data, such as `jdeclare_udm()` and",
+    "  stored. The few functions that change data, such as `jdeclare_missing()` and",
     "  `jconvert()`, take `modify = TRUE` to apply the change directly",
-    "  (`jdeclare_udm(df, ..., modify = TRUE)`) -- the form jstats teaches.",
+    "  (`jdeclare_missing(df, ..., modify = TRUE)`) -- the form jstats teaches.",
     "  They also return the changed data frame, so assigning back",
-    "  (`df <- jdeclare_udm(df, ...)`) works as well. `jconvert()`",
+    "  (`df <- jdeclare_missing(df, ...)`) works as well. `jconvert()`",
     "  translates missing-value codes between software conventions -- it is for",
     "  moving data to other software or to plain base-R form, and is never a",
     "  prerequisite for analysis in jstats, which reads labelled data directly.",
     "  Save data across sessions with `jsave()`.",
     "",
     "- Detailed help and worked examples for each function are available via",
-    "  `?jdesc`, `?jdeclare_udm`, and so on.",
+    "  `?jdesc`, `?jdeclare_missing`, and so on.",
     "",
     "Guides and reference: https://jma61.github.io/jstats-guides"
   )
@@ -908,7 +908,7 @@ jai <- function(setup = NULL, path = NULL) {
   paste(
     c("Use with the jstats R package or its example datasets community",
       "and clinic. jstats functions include jload, jdesc, jfreq, jscreen,",
-      "jt, jaov, jcorr, jlm, jlogistic, jcrosstab, jalpha, jdeclare_udm,",
+      "jt, jaov, jcorr, jlm, jlogistic, jcrosstab, jalpha, jdeclare_missing,",
       "juse, jsave, jconvert. Load this skill before writing jstats code;",
       "its syntax is newer than model training data and must not be",
       "guessed."),
@@ -1176,14 +1176,14 @@ jai <- function(setup = NULL, path = NULL) {
 #' durability rung the just-applied state reached and the action to climb to
 #' the next rung. The mechanics deliberately differ by verb -- the registry
 #' verbs (jnumeric, jcount, jlikert, jdummy) annotate the session through a
-#' notebook, while jdeclare_udm writes a missing-value declaration onto the
+#' notebook, while jdeclare_missing writes a missing-value declaration onto the
 #' data frame -- so the rung argument selects the wording rather than the
 #' helper inferring it.
 #'
 #' Returns the note as a single string with NO trailing newline. The "session"
-#' rung carries a "Note:" prefix; the "frame" rung follows jdeclare_udm's
+#' rung carries a "Note:" prefix; the "frame" rung follows jdeclare_missing's
 #' declaration block, so it has none. Callers emit it however they already do: the
-#' registry verbs message() it; jdeclare_udm appends it to its larger
+#' registry verbs message() it; jdeclare_missing appends it to its larger
 #' notification string. Visibility (standard and full, suppressed at minimal)
 #' is the caller's gate, not this helper's.
 #'
@@ -1194,7 +1194,7 @@ jai <- function(setup = NULL, path = NULL) {
 #'
 #' @param rung One of \code{"session"} (registry registrations -- jnumeric,
 #'   jcount, jlikert, jdummy), \code{"frame"} (a UDM declaration --
-#'   jdeclare_udm), or \code{"convert"} (a missing-value conversion --
+#'   jdeclare_missing), or \code{"convert"} (a missing-value conversion --
 #'   jconvert).
 #' @param data_name Character string name of the data frame, used to build the
 #'   jsave() example and, for the "frame" rung, the reassignment line.
@@ -1890,7 +1890,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' those breaks failing in both directions as variable content changed).
 #' Three refinements over a bare strwrap():
 #'   - ATOMIC TOKENS: function calls (jconvert(...), joptions(...)) and
-#'     dotted argument references (preserve.udm = FALSE) are never split
+#'     dotted argument references (preserve.declarations = FALSE) are never split
 #'     across lines -- a break inside a runnable token is worse than a
 #'     long line. Protection is limited to tokens it would be WRONG to
 #'     break, which excludes code slates -- the parenthesized comma
@@ -1978,7 +1978,7 @@ jai <- function(setup = NULL, path = NULL) {
   # Rule 2 (S252 design, built S254): a word ends a sentence if it closes
   # with terminal punctuation, is not a letter-dot abbreviation (e.g., i.e.),
   # and the next word opens a sentence. Conservative by construction: the
-  # dotted tokens preserve.udm, .a, .sav, 0.9.141 end in letters or digits
+  # dotted tokens preserve.declarations, .a, .sav, 0.9.141 end in letters or digits
   # without terminal punctuation, so none can fire.
   ends_sentence <- function(a, b) {
     grepl("[.!?]$", a) && !grepl("^([A-Za-z]\\.)+$", a) && grepl("^[A-Z0-9\"]", b)

@@ -338,7 +338,7 @@
 #           state active, or for listwise=TRUE callers, listwise excluded
 #           at least one case)
 #
-# udm.notice supports three states. Standard and full both use TRUE (always
+# missing.notice supports three states. Standard and full both use TRUE (always
 # show); minimal uses FALSE. The NULL/auto state is retained internally but
 # no preset level selects it and joutput() cannot set it, so the narrative
 # now shows on every UDM-bearing load unless minimal output is active:
@@ -353,28 +353,28 @@
                   case.processing = FALSE, case.processing.detail = "none",
                   variable.id = "names", value.id = "labels",
                   ref.categories = FALSE, digits = 3,
-                  udm.notice = FALSE),
+                  missing.notice = FALSE),
   standard = list(effect.size = TRUE,
                   regression.ci = FALSE, means.ci = TRUE,  levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = NULL,  case.processing.detail = "totals",
                   variable.id = "names", value.id = "both",
                   ref.categories = TRUE, digits = 3,
-                  udm.notice = TRUE),
+                  missing.notice = TRUE),
   full     = list(effect.size = TRUE,
                   regression.ci = TRUE,  means.ci = TRUE,  levene = TRUE,
                   posthoc = TRUE,  diagnostics = TRUE,
                   case.processing = TRUE,  case.processing.detail = "per_code",
                   variable.id = "legend", value.id = "both",
                   ref.categories = TRUE, digits = 3,
-                  udm.notice = TRUE)
+                  missing.notice = TRUE)
 )
 
 # -- joptions defaults --------------------------------------------------------
 #
 # Single source of truth for joptions slot defaults. Consulted both by
 # joptions itself for reset semantics and by downstream readers (jload,
-# jconvert, jdeclare_udm, jrecode) via getOption() fallback when no
+# jconvert, jdeclare_missing, jrecode) via getOption() fallback when no
 # explicit setting is present.
 #
 # Slots:
@@ -386,7 +386,7 @@
 #                          default target for jconvert(to = NULL), and
 #                          the reference point for the joptions
 #                          environment-scan notice.
-#   udm.convention.codes - numeric vector, length 1-3, whole numbers,
+#   missing.convention.codes - numeric vector, length 1-3, whole numbers,
 #                          no duplicates. Recommended UDM code set used
 #                          by jconvert for Stata-tag -> SPSS-code mapping.
 #   data.dir             - single character string, or NULL. NULL =
@@ -417,7 +417,7 @@
 #                          Session 253 hold (errors-only hooking) is over.
 .jst_options_defaults <- list(
   missing.convention   = "none",
-  udm.convention.codes = c(-99, -98, -97),
+  missing.convention.codes = c(-99, -98, -97),
   data.dir             = NULL,
   corr.layout          = "wide",
   missing.detail       = "per_code",
@@ -861,7 +861,7 @@
     }
     frv       <- function(x) format(x, trim = TRUE, scientific = FALSE)
     vars_txt  <- paste(var_names, collapse = ", ")
-    decl_line <- paste0("  jdeclare_udm(", data_name, ", ", vars_txt,
+    decl_line <- paste0("  jdeclare_missing(", data_name, ", ", vars_txt,
                         ", range = c(", frv(range[1L]), ", ", frv(range[2L]),
                         "), convention = \"spss\", modify = TRUE)")
     if (isTRUE(fits)) {
@@ -1019,7 +1019,7 @@
 #'   \code{"sas"}, or \code{NULL} (an \code{NA} from an ambiguous
 #'   mixed-case column is treated as \code{NULL}). When non-NULL and
 #'   non-NA, level 1 of the precedence rule applies and the function
-#'   returns this value immediately. \code{jdeclare_udm()} populates
+#'   returns this value immediately. \code{jdeclare_missing()} populates
 #'   this argument from \code{.jst_missing_info()} on the operand
 #'   column.
 #' @param act REQUIRED. The minting act, so the level-4 gate renders
@@ -1093,7 +1093,7 @@
     tagged = paste0("the '",
                     if (is.null(marker)) ".a" else marker,
                     "' marker cannot be ",
-                    if (identical(fn, "jdeclare_udm")) "declared."
+                    if (identical(fn, "jdeclare_missing")) "declared."
                     else "applied."),
     range  = NULL)
   gate_variant <- switch(act, codes = "menu", token = "menu",
@@ -1113,7 +1113,7 @@
 #' setting; this helper governs minting only.
 #'
 #' Foundation-session machinery (S226): the mint sites (jrecode,
-#' jdeclare_udm) adopt it at their parity-worklist touches; until
+#' jdeclare_missing) adopt it at their parity-worklist touches; until
 #' then they mint lowercase regardless of convention (the documented
 #' piecewise lag).
 #'
@@ -1135,7 +1135,7 @@
 #
 # Display-time tagged convention for MESSAGE PHRASING ONLY (S240). Used by
 # refusal messages that fire before (or independently of) convention
-# resolution -- the jdeclare_udm plain-column token refusal and the
+# resolution -- the jdeclare_missing plain-column token refusal and the
 # cross-convention builder -- so their token case, style word, and remedy
 # targets read congruently for a sas-setting user. Rule: a per-call
 # "stata"/"sas" wins; else a "sas" joptions setting; else "stata" (today's
@@ -1166,7 +1166,7 @@
 #' Maps a convention token to the locked user-facing vocabulary
 #' (the MISSING-VALUE-TERMS rule, S36): "SPSS-style" / "Stata-style" /
 #' "SAS-style". Shared by the joptions environment-scan notice and
-#' jdeclare_udm's post-declaration mismatch notice so the two render
+#' jdeclare_missing's post-declaration mismatch notice so the two render
 #' identically.
 #'
 #' @param convention Character vector of convention tokens ("spss",

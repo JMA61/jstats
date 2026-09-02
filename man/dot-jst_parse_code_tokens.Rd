@@ -20,7 +20,7 @@ builders that quote the call back; every other consumer ignores it.
 }
 \description{
 Converts a character \code{codes} vector (as accepted by
-\code{jdeclare_udm}) into the canonical numeric / tagged-NA form, so a
+\code{jdeclare_missing}) into the canonical numeric / tagged-NA form, so a
 caller can write \code{codes = c("Refused" = ".a")} or
 \code{c(".a", ".b")} without \code{haven::tagged_na()}. A token \code{".a"}
 becomes \code{haven::tagged_na("a")}; a numeric string such as \code{"-99"}

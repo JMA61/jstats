@@ -34,7 +34,7 @@ aliases: \code{"-5=NA"}, \code{"-5=System"}, or \code{"-5=SYSMIS"}.
 The same aliases may also appear as an OLD value, converting plain
 \code{NA} cells to a code: \code{"NA=-98; else=copy"} recodes every
 \code{NA} to \code{-98} (declare the code afterward with
-\code{jdeclare_udm()}). \code{NA} may be combined with numeric old
+\code{jdeclare_missing()}). \code{NA} may be combined with numeric old
 values in one rule (\code{"NA,-99=-98"}) and may be named in at most
 one rule. Only plain \code{NA} cells are affected; tagged
 missing values are never converted by an \code{NA} rule. Under
@@ -47,7 +47,7 @@ The right-hand side may also be the word \code{missing}
 (case-insensitive): the value is converted to your working
 convention's own missing form -- a tagged marker under the Stata or
 SAS convention, or the first code from
-\code{joptions("udm.convention.codes")} under the SPSS convention,
+\code{joptions("missing.convention.codes")} under the SPSS convention,
 declared on the result automatically. The same map string therefore
 works under every setting: \code{"8=missing; else=copy"}. The NA
 rule composes with it (\code{"NA=missing"} converts plain \code{NA}
@@ -179,18 +179,18 @@ canonical pattern is:
 df$EducR <- jrecode(df, Education,
                     map    = "1,2=1; 3=2; 4,5=3; -99,-98=-99",
                     labels = "1=High school or less; 2=Some college; 3=Degree")
-jdeclare_udm(df, EducR, codes = c(Refused = -99), modify = TRUE)
+jdeclare_missing(df, EducR, codes = c(Refused = -99), modify = TRUE)
 }
 
 The \code{jrecode()} call assigns the numeric code \code{-99}; the
-subsequent \code{jdeclare_udm()} call attaches the label and flags
+subsequent \code{jdeclare_missing()} call attaches the label and flags
 \code{-99} as missing. Labeling \code{-99} inside the \code{labels}
-argument is unnecessary --- \code{jdeclare_udm()} owns that label.
+argument is unnecessary --- \code{jdeclare_missing()} owns that label.
 
 The same two-step pattern serves data whose missingness arrived as
 plain \code{NA} (data born in R, or read from a CSV): \code{map =
 "NA=-98; else=copy"} converts the NA cells to the numeric code, and
-\code{jdeclare_udm()} declares it.
+\code{jdeclare_missing()} declares it.
 
 Under \strong{Stata convention}, UDMs are typed missing cells marked
 with Stata-style tags (\code{.a} through \code{.z}). The single-call
@@ -202,7 +202,7 @@ df$EducR <- jrecode(df, Education,
                     labels = "1=High school or less; 2=Some college; 3=Degree; .a=Refused")
 }
 
-Under Stata convention, \code{jdeclare_udm()} is not needed for this
+Under Stata convention, \code{jdeclare_missing()} is not needed for this
 pattern --- \code{jrecode()} handles both the value recoding and the
 Stata-style missing-value labeling in one call.
 
@@ -218,7 +218,7 @@ restate the markers as numeric codes to stay in SPSS convention, or
 switch convention with \code{joptions(missing.convention = ...)} (or
 with this call's \code{convention} argument). The error does not
 rewrite the call for you: the SPSS-form codes would have to be taken
-from \code{joptions("udm.convention.codes")}, which cannot be known
+from \code{joptions("missing.convention.codes")}, which cannot be known
 to be free of collision with values already in the column. The
 two-call SPSS-style pattern is documented above.
 }
@@ -252,7 +252,7 @@ df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
 # never infers one), so choose it first:
 joptions(missing.convention = "spss")
 df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
-df <- jdeclare_udm(df, AgeR, codes = c("Not recorded" = -98))
+df <- jdeclare_missing(df, AgeR, codes = c("Not recorded" = -98))
 
 # Stata convention: Stata-style missing-value tokens in map and labels
 # (single call; convention = "stata" scopes the choice to this call only)
@@ -275,7 +275,7 @@ df$RegionR2 <- jrecode(Region, map = "1,2=1; 3,4=2",
 
 }
 \seealso{
-\code{\link{jdeclare_udm}} for declaring user-defined missing
+\code{\link{jdeclare_missing}} for declaring user-defined missing
 values on a column after a recode (the SPSS-style canonical pattern).
 
 \code{\link{jrelabel}} for applying labels to an existing variable

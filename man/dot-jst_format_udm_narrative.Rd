@@ -48,7 +48,7 @@ NA, Decision 13) form their own "mixed-case" display group and
 get no align line of their own -- any align target collapses
 them.
 \item Compact form (second and later showings in a session, unless
-the call passed \code{udm.notice = TRUE}): header + inventory,
+the call passed \code{missing.notice = TRUE}): header + inventory,
 with the convention note retained -- it is frame-specific, and
 compaction must not silence a new frame's mismatch -- and the
 Case 1 guidance lines dropped.

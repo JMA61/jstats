@@ -95,7 +95,7 @@
 #'   label. Not a logical.
 #' @param ref.categories Logical or NULL. Override the level's default
 #'   for the reference categories block (registered dummies).
-#' @param udm.notice Logical or NULL. Controls the user-defined
+#' @param missing.notice Logical or NULL. Controls the user-defined
 #'   missing-value (UDM) notification emitted by \code{jload()} for
 #'   files with UDM-bearing variables. \code{TRUE} prints it on every
 #'   such load; \code{FALSE} suppresses it; \code{NULL} (the default)
@@ -143,7 +143,7 @@ joutput <- function(level, effect.size = NULL,
                     posthoc = NULL, diagnostics = NULL,
                     case.processing = NULL, case.processing.detail = NULL,
                     variable.id = NULL, value.id = NULL,
-                    ref.categories = NULL, udm.notice = NULL,
+                    ref.categories = NULL, missing.notice = NULL,
                     digits = NULL, quiet = FALSE) {
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
@@ -156,7 +156,7 @@ joutput <- function(level, effect.size = NULL,
   .jst_check_flag(diagnostics, "diagnostics", null.ok = TRUE)
   .jst_check_flag(case.processing, "case.processing", null.ok = TRUE)
   .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
-  .jst_check_flag(udm.notice, "udm.notice", null.ok = TRUE)
+  .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
 
   valid_levels <- c("minimal", "standard", "full")
 
@@ -204,7 +204,7 @@ joutput <- function(level, effect.size = NULL,
     toggle_args$value.id <- value.id
   }
   if (!is.null(ref.categories))  toggle_args$ref.categories  <- ref.categories
-  if (!is.null(udm.notice))      toggle_args$udm.notice      <- udm.notice
+  if (!is.null(missing.notice))      toggle_args$missing.notice      <- missing.notice
   if (!is.null(digits)) {
     if (length(digits) != 1L || is.na(digits) ||
         !is.numeric(digits) || digits != as.integer(digits) ||
@@ -262,7 +262,7 @@ joutput <- function(level, effect.size = NULL,
                     "posthoc", "diagnostics",
                     "case.processing", "case.processing.detail",
                     "variable.id", "value.id", "ref.categories",
-                    "udm.notice", "digits")
+                    "missing.notice", "digits")
   defaults     <- .jst_output_defaults[[level]]
 
   for (nm in toggle_names) {
@@ -279,7 +279,7 @@ joutput <- function(level, effect.size = NULL,
     # (both/values/labels/legend/legend.bottom) likewise carry string
     # tiers -- show the token,
     # not ON/OFF. digits is an integer (0-7) -- show the number. case.processing
-    # and udm.notice support three states (TRUE/FALSE/NULL=AUTO); the remaining
+    # and missing.notice support three states (TRUE/FALSE/NULL=AUTO); the remaining
     # toggles are binary.
     label <- if (nm %in% c("case.processing.detail", "variable.id",
                            "value.id")) {
@@ -309,7 +309,7 @@ joutput <- function(level, effect.size = NULL,
 # Which OTHER slots a setting call pulls into its echo. Strict test (S233
 # design): B is related to A only if setting A changes how B behaves or how
 # B's value should be read. Exactly one pair qualifies --
-# missing.convention and udm.convention.codes, because the codes are the
+# missing.convention and missing.convention.codes, because the codes are the
 # Stata-tag -> SPSS-code mapping set and are dormant off "spss", so the
 # convention is what tells you how to read them. data.dir, corr.layout,
 # missing.detail and message.width are singletons and are absent from the
@@ -324,8 +324,8 @@ joutput <- function(level, effect.size = NULL,
 
 #' @keywords internal
 .jst_options_related <- list(
-  missing.convention   = "udm.convention.codes",
-  udm.convention.codes = "missing.convention"
+  missing.convention   = "missing.convention.codes",
+  missing.convention.codes = "missing.convention"
 )
 
 
@@ -349,7 +349,7 @@ joutput <- function(level, effect.size = NULL,
   mc <- getOption(".jst_options_missing_convention",
                   .jst_options_defaults$missing.convention)
   cc <- getOption(".jst_options_udm_convention_codes",
-                  .jst_options_defaults$udm.convention.codes)
+                  .jst_options_defaults$missing.convention.codes)
   dd <- getOption(".jst_options_data_dir",
                   .jst_options_defaults$data.dir)
   cl <- getOption(".jst_options_corr_layout",
@@ -410,7 +410,7 @@ joutput <- function(level, effect.size = NULL,
   panel_lines <- c(
     missing.convention   = paste0(
       "Missing-value convention: ", mc_label, "\n"),
-    udm.convention.codes = paste0(
+    missing.convention.codes = paste0(
       "SPSS-style missing value codes: ", paste(cc, collapse = ", "),
       "\n"),
     data.dir             = paste0("Data folder: ", dd_label, "\n"),
@@ -422,12 +422,12 @@ joutput <- function(level, effect.size = NULL,
   # S267: the codes row is SPSS-convention detail; the FULL panel shows
   # it only when the setting is "spss" (bare-call and per-call spss users
   # both see the number in the mint note itself). An explicit partial
-  # query (joptions("udm.convention.codes")) always shows it --
+  # query (joptions("missing.convention.codes")) always shows it --
   # suppressing a slot the user asked for by name would read as the
   # option not existing.
   if (is.null(slots) && !identical(mc, "spss")) {
     panel_lines <- panel_lines[names(panel_lines) !=
-                                 "udm.convention.codes"]
+                                 "missing.convention.codes"]
   }
 
   partial <- !is.null(slots)
@@ -602,7 +602,7 @@ joutput <- function(level, effect.size = NULL,
 #'     notice (see below). Data already loaded is never changed by
 #'     setting this; \code{\link{jconvert}} is the explicit transform
 #'     path.}
-#'   \item{udm.convention.codes}{Numeric vector, length 1 to 3, whole
+#'   \item{missing.convention.codes}{Numeric vector, length 1 to 3, whole
 #'     numbers, no duplicates. Sign unconstrained. Default:
 #'     \code{c(-99, -98, -97)}. The recommended UDM code set used
 #'     by \code{\link{jconvert}} when translating Stata-style missing values
@@ -665,7 +665,7 @@ joutput <- function(level, effect.size = NULL,
 #'     the full panel -- everything changed.}
 #'   \item{\code{joptions(slot = value, ...)}}{Set one or more slots, then
 #'     echo only what the call touched: the slots named, plus
-#'     \code{udm.convention.codes} whenever \code{missing.convention} is
+#'     \code{missing.convention.codes} whenever \code{missing.convention} is
 #'     set and vice versa (the codes are read in light of the convention),
 #'     closed by a pointer to \code{joptions()} for the full panel. The
 #'     other three slots are independent and are not pulled in.
@@ -694,7 +694,7 @@ joutput <- function(level, effect.size = NULL,
 #' @param missing.convention One of \code{"none"}, \code{"spss"},
 #'   \code{"stata"}, or \code{"sas"} (any capitalization is accepted).
 #'   See Slots.
-#' @param udm.convention.codes Numeric vector, length 1 to 3. See Slots.
+#' @param missing.convention.codes Numeric vector, length 1 to 3. See Slots.
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
 #'   \code{NULL}. See Slots.
@@ -717,15 +717,15 @@ joutput <- function(level, effect.size = NULL,
 #' # (see the Environment-scan notice section):
 #' joptions(missing.convention = "spss")             # set, echo, scan notice
 #' joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
-#' joptions(udm.convention.codes = c(-99, -98))      # set, echo, no scan
+#' joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #' joptions(data.dir = "Data")                       # set save/load folder
 #' joptions(message.width = 60)                      # wrap message prose at 60
 #' joptions(message.width = "narrow")                # preset width (50 columns)
 #' joptions(message.width = "auto")                  # follow the console pane
 #' joptions(missing.convention = "stata",
-#'          udm.convention.codes = c(-99, -98, -97)) # set both
+#'          missing.convention.codes = c(-99, -98, -97)) # set both
 #' joptions(missing.convention = "spss",
-#'          udm.convention.codes = NULL)             # set mc, leave codes
+#'          missing.convention.codes = NULL)             # set mc, leave codes
 #' joptions(NULL)                                    # reset all to defaults
 #'
 #' @seealso \code{\link{joutput}} for output-verbosity settings;
@@ -736,7 +736,7 @@ joutput <- function(level, effect.size = NULL,
 #'   change silently, suppressing the settings echo, its pointer, and the
 #'   convention nudge alike. A bare joptions() status query always prints
 #'   regardless of quiet.
-joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
+joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                      data.dir = NULL, corr.layout = NULL,
                      missing.detail = NULL, message.width = NULL,
                      quiet = FALSE) {
@@ -744,7 +744,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   .jst_check_flag(quiet, "quiet")
 
   mc_supplied <- !missing(missing.convention)
-  cc_supplied <- !missing(udm.convention.codes)
+  cc_supplied <- !missing(missing.convention.codes)
   dd_supplied <- !missing(data.dir)
   cl_supplied <- !missing(corr.layout)
   md_supplied <- !missing(missing.detail)
@@ -800,16 +800,16 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
                     choices = c("none", "spss", "stata", "sas"))
     }
   }
-  if (cc_supplied && !is.null(udm.convention.codes)) {
-    x <- udm.convention.codes
+  if (cc_supplied && !is.null(missing.convention.codes)) {
+    x <- missing.convention.codes
     if (!is.numeric(x))
-      .jst_stop_arg("joptions", "udm.convention.codes", "numeric.")
+      .jst_stop_arg("joptions", "missing.convention.codes", "numeric.")
     if (length(x) < 1L || length(x) > 3L)
-      .jst_stop("udm.convention.codes must have length 1 to 3.", fn = "joptions")
+      .jst_stop("missing.convention.codes must have length 1 to 3.", fn = "joptions")
     if (anyNA(x) || !all(x == round(x)))
-      .jst_stop("udm.convention.codes must contain only whole numbers.")
+      .jst_stop("missing.convention.codes must contain only whole numbers.")
     if (anyDuplicated(x) > 0L)
-      .jst_stop("udm.convention.codes must contain no duplicates.")
+      .jst_stop("missing.convention.codes must contain no duplicates.")
   }
   if (dd_supplied && !is.null(data.dir)) {
     if (!is.character(data.dir) ||
@@ -862,9 +862,9 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
     written <- c(written, "missing.convention")
     if (missing.convention %in% c("spss", "stata", "sas")) trigger_nudge <- TRUE
   }
-  if (cc_supplied && !is.null(udm.convention.codes)) {
-    options(.jst_options_udm_convention_codes = udm.convention.codes)
-    written <- c(written, "udm.convention.codes")
+  if (cc_supplied && !is.null(missing.convention.codes)) {
+    options(.jst_options_udm_convention_codes = missing.convention.codes)
+    written <- c(written, "missing.convention.codes")
   }
   if (dd_supplied && !is.null(data.dir)) {
     # "" (empty or whitespace-only) clears the slot back to its NULL
@@ -908,7 +908,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
   # fully quiet.
   if (!quiet) {
     supplied <- c(if (mc_supplied) "missing.convention",
-                  if (cc_supplied) "udm.convention.codes",
+                  if (cc_supplied) "missing.convention.codes",
                   if (dd_supplied) "data.dir",
                   if (cl_supplied) "corr.layout",
                   if (md_supplied) "missing.detail",
@@ -924,7 +924,7 @@ joptions <- function(missing.convention = NULL, udm.convention.codes = NULL,
         !identical(getOption(".jst_options_missing_convention",
                              .jst_options_defaults$missing.convention),
                    "spss")) {
-      echo_slots <- setdiff(echo_slots, "udm.convention.codes")
+      echo_slots <- setdiff(echo_slots, "missing.convention.codes")
     }
     .jst_options_status(echo_slots)
     if (trigger_nudge) .jst_options_nudge(missing.convention)

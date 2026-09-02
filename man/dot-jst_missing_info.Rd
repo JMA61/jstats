@@ -78,7 +78,7 @@ by \code{.jst_scan_coded_missing}'s heuristic branch.
 
 \code{codes} carries DECLARATION-SLOT semantics -- consumers such as
 jsave's .sav pre-flight, jconvert's letter cap and its SPSS-to-Stata
-ordering, and jdeclare_udm's drop notice read \code{nrow(codes)} as
+ordering, and jdeclare_missing's drop notice read \code{nrow(codes)} as
 "how many discrete codes has the user declared". Folding observed
 in-band values into \code{codes} would take a range-bearing column
 from zero declared codes to however many happen to be present, and

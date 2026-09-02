@@ -2145,7 +2145,7 @@
 #' Internal helper: convert a character \code{codes} vector to canonical form
 #'
 #' Converts a character \code{codes} vector (as accepted by
-#' \code{jdeclare_udm}) into the canonical numeric / tagged-NA form, so a
+#' \code{jdeclare_missing}) into the canonical numeric / tagged-NA form, so a
 #' caller can write \code{codes = c("Refused" = ".a")} or
 #' \code{c(".a", ".b")} without \code{haven::tagged_na()}. A token \code{".a"}
 #' becomes \code{haven::tagged_na("a")}; a numeric string such as \code{"-99"}
@@ -2173,7 +2173,7 @@
   # it is read -- which is how a typed '.a' came to be quoted back as '.A'.
   # The typed spelling is therefore recorded on a tagged_raw attribute, the
   # codes-side counterpart of the per-mapping tagged_raw slot .jst_parse_map()
-  # keeps for the map side. jdeclare_udm harvests it and strips it straight
+  # keeps for the map side. jdeclare_missing harvests it and strips it straight
   # away, so it travels no further than the message builder that quotes it.
   # Last spelling wins where one letter is typed twice in different cases,
   # matching the map side's behavior.
@@ -2237,14 +2237,14 @@
   # S249: token case is accepted either way (Decision 13) and this parse
   # normalizes to lowercase, so the letter AS TYPED is recorded on a
   # tagged_raw attribute for the one caller that quotes it back
-  # (jdeclare_udm's cross-convention refusal). The counterpart on the codes
+  # (jdeclare_missing's cross-convention refusal). The counterpart on the codes
   # side is .jst_parse_code_tokens(); the map side keeps a per-mapping slot
   # in .jst_parse_map().
   #
   # STRIP IT IF YOU DO NOT QUOTE IT. jrelabel, jrecode, and jencode all feed
   # this return to labelled::val_labels(), which would attach an internal
   # bookkeeping attribute to a user's column. Each of those three drops the
-  # attribute on the line after the parse; jdeclare_udm harvests it and drops
+  # attribute on the line after the parse; jdeclare_missing harvests it and drops
   # it at the same point it harvests the codes-side record.
 
   rules <- trimws(strsplit(labels_str, ";")[[1]])
@@ -2397,7 +2397,7 @@
   # ======================= THE "missing" TOKEN =============================
   # Design-locked S236, live since S241: "missing" (case-insensitive, RHS
   # only) mints the resolved convention's missing form -- tagged .a under
-  # stata, .A under sas, udm.convention.codes[1] plus an auto-declaration
+  # stata, .A under sas, missing.convention.codes[1] plus an auto-declaration
   # on the result column under spss. The resolved convention is not
   # visible from this helper, so the branch returns a MARKER (missing =
   # TRUE) that each caller resolves after its convention gate. Both

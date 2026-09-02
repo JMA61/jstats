@@ -2,7 +2,7 @@
 % Please edit documentation in R/recode.R
 \name{.jst_jdeclare_udm_bulk_notification}
 \alias{.jst_jdeclare_udm_bulk_notification}
-\title{Internal: consolidated notification for a multi-variable jdeclare_udm call}
+\title{Internal: consolidated notification for a multi-variable jdeclare_missing call}
 \usage{
 .jst_jdeclare_udm_bulk_notification(
   data_name,

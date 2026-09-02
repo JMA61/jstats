@@ -112,7 +112,7 @@
 #'   \item{MoodRating}{Mood rating (integer, 1-10). Arrives "dirty": literal
 #'     -99 (Refused) and -98 (Don't know) codes are present in the data with NO
 #'     missing-value declaration, the state of play after a CSV or Excel import.
-#'     The package's jdeclare_udm() demonstration variable: summary statistics
+#'     The package's jdeclare_missing() demonstration variable: summary statistics
 #'     are poisoned until the codes are declared.}
 #'   \item{Anxiety1}{"I felt calm and relaxed." 5-point Likert (1 Not at all to
 #'     5 Extremely); reverse-keyed (the variable label ends in " R").
@@ -140,7 +140,7 @@
 #' values on non-overlapping cases, so listwise deletion across both reduces the
 #' analysis sample below the per-variable counts. MoodRating and Anxiety2 are
 #' the two columns whose -99/-98 codes arrive undeclared, awaiting
-#' \code{jdeclare_udm()}. The Stress-by-SocialSupport interaction on Flourishing
+#' \code{jdeclare_missing()}. The Stress-by-SocialSupport interaction on Flourishing
 #' is the buffering hypothesis (higher social support weakens the negative
 #' association between stress and flourishing), and treatment Condition has a
 #' modest effect on Flourishing.

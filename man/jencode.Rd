@@ -127,7 +127,7 @@ spreadsheet import often produces): the numbers are kept at face
 value and every word and blank is swept to missing. When a kept value
 looks like a coded missing value -- by magnitude, or because a swept
 word such as "Refused" is evidence the column carried missing-value
-codes -- a note suggests declaring it with \code{jdeclare_udm()}
+codes -- a note suggests declaring it with \code{jdeclare_missing()}
 rather than losing it.
 
 \strong{Blanks are counted separately.} An empty cell ("") is neither
@@ -162,6 +162,6 @@ MyData$Age <- jencode(MyData, AgeTxt, map = "else=NA")
 \seealso{
 \code{\link{jrecode}} for changing numeric values,
 \code{\link{jrelabel}} for value labels,
-\code{\link{jdeclare_udm}} for declaring missing-value codes,
+\code{\link{jdeclare_missing}} for declaring missing-value codes,
 \code{\link{jfreq}} for checking an encoding landed correctly.
 }

@@ -7,7 +7,7 @@
 .jst_jsave_release_notes(data, data_name, file_arg)
 }
 \arguments{
-\item{data}{The data frame as written (post any preserve.udm
+\item{data}{The data frame as written (post any preserve.declarations
 collapse, so a stripped frame has no evidence and stays silent).}
 
 \item{data_name}{Character. The frame's display name.}

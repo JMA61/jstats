@@ -18,7 +18,7 @@ unrecognized or \code{NA} input.
 Maps a convention token to the locked user-facing vocabulary
 (the MISSING-VALUE-TERMS rule, S36): "SPSS-style" / "Stata-style" /
 "SAS-style". Shared by the joptions environment-scan notice and
-jdeclare_udm's post-declaration mismatch notice so the two render
+jdeclare_missing's post-declaration mismatch notice so the two render
 identically.
 }
 \keyword{internal}

@@ -3108,7 +3108,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       if (length(coded_miss) > 0) {
         # Two-remedy redraft (D5, S239): the declaration route first --
         # pipeline Step 0 masks declared UDMs on the analysis copy, so a
-        # jdeclare_udm() call makes the very same jlogistic() call run --
+        # jdeclare_missing() call makes the very same jlogistic() call run --
         # then the destructive jrecode-to-NA route, its consequence named.
         one       <- length(coded_miss) == 1L
         miss_txt  <- .jst_and_list(vapply(coded_miss, .jst_fmt_code,
@@ -3131,7 +3131,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
             else " look like coded missing values."), "\n",
           "Declare ", if (one) "it" else "them",
           " so analyses exclude ", if (one) "it" else "them", ":\n",
-          "  jdeclare_udm(", .jst_data_name, ", ", dv_name, ", codes = ",
+          "  jdeclare_missing(", .jst_data_name, ", ", dv_name, ", codes = ",
           codes_txt, ", modify = TRUE)\n",
           "Or convert ", if (one) "it" else "them",
           " to NA, dropping the code", if (one) "" else "s", ":\n",
