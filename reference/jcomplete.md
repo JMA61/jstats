@@ -91,17 +91,18 @@ jcomplete(Income, Education, Age)
 #> Age        103        0  0.0%     
 #> 
 #>   Complete cases: 91 of 103 (88.3%)
-#>   Listwise filter activated — 12 cases will be excluded from subsequent analyses.
+#>   Listwise filter activated -- 12 cases will be excluded from
+#>   subsequent analyses.
 jdesc(Age)                     # Uses only complete cases on those 3 vars
 #> Descriptive Statistics
 #> Using default data frame: community
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        103
+#>     Original           --        103
 #>     jcomplete          12         91  Income, Education, +1 more
-#>     Remaining N         —         91
+#>     Remaining N        --         91
 #> 
-#> ────────────────────────────────────────────────────────────────
+#> ----------------------------------------------------------------
 #> 
 #> 
 #> Variable  Total  Non_missing  Min  Max    Mean      SD
@@ -119,8 +120,9 @@ jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #> Age        103        0  0.0%     
 #> 
 #>   Complete cases: 91 of 103 (88.3%)
-#>   Listwise filter activated — 12 cases will be excluded from subsequent analyses.
-#> jcomplete Preview — rows scheduled for deletion
+#>   Listwise filter activated -- 12 cases will be excluded from
+#>   subsequent analyses.
+#> jcomplete Preview -- rows scheduled for deletion
 #> Row  Income  Education  Age  DeletionCheck
 #> ---  ------  ---------  ---  -------------
 #>   6                  4   48              1
@@ -135,9 +137,10 @@ jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #>  72                  3   47              1
 #> 
 #>   Showing the first 10 of 12 dropped rows.
-#> (The preview viewer needs an interactive RStudio session; showing the first 10 in the console instead.)
+#> (The preview viewer needs an interactive RStudio session; showing the first 10
+#> in the console instead.)
 jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)
-#> jcomplete Preview — rows scheduled for deletion
+#> jcomplete Preview -- rows scheduled for deletion
 #> Row  Income  Education  Age  DeletionCheck
 #> ---  ------  ---------  ---  -------------
 #>   6                  4   48              1
@@ -152,9 +155,10 @@ jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)
 #>  72                  3   47              1
 #> 
 #>   Showing the first 10 of 12 dropped rows.
-#> (The preview viewer needs an interactive RStudio session; showing the first 10 in the console instead.)
+#> (The preview viewer needs an interactive RStudio session; showing the first 10
+#> in the console instead.)
 jcomplete(preview = TRUE, non.deletes = TRUE)  # Viewer shows all cases
-#> jcomplete Preview — rows scheduled for deletion
+#> jcomplete Preview -- rows scheduled for deletion
 #> Row  Income  Education  Age  DeletionCheck
 #> ---  ------  ---------  ---  -------------
 #>   6                  4   48              1
@@ -169,9 +173,10 @@ jcomplete(preview = TRUE, non.deletes = TRUE)  # Viewer shows all cases
 #>  72                  3   47              1
 #> 
 #>   Showing the first 10 of 12 dropped rows.
-#> (The preview viewer needs an interactive RStudio session; showing the first 10 in the console instead.)
+#> (The preview viewer needs an interactive RStudio session; showing the first 10
+#> in the console instead.)
 jcomplete(console = 10)        # Console only -- first 10 dropped rows
-#> jcomplete Preview — rows scheduled for deletion
+#> jcomplete Preview -- rows scheduled for deletion
 #> Row  Income  Education  Age  DeletionCheck
 #> ---  ------  ---------  ---  -------------
 #>   6                  4   48              1
@@ -187,7 +192,7 @@ jcomplete(console = 10)        # Console only -- first 10 dropped rows
 #> 
 #>   Showing the first 10 of 12 dropped rows. Use preview = TRUE to see them all in the viewer.
 jcomplete(preview = TRUE, console = 25)        # Viewer and console
-#> jcomplete Preview — rows scheduled for deletion
+#> jcomplete Preview -- rows scheduled for deletion
 #> Row  Income  Education  Age  DeletionCheck
 #> ---  ------  ---------  ---  -------------
 #>   6                  4   48              1
@@ -207,7 +212,8 @@ jcomplete(off)                 # Deactivate
 jcomplete(on)                  # Reactivate
 #> jcomplete reactivated for community: Income, Education, Age
 jcomplete()                    # Check status
-#> jcomplete active for community: Income, Education, Age (91 of 103 complete cases)
+#> jcomplete active for community: Income, Education, Age (91 of 103
+#> complete cases)
 jcomplete(NULL)                # Clear entirely
 #> jcomplete cleared for community (had: Income, Education, Age).
 # Not normally needed. You'd clear a default or registration only to

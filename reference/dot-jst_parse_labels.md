@@ -21,7 +21,12 @@ signs.
 ## Value
 
 Invisibly, a named numeric vector. Names are label strings; values are
-numeric codes, or Stata-style missing values for tagged entries.
+numeric codes, or Stata-style missing values for tagged entries. When
+any token was seen, a `tagged_raw` attribute records the marker letters
+as the caller typed them: a named character vector keyed by the
+canonical lowercase letter. Read only by message builders that quote the
+call back. Callers that do not quote must strip it immediately (see
+below); it must never reach a column.
 
 ## Details
 

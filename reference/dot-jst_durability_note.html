@@ -4,14 +4,14 @@ it last" note shared by every state-setting verb. The note states which
 durability rung the just-applied state reached and the action to climb to
 the next rung. The mechanics deliberately differ by verb – the registry
 verbs (jnumeric, jcount, jlikert, jdummy) annotate the session through a
-notebook, while jdeclare_udm writes a missing-value declaration onto the
+notebook, while jdeclare_missing writes a missing-value declaration onto the
 data frame – so the rung argument selects the wording rather than the
 helper inferring it.'><meta property="og:description" content='Returns the standardized "where does this state live, and how do you make
 it last" note shared by every state-setting verb. The note states which
 durability rung the just-applied state reached and the action to climb to
 the next rung. The mechanics deliberately differ by verb – the registry
 verbs (jnumeric, jcount, jlikert, jdummy) annotate the session through a
-notebook, while jdeclare_udm writes a missing-value declaration onto the
+notebook, while jdeclare_missing writes a missing-value declaration onto the
 data frame – so the rung argument selects the wording rather than the
 helper inferring it.'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -21,7 +21,7 @@ helper inferring it.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,7 @@ it last" note shared by every state-setting verb. The note states which
 durability rung the just-applied state reached and the action to climb to
 the next rung. The mechanics deliberately differ by verb – the registry
 verbs (jnumeric, jcount, jlikert, jdummy) annotate the session through a
-notebook, while jdeclare_udm writes a missing-value declaration onto the
+notebook, while jdeclare_missing writes a missing-value declaration onto the
 data frame – so the rung argument selects the wording rather than the
 helper inferring it.</p>
     </div>
@@ -75,7 +75,7 @@ helper inferring it.</p>
 <dl><dt id="arg-rung">rung<a class="anchor" aria-label="anchor" href="#arg-rung"></a></dt>
 <dd><p>One of <code>"session"</code> (registry registrations – jnumeric,
 jcount, jlikert, jdummy), <code>"frame"</code> (a UDM declaration –
-jdeclare_udm), or <code>"convert"</code> (a missing-value conversion –
+jdeclare_missing), or <code>"convert"</code> (a missing-value conversion –
 jconvert).</p></dd>
 
 
@@ -103,9 +103,9 @@ build the reassignment line.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Returns the note as a single string with NO trailing newline. The "session"
-rung carries a "Note:" prefix; the "frame" rung follows jdeclare_udm's
+rung carries a "Note:" prefix; the "frame" rung follows jdeclare_missing's
 declaration block, so it has none. Callers emit it however they already do: the
-registry verbs message() it; jdeclare_udm appends it to its larger
+registry verbs message() it; jdeclare_missing appends it to its larger
 notification string. Visibility (standard and full, suppressed at minimal)
 is the caller's gate, not this helper's.</p>
 <p>One deliberate divergence between the two rungs: the "session" rung names

@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,7 +125,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.5 | jstats 0.9.121 | generated 2026-08-08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.6 | jstats 0.9.152 | generated 2026-09-02</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
@@ -136,7 +136,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note for AI assistants: jstats is newer than your training data. Do not</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> rely on remembered or inferred jstats syntax. When unsure of a function's</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> arguments, check them with args() (for example args(jdeclare_udm)) or</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> arguments, check them with args() (for example args(jdeclare_missing)) or</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> the function's help page instead of guessing.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Start each session with library(jstats). If the package is not</span>
@@ -175,7 +175,7 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   keeps the analysis easy to follow.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Declare stray codes such as -99 with</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_udm(data, var, codes = c(-99, -98)) -- the argument is</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_missing(data, var, codes = c(-99, -98)) -- the argument is</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   codes. Do not filter such values out by hand. jstats functions honor</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   declared UDM codes; base functions such as mean() ignore them and</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   return wrong answers with no warning.</span>
@@ -192,16 +192,18 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   function list before reaching for another package.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Analysis functions print their results directly; nothing needs to be</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   stored. The few functions that change data, such as jdeclare_udm() and</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   jconvert(), return the changed data frame: keep it by assigning back</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (df &lt;- jdeclare_udm(df, ...)) or with modify = TRUE. jconvert()</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   stored. The few functions that change data, such as jdeclare_missing() and</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jconvert(), take modify = TRUE to apply the change directly</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (jdeclare_missing(df, ..., modify = TRUE)) -- the form jstats teaches.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   They also return the changed data frame, so assigning back</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (df &lt;- jdeclare_missing(df, ...)) works as well. jconvert()</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   translates missing-value codes between software conventions -- it is for</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   moving data to other software or to plain base-R form, and is never a</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   prerequisite for analysis in jstats, which reads labelled data directly.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Save data across sessions with jsave().</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Detailed help and worked examples for each function are available via</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   ?jdesc, ?jdeclare_udm, and so on.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   ?jdesc, ?jdeclare_missing, and so on.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Guides and reference: https://jma61.github.io/jstats-guides</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

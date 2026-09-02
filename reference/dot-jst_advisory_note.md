@@ -5,9 +5,9 @@ and the note just reports a benign detail (a no-op recode, a silent
 text-to- numeric coercion). They are shown only at `joutput("full")` and
 stay hidden at "standard" and "minimal". Consequential notes – an
 overwrite, an override taking precedence, a skipped variable, a
-diagnostic that could not be computed – use a plain
-[`message()`](https://rdrr.io/r/base/message.html) instead and are
-always visible.
+diagnostic that could not be computed – call
+[`.jst_msg()`](https://jma61.github.io/jstats/reference/dot-jst_msg.md)
+directly and are always visible.
 
 ## Usage
 
@@ -20,7 +20,7 @@ always visible.
 - ...:
 
   Parts of the message, passed through to
-  [`message()`](https://rdrr.io/r/base/message.html).
+  [`.jst_msg()`](https://jma61.github.io/jstats/reference/dot-jst_msg.md).
 
 ## Value
 

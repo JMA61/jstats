@@ -27,8 +27,8 @@ jload(
   package = FALSE,
   check.missing = TRUE,
   sheet = NULL,
-  preserve.udm = TRUE,
-  udm.notice = NULL,
+  preserve.declarations = TRUE,
+  missing.notice = NULL,
   quiet = FALSE
 )
 ```
@@ -87,7 +87,7 @@ jload(
   the file has multiple sheets and `sheet` is not specified, a message
   lists the available sheets.
 
-- preserve.udm:
+- preserve.declarations:
 
   Logical. If `TRUE` (default), user-defined missing values arriving
   with the file are preserved: SPSS-style codes such as -99 keep their
@@ -100,15 +100,17 @@ jload(
   files, and `.rds` files saved from such data. For `.sav` files, `TRUE`
   corresponds to haven's `user_na = TRUE`.
 
-- udm.notice:
+- missing.notice:
 
-  Per-call override for the user-defined missing value (UDM)
-  notification. `NULL` (default) defers to the setting from
+  Per-call override for the missing-value notification. `NULL` (default)
+  defers to the setting from
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
-  `TRUE` prints the notification on every load with UDM-bearing
-  variables; `FALSE` suppresses it. Under the default (standard) and
-  full output levels it prints on every such load; minimal suppresses
-  it. See
+  `TRUE` prints the notification, in its full form, on any load with
+  declared missing values; `FALSE` suppresses it. Under the default
+  (standard) and full output levels the first such load in a session
+  prints the full notification and later loads print a compact form (the
+  variable inventory, plus the convention note when one applies, without
+  the guidance lines); minimal suppresses the notification. See
   [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md) for
   the full toggle behavior.
 
@@ -116,7 +118,7 @@ jload(
 
   Logical; default FALSE. When TRUE, suppresses jload()'s informational
   messages (the directory-resolution note, file found, load summary,
-  default-data note, and the UDM narrative, overriding udm.notice).
+  default-data note, and the UDM narrative, overriding missing.notice).
   Errors, warnings, the multi-sheet advisory, and the overwrite prompt
   are still shown.
 
@@ -155,6 +157,15 @@ logical columns. Use
 [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) to
 add labels after loading if needed.
 
+**Missing-value declarations:** Missing-value declarations are stored in
+the file itself, but they only survive the trip back if the reader
+requests them. `jload()` always does, so declarations written by
+[`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) are
+present after every jstats load. Other ways of reading the same file may
+convert the declared cells to plain `NA` and discard the declarations,
+so the same file can show different numbers of valid cases depending on
+how it was read.
+
 **Coded missing values:** When `check.missing = TRUE`, the function
 scans numeric variables for values that appear to be coded missing
 values. Only whole-number values are considered (coded missing values
@@ -170,6 +181,21 @@ used:
 Detected values are reported but not changed. Use
 [`jrecode`](https://jma61.github.io/jstats/reference/jrecode.md) to
 convert them to `NA` if needed.
+
+**Package example datasets and .rda / .RData files:** `jload()` opens
+the example datasets shipped with jstats – currently `community` and
+`clinic` – by bare name: `jload("community")`. These ship inside the
+package as .rda files, but the bare-name load is a lookup of the shipped
+dataset, not a file read, and it works only for package datasets. It
+does not extend to .rda or .RData files generally: naming the extension
+(`jload("community.rda")`) or pointing at any other .rda or .RData file
+is refused with a pointer to base R's
+[`load()`](https://rdrr.io/r/base/load.html), because such files can
+hold several objects under names of their own choosing, outside jload's
+one-data-frame contract. Note also that the shipped dataset is a
+fallback: a file with a matching name in the working directory or
+data.dir folder is opened instead of the shipped copy. Use
+`package = TRUE` to force the shipped dataset.
 
 ## See also
 

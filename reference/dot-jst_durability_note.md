@@ -5,7 +5,7 @@ make it last" note shared by every state-setting verb. The note states
 which durability rung the just-applied state reached and the action to
 climb to the next rung. The mechanics deliberately differ by verb – the
 registry verbs (jnumeric, jcount, jlikert, jdummy) annotate the session
-through a notebook, while jdeclare_udm writes a missing-value
+through a notebook, while jdeclare_missing writes a missing-value
 declaration onto the data frame – so the rung argument selects the
 wording rather than the helper inferring it.
 
@@ -27,7 +27,7 @@ wording rather than the helper inferring it.
 - rung:
 
   One of `"session"` (registry registrations – jnumeric, jcount,
-  jlikert, jdummy), `"frame"` (a UDM declaration – jdeclare_udm), or
+  jlikert, jdummy), `"frame"` (a UDM declaration – jdeclare_missing), or
   `"convert"` (a missing-value conversion – jconvert).
 
 - data_name:
@@ -55,10 +55,11 @@ wording rather than the helper inferring it.
 
 Returns the note as a single string with NO trailing newline. The
 "session" rung carries a "Note:" prefix; the "frame" rung follows
-jdeclare_udm's declaration block, so it has none. Callers emit it
-however they already do: the registry verbs message() it; jdeclare_udm
-appends it to its larger notification string. Visibility (standard and
-full, suppressed at minimal) is the caller's gate, not this helper's.
+jdeclare_missing's declaration block, so it has none. Callers emit it
+however they already do: the registry verbs message() it;
+jdeclare_missing appends it to its larger notification string.
+Visibility (standard and full, suppressed at minimal) is the caller's
+gate, not this helper's.
 
 One deliberate divergence between the two rungs: the "session" rung
 names "R format (.rds)" because registry registrations bake only into

@@ -76,7 +76,8 @@ community$EnvTotal <- jsum(Environment1, Environment3, Environment4)
 # Sum with partial data allowed (at least 2 non-missing)
 community$EnvTotal <- jsum(Environment1, Environment3, Environment4,
                            min.valid = 2)
-#> Sum of 3 variables computed for 103 cases (min.valid = 2: 14 cases used partial data, 5 set to NA due to missing values).
+#> Sum of 3 variables computed for 103 cases (min.valid = 2: 14 cases used partial
+#> data, 5 set to NA due to missing values).
 #> Mean of the new variable: 9.082.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
@@ -96,9 +97,10 @@ community$EnvTotal <- jsum(Environment1:Environment5)
 community$Environment2R <- jrecode(community, Environment2,
                                    map = "1=5; 2=4; 3=3; 4=2; 5=1")
 #> 
-#> Note: jrecode() returns the recoded values; assign them to a column to keep them:
+#> Note: This call changes community only if you assign the result:
 #>   community$<name> <- jrecode(...)
-#> To check the recode landed correctly, compare jfreq() on the original and the new column.
+#> To check the recode landed correctly, compare jfreq() on the original and the
+#> new column.
 community$ScaleTotal <- jsum(Environment1, Environment2R,
                              Environment3:Environment5)
 #> Sum of 5 variables computed for 103 cases (19 set to NA due to missing values).

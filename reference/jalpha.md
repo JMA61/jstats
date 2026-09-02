@@ -106,9 +106,9 @@ jalpha(community, Environment1, Environment2, Environment3,
 #> Reliability Analysis
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise        19         84
-#>     Analysis N            —         84
+#>     Analysis N           --         84
 #> 
 #> Missing-data breakdown  From 103     %
 #>     Environment1
@@ -116,7 +116,7 @@ jalpha(community, Environment1, Environment2, Environment3,
 #>     Environment3
 #>       Missing              12     11.7
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Reliability Statistics
 #> Cronbach's Alpha  N of Items
@@ -132,8 +132,10 @@ jalpha(community, Environment1, Environment2, Environment3,
 #> Environment4  3.333  1.186  84
 #> Environment5  2.762  1.470  84
 #> 
-#> Warning: The following item(s) are negatively correlated with the rest of the scale: Environment2.
-#> They may need reverse-coding, or may not belong in the scale - check the item-total table and the item wording.
+#> Warning: The following item is negatively correlated with the rest of the
+#> scale: Environment2.
+#> It may need reverse-coding, or may not belong in the scale -- check the
+#> item-total table and the item wording.
 #> 
 #> Item-Total Statistics
 #> Item          Corrected Item-Total r  Alpha if Item Deleted
@@ -154,9 +156,9 @@ jalpha(Environment1, Environment2, Environment3, Environment4,
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise        19         84
-#>     Analysis N            —         84
+#>     Analysis N           --         84
 #> 
 #> Missing-data breakdown  From 103     %
 #>     Environment1
@@ -164,7 +166,7 @@ jalpha(Environment1, Environment2, Environment3, Environment4,
 #>     Environment3
 #>       Missing              12     11.7
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Reliability Statistics
 #> Cronbach's Alpha  N of Items
@@ -180,8 +182,10 @@ jalpha(Environment1, Environment2, Environment3, Environment4,
 #> Environment4  3.333  1.186  84
 #> Environment5  2.762  1.470  84
 #> 
-#> Warning: The following item(s) are negatively correlated with the rest of the scale: Environment2.
-#> They may need reverse-coding, or may not belong in the scale - check the item-total table and the item wording.
+#> Warning: The following item is negatively correlated with the rest of the
+#> scale: Environment2.
+#> It may need reverse-coding, or may not belong in the scale -- check the
+#> item-total table and the item wording.
 #> 
 #> Item-Total Statistics
 #> Item          Corrected Item-Total r  Alpha if Item Deleted

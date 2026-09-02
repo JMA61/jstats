@@ -1,17 +1,23 @@
-# Internal helper: build jrecode's cross-convention error message
+# Internal helper: build the cross-convention error message
 
 Produces the error message used by
-[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) when
-Stata-style Stata-style missing-value tokens appear in the map or labels
-argument but the resolved convention is SPSS. Verbosity is controlled by
-the active
+[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) and
+[`jencode()`](https://jma61.github.io/jstats/reference/jencode.md) when
+lettered missing-value markers appear in the map or labels argument but
+the resolved convention is SPSS. The message states the mismatch and
+names the settings-level remedies; per Rule Y it does not rewrite the
+user's call. One form at every
 [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
 level.
 
 ## Usage
 
 ``` r
-.jst_jrecode_convention_error(parsed_map, parsed_labels, data_name, orig_name)
+.jst_jrecode_convention_error(
+  parsed_map,
+  parsed_labels,
+  per_call_convention = NULL
+)
 ```
 
 ## Arguments
@@ -19,7 +25,12 @@ level.
 - parsed_map:
 
   List returned by
-  [`.jst_parse_map()`](https://jma61.github.io/jstats/reference/dot-jst_parse_map.md).
+  [`.jst_parse_map()`](https://jma61.github.io/jstats/reference/dot-jst_parse_map.md),
+  or by
+  [`.jst_parse_text_map()`](https://jma61.github.io/jstats/reference/dot-jst_parse_text_map.md)
+  for the
+  [`jencode()`](https://jma61.github.io/jstats/reference/jencode.md)
+  caller.
 
 - parsed_labels:
 
@@ -27,16 +38,15 @@ level.
   [`.jst_parse_labels()`](https://jma61.github.io/jstats/reference/dot-jst_parse_labels.md),
   or `NULL` if no labels argument was supplied.
 
-- data_name:
+- per_call_convention:
 
-  Character. Name of the data frame in the user's call (used to
-  reconstruct the example).
-
-- orig_name:
-
-  Character. Name of the variable being recoded.
+  Character or `NULL`. The caller's raw per-call `convention` argument.
+  It selects which of the two routes to an SPSS resolution the message
+  describes – the call or the setting – and therefore which remedy is
+  offered; it plays no part in whether the error fires. It also seeds
+  the display case for a marker that carries no recorded raw spelling.
 
 ## Value
 
 Character scalar suitable for passing to
-[`stop()`](https://rdrr.io/r/base/stop.html).
+[`.jst_stop()`](https://jma61.github.io/jstats/reference/dot-jst_stop.md).

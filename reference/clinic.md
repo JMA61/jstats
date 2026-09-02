@@ -79,8 +79,8 @@ A data frame with 70 rows and 16 variables:
   Mood rating (integer, 1-10). Arrives "dirty": literal -99 (Refused)
   and -98 (Don't know) codes are present in the data with NO
   missing-value declaration, the state of play after a CSV or Excel
-  import. The package's jdeclare_udm() demonstration variable: summary
-  statistics are poisoned until the codes are declared.
+  import. The package's jdeclare_missing() demonstration variable:
+  summary statistics are poisoned until the codes are declared.
 
 - Anxiety1:
 
@@ -128,7 +128,7 @@ carry SPSS-style missing values on non-overlapping cases, so listwise
 deletion across both reduces the analysis sample below the per-variable
 counts. MoodRating and Anxiety2 are the two columns whose -99/-98 codes
 arrive undeclared, awaiting
-[`jdeclare_udm()`](https://jma61.github.io/jstats/reference/jdeclare_udm.md).
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md).
 The Stress-by-SocialSupport interaction on Flourishing is the buffering
 hypothesis (higher social support weakens the negative association
 between stress and flourishing), and treatment Condition has a modest

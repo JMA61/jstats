@@ -87,8 +87,8 @@ jscreen(
   haven_labelled / factor / character / date-time) to the Variable Types
   table, showing each variable's storage type alongside its jstats
   class. Default is FALSE: the storage type is expert detail (its main
-  signal is "this variable carries value labels / came from SPSS or
-  Stata"), so it is opt-in rather than shown by default. The returned
+  signal is "this variable carries value labels / came from SPSS, Stata,
+  or SAS"), so it is opt-in rather than shown by default. The returned
   data frame always includes it regardless of this setting.
 
 - stats:
@@ -196,6 +196,10 @@ jscreen(community)
 #> Environment1       12       11.7
 #> Environment3       12       11.7
 #> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
+#> 
 jscreen(community, outlier.sd = 2.5)
 #> Data Screening
 #>   Cases: 103 
@@ -226,13 +230,17 @@ jscreen(community, outlier.sd = 2.5)
 #> Missing Data & Outliers (outliers > 2.5 SD from mean)
 #> Variable        Missing  % Missing  Outliers
 #> --------------  -------  ---------  --------
-#> Income                6        5.8          
-#> Education             6        5.8          
-#> Age                                        1
-#> WellbeingScore                             1
-#> Smoker                5        4.9          
-#> Environment1         12       11.7          
-#> Environment3         12       11.7          
+#> Income                6        5.8        --
+#> Education             6        5.8        --
+#> Age                  --         --         1
+#> WellbeingScore       --         --         1
+#> Smoker                5        4.9        --
+#> Environment1         12       11.7        --
+#> Environment3         12       11.7        --
+#> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
 #> 
 
 # Show the Base R storage type column
@@ -272,6 +280,10 @@ jscreen(community, r.type = TRUE)
 #> Environment1       12       11.7
 #> Environment3       12       11.7
 #> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
+#> 
 
 # Add Mean and Median columns for numeric-like variables
 jscreen(community, stats = TRUE)
@@ -310,6 +322,10 @@ jscreen(community, stats = TRUE)
 #> Environment1       12       11.7
 #> Environment3       12       11.7
 #> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
+#> 
 
 # Suppress tables (header block only)
 jscreen(community, types = FALSE, issues = FALSE)
@@ -318,6 +334,10 @@ jscreen(community, types = FALSE, issues = FALSE)
 #>   Variables: 15 
 #>   Cases with missing data: 34 
 #>   Variables with outliers: 0 
+#> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
 #> 
 
 # Using juse() default
@@ -360,6 +380,10 @@ jscreen()
 #> Environment1       12       11.7
 #> Environment3       12       11.7
 #> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
+#> 
 jscreen(Income, Age, WellbeingScore)
 #> Data Screening
 #> Using default data frame: community
@@ -379,6 +403,9 @@ jscreen(Income, Age, WellbeingScore)
 #> Variable  Missing  % Missing
 #> --------  -------  ---------
 #> Income          6        5.8
+#> 
+#> Note: SPSS-style declared missing values on: Income.
+#> jstats treats these as missing; base R functions do not.
 #> 
 jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 #> Data Screening
@@ -400,5 +427,8 @@ jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 #> Variable  Missing  % Missing
 #> --------  -------  ---------
 #> Income          4        8.2
+#> 
+#> Note: SPSS-style declared missing values on: Income.
+#> jstats treats these as missing; base R functions do not.
 #> 
 ```

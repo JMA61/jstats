@@ -5,7 +5,7 @@ fn prefix names the user-facing function so the message identifies its
 origin even though the package signals errors with call. = FALSE (which
 suppresses R's automatic call context). Supply either a freeform
 requirement string, or a character vector of allowed values via choices
-to get a standardized "one of:" enumeration with consistent
+to get the standardized choice-error enumeration with consistent
 double-quoting.
 
 ## Usage
@@ -22,7 +22,8 @@ double-quoting.
 
 - arg:
 
-  The offending argument's name (e.g. "method").
+  The offending argument's name (e.g. "method"); backticked
+  automatically when choices is supplied.
 
 - requirement:
 
@@ -31,8 +32,10 @@ double-quoting.
 
 - choices:
 
-  Optional character vector of allowed values; renders as a
-  double-quoted comma-separated list introduced by "one of:".
+  Optional character vector of allowed values; renders in the Rule A
+  choice-error house form – a double-quoted natural list, "or" before
+  the last element, Oxford comma at three or more, and no "one of:"
+  lead-in.
 
 ## Value
 

@@ -23,7 +23,7 @@ specific knowledge in one place."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,7 +88,20 @@ CPS renderers – leave it <code>FALSE</code> and pay nothing.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>NULL</code> if the column has no formal UDM declarations.
 Otherwise a list with:</p><dl><dt>representation</dt>
-<dd><p><code>"spss"</code> or <code>"stata"</code></p></dd>
+<dd><p><code>"spss"</code> or <code>"stata"</code> – the
+PHYSICAL structure (na_values metadata vs tagged_na markers).
+Deliberately binary: SAS-form is structurally Stata-form
+(Decision 13), so structural consumers (conversion loops,
+UDM-to-NA application) key on this and never see "sas".</p></dd>
+
+<dt>convention</dt>
+<dd><p><code>"spss"</code>, <code>"stata"</code>, <code>"sas"</code>,
+or <code>NA_character_</code> – the user-facing CONVENTION, refined
+from tag letter case: all-lowercase tags read as Stata-form,
+all-uppercase as SAS-form, mixed case as <code>NA</code> (ambiguous;
+Decision 13's rule – such a column is skipped by convention
+counting and does not engage the resolver's column level).
+Always <code>"spss"</code> for SPSS-representation columns.</p></dd>
 
 <dt>na_range</dt>
 <dd><p>Length-2 numeric vector for SPSS range-based
@@ -131,7 +144,7 @@ by <code>.jst_scan_coded_missing</code>'s heuristic branch.</p>
 
 <p><code>codes</code> carries DECLARATION-SLOT semantics – consumers such as
 jsave's .sav pre-flight, jconvert's letter cap and its SPSS-to-Stata
-ordering, and jdeclare_udm's drop notice read <code>nrow(codes)</code> as
+ordering, and jdeclare_missing's drop notice read <code>nrow(codes)</code> as
 "how many discrete codes has the user declared". Folding observed
 in-band values into <code>codes</code> would take a range-bearing column
 from zero declared codes to however many happen to be present, and

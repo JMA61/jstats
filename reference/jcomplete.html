@@ -31,7 +31,7 @@ FILTER convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -143,17 +143,18 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age        103        0  0.0%     </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Complete cases: 91 of 103 (88.3%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Listwise filter activated — 12 cases will be excluded from subsequent analyses.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Listwise filter activated -- 12 cases will be excluded from</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   subsequent analyses.</span>
 <span class="r-in"><span><span class="fu"><a href="jdesc.html">jdesc</a></span><span class="op">(</span><span class="va">Age</span><span class="op">)</span>                     <span class="co"># Uses only complete cases on those 3 vars</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original            —        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     jcomplete          12         91  Income, Education, +1 more</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N         —         91</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --         91</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────────────────────────────────</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max    Mean      SD</span>
@@ -171,8 +172,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age        103        0  0.0%     </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Complete cases: 91 of 103 (88.3%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Listwise filter activated — 12 cases will be excluded from subsequent analyses.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview — rows scheduled for deletion</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Listwise filter activated -- 12 cases will be excluded from</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   subsequent analyses.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview -- rows scheduled for deletion</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Row  Income  Education  Age  DeletionCheck</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---  ------  ---------  ---  -------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   6                  4   48              1</span>
@@ -187,9 +189,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  72                  3   47              1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Showing the first 10 of 12 dropped rows.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> (The preview viewer needs an interactive RStudio session; showing the first 10 in the console instead.)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> (The preview viewer needs an interactive RStudio session; showing the first 10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> in the console instead.)</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span>preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>      <span class="co"># Preview the already-set filter (viewer)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview — rows scheduled for deletion</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview -- rows scheduled for deletion</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Row  Income  Education  Age  DeletionCheck</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---  ------  ---------  ---  -------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   6                  4   48              1</span>
@@ -204,9 +207,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  72                  3   47              1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Showing the first 10 of 12 dropped rows.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> (The preview viewer needs an interactive RStudio session; showing the first 10 in the console instead.)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> (The preview viewer needs an interactive RStudio session; showing the first 10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> in the console instead.)</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span>preview <span class="op">=</span> <span class="cn">TRUE</span>, non.deletes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>  <span class="co"># Viewer shows all cases</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview — rows scheduled for deletion</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview -- rows scheduled for deletion</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Row  Income  Education  Age  DeletionCheck</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---  ------  ---------  ---  -------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   6                  4   48              1</span>
@@ -221,9 +225,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  72                  3   47              1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Showing the first 10 of 12 dropped rows.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> (The preview viewer needs an interactive RStudio session; showing the first 10 in the console instead.)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> (The preview viewer needs an interactive RStudio session; showing the first 10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> in the console instead.)</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span>console <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>        <span class="co"># Console only -- first 10 dropped rows</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview — rows scheduled for deletion</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview -- rows scheduled for deletion</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Row  Income  Education  Age  DeletionCheck</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---  ------  ---------  ---  -------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   6                  4   48              1</span>
@@ -239,7 +244,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Showing the first 10 of 12 dropped rows. Use preview = TRUE to see them all in the viewer.</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span>preview <span class="op">=</span> <span class="cn">TRUE</span>, console <span class="op">=</span> <span class="fl">25</span><span class="op">)</span>        <span class="co"># Viewer and console</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview — rows scheduled for deletion</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">jcomplete Preview -- rows scheduled for deletion</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Row  Income  Education  Age  DeletionCheck</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---  ------  ---------  ---  -------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   6                  4   48              1</span>
@@ -259,7 +264,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">on</span><span class="op">)</span>                  <span class="co"># Reactivate</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete reactivated for community: Income, Education, Age</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="op">)</span>                    <span class="co"># Check status</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete active for community: Income, Education, Age (91 of 103 complete cases)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete active for community: Income, Education, Age (91 of 103</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> complete cases)</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                <span class="co"># Clear entirely</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete cleared for community (had: Income, Education, Age).</span>
 <span class="r-in"><span><span class="co"># Not normally needed. You'd clear a default or registration only to</span></span></span>

@@ -2,16 +2,23 @@
 
 `jconvert()` provides a single entry point for changing how user-
 defined missing values (UDMs) are represented on the columns of a data
-frame already in memory. Three target formats are supported: SPSS-style
-(`na_values` on `haven_labelled_spss`), Stata-style (`tagged_na` on
+frame already in memory. Four target formats are supported: SPSS-style
+(`na_values` on `haven_labelled_spss`), Stata-style (lowercase
+`tagged_na` on `haven_labelled`), SAS-style (uppercase `tagged_na` on
 `haven_labelled`), and base R (declarations stripped, declared cells
-converted to plain `NA`). Replaces `jstrip_udm()` (retired in v0.9.5);
-the base R target is the strip behavior.
+converted to plain `NA`).
 
 ## Usage
 
 ``` r
-jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
+jconvert(
+  data,
+  to = NULL,
+  ...,
+  vars = NULL,
+  missing.notice = TRUE,
+  modify = FALSE
+)
 ```
 
 ## Arguments
@@ -25,11 +32,11 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
 
   One of `"baseR"`, `"spss"`, `"stata"`, or `"sas"` (any capitalization
   is accepted). When `NULL` (the default), `jconvert()` reads
-  `joptions("missing.convention")`: if the slot is set to `"spss"` or
-  `"stata"`, `to` resolves to that value; if the slot is at its `"none"`
-  default, `jconvert()` errors with guidance naming the concrete
-  options. The destructive `"baseR"` target is never auto-resolved – it
-  must always be passed explicitly.
+  `joptions("missing.convention")`: if the slot is set to `"spss"`,
+  `"stata"`, or `"sas"`, `to` resolves to that value; if the slot is at
+  its `"none"` default, `jconvert()` errors with guidance naming the
+  concrete options. The destructive `"baseR"` target is never
+  auto-resolved – it must always be passed explicitly.
 
 - ...:
 
@@ -42,7 +49,7 @@ jconvert(data, to = NULL, ..., vars = NULL, udm.notice = TRUE, modify = FALSE)
   names. Mutually exclusive with `...`. When both `...` and `vars` are
   empty, `jconvert()` operates on the whole data frame.
 
-- udm.notice:
+- missing.notice:
 
   Logical; `TRUE` (default) prints a notification summarizing what was
   converted (and what was skipped) along with a reminder of how to keep
@@ -93,7 +100,7 @@ The three target formats:
 
   Convert Stata-style or SAS-style missing values to SPSS-form numeric
   codes. Letter tags map to numeric codes via
-  `joptions("udm.convention.codes")` (default `-99`, `-98`, `-97`):
+  `joptions("missing.convention.codes")` (default `-99`, `-98`, `-97`):
   `.a -> codes[1]`, `.b -> codes[2]`, and so on. SAS-style (uppercase)
   tags are case-corrected to Stata-style (lowercase) before the numeric
   mapping – for round-trip purposes the package treats `.A` and `.a` as
@@ -152,7 +159,7 @@ column's target numeric code (e.g. `-99` for `.a`) is present as genuine
 data in the column, the call errors before any data is touched. The
 error message lists every colliding column and presents three resolution
 paths: change the convention codes via
-`joptions(udm.convention.codes = ...)`, scope the call via
+`joptions(missing.convention.codes = ...)`, scope the call via
 `vars = c(...)` to exclude affected columns, or recode the real- data
 values via
 [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)
@@ -164,14 +171,14 @@ declaration.** When a column has no formal UDM declaration but carries
 value labels matching the package's missing-label wordlist (e.g.
 `"Refused"`, `"Don't know"`, `"Not applicable"`), `jconvert()` skips the
 column and surfaces it in the notification with the affected value/label
-pairs. To formalise these as UDMs use
-[`jdeclare_udm()`](https://jma61.github.io/jstats/reference/jdeclare_udm.md);
+pairs. To formalize these as UDMs use
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md);
 to leave them as ordinary data, no action is needed.
 
 ## See also
 
 [`jload`](https://jma61.github.io/jstats/reference/jload.md) for the
-load-time strip alternative (`preserve.udm = FALSE`);
+load-time strip alternative (`preserve.declarations = FALSE`);
 [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) for
 setting the default convention and convention codes session-wide.
 
@@ -228,7 +235,7 @@ df_sas <- jconvert(community, to = "sas")
 
 # Strip UDMs from every applicable variable:
 df3 <- jconvert(community, to = "baseR")
-#> Stripped declarations of user-defined missing values (UDMs) from 5 variables:
+#> Stripped the missing-value declarations from 5 variables:
 #>   Income        (-99 "Refused", -98 "Don't know")
 #>   Education     (-99 "Refused", -98 "Don't know")
 #>   Smoker        (-99 "Refused")
@@ -243,7 +250,7 @@ df3 <- jconvert(community, to = "baseR")
 
 # Scope by unquoted names:
 df4 <- jconvert(community, to = "baseR", Income, Education)
-#> Stripped declarations of user-defined missing values (UDMs) from 2 variables:
+#> Stripped the missing-value declarations from 2 variables:
 #>   Income     (-99 "Refused", -98 "Don't know")
 #>   Education  (-99 "Refused", -98 "Don't know")
 #> 
@@ -255,7 +262,7 @@ df4 <- jconvert(community, to = "baseR", Income, Education)
 
 # Scope by character vector (alternative form):
 df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
-#> Stripped declarations of user-defined missing values (UDMs) from 2 variables:
+#> Stripped the missing-value declarations from 2 variables:
 #>   Income     (-99 "Refused", -98 "Don't know")
 #>   Education  (-99 "Refused", -98 "Don't know")
 #> 
@@ -266,7 +273,7 @@ df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 #>   jconvert(community, ..., modify = TRUE)
 
 # Suppress the notification (e.g. inside a script):
-df6 <- jconvert(community, to = "baseR", udm.notice = FALSE)
+df6 <- jconvert(community, to = "baseR", missing.notice = FALSE)
 
 if (FALSE) { # \dontrun{
 # Convert with target inferred from joptions:

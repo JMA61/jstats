@@ -1,4 +1,4 @@
-# Internal helper: shared registration engine for jnumeric() / jcount()
+# Internal helper: shared registration engine for jnumeric() / jcount() / jlikert()
 
 Validates the requested variables, then either removes their
 registrations of the given kind (`remove = TRUE`) or writes them,
@@ -19,7 +19,7 @@ registrations are session-only and how to persist them.
 
 - kind:
 
-  One of "numeric", "count".
+  One of "numeric", "count", "likert".
 
 - data:
 

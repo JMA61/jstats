@@ -17,7 +17,7 @@ community
 
 ## Format
 
-A data frame with 100 rows and 15 variables:
+A data frame with 103 rows and 15 variables:
 
 - RespondentID:
 

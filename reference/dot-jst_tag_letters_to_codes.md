@@ -2,8 +2,8 @@
 
 Translates a vector of lowercase letter tags (e.g. `c("a", "b")`) into
 the equivalent numeric UDM codes drawn from
-`joptions("udm.convention.codes")`. Mapping is positional: `.a` maps to
-the first code, `.b` to the second, etc.
+`joptions("missing.convention.codes")`. Mapping is positional: `.a` maps
+to the first code, `.b` to the second, etc.
 
 ## Usage
 
@@ -22,8 +22,8 @@ the first code, `.b` to the second, etc.
 - convention_codes:
 
   Optional numeric vector of UDM codes. When `NULL` (the default), the
-  helper sources the value of `joptions("udm.convention.codes")` via the
-  standard [`getOption()`](https://rdrr.io/r/base/options.html)
+  helper sources the value of `joptions("missing.convention.codes")` via
+  the standard [`getOption()`](https://rdrr.io/r/base/options.html)
   fallback.
 
 ## Value

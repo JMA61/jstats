@@ -5,13 +5,15 @@ The fn prefix names the user-facing function so the message identifies its
 origin even though the package signals errors with call. = FALSE (which
 suppresses R's automatic call context). Supply either a freeform
 requirement string, or a character vector of allowed values via choices to
-get a standardized &quot;one of:&quot; enumeration with consistent double-quoting."><meta property="og:description" content="Builds and signals a stop() in the package house voice:
+get the standardized choice-error enumeration with consistent
+double-quoting."><meta property="og:description" content="Builds and signals a stop() in the package house voice:
 ():  must be
 The fn prefix names the user-facing function so the message identifies its
 origin even though the package signals errors with call. = FALSE (which
 suppresses R's automatic call context). Supply either a freeform
 requirement string, or a character vector of allowed values via choices to
-get a standardized &quot;one of:&quot; enumeration with consistent double-quoting."></head><body>
+get the standardized choice-error enumeration with consistent
+double-quoting."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -19,7 +21,7 @@ get a standardized &quot;one of:&quot; enumeration with consistent double-quotin
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,7 +52,8 @@ The fn prefix names the user-facing function so the message identifies its
 origin even though the package signals errors with call. = FALSE (which
 suppresses R's automatic call context). Supply either a freeform
 requirement string, or a character vector of allowed values via choices to
-get a standardized "one of:" enumeration with consistent double-quoting.</requirement></arg></fn></p>
+get the standardized choice-error enumeration with consistent
+double-quoting.</requirement></arg></fn></p>
     </div>
 
     <div class="section level2">
@@ -67,7 +70,8 @@ get a standardized "one of:" enumeration with consistent double-quoting.</requir
 
 
 <dt id="arg-arg">arg<a class="anchor" aria-label="anchor" href="#arg-arg"></a></dt>
-<dd><p>The offending argument's name (e.g. "method").</p></dd>
+<dd><p>The offending argument's name (e.g. "method"); backticked
+automatically when choices is supplied.</p></dd>
 
 
 <dt id="arg-requirement">requirement<a class="anchor" aria-label="anchor" href="#arg-requirement"></a></dt>
@@ -76,8 +80,10 @@ trailing period. Ignored when choices is supplied.</arg></p></dd>
 
 
 <dt id="arg-choices">choices<a class="anchor" aria-label="anchor" href="#arg-choices"></a></dt>
-<dd><p>Optional character vector of allowed values; renders as a
-double-quoted comma-separated list introduced by "one of:".</p></dd>
+<dd><p>Optional character vector of allowed values; renders in the
+Rule A choice-error house form – a double-quoted natural list, "or"
+before the last element, Oxford comma at three or more, and no "one of:"
+lead-in.</p></dd>
 
 </dl></div>
     <div class="section level2">

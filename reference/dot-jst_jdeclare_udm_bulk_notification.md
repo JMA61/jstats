@@ -1,11 +1,12 @@
-# Internal: consolidated notification for a multi-variable jdeclare_udm call
+# Internal: consolidated notification for a multi-variable jdeclare_missing call
 
 One summary block instead of one block per column: a bulk call on 52
 variables must not print 52 near-identical notices. Variables are
 grouped by resulting branch (a single call CAN split branches – e.g.
-numeric codes applied across a frame where some columns already carry
-Stata-form markers resolve to conversion while plain columns resolve to
-the SPSS default), each group gets one header plus one body block (the
+numeric codes applied under an active SPSS convention across a frame
+where some columns already carry Stata-form markers: the marked columns
+resolve to conversion while plain columns resolve to an SPSS-style
+declaration), each group gets one header plus one body block (the
 declaration is identical within a group by construction), and the
 durability note prints once at the end.
 

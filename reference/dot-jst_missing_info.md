@@ -40,7 +40,19 @@ with:
 
 - representation:
 
-  `"spss"` or `"stata"`
+  `"spss"` or `"stata"` – the PHYSICAL structure (na_values metadata vs
+  tagged_na markers). Deliberately binary: SAS-form is structurally
+  Stata-form (Decision 13), so structural consumers (conversion loops,
+  UDM-to-NA application) key on this and never see "sas".
+
+- convention:
+
+  `"spss"`, `"stata"`, `"sas"`, or `NA_character_` – the user-facing
+  CONVENTION, refined from tag letter case: all-lowercase tags read as
+  Stata-form, all-uppercase as SAS-form, mixed case as `NA` (ambiguous;
+  Decision 13's rule – such a column is skipped by convention counting
+  and does not engage the resolver's column level). Always `"spss"` for
+  SPSS-representation columns.
 
 - na_range:
 
@@ -77,9 +89,9 @@ declaration) is NOT in scope here – that pattern is handled by
 
 `codes` carries DECLARATION-SLOT semantics – consumers such as jsave's
 .sav pre-flight, jconvert's letter cap and its SPSS-to-Stata ordering,
-and jdeclare_udm's drop notice read `nrow(codes)` as "how many discrete
-codes has the user declared". Folding observed in-band values into
-`codes` would take a range-bearing column from zero declared codes to
-however many happen to be present, and those consumers would then refuse
-a file that saves correctly today. Observed values are therefore a
-separate component, never a longer `codes`.
+and jdeclare_missing's drop notice read `nrow(codes)` as "how many
+discrete codes has the user declared". Folding observed in-band values
+into `codes` would take a range-bearing column from zero declared codes
+to however many happen to be present, and those consumers would then
+refuse a file that saves correctly today. Observed values are therefore
+a separate component, never a longer `codes`.

@@ -25,7 +25,7 @@ data are synthetic, but the relationships among the variables are realistic."></
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,7 +116,7 @@ coded 0/1 (0 No, 1 Yes). A clean logistic-regression outcome.</p></dd>
 <dd><p>Mood rating (integer, 1-10). Arrives "dirty": literal
 -99 (Refused) and -98 (Don't know) codes are present in the data with NO
 missing-value declaration, the state of play after a CSV or Excel import.
-The package's jdeclare_udm() demonstration variable: summary statistics
+The package's jdeclare_missing() demonstration variable: summary statistics
 are poisoned until the codes are declared.</p></dd>
 
 <dt>Anxiety1</dt>
@@ -161,7 +161,7 @@ output flags for dropping. Stress and SleepHours carry SPSS-style missing
 values on non-overlapping cases, so listwise deletion across both reduces the
 analysis sample below the per-variable counts. MoodRating and Anxiety2 are
 the two columns whose -99/-98 codes arrive undeclared, awaiting
-<code><a href="jdeclare_udm.html">jdeclare_udm()</a></code>. The Stress-by-SocialSupport interaction on Flourishing
+<code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>. The Stress-by-SocialSupport interaction on Flourishing
 is the buffering hypothesis (higher social support weakens the negative
 association between stress and flourishing), and treatment Condition has a
 modest effect on Flourishing.</p>

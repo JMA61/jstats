@@ -81,7 +81,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.5 | jstats 0.9.121 | generated 2026-08-08
+#> Orientation text v3.6 | jstats 0.9.152 | generated 2026-09-02
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial
@@ -92,7 +92,7 @@ jai()
 #> 
 #> Note for AI assistants: jstats is newer than your training data. Do not
 #> rely on remembered or inferred jstats syntax. When unsure of a function's
-#> arguments, check them with args() (for example args(jdeclare_udm)) or
+#> arguments, check them with args() (for example args(jdeclare_missing)) or
 #> the function's help page instead of guessing.
 #> 
 #> - Start each session with library(jstats). If the package is not
@@ -131,7 +131,7 @@ jai()
 #>   keeps the analysis easy to follow.
 #> 
 #> - Declare stray codes such as -99 with
-#>   jdeclare_udm(data, var, codes = c(-99, -98)) -- the argument is
+#>   jdeclare_missing(data, var, codes = c(-99, -98)) -- the argument is
 #>   codes. Do not filter such values out by hand. jstats functions honor
 #>   declared UDM codes; base functions such as mean() ignore them and
 #>   return wrong answers with no warning.
@@ -148,16 +148,18 @@ jai()
 #>   function list before reaching for another package.
 #> 
 #> - Analysis functions print their results directly; nothing needs to be
-#>   stored. The few functions that change data, such as jdeclare_udm() and
-#>   jconvert(), return the changed data frame: keep it by assigning back
-#>   (df <- jdeclare_udm(df, ...)) or with modify = TRUE. jconvert()
+#>   stored. The few functions that change data, such as jdeclare_missing() and
+#>   jconvert(), take modify = TRUE to apply the change directly
+#>   (jdeclare_missing(df, ..., modify = TRUE)) -- the form jstats teaches.
+#>   They also return the changed data frame, so assigning back
+#>   (df <- jdeclare_missing(df, ...)) works as well. jconvert()
 #>   translates missing-value codes between software conventions -- it is for
 #>   moving data to other software or to plain base-R form, and is never a
 #>   prerequisite for analysis in jstats, which reads labelled data directly.
 #>   Save data across sessions with jsave().
 #> 
 #> - Detailed help and worked examples for each function are available via
-#>   ?jdesc, ?jdeclare_udm, and so on.
+#>   ?jdesc, ?jdeclare_missing, and so on.
 #> 
 #> Guides and reference: https://jma61.github.io/jstats-guides
 #> 

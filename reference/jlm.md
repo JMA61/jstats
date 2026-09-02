@@ -330,15 +330,15 @@ jlm(WellbeingScore ~ Income + Age, data = community)
 #> Linear Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients
@@ -365,15 +365,15 @@ jlm(WellbeingScore ~ Income + Age, community)
 #> Linear Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients
@@ -403,15 +403,15 @@ jlm(WellbeingScore ~ Income + Age)
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients
@@ -556,15 +556,15 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients
@@ -593,9 +593,9 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise        11         92
-#>     Analysis N            —         92
+#>     Analysis N           --         92
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
@@ -603,7 +603,7 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #>     Smoker
 #>       Missing              5      4.9
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients

@@ -25,7 +25,7 @@ range of consecutive columns (e.g. Attitude1:Attitude6)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -123,7 +123,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># Sum with partial data allowed (at least 2 non-missing)</span></span></span>
 <span class="r-in"><span><span class="va">community</span><span class="op">$</span><span class="va">EnvTotal</span> <span class="op">&lt;-</span> <span class="fu">jsum</span><span class="op">(</span><span class="va">Environment1</span>, <span class="va">Environment3</span>, <span class="va">Environment4</span>,</span></span>
 <span class="r-in"><span>                           min.valid <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Sum of 3 variables computed for 103 cases (min.valid = 2: 14 cases used partial data, 5 set to NA due to missing values).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Sum of 3 variables computed for 103 cases (min.valid = 2: 14 cases used partial</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> data, 5 set to NA due to missing values).</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Mean of the new variable: 9.082.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jsum() returns the totals; assign them to a column to keep them:</span>
@@ -143,9 +144,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="va">community</span><span class="op">$</span><span class="va">Environment2R</span> <span class="op">&lt;-</span> <span class="fu"><a href="jrecode.html">jrecode</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Environment2</span>,</span></span>
 <span class="r-in"><span>                                   map <span class="op">=</span> <span class="st">"1=5; 2=4; 3=3; 4=2; 5=1"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span><span class="va">community</span><span class="op">$</span><span class="va">ScaleTotal</span> <span class="op">&lt;-</span> <span class="fu">jsum</span><span class="op">(</span><span class="va">Environment1</span>, <span class="va">Environment2R</span>,</span></span>
 <span class="r-in"><span>                             <span class="va">Environment3</span><span class="op">:</span><span class="va">Environment5</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Sum of 5 variables computed for 103 cases (19 set to NA due to missing values).</span>

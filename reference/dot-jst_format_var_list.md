@@ -8,7 +8,7 @@ the .sav, .dta, and .xpt code paths share one truncation convention.
 ## Usage
 
 ``` r
-.jst_format_var_list(vars, max_show = 10L)
+.jst_format_var_list(vars, max_show = 10L, and = FALSE)
 ```
 
 ## Arguments
@@ -21,6 +21,14 @@ the .sav, .dta, and .xpt code paths share one truncation convention.
 
   Integer. Maximum number of names to show before truncating. Default
   `10L`.
+
+- and:
+
+  Logical. When `TRUE` and the list is not truncated, the final name is
+  joined with `"and"` ("A and B"; "A, B, and C" at three or more, Oxford
+  comma per Rule A). Default `FALSE`, the comma-only form every pre-S227
+  caller expects. A truncated list is unaffected either way – its "...
+  and N more" tail already supplies the conjunction.
 
 ## Value
 

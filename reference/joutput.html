@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,7 @@ precedence over joutput() settings.</p>
 <span>  variable.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ref.categories <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  udm.notice <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  missing.notice <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -166,7 +166,7 @@ between the coefficients and fit blocks; for <code>jfreq</code> under each
 variable's own table; elsewhere directly after the single table).
 <code>"legend.bottom"</code> keeps names in place and prints one
 consolidated legend at the very end of the output. The minimal and
-standard tiers default to <code>"none"</code>; the full tier defaults to
+standard tiers default to <code>"names"</code>; the full tier defaults to
 <code>"legend"</code>. Not a logical – <code>TRUE</code>/<code>FALSE</code> are not
 accepted.</p></dd>
 
@@ -195,7 +195,7 @@ label. Not a logical.</p></dd>
 for the reference categories block (registered dummies).</p></dd>
 
 
-<dt id="arg-udm-notice">udm.notice<a class="anchor" aria-label="anchor" href="#arg-udm-notice"></a></dt>
+<dt id="arg-missing-notice">missing.notice<a class="anchor" aria-label="anchor" href="#arg-missing-notice"></a></dt>
 <dd><p>Logical or NULL. Controls the user-defined
 missing-value (UDM) notification emitted by <code><a href="jload.html">jload()</a></code> for
 files with UDM-bearing variables. <code>TRUE</code> prints it on every
@@ -225,6 +225,21 @@ joutput() status query always prints regardless of quiet.</p></dd>
 session options.</p>
     </div>
     <div class="section level2">
+    <h2 id="session-options">Session options<a class="anchor" aria-label="anchor" href="#session-options"></a></h2>
+
+
+<p><code>joutput()</code> stores its settings through R's standard
+<code><a href="https://rdrr.io/r/base/options.html" class="external-link">options()</a></code> / <code><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption()</a></code> mechanism, under two keys:
+<code>.jst_output_level</code> (the preset level) and
+<code>.jst_output_toggles</code> (a named list holding any per-slot
+overrides). <code>getOption(".jst_output_level")</code> returns the raw
+stored level – <code>NULL</code> until a level has been set, which the
+package reads as the <code>"standard"</code> default. <code>joutput(NULL)</code>
+clears both keys. The same values can be read or set with base R's
+<code><a href="https://rdrr.io/r/base/options.html" class="external-link">options()</a></code> directly; <code>joutput()</code> is the supported
+interface, adding validation and the settings display.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="jstats-package.html">jstats</a></code> for the package overview,
 workflow conventions, and complete function listing.</p></div>
@@ -246,7 +261,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="st">"standard"</span>, regression.ci <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># also show jlm/jlogistic coefficient CIs</span></span></span>
@@ -263,7 +278,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="st">"full"</span><span class="op">)</span>                         <span class="co"># everything</span></span></span>
@@ -280,7 +295,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: LEGEND</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="op">)</span>                               <span class="co"># show current settings</span></span></span>
@@ -297,9 +312,11 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: LEGEND</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   udm.notice: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">".jst_output_level"</span><span class="op">)</span>          <span class="co"># the raw option behind the level</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "full"</span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                           <span class="co"># reset to defaults</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Output Settings</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Reset to defaults (standard, no toggle overrides).</span>

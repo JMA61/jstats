@@ -161,13 +161,15 @@ Build scale scores and check internal consistency.
 
 ## Prepare and manage your data
 
-Recode, relabel, declare missing values, and select cases.
+Recode, encode text, relabel, declare missing values, and select cases.
 
 - [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) :
   Recode a variable with explicit value mapping and optional labels
+- [`jencode()`](https://jma61.github.io/jstats/reference/jencode.md) :
+  Encode a text variable as labelled numbers
 - [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) :
   Apply variable and value labels to a variable
-- [`jdeclare_udm()`](https://jma61.github.io/jstats/reference/jdeclare_udm.md)
+- [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
   : Declare user-defined missing values on one or more variables
 - [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) :
   Set, activate, deactivate, or clear a per-dataset case-selection

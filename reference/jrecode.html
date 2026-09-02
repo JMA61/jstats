@@ -23,7 +23,7 @@ below for the canonical patterns under each convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,13 +91,36 @@ unmapped values are deliberately set to system NA.</p></li>
 convention only): unmapped values are set to that Stata-style missing value.</p></li>
 </ul><p>Individual values can also be mapped to system NA using the same
 aliases: <code>"-5=NA"</code>, <code>"-5=System"</code>, or <code>"-5=SYSMIS"</code>.</p>
-<p>Under Stata convention, values can be mapped to Stata-style missing-value tokens:
+<p>The same aliases may also appear as an OLD value, converting plain
+<code>NA</code> cells to a code: <code>"NA=-98; else=copy"</code> recodes every
+<code>NA</code> to <code>-98</code> (declare the code afterward with
+<code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>). <code>NA</code> may be combined with numeric old
+values in one rule (<code>"NA,-99=-98"</code>) and may be named in at most
+one rule. Only plain <code>NA</code> cells are affected; tagged
+missing values are never converted by an <code>NA</code> rule. Under
+Stata or SAS convention the target may itself be a token: <code>"NA=.a"</code>.</p>
+<p>Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 <code>"-99=.a; -98=.b"</code>.</p>
+<p>The right-hand side may also be the word <code>missing</code>
+(case-insensitive): the value is converted to your working
+convention's own missing form – a tagged marker under the Stata or
+SAS convention, or the first code from
+<code>joptions("missing.convention.codes")</code> under the SPSS convention,
+declared on the result automatically. The same map string therefore
+works under every setting: <code>"8=missing; else=copy"</code>. The NA
+rule composes with it (<code>"NA=missing"</code> converts plain <code>NA</code>
+cells the same way), and <code>labels = "missing=Refused"</code> labels
+whatever the token produced. If the column already carries the other
+convention's markers while your <code>missing.convention</code> setting
+is set, the call stops and shows both resolutions rather than
+guessing.</p>
 <p>Examples:</p><ul><li><p><code>"1=1; 2=0"</code></p></li>
 <li><p><code>"1=1; 2,3=2; 4,5=3; else=NA"</code></p></li>
 <li><p><code>"1=1; 2=0; else=copy"</code></p></li>
 <li><p><code>"-5=System; else=copy"</code></p></li>
-<li><p><code>"3=1; 4=2; else=.a"</code> (Stata convention only)</p></li>
+<li><p><code>"NA=-98; else=copy"</code></p></li>
+<li><p><code>"3=1; 4=2; else=.a"</code> (Stata or SAS convention only)</p></li>
+<li><p><code>"8=missing; else=copy"</code> (any convention)</p></li>
 </ul></dd>
 
 
@@ -108,7 +131,9 @@ separated by semicolons. If supplied, these labels are used as-is.</p>
 <p>The left side of each rule may be a numeric code or, under Stata
 convention, a Stata-style missing-value token (<code>.a</code> through
 <code>.z</code>). Tagged-NA labels are stored on the tag itself, not on
-a numeric code.</p>
+a numeric code. It may also be the word <code>missing</code>, labelling
+whatever the map's <code>missing</code> target produced:
+<code>labels = "missing=Refused"</code>.</p>
 <p>If omitted, the function attempts to transfer value labels automatically
 from the original variable. This works when the original variable has
 value labels and the mapping is one-to-one (no categories are collapsed).
@@ -118,17 +143,21 @@ and a note is printed.</p>
 
 
 <dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>
-<dd><p>Optional. One of <code>"spss"</code>, <code>"stata"</code>, or
-<code>NULL</code> (default); any capitalization is accepted. Controls whether
-Stata-style missing-value tokens
-(<code>.a</code> through <code>.z</code>) are accepted in the map and labels
-arguments. Inert when no Stata-style missing-value tokens appear in either argument.</p>
+<dd><p>Optional. One of <code>"spss"</code>, <code>"stata"</code>,
+<code>"sas"</code>, or <code>NULL</code> (default); any capitalization is
+accepted. Controls whether missing-value tokens (<code>.a</code> through
+<code>.z</code> or <code>.A</code> through <code>.Z</code>) are accepted in the map
+and labels arguments. Token letters are matched case-insensitively;
+the stored markers take the convention's letter case (lowercase
+Stata-style under <code>"stata"</code>, uppercase SAS-style under
+<code>"sas"</code>). Inert when no such tokens appear in either argument.</p>
 <p>When <code>NULL</code>, the convention is resolved from
 <code>joptions("missing.convention")</code>; if that is also unset, the
-default is SPSS. Most users set the convention once at the top of a
-session via <code><a href="joptions.html">joptions()</a></code> (or in their <code>.Rprofile</code>) rather
-than supplying this argument on every call. See <code><a href="joptions.html">?joptions</a></code> for
-details.</p></dd>
+call stops with a guided error asking you to choose – the package
+never infers a convention. Most users set the convention once at
+the top of a session via <code><a href="joptions.html">joptions()</a></code> (or in their
+<code>.Rprofile</code>) rather than supplying this argument on every
+call. See <code><a href="joptions.html">?joptions</a></code> for details.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -155,8 +184,12 @@ the mapping is one-to-one (no collapsing). For example, recoding 1/2 to
 <li><p>If categories are collapsed (multiple old values map to one new
 value), automatic transfer is not possible and a note is printed
 directing you to supply labels manually.</p></li>
-</ol><p>NA values in the original variable are always set to NA in the new variable,
-regardless of the <code>else</code> setting.</p>
+</ol><p>NA values in the original variable are carried across as NA unless the
+map names <code>NA</code> as an old value (for example <code>"NA=-98"</code>); the
+<code>else</code> setting never converts NA. An <code>NA</code> rule affects plain
+<code>NA</code> cells only — Stata-style missing values (tagged NAs) are
+declared missings and are preserved with their tags regardless of the
+map.</p>
 <p>Values that appear to be coded missing values (e.g. -99, -9, 999) from SPSS
 or another package are automatically detected and set to NA, even when
 <code>else=copy</code> is used. A note is printed when this occurs.</p>
@@ -166,22 +199,30 @@ unmapped values so you can fix the map before proceeding.</p>
 <p>If the map specifies values that do not exist in the original variable, a
 warning is issued (but the function continues). This helps catch typos in
 the map string.</p>
-<p><strong>Missing values in the map.</strong> The package supports two conventions
-for representing user-defined missing values (UDMs), and the syntax for
-producing UDMs from <code>jrecode()</code> depends on which one is active:</p>
-<p>Under <strong>SPSS convention</strong> (the default), UDMs are real numeric
+<p><strong>Missing values in the map.</strong> The package supports three
+conventions for representing user-defined missing values (UDMs), and
+the syntax for producing UDMs from <code>jrecode()</code> depends on which
+one is active. A convention becomes active via
+<code>joptions(missing.convention = ...)</code> or this call's
+<code>convention</code> argument; with neither set, a call that produces
+UDMs stops with a guided error asking you to choose.</p>
+<p>Under <strong>SPSS convention</strong>, UDMs are real numeric
 codes carrying metadata that flags them as missing. The two-step
 canonical pattern is:</p>
 <div class="sourceCode"><pre><code><span></span>
 <span><span class="va">df</span><span class="op">$</span><span class="va">EducR</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jrecode.html">jrecode</a></span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span>
 <span>                    map    <span class="op">=</span> <span class="st">"1,2=1; 3=2; 4,5=3; -99,-98=-99"</span>,</span>
 <span>                    labels <span class="op">=</span> <span class="st">"1=High school or less; 2=Some college; 3=Degree"</span><span class="op">)</span></span>
-<span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/jdeclare_udm.html">jdeclare_udm</a></span><span class="op">(</span><span class="va">df</span>, <span class="va">EducR</span>, codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Refused <span class="op">=</span> <span class="op">-</span><span class="fl">99</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/jdeclare_missing.html">jdeclare_missing</a></span><span class="op">(</span><span class="va">df</span>, <span class="va">EducR</span>, codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Refused <span class="op">=</span> <span class="op">-</span><span class="fl">99</span><span class="op">)</span>, modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 
-<p>The <code>jrecode()</code> call assigns the numeric sentinel <code>-99</code>; the
-subsequent <code><a href="jdeclare_udm.html">jdeclare_udm()</a></code> call attaches the label and flags
+<p>The <code>jrecode()</code> call assigns the numeric code <code>-99</code>; the
+subsequent <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> call attaches the label and flags
 <code>-99</code> as missing. Labeling <code>-99</code> inside the <code>labels</code>
-argument is unnecessary — <code><a href="jdeclare_udm.html">jdeclare_udm()</a></code> owns that label.</p>
+argument is unnecessary — <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> owns that label.</p>
+<p>The same two-step pattern serves data whose missingness arrived as
+plain <code>NA</code> (data born in R, or read from a CSV): <code>map =
+"NA=-98; else=copy"</code> converts the NA cells to the numeric code, and
+<code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> declares it.</p>
 <p>Under <strong>Stata convention</strong>, UDMs are typed missing cells marked
 with Stata-style tags (<code>.a</code> through <code>.z</code>). The single-call
 canonical pattern is:</p>
@@ -190,17 +231,27 @@ canonical pattern is:</p>
 <span>                    map    <span class="op">=</span> <span class="st">"1,2=1; 3=2; 4,5=3; else=.a"</span>,</span>
 <span>                    labels <span class="op">=</span> <span class="st">"1=High school or less; 2=Some college; 3=Degree; .a=Refused"</span><span class="op">)</span></span></code></pre></div>
 
-<p>Under Stata convention, <code><a href="jdeclare_udm.html">jdeclare_udm()</a></code> is not needed for this
+<p>Under Stata convention, <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> is not needed for this
 pattern — <code>jrecode()</code> handles both the value recoding and the
 Stata-style missing-value labeling in one call.</p>
-<p>Writing Stata-style missing-value tokens while the active convention is SPSS raises an
-informative error that echoes the user's call rewritten in SPSS-style
-syntax. Switching the convention session-wide is one line:
-<code>joptions(missing.convention = "stata")</code>.</p>
+<p><strong>SAS convention</strong> works the same way with SAS-style missing
+values (<code>.A</code> through <code>.Z</code>). Map and labels tokens are
+matched case-insensitively, and the stored markers take the active
+convention's letter case: lowercase under Stata convention, uppercase
+under SAS convention.</p>
+<p>Writing these missing-value tokens while the active convention is
+SPSS raises an error naming the mismatch and the two ways out:
+restate the markers as numeric codes to stay in SPSS convention, or
+switch convention with <code>joptions(missing.convention = ...)</code> (or
+with this call's <code>convention</code> argument). The error does not
+rewrite the call for you: the SPSS-form codes would have to be taken
+from <code>joptions("missing.convention.codes")</code>, which cannot be known
+to be free of collision with values already in the column. The
+two-call SPSS-style pattern is documented above.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="jdeclare_udm.html">jdeclare_udm</a></code> for declaring user-defined missing
+    <div class="dont-index"><p><code><a href="jdeclare_missing.html">jdeclare_missing</a></code> for declaring user-defined missing
 values on a column after a recode (the SPSS-style canonical pattern).</p>
 <p><code><a href="jrelabel.html">jrelabel</a></code> for applying labels to an existing variable
 after a recode.</p>
@@ -218,49 +269,82 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span>                         map    <span class="op">=</span> <span class="st">"1=1; 2=0"</span>,</span></span>
 <span class="r-in"><span>                         labels <span class="op">=</span> <span class="st">"0=No; 1=Yes"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Collapse categories (must supply labels)</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">RegionR</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Region</span>,</span></span>
 <span class="r-in"><span>                      map    <span class="op">=</span> <span class="st">"1,2=1; 3,4=2"</span>,</span></span>
 <span class="r-in"><span>                      labels <span class="op">=</span> <span class="st">"1=North or South; 2=East or West"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use else=copy to carry unspecified values across unchanged</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span></span>
 <span class="r-in"><span>                    map    <span class="op">=</span> <span class="st">"5=4; else=copy"</span>,</span></span>
 <span class="r-in"><span>                    labels <span class="op">=</span> <span class="st">"4=Bachelor's degree or higher"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were kept on the recoded variable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> kept on the recoded variable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To convert them to plain NA instead, map them to NA (for example -99=NA).</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use else=NA to deliberately drop unspecified values to system NA</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR2</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span></span>
 <span class="r-in"><span>                     map    <span class="op">=</span> <span class="st">"4=1; 5=1; else=NA"</span>,</span></span>
 <span class="r-in"><span>                     labels <span class="op">=</span> <span class="st">"1=College degree"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were kept on the recoded variable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> kept on the recoded variable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To convert them to plain NA instead, map them to NA (for example -99=NA).</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Convert a specific coded missing value to system NA</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR3</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>, map <span class="op">=</span> <span class="st">"-99=System; else=copy"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -98 ("Don't know") is a declared missing value and was kept on the recoded variable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -98 ("Don't know") is a declared missing value and was kept on the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> recoded variable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To convert it to a plain NA instead, add -98=NA to the map.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Give plain NA cells a codable value, then declare it. Declaring on a</span></span></span>
+<span class="r-in"><span><span class="co"># plain column needs a chosen missing-value convention (the package</span></span></span>
+<span class="r-in"><span><span class="co"># never infers one), so choose it first:</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="joptions.html">joptions</a></span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"spss"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: SPSS-style</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98, -97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">AgeR</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Age</span>, map <span class="op">=</span> <span class="st">"NA=-98; else=copy"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
+<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="jdeclare_missing.html">jdeclare_missing</a></span><span class="op">(</span><span class="va">df</span>, <span class="va">AgeR</span>, codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Not recorded"</span> <span class="op">=</span> <span class="op">-</span><span class="fl">98</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Declared SPSS-style missing values on AgeR:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   -98 ["Not recorded"]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> This call changes df only if you assign the result:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   df &lt;- jdeclare_missing(df, AgeR, ...)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> To change df directly, rerun with modify = TRUE:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_missing(df, AgeR, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Stata convention: Stata-style missing-value tokens in map and labels</span></span></span>
 <span class="r-in"><span><span class="co"># (single call; convention = "stata" scopes the choice to this call only)</span></span></span>
@@ -268,12 +352,29 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span>                     map    <span class="op">=</span> <span class="st">"1,2=1; 3,4,5=2; else=.a"</span>,</span></span>
 <span class="r-in"><span>                     labels <span class="op">=</span> <span class="st">"1=No college; 2=College; .a=Refused"</span>,</span></span>
 <span class="r-in"><span>                     convention <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were kept on the recoded variable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> kept on the recoded variable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To convert them to plain NA instead, map them to NA (for example -99=NA).</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># SAS convention: the same single-call pattern; tokens are matched</span></span></span>
+<span class="r-in"><span><span class="co"># case-insensitively and the markers store in uppercase (.A)</span></span></span>
+<span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR5</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span></span>
+<span class="r-in"><span>                     map    <span class="op">=</span> <span class="st">"1,2=1; 3,4,5=2; else=.a"</span>,</span></span>
+<span class="r-in"><span>                     labels <span class="op">=</span> <span class="st">"1=No college; 2=College; .a=Refused"</span>,</span></span>
+<span class="r-in"><span>                     convention <span class="op">=</span> <span class="st">"sas"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> kept on the recoded variable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To convert them to plain NA instead, map them to NA (for example -99=NA).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">df</span><span class="op">)</span></span></span>
@@ -281,9 +382,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">RegionR2</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">Region</span>, map <span class="op">=</span> <span class="st">"1,2=1; 3,4=2"</span>,</span></span>
 <span class="r-in"><span>                       labels <span class="op">=</span> <span class="st">"1=North or South; 2=East or West"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jrecode() returns the recoded values; assign them to a column to keep them:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the new column.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

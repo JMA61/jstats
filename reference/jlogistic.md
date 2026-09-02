@@ -281,15 +281,15 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #> Logistic Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients
@@ -320,22 +320,23 @@ df <- community
 df$OwnsHome01 <- jrecode(df, OwnsHome,
                          map = "1=1; 2=0", labels = "0=No; 1=Yes")
 #> 
-#> Note: jrecode() returns the recoded values; assign them to a column to keep them:
+#> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
-#> To check the recode landed correctly, compare jfreq() on the original and the new column.
+#> To check the recode landed correctly, compare jfreq() on the original and the
+#> new column.
 jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #> Logistic Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients
@@ -369,15 +370,15 @@ jlogistic(Volunteer ~ Income + Age)
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients
@@ -535,15 +536,15 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients

@@ -1,10 +1,9 @@
 # Internal helper: classify a data frame's predominant UDM convention
 
-Walks a data frame's columns via
-[`.jst_missing_info()`](https://jma61.github.io/jstats/reference/dot-jst_missing_info.md),
-counts SPSS-form vs Stata-form UDM-bearing columns, and returns the
-convention with the larger count. Returns `NA_character_` when counts
-tie or when no columns carry UDM declarations.
+Thin wrapper over
+[`.jst_convention_census()`](https://jma61.github.io/jstats/reference/dot-jst_convention_census.md)
+returning only the verdict, for callers that need no counts or
+unanimity.
 
 ## Usage
 
@@ -20,4 +19,4 @@ tie or when no columns carry UDM declarations.
 
 ## Value
 
-Character scalar: `"spss"`, `"stata"`, or `NA_character_`.
+Character scalar: `"spss"`, `"stata"`, `"sas"`, or `NA_character_`.

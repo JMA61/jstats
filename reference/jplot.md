@@ -286,15 +286,15 @@ m <- jlm(WellbeingScore ~ Income + Age, community)
 #> Linear Regression
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> 
 #> Coefficients

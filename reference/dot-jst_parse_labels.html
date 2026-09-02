@@ -15,7 +15,7 @@ sign in each rule, so label text may itself contain equals signs.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,7 +64,12 @@ sign in each rule, so label text may itself contain equals signs.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly, a named numeric vector. Names are label strings;
-values are numeric codes, or Stata-style missing values for tagged entries.</p>
+values are numeric codes, or Stata-style missing values for tagged entries.
+When any token was seen, a <code>tagged_raw</code> attribute records the marker
+letters as the caller typed them: a named character vector keyed by the
+canonical lowercase letter. Read only by message builders that quote the
+call back. Callers that do not quote must strip it immediately (see
+below); it must never reach a column.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

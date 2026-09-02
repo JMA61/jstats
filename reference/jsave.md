@@ -24,7 +24,7 @@ If the `data` argument is omitted, the default data frame set by
 ## Usage
 
 ``` r
-jsave(data, file, overwrite = FALSE, preserve.udm = TRUE)
+jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
 ```
 
 ## Arguments
@@ -48,14 +48,14 @@ jsave(data, file, overwrite = FALSE, preserve.udm = TRUE)
   Otherwise, if the file already exists and the script was run by
   pasting or with RStudio's Run button, the call stops with an error.
 
-- preserve.udm:
+- preserve.declarations:
 
   Logical. If `TRUE` (the default), missing-value declarations are
   written as they stand; formats that cannot store them (notably Excel
   and CSV) drop the metadata, and SPSS-style codes such as -99 then read
   back as ordinary numbers. If `FALSE`, those codes are blanked to plain
   NA before writing, so they become empty cells. Mirrors the
-  `preserve.udm` argument of
+  `preserve.declarations` argument of
   [`jload`](https://jma61.github.io/jstats/reference/jload.md). The
   pre-flight checks for the .sav, .dta, and .xpt formats run before this
   step, so a missing-value form a target format cannot represent is
@@ -110,7 +110,8 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpxbPjgE/community.sav (SPSS format; 103 cases, 15 variables)
+#> Saved community to /tmp/RtmpDZgEBy/community.sav
+#> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
 # The file extension determines the format ---

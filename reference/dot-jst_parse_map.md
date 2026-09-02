@@ -4,7 +4,12 @@ Parses a map string of the form `"1=1; 2,3=2; 4,5=3; else=copy"` (used
 by [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md))
 into a list of mapping rules plus an else-action. Each rule's left-hand
 side may be a single value or a comma-separated list of values; an
-explicit `else=...` clause sets the fallback action.
+explicit `else=...` clause sets the fallback action. A left-hand side
+may also include the system-NA aliases (`NA`, `System`, or `SYSMIS`,
+case-insensitive) to target plain `NA` cells; alias tokens are split out
+into the `na_rule` component rather than entering `mappings`, so
+downstream consumers of `mappings` continue to see numeric old values
+only.
 
 ## Usage
 
@@ -43,6 +48,14 @@ Invisibly, a list with components:
 
   Logical: `TRUE` if the user wrote an explicit `else=...` clause,
   `FALSE` if defaulted.
+
+- na_rule:
+
+  `NULL` when the map does not name `NA` as an old value; otherwise a
+  list with `new_val` (single numeric; `NA_real_` for system-NA and
+  tagged-NA targets) and `tagged` (`NULL`, or a single lowercase letter
+  for a tagged-NA target). Populated by the `NA` / `System` / `SYSMIS`
+  aliases on a rule's left-hand side; at most one rule may name `NA`.
 
 ## Details
 

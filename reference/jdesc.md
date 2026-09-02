@@ -163,10 +163,10 @@ jdesc(community, Income, Age, WellbeingScore)
 #> Descriptive Statistics
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        103
-#>     Remaining N         —        103
+#>     Original           --        103
+#>     Remaining N        --        103
 #> 
-#> ────────────────────────────────────
+#> ------------------------------------
 #> 
 #> 
 #> Variable        Total  Non_missing    Min    Max       Mean         SD
@@ -203,10 +203,10 @@ jdesc(Income, Age, WellbeingScore)
 #> Using default data frame: community
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        103
-#>     Remaining N         —        103
+#>     Original           --        103
+#>     Remaining N        --        103
 #> 
-#> ────────────────────────────────────
+#> ------------------------------------
 #> 
 #> 
 #> Variable        Total  Non_missing    Min    Max       Mean         SD

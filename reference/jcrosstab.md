@@ -154,15 +154,15 @@ jcrosstab(Education ~ Volunteer, data = community)
 #> Cross-Tabulation
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
 #> Education                0: No  1: Yes  Total 
@@ -186,15 +186,15 @@ jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 #> Cross-Tabulation
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
 #> Education                0: No  1: Yes  Total 
@@ -223,15 +223,15 @@ jcrosstab(Education ~ Volunteer, data = community,
 #> Cross-Tabulation
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
 #> Education                0: No   1: Yes  Total 
@@ -266,15 +266,15 @@ jcrosstab(Education ~ Volunteer, data = community, residuals = "adjusted")
 #> Cross-Tabulation
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
 #> Education                0: No   1: Yes  Total 
@@ -306,15 +306,15 @@ jcrosstab(Education ~ Volunteer)
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
 #> Education                0: No  1: Yes  Total 
@@ -337,15 +337,15 @@ jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #> Using default data frame: community
 #> 
 #> Case Processing    Excluded  Remaining
-#>     Original              —        103
+#>     Original             --        103
 #>     Auto-listwise         6         97
-#>     Analysis N            —         97
+#>     Analysis N           --         97
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
 #> 
-#> ──────────────────────────────────────
+#> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
 #> Education                0: No  1: Yes  Total 

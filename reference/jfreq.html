@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -123,7 +123,14 @@ detail already appears in each variable's frequency table.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly returns a list of class <code>jst_freq</code> containing:
-<code>frequencies</code> (named list of data frames, one per variable) and
+<code>frequencies</code> (a named list, one element per variable; each
+element is itself a list with seven components – <code>valid</code>, the
+valid-row frequency table as a data frame; <code>udm</code>, the
+user-defined-missing rows as a data frame, empty when the variable
+has none; <code>na</code>, the system-missing row as a one-row data
+frame, or <code>NULL</code> when there are none; <code>total</code>,
+<code>valid_count</code>, and <code>missing</code>, the case counts; and
+<code>var_label</code>, the variable's display label) and
 <code>sample_info</code> (pipeline and missing data counts).</p>
     </div>
     <div class="section level2">
@@ -170,10 +177,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Frequencies</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original            —        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N         —        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --        103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -228,10 +235,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original            —        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N         —        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --        103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

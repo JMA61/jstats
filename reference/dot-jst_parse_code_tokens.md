@@ -1,7 +1,7 @@
 # Internal helper: convert a character `codes` vector to canonical form
 
-Converts a character `codes` vector (as accepted by `jdeclare_udm`) into
-the canonical numeric / tagged-NA form, so a caller can write
+Converts a character `codes` vector (as accepted by `jdeclare_missing`)
+into the canonical numeric / tagged-NA form, so a caller can write
 `codes = c("Refused" = ".a")` or `c(".a", ".b")` without
 [`haven::tagged_na()`](https://haven.tidyverse.org/reference/tagged_na.html).
 A token `".a"` becomes `haven::tagged_na("a")`; a numeric string such as
@@ -23,4 +23,8 @@ A token `".a"` becomes `haven::tagged_na("a")`; a numeric string such as
 ## Value
 
 A numeric vector (with tagged-NA values for token entries), carrying the
-names of `codes`.
+names of `codes`. When any token was seen, a `tagged_raw` attribute
+records the marker letters as the caller typed them: a named character
+vector keyed by the canonical lowercase letter, whose values are the
+typed spellings. Read only by message builders that quote the call back;
+every other consumer ignores it.

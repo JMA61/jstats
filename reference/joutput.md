@@ -21,7 +21,7 @@ joutput(
   variable.id = NULL,
   value.id = NULL,
   ref.categories = NULL,
-  udm.notice = NULL,
+  missing.notice = NULL,
   digits = NULL,
   quiet = FALSE
 )
@@ -123,9 +123,9 @@ joutput(
   coefficients and fit blocks; for `jfreq` under each variable's own
   table; elsewhere directly after the single table). `"legend.bottom"`
   keeps names in place and prints one consolidated legend at the very
-  end of the output. The minimal and standard tiers default to `"none"`;
-  the full tier defaults to `"legend"`. Not a logical – `TRUE`/`FALSE`
-  are not accepted.
+  end of the output. The minimal and standard tiers default to
+  `"names"`; the full tier defaults to `"legend"`. Not a logical –
+  `TRUE`/`FALSE` are not accepted.
 
 - value.id:
 
@@ -149,7 +149,7 @@ joutput(
   Logical or NULL. Override the level's default for the reference
   categories block (registered dummies).
 
-- udm.notice:
+- missing.notice:
 
   Logical or NULL. Controls the user-defined missing-value (UDM)
   notification emitted by
@@ -179,6 +179,20 @@ joutput(
 Invisibly returns NULL. Called for its side effect of setting session
 options.
 
+## Session options
+
+`joutput()` stores its settings through R's standard
+[`options()`](https://rdrr.io/r/base/options.html) /
+[`getOption()`](https://rdrr.io/r/base/options.html) mechanism, under
+two keys: `.jst_output_level` (the preset level) and
+`.jst_output_toggles` (a named list holding any per-slot overrides).
+`getOption(".jst_output_level")` returns the raw stored level – `NULL`
+until a level has been set, which the package reads as the `"standard"`
+default. `joutput(NULL)` clears both keys. The same values can be read
+or set with base R's [`options()`](https://rdrr.io/r/base/options.html)
+directly; `joutput()` is the supported interface, adding validation and
+the settings display.
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)
@@ -202,7 +216,7 @@ joutput("standard")                       # effect sizes + means/diff CIs (jt, j
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
-#>   udm.notice: ON
+#>   missing.notice: ON
 #>   digits: 3
 #> 
 joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
@@ -219,7 +233,7 @@ joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient 
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
-#>   udm.notice: ON
+#>   missing.notice: ON
 #>   digits: 3
 #> 
 joutput("full")                         # everything
@@ -236,7 +250,7 @@ joutput("full")                         # everything
 #>   variable.id: LEGEND
 #>   value.id: BOTH
 #>   ref.categories: ON
-#>   udm.notice: ON
+#>   missing.notice: ON
 #>   digits: 3
 #> 
 joutput()                               # show current settings
@@ -253,9 +267,11 @@ joutput()                               # show current settings
 #>   variable.id: LEGEND
 #>   value.id: BOTH
 #>   ref.categories: ON
-#>   udm.notice: ON
+#>   missing.notice: ON
 #>   digits: 3
 #> 
+getOption(".jst_output_level")          # the raw option behind the level
+#> [1] "full"
 joutput(NULL)                           # reset to defaults
 #> Output Settings
 #> Reset to defaults (standard, no toggle overrides).

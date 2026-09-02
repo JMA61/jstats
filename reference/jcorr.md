@@ -147,14 +147,14 @@ jcorr(community, Income, Age, WellbeingScore)
 #> Pearson Bivariate Correlations
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        103
-#>     Remaining N         —        103
+#>     Original           --        103
+#>     Remaining N        --        103
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ─────────────────────────────────────
+#> -------------------------------------
 #> 
 #> Bivariate Correlations (Pearson)
 #>                 Income          Age             WellbeingScore
@@ -171,14 +171,14 @@ jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #> Spearman Bivariate Correlations
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        103
-#>     Remaining N         —        103
+#>     Original           --        103
+#>     Remaining N        --        103
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ─────────────────────────────────────
+#> -------------------------------------
 #> 
 #> Bivariate Correlations (Spearman)
 #>                 Income          Age             WellbeingScore
@@ -202,14 +202,14 @@ jcorr(Income, Age, WellbeingScore)
 #> Using default data frame: community
 #> 
 #> Case Processing  Excluded  Remaining
-#>     Original            —        103
-#>     Remaining N         —        103
+#>     Original           --        103
+#>     Remaining N        --        103
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
 #> 
-#> ─────────────────────────────────────
+#> -------------------------------------
 #> 
 #> Bivariate Correlations (Pearson)
 #>                 Income          Age             WellbeingScore

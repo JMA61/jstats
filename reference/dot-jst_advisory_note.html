@@ -4,12 +4,12 @@ the note just reports a benign detail (a no-op recode, a silent text-to-
 numeric coercion). They are shown only at joutput("full") and stay
 hidden at "standard" and "minimal". Consequential notes – an overwrite, an
 override taking precedence, a skipped variable, a diagnostic that could not
-be computed – use a plain message() instead and are always visible.'><meta property="og:description" content='Advisory notes are pure FYI: the function did exactly what was asked, and
+be computed – call .jst_msg() directly and are always visible.'><meta property="og:description" content='Advisory notes are pure FYI: the function did exactly what was asked, and
 the note just reports a benign detail (a no-op recode, a silent text-to-
 numeric coercion). They are shown only at joutput("full") and stay
 hidden at "standard" and "minimal". Consequential notes – an overwrite, an
 override taking precedence, a skipped variable, a diagnostic that could not
-be computed – use a plain message() instead and are always visible.'></head><body>
+be computed – call .jst_msg() directly and are always visible.'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -17,7 +17,7 @@ be computed – use a plain message() instead and are always visible.'></head><b
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,7 +47,7 @@ the note just reports a benign detail (a no-op recode, a silent text-to-
 numeric coercion). They are shown only at <code>joutput("full")</code> and stay
 hidden at "standard" and "minimal". Consequential notes – an overwrite, an
 override taking precedence, a skipped variable, a diagnostic that could not
-be computed – use a plain <code><a href="https://rdrr.io/r/base/message.html" class="external-link">message()</a></code> instead and are always visible.</p>
+be computed – call <code><a href="dot-jst_msg.html">.jst_msg()</a></code> directly and are always visible.</p>
     </div>
 
     <div class="section level2">
@@ -60,7 +60,7 @@ be computed – use a plain <code><a href="https://rdrr.io/r/base/message.html" 
 
 
 <dl><dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Parts of the message, passed through to <code><a href="https://rdrr.io/r/base/message.html" class="external-link">message()</a></code>.</p></dd>
+<dd><p>Parts of the message, passed through to <code><a href="dot-jst_msg.html">.jst_msg()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

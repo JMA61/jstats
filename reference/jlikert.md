@@ -128,6 +128,10 @@ Clearing mirrors the other registration verbs:
 #> Environment1       12       11.7
 #> Environment3       12       11.7
 #> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
+#> 
   jlikert(community, Environment1, remove = TRUE) # undo one
 #> Likert registration removed for 'Environment1' in community.
   jlikert(community, NULL)                        # clear the registrations

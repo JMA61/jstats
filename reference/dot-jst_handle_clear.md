@@ -37,7 +37,7 @@ uniform.
 
 - kind:
 
-  One of "numeric", "count", "dummy".
+  One of "numeric", "count", "likert", "dummy".
 
 - clear.all:
 

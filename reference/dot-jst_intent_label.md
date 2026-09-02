@@ -12,7 +12,7 @@ Internal helper: human-readable label for a registered intent kind
 
 - kind:
 
-  One of "numeric", "count", "dummy".
+  One of "numeric", "count", "likert", "dummy".
 
 - cap:
 

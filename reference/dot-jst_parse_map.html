@@ -3,11 +3,21 @@
 (used by jrecode()) into a list of mapping rules plus an
 else-action. Each rule's left-hand side may be a single value or a
 comma-separated list of values; an explicit else=... clause
-sets the fallback action."><meta property="og:description" content="Parses a map string of the form &quot;1=1; 2,3=2; 4,5=3; else=copy&quot;
+sets the fallback action. A left-hand side may also include the
+system-NA aliases (NA, System, or SYSMIS,
+case-insensitive) to target plain NA cells; alias tokens are
+split out into the na_rule component rather than entering
+mappings, so downstream consumers of mappings continue
+to see numeric old values only."><meta property="og:description" content="Parses a map string of the form &quot;1=1; 2,3=2; 4,5=3; else=copy&quot;
 (used by jrecode()) into a list of mapping rules plus an
 else-action. Each rule's left-hand side may be a single value or a
 comma-separated list of values; an explicit else=... clause
-sets the fallback action."></head><body>
+sets the fallback action. A left-hand side may also include the
+system-NA aliases (NA, System, or SYSMIS,
+case-insensitive) to target plain NA cells; alias tokens are
+split out into the na_rule component rather than entering
+mappings, so downstream consumers of mappings continue
+to see numeric old values only."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -15,7 +25,7 @@ sets the fallback action."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +54,12 @@ sets the fallback action."></head><body>
 (used by <code><a href="jrecode.html">jrecode()</a></code>) into a list of mapping rules plus an
 else-action. Each rule's left-hand side may be a single value or a
 comma-separated list of values; an explicit <code>else=...</code> clause
-sets the fallback action.</p>
+sets the fallback action. A left-hand side may also include the
+system-NA aliases (<code>NA</code>, <code>System</code>, or <code>SYSMIS</code>,
+case-insensitive) to target plain <code>NA</code> cells; alias tokens are
+split out into the <code>na_rule</code> component rather than entering
+<code>mappings</code>, so downstream consumers of <code>mappings</code> continue
+to see numeric old values only.</p>
     </div>
 
     <div class="section level2">
@@ -82,6 +97,15 @@ for tagged-NA rules).</p></dd>
 <dt>else_explicit</dt>
 <dd><p>Logical: <code>TRUE</code> if the user wrote an
 explicit <code>else=...</code> clause, <code>FALSE</code> if defaulted.</p></dd>
+
+<dt>na_rule</dt>
+<dd><p><code>NULL</code> when the map does not name <code>NA</code>
+as an old value; otherwise a list with <code>new_val</code> (single
+numeric; <code>NA_real_</code> for system-NA and tagged-NA targets)
+and <code>tagged</code> (<code>NULL</code>, or a single lowercase letter
+for a tagged-NA target). Populated by the <code>NA</code> /
+<code>System</code> / <code>SYSMIS</code> aliases on a rule's left-hand
+side; at most one rule may name <code>NA</code>.</p></dd>
 
 
 </dl></div>

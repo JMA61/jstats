@@ -23,7 +23,7 @@ and date/time variables gracefully.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,7 +137,7 @@ FALSE to suppress the table entirely. Suppressing <code>types</code>,
 haven_labelled / factor / character / date-time) to the Variable Types
 table, showing each variable's storage type alongside its jstats class.
 Default is FALSE: the storage type is expert detail (its main signal is
-"this variable carries value labels / came from SPSS or Stata"), so it
+"this variable carries value labels / came from SPSS, Stata, or SAS"), so it
 is opt-in rather than shown by default. The returned data frame always
 includes it regardless of this setting.</p></dd>
 
@@ -242,6 +242,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income, Education, Smoker,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1, Environment3.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, outlier.sd <span class="op">=</span> <span class="fl">2.5</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
@@ -272,13 +276,17 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 2.5 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Missing  % Missing  Outliers</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  -------  ---------  --------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income                6        5.8          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education             6        5.8          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age                                        1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore                             1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker                5        4.9          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1         12       11.7          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3         12       11.7          </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income                6        5.8        --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education             6        5.8        --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                  --         --         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore       --         --         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Smoker                5        4.9        --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1         12       11.7        --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment3         12       11.7        --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income, Education, Smoker,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1, Environment3.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Show the Base R storage type column</span></span></span>
@@ -318,6 +326,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income, Education, Smoker,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1, Environment3.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add Mean and Median columns for numeric-like variables</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, stats <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
@@ -356,6 +368,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income, Education, Smoker,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1, Environment3.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Suppress tables (header block only)</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, types <span class="op">=</span> <span class="cn">FALSE</span>, issues <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
@@ -364,6 +380,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income, Education, Smoker,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1, Environment3.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
@@ -406,6 +426,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment3       12       11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income, Education, Smoker,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Environment1, Environment3.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
@@ -425,6 +449,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -------  ---------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Income          6        5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span>, subset <span class="op">=</span> <span class="va">Volunteer</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
@@ -446,6 +473,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -------  ---------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Income          4        8.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

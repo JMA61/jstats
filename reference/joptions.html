@@ -3,16 +3,20 @@
 missing-value information and related conventions. joptions
 complements joutput: joutput governs output verbosity and
 tiering, while joptions holds session-wide conventions plus a small number
-of per-function display defaults (currently the jcorr() cell
-layout). Settings are read fresh on each function call:
+of per-function display defaults (the jcorr() cell layout via
+corr.layout, and the jfreq() missing-value range detail
+via missing.detail), and the width at which runtime message prose
+wraps (message.width). Settings are read fresh on each function call:
 changing a setting after data has been loaded does not retroactively
 transform data already in memory. jconvert is the
 explicit transform path for data already in the workspace."><meta property="og:description" content="Controls session-wide settings that affect how the package handles
 missing-value information and related conventions. joptions
 complements joutput: joutput governs output verbosity and
 tiering, while joptions holds session-wide conventions plus a small number
-of per-function display defaults (currently the jcorr() cell
-layout). Settings are read fresh on each function call:
+of per-function display defaults (the jcorr() cell layout via
+corr.layout, and the jfreq() missing-value range detail
+via missing.detail), and the width at which runtime message prose
+wraps (message.width). Settings are read fresh on each function call:
 changing a setting after data has been loaded does not retroactively
 transform data already in memory. jconvert is the
 explicit transform path for data already in the workspace."></head><body>
@@ -23,7 +27,7 @@ explicit transform path for data already in the workspace."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.121</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.152</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,8 +56,10 @@ explicit transform path for data already in the workspace."></head><body>
 missing-value information and related conventions. <code>joptions</code>
 complements <code><a href="joutput.html">joutput</a></code>: joutput governs output verbosity and
 tiering, while joptions holds session-wide conventions plus a small number
-of per-function display defaults (currently the <code><a href="jcorr.html">jcorr()</a></code> cell
-layout). Settings are read fresh on each function call:
+of per-function display defaults (the <code><a href="jcorr.html">jcorr()</a></code> cell layout via
+<code>corr.layout</code>, and the <code><a href="jfreq.html">jfreq()</a></code> missing-value range detail
+via <code>missing.detail</code>), and the width at which runtime message prose
+wraps (<code>message.width</code>). Settings are read fresh on each function call:
 changing a setting after data has been loaded does not retroactively
 transform data already in memory. <code><a href="jconvert.html">jconvert</a></code> is the
 explicit transform path for data already in the workspace.</p>
@@ -63,10 +69,11 @@ explicit transform path for data already in the workspace.</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">joptions</span><span class="op">(</span></span>
 <span>  missing.convention <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  udm.convention.codes <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  missing.convention.codes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  data.dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  corr.layout <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  missing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  message.width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -76,11 +83,12 @@ explicit transform path for data already in the workspace.</p>
 
 
 <dl><dt id="arg-missing-convention">missing.convention<a class="anchor" aria-label="anchor" href="#arg-missing-convention"></a></dt>
-<dd><p>One of <code>"none"</code>, <code>"spss"</code>, or
-<code>"stata"</code> (any capitalization is accepted). See Slots.</p></dd>
+<dd><p>One of <code>"none"</code>, <code>"spss"</code>,
+<code>"stata"</code>, or <code>"sas"</code> (any capitalization is accepted).
+See Slots.</p></dd>
 
 
-<dt id="arg-udm-convention-codes">udm.convention.codes<a class="anchor" aria-label="anchor" href="#arg-udm-convention-codes"></a></dt>
+<dt id="arg-missing-convention-codes">missing.convention.codes<a class="anchor" aria-label="anchor" href="#arg-missing-convention-codes"></a></dt>
 <dd><p>Numeric vector, length 1 to 3. See Slots.</p></dd>
 
 
@@ -98,16 +106,25 @@ explicit transform path for data already in the workspace.</p>
 <code>"all"</code>, or <code>NULL</code>. See Slots.</p></dd>
 
 
+<dt id="arg-message-width">message.width<a class="anchor" aria-label="anchor" href="#arg-message-width"></a></dt>
+<dd><p>One of <code>"auto"</code>, <code>"narrow"</code>,
+<code>"medium"</code>, <code>"wide"</code>, a whole number between 40 and 120,
+or <code>NULL</code>. See Slots.</p></dd>
+
+
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Logical; default FALSE. When TRUE, joptions() applies the
-change silently, suppressing both the status panel and the convention
-nudge. A bare joptions() status query always prints regardless of quiet.</p></dd>
+change silently, suppressing the settings echo, its pointer, and the
+convention nudge alike. A bare joptions() status query always prints
+regardless of quiet.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly returns <code>NULL</code>. Called for the side effect of
-updating session options and printing the status panel.</p>
+updating session options and printing the settings panel – in full
+for a status query or a reset, or as an echo of the slots a setting
+call touched.</p>
     </div>
     <div class="section level2">
     <h2 id="slots">Slots<a class="anchor" aria-label="anchor" href="#slots"></a></h2>
@@ -115,19 +132,26 @@ updating session options and printing the status panel.</p>
 
 <dl><dt>missing.convention</dt>
 <dd><p>Character, length 1. One of <code>"none"</code>,
-<code>"spss"</code>, or <code>"stata"</code>. Default: <code>"none"</code>.
-<code>"none"</code> preserves loaded data as-is (no automatic conversion
-between user-defined missing value (UDM) representations at load time). <code>"spss"</code> or
-<code>"stata"</code> opts into load-time auto-conversion via
-<code><a href="jload.html">jload</a></code>, and also supplies the target convention for
-fresh UDM declarations on columns with no existing convention.</p></dd>
+<code>"spss"</code>, <code>"stata"</code>, or <code>"sas"</code>. Default:
+<code>"none"</code>, meaning no stated preference: loaded data is
+preserved as-is, and a call that would create a fresh
+user-defined missing value (UDM) declaration stops with a
+guided error asking you to choose a convention – the package
+never infers one. A set value states your
+working convention: it supplies the target for fresh UDM
+declarations on columns with no existing convention, becomes the
+default target for <code><a href="jconvert.html">jconvert</a></code> when <code>to</code> is not
+given, and is the reference point for the environment-scan
+notice (see below). Data already loaded is never changed by
+setting this; <code><a href="jconvert.html">jconvert</a></code> is the explicit transform
+path.</p></dd>
 
-<dt>udm.convention.codes</dt>
+<dt>missing.convention.codes</dt>
 <dd><p>Numeric vector, length 1 to 3, whole
 numbers, no duplicates. Sign unconstrained. Default:
 <code>c(-99, -98, -97)</code>. The recommended UDM code set used
 by <code><a href="jconvert.html">jconvert</a></code> when translating Stata-style missing values
-(<code>.a</code>, <code>.b</code>, <code>.c</code>, <code>.d</code>) into SPSS-form
+(<code>.a</code>, <code>.b</code>, <code>.c</code>, <code>.d</code>) into SPSS-style
 numeric codes, and by the load-time diagnostic for
 convention-matched detection.</p></dd>
 
@@ -173,6 +197,19 @@ range. A per-call <code>missing.detail</code> argument to
 here rather than in <code><a href="joutput.html">joutput</a></code> because it is specific
 to one function's output.</p></dd>
 
+<dt>message.width</dt>
+<dd><p>Character or numeric, length 1. One of
+<code>"auto"</code>, <code>"narrow"</code> (50 columns), <code>"medium"</code> (76),
+<code>"wide"</code> (90), or a whole number between 40 and 120. Default:
+<code>"auto"</code>. The target width at which the package wraps runtime
+MESSAGE prose – errors, warnings and notes. <code>"auto"</code> follows the
+console pane, which R keeps current as the pane is resized, so it is
+resolved afresh for each message rather than fixed when it is set. A
+width outside 40 to 120 is refused rather than quietly adjusted.
+Analysis TABLES are not affected and do not reflow: prose can be
+re-wrapped without losing information, whereas breaking a correlation
+matrix mid-row would destroy the alignment that makes it readable.</p></dd>
+
 
 </dl></div>
     <div class="section level2">
@@ -180,17 +217,23 @@ to one function's output.</p></dd>
 
 
 <dl><dt><code>joptions()</code></dt>
-<dd><p>Print the current settings panel.</p></dd>
+<dd><p>Print the full settings panel.</p></dd>
 
 <dt><code>joptions(NULL)</code></dt>
 <dd><p>Reset all slots to defaults, then print
-the panel.</p></dd>
+the full panel – everything changed.</p></dd>
 
 <dt><code>joptions(slot = value, ...)</code></dt>
-<dd><p>Set one or more slots,
-then print the panel. Passing <code>slot = NULL</code> as a named
+<dd><p>Set one or more slots, then
+echo only what the call touched: the slots named, plus
+<code>missing.convention.codes</code> whenever <code>missing.convention</code> is
+set and vice versa (the codes are read in light of the convention),
+closed by a pointer to <code>joptions()</code> for the full panel. The
+other three slots are independent and are not pulled in.
+Passing <code>slot = NULL</code> as a named
 argument leaves that slot at its current value – useful for
-setting one slot without touching another. To reset a single
+setting one slot without touching another – and echoes that
+unchanged value back. To reset a single
 slot to its default, pass the default value explicitly (e.g.
 <code>joptions(missing.convention = "none")</code>). Because
 <code>data.dir</code>'s default is <code>NULL</code> – which already means
@@ -202,14 +245,16 @@ slot to its default, pass the default value explicitly (e.g.
     <h2 id="environment-scan-notice">Environment-scan notice<a class="anchor" aria-label="anchor" href="#environment-scan-notice"></a></h2>
 
 
-<p>Setting <code>missing.convention</code> to <code>"spss"</code> or <code>"stata"</code>
-triggers a one-time scan of <code><a href="https://rdrr.io/r/base/environment.html" class="external-link">globalenv()</a></code> for data frames whose
-predominant UDM convention differs from the newly-set value. When
-mismatches exist, a one-line notice lists the affected data frames
-and suggests <code><a href="jconvert.html">jconvert</a></code> for alignment. The notice is
-informational; nothing is changed. Plain data frames with no
-UDM-bearing columns – including the course datasets in their
-standard form – do not trigger the notice.</p>
+<p>Setting <code>missing.convention</code> to <code>"spss"</code>, <code>"stata"</code>,
+or <code>"sas"</code> triggers a one-time scan of <code><a href="https://rdrr.io/r/base/environment.html" class="external-link">globalenv()</a></code> for
+data frames whose UDM convention differs from the newly-set value.
+When mismatches exist, a notice lists the affected data frames and
+suggests <code><a href="jconvert.html">jconvert</a></code>: frames whose declared columns all
+carry one convention read "use X-style missing values", while
+frames with a genuine internal majority read "predominantly use".
+The notice is informational; nothing is changed. Plain data frames
+with no UDM-bearing columns – including the course datasets in
+their standard form – do not trigger the notice.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -221,61 +266,75 @@ standard form – do not trigger the notice.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span><span class="op">)</span>                                        <span class="co"># show current settings</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> User-defined missing values (UDMs) convention: None selected</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: SPSS-style</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98, -97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Message width: Auto (currently 79)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"spss"</span><span class="op">)</span>             <span class="co"># set, panel, nudge</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Setting a convention echoes the convention and its codes, then scans</span></span></span>
+<span class="r-in"><span><span class="co"># the workspace and notes any data frames whose UDM convention differs</span></span></span>
+<span class="r-in"><span><span class="co"># (see the Environment-scan notice section):</span></span></span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"spss"</span><span class="op">)</span>             <span class="co"># set, echo, scan notice</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> User-defined missing values (UDMs) convention: SPSS</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: SPSS-style</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98, -97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>udm.convention.codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span><span class="op">)</span><span class="op">)</span>      <span class="co"># set, panel, no nudge</span></span></span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"sas"</span><span class="op">)</span>              <span class="co"># SAS-style: .A, .B, ...</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> User-defined missing values (UDMs) convention: SPSS</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: SAS-style</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention.codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span><span class="op">)</span><span class="op">)</span>      <span class="co"># set, echo, no scan</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: SAS-style</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="st">"Data"</span><span class="op">)</span>                       <span class="co"># set save/load folder</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> User-defined missing values (UDMs) convention: SPSS</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Data (will be created on first save)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>message.width <span class="op">=</span> <span class="fl">60</span><span class="op">)</span>                      <span class="co"># wrap message prose at 60</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Message width: 60</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>message.width <span class="op">=</span> <span class="st">"narrow"</span><span class="op">)</span>                <span class="co"># preset width (50 columns)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Message width: Narrow (50)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>message.width <span class="op">=</span> <span class="st">"auto"</span><span class="op">)</span>                  <span class="co"># follow the console pane</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Message width: Auto (currently 79)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"stata"</span>,</span></span>
-<span class="r-in"><span>         udm.convention.codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span>, <span class="op">-</span><span class="fl">97</span><span class="op">)</span><span class="op">)</span> <span class="co"># set both</span></span></span>
+<span class="r-in"><span>         missing.convention.codes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">99</span>, <span class="op">-</span><span class="fl">98</span>, <span class="op">-</span><span class="fl">97</span><span class="op">)</span><span class="op">)</span> <span class="co"># set both</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> User-defined missing values (UDMs) convention: Stata</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Data (will be created on first save)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: Stata-style</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98, -97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>missing.convention <span class="op">=</span> <span class="st">"spss"</span>,</span></span>
-<span class="r-in"><span>         udm.convention.codes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>             <span class="co"># set mc, leave codes</span></span></span>
+<span class="r-in"><span>         missing.convention.codes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>             <span class="co"># set mc, leave codes</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> User-defined missing values (UDMs) convention: SPSS</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Data (will be created on first save)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: SPSS-style</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98, -97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                                    <span class="co"># reset all to defaults</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> User-defined missing values (UDMs) convention: None selected</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> UDM convention codes: -99, -98, -97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value convention: None selected</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Message width: Auto (currently 79)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

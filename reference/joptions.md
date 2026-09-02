@@ -6,11 +6,14 @@ complements
 [`joutput`](https://jma61.github.io/jstats/reference/joutput.md):
 joutput governs output verbosity and tiering, while joptions holds
 session-wide conventions plus a small number of per-function display
-defaults (currently the
+defaults (the
 [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) cell
-layout). Settings are read fresh on each function call: changing a
-setting after data has been loaded does not retroactively transform data
-already in memory.
+layout via `corr.layout`, and the
+[`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md)
+missing-value range detail via `missing.detail`), and the width at which
+runtime message prose wraps (`message.width`). Settings are read fresh
+on each function call: changing a setting after data has been loaded
+does not retroactively transform data already in memory.
 [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md) is
 the explicit transform path for data already in the workspace.
 
@@ -19,10 +22,11 @@ the explicit transform path for data already in the workspace.
 ``` r
 joptions(
   missing.convention = NULL,
-  udm.convention.codes = NULL,
+  missing.convention.codes = NULL,
   data.dir = NULL,
   corr.layout = NULL,
   missing.detail = NULL,
+  message.width = NULL,
   quiet = FALSE
 )
 ```
@@ -31,10 +35,10 @@ joptions(
 
 - missing.convention:
 
-  One of `"none"`, `"spss"`, or `"stata"` (any capitalization is
-  accepted). See Slots.
+  One of `"none"`, `"spss"`, `"stata"`, or `"sas"` (any capitalization
+  is accepted). See Slots.
 
-- udm.convention.codes:
+- missing.convention.codes:
 
   Numeric vector, length 1 to 3. See Slots.
 
@@ -50,37 +54,51 @@ joptions(
 
   One of `"totals"`, `"per_code"`, or `"all"`, or `NULL`. See Slots.
 
+- message.width:
+
+  One of `"auto"`, `"narrow"`, `"medium"`, `"wide"`, a whole number
+  between 40 and 120, or `NULL`. See Slots.
+
 - quiet:
 
   Logical; default FALSE. When TRUE, joptions() applies the change
-  silently, suppressing both the status panel and the convention nudge.
-  A bare joptions() status query always prints regardless of quiet.
+  silently, suppressing the settings echo, its pointer, and the
+  convention nudge alike. A bare joptions() status query always prints
+  regardless of quiet.
 
 ## Value
 
 Invisibly returns `NULL`. Called for the side effect of updating session
-options and printing the status panel.
+options and printing the settings panel – in full for a status query or
+a reset, or as an echo of the slots a setting call touched.
 
 ## Slots
 
 - missing.convention:
 
-  Character, length 1. One of `"none"`, `"spss"`, or `"stata"`. Default:
-  `"none"`. `"none"` preserves loaded data as-is (no automatic
-  conversion between user-defined missing value (UDM) representations at
-  load time). `"spss"` or `"stata"` opts into load-time auto-conversion
-  via [`jload`](https://jma61.github.io/jstats/reference/jload.md), and
-  also supplies the target convention for fresh UDM declarations on
-  columns with no existing convention.
+  Character, length 1. One of `"none"`, `"spss"`, `"stata"`, or `"sas"`.
+  Default: `"none"`, meaning no stated preference: loaded data is
+  preserved as-is, and a call that would create a fresh user-defined
+  missing value (UDM) declaration stops with a guided error asking you
+  to choose a convention – the package never infers one. A set value
+  states your working convention: it supplies the target for fresh UDM
+  declarations on columns with no existing convention, becomes the
+  default target for
+  [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md)
+  when `to` is not given, and is the reference point for the
+  environment-scan notice (see below). Data already loaded is never
+  changed by setting this;
+  [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md) is
+  the explicit transform path.
 
-- udm.convention.codes:
+- missing.convention.codes:
 
   Numeric vector, length 1 to 3, whole numbers, no duplicates. Sign
   unconstrained. Default: `c(-99, -98, -97)`. The recommended UDM code
   set used by
   [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md)
   when translating Stata-style missing values (`.a`, `.b`, `.c`, `.d`)
-  into SPSS-form numeric codes, and by the load-time diagnostic for
+  into SPSS-style numeric codes, and by the load-time diagnostic for
   convention-matched detection.
 
 - data.dir:
@@ -131,38 +149,59 @@ options and printing the status panel.
   [`joutput`](https://jma61.github.io/jstats/reference/joutput.md)
   because it is specific to one function's output.
 
+- message.width:
+
+  Character or numeric, length 1. One of `"auto"`, `"narrow"` (50
+  columns), `"medium"` (76), `"wide"` (90), or a whole number between 40
+  and 120. Default: `"auto"`. The target width at which the package
+  wraps runtime MESSAGE prose – errors, warnings and notes. `"auto"`
+  follows the console pane, which R keeps current as the pane is
+  resized, so it is resolved afresh for each message rather than fixed
+  when it is set. A width outside 40 to 120 is refused rather than
+  quietly adjusted. Analysis TABLES are not affected and do not reflow:
+  prose can be re-wrapped without losing information, whereas breaking a
+  correlation matrix mid-row would destroy the alignment that makes it
+  readable.
+
 ## Call patterns
 
 - `joptions()`:
 
-  Print the current settings panel.
+  Print the full settings panel.
 
 - `joptions(NULL)`:
 
-  Reset all slots to defaults, then print the panel.
+  Reset all slots to defaults, then print the full panel – everything
+  changed.
 
 - `joptions(slot = value, ...)`:
 
-  Set one or more slots, then print the panel. Passing `slot = NULL` as
-  a named argument leaves that slot at its current value – useful for
-  setting one slot without touching another. To reset a single slot to
-  its default, pass the default value explicitly (e.g.
+  Set one or more slots, then echo only what the call touched: the slots
+  named, plus `missing.convention.codes` whenever `missing.convention`
+  is set and vice versa (the codes are read in light of the convention),
+  closed by a pointer to `joptions()` for the full panel. The other
+  three slots are independent and are not pulled in. Passing
+  `slot = NULL` as a named argument leaves that slot at its current
+  value – useful for setting one slot without touching another – and
+  echoes that unchanged value back. To reset a single slot to its
+  default, pass the default value explicitly (e.g.
   `joptions(missing.convention = "none")`). Because `data.dir`'s default
   is `NULL` – which already means "leave alone" – it is cleared instead
   with `data.dir = ""`.
 
 ## Environment-scan notice
 
-Setting `missing.convention` to `"spss"` or `"stata"` triggers a
-one-time scan of
+Setting `missing.convention` to `"spss"`, `"stata"`, or `"sas"` triggers
+a one-time scan of
 [`globalenv()`](https://rdrr.io/r/base/environment.html) for data frames
-whose predominant UDM convention differs from the newly-set value. When
-mismatches exist, a one-line notice lists the affected data frames and
-suggests
-[`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md) for
-alignment. The notice is informational; nothing is changed. Plain data
-frames with no UDM-bearing columns – including the course datasets in
-their standard form – do not trigger the notice.
+whose UDM convention differs from the newly-set value. When mismatches
+exist, a notice lists the affected data frames and suggests
+[`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md):
+frames whose declared columns all carry one convention read "use X-style
+missing values", while frames with a genuine internal majority read
+"predominantly use". The notice is informational; nothing is changed.
+Plain data frames with no UDM-bearing columns – including the course
+datasets in their standard form – do not trigger the notice.
 
 ## See also
 
@@ -176,60 +215,74 @@ for the package overview.
 ``` r
 joptions()                                        # show current settings
 #> Options Settings
-#> User-defined missing values (UDMs) convention: None selected
-#> UDM convention codes: -99, -98, -97
+#> Missing-value convention: SPSS-style
+#> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
 #> Correlation layout: wide
 #> Missing-value detail: per_code
+#> Message width: Auto (currently 79)
 #> 
-joptions(missing.convention = "spss")             # set, panel, nudge
+
+# Setting a convention echoes the convention and its codes, then scans
+# the workspace and notes any data frames whose UDM convention differs
+# (see the Environment-scan notice section):
+joptions(missing.convention = "spss")             # set, echo, scan notice
 #> Options Settings
-#> User-defined missing values (UDMs) convention: SPSS
-#> UDM convention codes: -99, -98, -97
-#> Data folder: Working directory
-#> Correlation layout: wide
-#> Missing-value detail: per_code
+#> Missing-value convention: SPSS-style
+#> SPSS-style missing value codes: -99, -98, -97
+#> Run joptions() to see all settings.
 #> 
-joptions(udm.convention.codes = c(-99, -98))      # set, panel, no nudge
+joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
 #> Options Settings
-#> User-defined missing values (UDMs) convention: SPSS
-#> UDM convention codes: -99, -98
-#> Data folder: Working directory
-#> Correlation layout: wide
-#> Missing-value detail: per_code
+#> Missing-value convention: SAS-style
+#> Run joptions() to see all settings.
+#> 
+joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
+#> Options Settings
+#> Missing-value convention: SAS-style
+#> SPSS-style missing value codes: -99, -98
+#> Run joptions() to see all settings.
 #> 
 joptions(data.dir = "Data")                       # set save/load folder
 #> Options Settings
-#> User-defined missing values (UDMs) convention: SPSS
-#> UDM convention codes: -99, -98
 #> Data folder: Data (will be created on first save)
-#> Correlation layout: wide
-#> Missing-value detail: per_code
+#> Run joptions() to see all settings.
+#> 
+joptions(message.width = 60)                      # wrap message prose at 60
+#> Options Settings
+#> Message width: 60
+#> Run joptions() to see all settings.
+#> 
+joptions(message.width = "narrow")                # preset width (50 columns)
+#> Options Settings
+#> Message width: Narrow (50)
+#> Run joptions() to see all settings.
+#> 
+joptions(message.width = "auto")                  # follow the console pane
+#> Options Settings
+#> Message width: Auto (currently 79)
+#> Run joptions() to see all settings.
 #> 
 joptions(missing.convention = "stata",
-         udm.convention.codes = c(-99, -98, -97)) # set both
+         missing.convention.codes = c(-99, -98, -97)) # set both
 #> Options Settings
-#> User-defined missing values (UDMs) convention: Stata
-#> UDM convention codes: -99, -98, -97
-#> Data folder: Data (will be created on first save)
-#> Correlation layout: wide
-#> Missing-value detail: per_code
+#> Missing-value convention: Stata-style
+#> SPSS-style missing value codes: -99, -98, -97
+#> Run joptions() to see all settings.
 #> 
 joptions(missing.convention = "spss",
-         udm.convention.codes = NULL)             # set mc, leave codes
+         missing.convention.codes = NULL)             # set mc, leave codes
 #> Options Settings
-#> User-defined missing values (UDMs) convention: SPSS
-#> UDM convention codes: -99, -98, -97
-#> Data folder: Data (will be created on first save)
-#> Correlation layout: wide
-#> Missing-value detail: per_code
+#> Missing-value convention: SPSS-style
+#> SPSS-style missing value codes: -99, -98, -97
+#> Run joptions() to see all settings.
 #> 
 joptions(NULL)                                    # reset all to defaults
 #> Options Settings
-#> User-defined missing values (UDMs) convention: None selected
-#> UDM convention codes: -99, -98, -97
+#> Missing-value convention: None selected
 #> Data folder: Working directory
 #> Correlation layout: wide
 #> Missing-value detail: per_code
+#> Message width: Auto (currently 79)
 #> 
 ```
