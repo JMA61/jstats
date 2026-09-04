@@ -85,11 +85,11 @@ jfreq(
 Invisibly returns a list of class `jst_freq` containing: `frequencies`
 (a named list, one element per variable; each element is itself a list
 with seven components – `valid`, the valid-row frequency table as a data
-frame; `udm`, the user-defined-missing rows as a data frame, empty when
-the variable has none; `na`, the system-missing row as a one-row data
-frame, or `NULL` when there are none; `total`, `valid_count`, and
-`missing`, the case counts; and `var_label`, the variable's display
-label) and `sample_info` (pipeline and missing data counts).
+frame; `udm`, the declared-missing rows as a data frame, empty when the
+variable has none; `na`, the system-missing row as a one-row data frame,
+or `NULL` when there are none; `total`, `valid_count`, and `missing`,
+the case counts; and `var_label`, the variable's display label) and
+`sample_info` (pipeline and missing data counts).
 
 ## Details
 

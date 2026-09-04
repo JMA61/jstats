@@ -11,7 +11,7 @@ representation (`tagged_na` markers on `haven_labelled`).
 ## Usage
 
 ``` r
-.jst_handle_udms(df, preserve.udm)
+.jst_handle_udms(df, preserve.declarations)
 ```
 
 ## Value
@@ -25,8 +25,8 @@ return value for that column).
 
 ## Details
 
-When `preserve.udm = FALSE`, additionally converts UDM cells to `NA` and
-strips the corresponding metadata. For SPSS columns this strips
+When `preserve.declarations = FALSE`, additionally converts UDM cells to
+`NA` and strips the corresponding metadata. For SPSS columns this strips
 `na_values` and `na_range`; for Stata columns
 [`haven::zap_missing()`](https://haven.tidyverse.org/reference/zap_missing.html)
 converts Stata-style missing-value cells to plain NA. In both cases the

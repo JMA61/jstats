@@ -2,15 +2,21 @@
 
 Excel and CSV cannot store variable labels, value labels, or
 missing-value declarations. jsave emits a note after a successful write
-to these formats describing what was (or, under `preserve.udm = FALSE`,
-would have been) lost. The wording depends on which missing-value form
-the frame carried and on whether `preserve.udm = FALSE` blanked the
-codes.
+to these formats describing what was (or, under
+`preserve.declarations = FALSE`, would have been) lost. The wording
+depends on which missing-value form the frame carried and on whether
+`preserve.declarations = FALSE` blanked the codes.
 
 ## Usage
 
 ``` r
-.jst_jsave_label_loss_note(ext, spss_vars, stata_vars, preserve.udm, n_blanked)
+.jst_jsave_label_loss_note(
+  ext,
+  spss_vars,
+  stata_vars,
+  preserve.declarations,
+  n_blanked
+)
 ```
 
 ## Arguments
@@ -29,14 +35,14 @@ codes.
   Character vector of Stata-form tagged-NA variable names, as detected
   before any collapse.
 
-- preserve.udm:
+- preserve.declarations:
 
   Logical, the value passed to jsave.
 
 - n_blanked:
 
   Integer count of SPSS-style code cells blanked when
-  `preserve.udm = FALSE`; zero otherwise.
+  `preserve.declarations = FALSE`; zero otherwise.
 
 ## Value
 
@@ -47,11 +53,12 @@ A single message string, or `NULL` if no note applies.
 Branching (SPSS-style codes write as literal numbers, while Stata-style
 tagged NAs write as blank cells):
 
-- `preserve.udm = FALSE` and SPSS-style codes were blanked: a
+- `preserve.declarations = FALSE` and SPSS-style codes were blanked: a
   confirmation giving the count of blanked cells.
 
-- both forms present (`preserve.udm = TRUE`): a generic note that names
-  neither platform, plus the `preserve.udm = FALSE` suggestion.
+- both forms present (`preserve.declarations = TRUE`): a generic note
+  that names neither platform, plus the `preserve.declarations = FALSE`
+  suggestion.
 
 - SPSS-style only: the literal-numbers warning plus the suggestion.
 

@@ -59,7 +59,8 @@ jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
   [`jload`](https://jma61.github.io/jstats/reference/jload.md). The
   pre-flight checks for the .sav, .dta, and .xpt formats run before this
   step, so a missing-value form a target format cannot represent is
-  still reported and blocked rather than silently dropped.
+  still reported and blocked rather than silently dropped. The haven
+  package and its documentation call these user-defined missing values.
 
 ## Value
 
@@ -110,7 +111,7 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpDZgEBy/community.sav
+#> Saved community to /tmp/RtmpR4rfVW/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
@@ -121,7 +122,7 @@ jsave(community, "community.xlsx")        # Excel
 jsave(community, "community.csv")         # CSV
 jsave(community, "community.rds")         # R native
 
-# Stata and SAS formats cannot carry community's SPSS-form missing-value
+# Stata and SAS formats cannot carry community's SPSS-style missing-value
 # declarations -- convert first (jsave() pre-flights this and says so)
 jsave(jconvert(community, to = "stata"), "community.dta")   # Stata
 jsave(jconvert(community, to = "baseR"), "community.xpt")   # SAS interchange

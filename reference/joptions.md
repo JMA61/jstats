@@ -78,10 +78,10 @@ a reset, or as an echo of the slots a setting call touched.
 
   Character, length 1. One of `"none"`, `"spss"`, `"stata"`, or `"sas"`.
   Default: `"none"`, meaning no stated preference: loaded data is
-  preserved as-is, and a call that would create a fresh user-defined
-  missing value (UDM) declaration stops with a guided error asking you
-  to choose a convention – the package never infers one. A set value
-  states your working convention: it supplies the target for fresh UDM
+  preserved as-is, and a call that would create a fresh missing-value
+  declaration stops with a guided error asking you to choose a
+  convention – the package never infers one. A set value states your
+  working convention: it supplies the target for fresh missing-value
   declarations on columns with no existing convention, becomes the
   default target for
   [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md)
@@ -94,8 +94,8 @@ a reset, or as an echo of the slots a setting call touched.
 - missing.convention.codes:
 
   Numeric vector, length 1 to 3, whole numbers, no duplicates. Sign
-  unconstrained. Default: `c(-99, -98, -97)`. The recommended UDM code
-  set used by
+  unconstrained. Default: `c(-99, -98, -97)`. The recommended
+  missing-value code set used by
   [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md)
   when translating Stata-style missing values (`.a`, `.b`, `.c`, `.d`)
   into SPSS-style numeric codes, and by the load-time diagnostic for
@@ -194,13 +194,13 @@ a reset, or as an echo of the slots a setting call touched.
 Setting `missing.convention` to `"spss"`, `"stata"`, or `"sas"` triggers
 a one-time scan of
 [`globalenv()`](https://rdrr.io/r/base/environment.html) for data frames
-whose UDM convention differs from the newly-set value. When mismatches
-exist, a notice lists the affected data frames and suggests
+whose missing-value convention differs from the newly-set value. When
+mismatches exist, a notice lists the affected data frames and suggests
 [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md):
 frames whose declared columns all carry one convention read "use X-style
 missing values", while frames with a genuine internal majority read
 "predominantly use". The notice is informational; nothing is changed.
-Plain data frames with no UDM-bearing columns – including the course
+Plain data frames with no declared missing values – including the course
 datasets in their standard form – do not trigger the notice.
 
 ## See also
@@ -224,8 +224,8 @@ joptions()                                        # show current settings
 #> 
 
 # Setting a convention echoes the convention and its codes, then scans
-# the workspace and notes any data frames whose UDM convention differs
-# (see the Environment-scan notice section):
+# the workspace and notes any data frames whose missing-value
+# convention differs (see the Environment-scan notice section):
 joptions(missing.convention = "spss")             # set, echo, scan notice
 #> Options Settings
 #> Missing-value convention: SPSS-style

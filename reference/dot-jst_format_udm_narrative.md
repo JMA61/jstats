@@ -13,7 +13,7 @@ has already been shown this session (`compact`).
 ``` r
 .jst_format_udm_narrative(
   udm_info,
-  preserve.udm,
+  preserve.declarations,
   max_show = 10L,
   data_name = "data",
   compact = FALSE
@@ -29,7 +29,7 @@ has already been shown this session (`compact`).
 
 ## Details
 
-Shapes produced under `preserve.udm = TRUE`:
+Shapes produced under `preserve.declarations = TRUE`:
 
 - Uniform frame: style-named header ("5 variables have SPSS-style
   missing values:"). SPSS-style frames with no conflicting setting add
@@ -67,10 +67,10 @@ in the missing-values reference). The rider is not a suggestion to adopt
 a convention – it is the second half of a remedy the user has already
 chosen to run.
 
-The `preserve.udm = FALSE` branch (declarations converted to plain NA on
-request) keeps its original shape with a style-named header and is never
-compacted – it reports a destructive action the user explicitly
-requested.
+The `preserve.declarations = FALSE` branch (declarations converted to
+plain NA on request) keeps its original shape with a style-named header
+and is never compacted – it reports a destructive action the user
+explicitly requested.
 
 Renders SPSS UDM codes (e.g. `-99`) and tagged markers (e.g. `.a`) using
 parallel notation: `code ["label"]` or `code (no label)`. The code form

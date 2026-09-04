@@ -170,7 +170,7 @@ Recode, encode text, relabel, declare missing values, and select cases.
 - [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) :
   Apply variable and value labels to a variable
 - [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
-  : Declare user-defined missing values on one or more variables
+  : Declare missing values on one or more variables
 - [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) :
   Set, activate, deactivate, or clear a per-dataset case-selection
   expression
@@ -188,7 +188,7 @@ Read and write SPSS, Stata, SAS, Excel, and CSV data.
 - [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) : Save
   a data frame to a file
 - [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md) :
-  Convert user-defined missing value (UDM) declarations between formats
+  Convert missing-value declarations between formats
 - [`jdata_dir()`](https://jma61.github.io/jstats/reference/jdata_dir.md)
   : Return the configured data folder
 
@@ -211,7 +211,7 @@ copy current.
 ## Plots
 
 - [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) :
-  Visualise jst\_\* result objects or plot variables directly from a
+  Visualize jst\_\* result objects or plot variables directly from a
   data frame
 
 ## Fine-tuning: tell jstats how to treat a variable

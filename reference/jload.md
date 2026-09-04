@@ -89,8 +89,8 @@ jload(
 
 - preserve.declarations:
 
-  Logical. If `TRUE` (default), user-defined missing values arriving
-  with the file are preserved: SPSS-style codes such as -99 keep their
+  Logical. If `TRUE` (default), declared missing values arriving with
+  the file are preserved: SPSS-style codes such as -99 keep their
   original numeric values in the data frame, with metadata attached so
   the package's analysis functions still treat them as missing, and
   Stata-style tagged values (`.a`, `.b`, ...) are kept as read. If
@@ -98,7 +98,8 @@ jload(
   metadata is stripped. Applies to any loaded file whose columns carry
   missing-value declarations — typically `.sav`, `.dta`, and `.sas7bdat`
   files, and `.rds` files saved from such data. For `.sav` files, `TRUE`
-  corresponds to haven's `user_na = TRUE`.
+  corresponds to haven's `user_na = TRUE`. The haven package and its
+  documentation call these user-defined missing values.
 
 - missing.notice:
 
@@ -118,9 +119,9 @@ jload(
 
   Logical; default FALSE. When TRUE, suppresses jload()'s informational
   messages (the directory-resolution note, file found, load summary,
-  default-data note, and the UDM narrative, overriding missing.notice).
-  Errors, warnings, the multi-sheet advisory, and the overwrite prompt
-  are still shown.
+  default-data note, and the narrative about declared missing values,
+  overriding missing.notice). Errors, warnings, the multi-sheet
+  advisory, and the overwrite prompt are still shown.
 
 ## Value
 
@@ -172,8 +173,8 @@ values. Only whole-number values are considered (coded missing values
 are always integers like -99, 999, etc.). Two detection methods are
 used:
 
-- For SPSS files, user-defined missing values stored in the file
-  metadata are reported with high confidence.
+- For SPSS files, missing values declared in the file metadata are
+  reported with high confidence.
 
 - A heuristic scan detects negative values among otherwise positive data
   and extreme outlier values (5x the range of other values).

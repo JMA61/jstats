@@ -184,14 +184,15 @@ a warning is issued (but the function continues). This helps catch typos
 in the map string.
 
 **Missing values in the map.** The package supports three conventions
-for representing user-defined missing values (UDMs), and the syntax for
-producing UDMs from `jrecode()` depends on which one is active. A
-convention becomes active via `joptions(missing.convention = ...)` or
-this call's `convention` argument; with neither set, a call that
-produces UDMs stops with a guided error asking you to choose.
+for representing declared missing values, and the syntax for producing
+them from `jrecode()` depends on which one is active. A convention
+becomes active via `joptions(missing.convention = ...)` or this call's
+`convention` argument; with neither set, a call that produces declared
+missing values stops with a guided error asking you to choose.
 
-Under **SPSS convention**, UDMs are real numeric codes carrying metadata
-that flags them as missing. The two-step canonical pattern is:
+Under **SPSS convention**, declared missing values are real numeric
+codes carrying metadata that flags them as missing. The two-step
+canonical pattern is:
 
 
     df$EducR <- jrecode(df, Education,
@@ -212,9 +213,9 @@ converts the NA cells to the numeric code, and
 [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
 declares it.
 
-Under **Stata convention**, UDMs are typed missing cells marked with
-Stata-style tags (`.a` through `.z`). The single-call canonical pattern
-is:
+Under **Stata convention**, declared missing values are typed missing
+cells marked with Stata-style tags (`.a` through `.z`). The single-call
+canonical pattern is:
 
 
     df$EducR <- jrecode(df, Education,
@@ -237,7 +238,7 @@ raises an error naming the mismatch and the two ways out: restate the
 markers as numeric codes to stay in SPSS convention, or switch
 convention with `joptions(missing.convention = ...)` (or with this
 call's `convention` argument). The error does not rewrite the call for
-you: the SPSS-form codes would have to be taken from
+you: the SPSS-style codes would have to be taken from
 `joptions("missing.convention.codes")`, which cannot be known to be free
 of collision with values already in the column. The two-call SPSS-style
 pattern is documented above.
@@ -245,8 +246,8 @@ pattern is documented above.
 ## See also
 
 [`jdeclare_missing`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
-for declaring user-defined missing values on a column after a recode
-(the SPSS-style canonical pattern).
+for declaring missing values on a column after a recode (the SPSS-style
+canonical pattern).
 
 [`jrelabel`](https://jma61.github.io/jstats/reference/jrelabel.md) for
 applying labels to an existing variable after a recode.

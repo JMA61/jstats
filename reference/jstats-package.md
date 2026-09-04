@@ -21,10 +21,10 @@ others who routinely work with Likert scales, categorical variables,
 dichotomies, Cronbach's alpha, dummy-coded regression, and
 `haven`-imported data from SPSS, Stata, or SAS.
 
-During the current development phase the package is being tested
-actively by students and colleagues at Griffith University, plus a
-growing community of former students and collaborating instructors.
-Feedback from this group shapes ongoing refinements.
+The package is exercised in ongoing research projects by the author,
+colleagues, and former students, and their feedback shapes its
+refinement. Bug reports and suggestions are welcome through the
+package's GitHub repository.
 
 ## Functions by purpose
 
@@ -71,13 +71,42 @@ Feedback from this group shapes ongoing refinements.
 - [`jrelabel`](https://jma61.github.io/jstats/reference/jrelabel.md) –
   apply or replace value labels and variable label
 
+- [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) –
+  encode a text variable as labelled numeric codes
+
 - [`jsum`](https://jma61.github.io/jstats/reference/jsum.md) – row-wise
   sum across variables, with min-valid handling
 
 - [`javg`](https://jma61.github.io/jstats/reference/javg.md) – row-wise
   mean across variables, with min-valid handling
 
-**Pipeline state management**
+**Missing values**
+
+- [`jdeclare_missing`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
+  – declare missing-value codes or ranges on one or more variables
+
+- [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md) –
+  convert missing-value declarations between SPSS-style, Stata-style,
+  SAS-style, and base R representations
+
+**Variable classification**
+
+- [`jdummy`](https://jma61.github.io/jstats/reference/jdummy.md) –
+  register categorical variables for dummy coding in regression
+
+- [`jnumeric`](https://jma61.github.io/jstats/reference/jnumeric.md) –
+  register variables as numeric for analysis
+
+- [`jcount`](https://jma61.github.io/jstats/reference/jcount.md) –
+  register variables as counts for analysis
+
+- [`jlikert`](https://jma61.github.io/jstats/reference/jlikert.md) –
+  register variables as Likert (ordered response) items
+
+- [`jcopy`](https://jma61.github.io/jstats/reference/jcopy.md) – copy a
+  data frame, carrying its classification registrations
+
+**Session state and options**
 
 - [`juse`](https://jma61.github.io/jstats/reference/juse.md) – set the
   default data frame used implicitly by analysis functions
@@ -89,26 +118,40 @@ Feedback from this group shapes ongoing refinements.
 - [`jcomplete`](https://jma61.github.io/jstats/reference/jcomplete.md) –
   activate listwise filtering on selected variables
 
-- [`jdummy`](https://jma61.github.io/jstats/reference/jdummy.md) –
-  register categorical variables for dummy coding in regression
-
 - [`joutput`](https://jma61.github.io/jstats/reference/joutput.md) – set
   session-level output verbosity (minimal / standard / full)
+
+- [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) –
+  set or display session-level package options (missing-value
+  convention, data folder, and others)
 
 **Data import and export**
 
 - [`jload`](https://jma61.github.io/jstats/reference/jload.md) – load
-  data from `.rds`, `.sav`, `.dta`, `.sas7bdat`, `.xlsx`, or `.csv`
+  data from `.rds`, `.sav`, `.dta`, `.sas7bdat`, `.xpt`, `.xlsx`,
+  `.xls`, or `.csv`
 
 - [`jsave`](https://jma61.github.io/jstats/reference/jsave.md) – save a
   data frame, with format inferred from the file extension
 
-**Visualisation**
+- [`jdata_dir`](https://jma61.github.io/jstats/reference/jdata_dir.md) –
+  return the configured data folder
 
-- [`jplot`](https://jma61.github.io/jstats/reference/jplot.md) – base
-  histograms and bar plots for data, plus method dispatch on result
-  objects from [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
+**Visualization**
+
+- [`jplot`](https://jma61.github.io/jstats/reference/jplot.md) –
+  histograms, bar charts, scatterplots, and boxplots from a data frame,
+  plus plots of result objects from
+  [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
   [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md), etc.
+
+**Package and assistant support**
+
+- [`jupdate`](https://jma61.github.io/jstats/reference/jupdate.md) –
+  update jstats to the latest version
+
+- [`jai`](https://jma61.github.io/jstats/reference/jai.md) – print the
+  package orientation, or install it for an AI coding assistant
 
 For the full alphabetical listing of every exported function, run
 [`library(help = "jstats")`](https://rdrr.io/r/base/library.html) or
@@ -123,10 +166,10 @@ intended for direct use.
 
 **Formula vs data-first.** Group-comparison and modeling functions
 follow the base R formula interface:
-`jt(MathScore ~ Gender, data = SampleData)`. Descriptive and
-data-management functions take the data frame first, followed by
-unquoted variable names: `jfreq(SampleData, Gender, Program)`. This
-matches the conventions of base R functions like
+`jt(Age ~ Volunteer, data = community)`. Descriptive and data-management
+functions take the data frame first, followed by unquoted variable
+names: `jfreq(community, Region, Education)`. This matches the
+conventions of base R functions like
 [`aggregate()`](https://rdrr.io/r/stats/aggregate.html) and
 [`cor()`](https://rdrr.io/r/stats/cor.html).
 
@@ -182,7 +225,9 @@ the full toggle behavior.
 
 Useful links:
 
-- <https://jma61.github.io/jstats/>
+- <https://JMA61.github.io/jstats/>
+
+- Report bugs at <https://github.com/JMA61/jstats/issues>
 
 ## Author
 

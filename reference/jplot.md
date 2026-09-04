@@ -1,4 +1,4 @@
-# Visualise jst\_\* result objects or plot variables directly from a data frame
+# Visualize jst\_\* result objects or plot variables directly from a data frame
 
 Unified plotting function. Can be called in three ways:
 

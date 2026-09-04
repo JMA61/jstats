@@ -106,7 +106,7 @@ joutput(
 
   Detail tier for the Case Processing Summary's missing-data breakdown:
   `"none"` (no bottom table), `"totals"` (one summed missing row per
-  variable), or `"per_code"` (per user-defined missing value code plus
+  variable), or `"per_code"` (per declared missing-value code plus
   system-missing). The minimal tier defaults to `"none"`, standard to
   `"totals"`, full to `"per_code"`.
 
@@ -151,13 +151,13 @@ joutput(
 
 - missing.notice:
 
-  Logical or NULL. Controls the user-defined missing-value (UDM)
-  notification emitted by
-  [`jload()`](https://jma61.github.io/jstats/reference/jload.md) for
-  files with UDM-bearing variables. `TRUE` prints it on every such load;
-  `FALSE` suppresses it; `NULL` (the default) leaves the level's setting
-  in place. The standard and full levels print it; the minimal level
-  suppresses it.
+  Logical or NULL. Controls the notification about declared missing
+  values that
+  [`jload()`](https://jma61.github.io/jstats/reference/jload.md) emits
+  for files whose variables carry them. `TRUE` prints it on every such
+  load; `FALSE` suppresses it; `NULL` (the default) leaves the level's
+  setting in place. The standard and full levels print it; the minimal
+  level suppresses it.
 
 - digits:
 
