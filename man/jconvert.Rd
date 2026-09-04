@@ -2,7 +2,7 @@
 % Please edit documentation in R/recode.R
 \name{jconvert}
 \alias{jconvert}
-\title{Convert user-defined missing value (UDM) declarations between formats}
+\title{Convert missing-value declarations between formats}
 \usage{
 jconvert(
   data,
@@ -60,19 +60,21 @@ frame is unchanged until the result is assigned back. With
 caller's data frame, and the returned copy can be ignored.
 }
 \description{
-\code{jconvert()} provides a single entry point for changing how user-
-defined missing values (UDMs) are represented on the columns of a data
+\code{jconvert()} provides a single entry point for changing how
+declared missing values are represented on the columns of a data
 frame already in memory. Four target formats are supported: SPSS-style
 (\code{na_values} on \code{haven_labelled_spss}), Stata-style
 (lowercase \code{tagged_na} on \code{haven_labelled}), SAS-style
 (uppercase \code{tagged_na} on \code{haven_labelled}), and base R
 (declarations stripped, declared cells converted to plain \code{NA}).
+The haven package and its documentation call these user-defined
+missing values.
 }
 \details{
 The three target formats:
 \describe{
-\item{\code{to = "baseR"}}{Strip all UDM declarations and convert
-declared cells to plain \code{NA}. For SPSS-form columns
+\item{\code{to = "baseR"}}{Strip all missing-value declarations and
+convert declared cells to plain \code{NA}. For SPSS-style columns
 (\code{na_values} / \code{na_range} on
 \code{haven_labelled_spss}), masks declared codes to \code{NA} and
 removes the attributes; value labels are preserved so the column
@@ -81,7 +83,7 @@ labeling. For columns carrying Stata-style missing values
 (\code{tagged_na} markers), uses \code{haven::zap_missing()} to
 convert them to plain \code{NA}s.}
 \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
-values to SPSS-form numeric codes. Letter tags map to numeric
+values to SPSS-style numeric codes. Letter tags map to numeric
 codes via \code{joptions("missing.convention.codes")} (default
 \code{-99}, \code{-98}, \code{-97}):
 \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
@@ -97,7 +99,7 @@ tags beyond those covered by the convention codes (default
 \code{.a}--\code{.c}, one letter per code, after case correction)
 are refused with guidance to use \code{jrecode()} for manual
 mapping.}
-\item{\code{to = "stata"}}{Convert SPSS-form numeric codes to
+\item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 Stata-style missing values. Letter tags are assigned by ordering
 rather than by convention: each column's own declared
 \code{na_values} codes are sorted by absolute value descending
@@ -129,7 +131,7 @@ converted; columns already fully lowercase are skipped as already
 in the target form.}
 \item{\code{to = "sas"}}{Identical to \code{to = "stata"} except
 that the letters are uppercase (\code{.A}--\code{.Z}, SAS's
-native extended-missing convention): SPSS-form columns are
+native extended-missing convention): SPSS-style columns are
 enumerated and mapped to uppercase tags, Stata-style (lowercase)
 tagged columns are case-corrected to uppercase and counted as
 converted, and columns already fully uppercase are skipped.
@@ -151,19 +153,21 @@ error mode -- the entire \code{jconvert()} call either succeeds or
 errors before mutating the data frame.
 
 \strong{Pattern A -- value labels suggest missingness but no formal
-declaration.} When a column has no formal UDM declaration but carries
-value labels matching the package's missing-label wordlist (e.g.
-\code{"Refused"}, \code{"Don't know"}, \code{"Not applicable"}),
-\code{jconvert()} skips the column and surfaces it in the
-notification with the affected value/label pairs. To formalize these
-as UDMs use \code{jdeclare_missing()}; to leave them as ordinary data, no
-action is needed.
+declaration.} When a column has no formal missing-value declaration
+but carries value labels matching the package's missing-label
+wordlist (e.g. \code{"Refused"}, \code{"Don't know"},
+\code{"Not applicable"}), \code{jconvert()} skips the column and
+surfaces it in the notification with the affected value/label pairs.
+To formalize these as declared missing values use
+\code{jdeclare_missing()}; to leave them as ordinary data, no action
+is needed.
 }
 \examples{
-# community ships with SPSS-form UDMs (Income, Education, Smoker,
-# Environment1, Environment3), so the conversions run on it directly.
+# community ships with SPSS-style missing values (Income, Education,
+# Smoker, Environment1, Environment3), so the conversions run on it
+# directly.
 
-# Convert SPSS-form UDMs to Stata-style missing values. modify = TRUE
+# Convert SPSS-style to Stata-style missing values. modify = TRUE
 # writes the result back onto df in one step -- the recommended
 # workflow.
 df <- community
@@ -175,7 +179,7 @@ df2 <- jconvert(community, to = "stata")
 # Convert to SAS-style missing values (uppercase .A, .B, ...):
 df_sas <- jconvert(community, to = "sas")
 
-# Strip UDMs from every applicable variable:
+# Strip the declarations from every applicable variable:
 df3 <- jconvert(community, to = "baseR")
 
 # Scope by unquoted names:
@@ -190,7 +194,7 @@ df6 <- jconvert(community, to = "baseR", missing.notice = FALSE)
 \dontrun{
 # Convert with target inferred from joptions:
 joptions(missing.convention = "spss")
-df <- jconvert(df)   # converts any Stata-form columns to SPSS
+df <- jconvert(df)   # converts any Stata-style columns to SPSS
 }
 
 }

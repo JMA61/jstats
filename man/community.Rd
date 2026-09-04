@@ -56,8 +56,8 @@ example. It backs the function examples, serves as a teaching dataset for
 new users, and demonstrates cross-platform save and load behavior. The 100
 respondents and 15 variables are chosen to exercise the kinds of data
 social-science users actually have: Likert scales, dichotomies, a
-multi-category variable, continuous measures, and SPSS-style user-defined
-missing values. The data are synthetic, but the relationships among the
+multi-category variable, continuous measures, and SPSS-style missing
+values. The data are synthetic, but the relationships among the
 variables are realistic.
 }
 \details{

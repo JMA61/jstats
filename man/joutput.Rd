@@ -79,9 +79,9 @@ tier sets it to \code{NULL}.}
 \item{case.processing.detail}{Detail tier for the Case Processing
 Summary's missing-data breakdown: \code{"none"} (no bottom
 table), \code{"totals"} (one summed missing row per variable),
-or \code{"per_code"} (per user-defined missing value code plus system-missing). The
-minimal tier defaults to \code{"none"}, standard to
-\code{"totals"}, full to \code{"per_code"}.}
+or \code{"per_code"} (per declared missing-value code plus
+system-missing). The minimal tier defaults to \code{"none"},
+standard to \code{"totals"}, full to \code{"per_code"}.}
 
 \item{variable.id}{Character or NULL. Variable label display mode, one
 of \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
@@ -120,9 +120,9 @@ label. Not a logical.}
 \item{ref.categories}{Logical or NULL. Override the level's default
 for the reference categories block (registered dummies).}
 
-\item{missing.notice}{Logical or NULL. Controls the user-defined
-missing-value (UDM) notification emitted by \code{jload()} for
-files with UDM-bearing variables. \code{TRUE} prints it on every
+\item{missing.notice}{Logical or NULL. Controls the notification about
+declared missing values that \code{jload()} emits for files whose
+variables carry them. \code{TRUE} prints it on every
 such load; \code{FALSE} suppresses it; \code{NULL} (the default)
 leaves the level's setting in place. The standard and full levels
 print it; the minimal level suppresses it.}

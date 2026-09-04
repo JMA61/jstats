@@ -58,9 +58,9 @@
 #' @param case.processing.detail Detail tier for the Case Processing
 #'   Summary's missing-data breakdown: \code{"none"} (no bottom
 #'   table), \code{"totals"} (one summed missing row per variable),
-#'   or \code{"per_code"} (per user-defined missing value code plus system-missing). The
-#'   minimal tier defaults to \code{"none"}, standard to
-#'   \code{"totals"}, full to \code{"per_code"}.
+#'   or \code{"per_code"} (per declared missing-value code plus
+#'   system-missing). The minimal tier defaults to \code{"none"},
+#'   standard to \code{"totals"}, full to \code{"per_code"}.
 #' @param variable.id Character or NULL. Variable label display mode, one
 #'   of \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 #'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
@@ -95,9 +95,9 @@
 #'   label. Not a logical.
 #' @param ref.categories Logical or NULL. Override the level's default
 #'   for the reference categories block (registered dummies).
-#' @param missing.notice Logical or NULL. Controls the user-defined
-#'   missing-value (UDM) notification emitted by \code{jload()} for
-#'   files with UDM-bearing variables. \code{TRUE} prints it on every
+#' @param missing.notice Logical or NULL. Controls the notification about
+#'   declared missing values that \code{jload()} emits for files whose
+#'   variables carry them. \code{TRUE} prints it on every
 #'   such load; \code{FALSE} suppresses it; \code{NULL} (the default)
 #'   leaves the level's setting in place. The standard and full levels
 #'   print it; the minimal level suppresses it.
@@ -348,7 +348,7 @@ joutput <- function(level, effect.size = NULL,
 .jst_options_status <- function(slots = NULL) {
   mc <- getOption(".jst_options_missing_convention",
                   .jst_options_defaults$missing.convention)
-  cc <- getOption(".jst_options_udm_convention_codes",
+  cc <- getOption(".jst_options_missing_convention_codes",
                   .jst_options_defaults$missing.convention.codes)
   dd <- getOption(".jst_options_data_dir",
                   .jst_options_defaults$data.dir)
@@ -592,22 +592,21 @@ joutput <- function(level, effect.size = NULL,
 #'     \code{"spss"}, \code{"stata"}, or \code{"sas"}. Default:
 #'     \code{"none"}, meaning no stated preference: loaded data is
 #'     preserved as-is, and a call that would create a fresh
-#'     user-defined missing value (UDM) declaration stops with a
-#'     guided error asking you to choose a convention -- the package
-#'     never infers one. A set value states your
-#'     working convention: it supplies the target for fresh UDM
-#'     declarations on columns with no existing convention, becomes the
-#'     default target for \code{\link{jconvert}} when \code{to} is not
-#'     given, and is the reference point for the environment-scan
-#'     notice (see below). Data already loaded is never changed by
-#'     setting this; \code{\link{jconvert}} is the explicit transform
-#'     path.}
+#'     missing-value declaration stops with a guided error asking you
+#'     to choose a convention -- the package never infers one. A set
+#'     value states your working convention: it supplies the target for
+#'     fresh missing-value declarations on columns with no existing
+#'     convention, becomes the default target for \code{\link{jconvert}}
+#'     when \code{to} is not given, and is the reference point for the
+#'     environment-scan notice (see below). Data already loaded is never
+#'     changed by setting this; \code{\link{jconvert}} is the explicit
+#'     transform path.}
 #'   \item{missing.convention.codes}{Numeric vector, length 1 to 3, whole
 #'     numbers, no duplicates. Sign unconstrained. Default:
-#'     \code{c(-99, -98, -97)}. The recommended UDM code set used
-#'     by \code{\link{jconvert}} when translating Stata-style missing values
-#'     (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-style
-#'     numeric codes, and by the load-time diagnostic for
+#'     \code{c(-99, -98, -97)}. The recommended missing-value code set
+#'     used by \code{\link{jconvert}} when translating Stata-style
+#'     missing values (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into
+#'     SPSS-style numeric codes, and by the load-time diagnostic for
 #'     convention-matched detection.}
 #'   \item{data.dir}{Character string (length 1), or \code{NULL}. Default:
 #'     \code{NULL}. When \code{NULL}, \code{\link{jsave}} writes
@@ -682,13 +681,13 @@ joutput <- function(level, effect.size = NULL,
 #' @section Environment-scan notice:
 #' Setting \code{missing.convention} to \code{"spss"}, \code{"stata"},
 #' or \code{"sas"} triggers a one-time scan of \code{globalenv()} for
-#' data frames whose UDM convention differs from the newly-set value.
-#' When mismatches exist, a notice lists the affected data frames and
-#' suggests \code{\link{jconvert}}: frames whose declared columns all
+#' data frames whose missing-value convention differs from the newly-set
+#' value. When mismatches exist, a notice lists the affected data frames
+#' and suggests \code{\link{jconvert}}: frames whose declared columns all
 #' carry one convention read "use X-style missing values", while
 #' frames with a genuine internal majority read "predominantly use".
 #' The notice is informational; nothing is changed. Plain data frames
-#' with no UDM-bearing columns -- including the course datasets in
+#' with no declared missing values -- including the course datasets in
 #' their standard form -- do not trigger the notice.
 #'
 #' @param missing.convention One of \code{"none"}, \code{"spss"},
@@ -713,8 +712,8 @@ joutput <- function(level, effect.size = NULL,
 #' joptions()                                        # show current settings
 #'
 #' # Setting a convention echoes the convention and its codes, then scans
-#' # the workspace and notes any data frames whose UDM convention differs
-#' # (see the Environment-scan notice section):
+#' # the workspace and notes any data frames whose missing-value
+#' # convention differs (see the Environment-scan notice section):
 #' joptions(missing.convention = "spss")             # set, echo, scan notice
 #' joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
 #' joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
@@ -777,7 +776,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
   # joptions(NULL) -- reset all
   if (positional_null_reset) {
     options(.jst_options_missing_convention   = NULL)
-    options(.jst_options_udm_convention_codes = NULL)
+    options(.jst_options_missing_convention_codes = NULL)
     options(.jst_options_data_dir             = NULL)
     options(.jst_options_corr_layout          = NULL)
     options(.jst_options_missing_detail       = NULL)
@@ -863,7 +862,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     if (missing.convention %in% c("spss", "stata", "sas")) trigger_nudge <- TRUE
   }
   if (cc_supplied && !is.null(missing.convention.codes)) {
-    options(.jst_options_udm_convention_codes = missing.convention.codes)
+    options(.jst_options_missing_convention_codes = missing.convention.codes)
     written <- c(written, "missing.convention.codes")
   }
   if (dd_supplied && !is.null(data.dir)) {

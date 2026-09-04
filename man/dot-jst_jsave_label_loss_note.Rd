@@ -4,7 +4,13 @@
 \alias{.jst_jsave_label_loss_note}
 \title{Internal: build the label / missing-value loss note for Excel and CSV saves}
 \usage{
-.jst_jsave_label_loss_note(ext, spss_vars, stata_vars, preserve.udm, n_blanked)
+.jst_jsave_label_loss_note(
+  ext,
+  spss_vars,
+  stata_vars,
+  preserve.declarations,
+  n_blanked
+)
 }
 \arguments{
 \item{ext}{Lowercase target extension, \code{"xlsx"} or \code{"csv"}.}
@@ -15,10 +21,10 @@ detected before any collapse.}
 \item{stata_vars}{Character vector of Stata-form tagged-NA variable
 names, as detected before any collapse.}
 
-\item{preserve.udm}{Logical, the value passed to jsave.}
+\item{preserve.declarations}{Logical, the value passed to jsave.}
 
 \item{n_blanked}{Integer count of SPSS-style code cells blanked when
-\code{preserve.udm = FALSE}; zero otherwise.}
+\code{preserve.declarations = FALSE}; zero otherwise.}
 }
 \value{
 A single message string, or \code{NULL} if no note applies.
@@ -27,19 +33,19 @@ A single message string, or \code{NULL} if no note applies.
 Excel and CSV cannot store variable labels, value labels, or
 missing-value declarations. jsave emits a note after a successful write
 to these formats describing what was (or, under
-\code{preserve.udm = FALSE}, would have been) lost. The wording depends
-on which missing-value form the frame carried and on whether
-\code{preserve.udm = FALSE} blanked the codes.
+\code{preserve.declarations = FALSE}, would have been) lost. The wording
+depends on which missing-value form the frame carried and on whether
+\code{preserve.declarations = FALSE} blanked the codes.
 }
 \details{
 Branching (SPSS-style codes write as literal numbers, while Stata-style
 tagged NAs write as blank cells):
 \itemize{
-\item \code{preserve.udm = FALSE} and SPSS-style codes were blanked:
-a confirmation giving the count of blanked cells.
-\item both forms present (\code{preserve.udm = TRUE}): a generic note
-that names neither platform, plus the \code{preserve.udm = FALSE}
-suggestion.
+\item \code{preserve.declarations = FALSE} and SPSS-style codes were
+blanked: a confirmation giving the count of blanked cells.
+\item both forms present (\code{preserve.declarations = TRUE}): a
+generic note that names neither platform, plus the
+\code{preserve.declarations = FALSE} suggestion.
 \item SPSS-style only: the literal-numbers warning plus the suggestion.
 \item Stata-style only: a brief note that the tags write as blank cells
 and the distinction between them is not preserved.

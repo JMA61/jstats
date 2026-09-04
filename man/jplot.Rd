@@ -11,7 +11,7 @@
 \alias{jplot.jst_crosstab}
 \alias{jplot.jst_desc}
 \alias{jplot.jst_freq}
-\title{Visualise jst_* result objects or plot variables directly from a data frame}
+\title{Visualize jst_* result objects or plot variables directly from a data frame}
 \usage{
 jplot(x, which = "core", ...)
 

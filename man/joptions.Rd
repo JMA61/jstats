@@ -64,22 +64,21 @@ explicit transform path for data already in the workspace.
 \code{"spss"}, \code{"stata"}, or \code{"sas"}. Default:
 \code{"none"}, meaning no stated preference: loaded data is
 preserved as-is, and a call that would create a fresh
-user-defined missing value (UDM) declaration stops with a
-guided error asking you to choose a convention -- the package
-never infers one. A set value states your
-working convention: it supplies the target for fresh UDM
-declarations on columns with no existing convention, becomes the
-default target for \code{\link{jconvert}} when \code{to} is not
-given, and is the reference point for the environment-scan
-notice (see below). Data already loaded is never changed by
-setting this; \code{\link{jconvert}} is the explicit transform
-path.}
+missing-value declaration stops with a guided error asking you
+to choose a convention -- the package never infers one. A set
+value states your working convention: it supplies the target for
+fresh missing-value declarations on columns with no existing
+convention, becomes the default target for \code{\link{jconvert}}
+when \code{to} is not given, and is the reference point for the
+environment-scan notice (see below). Data already loaded is never
+changed by setting this; \code{\link{jconvert}} is the explicit
+transform path.}
 \item{missing.convention.codes}{Numeric vector, length 1 to 3, whole
 numbers, no duplicates. Sign unconstrained. Default:
-\code{c(-99, -98, -97)}. The recommended UDM code set used
-by \code{\link{jconvert}} when translating Stata-style missing values
-(\code{.a}, \code{.b}, \code{.c}, \code{.d}) into SPSS-style
-numeric codes, and by the load-time diagnostic for
+\code{c(-99, -98, -97)}. The recommended missing-value code set
+used by \code{\link{jconvert}} when translating Stata-style
+missing values (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into
+SPSS-style numeric codes, and by the load-time diagnostic for
 convention-matched detection.}
 \item{data.dir}{Character string (length 1), or \code{NULL}. Default:
 \code{NULL}. When \code{NULL}, \code{\link{jsave}} writes
@@ -158,13 +157,13 @@ slot to its default, pass the default value explicitly (e.g.
 
 Setting \code{missing.convention} to \code{"spss"}, \code{"stata"},
 or \code{"sas"} triggers a one-time scan of \code{globalenv()} for
-data frames whose UDM convention differs from the newly-set value.
-When mismatches exist, a notice lists the affected data frames and
-suggests \code{\link{jconvert}}: frames whose declared columns all
+data frames whose missing-value convention differs from the newly-set
+value. When mismatches exist, a notice lists the affected data frames
+and suggests \code{\link{jconvert}}: frames whose declared columns all
 carry one convention read "use X-style missing values", while
 frames with a genuine internal majority read "predominantly use".
 The notice is informational; nothing is changed. Plain data frames
-with no UDM-bearing columns -- including the course datasets in
+with no declared missing values -- including the course datasets in
 their standard form -- do not trigger the notice.
 }
 
@@ -172,8 +171,8 @@ their standard form -- do not trigger the notice.
 joptions()                                        # show current settings
 
 # Setting a convention echoes the convention and its codes, then scans
-# the workspace and notes any data frames whose UDM convention differs
-# (see the Environment-scan notice section):
+# the workspace and notes any data frames whose missing-value
+# convention differs (see the Environment-scan notice section):
 joptions(missing.convention = "spss")             # set, echo, scan notice
 joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
 joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan

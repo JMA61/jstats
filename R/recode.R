@@ -216,7 +216,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # message builder. The rule drawn from it: a message may NAME values
 # that already exist in the user's data or declaration, and may not
 # MINT values the user never supplied. The sibling
-# .jst_jdeclare_udm_convention_error reads the column's own na_values
+# .jst_jdeclare_missing_convention_error reads the column's own na_values
 # rather than the pool, so it passes the test and is unchanged.
 #
 # Retired with the echo-back: the rebuilt map and labels, the
@@ -389,7 +389,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
 
 # -----------------------------------------------------------------------------
-# .jst_jdeclare_udm_convention_error()
+# .jst_jdeclare_missing_convention_error()
 #
 # Builds the cross-convention error message for jdeclare_missing. Fires
 # when the user passes Stata-style missing-value tokens in the codes vector
@@ -450,7 +450,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
-.jst_jdeclare_udm_convention_error <- function(parsed_codes,
+.jst_jdeclare_missing_convention_error <- function(parsed_codes,
                                                data_name, var_name, col,
                                                per_call_convention = NULL,
                                                tagged_raw = NULL,
@@ -654,7 +654,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
 
 # -----------------------------------------------------------------------------
-# .jst_jdeclare_udm_mixed_error()
+# .jst_jdeclare_missing_mixed_error()
 #
 # Builds the Sign-off 4 error for when the user mixes tagged-NA elements
 # and plain numeric codes in a single codes vector under Stata
@@ -662,7 +662,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_mixed_error <- function(parsed_codes, data_name, var_name,
+.jst_jdeclare_missing_mixed_error <- function(parsed_codes, data_name, var_name,
                                           per_call_convention = NULL,
                                           arg_label = "codes") {
 
@@ -757,7 +757,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 
 
 # -----------------------------------------------------------------------------
-# .jst_jdeclare_udm_drop_notice()
+# .jst_jdeclare_missing_drop_notice()
 #
 # Builds the Sign-off 5 drop-notice message emitted after a successful
 # declaration when the prior UDM set contained codes not in the new set.
@@ -766,7 +766,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_drop_notice <- function(dropped_df, var_name,
+.jst_jdeclare_missing_drop_notice <- function(dropped_df, var_name,
                                           representation) {
   # dropped_df: subset of an .jst_missing_info()$codes data.frame containing
   # only the dropped rows. Has columns code, label, source, numeric, tag.
@@ -959,14 +959,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' the map string.
 #'
 #' \strong{Missing values in the map.} The package supports three
-#' conventions for representing user-defined missing values (UDMs), and
-#' the syntax for producing UDMs from \code{jrecode()} depends on which
-#' one is active. A convention becomes active via
+#' conventions for representing declared missing values, and the syntax
+#' for producing them from \code{jrecode()} depends on which one is
+#' active. A convention becomes active via
 #' \code{joptions(missing.convention = ...)} or this call's
 #' \code{convention} argument; with neither set, a call that produces
-#' UDMs stops with a guided error asking you to choose.
+#' declared missing values stops with a guided error asking you to choose.
 #'
-#' Under \strong{SPSS convention}, UDMs are real numeric
+#' Under \strong{SPSS convention}, declared missing values are real numeric
 #' codes carrying metadata that flags them as missing. The two-step
 #' canonical pattern is:
 #'
@@ -987,9 +987,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' "NA=-98; else=copy"} converts the NA cells to the numeric code, and
 #' \code{jdeclare_missing()} declares it.
 #'
-#' Under \strong{Stata convention}, UDMs are typed missing cells marked
-#' with Stata-style tags (\code{.a} through \code{.z}). The single-call
-#' canonical pattern is:
+#' Under \strong{Stata convention}, declared missing values are typed
+#' missing cells marked with Stata-style tags (\code{.a} through
+#' \code{.z}). The single-call canonical pattern is:
 #'
 #' \preformatted{
 #' df$EducR <- jrecode(df, Education,
@@ -1012,7 +1012,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' restate the markers as numeric codes to stay in SPSS convention, or
 #' switch convention with \code{joptions(missing.convention = ...)} (or
 #' with this call's \code{convention} argument). The error does not
-#' rewrite the call for you: the SPSS-form codes would have to be taken
+#' rewrite the call for you: the SPSS-style codes would have to be taken
 #' from \code{joptions("missing.convention.codes")}, which cannot be known
 #' to be free of collision with values already in the column. The
 #' two-call SPSS-style pattern is documented above.
@@ -1068,8 +1068,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' df$RegionR2 <- jrecode(Region, map = "1,2=1; 3,4=2",
 #'                        labels = "1=North or South; 2=East or West")
 #'
-#' @seealso \code{\link{jdeclare_missing}} for declaring user-defined missing
-#'   values on a column after a recode (the SPSS-style canonical pattern).
+#' @seealso \code{\link{jdeclare_missing}} for declaring missing values on a
+#'   column after a recode (the SPSS-style canonical pattern).
 #' @seealso \code{\link{jrelabel}} for applying labels to an existing variable
 #'   after a recode.
 #' @seealso \code{\link{joptions}} for the session-level
@@ -1258,7 +1258,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     tok_conv <- .jst_resolve_convention(convention, act = "token",
                                         fn = "jrecode")
     if (identical(tok_conv, "spss")) {
-      cc <- getOption(".jst_options_udm_convention_codes",
+      cc <- getOption(".jst_options_missing_convention_codes",
                       .jst_options_defaults$missing.convention.codes)
       tok_mint_code <- as.numeric(cc[1])
       src_codes <- attr(orig, "na_values", exact = TRUE)
@@ -1710,7 +1710,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   if (!is.null(tok_mint_code) && isTRUE(tok_minted_any)) {
     # S267: "your ... setting" only when the option was actually set; on
     # the untouched default the possessive claimed a choice never made.
-    cc_src <- if (is.null(getOption(".jst_options_udm_convention_codes"))) {
+    cc_src <- if (is.null(getOption(".jst_options_missing_convention_codes"))) {
       "the missing.convention.codes default"
     } else "your missing.convention.codes setting"
     if (isTRUE(tok_reused)) {
@@ -2595,7 +2595,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       tok_conv <- .jst_resolve_convention(convention, act = "token",
                                           fn = "jencode")
       if (identical(tok_conv, "spss")) {
-        cc <- getOption(".jst_options_udm_convention_codes",
+        cc <- getOption(".jst_options_missing_convention_codes",
                         .jst_options_defaults$missing.convention.codes)
         tok_mint_code <- as.numeric(cc[1])
         for (i in tok_rule_idx) {
@@ -3025,7 +3025,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         (tok_in_na && any(na_mask))
       if (tok_minted_any) {
         cc_src <- if (is.null(getOption(
-                        ".jst_options_udm_convention_codes"))) {
+                        ".jst_options_missing_convention_codes"))) {
           "the missing.convention.codes default"
         } else "your missing.convention.codes setting"
         msgs <- c(msgs, .jst_wrap_prose(paste0(
@@ -3293,17 +3293,18 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 
 # -- jdeclare_missing ------------------------------------------------------------
 
-#' Declare user-defined missing values on one or more variables
+#' Declare missing values on one or more variables
 #'
 #' @description
-#' \code{jdeclare_missing()} declares one or more user-defined missing
-#' values (UDMs) on one or more variables. UDMs are specific data values --
+#' \code{jdeclare_missing()} declares missing values on one or more
+#' variables. Declared missing values are specific data values --
 #' typically negative codes such as \code{-99} or Stata-style tagged
 #' markers such as \code{.a} -- that indicate \emph{why} a value is
 #' missing (refused, don't know, not applicable, etc.) rather than
-#' simply that it is missing. Once declared, UDM cells are
+#' simply that it is missing. Once declared, those cells are
 #' automatically excluded from analyses but remain visible in the data
-#' for diagnostic purposes (see \code{jfreq()}).
+#' for diagnostic purposes (see \code{jfreq()}). The haven package and
+#' its documentation call these user-defined missing values.
 #'
 #' The function operates in declarative mode: what a call mentions, it
 #' replaces; what it omits survives. Supplying \code{codes} replaces the
@@ -3312,9 +3313,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' call, and existing discrete codes survive a range-only call. A second
 #' call therefore replaces, not augments, whichever parts it names --
 #' matching SPSS's \code{MISSING VALUES} and Stata's \code{mvdecode}
-#' semantics, neither of which has an additive form. When prior UDMs are
-#' dropped, a note lists them so the destructive aspect of the
-#' replacement is not silent.
+#' semantics, neither of which has an additive form. When prior
+#' declarations are dropped, a note lists them so the destructive aspect
+#' of the replacement is not silent.
 #'
 #' Variables are given either as unquoted names (\code{jdeclare_missing(df,
 #' MathScore, EnglishScore, codes = c(-99))}) or as a character vector
@@ -3327,11 +3328,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' declare on every column, pass \code{vars = names(data)} explicitly.
 #'
 #' @param data A data frame containing the variable(s).
-#' @param ... The variable(s) to declare UDMs on, as unquoted names
-#'   (e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
+#' @param ... The variable(s) to declare missing values on, as unquoted
+#'   names (e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
 #'   either \code{...} or \code{vars}, not both. All arguments after
 #'   the variables must be named.
-#' @param codes Numeric vector of code values to declare as UDMs.
+#' @param codes Numeric vector of code values to declare as missing.
 #'   Accepts two forms:
 #'   \describe{
 #'     \item{Option A (separate codes and labels)}{Unnamed numeric
@@ -3397,7 +3398,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   \code{"sas"} (any capitalization is accepted); overrides the
 #'   convention resolution for this call. When
 #'   \code{NULL} (the default), the convention is resolved from the
-#'   column's existing UDM declaration (if any), then from
+#'   column's existing missing-value declaration (if any), then from
 #'   \code{joptions("missing.convention")}; when neither supplies one,
 #'   the call stops with a guided error asking you to choose -- the
 #'   package never infers a convention for a fresh declaration. A
@@ -3421,17 +3422,17 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   declaration.
 #'
 #' @return The data frame, with the specified variable(s) updated to
-#'   carry the declared UDMs, returned invisibly. With the default
-#'   \code{modify = FALSE}, the caller's data frame is unchanged until
-#'   the result is assigned back. With \code{modify = TRUE}, the
+#'   carry the declared missing values, returned invisibly. With the
+#'   default \code{modify = FALSE}, the caller's data frame is unchanged
+#'   until the result is assigned back. With \code{modify = TRUE}, the
 #'   change is also written back onto the caller's data frame, and the
 #'   returned copy can be ignored.
 #'
 #' @section Missing-Values Convention:
 #' Under SPSS convention, codes are declared as numeric values via the
 #' column's \code{na_values} attribute (haven's representation of
-#' SPSS-form UDMs). The data cells themselves are unchanged; only the
-#' metadata that flags certain values as missing is added.
+#' SPSS-style missing values). The data cells themselves are unchanged;
+#' only the metadata that flags certain values as missing is added.
 #'
 #' Under Stata or SAS convention with tagged missing-value input (quoted
 #' tokens such as \code{".a"}), the function attaches value labels to
@@ -3491,12 +3492,13 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' surviving codes named.
 #'
 #' @section Mixed conventions and file export:
-#' A single data frame may carry both SPSS-form and Stata-form UDM
-#' columns. In-memory analysis and display tolerate the mix without
-#' issue (each column renders in its native form). The constraint
-#' shows up at file-export time: \code{.sav} cannot
-#' represent Stata-style missing values; \code{.dta} cannot represent SPSS-form
-#' \code{na_values} declarations; \code{.xpt} can represent neither
+#' A single data frame may carry columns with SPSS-style and columns
+#' with Stata-style missing values. In-memory analysis and display
+#' tolerate the mix without issue (each column renders in its native
+#' form). The constraint shows up at file-export time: \code{.sav}
+#' cannot represent Stata-style missing values; \code{.dta} cannot
+#' represent SPSS-style \code{na_values} declarations; \code{.xpt} can
+#' represent neither
 #' form. \code{jsave()} pre-flights the DF
 #' against the destination format and errors with a pointer to
 #' \code{jconvert()} when the mix is incompatible. The
@@ -3518,7 +3520,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' df <- clinic
 #' jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 #'
-#' # SPSS form: declare -99 and -98 as UDMs with labels. modify = TRUE
+#' # SPSS form: declare -99 and -98 as missing, with labels. modify = TRUE
 #' # writes the declaration back onto df in one step -- the recommended
 #' # workflow.
 #' jdeclare_missing(df, MoodRating,
@@ -3567,7 +3569,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' # plain column -- forks on joptions(missing.convention = ...):
 #' joptions(missing.convention = "spss")
 #' df6 <- jdeclare_missing(clinic, MoodRating, codes = c(-99))
-#' # -99 stays in the cells, flagged as missing (SPSS-form declaration)
+#' # -99 stays in the cells, flagged as missing (SPSS-style declaration)
 #'
 #' joptions(missing.convention = "stata")
 #' df7 <- jdeclare_missing(clinic, MoodRating, codes = c(-99))
@@ -4005,7 +4007,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   # --- Sign-off 4: reject mixed tagged + numeric ---------------------------
   if (has_tagged && has_numeric) {
-    .jst_stop(.jst_jdeclare_udm_mixed_error(
+    .jst_stop(.jst_jdeclare_missing_mixed_error(
       parsed_codes, data_name, target_vars[1],
       per_call_convention = convention,
       arg_label           = if (labels_only) "labels" else "codes"))
@@ -4082,7 +4084,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           # codes and at jconvert (S218 builder rewrite; phrasing convention
           # threaded S240 so a sas-setting user reads uppercase tokens and a
           # to = "sas" remedy).
-          err_msg <- .jst_jdeclare_udm_convention_error(
+          err_msg <- .jst_jdeclare_missing_convention_error(
             parsed_codes        = parsed_codes,
             data_name           = data_name,
             var_name            = vn,
@@ -4320,20 +4322,20 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       marker_notes <- NULL
       if (resolved_convention == "spss") {
         # ---------- Branch D1: SPSS canonical (numeric codes / range) ------
-        new_col <- .jst_jdeclare_udm_spss(col, parsed_codes, vn,
+        new_col <- .jst_jdeclare_missing_spss(col, parsed_codes, vn,
                                           range         = range,
                                           inband_labels = inband_labels)
         branch  <- "spss_canonical"
 
       } else if (has_tagged) {
         # ---------- Branch D3: Stata/SAS canonical (tagged-NA labeling) ----
-        new_col <- .jst_jdeclare_udm_stata_label(col, pc)
+        new_col <- .jst_jdeclare_missing_stata_label(col, pc)
         branch  <- "stata_canonical"
-        marker_notes <- .jst_jdeclare_udm_marker_notes(col, new_col, pc)
+        marker_notes <- .jst_jdeclare_missing_marker_notes(col, new_col, pc)
 
       } else {
         # ---------- Branch D4: Stata/SAS conversion (numeric -> tagged) ----
-        conv_result <- .jst_jdeclare_udm_stata_convert(col, pc, vn,
+        conv_result <- .jst_jdeclare_missing_stata_convert(col, pc, vn,
                          convention = resolved_convention)
         new_col <- conv_result$new_col
         branch  <- "stata_conversion"
@@ -4480,7 +4482,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         dropped_mask <- !old_tags %in% new_tags
       }
       if (any(dropped_mask)) {
-        drop_notices <- c(drop_notices, .jst_jdeclare_udm_drop_notice(
+        drop_notices <- c(drop_notices, .jst_jdeclare_missing_drop_notice(
           dropped_df     = existing_info$codes[dropped_mask, , drop = FALSE],
           var_name       = vn,
           representation = existing_info$representation
@@ -4526,7 +4528,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # --- Build and emit notification -----------------------------------------
   if (isTRUE(missing.notice)) {
     if (n_targets == 1L) {
-      notif <- .jst_jdeclare_udm_notification(
+      notif <- .jst_jdeclare_missing_notification(
         data_name           = data_name,
         var_name            = target_vars[1L],
         parsed_codes        = results[[1L]]$parsed_codes_used,
@@ -4540,7 +4542,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         marker_notes        = results[[1L]]$marker_notes
       )
     } else {
-      notif <- .jst_jdeclare_udm_bulk_notification(
+      notif <- .jst_jdeclare_missing_bulk_notification(
         data_name     = data_name,
         target_vars   = target_vars,
         results       = results,
@@ -4665,7 +4667,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_spss <- function(col, parsed_codes, var_name,
+.jst_jdeclare_missing_spss <- function(col, parsed_codes, var_name,
                                    range = NULL, inband_labels = NULL) {
   # parsed_codes: named numeric vector (names = labels or "", values =
   # numeric codes), possibly EMPTY (a range-only call). Tagged-NA elements
@@ -4831,7 +4833,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_stata_label <- function(col, parsed_codes) {
+.jst_jdeclare_missing_stata_label <- function(col, parsed_codes) {
   # parsed_codes: named numeric vector where every value is a tagged-NA
   # (NA_real_ with a tag attribute).
 
@@ -4890,7 +4892,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_stata_convert <- function(col, parsed_codes, var_name,
+.jst_jdeclare_missing_stata_convert <- function(col, parsed_codes, var_name,
                                             convention = "stata") {
   # parsed_codes: named numeric vector (names = labels or "", values =
   # plain numeric codes). Tagged-NA elements ruled out upstream.
@@ -4986,7 +4988,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
 
 # -----------------------------------------------------------------------------
-# .jst_jdeclare_udm_marker_notes()
+# .jst_jdeclare_missing_marker_notes()
 #
 # Per-marker truthfulness annotations for the stata_canonical body lines
 # (S247). That branch renders from the CODES ARGUMENT rather than from what
@@ -5012,7 +5014,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_marker_notes <- function(col, new_col, parsed_codes) {
+.jst_jdeclare_missing_marker_notes <- function(col, new_col, parsed_codes) {
   tags <- haven::na_tag(parsed_codes)
   lbls <- names(parsed_codes)
   if (is.null(lbls)) lbls <- rep("", length(parsed_codes))
@@ -5052,7 +5054,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
 
 # -----------------------------------------------------------------------------
-# .jst_jdeclare_udm_no_naming_note()
+# .jst_jdeclare_missing_no_naming_note()
 #
 # Replaces the stata_canonical block when EVERY entry in codes is bare
 # (S247). On this branch the cells are already tagged NAs -- already missing,
@@ -5074,7 +5076,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_no_naming_note <- function(data_name, var_phrase,
+.jst_jdeclare_missing_no_naming_note <- function(data_name, var_phrase,
                                              parsed_codes, scaffold_var,
                                              modify = FALSE,
                                              plural = FALSE) {
@@ -5104,7 +5106,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
-.jst_jdeclare_udm_notification <- function(data_name, var_name,
+.jst_jdeclare_missing_notification <- function(data_name, var_name,
                                            parsed_codes, branch,
                                            conversion_info = NULL,
                                            modify = FALSE,
@@ -5120,7 +5122,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # before the header is built -- there is no header to build.
   if (identical(branch, "stata_canonical") &&
       !any(nzchar(names(parsed_codes)))) {
-    return(.jst_jdeclare_udm_no_naming_note(
+    return(.jst_jdeclare_missing_no_naming_note(
       data_name    = data_name,
       var_phrase   = var_name,
       parsed_codes = parsed_codes,
@@ -5190,7 +5192,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     # existing label, so there is no renaming to report -- it renders as
     # the marker alone. S247: each line carries its truthfulness annotation
     # (what actually happened to that marker), built by
-    # .jst_jdeclare_udm_marker_notes(). An all-bare call never reaches here.
+    # .jst_jdeclare_missing_marker_notes(). An all-bare call never reaches here.
     c_tags <- haven::na_tag(parsed_codes)
     notes  <- if (is.null(marker_notes)) rep("", length(parsed_codes))
               else marker_notes
@@ -5310,7 +5312,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' the durability note prints once at the end.
 #'
 #' @keywords internal
-.jst_jdeclare_udm_bulk_notification <- function(data_name, target_vars,
+.jst_jdeclare_missing_bulk_notification <- function(data_name, target_vars,
                                                 results, parsed_codes,
                                                 range = NULL,
                                                 inband_labels = NULL,
@@ -5400,7 +5402,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       # (S247). Bare-ness comes from the codes argument, so it is call-level
       # -- but the BRANCH is per column, so other groups keep their blocks.
       if (!any(nzchar(names(pc_grp)))) {
-        nn <- .jst_jdeclare_udm_no_naming_note(
+        nn <- .jst_jdeclare_missing_no_naming_note(
           data_name    = data_name,
           var_phrase   = paste0(length(vn_set),
                                 if (length(vn_set) == 1L) " variable"
@@ -5499,15 +5501,17 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
 # -- jconvert -----------------------------------------------------------------
 
-#' Convert user-defined missing value (UDM) declarations between formats
+#' Convert missing-value declarations between formats
 #'
-#' \code{jconvert()} provides a single entry point for changing how user-
-#' defined missing values (UDMs) are represented on the columns of a data
+#' \code{jconvert()} provides a single entry point for changing how
+#' declared missing values are represented on the columns of a data
 #' frame already in memory. Four target formats are supported: SPSS-style
 #' (\code{na_values} on \code{haven_labelled_spss}), Stata-style
 #' (lowercase \code{tagged_na} on \code{haven_labelled}), SAS-style
 #' (uppercase \code{tagged_na} on \code{haven_labelled}), and base R
 #' (declarations stripped, declared cells converted to plain \code{NA}).
+#' The haven package and its documentation call these user-defined
+#' missing values.
 #'
 #' @param data A data frame, or omitted to use the \code{juse()} default.
 #' @param to One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
@@ -5551,8 +5555,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' @details
 #' The three target formats:
 #' \describe{
-#'   \item{\code{to = "baseR"}}{Strip all UDM declarations and convert
-#'     declared cells to plain \code{NA}. For SPSS-form columns
+#'   \item{\code{to = "baseR"}}{Strip all missing-value declarations and
+#'     convert declared cells to plain \code{NA}. For SPSS-style columns
 #'     (\code{na_values} / \code{na_range} on
 #'     \code{haven_labelled_spss}), masks declared codes to \code{NA} and
 #'     removes the attributes; value labels are preserved so the column
@@ -5561,7 +5565,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     (\code{tagged_na} markers), uses \code{haven::zap_missing()} to
 #'     convert them to plain \code{NA}s.}
 #'   \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
-#'     values to SPSS-form numeric codes. Letter tags map to numeric
+#'     values to SPSS-style numeric codes. Letter tags map to numeric
 #'     codes via \code{joptions("missing.convention.codes")} (default
 #'     \code{-99}, \code{-98}, \code{-97}):
 #'     \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
@@ -5577,7 +5581,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     \code{.a}--\code{.c}, one letter per code, after case correction)
 #'     are refused with guidance to use \code{jrecode()} for manual
 #'     mapping.}
-#'   \item{\code{to = "stata"}}{Convert SPSS-form numeric codes to
+#'   \item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 #'     Stata-style missing values. Letter tags are assigned by ordering
 #'     rather than by convention: each column's own declared
 #'     \code{na_values} codes are sorted by absolute value descending
@@ -5609,7 +5613,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     in the target form.}
 #'   \item{\code{to = "sas"}}{Identical to \code{to = "stata"} except
 #'     that the letters are uppercase (\code{.A}--\code{.Z}, SAS's
-#'     native extended-missing convention): SPSS-form columns are
+#'     native extended-missing convention): SPSS-style columns are
 #'     enumerated and mapped to uppercase tags, Stata-style (lowercase)
 #'     tagged columns are case-corrected to uppercase and counted as
 #'     converted, and columns already fully uppercase are skipped.
@@ -5631,19 +5635,21 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' errors before mutating the data frame.
 #'
 #' \strong{Pattern A -- value labels suggest missingness but no formal
-#' declaration.} When a column has no formal UDM declaration but carries
-#' value labels matching the package's missing-label wordlist (e.g.
-#' \code{"Refused"}, \code{"Don't know"}, \code{"Not applicable"}),
-#' \code{jconvert()} skips the column and surfaces it in the
-#' notification with the affected value/label pairs. To formalize these
-#' as UDMs use \code{jdeclare_missing()}; to leave them as ordinary data, no
-#' action is needed.
+#' declaration.} When a column has no formal missing-value declaration
+#' but carries value labels matching the package's missing-label
+#' wordlist (e.g. \code{"Refused"}, \code{"Don't know"},
+#' \code{"Not applicable"}), \code{jconvert()} skips the column and
+#' surfaces it in the notification with the affected value/label pairs.
+#' To formalize these as declared missing values use
+#' \code{jdeclare_missing()}; to leave them as ordinary data, no action
+#' is needed.
 #'
 #' @examples
-#' # community ships with SPSS-form UDMs (Income, Education, Smoker,
-#' # Environment1, Environment3), so the conversions run on it directly.
+#' # community ships with SPSS-style missing values (Income, Education,
+#' # Smoker, Environment1, Environment3), so the conversions run on it
+#' # directly.
 #'
-#' # Convert SPSS-form UDMs to Stata-style missing values. modify = TRUE
+#' # Convert SPSS-style to Stata-style missing values. modify = TRUE
 #' # writes the result back onto df in one step -- the recommended
 #' # workflow.
 #' df <- community
@@ -5655,7 +5661,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' # Convert to SAS-style missing values (uppercase .A, .B, ...):
 #' df_sas <- jconvert(community, to = "sas")
 #'
-#' # Strip UDMs from every applicable variable:
+#' # Strip the declarations from every applicable variable:
 #' df3 <- jconvert(community, to = "baseR")
 #'
 #' # Scope by unquoted names:
@@ -5670,7 +5676,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' \dontrun{
 #' # Convert with target inferred from joptions:
 #' joptions(missing.convention = "spss")
-#' df <- jconvert(df)   # converts any Stata-form columns to SPSS
+#' df <- jconvert(df)   # converts any Stata-style columns to SPSS
 #' }
 #'
 #' @seealso \code{\link{jload}} for the load-time strip alternative
@@ -5860,7 +5866,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
   }
 
   # --- Pre-flight checks: Q3 strict atomicity --------------------------------
-  convention_codes <- getOption(".jst_options_udm_convention_codes",
+  convention_codes <- getOption(".jst_options_missing_convention_codes",
                                 .jst_options_defaults$missing.convention.codes)
   letter_codes <- letters[seq_along(convention_codes)]
   code_for_tag <- .jst_tag_letters_to_codes(letter_codes, convention_codes)

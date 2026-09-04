@@ -56,7 +56,7 @@ name (character) or sheet number (integer). Defaults to the first sheet.
 If the file has multiple sheets and \code{sheet} is not specified,
 a message lists the available sheets.}
 
-\item{preserve.declarations}{Logical. If \code{TRUE} (default), user-defined
+\item{preserve.declarations}{Logical. If \code{TRUE} (default), declared
 missing values arriving with the file are preserved: SPSS-style
 codes such as -99 keep their original numeric values in the data
 frame, with metadata attached so the package's analysis functions
@@ -67,7 +67,8 @@ metadata is stripped. Applies to any loaded file whose columns
 carry missing-value declarations --- typically \code{.sav},
 \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
 saved from such data. For \code{.sav} files, \code{TRUE}
-corresponds to haven's \code{user_na = TRUE}.}
+corresponds to haven's \code{user_na = TRUE}. The haven package and
+its documentation call these user-defined missing values.}
 
 \item{missing.notice}{Per-call override for the missing-value notification.
 \code{NULL} (default) defers to the setting from \code{joutput()}.
@@ -81,9 +82,9 @@ notification. See \code{?joutput} for the full toggle behavior.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, suppresses jload()'s
 informational messages (the directory-resolution note, file found,
-load summary, default-data note, and the UDM narrative, overriding
-missing.notice). Errors, warnings, the multi-sheet advisory, and the
-overwrite prompt are still shown.}
+load summary, default-data note, and the narrative about declared
+missing values, overriding missing.notice). Errors, warnings, the
+multi-sheet advisory, and the overwrite prompt are still shown.}
 }
 \value{
 Invisibly returns \code{NULL}; jload() is called for its side
@@ -152,8 +153,8 @@ for values that appear to be coded missing values. Only whole-number
 values are considered (coded missing values are always integers like
 -99, 999, etc.). Two detection methods are used:
 \itemize{
-\item For SPSS files, user-defined missing values stored in the file
-metadata are reported with high confidence.
+\item For SPSS files, missing values declared in the file metadata
+are reported with high confidence.
 \item A heuristic scan detects negative values among otherwise positive
 data and extreme outlier values (5x the range of other values).
 }

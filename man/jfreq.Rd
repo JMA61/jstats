@@ -68,7 +68,7 @@ Invisibly returns a list of class \code{jst_freq} containing:
 \code{frequencies} (a named list, one element per variable; each
 element is itself a list with seven components -- \code{valid}, the
 valid-row frequency table as a data frame; \code{udm}, the
-user-defined-missing rows as a data frame, empty when the variable
+declared-missing rows as a data frame, empty when the variable
 has none; \code{na}, the system-missing row as a one-row data
 frame, or \code{NULL} when there are none; \code{total},
 \code{valid_count}, and \code{missing}, the case counts; and

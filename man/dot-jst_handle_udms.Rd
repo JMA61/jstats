@@ -5,7 +5,7 @@
 \title{Internal: inspect a data frame for UDM-bearing columns and optionally
 convert UDM cells to NA}
 \usage{
-.jst_handle_udms(df, preserve.udm)
+.jst_handle_udms(df, preserve.declarations)
 }
 \value{
 A list with elements \code{df} (possibly modified) and
@@ -24,7 +24,7 @@ by the narrative formatter. Covers both SPSS UDM representation
 (\code{tagged_na} markers on \code{haven_labelled}).
 }
 \details{
-When \code{preserve.udm = FALSE}, additionally converts UDM cells to
+When \code{preserve.declarations = FALSE}, additionally converts UDM cells to
 \code{NA} and strips the corresponding metadata. For SPSS columns
 this strips \code{na_values} and \code{na_range}; for Stata columns
 \code{haven::zap_missing()} converts Stata-style missing-value cells to plain NA.

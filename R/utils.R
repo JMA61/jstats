@@ -70,7 +70,7 @@
 #'   \item \code{\link{jsave}} -- save a data frame, with format inferred from the file extension
 #' }
 #'
-#' \strong{Visualisation}
+#' \strong{Visualization}
 #' \itemize{
 #'   \item \code{\link{jplot}} -- base histograms and bar plots for data, plus method dispatch on result objects from \code{jt()}, \code{jlm()}, etc.
 #' }
@@ -271,7 +271,7 @@ jupdate <- function(ask = FALSE) {
 #'
 #' \code{jai()} prints a short, plain-text orientation to the package's core
 #' conventions: how to load data, how jstats handles value labels and
-#' user-defined missing values, how to choose an analysis function, and how
+#' declared missing values, how to choose an analysis function, and how
 #' to keep changes made to a data frame. It is written to be useful both to
 #' people new to the package and to AI coding assistants (such as the
 #' assistant built into RStudio), which read console output and can act on

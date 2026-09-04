@@ -53,7 +53,7 @@
 #'   name (character) or sheet number (integer). Defaults to the first sheet.
 #'   If the file has multiple sheets and \code{sheet} is not specified,
 #'   a message lists the available sheets.
-#' @param preserve.declarations Logical. If \code{TRUE} (default), user-defined
+#' @param preserve.declarations Logical. If \code{TRUE} (default), declared
 #'   missing values arriving with the file are preserved: SPSS-style
 #'   codes such as -99 keep their original numeric values in the data
 #'   frame, with metadata attached so the package's analysis functions
@@ -64,7 +64,8 @@
 #'   carry missing-value declarations --- typically \code{.sav},
 #'   \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
 #'   saved from such data. For \code{.sav} files, \code{TRUE}
-#'   corresponds to haven's \code{user_na = TRUE}.
+#'   corresponds to haven's \code{user_na = TRUE}. The haven package and
+#'   its documentation call these user-defined missing values.
 #' @param missing.notice Per-call override for the missing-value notification.
 #'   \code{NULL} (default) defers to the setting from \code{joutput()}.
 #'   \code{TRUE} prints the notification, in its full form, on any load
@@ -123,8 +124,8 @@
 #' values are considered (coded missing values are always integers like
 #' -99, 999, etc.). Two detection methods are used:
 #' \itemize{
-#'   \item For SPSS files, user-defined missing values stored in the file
-#'     metadata are reported with high confidence.
+#'   \item For SPSS files, missing values declared in the file metadata
+#'     are reported with high confidence.
 #'   \item A heuristic scan detects negative values among otherwise positive
 #'     data and extreme outlier values (5x the range of other values).
 #' }
@@ -187,9 +188,9 @@
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, suppresses jload()'s
 #'   informational messages (the directory-resolution note, file found,
-#'   load summary, default-data note, and the UDM narrative, overriding
-#'   missing.notice). Errors, warnings, the multi-sheet advisory, and the
-#'   overwrite prompt are still shown.
+#'   load summary, default-data note, and the narrative about declared
+#'   missing values, overriding missing.notice). Errors, warnings, the
+#'   multi-sheet advisory, and the overwrite prompt are still shown.
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
                   preserve.declarations = TRUE, missing.notice = NULL, quiet = FALSE) {
@@ -577,7 +578,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # Toggle resolution: per-call missing.notice arg > joutput global toggle >
   # joutput level default. Standard and full both default to TRUE (show on
   # every UDM-bearing load); minimal is FALSE. The NULL/"auto" branch below
-  # (show once per session, tracked via .jst_udm_notice_shown) is retained
+  # (show once per session, tracked via .jst_missing_notice_shown) is retained
   # but no preset level now selects it.
   # Form (S227, E17): the first showing in a session uses the full form;
   # later showings use the compact form (inventory plus any convention
@@ -593,16 +594,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       FALSE
     } else {
       # NULL / auto mode — show only if not yet shown this session
-      !isTRUE(getOption(".jst_udm_notice_shown", FALSE))
+      !isTRUE(getOption(".jst_missing_notice_shown", FALSE))
     }
     if (show_notice && !quiet) {
-      compact <- isTRUE(getOption(".jst_udm_notice_shown", FALSE)) &&
+      compact <- isTRUE(getOption(".jst_missing_notice_shown", FALSE)) &&
         !isTRUE(missing.notice)
       .jst_msg(.jst_format_udm_narrative(udm_info, preserve.declarations,
                                         data_name = obj_name,
                                         compact = compact))
       .jst_note_fired <- TRUE
-      options(.jst_udm_notice_shown = TRUE)
+      options(.jst_missing_notice_shown = TRUE)
     }
   }
 
@@ -1127,7 +1128,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \code{haven_labelled_spss}) and Stata UDM representation
 #' (\code{tagged_na} markers on \code{haven_labelled}).
 #'
-#' When \code{preserve.udm = FALSE}, additionally converts UDM cells to
+#' When \code{preserve.declarations = FALSE}, additionally converts UDM cells to
 #' \code{NA} and strips the corresponding metadata. For SPSS columns
 #' this strips \code{na_values} and \code{na_range}; for Stata columns
 #' \code{haven::zap_missing()} converts Stata-style missing-value cells to plain NA.
@@ -1141,7 +1142,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   (the \code{.jst_missing_info()} return value for that column).
 #'
 #' @keywords internal
-.jst_handle_udms <- function(df, preserve.udm) {
+.jst_handle_udms <- function(df, preserve.declarations) {
   udm_info <- list()
 
   for (vname in names(df)) {
@@ -1155,7 +1156,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       info = info
     )
 
-    if (!preserve.udm) {
+    if (!preserve.declarations) {
       if (info$representation == "spss") {
         # unclass() bypasses vctrs's "Can't convert <haven_labelled> to <double>"
         # cast refusal in cold-session vec_cast dispatch ordering. See the matching
@@ -1175,8 +1176,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         attr(df[[vname]], "na_range")  <- NULL
 
       } else if (info$representation == "stata") {
-        # User-requested plain-NA conversion (preserve.udm = FALSE): strip
-        # the tagged-NA metadata so nothing round-trips back to Stata.
+        # User-requested plain-NA conversion (preserve.declarations = FALSE):
+        # strip the tagged-NA metadata so nothing round-trips back to Stata.
         # haven::zap_missing converts tagged NAs to plain NAs while
         # preserving labels on non-missing values. (The analysis pipeline's
         # Step 0 applies the same zap on its own copy -- AUDIT-039 -- for a
@@ -1199,7 +1200,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \code{joptions("missing.convention")} setting, and whether the full
 #' form has already been shown this session (\code{compact}).
 #'
-#' Shapes produced under \code{preserve.udm = TRUE}:
+#' Shapes produced under \code{preserve.declarations = TRUE}:
 #' \itemize{
 #'   \item Uniform frame: style-named header ("5 variables have
 #'     SPSS-style missing values:"). SPSS-style frames with no
@@ -1238,7 +1239,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' a convention -- it is the second half of a remedy the user has
 #' already chosen to run.
 #'
-#' The \code{preserve.udm = FALSE} branch (declarations converted to
+#' The \code{preserve.declarations = FALSE} branch (declarations converted to
 #' plain NA on request) keeps its original shape with a style-named
 #' header and is never compacted -- it reports a destructive action the
 #' user explicitly requested.
@@ -1252,8 +1253,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   compact form described above.
 #'
 #' @keywords internal
-.jst_format_udm_narrative <- function(udm_info, preserve.udm, max_show = 10L,
-                                      data_name = "data", compact = FALSE) {
+.jst_format_udm_narrative <- function(udm_info, preserve.declarations,
+                                      max_show = 10L, data_name = "data",
+                                      compact = FALSE) {
   # Suggested jconvert()/joptions() calls below use the loaded object's
   # name (threaded from jload) so the advice is copy-paste runnable; fall
   # back to the generic placeholder only when no name is available.
@@ -1319,7 +1321,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
 
     body <- paste(parts, collapse = "; ")
-    if (!preserve.udm) body <- paste0("was ", body)
+    if (!preserve.declarations) body <- paste0("was ", body)
 
     var_strings[i] <- sprintf("%s: %s", entry$var, body)
   }
@@ -1339,8 +1341,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     sprintf("%d %s", grp_counts[[g]], disp_label(g)), character(1)),
     collapse = ", ")
 
-  # --- preserve.udm = FALSE: conversion report, never compacted -------------
-  if (!preserve.udm) {
+  # --- preserve.declarations = FALSE: conversion report, never compacted ----
+  if (!preserve.declarations) {
     head_str <- if (uniform) {
       .jst_wrap_prose(sprintf(
         "%d %s had %s missing values, converted to plain NA per preserve.declarations = FALSE:",
@@ -1356,7 +1358,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     ))
   }
 
-  # --- preserve.udm = TRUE ---------------------------------------------------
+  # --- preserve.declarations = TRUE ------------------------------------------
   head_str <- if (uniform) {
     sprintf("%d %s %s %s missing values:",
             n_vars, verb_noun, verb_have, disp_label(present))
@@ -2670,19 +2672,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Excel and CSV cannot store variable labels, value labels, or
 #' missing-value declarations. jsave emits a note after a successful write
 #' to these formats describing what was (or, under
-#' \code{preserve.udm = FALSE}, would have been) lost. The wording depends
-#' on which missing-value form the frame carried and on whether
-#' \code{preserve.udm = FALSE} blanked the codes.
+#' \code{preserve.declarations = FALSE}, would have been) lost. The wording
+#' depends on which missing-value form the frame carried and on whether
+#' \code{preserve.declarations = FALSE} blanked the codes.
 #'
 #' @details
 #' Branching (SPSS-style codes write as literal numbers, while Stata-style
 #' tagged NAs write as blank cells):
 #' \itemize{
-#'   \item \code{preserve.udm = FALSE} and SPSS-style codes were blanked:
-#'     a confirmation giving the count of blanked cells.
-#'   \item both forms present (\code{preserve.udm = TRUE}): a generic note
-#'     that names neither platform, plus the \code{preserve.udm = FALSE}
-#'     suggestion.
+#'   \item \code{preserve.declarations = FALSE} and SPSS-style codes were
+#'     blanked: a confirmation giving the count of blanked cells.
+#'   \item both forms present (\code{preserve.declarations = TRUE}): a
+#'     generic note that names neither platform, plus the
+#'     \code{preserve.declarations = FALSE} suggestion.
 #'   \item SPSS-style only: the literal-numbers warning plus the suggestion.
 #'   \item Stata-style only: a brief note that the tags write as blank cells
 #'     and the distinction between them is not preserved.
@@ -2696,15 +2698,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   detected before any collapse.
 #' @param stata_vars Character vector of Stata-form tagged-NA variable
 #'   names, as detected before any collapse.
-#' @param preserve.udm Logical, the value passed to jsave.
+#' @param preserve.declarations Logical, the value passed to jsave.
 #' @param n_blanked Integer count of SPSS-style code cells blanked when
-#'   \code{preserve.udm = FALSE}; zero otherwise.
+#'   \code{preserve.declarations = FALSE}; zero otherwise.
 #'
 #' @return A single message string, or \code{NULL} if no note applies.
 #'
 #' @keywords internal
 .jst_jsave_label_loss_note <- function(ext, spss_vars, stata_vars,
-                                       preserve.udm, n_blanked) {
+                                       preserve.declarations, n_blanked) {
   fmt <- if (identical(ext, "xlsx")) {
     "Excel format (.xlsx)"
   } else {
@@ -2713,8 +2715,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   has_spss  <- length(spss_vars)  > 0
   has_stata <- length(stata_vars) > 0
 
-  # preserve.udm = FALSE that actually blanked SPSS-style codes -> confirm.
-  if (!preserve.udm && has_spss && n_blanked > 0) {
+  # preserve.declarations = FALSE that blanked SPSS-style codes -> confirm.
+  if (!preserve.declarations && has_spss && n_blanked > 0) {
     return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels or value labels. ",
       n_blanked, " missing-value codes were blanked to empty cells ",
@@ -2790,15 +2792,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{jsave(mydata, "mydata.rds", overwrite = TRUE)}. Otherwise, if
 #'   the file already exists and the script was run by pasting or with
 #'   RStudio's Run button, the call stops with an error.
-#' @param preserve.declarations Logical. If \code{TRUE} (the default), missing-value
-#'   declarations are written as they stand; formats that cannot store them
-#'   (notably Excel and CSV) drop the metadata, and SPSS-style codes such as
-#'   -99 then read back as ordinary numbers. If \code{FALSE}, those codes are
-#'   blanked to plain NA before writing, so they become empty cells. Mirrors
-#'   the \code{preserve.declarations} argument of \code{\link{jload}}. The pre-flight
-#'   checks for the .sav, .dta, and .xpt formats run before this step, so a
-#'   missing-value form a target format cannot represent is still reported
-#'   and blocked rather than silently dropped.
+#' @param preserve.declarations Logical. If \code{TRUE} (the default),
+#'   missing-value declarations are written as they stand; formats that
+#'   cannot store them (notably Excel and CSV) drop the metadata, and
+#'   SPSS-style codes such as -99 then read back as ordinary numbers. If
+#'   \code{FALSE}, those codes are blanked to plain NA before writing, so
+#'   they become empty cells. Mirrors the \code{preserve.declarations}
+#'   argument of \code{\link{jload}}. The pre-flight checks for the .sav,
+#'   .dta, and .xpt formats run before this step, so a missing-value form
+#'   a target format cannot represent is still reported and blocked
+#'   rather than silently dropped. The haven package and its
+#'   documentation call these user-defined missing values.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect of
 #'   writing a file to disk.
@@ -2846,7 +2850,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' jsave(community, "community.csv")         # CSV
 #' jsave(community, "community.rds")         # R native
 #'
-#' # Stata and SAS formats cannot carry community's SPSS-form missing-value
+#' # Stata and SAS formats cannot carry community's SPSS-style missing-value
 #' # declarations -- convert first (jsave() pre-flights this and says so)
 #' jsave(jconvert(community, to = "stata"), "community.dta")   # Stata
 #' jsave(jconvert(community, to = "baseR"), "community.xpt")   # SAS interchange
@@ -3212,7 +3216,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
     stata_udm_vars <- .jst_has_tagged_na(data)
     if (!preserve.declarations &&
         (length(spss_udm_vars) > 0 || length(stata_udm_vars) > 0)) {
-      collapsed <- .jst_handle_udms(data, preserve.udm = FALSE)
+      collapsed <- .jst_handle_udms(data, preserve.declarations = FALSE)
       if (length(spss_udm_vars) > 0) {
         n_udm_blanked <- sum(vapply(spss_udm_vars, function(v) {
           # Count on the underlying values: is.na() on a labelled_spss column

@@ -7,7 +7,7 @@
 
 # -- jplot ---------------------------------------------------------------------
 
-#' Visualise jst_* result objects or plot variables directly from a data frame
+#' Visualize jst_* result objects or plot variables directly from a data frame
 #'
 #' Unified plotting function. Can be called in three ways:
 #'

@@ -1,27 +1,31 @@
 Package: jstats
 Title: Simplified Statistical Analysis Tools for Social Science
-Version: 0.9.152
+Version: 0.9.153
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
 Description: Provides simplified tools for common statistical analyses
     used in social science research and teaching, with output formatted
-    in the style of SPSS and Stata. Analysis functions include descriptive
-    statistics, frequency tables, t-tests, ANOVA, correlations,
-    chi-square tests, cross-tabulations, linear regression, logistic
-    regression, and Cronbach's alpha, with built-in model diagnostics
-    and publication-oriented plotting. Supporting tools handle data
-    management (recoding, labelling, filtering, dummy coding, scale
-    construction), automatic detection and handling of coded missing
-    values, and unified data import and export for SPSS, Stata, SAS,
-    Excel, CSV, and R formats. Functions accept unquoted variable
-    names and formula syntax for ease of use, handle haven-labelled
-    variables automatically, and return results invisibly while
-    printing user-friendly tables. The package stays close enough to
-    base R conventions that users learn transferable skills rather
-    than a private dialect, supporting a smooth transition from SPSS,
-    Stata, or SAS into the broader R ecosystem.
+    in the style of 'SPSS', 'Stata', or 'SAS'. Analysis functions include
+    descriptive statistics, frequency tables, t-tests, ANOVA,
+    correlations, chi-square tests, cross-tabulations, linear regression,
+    logistic regression, and Cronbach's alpha, with built-in model
+    diagnostics and plotting. Supporting tools handle data management
+    (recoding, labelling, encoding text as coded values, case selection,
+    dummy coding, scale construction, data screening) and unified data
+    import and export for 'SPSS', 'Stata', 'SAS', 'Excel', CSV, and R
+    formats. Declared missing values are read and written faithfully in
+    each platform's own convention, can be declared or converted between
+    conventions within R, and suspected but undeclared missing-value
+    codes are detected automatically. Functions accept unquoted variable
+    names and formula syntax, handle 'haven'-labelled variables directly,
+    and return results invisibly while printing readable tables. The
+    package stays close enough to base R conventions that users learn
+    transferable skills rather than a private dialect, easing the
+    transition from 'SPSS', 'Stata', or 'SAS' into the broader R
+    ecosystem.
 License: MIT + file LICENSE
 Encoding: UTF-8
+Language: en-US
 Depends:
     R (>= 4.2.0)
 Roxygen: list(markdown = TRUE)
@@ -36,5 +40,6 @@ Imports:
     tools
 Suggests: generics
 LazyData: true
-URL: https://jma61.github.io/jstats/
+URL: https://JMA61.github.io/jstats/
+BugReports: https://github.com/JMA61/jstats/issues
 Config/roxygen2/version: 8.0.0

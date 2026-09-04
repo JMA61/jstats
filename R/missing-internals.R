@@ -468,7 +468,7 @@
 .jst_tag_letters_to_codes <- function(letters_in, convention_codes = NULL) {
 
   if (is.null(convention_codes)) {
-    convention_codes <- getOption(".jst_options_udm_convention_codes",
+    convention_codes <- getOption(".jst_options_missing_convention_codes",
                                   .jst_options_defaults$missing.convention.codes)
   }
 

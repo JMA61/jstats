@@ -2,7 +2,7 @@
 % Please edit documentation in R/recode.R
 \name{jdeclare_missing}
 \alias{jdeclare_missing}
-\title{Declare user-defined missing values on one or more variables}
+\title{Declare missing values on one or more variables}
 \usage{
 jdeclare_missing(
   data,
@@ -19,12 +19,12 @@ jdeclare_missing(
 \arguments{
 \item{data}{A data frame containing the variable(s).}
 
-\item{...}{The variable(s) to declare UDMs on, as unquoted names
-(e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
+\item{...}{The variable(s) to declare missing values on, as unquoted
+names (e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
 either \code{...} or \code{vars}, not both. All arguments after
 the variables must be named.}
 
-\item{codes}{Numeric vector of code values to declare as UDMs.
+\item{codes}{Numeric vector of code values to declare as missing.
 Accepts two forms:
 \describe{
 \item{Option A (separate codes and labels)}{Unnamed numeric
@@ -94,7 +94,7 @@ either \code{vars} or \code{...}, not both.}
 \code{"sas"} (any capitalization is accepted); overrides the
 convention resolution for this call. When
 \code{NULL} (the default), the convention is resolved from the
-column's existing UDM declaration (if any), then from
+column's existing missing-value declaration (if any), then from
 \code{joptions("missing.convention")}; when neither supplies one,
 the call stops with a guided error asking you to choose -- the
 package never infers a convention for a fresh declaration. A
@@ -121,21 +121,22 @@ declaration.}
 }
 \value{
 The data frame, with the specified variable(s) updated to
-carry the declared UDMs, returned invisibly. With the default
-\code{modify = FALSE}, the caller's data frame is unchanged until
-the result is assigned back. With \code{modify = TRUE}, the
+carry the declared missing values, returned invisibly. With the
+default \code{modify = FALSE}, the caller's data frame is unchanged
+until the result is assigned back. With \code{modify = TRUE}, the
 change is also written back onto the caller's data frame, and the
 returned copy can be ignored.
 }
 \description{
-\code{jdeclare_missing()} declares one or more user-defined missing
-values (UDMs) on one or more variables. UDMs are specific data values --
+\code{jdeclare_missing()} declares missing values on one or more
+variables. Declared missing values are specific data values --
 typically negative codes such as \code{-99} or Stata-style tagged
 markers such as \code{.a} -- that indicate \emph{why} a value is
 missing (refused, don't know, not applicable, etc.) rather than
-simply that it is missing. Once declared, UDM cells are
+simply that it is missing. Once declared, those cells are
 automatically excluded from analyses but remain visible in the data
-for diagnostic purposes (see \code{jfreq()}).
+for diagnostic purposes (see \code{jfreq()}). The haven package and
+its documentation call these user-defined missing values.
 
 The function operates in declarative mode: what a call mentions, it
 replaces; what it omits survives. Supplying \code{codes} replaces the
@@ -144,9 +145,9 @@ column's missing-value range; an existing range survives a codes-only
 call, and existing discrete codes survive a range-only call. A second
 call therefore replaces, not augments, whichever parts it names --
 matching SPSS's \code{MISSING VALUES} and Stata's \code{mvdecode}
-semantics, neither of which has an additive form. When prior UDMs are
-dropped, a note lists them so the destructive aspect of the
-replacement is not silent.
+semantics, neither of which has an additive form. When prior
+declarations are dropped, a note lists them so the destructive aspect
+of the replacement is not silent.
 
 Variables are given either as unquoted names (\code{jdeclare_missing(df,
 MathScore, EnglishScore, codes = c(-99))}) or as a character vector
@@ -162,8 +163,8 @@ declare on every column, pass \code{vars = names(data)} explicitly.
 
 Under SPSS convention, codes are declared as numeric values via the
 column's \code{na_values} attribute (haven's representation of
-SPSS-form UDMs). The data cells themselves are unchanged; only the
-metadata that flags certain values as missing is added.
+SPSS-style missing values). The data cells themselves are unchanged;
+only the metadata that flags certain values as missing is added.
 
 Under Stata or SAS convention with tagged missing-value input (quoted
 tokens such as \code{".a"}), the function attaches value labels to
@@ -227,12 +228,13 @@ surviving codes named.
 
 \section{Mixed conventions and file export}{
 
-A single data frame may carry both SPSS-form and Stata-form UDM
-columns. In-memory analysis and display tolerate the mix without
-issue (each column renders in its native form). The constraint
-shows up at file-export time: \code{.sav} cannot
-represent Stata-style missing values; \code{.dta} cannot represent SPSS-form
-\code{na_values} declarations; \code{.xpt} can represent neither
+A single data frame may carry columns with SPSS-style and columns
+with Stata-style missing values. In-memory analysis and display
+tolerate the mix without issue (each column renders in its native
+form). The constraint shows up at file-export time: \code{.sav}
+cannot represent Stata-style missing values; \code{.dta} cannot
+represent SPSS-style \code{na_values} declarations; \code{.xpt} can
+represent neither
 form. \code{jsave()} pre-flights the DF
 against the destination format and errors with a pointer to
 \code{jconvert()} when the mix is incompatible. The
@@ -252,7 +254,7 @@ joptions(missing.convention = "spss")
 df <- clinic
 jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 
-# SPSS form: declare -99 and -98 as UDMs with labels. modify = TRUE
+# SPSS form: declare -99 and -98 as missing, with labels. modify = TRUE
 # writes the declaration back onto df in one step -- the recommended
 # workflow.
 jdeclare_missing(df, MoodRating,
@@ -301,7 +303,7 @@ jdeclare_missing(df5, Mood2,
 # plain column -- forks on joptions(missing.convention = ...):
 joptions(missing.convention = "spss")
 df6 <- jdeclare_missing(clinic, MoodRating, codes = c(-99))
-# -99 stays in the cells, flagged as missing (SPSS-form declaration)
+# -99 stays in the cells, flagged as missing (SPSS-style declaration)
 
 joptions(missing.convention = "stata")
 df7 <- jdeclare_missing(clinic, MoodRating, codes = c(-99))

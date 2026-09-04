@@ -3,6 +3,11 @@
 #
 # All package-level hooks for jstats live in this file:
 #
+#   .onLoad()    — runs automatically when the namespace is loaded.
+#                  Registers the internal APA-export accessor methods on
+#                  their internal generics and, when generics/broom is
+#                  present, the optional tidy()/glance() adapter methods.
+#
 #   .onAttach()  — runs automatically on library(jstats). When the
 #                  jstats.check_updates option is TRUE (the default), it
 #                  performs up to two network reads: (1) a redirect-and-
@@ -117,25 +122,32 @@
 
 # -- Internal: fetch the latest jstats version from r-universe -----------------
 #
-# Reads the published Version from the jstats r-universe package index and
+# Reads the published Version from the package's r-universe index and
 # returns it as a character string, or NA_character_ if the read fails (no
-# network, the repository unreachable, or jstats not listed). Reads the source
-# index (type = "source") so the version comes back regardless of the running R
-# version or platform. Factored out so the version read lives in exactly one
-# place: both the load-time check (.jst_show_version_status) and jupdate() call
-# it.
+# network, the repository unreachable, or the package not listed). Reads the
+# source index (type = "source") so the version comes back regardless of the
+# running R version or platform. Factored out so the version read lives in
+# exactly one place: both the load-time check (.jst_show_version_status) and
+# jupdate() call it. `pkg` names the package to look up; NULL (the default)
+# resolves it from the namespace this function ships in, so the lookup follows
+# a later package rename automatically. The literal fallback is reached only
+# when the source is merely source()d during development, where there is no
+# namespace to ask.
 
-.jst_latest_universe_version <- function() {
+.jst_latest_universe_version <- function(pkg = NULL) {
   old_opts <- options(timeout = 3)
   on.exit(options(old_opts), add = TRUE)
+
+  if (is.null(pkg)) pkg <- utils::packageName()
+  if (is.null(pkg) || !nzchar(pkg)) pkg <- "jstats"
 
   tryCatch({
     ap <- suppressWarnings(available.packages(
       repos = "https://jma61.r-universe.dev",
       type  = "source"
     ))
-    if ("jstats" %in% rownames(ap)) {
-      as.character(ap["jstats", "Version"])
+    if (pkg %in% rownames(ap)) {
+      as.character(ap[pkg, "Version"])
     } else {
       NA_character_
     }
@@ -148,10 +160,11 @@
 # Compares the latest r-universe version (via .jst_latest_universe_version()) to
 # the installed version and prints either an "up to date" line or a short
 # upgrade notice that points at jupdate(). Falls back to a "loaded" line if the
-# version read fails (typically no internet).
+# version read fails (typically no internet). `pkg` is passed through to the
+# version read; see .jst_latest_universe_version() for its resolution.
 
-.jst_show_version_status <- function(installed_ver) {
-  universe_ver <- .jst_latest_universe_version()
+.jst_show_version_status <- function(installed_ver, pkg = NULL) {
+  universe_ver <- .jst_latest_universe_version(pkg)
 
   if (is.na(universe_ver)) {
     packageStartupMessage(
@@ -317,7 +330,7 @@
     return()
   }
 
-  installed_ver <- as.character(utils::packageVersion("jstats"))
+  installed_ver <- as.character(utils::packageVersion(pkgname))
 
   # Evergreen pointer to the on-demand orientation printout (jai()). Shown
   # once on a normal load, so any user -- or an AI assistant reading the
@@ -345,11 +358,11 @@
   # same notice without waiting out a second timeout.
   migrated <- FALSE
   if (!is.null(gist_info$successor) &&
-      !identical(gist_info$successor$package, "jstats")) {
+      !identical(gist_info$successor$package, pkgname)) {
     .jst_show_migration(gist_info$successor, installed_ver)
     migrated <- TRUE
   } else if (isTRUE(gist_info$network_ok)) {
-    .jst_show_version_status(installed_ver)
+    .jst_show_version_status(installed_ver, pkgname)
   } else {
     packageStartupMessage(
       "jstats v", installed_ver, " loaded.",
@@ -376,15 +389,39 @@
 # -- .onUnload -----------------------------------------------------------------
 #
 # Runs automatically when the package is unloaded (detach(..., unload =
-# TRUE)) or the R session ends. Clears all session-state options the
-# package sets. Moved here from the main source file in Session 10 for
-# consistency with .onAttach().
+# TRUE)) or the R session ends. Clears every session-state option the
+# package sets, so a later library() in the same session starts clean
+# rather than inheriting a mixed state. Moved here from the main source
+# file in Session 10 for consistency with .onAttach().
+#
+# .jst_session_option_keys is the complete inventory of options() keys the
+# package writes: the pipeline state (juse, jsubset, jcomplete, jdummy),
+# the joutput level and toggles, the six joptions() settings, the
+# classification registry, and the show-once flag for the
+# declared-missing-values narrative. Session 277 completed the inventory
+# (it had stopped at the first six). Any new options() key the package
+# adds belongs here too.
+
+.jst_session_option_keys <- c(
+  ".jst_default_data",
+  ".jst_filter",
+  ".jst_complete",
+  ".jst_dummy",
+  ".jst_output_level",
+  ".jst_output_toggles",
+  ".jst_options_missing_convention",
+  ".jst_options_missing_convention_codes",
+  ".jst_options_data_dir",
+  ".jst_options_corr_layout",
+  ".jst_options_missing_detail",
+  ".jst_options_message_width",
+  ".jst_registry",
+  ".jst_missing_notice_shown"
+)
 
 .onUnload <- function(libpath) {
-  options(.jst_default_data    = NULL)
-  options(.jst_filter          = NULL)
-  options(.jst_complete        = NULL)
-  options(.jst_dummy           = NULL)
-  options(.jst_output_level    = NULL)
-  options(.jst_output_toggles  = NULL)
+  # A named list of NULLs: options() removes each key it names with NULL.
+  cleared <- vector("list", length(.jst_session_option_keys))
+  names(cleared) <- .jst_session_option_keys
+  options(cleared)
 }

@@ -6,7 +6,7 @@
 \usage{
 .jst_format_udm_narrative(
   udm_info,
-  preserve.udm,
+  preserve.declarations,
   max_show = 10L,
   data_name = "data",
   compact = FALSE
@@ -25,7 +25,7 @@ on three things: the convention(s) actually read (per-variable
 form has already been shown this session (\code{compact}).
 }
 \details{
-Shapes produced under \code{preserve.udm = TRUE}:
+Shapes produced under \code{preserve.declarations = TRUE}:
 \itemize{
 \item Uniform frame: style-named header ("5 variables have
 SPSS-style missing values:"). SPSS-style frames with no
@@ -64,7 +64,7 @@ the missing-values reference). The rider is not a suggestion to adopt
 a convention -- it is the second half of a remedy the user has
 already chosen to run.
 
-The \code{preserve.udm = FALSE} branch (declarations converted to
+The \code{preserve.declarations = FALSE} branch (declarations converted to
 plain NA on request) keeps its original shape with a style-named
 header and is never compacted -- it reports a destructive action the
 user explicitly requested.

@@ -164,14 +164,14 @@ warning is issued (but the function continues). This helps catch typos in
 the map string.
 
 \strong{Missing values in the map.} The package supports three
-conventions for representing user-defined missing values (UDMs), and
-the syntax for producing UDMs from \code{jrecode()} depends on which
-one is active. A convention becomes active via
+conventions for representing declared missing values, and the syntax
+for producing them from \code{jrecode()} depends on which one is
+active. A convention becomes active via
 \code{joptions(missing.convention = ...)} or this call's
 \code{convention} argument; with neither set, a call that produces
-UDMs stops with a guided error asking you to choose.
+declared missing values stops with a guided error asking you to choose.
 
-Under \strong{SPSS convention}, UDMs are real numeric
+Under \strong{SPSS convention}, declared missing values are real numeric
 codes carrying metadata that flags them as missing. The two-step
 canonical pattern is:
 
@@ -192,9 +192,9 @@ plain \code{NA} (data born in R, or read from a CSV): \code{map =
 "NA=-98; else=copy"} converts the NA cells to the numeric code, and
 \code{jdeclare_missing()} declares it.
 
-Under \strong{Stata convention}, UDMs are typed missing cells marked
-with Stata-style tags (\code{.a} through \code{.z}). The single-call
-canonical pattern is:
+Under \strong{Stata convention}, declared missing values are typed
+missing cells marked with Stata-style tags (\code{.a} through
+\code{.z}). The single-call canonical pattern is:
 
 \preformatted{
 df$EducR <- jrecode(df, Education,
@@ -217,7 +217,7 @@ SPSS raises an error naming the mismatch and the two ways out:
 restate the markers as numeric codes to stay in SPSS convention, or
 switch convention with \code{joptions(missing.convention = ...)} (or
 with this call's \code{convention} argument). The error does not
-rewrite the call for you: the SPSS-form codes would have to be taken
+rewrite the call for you: the SPSS-style codes would have to be taken
 from \code{joptions("missing.convention.codes")}, which cannot be known
 to be free of collision with values already in the column. The
 two-call SPSS-style pattern is documented above.
@@ -275,8 +275,8 @@ df$RegionR2 <- jrecode(Region, map = "1,2=1; 3,4=2",
 
 }
 \seealso{
-\code{\link{jdeclare_missing}} for declaring user-defined missing
-values on a column after a recode (the SPSS-style canonical pattern).
+\code{\link{jdeclare_missing}} for declaring missing values on a
+column after a recode (the SPSS-style canonical pattern).
 
 \code{\link{jrelabel}} for applying labels to an existing variable
 after a recode.

@@ -77,7 +77,7 @@ instructors. Feedback from this group shapes ongoing refinements.
 \item \code{\link{jsave}} -- save a data frame, with format inferred from the file extension
 }
 
-\strong{Visualisation}
+\strong{Visualization}
 \itemize{
 \item \code{\link{jplot}} -- base histograms and bar plots for data, plus method dispatch on result objects from \code{jt()}, \code{jlm()}, etc.
 }
@@ -148,7 +148,8 @@ deeper guide to the package's design and use in real research
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://jma61.github.io/jstats/}
+  \item \url{https://JMA61.github.io/jstats/}
+  \item Report bugs at \url{https://github.com/JMA61/jstats/issues}
 }
 
 }
