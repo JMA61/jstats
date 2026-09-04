@@ -28,58 +28,113 @@ and others who routinely work with Likert scales, categorical
 variables, dichotomies, Cronbach's alpha, dummy-coded regression,
 and \code{haven}-imported data from SPSS, Stata, or SAS.
 
-During the current development phase the package is being tested
-actively by students and colleagues at Griffith University, plus
-a growing community of former students and collaborating
-instructors. Feedback from this group shapes ongoing refinements.
+The package is exercised in ongoing research projects by the author,
+colleagues, and former students, and their feedback shapes its
+refinement. Bug reports and suggestions are welcome through the
+package's GitHub repository.
 }
 
 \section{Functions by purpose}{
 
 \strong{Descriptive analysis}
 \itemize{
-\item \code{\link{jdesc}} -- univariate descriptives (mean, median, SD, range, etc.) with optional grouping
-\item \code{\link{jfreq}} -- frequency tables for one or more variables
-\item \code{\link{jcorr}} -- Pearson or Spearman correlations with significance tests
-\item \code{\link{jalpha}} -- Cronbach's alpha and item-total statistics for scale reliability
-\item \code{\link{jscreen}} -- data screening for outliers, ranges, and skew
+\item \code{\link{jdesc}} -- univariate descriptives (mean, median,
+SD, range, etc.) with optional grouping
+\item \code{\link{jfreq}} -- frequency tables for one or more
+variables
+\item \code{\link{jcorr}} -- Pearson or Spearman correlations with
+significance tests
+\item \code{\link{jalpha}} -- Cronbach's alpha and item-total
+statistics for scale reliability
+\item \code{\link{jscreen}} -- data screening for outliers, ranges,
+and skew
 }
 
 \strong{Group comparisons and modeling}
 \itemize{
 \item \code{\link{jt}} -- independent or paired t-test
-\item \code{\link{jaov}} -- one-way analysis of variance with optional post-hoc tests
-\item \code{\link{jcrosstab}} -- cross-tabulation with chi-square and effect-size options
+\item \code{\link{jaov}} -- one-way analysis of variance with
+optional post-hoc tests
+\item \code{\link{jcrosstab}} -- cross-tabulation with chi-square
+and effect-size options
 \item \code{\link{jlm}} -- linear regression
 \item \code{\link{jlogistic}} -- logistic regression
 }
 
 \strong{Variable construction}
 \itemize{
-\item \code{\link{jrecode}} -- recode values, with optional new value labels
-\item \code{\link{jrelabel}} -- apply or replace value labels and variable label
-\item \code{\link{jsum}} -- row-wise sum across variables, with min-valid handling
-\item \code{\link{javg}} -- row-wise mean across variables, with min-valid handling
+\item \code{\link{jrecode}} -- recode values, with optional new
+value labels
+\item \code{\link{jrelabel}} -- apply or replace value labels and
+variable label
+\item \code{\link{jencode}} -- encode a text variable as labelled
+numeric codes
+\item \code{\link{jsum}} -- row-wise sum across variables, with
+min-valid handling
+\item \code{\link{javg}} -- row-wise mean across variables, with
+min-valid handling
 }
 
-\strong{Pipeline state management}
+\strong{Missing values}
 \itemize{
-\item \code{\link{juse}} -- set the default data frame used implicitly by analysis functions
-\item \code{\link{jsubset}} -- activate a row-level case-selection expression applied to subsequent calls
-\item \code{\link{jcomplete}} -- activate listwise filtering on selected variables
-\item \code{\link{jdummy}} -- register categorical variables for dummy coding in regression
-\item \code{\link{joutput}} -- set session-level output verbosity (minimal / standard / full)
+\item \code{\link{jdeclare_missing}} -- declare missing-value codes
+or ranges on one or more variables
+\item \code{\link{jconvert}} -- convert missing-value declarations
+between SPSS-style, Stata-style, SAS-style, and base R
+representations
+}
+
+\strong{Variable classification}
+\itemize{
+\item \code{\link{jdummy}} -- register categorical variables for
+dummy coding in regression
+\item \code{\link{jnumeric}} -- register variables as numeric for
+analysis
+\item \code{\link{jcount}} -- register variables as counts for
+analysis
+\item \code{\link{jlikert}} -- register variables as Likert
+(ordered response) items
+\item \code{\link{jcopy}} -- copy a data frame, carrying its
+classification registrations
+}
+
+\strong{Session state and options}
+\itemize{
+\item \code{\link{juse}} -- set the default data frame used
+implicitly by analysis functions
+\item \code{\link{jsubset}} -- activate a row-level case-selection
+expression applied to subsequent calls
+\item \code{\link{jcomplete}} -- activate listwise filtering on
+selected variables
+\item \code{\link{joutput}} -- set session-level output verbosity
+(minimal / standard / full)
+\item \code{\link{joptions}} -- set or display session-level
+package options (missing-value convention, data folder, and
+others)
 }
 
 \strong{Data import and export}
 \itemize{
-\item \code{\link{jload}} -- load data from \code{.rds}, \code{.sav}, \code{.dta}, \code{.sas7bdat}, \code{.xlsx}, or \code{.csv}
-\item \code{\link{jsave}} -- save a data frame, with format inferred from the file extension
+\item \code{\link{jload}} -- load data from \code{.rds},
+\code{.sav}, \code{.dta}, \code{.sas7bdat}, \code{.xpt},
+\code{.xlsx}, \code{.xls}, or \code{.csv}
+\item \code{\link{jsave}} -- save a data frame, with format
+inferred from the file extension
+\item \code{\link{jdata_dir}} -- return the configured data folder
 }
 
 \strong{Visualization}
 \itemize{
-\item \code{\link{jplot}} -- base histograms and bar plots for data, plus method dispatch on result objects from \code{jt()}, \code{jlm()}, etc.
+\item \code{\link{jplot}} -- histograms, bar charts, scatterplots,
+and boxplots from a data frame, plus plots of result objects
+from \code{jt()}, \code{jlm()}, etc.
+}
+
+\strong{Package and assistant support}
+\itemize{
+\item \code{\link{jupdate}} -- update jstats to the latest version
+\item \code{\link{jai}} -- print the package orientation, or
+install it for an AI coding assistant
 }
 
 For the full alphabetical listing of every exported function, run
@@ -95,9 +150,9 @@ dot or \code{.jst_} and are not intended for direct use.
 
 \strong{Formula vs data-first.} Group-comparison and modeling
 functions follow the base R formula interface:
-\code{jt(MathScore ~ Gender, data = SampleData)}. Descriptive and
+\code{jt(Age ~ Volunteer, data = community)}. Descriptive and
 data-management functions take the data frame first, followed by
-unquoted variable names: \code{jfreq(SampleData, Gender, Program)}.
+unquoted variable names: \code{jfreq(community, Region, Education)}.
 This matches the conventions of base R functions like
 \code{aggregate()} and \code{cor()}.
 
