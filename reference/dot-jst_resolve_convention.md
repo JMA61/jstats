@@ -82,8 +82,9 @@ The four levels of the precedence rule, in order:
 
 2.  If `per_call` is `"spss"`, `"stata"`, or `"sas"`, use that.
 
-3.  If `joptions("missing.convention")` is `"spss"`, `"stata"`, or
-    `"sas"`, use that.
+3.  If the `missing.convention` setting in
+    [`joptions`](https://jma61.github.io/jstats/reference/joptions.md)
+    is `"spss"`, `"stata"`, or `"sas"`, use that.
 
 4.  Else STOP with the act-shaped choose-first guided error, rendered by
     [`.jst_choose_convention_error()`](https://jma61.github.io/jstats/reference/dot-jst_choose_convention_error.md):

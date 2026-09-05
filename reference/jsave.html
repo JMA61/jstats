@@ -35,7 +35,7 @@ juse() is used."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.154</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -135,12 +135,12 @@ Windows File Explorer, replace the backslashes with forward slashes.
 R does not accept single backslashes in file paths.</p>
 <p><strong>File location:</strong></p><ul><li><p>If the path contains a directory separator, the file is saved
 to that exact location.</p></li>
-<li><p>If the path is a bare filename and <code>joptions("data.dir")</code>
-is set, the file is saved to that folder (auto-created if it
-doesn't yet exist).</p></li>
-<li><p>If the path is a bare filename and <code>joptions("data.dir")</code>
-is unset (the default), the file is saved to the working
-directory.</p></li>
+<li><p>If the path is a bare filename and the <code>data.dir</code> setting in
+<code><a href="joptions.html">joptions</a></code> is set, the file is saved to that folder
+(auto-created if it doesn't yet exist).</p></li>
+<li><p>If the path is a bare filename and the <code>data.dir</code> setting in
+<code><a href="joptions.html">joptions</a></code> is unset (the default), the file is saved to the
+working directory.</p></li>
 </ul><p><strong>Format notes:</strong></p><ul><li><p>SPSS (<code>.sav</code>) and Stata (<code>.dta</code>) preserve variable
 labels and value labels.</p></li>
 <li><p>Excel (<code>.xlsx</code>) and CSV (<code>.csv</code>) do not preserve
@@ -161,7 +161,7 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A runnable save into R's session temporary folder</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpR4rfVW/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpsHfKqv/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>

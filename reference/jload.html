@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.154</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -198,8 +198,9 @@ R does not accept single backslashes in file paths.</p>
 <p><strong>File search order:</strong></p><ol><li><p>If the path contains a directory separator (<code>/</code>), the path
 is used directly.</p></li>
 <li><p>If the path is a bare filename, <code>jload()</code> checks:
-(a) the folder named by <code>joptions("data.dir")</code> if it is set
-and exists; (b) the working directory.</p></li>
+(a) the folder named by the <code>data.dir</code> setting in
+<code><a href="joptions.html">joptions</a></code> if it is set and exists; (b) the working
+directory.</p></li>
 </ol><p><strong>Auto-naming:</strong>
 The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not

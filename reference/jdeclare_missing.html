@@ -61,7 +61,7 @@ declare on every column, pass vars = names(data) explicitly."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.154</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -183,10 +183,14 @@ declaration.</p></dd>
 <dd><p>Optional. A quoted string in the form
 <code>"value=label; value=label"</code> pairing labels with codes
 (Option A only). Must be <code>NULL</code> when <code>codes</code> is named
-(Option C). When a <code>range</code> is in effect (supplied in this
-call, or already on the column), entries may also name values
-inside the range: those attach as value labels on the in-range
-values without becoming discrete declared codes (see the
+(Option C). It may also stand alone, with no <code>codes</code>: the
+values named in the string are then the codes declared, so
+<code>labels = "-99=Refused; -98=Don't know"</code> declares and labels
+both codes in one argument (and <code>labels = ".a=Refused"</code> names
+a marker on a tagged column). When a <code>range</code> is in effect
+(supplied in this call, or already on the column), entries may also
+name values inside the range: those attach as value labels on the
+in-range values without becoming discrete declared codes (see the
 Missing-value ranges section).</p></dd>
 
 
@@ -223,18 +227,22 @@ either <code>vars</code> or <code>...</code>, not both.</p></dd>
 
 <dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>
 <dd><p>Optional. One of <code>"spss"</code>, <code>"stata"</code>, or
-<code>"sas"</code> (any capitalization is accepted); overrides the
-convention resolution for this call. When
+<code>"sas"</code> (any capitalization is accepted); sets the convention
+for this call on columns that carry no missing-value declaration
+yet. A column that already carries the other convention's missing
+values is not overridden: the call stops and offers the two
+remedies (drop the argument to follow the column's form, or
+<code><a href="jconvert.html">jconvert()</a></code> the column first). When
 <code>NULL</code> (the default), the convention is resolved from the
 column's existing missing-value declaration (if any), then from
-<code>joptions("missing.convention")</code>; when neither supplies one,
-the call stops with a guided error asking you to choose – the
-package never infers a convention for a fresh declaration. A
-<code>range</code> requires SPSS convention (see <code>range</code>).
-The SAS convention behaves as the Stata convention with uppercase
-markers: markers are stored and labeled as <code>.A</code>-<code>.Z</code>. Token
-input is case-insensitive under both tagged conventions; the case
-written to the column follows the resolved convention.</p></dd>
+the <code>missing.convention</code> setting in <code><a href="joptions.html">joptions</a></code>; when
+neither supplies one, the call stops with a guided error asking you to
+choose – the package never infers a convention for a fresh declaration. A
+<code>range</code> requires SPSS convention (see <code>range</code>). The SAS
+convention behaves as the Stata convention with uppercase markers: markers
+are stored and labeled as <code>.A</code>-<code>.Z</code>. Token input is
+case-insensitive under both tagged conventions; the case written to the
+column follows the resolved convention.</p></dd>
 
 
 <dt id="arg-missing-notice">missing.notice<a class="anchor" aria-label="anchor" href="#arg-missing-notice"></a></dt>
@@ -295,16 +303,16 @@ are converted to markers and the numbers leave the data. This is the
 one place <code>joptions(missing.convention = ...)</code> changes what
 happens to data (see the examples).</p>
 <p>Under Stata or SAS convention with numeric input, the function
-converts matching cells to tagged missing-value markers (Session 30
-design lock; SAS convention writes the same letters uppercase). The
+converts matching cells to tagged missing-value markers (SAS
+convention writes the same letters uppercase). The
 mapping is ordering-based: codes sorted by absolute value
 descending, more-negative-first as tie-breaker, then assigned
 <code>.a</code>, <code>.b</code>, <code>.c</code>, <code>.d</code> in that order (<code>.A</code>,
 <code>.B</code>, ... under SAS convention). The
-assignment proceeds independently of <code>joptions("missing.convention.codes")</code>
-(which only governs the reverse Stata-to-SPSS direction). A
-conversion note in the standard/full <code>joutput</code> tier shows the
-Stata-style equivalent for future calls.</p>
+assignment proceeds independently of the <code>missing.convention.codes</code>
+setting in <code><a href="joptions.html">joptions</a></code> (which only governs the reverse
+Stata-to-SPSS direction). At the full <code>joutput</code> tier, a
+conversion note shows the tagged-marker equivalent for future calls.</p>
     </div>
     <div class="section level2">
     <h2 id="missing-value-ranges">Missing-value ranges<a class="anchor" aria-label="anchor" href="#missing-value-ranges"></a></h2>

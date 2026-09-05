@@ -17,7 +17,7 @@ to a rank.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.154</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,11 +82,14 @@ a semicolon must be double-quoted (<code>'"Not applicable; other"=3'</code>);
 apostrophes need no quoting: <code>map = "Yes=1; Don't know=8"</code> works
 as typed.</p>
 <p>Special left-hand sides: <code>blank=&lt;number&gt;</code> gives empty cells their
-own code (by default they are left missing, with a note showing the
-blank rule to use). Special targets: <code>else=NA</code> converts every
-unmapped word to system missing; <code>else=.a</code> (through <code>.z</code>)
-converts them to a tagged missing value under the Stata or SAS
-convention (see <code>convention</code>). <code>else=copy</code> is refused:
+own code. With no map, blanks are left missing and a note shows the
+blank rule to use; with a map, blanks count as unmapped, so a map
+that neither names them nor carries an <code>else</code> rule stops with
+the same incomplete-map error. Special targets: <code>else=NA</code>
+converts every unmapped word to system missing; <code>else=.a</code>
+(through <code>.z</code>) converts them to a tagged missing value under
+the Stata or SAS convention (see <code>convention</code>).
+<code>else=copy</code> is refused:
 words cannot be kept in a numeric column. A word may also be sent to
 the word <code>missing</code> – your working convention's own missing
 form, declared automatically under the SPSS convention (see
@@ -114,14 +117,15 @@ accepted. Controls whether missing-value tokens (<code>.a</code> through
 targets. Token letters are matched case-insensitively; the stored
 markers take the convention's letter case (lowercase Stata-style
 under <code>"stata"</code>, uppercase SAS-style under <code>"sas"</code>).
-Inert when no such tokens appear in the map.</p>
+Also decides what the <code>missing</code> keyword produces. Inert when
+neither tokens nor <code>missing</code> appear in the map.</p>
 <p>When <code>NULL</code>, the convention is resolved from
-<code>joptions("missing.convention")</code>; if that is also unset, the
-call stops with a guided error asking you to choose – the package
-never infers a convention. Most users set the convention once at
-the top of a session via <code><a href="joptions.html">joptions()</a></code> (or in their
-<code>.Rprofile</code>) rather than supplying this argument on every
-call. See <code><a href="joptions.html">?joptions</a></code> for details.</p></dd>
+the <code>missing.convention</code> setting in <code><a href="joptions.html">joptions</a></code>; if that
+is also unset, the call stops with a guided error asking you to choose –
+the package never infers a convention. Most users set the convention once
+at the top of a session via <code><a href="joptions.html">joptions()</a></code> (or in their
+<code>.Rprofile</code>) rather than supplying this argument on every call. See
+<code><a href="joptions.html">?joptions</a></code> for details.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -176,8 +180,9 @@ word such as "Refused" is evidence the column carried missing-value
 codes – a note suggests declaring it with <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>
 rather than losing it.</p>
 <p><strong>Blanks are counted separately.</strong> An empty cell ("") is neither
-a word nor an NA. By default blanks are left missing, with a note
-showing the <code>blank=</code> rule; mapping <code>blank=0</code> (or any code)
+a word nor an NA. In automatic mode blanks are left missing, with a
+note showing the <code>blank=</code> rule; with a map they must be named or
+swept by an <code>else</code> rule, and mapping <code>blank=0</code> (or any code)
 gives them their own category, which matters in field data where a
 blank often means "No".</p>
 <p>The variable label from the original variable is carried across

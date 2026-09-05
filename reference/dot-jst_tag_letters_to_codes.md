@@ -1,9 +1,11 @@
 # Internal helper: map Stata-style tagged-NA letters to UDM codes
 
 Translates a vector of lowercase letter tags (e.g. `c("a", "b")`) into
-the equivalent numeric UDM codes drawn from
-`joptions("missing.convention.codes")`. Mapping is positional: `.a` maps
-to the first code, `.b` to the second, etc.
+the equivalent numeric UDM codes drawn from the
+`missing.convention.codes` setting in
+[`joptions`](https://jma61.github.io/jstats/reference/joptions.md).
+Mapping is positional: `.a` maps to the first code, `.b` to the second,
+etc.
 
 ## Usage
 
@@ -22,7 +24,8 @@ to the first code, `.b` to the second, etc.
 - convention_codes:
 
   Optional numeric vector of UDM codes. When `NULL` (the default), the
-  helper sources the value of `joptions("missing.convention.codes")` via
+  helper sources the value of the `missing.convention.codes` setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) via
   the standard [`getOption()`](https://rdrr.io/r/base/options.html)
   fallback.
 

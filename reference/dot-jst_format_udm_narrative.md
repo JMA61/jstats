@@ -5,8 +5,9 @@ detected during a load. The S227 (E17) redesign conditions the text on
 three things: the convention(s) actually read (per-variable `convention`
 from
 [`.jst_missing_info()`](https://jma61.github.io/jstats/reference/dot-jst_missing_info.md)),
-the `joptions("missing.convention")` setting, and whether the full form
-has already been shown this session (`compact`).
+the `missing.convention` setting in
+[`joptions`](https://jma61.github.io/jstats/reference/joptions.md), and
+whether the full form has already been shown this session (`compact`).
 
 ## Usage
 

@@ -2,8 +2,9 @@
 
 Resolution rules:
 
-- If `joptions("data.dir")` is set and that folder exists, it is
-  searched first.
+- If the `data.dir` setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) is
+  set and that folder exists, it is searched first.
 
 - The working directory itself is always included as the final search
   location.

@@ -98,11 +98,14 @@ jdeclare_missing(
 
   Optional. A quoted string in the form `"value=label; value=label"`
   pairing labels with codes (Option A only). Must be `NULL` when `codes`
-  is named (Option C). When a `range` is in effect (supplied in this
-  call, or already on the column), entries may also name values inside
-  the range: those attach as value labels on the in-range values without
-  becoming discrete declared codes (see the Missing-value ranges
-  section).
+  is named (Option C). It may also stand alone, with no `codes`: the
+  values named in the string are then the codes declared, so
+  `labels = "-99=Refused; -98=Don't know"` declares and labels both
+  codes in one argument (and `labels = ".a=Refused"` names a marker on a
+  tagged column). When a `range` is in effect (supplied in this call, or
+  already on the column), entries may also name values inside the range:
+  those attach as value labels on the in-range values without becoming
+  discrete declared codes (see the Missing-value ranges section).
 
 - range:
 
@@ -136,17 +139,23 @@ jdeclare_missing(
 - convention:
 
   Optional. One of `"spss"`, `"stata"`, or `"sas"` (any capitalization
-  is accepted); overrides the convention resolution for this call. When
-  `NULL` (the default), the convention is resolved from the column's
-  existing missing-value declaration (if any), then from
-  `joptions("missing.convention")`; when neither supplies one, the call
-  stops with a guided error asking you to choose – the package never
-  infers a convention for a fresh declaration. A `range` requires SPSS
-  convention (see `range`). The SAS convention behaves as the Stata
-  convention with uppercase markers: markers are stored and labeled as
-  `.A`-`.Z`. Token input is case-insensitive under both tagged
-  conventions; the case written to the column follows the resolved
-  convention.
+  is accepted); sets the convention for this call on columns that carry
+  no missing-value declaration yet. A column that already carries the
+  other convention's missing values is not overridden: the call stops
+  and offers the two remedies (drop the argument to follow the column's
+  form, or
+  [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
+  the column first). When `NULL` (the default), the convention is
+  resolved from the column's existing missing-value declaration (if
+  any), then from the `missing.convention` setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md);
+  when neither supplies one, the call stops with a guided error asking
+  you to choose – the package never infers a convention for a fresh
+  declaration. A `range` requires SPSS convention (see `range`). The SAS
+  convention behaves as the Stata convention with uppercase markers:
+  markers are stored and labeled as `.A`-`.Z`. Token input is
+  case-insensitive under both tagged conventions; the case written to
+  the column follows the resolved convention.
 
 - missing.notice:
 
@@ -206,14 +215,15 @@ to markers and the numbers leave the data. This is the one place
 the examples).
 
 Under Stata or SAS convention with numeric input, the function converts
-matching cells to tagged missing-value markers (Session 30 design lock;
-SAS convention writes the same letters uppercase). The mapping is
-ordering-based: codes sorted by absolute value descending,
-more-negative-first as tie-breaker, then assigned `.a`, `.b`, `.c`, `.d`
-in that order (`.A`, `.B`, ... under SAS convention). The assignment
-proceeds independently of `joptions("missing.convention.codes")` (which
-only governs the reverse Stata-to-SPSS direction). A conversion note in
-the standard/full `joutput` tier shows the Stata-style equivalent for
+matching cells to tagged missing-value markers (SAS convention writes
+the same letters uppercase). The mapping is ordering-based: codes sorted
+by absolute value descending, more-negative-first as tie-breaker, then
+assigned `.a`, `.b`, `.c`, `.d` in that order (`.A`, `.B`, ... under SAS
+convention). The assignment proceeds independently of the
+`missing.convention.codes` setting in
+[`joptions`](https://jma61.github.io/jstats/reference/joptions.md)
+(which only governs the reverse Stata-to-SPSS direction). At the full
+`joutput` tier, a conversion note shows the tagged-marker equivalent for
 future calls.
 
 ## Missing-value ranges

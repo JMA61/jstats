@@ -97,9 +97,14 @@ a reset, or as an echo of the slots a setting call touched.
   unconstrained. Default: `c(-99, -98, -97)`. The recommended
   missing-value code set used by
   [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md)
-  when translating Stata-style missing values (`.a`, `.b`, `.c`, `.d`)
-  into SPSS-style numeric codes, and by the load-time diagnostic for
-  convention-matched detection.
+  when translating Stata-style or SAS-style missing values into
+  SPSS-style numeric codes: the first tag letter (`.a` or `.A`) takes
+  the first code, the second the second, and so on, so a column carrying
+  more distinct tags than there are codes cannot be converted. Also the
+  source of the value the `missing` keyword creates in a
+  [`jrecode`](https://jma61.github.io/jstats/reference/jrecode.md) or
+  [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) map
+  under an SPSS-style convention (the first code).
 
 - data.dir:
 
@@ -114,8 +119,9 @@ a reset, or as an echo of the slots a setting call touched.
   (nested paths are created in full). To clear a previously-set folder
   back to this default, pass `data.dir = ""` (an empty string); passing
   `data.dir = NULL` leaves the current setting unchanged (see Call
-  patterns). Filenames containing a directory separator (`/`) bypass
-  this setting and are taken literally.
+  patterns). Filenames containing a directory separator (a forward
+  slash, or a backslash on Windows) bypass this setting and are taken
+  literally.
 
 - corr.layout:
 
@@ -167,7 +173,9 @@ a reset, or as an echo of the slots a setting call touched.
 
 - `joptions()`:
 
-  Print the full settings panel.
+  Print the full settings panel. The `missing.convention.codes` row is
+  SPSS-convention detail and appears only while `missing.convention` is
+  `"spss"`.
 
 - `joptions(NULL)`:
 
@@ -177,10 +185,12 @@ a reset, or as an echo of the slots a setting call touched.
 - `joptions(slot = value, ...)`:
 
   Set one or more slots, then echo only what the call touched: the slots
-  named, plus `missing.convention.codes` whenever `missing.convention`
-  is set and vice versa (the codes are read in light of the convention),
-  closed by a pointer to `joptions()` for the full panel. The other
-  three slots are independent and are not pulled in. Passing
+  named, plus `missing.convention` whenever `missing.convention.codes`
+  is set (the codes are read in light of the convention), and plus
+  `missing.convention.codes` when `missing.convention` is set to
+  `"spss"` (under any other convention the codes are dormant and the row
+  is omitted), closed by a pointer to `joptions()` for the full panel.
+  The other four slots are independent and are not pulled in. Passing
   `slot = NULL` as a named argument leaves that slot at its current
   value – useful for setting one slot without touching another – and
   echoes that unchanged value back. To reset a single slot to its

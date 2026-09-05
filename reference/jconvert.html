@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.154</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -84,13 +84,12 @@ missing values.</p>
 <dd><p>One of <code>"baseR"</code>, <code>"spss"</code>, <code>"stata"</code>, or
 <code>"sas"</code> (any capitalization is accepted). When <code>NULL</code> (the
 default), <code>jconvert()</code>
-reads <code>joptions("missing.convention")</code>: if the slot is set to
-<code>"spss"</code>, <code>"stata"</code>, or <code>"sas"</code>, <code>to</code> resolves to
-that value; if
-the slot is at its <code>"none"</code> default, <code>jconvert()</code> errors
-with guidance naming the concrete options. The destructive
-<code>"baseR"</code> target is never auto-resolved – it must always be
-passed explicitly.</p></dd>
+reads the <code>missing.convention</code> setting in <code><a href="joptions.html">joptions</a></code>: if
+the slot is set to <code>"spss"</code>, <code>"stata"</code>, or <code>"sas"</code>,
+<code>to</code> resolves to that value; if the slot is at its <code>"none"</code>
+default, <code>jconvert()</code> errors with guidance naming the concrete
+options. The destructive <code>"baseR"</code> target is never auto-resolved –
+it must always be passed explicitly.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -109,9 +108,10 @@ the whole data frame.</p></dd>
 <dd><p>Logical; <code>TRUE</code> (default) prints a notification
 summarizing what was converted (and what was skipped) along with a
 reminder of how to keep the result. <code>FALSE</code> suppresses the
-message. Always-on by default; does not consult <code><a href="joutput.html">joutput()</a></code>
+message. The notification itself does not consult <code><a href="joutput.html">joutput()</a></code>,
 because the function reports an action it just performed rather than
-explaining system behavior.</p></dd>
+explaining system behavior; only the keep-the-result reminder
+follows the tier, and is omitted at <code>"minimal"</code>.</p></dd>
 
 
 <dt id="arg-modify">modify<a class="anchor" aria-label="anchor" href="#arg-modify"></a></dt>
@@ -136,7 +136,7 @@ caller's data frame, and the returned copy can be ignored.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The three target formats:</p><dl><dt><code>to = "baseR"</code></dt>
+    <p>The four target formats:</p><dl><dt><code>to = "baseR"</code></dt>
 <dd><p>Strip all missing-value declarations and
 convert declared cells to plain <code>NA</code>. For SPSS-style columns
 (<code>na_values</code> / <code>na_range</code> on
@@ -150,21 +150,22 @@ convert them to plain <code>NA</code>s.</p></dd>
 <dt><code>to = "spss"</code></dt>
 <dd><p>Convert Stata-style or SAS-style missing
 values to SPSS-style numeric codes. Letter tags map to numeric
-codes via <code>joptions("missing.convention.codes")</code> (default
-<code>-99</code>, <code>-98</code>, <code>-97</code>):
+codes via the <code>missing.convention.codes</code> setting in
+<code><a href="joptions.html">joptions</a></code> (default <code>-99</code>, <code>-98</code>, <code>-97</code>):
 <code>.a -&gt; codes[1]</code>, <code>.b -&gt; codes[2]</code>, and so on. SAS-style
-(uppercase) tags are case-corrected to Stata-style (lowercase)
-before the numeric mapping – for round-trip purposes the package
-treats <code>.A</code> and <code>.a</code> as the same conceptual marker, and
-mixed-case columns collapse to a single lowercase marker (SPSS has
-no parallel uppercase convention). The notification's per-column
-display shows the original (pre-correction) tag for SAS-corrected
-columns – e.g. <code>.A "Refused" -&gt; -99</code> – so the user-visible
-mapping reflects what was actually in the data on input. Letter
-tags beyond those covered by the convention codes (default
-<code>.a</code>–<code>.c</code>, one letter per code, after case correction)
-are refused with guidance to use <code><a href="jrecode.html">jrecode()</a></code> for manual
-mapping.</p></dd>
+(uppercase) tags are case-corrected to Stata-style (lowercase) before
+the numeric mapping – for round-trip purposes the package treats
+<code>.A</code> and <code>.a</code> as the same conceptual marker, and mixed-case
+columns collapse to a single lowercase marker (SPSS has no parallel
+uppercase convention). The notification's per-column display shows the
+original (pre-correction) tag for SAS-corrected columns – e.g.
+<code>.A "Refused" -&gt; -99</code> – so the user-visible mapping reflects
+what was actually in the data on input. Letter tags beyond those
+covered by the convention codes (default <code>.a</code>–<code>.c</code>, one
+letter per code, after case correction) are refused before any
+data is touched; the message offers scoping the call with
+<code>vars = c(...)</code> to leave those columns out, or reducing their
+declared codes first.</p></dd>
 
 <dt><code>to = "stata"</code></dt>
 <dd><p>Convert SPSS-style numeric codes to
@@ -215,10 +216,11 @@ supports lowercase letters.</p></dd>
 if a column's target numeric code (e.g. <code>-99</code> for <code>.a</code>) is
 present as genuine data in the column, the call errors before any
 data is touched. The error message lists every colliding column and
-presents three resolution paths: change the convention codes via
-<code>joptions(missing.convention.codes = ...)</code>, scope the call via
-<code>vars = c(...)</code> to exclude affected columns, or recode the real-
-data values via <code><a href="jrecode.html">jrecode()</a></code> first. Atomicity applies to every
+the remedy: change the convention codes via
+<code>joptions(missing.convention.codes = ...)</code>. When the same call
+also meets columns with more tags than codes, it adds the option of
+scoping the call with <code>vars = c(...)</code> to leave the affected
+columns out. Atomicity applies to every
 error mode – the entire <code>jconvert()</code> call either succeeds or
 errors before mutating the data frame.</p>
 <p><strong>Pattern A – value labels suggest missingness but no formal

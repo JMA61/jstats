@@ -144,8 +144,9 @@ slashes. R does not accept single backslashes in file paths.
     directly.
 
 2.  If the path is a bare filename, `jload()` checks: (a) the folder
-    named by `joptions("data.dir")` if it is set and exists; (b) the
-    working directory.
+    named by the `data.dir` setting in
+    [`joptions`](https://jma61.github.io/jstats/reference/joptions.md)
+    if it is set and exists; (b) the working directory.
 
 **Auto-naming:** The data frame name is derived from the filename by
 stripping the extension. If the resulting name starts with a digit

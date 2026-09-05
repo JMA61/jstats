@@ -110,8 +110,8 @@ Distinguishes five outcomes via the `mode` field:
 
   Only returned when `accept_vector = TRUE`. User passed an expression
   that evaluated to a non-data-frame value (typically an atomic vector
-  or a column reference like `SampleData$Gender`). The caller handles
-  this — usually by wrapping the value in a temporary data frame.
+  or a column reference like `MyData$Gender`). The caller handles this —
+  usually by wrapping the value in a temporary data frame.
 
 - `symbol_with_default`:
 

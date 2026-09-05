@@ -40,14 +40,16 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
   `map = "Yes=1; Don't know=8"` works as typed.
 
   Special left-hand sides: `blank=<number>` gives empty cells their own
-  code (by default they are left missing, with a note showing the blank
-  rule to use). Special targets: `else=NA` converts every unmapped word
-  to system missing; `else=.a` (through `.z`) converts them to a tagged
-  missing value under the Stata or SAS convention (see `convention`).
-  `else=copy` is refused: words cannot be kept in a numeric column. A
-  word may also be sent to the word `missing` – your working
-  convention's own missing form, declared automatically under the SPSS
-  convention (see
+  code. With no map, blanks are left missing and a note shows the blank
+  rule to use; with a map, blanks count as unmapped, so a map that
+  neither names them nor carries an `else` rule stops with the same
+  incomplete-map error. Special targets: `else=NA` converts every
+  unmapped word to system missing; `else=.a` (through `.z`) converts
+  them to a tagged missing value under the Stata or SAS convention (see
+  `convention`). `else=copy` is refused: words cannot be kept in a
+  numeric column. A word may also be sent to the word `missing` – your
+  working convention's own missing form, declared automatically under
+  the SPSS convention (see
   [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)'s
   `map` for the full rule); `blank=missing` composes the two tokens.
 
@@ -71,14 +73,16 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
   (`.a` through `.z` or `.A` through `.Z`) are accepted as map targets.
   Token letters are matched case-insensitively; the stored markers take
   the convention's letter case (lowercase Stata-style under `"stata"`,
-  uppercase SAS-style under `"sas"`). Inert when no such tokens appear
-  in the map.
+  uppercase SAS-style under `"sas"`). Also decides what the `missing`
+  keyword produces. Inert when neither tokens nor `missing` appear in
+  the map.
 
-  When `NULL`, the convention is resolved from
-  `joptions("missing.convention")`; if that is also unset, the call
-  stops with a guided error asking you to choose – the package never
-  infers a convention. Most users set the convention once at the top of
-  a session via
+  When `NULL`, the convention is resolved from the `missing.convention`
+  setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md); if
+  that is also unset, the call stops with a guided error asking you to
+  choose – the package never infers a convention. Most users set the
+  convention once at the top of a session via
   [`joptions()`](https://jma61.github.io/jstats/reference/joptions.md)
   (or in their `.Rprofile`) rather than supplying this argument on every
   call. See
@@ -145,8 +149,9 @@ declaring it with
 rather than losing it.
 
 **Blanks are counted separately.** An empty cell ("") is neither a word
-nor an NA. By default blanks are left missing, with a note showing the
-`blank=` rule; mapping `blank=0` (or any code) gives them their own
+nor an NA. In automatic mode blanks are left missing, with a note
+showing the `blank=` rule; with a map they must be named or swept by an
+`else` rule, and mapping `blank=0` (or any code) gives them their own
 category, which matters in field data where a blank often means "No".
 
 The variable label from the original variable is carried across

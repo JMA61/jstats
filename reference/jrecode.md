@@ -7,10 +7,10 @@ or recode dichotomies. Variable and value labels are handled
 automatically.
 
 Map and labels rules can also produce missing values: plain system NA
-via the `NA` / `System` / `SYSMIS` aliases, or Stata-style tagged
-missing values (`.a` through `.z`) when the active convention is Stata.
-See *Missing values in the map* below for the canonical patterns under
-each convention.
+via the `NA` / `System` / `SYSMIS` aliases, or tagged missing values
+(`.a` through `.z`, or `.A` through `.Z`) when the active convention is
+Stata or SAS. See *Missing values in the map* below for the canonical
+patterns under each convention.
 
 ## Usage
 
@@ -46,8 +46,9 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
 
   - `else=copy`: unmapped values are carried across unchanged.
 
-  - `else=.a` (or any Stata-style missing-value token, Stata convention
-    only): unmapped values are set to that Stata-style missing value.
+  - `else=.a` (or any tagged missing-value token; Stata or SAS
+    convention only): unmapped values are set to that tagged missing
+    value.
 
   Individual values can also be mapped to system NA using the same
   aliases: `"-5=NA"`, `"-5=System"`, or `"-5=SYSMIS"`.
@@ -68,14 +69,16 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   The right-hand side may also be the word `missing` (case-insensitive):
   the value is converted to your working convention's own missing form –
   a tagged marker under the Stata or SAS convention, or the first code
-  from `joptions("missing.convention.codes")` under the SPSS convention,
-  declared on the result automatically. The same map string therefore
-  works under every setting: `"8=missing; else=copy"`. The NA rule
-  composes with it (`"NA=missing"` converts plain `NA` cells the same
-  way), and `labels = "missing=Refused"` labels whatever the token
-  produced. If the column already carries the other convention's markers
-  while your `missing.convention` setting is set, the call stops and
-  shows both resolutions rather than guessing.
+  from the `missing.convention.codes` setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md)
+  under the SPSS convention, declared on the result automatically. The
+  same map string therefore works under every setting:
+  `"8=missing; else=copy"`. The NA rule composes with it (`"NA=missing"`
+  converts plain `NA` cells the same way), and
+  `labels = "missing=Refused"` labels whatever the token produced. If
+  the column already carries the other convention's markers while your
+  `missing.convention` setting is set, the call stops and shows both
+  resolutions rather than guessing.
 
   Examples:
 
@@ -99,11 +102,12 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   variable, using the format `"code=Label Text"` with rules separated by
   semicolons. If supplied, these labels are used as-is.
 
-  The left side of each rule may be a numeric code or, under Stata
-  convention, a Stata-style missing-value token (`.a` through `.z`).
-  Tagged-NA labels are stored on the tag itself, not on a numeric code.
-  It may also be the word `missing`, labelling whatever the map's
-  `missing` target produced: `labels = "missing=Refused"`.
+  The left side of each rule may be a numeric code or, under Stata or
+  SAS convention, a tagged missing-value token (`.a` through `.z`, or
+  `.A` through `.Z`). Tagged-NA labels are stored on the tag itself, not
+  on a numeric code. It may also be the word `missing`, labelling
+  whatever the map's `missing` target produced:
+  `labels = "missing=Refused"`.
 
   If omitted, the function attempts to transfer value labels
   automatically from the original variable. This works when the original
@@ -120,14 +124,16 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   (`.a` through `.z` or `.A` through `.Z`) are accepted in the map and
   labels arguments. Token letters are matched case-insensitively; the
   stored markers take the convention's letter case (lowercase
-  Stata-style under `"stata"`, uppercase SAS-style under `"sas"`). Inert
-  when no such tokens appear in either argument.
+  Stata-style under `"stata"`, uppercase SAS-style under `"sas"`). Also
+  decides what the `missing` keyword produces. Inert when neither tokens
+  nor `missing` appear in either argument.
 
-  When `NULL`, the convention is resolved from
-  `joptions("missing.convention")`; if that is also unset, the call
-  stops with a guided error asking you to choose – the package never
-  infers a convention. Most users set the convention once at the top of
-  a session via
+  When `NULL`, the convention is resolved from the `missing.convention`
+  setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md); if
+  that is also unset, the call stops with a guided error asking you to
+  choose – the package never infers a convention. Most users set the
+  convention once at the top of a session via
   [`joptions()`](https://jma61.github.io/jstats/reference/joptions.md)
   (or in their `.Rprofile`) rather than supplying this argument on every
   call. See
@@ -168,20 +174,29 @@ Value labels are handled in three ways, in order of priority:
 NA values in the original variable are carried across as NA unless the
 map names `NA` as an old value (for example `"NA=-98"`); the `else`
 setting never converts NA. An `NA` rule affects plain `NA` cells only —
-Stata-style missing values (tagged NAs) are declared missings and are
-preserved with their tags regardless of the map.
+tagged missing values (Stata-style or SAS-style) are declared missings
+and are preserved with their tags regardless of the map. Declared
+SPSS-style codes on the original variable are likewise preserved: they
+need not appear in the map, they are carried onto the result with their
+declaration, and a note says so (map them to `NA` explicitly to convert
+them instead).
 
-Values that appear to be coded missing values (e.g. -99, -9, 999) from
-SPSS or another package are automatically detected and set to NA, even
-when `else=copy` is used. A note is printed when this occurs.
+Values that merely look like coded missing values (e.g. -99, -9, 999)
+but are not declared are never changed on their own. Left unmapped with
+no `else` clause, they are named in the error that stops the call, with
+a nudge toward
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md);
+carried across by `else=copy`, they draw an advisory note at the full
+`joutput` tier. Recoding values *to* a code that looks like a missing
+value draws a note suggesting the declaration.
 
 If the map does not include an `else` clause and there are unmapped
 values in the variable, the function stops with a message listing the
 unmapped values so you can fix the map before proceeding.
 
 If the map specifies values that do not exist in the original variable,
-a warning is issued (but the function continues). This helps catch typos
-in the map string.
+nothing is recoded for them and an advisory note says so at the full
+`joutput` tier. This helps catch typos in the map string.
 
 **Missing values in the map.** The package supports three conventions
 for representing declared missing values, and the syntax for producing
@@ -238,10 +253,11 @@ raises an error naming the mismatch and the two ways out: restate the
 markers as numeric codes to stay in SPSS convention, or switch
 convention with `joptions(missing.convention = ...)` (or with this
 call's `convention` argument). The error does not rewrite the call for
-you: the SPSS-style codes would have to be taken from
-`joptions("missing.convention.codes")`, which cannot be known to be free
-of collision with values already in the column. The two-call SPSS-style
-pattern is documented above.
+you: the SPSS-style codes would have to be taken from the
+`missing.convention.codes` setting in
+[`joptions`](https://jma61.github.io/jstats/reference/joptions.md),
+which cannot be known to be free of collision with values already in the
+column. The two-call SPSS-style pattern is documented above.
 
 ## See also
 

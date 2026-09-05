@@ -32,12 +32,14 @@ jconvert(
 - to:
 
   One of `"baseR"`, `"spss"`, `"stata"`, or `"sas"` (any capitalization
-  is accepted). When `NULL` (the default), `jconvert()` reads
-  `joptions("missing.convention")`: if the slot is set to `"spss"`,
-  `"stata"`, or `"sas"`, `to` resolves to that value; if the slot is at
-  its `"none"` default, `jconvert()` errors with guidance naming the
-  concrete options. The destructive `"baseR"` target is never
-  auto-resolved – it must always be passed explicitly.
+  is accepted). When `NULL` (the default), `jconvert()` reads the
+  `missing.convention` setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md): if
+  the slot is set to `"spss"`, `"stata"`, or `"sas"`, `to` resolves to
+  that value; if the slot is at its `"none"` default, `jconvert()`
+  errors with guidance naming the concrete options. The destructive
+  `"baseR"` target is never auto-resolved – it must always be passed
+  explicitly.
 
 - ...:
 
@@ -54,11 +56,12 @@ jconvert(
 
   Logical; `TRUE` (default) prints a notification summarizing what was
   converted (and what was skipped) along with a reminder of how to keep
-  the result. `FALSE` suppresses the message. Always-on by default; does
-  not consult
-  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
+  the result. `FALSE` suppresses the message. The notification itself
+  does not consult
+  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md),
   because the function reports an action it just performed rather than
-  explaining system behavior.
+  explaining system behavior; only the keep-the-result reminder follows
+  the tier, and is omitted at `"minimal"`.
 
 - modify:
 
@@ -82,7 +85,7 @@ returned copy can be ignored.
 
 ## Details
 
-The three target formats:
+The four target formats:
 
 - `to = "baseR"`:
 
@@ -100,21 +103,22 @@ The three target formats:
 - `to = "spss"`:
 
   Convert Stata-style or SAS-style missing values to SPSS-style numeric
-  codes. Letter tags map to numeric codes via
-  `joptions("missing.convention.codes")` (default `-99`, `-98`, `-97`):
-  `.a -> codes[1]`, `.b -> codes[2]`, and so on. SAS-style (uppercase)
-  tags are case-corrected to Stata-style (lowercase) before the numeric
-  mapping – for round-trip purposes the package treats `.A` and `.a` as
-  the same conceptual marker, and mixed-case columns collapse to a
-  single lowercase marker (SPSS has no parallel uppercase convention).
-  The notification's per-column display shows the original
-  (pre-correction) tag for SAS-corrected columns – e.g.
-  `.A "Refused" -> -99` – so the user-visible mapping reflects what was
-  actually in the data on input. Letter tags beyond those covered by the
-  convention codes (default `.a`–`.c`, one letter per code, after case
-  correction) are refused with guidance to use
-  [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) for
-  manual mapping.
+  codes. Letter tags map to numeric codes via the
+  `missing.convention.codes` setting in
+  [`joptions`](https://jma61.github.io/jstats/reference/joptions.md)
+  (default `-99`, `-98`, `-97`): `.a -> codes[1]`, `.b -> codes[2]`, and
+  so on. SAS-style (uppercase) tags are case-corrected to Stata-style
+  (lowercase) before the numeric mapping – for round-trip purposes the
+  package treats `.A` and `.a` as the same conceptual marker, and
+  mixed-case columns collapse to a single lowercase marker (SPSS has no
+  parallel uppercase convention). The notification's per-column display
+  shows the original (pre-correction) tag for SAS-corrected columns –
+  e.g. `.A "Refused" -> -99` – so the user-visible mapping reflects what
+  was actually in the data on input. Letter tags beyond those covered by
+  the convention codes (default `.a`–`.c`, one letter per code, after
+  case correction) are refused before any data is touched; the message
+  offers scoping the call with `vars = c(...)` to leave those columns
+  out, or reducing their declared codes first.
 
 - `to = "stata"`:
 
@@ -158,14 +162,13 @@ The three target formats:
 Pre-flight checks for `to = "spss"` include a collision check: if a
 column's target numeric code (e.g. `-99` for `.a`) is present as genuine
 data in the column, the call errors before any data is touched. The
-error message lists every colliding column and presents three resolution
-paths: change the convention codes via
-`joptions(missing.convention.codes = ...)`, scope the call via
-`vars = c(...)` to exclude affected columns, or recode the real- data
-values via
-[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)
-first. Atomicity applies to every error mode – the entire `jconvert()`
-call either succeeds or errors before mutating the data frame.
+error message lists every colliding column and the remedy: change the
+convention codes via `joptions(missing.convention.codes = ...)`. When
+the same call also meets columns with more tags than codes, it adds the
+option of scoping the call with `vars = c(...)` to leave the affected
+columns out. Atomicity applies to every error mode – the entire
+`jconvert()` call either succeeds or errors before mutating the data
+frame.
 
 **Pattern A – value labels suggest missingness but no formal
 declaration.** When a column has no formal missing-value declaration but
