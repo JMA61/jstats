@@ -1,9 +1,9 @@
 Package: jstats
 Title: Simplified Statistical Analysis Tools for Social Science
-Version: 0.9.156
+Version: 0.9.157
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
-Description: Provides simplified tools for common statistical analyses
+Description: Provides simplified tools for common statistical analysesmu
     used in social science research and teaching, with output formatted
     in the style of 'SPSS', 'Stata', or 'SAS'. Analysis functions include
     descriptive statistics, frequency tables, t-tests, ANOVA,

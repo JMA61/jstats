@@ -666,6 +666,19 @@ joutput <- function(level, effect.size = NULL,
 #'   \item{\code{joptions()}}{Print the full settings panel. The
 #'     \code{missing.convention.codes} row is SPSS-convention detail and
 #'     appears only while \code{missing.convention} is \code{"spss"}.}
+#'   \item{\code{joptions("slot")}}{Print one slot and nothing else --
+#'     \code{joptions("data.dir")}, or several at once with
+#'     \code{joptions(c("data.dir", "corr.layout"))} -- closed by a
+#'     pointer to \code{joptions()} for the full panel. A slot name given
+#'     WITHOUT an argument name is read as a query rather than a setting;
+#'     the six slot names and the four \code{missing.convention} values
+#'     share no string, so the two readings cannot collide. A named
+#'     argument is always a setting, which leaves
+#'     \code{joptions(missing.convention = "data.dir")} an error. Only
+#'     the slots named are shown: a query pulls in no related slot, and
+#'     \code{missing.convention.codes} appears whenever it is asked for,
+#'     whatever the convention. Like the full panel, a query prints
+#'     regardless of \code{quiet}.}
 #'   \item{\code{joptions(NULL)}}{Reset all slots to defaults, then print
 #'     the full panel -- everything changed.}
 #'   \item{\code{joptions(slot = value, ...)}}{Set one or more slots, then
@@ -701,7 +714,8 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @param missing.convention One of \code{"none"}, \code{"spss"},
 #'   \code{"stata"}, or \code{"sas"} (any capitalization is accepted).
-#'   See Slots.
+#'   See Slots. A slot name arriving here unnamed and positionally is
+#'   read instead as a status query on that slot (see Call patterns).
 #' @param missing.convention.codes Numeric vector, length 1 to 3. See Slots.
 #' @param data.dir Character string (length 1), or \code{NULL}. See Slots.
 #' @param corr.layout One of \code{"wide"} or \code{"stacked"}, or
@@ -714,11 +728,14 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @return Invisibly returns \code{NULL}. Called for the side effect of
 #'   updating session options and printing the settings panel -- in full
-#'   for a status query or a reset, or as an echo of the slots a setting
+#'   for a bare status query or a reset, as the named slots alone for a
+#'   \code{joptions("slot")} query, or as an echo of the slots a setting
 #'   call touched.
 #'
 #' @examples
 #' joptions()                                        # show current settings
+#' joptions("data.dir")                              # show one slot
+#' joptions(c("data.dir", "corr.layout"))            # show two
 #'
 #' # Setting a convention echoes the convention and its codes, then scans
 #' # the workspace and notes any data frames whose missing-value
@@ -742,8 +759,9 @@ joutput <- function(level, effect.size = NULL,
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, joptions() applies the
 #'   change silently, suppressing the settings echo, its pointer, and the
-#'   convention nudge alike. A bare joptions() status query always prints
-#'   regardless of quiet.
+#'   convention nudge alike. It has no effect on a status query, which
+#'   makes no change to silence: the bare joptions() panel and a
+#'   joptions("slot") query both print regardless.
 joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                      data.dir = NULL, corr.layout = NULL,
                      missing.detail = NULL, message.width = NULL,
@@ -765,22 +783,45 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     return(invisible(NULL))
   }
 
-  # Distinguish joptions(NULL) (reset all) from joptions(slot = NULL)
-  # (leave that slot alone). The reset call has a single positional NULL
-  # argument; match.call() would have rewritten that to
-  # joptions(missing.convention = NULL) and erased the distinction, so
-  # we inspect sys.call() directly. Detected shape: exactly one supplied
-  # argument, unnamed in the source call, and NULL in value.
+  # Two call shapes are distinguished by whether the lone argument was
+  # written WITHOUT a name, which match.call() would have erased -- it
+  # rewrites joptions(NULL) to joptions(missing.convention = NULL) and
+  # joptions("data.dir") to joptions(missing.convention = "data.dir") --
+  # so we inspect sys.call() directly.
+  #   joptions(NULL)        reset all, vs joptions(slot = NULL) which
+  #                         leaves that slot alone.
+  #   joptions("data.dir")  status query on one slot, vs
+  #                         joptions(missing.convention = "data.dir")
+  #                         which is a setting call with a bad value and
+  #                         stays an error.
+  # In both, a NAMED argument always means "set". The name is what
+  # decides, not the value, so a variable holding either works.
   call_args <- as.list(sys.call())[-1L]
-  # Ignore a named quiet = ... when detecting the reset shape, so
+  # Ignore a named quiet = ... when detecting these shapes, so
   # joptions(NULL, quiet = TRUE) is still recognized as a (quiet) reset
   # rather than read as two arguments.
   arg_names <- names(call_args)
   if (!is.null(arg_names)) call_args <- call_args[arg_names != "quiet"]
-  positional_null_reset <- length(call_args) == 1L &&
-                           (is.null(names(call_args)) ||
-                            names(call_args) == "") &&
-                           is.null(call_args[[1L]])
+  lone_positional <- length(call_args) == 1L &&
+                     (is.null(names(call_args)) ||
+                      names(call_args) == "")
+
+  positional_null_reset <- lone_positional && is.null(call_args[[1L]])
+
+  # A slot NAME in the first position asks to SEE that slot. Safe because
+  # the six slot names and the four missing.convention values are
+  # disjoint sets: no string can be read both ways. The value is taken
+  # from missing.convention, where positional matching has already put
+  # it, and the canonical name vector is .jst_options_defaults's own, so
+  # a slot added there is queryable without a second list to maintain.
+  # A vector is accepted -- .jst_options_status() imposes order and drops
+  # duplicates, so no ordering contract is made here.
+  positional_slot_query <- lone_positional &&
+                           is.character(missing.convention) &&
+                           length(missing.convention) >= 1L &&
+                           !anyNA(missing.convention) &&
+                           all(missing.convention %in%
+                                 names(.jst_options_defaults))
 
   # joptions(NULL) -- reset all
   if (positional_null_reset) {
@@ -791,6 +832,24 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     options(.jst_options_missing_detail       = NULL)
     options(.jst_options_message_width        = NULL)
     if (!quiet) .jst_options_status()
+    return(invisible(NULL))
+  }
+
+  # joptions("slot") -- partial status query
+  #
+  # quiet is deliberately NOT consulted, matching the bare joptions()
+  # panel above: quiet suppresses the echo, pointer and nudge that follow
+  # a CHANGE, and a query makes no change. A silenced query would return
+  # nothing at all, which is not a use anyone has.
+  #
+  # No related-slot pull, unlike the setting echo below: that pull exists
+  # to contextualize a change (the codes are read in light of the
+  # convention), and a query has no change to contextualize. It shows
+  # exactly what was asked for -- including the codes row, which the
+  # S267 suppression leaves alone on a partial call precisely so that
+  # naming a slot always shows it.
+  if (positional_slot_query) {
+    .jst_options_status(missing.convention)
     return(invisible(NULL))
   }
 

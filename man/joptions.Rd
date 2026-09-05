@@ -17,7 +17,8 @@ joptions(
 \arguments{
 \item{missing.convention}{One of \code{"none"}, \code{"spss"},
 \code{"stata"}, or \code{"sas"} (any capitalization is accepted).
-See Slots.}
+See Slots. A slot name arriving here unnamed and positionally is
+read instead as a status query on that slot (see Call patterns).}
 
 \item{missing.convention.codes}{Numeric vector, length 1 to 3. See Slots.}
 
@@ -35,13 +36,15 @@ or \code{NULL}. See Slots.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, joptions() applies the
 change silently, suppressing the settings echo, its pointer, and the
-convention nudge alike. A bare joptions() status query always prints
-regardless of quiet.}
+convention nudge alike. It has no effect on a status query, which
+makes no change to silence: the bare joptions() panel and a
+joptions("slot") query both print regardless.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for the side effect of
 updating session options and printing the settings panel -- in full
-for a status query or a reset, or as an echo of the slots a setting
+for a bare status query or a reset, as the named slots alone for a
+\code{joptions("slot")} query, or as an echo of the slots a setting
 call touched.
 }
 \description{
@@ -141,6 +144,19 @@ matrix mid-row would destroy the alignment that makes it readable.}
 \item{\code{joptions()}}{Print the full settings panel. The
 \code{missing.convention.codes} row is SPSS-convention detail and
 appears only while \code{missing.convention} is \code{"spss"}.}
+\item{\code{joptions("slot")}}{Print one slot and nothing else --
+\code{joptions("data.dir")}, or several at once with
+\code{joptions(c("data.dir", "corr.layout"))} -- closed by a
+pointer to \code{joptions()} for the full panel. A slot name given
+WITHOUT an argument name is read as a query rather than a setting;
+the six slot names and the four \code{missing.convention} values
+share no string, so the two readings cannot collide. A named
+argument is always a setting, which leaves
+\code{joptions(missing.convention = "data.dir")} an error. Only
+the slots named are shown: a query pulls in no related slot, and
+\code{missing.convention.codes} appears whenever it is asked for,
+whatever the convention. Like the full panel, a query prints
+regardless of \code{quiet}.}
 \item{\code{joptions(NULL)}}{Reset all slots to defaults, then print
 the full panel -- everything changed.}
 \item{\code{joptions(slot = value, ...)}}{Set one or more slots, then
@@ -179,6 +195,8 @@ their standard form -- do not trigger the notice.
 
 \examples{
 joptions()                                        # show current settings
+joptions("data.dir")                              # show one slot
+joptions(c("data.dir", "corr.layout"))            # show two
 
 # Setting a convention echoes the convention and its codes, then scans
 # the workspace and notes any data frames whose missing-value
