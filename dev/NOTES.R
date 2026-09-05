@@ -18,7 +18,7 @@ receive_package("jstats_source.R")
 ## That function will:
 # back up the current files in R/
 # split the master into the 17 files that go into the R folder
-# does a byte-identical self-check
+# does a byte-identical self-checkAr
 # runs devtools::document()
 # runs a full devtools::check()
 

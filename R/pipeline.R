@@ -356,7 +356,7 @@ jsubset <- function(data, expr) {
       "which R treats as a variable name, not a logical operator.\n",
       "  In R, use ", replacement, " instead.\n",
       "  Examples:\n",
-      "    jsubset(Age < 40 & Gender == 1)     # AND\n",
+      "    jsubset(Age < 40 & Volunteer == 1)  # AND\n",
       "    jsubset(Age < 40 | Age > 60)        # OR\n",
       "    jsubset(!is.na(Age))                # NOT\n",
       "  You wrote: ", expr_str
@@ -374,7 +374,7 @@ jsubset <- function(data, expr) {
     .jst_stop(
       "It looks like you used `=` in your subset expression. In R, `=` is ",
       "assignment; equality comparison uses `==` (double equals).\n",
-      "  Example: jsubset(Gender == 1)\n",
+      "  Example: jsubset(Volunteer == 1)\n",
       "  You wrote: ", expr_str
     )
   }

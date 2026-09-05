@@ -855,6 +855,30 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
 
   # Validate (atomic) -- all checks pass before any options() write
   if (mc_supplied && !is.null(missing.convention)) {
+    # S281: a lone positional string that is neither a slot name nor a
+    # convention value is most likely a mistyped slot query -- that is the
+    # only positional form that takes a bare string. Test it as a near
+    # miss against the six slot names BEFORE the lowercasing below, so the
+    # error quotes what the user typed (Rule AB), not a normalized copy.
+    # Levenshtein distance, case-insensitive, at most 2. A case-only
+    # variant is distance 0 and gets the suggestion rather than silently
+    # resolving: slot names are argument identifiers, which R treats as
+    # case-sensitive. A string near no slot falls through to the
+    # conventions error unchanged. Named calls never reach this branch
+    # (lone_positional is FALSE for them).
+    if (lone_positional && is.character(missing.convention) &&
+        length(missing.convention) == 1L && !is.na(missing.convention)) {
+      slot_names <- names(.jst_options_defaults)
+      slot_dist  <- as.integer(utils::adist(tolower(missing.convention),
+                                            slot_names))
+      if (min(slot_dist) <= 2L) {
+        near <- slot_names[slot_dist == min(slot_dist)]
+        .jst_stop("no setting named \"", missing.convention,
+                  "\". Did you mean ", paste(near, collapse = " or "), "?",
+                  paste0("\n  joptions(\"", near, "\")", collapse = ""),
+                  fn = "joptions")
+      }
+    }
     # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
     if (is.character(missing.convention) &&
         length(missing.convention) == 1L && !is.na(missing.convention)) {

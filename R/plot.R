@@ -273,8 +273,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (n_vars > 2) {
     .jst_stop("only 1 or 2 variables can be plotted at once. ",
               "For more variables, use `by =` to add a grouping variable ",
-              "(e.g. jplot(data, x, y, by = Gender)) or call jplot() ",
-              "multiple times.", fn = "jplot")
+              "(e.g. jplot(community, Age, Income, by = Region)) or call ",
+              "jplot() multiple times.", fn = "jplot")
   }
 
   # Check all variables exist

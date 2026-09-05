@@ -6004,21 +6004,49 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       coll_lead <- if (n_coll == 1L) "This variable" else "These variables"
       coll_verb <- if (n_coll == 1L) "is" else "are"
 
+      # S281: the binding limit is the codes set (1 to 3 per joptions), not
+      # SPSS's 3 outright. At 3 codes the two coincide and the S267 text
+      # stands byte for byte. Below 3 the heading names the real limit, and
+      # widening the setting is offered only where it can succeed (no
+      # flagged variable beyond SPSS's own ceiling of 3); past that, the
+      # existing remedies stand against the corrected number. The "because"
+      # clause is Rule I's fix-pointing boundary: it names the setting the
+      # fix acts on.
+      n_codes  <- length(convention_codes)
+      max_tags <- if (has_over) {
+        max(vapply(beyond_d_vars, function(e) as.integer(e$n), integer(1)))
+      } else 0L
+      narrowed  <- n_codes < 3L
+      can_widen <- narrowed && max_tags <= 3L
+      over_head <- if (narrowed) {
+        sprintf(paste0("at most %d declared missing %s per variable can be ",
+                       "converted because your missing.convention.codes ",
+                       "setting currently has only %d %s."),
+                n_codes, if (n_codes == 1L) "value" else "values",
+                n_codes, if (n_codes == 1L) "code" else "codes")
+      } else {
+        "SPSS supports at most 3 declared missing values per variable."
+      }
+      widen_lines <- c("To allow more, set up to three codes:",
+                       "  joptions(missing.convention.codes = c(...))")
+
       # S267 redraft: "declared missing values" (locked generic), Rule X
       # (no method named for the many-ways reduction), Rule L two-space
       # remedies, and unnumbered alternatives so a wrapped intro cannot
       # hang at a list number's indent.
       if (has_over && !has_coll) {
         msg_lines <- c(
-          "SPSS supports at most 3 declared missing values per variable.",
+          over_head,
           "",
           sprintf("%s in %s %s more:", over_lead, data_name, over_verb),
           over_lines,
           "",
-          "To convert a narrower set, leaving out those above:",
-          sprintf("  jconvert(%s, to = \"spss\", vars = c(...), modify = TRUE)",
-                  data_name),
-          "Or reduce each variable to 3 or fewer declared codes first.")
+          if (can_widen) widen_lines else c(
+            "To convert a narrower set, leaving out those above:",
+            sprintf("  jconvert(%s, to = \"spss\", vars = c(...), modify = TRUE)",
+                    data_name),
+            sprintf("Or reduce each variable to %d or fewer declared codes first.",
+                    n_codes)))
       } else if (has_coll && !has_over) {
         msg_lines <- c(
           "the missing.convention.codes values overlap with real data values.",
@@ -6029,18 +6057,29 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           "To change the codes:",
           "  joptions(missing.convention.codes = c(...))")
       } else {
+        # Mid-message paragraph, so the narrowed heading takes a capital.
+        # Where widening can succeed, one joptions() call clears BOTH
+        # problems, so the two per-paragraph fixes fold into one.
+        both_head <- if (narrowed) sub("^at most", "At most", over_head) else
+          over_head
         msg_lines <- c(
           sprintf("cannot convert %s to SPSS -- two problems:", data_name),
           "",
-          "SPSS supports at most 3 declared missing values per variable.",
+          both_head,
           sprintf("%s %s more:", over_lead, over_verb),
           over_lines,
-          "To fix, reduce each to 3 or fewer declared codes.",
+          if (!can_widen)
+            sprintf("To fix, reduce each to %d or fewer declared codes.",
+                    n_codes),
           "",
           "The missing.convention.codes values overlap with real data values.",
           sprintf("%s %s affected:", coll_lead, coll_verb),
           coll_lines,
-          "To fix, change the codes:",
+          if (can_widen) {
+            c("", "To fix both, set up to three codes that do not overlap:")
+          } else {
+            "To fix, change the codes:"
+          },
           "  joptions(missing.convention.codes = c(...))",
           "",
           "Or convert a narrower set, leaving out all the variables above:",
