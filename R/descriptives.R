@@ -125,7 +125,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     accept_vector = TRUE
   )
 
-  # Vector-input path (e.g. jdesc(SampleData$Gender)) — wrap and recurse
+  # Vector-input path (e.g. jdesc(community$Age)) — wrap and recurse
   if (arg1$mode == "vector_input") {
     var_name <- paste(deparse(arg1$first_arg_sub), collapse = "")
     if (grepl("\\$", var_name)) {
@@ -657,7 +657,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     accept_vector = TRUE
   )
 
-  # Vector-input path (e.g. jfreq(SampleData$Gender)) — wrap and recurse
+  # Vector-input path (e.g. jfreq(community$Region)) — wrap and recurse
   if (arg1$mode == "vector_input") {
     var_name <- paste(deparse(arg1$first_arg_sub), collapse = "")
     if (grepl("\\$", var_name)) {

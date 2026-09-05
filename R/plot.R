@@ -268,7 +268,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   n_vars <- length(variable_names)
   if (n_vars == 0) {
     .jst_stop("no variables specified. Provide one or more variable ",
-              "names, e.g. jplot(SampleData, Age, Tattoos).", fn = "jplot")
+              "names, e.g. jplot(community, Age).", fn = "jplot")
   }
   if (n_vars > 2) {
     .jst_stop("only 1 or 2 variables can be plotted at once. ",
@@ -550,7 +550,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   formula_vars <- all.vars(formula)
   if (length(formula) < 3) {
     .jst_stop("A two-sided formula is required: DV ~ IV.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)")
+         "  Example: jplot(WellbeingScore ~ Income, community)")
   }
 
   y_name <- all.vars(formula[[2]])
@@ -558,7 +558,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   if (length(y_name) != 1) {
     .jst_stop("Only one variable is supported on the left side of ~.\n",
-         "  Example: jplot(Tattoos ~ Age, SampleData)")
+         "  Example: jplot(WellbeingScore ~ Income, community)")
   }
   if (length(x_vars) > 1) {
     .jst_stop("Only one independent variable is supported in the formula.\n",

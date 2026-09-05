@@ -57,7 +57,7 @@
   }
 
   # -- Guard: blank variable name from an empty positional slot ------------
-  # A stray comma (e.g. jdesc(SampleData, , Age)) leaves an empty quosure,
+  # A stray comma (e.g. jdesc(community, , Age)) leaves an empty quosure,
   # which quo_name() renders as "". Catch it here -- one consistent error
   # across the data-first family -- before the not-found check turns it
   # into an unhelpful blank-bullet "not found" message. The .jst_stop()
@@ -173,7 +173,7 @@
     # Leading-comma habit carried over from the data-first functions:
     # an empty first slot pushes the formula into the data position.
     .jst_stop(
-      "The formula goes first -- e.g. ", fn, "(", f_text, ", SampleData).\n",
+      "The formula goes first -- e.g. ", fn, "(", f_text, ", MyData).\n",
       "With a juse() default set, no comma is needed: ",
       fn, "(", f_text, ").",
       fn = fn
@@ -187,7 +187,7 @@
                    nzchar(first_name)) {
       first_name
     } else {
-      "SampleData"
+      "MyData"
     }
     .jst_stop(
       "The formula goes first, then the data -- e.g. ",
@@ -202,14 +202,14 @@
     # for users arriving from syntax-as-strings environments.
     .jst_stop(
       "The formula should not be in quotes.\n",
-      "Remove them -- e.g. ", fn, "(", formula, ", SampleData).",
+      "Remove them -- e.g. ", fn, "(", formula, ", MyData).",
       fn = fn
     )
   }
 
   .jst_stop(
     "The first input must be a formula -- e.g. ",
-    fn, "(", example, ", SampleData).",
+    fn, "(", example, ", MyData).",
     fn = fn
   )
 }
@@ -309,7 +309,7 @@
 #'   \item{\code{vector_input}}{Only returned when
 #'     \code{accept_vector = TRUE}. User passed an expression that
 #'     evaluated to a non-data-frame value (typically an atomic vector
-#'     or a column reference like \code{SampleData$Gender}). The caller
+#'     or a column reference like \code{MyData$Gender}). The caller
 #'     handles this --- usually by wrapping the value in a temporary
 #'     data frame.}
 #'   \item{\code{symbol_with_default}}{User passed a bare symbol that

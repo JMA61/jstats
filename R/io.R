@@ -2884,7 +2884,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # Cases intercepted:
   #   1. Bare symbol that doesn't exist (e.g. jsave(BadName, "x.rds"))
   #   2. Expression that fails to evaluate
-  #   3. Expression that evaluates to NULL (e.g. jsave(SampleData$BadCol,
+  #   3. Expression that evaluates to NULL (e.g. jsave(MyData$BadCol,
   #      "x.rds") -- $-access on a missing column returns NULL rather
   #      than erroring)
   #   4. Value that is neither a data frame nor a string (e.g.

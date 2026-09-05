@@ -77,7 +77,7 @@ to a data frame. That data frame is used.}
 \item{\code{vector_input}}{Only returned when
 \code{accept_vector = TRUE}. User passed an expression that
 evaluated to a non-data-frame value (typically an atomic vector
-or a column reference like \code{SampleData$Gender}). The caller
+or a column reference like \code{MyData$Gender}). The caller
 handles this --- usually by wrapping the value in a temporary
 data frame.}
 \item{\code{symbol_with_default}}{User passed a bare symbol that

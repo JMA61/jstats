@@ -261,7 +261,7 @@ jsubset <- function(data, expr) {
   target_name <- arg1$name
 
   if (arg1$mode == "explicit") {
-    # jsubset(SampleData, <expr>) — explicit data frame + expression slot
+    # jsubset(MyData, <expr>) — explicit data frame + expression slot
     if (missing(expr)) {
       .jst_stop("the condition must be a logical expression. ",
            "Example: jsubset(", target_name, ", Age < 40)")
@@ -772,7 +772,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 
   # -- Resolve the first argument via the standard helper -------------------
   # Three modes possible at this point:
-  #   explicit            : jcomplete(SampleData, v1, v2)  - data is a frame
+  #   explicit            : jcomplete(MyData, v1, v2)      - data is a frame
   #   default             : jcomplete(, v1, v2)            - leading-comma form
   #   symbol_with_default : jcomplete(v1, v2, v3)          - bare-symbol form
   arg1 <- .jst_resolve_first_arg(
@@ -1099,7 +1099,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 
   # -- Resolve the first argument via the standard helper -------------------
   # Three modes possible at this point:
-  #   explicit            : jdummy(SampleData, A, B)        - data is a frame
+  #   explicit            : jdummy(MyData, A, B)            - data is a frame
   #   default             : jdummy(, A, B)                  - leading-comma form
   #   symbol_with_default : jdummy(A, B)                    - bare-symbol form
   arg1 <- .jst_resolve_first_arg(
