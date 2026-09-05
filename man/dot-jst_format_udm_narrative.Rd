@@ -21,8 +21,8 @@ Builds the message string emitted when UDM-bearing variables are
 detected during a load. The S227 (E17) redesign conditions the text
 on three things: the convention(s) actually read (per-variable
 \code{convention} from \code{.jst_missing_info()}), the
-\code{joptions("missing.convention")} setting, and whether the full
-form has already been shown this session (\code{compact}).
+\code{missing.convention} setting in \code{\link{joptions}}, and whether the
+full form has already been shown this session (\code{compact}).
 }
 \details{
 Shapes produced under \code{preserve.declarations = TRUE}:

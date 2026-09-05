@@ -421,10 +421,9 @@ joutput <- function(level, effect.size = NULL,
 
   # S267: the codes row is SPSS-convention detail; the FULL panel shows
   # it only when the setting is "spss" (bare-call and per-call spss users
-  # both see the number in the mint note itself). An explicit partial
-  # query (joptions("missing.convention.codes")) always shows it --
-  # suppressing a slot the user asked for by name would read as the
-  # option not existing.
+  # both see the number in the mint note itself). A setting call that
+  # supplied the codes itself always echoes them -- suppressing a slot the
+  # user just set by name would read as the option not existing.
   if (is.null(slots) && !identical(mc, "spss")) {
     panel_lines <- panel_lines[names(panel_lines) !=
                                  "missing.convention.codes"]
@@ -604,10 +603,14 @@ joutput <- function(level, effect.size = NULL,
 #'   \item{missing.convention.codes}{Numeric vector, length 1 to 3, whole
 #'     numbers, no duplicates. Sign unconstrained. Default:
 #'     \code{c(-99, -98, -97)}. The recommended missing-value code set
-#'     used by \code{\link{jconvert}} when translating Stata-style
-#'     missing values (\code{.a}, \code{.b}, \code{.c}, \code{.d}) into
-#'     SPSS-style numeric codes, and by the load-time diagnostic for
-#'     convention-matched detection.}
+#'     used by \code{\link{jconvert}} when translating Stata-style or
+#'     SAS-style missing values into SPSS-style numeric codes: the first
+#'     tag letter (\code{.a} or \code{.A}) takes the first code, the
+#'     second the second, and so on, so a column carrying more distinct
+#'     tags than there are codes cannot be converted. Also the source of
+#'     the value the \code{missing} keyword creates in a
+#'     \code{\link{jrecode}} or \code{\link{jencode}} map under an
+#'     SPSS-style convention (the first code).}
 #'   \item{data.dir}{Character string (length 1), or \code{NULL}. Default:
 #'     \code{NULL}. When \code{NULL}, \code{\link{jsave}} writes
 #'     bare-filename saves to the working directory and \code{\link{jload}}
@@ -620,7 +623,8 @@ joutput <- function(level, effect.size = NULL,
 #'     \code{data.dir = ""} (an empty string); passing
 #'     \code{data.dir = NULL} leaves the current setting unchanged
 #'     (see Call patterns). Filenames containing a directory
-#'     separator (\code{/}) bypass this setting and are taken literally.}
+#'     separator (a forward slash, or a backslash on Windows) bypass this
+#'     setting and are taken literally.}
 #'   \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 #'     \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
 #'     \code{\link{jcorr}} when three or more variables are correlated:
@@ -659,15 +663,20 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @section Call patterns:
 #' \describe{
-#'   \item{\code{joptions()}}{Print the full settings panel.}
+#'   \item{\code{joptions()}}{Print the full settings panel. The
+#'     \code{missing.convention.codes} row is SPSS-convention detail and
+#'     appears only while \code{missing.convention} is \code{"spss"}.}
 #'   \item{\code{joptions(NULL)}}{Reset all slots to defaults, then print
 #'     the full panel -- everything changed.}
 #'   \item{\code{joptions(slot = value, ...)}}{Set one or more slots, then
 #'     echo only what the call touched: the slots named, plus
-#'     \code{missing.convention.codes} whenever \code{missing.convention} is
-#'     set and vice versa (the codes are read in light of the convention),
-#'     closed by a pointer to \code{joptions()} for the full panel. The
-#'     other three slots are independent and are not pulled in.
+#'     \code{missing.convention} whenever \code{missing.convention.codes}
+#'     is set (the codes are read in light of the convention), and plus
+#'     \code{missing.convention.codes} when \code{missing.convention} is
+#'     set to \code{"spss"} (under any other convention the codes are
+#'     dormant and the row is omitted), closed by a pointer to
+#'     \code{joptions()} for the full panel. The other four slots are
+#'     independent and are not pulled in.
 #'     Passing \code{slot = NULL} as a named
 #'     argument leaves that slot at its current value -- useful for
 #'     setting one slot without touching another -- and echoes that

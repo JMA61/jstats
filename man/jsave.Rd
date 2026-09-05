@@ -68,12 +68,12 @@ R does not accept single backslashes in file paths.
 \itemize{
 \item If the path contains a directory separator, the file is saved
 to that exact location.
-\item If the path is a bare filename and \code{joptions("data.dir")}
-is set, the file is saved to that folder (auto-created if it
-doesn't yet exist).
-\item If the path is a bare filename and \code{joptions("data.dir")}
-is unset (the default), the file is saved to the working
-directory.
+\item If the path is a bare filename and the \code{data.dir} setting in
+\code{\link{joptions}} is set, the file is saved to that folder
+(auto-created if it doesn't yet exist).
+\item If the path is a bare filename and the \code{data.dir} setting in
+\code{\link{joptions}} is unset (the default), the file is saved to the
+working directory.
 }
 
 \strong{Format notes:}

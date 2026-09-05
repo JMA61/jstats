@@ -57,10 +57,14 @@ declaration.}
 \item{labels}{Optional. A quoted string in the form
 \code{"value=label; value=label"} pairing labels with codes
 (Option A only). Must be \code{NULL} when \code{codes} is named
-(Option C). When a \code{range} is in effect (supplied in this
-call, or already on the column), entries may also name values
-inside the range: those attach as value labels on the in-range
-values without becoming discrete declared codes (see the
+(Option C). It may also stand alone, with no \code{codes}: the
+values named in the string are then the codes declared, so
+\code{labels = "-99=Refused; -98=Don't know"} declares and labels
+both codes in one argument (and \code{labels = ".a=Refused"} names
+a marker on a tagged column). When a \code{range} is in effect
+(supplied in this call, or already on the column), entries may also
+name values inside the range: those attach as value labels on the
+in-range values without becoming discrete declared codes (see the
 Missing-value ranges section).}
 
 \item{range}{Optional. A length-2 numeric vector declaring a
@@ -91,18 +95,22 @@ offence_cols} where \code{offence_cols} holds the names). Use
 either \code{vars} or \code{...}, not both.}
 
 \item{convention}{Optional. One of \code{"spss"}, \code{"stata"}, or
-\code{"sas"} (any capitalization is accepted); overrides the
-convention resolution for this call. When
+\code{"sas"} (any capitalization is accepted); sets the convention
+for this call on columns that carry no missing-value declaration
+yet. A column that already carries the other convention's missing
+values is not overridden: the call stops and offers the two
+remedies (drop the argument to follow the column's form, or
+\code{jconvert()} the column first). When
 \code{NULL} (the default), the convention is resolved from the
 column's existing missing-value declaration (if any), then from
-\code{joptions("missing.convention")}; when neither supplies one,
-the call stops with a guided error asking you to choose -- the
-package never infers a convention for a fresh declaration. A
-\code{range} requires SPSS convention (see \code{range}).
-The SAS convention behaves as the Stata convention with uppercase
-markers: markers are stored and labeled as \code{.A}-\code{.Z}. Token
-input is case-insensitive under both tagged conventions; the case
-written to the column follows the resolved convention.}
+the \code{missing.convention} setting in \code{\link{joptions}}; when
+neither supplies one, the call stops with a guided error asking you to
+choose -- the package never infers a convention for a fresh declaration. A
+\code{range} requires SPSS convention (see \code{range}). The SAS
+convention behaves as the Stata convention with uppercase markers: markers
+are stored and labeled as \code{.A}-\code{.Z}. Token input is
+case-insensitive under both tagged conventions; the case written to the
+column follows the resolved convention.}
 
 \item{missing.notice}{Logical. When \code{TRUE} (the default), the
 function prints a notification summarizing what was declared,
@@ -190,16 +198,16 @@ one place \code{joptions(missing.convention = ...)} changes what
 happens to data (see the examples).
 
 Under Stata or SAS convention with numeric input, the function
-converts matching cells to tagged missing-value markers (Session 30
-design lock; SAS convention writes the same letters uppercase). The
+converts matching cells to tagged missing-value markers (SAS
+convention writes the same letters uppercase). The
 mapping is ordering-based: codes sorted by absolute value
 descending, more-negative-first as tie-breaker, then assigned
 \code{.a}, \code{.b}, \code{.c}, \code{.d} in that order (\code{.A},
 \code{.B}, ... under SAS convention). The
-assignment proceeds independently of \code{joptions("missing.convention.codes")}
-(which only governs the reverse Stata-to-SPSS direction). A
-conversion note in the standard/full \code{joutput} tier shows the
-Stata-style equivalent for future calls.
+assignment proceeds independently of the \code{missing.convention.codes}
+setting in \code{\link{joptions}} (which only governs the reverse
+Stata-to-SPSS direction). At the full \code{joutput} tier, a
+conversion note shows the tagged-marker equivalent for future calls.
 }
 
 \section{Missing-value ranges}{

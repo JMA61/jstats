@@ -24,8 +24,9 @@ values are left unmapped, so you can fix the map before proceeding.
 \item \code{else=NA} (also \code{else=System} or \code{else=SYSMIS}):
 unmapped values are deliberately set to system NA.
 \item \code{else=copy}: unmapped values are carried across unchanged.
-\item \code{else=.a} (or any Stata-style missing-value token, Stata
-convention only): unmapped values are set to that Stata-style missing value.
+\item \code{else=.a} (or any tagged missing-value token; Stata or
+SAS convention only): unmapped values are set to that tagged
+missing value.
 }
 
 Individual values can also be mapped to system NA using the same
@@ -47,15 +48,15 @@ The right-hand side may also be the word \code{missing}
 (case-insensitive): the value is converted to your working
 convention's own missing form -- a tagged marker under the Stata or
 SAS convention, or the first code from
-\code{joptions("missing.convention.codes")} under the SPSS convention,
-declared on the result automatically. The same map string therefore
-works under every setting: \code{"8=missing; else=copy"}. The NA
-rule composes with it (\code{"NA=missing"} converts plain \code{NA}
-cells the same way), and \code{labels = "missing=Refused"} labels
-whatever the token produced. If the column already carries the other
-convention's markers while your \code{missing.convention} setting
-is set, the call stops and shows both resolutions rather than
-guessing.
+the \code{missing.convention.codes} setting in \code{\link{joptions}}
+under the SPSS convention, declared on the result automatically. The
+same map string therefore works under every setting:
+\code{"8=missing; else=copy"}. The NA rule composes with it
+(\code{"NA=missing"} converts plain \code{NA} cells the same way), and
+\code{labels = "missing=Refused"} labels whatever the token produced.
+If the column already carries the other convention's markers while
+your \code{missing.convention} setting is set, the call stops and
+shows both resolutions rather than guessing.
 
 Examples:
 \itemize{
@@ -72,9 +73,10 @@ Examples:
 new variable, using the format \code{"code=Label Text"} with rules
 separated by semicolons. If supplied, these labels are used as-is.
 
-The left side of each rule may be a numeric code or, under Stata
-convention, a Stata-style missing-value token (\code{.a} through
-\code{.z}). Tagged-NA labels are stored on the tag itself, not on
+The left side of each rule may be a numeric code or, under Stata or
+SAS convention, a tagged missing-value token (\code{.a} through
+\code{.z}, or \code{.A} through \code{.Z}). Tagged-NA labels are
+stored on the tag itself, not on
 a numeric code. It may also be the word \code{missing}, labelling
 whatever the map's \code{missing} target produced:
 \code{labels = "missing=Refused"}.
@@ -94,15 +96,17 @@ accepted. Controls whether missing-value tokens (\code{.a} through
 and labels arguments. Token letters are matched case-insensitively;
 the stored markers take the convention's letter case (lowercase
 Stata-style under \code{"stata"}, uppercase SAS-style under
-\code{"sas"}). Inert when no such tokens appear in either argument.
+\code{"sas"}). Also decides what the \code{missing} keyword
+produces. Inert when neither tokens nor \code{missing} appear in
+either argument.
 
 When \code{NULL}, the convention is resolved from
-\code{joptions("missing.convention")}; if that is also unset, the
-call stops with a guided error asking you to choose -- the package
-never infers a convention. Most users set the convention once at
-the top of a session via \code{joptions()} (or in their
-\code{.Rprofile}) rather than supplying this argument on every
-call. See \code{?joptions} for details.}
+the \code{missing.convention} setting in \code{\link{joptions}}; if that
+is also unset, the call stops with a guided error asking you to choose --
+the package never infers a convention. Most users set the convention once
+at the top of a session via \code{joptions()} (or in their
+\code{.Rprofile}) rather than supplying this argument on every call. See
+\code{?joptions} for details.}
 }
 \value{
 A \code{haven_labelled} vector with the recoded values, variable
@@ -118,8 +122,9 @@ or recode dichotomies. Variable and value labels are handled automatically.
 
 Map and labels rules can also produce missing values: plain system NA
 via the \code{NA} / \code{System} / \code{SYSMIS} aliases, or
-Stata-style tagged missing values (\code{.a} through \code{.z}) when
-the active convention is Stata. See \emph{Missing values in the map}
+tagged missing values (\code{.a} through \code{.z}, or \code{.A}
+through \code{.Z}) when the active convention is Stata or SAS. See
+\emph{Missing values in the map}
 below for the canonical patterns under each convention.
 }
 \details{
@@ -147,21 +152,28 @@ directing you to supply labels manually.
 NA values in the original variable are carried across as NA unless the
 map names \code{NA} as an old value (for example \code{"NA=-98"}); the
 \code{else} setting never converts NA. An \code{NA} rule affects plain
-\code{NA} cells only --- Stata-style missing values (tagged NAs) are
-declared missings and are preserved with their tags regardless of the
-map.
+\code{NA} cells only --- tagged missing values (Stata-style or
+SAS-style) are declared missings and are preserved with their tags
+regardless of the map. Declared SPSS-style codes on the original
+variable are likewise preserved: they need not appear in the map, they
+are carried onto the result with their declaration, and a note says
+so (map them to \code{NA} explicitly to convert them instead).
 
-Values that appear to be coded missing values (e.g. -99, -9, 999) from SPSS
-or another package are automatically detected and set to NA, even when
-\code{else=copy} is used. A note is printed when this occurs.
+Values that merely look like coded missing values (e.g. -99, -9, 999)
+but are not declared are never changed on their own. Left unmapped
+with no \code{else} clause, they are named in the error that stops the
+call, with a nudge toward \code{jdeclare_missing()}; carried across by
+\code{else=copy}, they draw an advisory note at the full
+\code{joutput} tier. Recoding values \emph{to} a code that looks
+like a missing value draws a note suggesting the declaration.
 
 If the map does not include an \code{else} clause and there are unmapped
 values in the variable, the function stops with a message listing the
 unmapped values so you can fix the map before proceeding.
 
-If the map specifies values that do not exist in the original variable, a
-warning is issued (but the function continues). This helps catch typos in
-the map string.
+If the map specifies values that do not exist in the original variable,
+nothing is recoded for them and an advisory note says so at the full
+\code{joutput} tier. This helps catch typos in the map string.
 
 \strong{Missing values in the map.} The package supports three
 conventions for representing declared missing values, and the syntax
@@ -218,9 +230,9 @@ restate the markers as numeric codes to stay in SPSS convention, or
 switch convention with \code{joptions(missing.convention = ...)} (or
 with this call's \code{convention} argument). The error does not
 rewrite the call for you: the SPSS-style codes would have to be taken
-from \code{joptions("missing.convention.codes")}, which cannot be known
-to be free of collision with values already in the column. The
-two-call SPSS-style pattern is documented above.
+from the \code{missing.convention.codes} setting in \code{\link{joptions}},
+which cannot be known to be free of collision with values already in the
+column. The two-call SPSS-style pattern is documented above.
 }
 \examples{
 # Recode with explicit labels (a 1/2 dichotomy to 0/1)

@@ -94,8 +94,9 @@
 #'   \item If the path contains a directory separator (\code{/}), the path
 #'     is used directly.
 #'   \item If the path is a bare filename, \code{jload()} checks:
-#'     (a) the folder named by \code{joptions("data.dir")} if it is set
-#'     and exists; (b) the working directory.
+#'     (a) the folder named by the \code{data.dir} setting in
+#'     \code{\link{joptions}} if it is set and exists; (b) the working
+#'     directory.
 #' }
 #'
 #' \strong{Auto-naming:}
@@ -1197,8 +1198,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' detected during a load. The S227 (E17) redesign conditions the text
 #' on three things: the convention(s) actually read (per-variable
 #' \code{convention} from \code{.jst_missing_info()}), the
-#' \code{joptions("missing.convention")} setting, and whether the full
-#' form has already been shown this session (\code{compact}).
+#' \code{missing.convention} setting in \code{\link{joptions}}, and whether the
+#' full form has already been shown this session (\code{compact}).
 #'
 #' Shapes produced under \code{preserve.declarations = TRUE}:
 #' \itemize{
@@ -1635,8 +1636,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Internal: get the ordered list of directories to search for data files
 #'
 #' Resolution rules:
-#' - If \code{joptions("data.dir")} is set and that folder exists, it is
-#'   searched first.
+#' - If the \code{data.dir} setting in \code{\link{joptions}} is set and that
+#'   folder exists, it is searched first.
 #' - The working directory itself is always included as the final
 #'   search location.
 #'
@@ -2817,12 +2818,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \itemize{
 #'   \item If the path contains a directory separator, the file is saved
 #'     to that exact location.
-#'   \item If the path is a bare filename and \code{joptions("data.dir")}
-#'     is set, the file is saved to that folder (auto-created if it
-#'     doesn't yet exist).
-#'   \item If the path is a bare filename and \code{joptions("data.dir")}
-#'     is unset (the default), the file is saved to the working
-#'     directory.
+#'   \item If the path is a bare filename and the \code{data.dir} setting in
+#'     \code{\link{joptions}} is set, the file is saved to that folder
+#'     (auto-created if it doesn't yet exist).
+#'   \item If the path is a bare filename and the \code{data.dir} setting in
+#'     \code{\link{joptions}} is unset (the default), the file is saved to the
+#'     working directory.
 #' }
 #'
 #' \strong{Format notes:}

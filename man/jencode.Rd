@@ -25,11 +25,14 @@ apostrophes need no quoting: \code{map = "Yes=1; Don't know=8"} works
 as typed.
 
 Special left-hand sides: \code{blank=<number>} gives empty cells their
-own code (by default they are left missing, with a note showing the
-blank rule to use). Special targets: \code{else=NA} converts every
-unmapped word to system missing; \code{else=.a} (through \code{.z})
-converts them to a tagged missing value under the Stata or SAS
-convention (see \code{convention}). \code{else=copy} is refused:
+own code. With no map, blanks are left missing and a note shows the
+blank rule to use; with a map, blanks count as unmapped, so a map
+that neither names them nor carries an \code{else} rule stops with
+the same incomplete-map error. Special targets: \code{else=NA}
+converts every unmapped word to system missing; \code{else=.a}
+(through \code{.z}) converts them to a tagged missing value under
+the Stata or SAS convention (see \code{convention}).
+\code{else=copy} is refused:
 words cannot be kept in a numeric column. A word may also be sent to
 the word \code{missing} -- your working convention's own missing
 form, declared automatically under the SPSS convention (see
@@ -54,15 +57,16 @@ accepted. Controls whether missing-value tokens (\code{.a} through
 targets. Token letters are matched case-insensitively; the stored
 markers take the convention's letter case (lowercase Stata-style
 under \code{"stata"}, uppercase SAS-style under \code{"sas"}).
-Inert when no such tokens appear in the map.
+Also decides what the \code{missing} keyword produces. Inert when
+neither tokens nor \code{missing} appear in the map.
 
 When \code{NULL}, the convention is resolved from
-\code{joptions("missing.convention")}; if that is also unset, the
-call stops with a guided error asking you to choose -- the package
-never infers a convention. Most users set the convention once at
-the top of a session via \code{joptions()} (or in their
-\code{.Rprofile}) rather than supplying this argument on every
-call. See \code{?joptions} for details.}
+the \code{missing.convention} setting in \code{\link{joptions}}; if that
+is also unset, the call stops with a guided error asking you to choose --
+the package never infers a convention. Most users set the convention once
+at the top of a session via \code{joptions()} (or in their
+\code{.Rprofile}) rather than supplying this argument on every call. See
+\code{?joptions} for details.}
 }
 \value{
 A \code{haven_labelled} numeric vector with the encoded values
@@ -131,8 +135,9 @@ codes -- a note suggests declaring it with \code{jdeclare_missing()}
 rather than losing it.
 
 \strong{Blanks are counted separately.} An empty cell ("") is neither
-a word nor an NA. By default blanks are left missing, with a note
-showing the \code{blank=} rule; mapping \code{blank=0} (or any code)
+a word nor an NA. In automatic mode blanks are left missing, with a
+note showing the \code{blank=} rule; with a map they must be named or
+swept by an \code{else} rule, and mapping \code{blank=0} (or any code)
 gives them their own category, which matters in field data where a
 blank often means "No".
 

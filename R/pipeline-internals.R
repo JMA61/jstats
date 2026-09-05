@@ -997,8 +997,8 @@
 #'     ambiguous rule) and does not engage this level.
 #'   \item If \code{per_call} is \code{"spss"}, \code{"stata"}, or
 #'     \code{"sas"}, use that.
-#'   \item If \code{joptions("missing.convention")} is \code{"spss"},
-#'     \code{"stata"}, or \code{"sas"}, use that.
+#'   \item If the \code{missing.convention} setting in \code{\link{joptions}}
+#'     is \code{"spss"}, \code{"stata"}, or \code{"sas"}, use that.
 #'   \item Else STOP with the act-shaped choose-first guided error,
 #'     rendered by \code{.jst_choose_convention_error()}: the full
 #'     three-option menu for numeric codes and the \code{missing}

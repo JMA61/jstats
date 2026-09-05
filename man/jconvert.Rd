@@ -19,13 +19,12 @@ jconvert(
 \item{to}{One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
 \code{"sas"} (any capitalization is accepted). When \code{NULL} (the
 default), \code{jconvert()}
-reads \code{joptions("missing.convention")}: if the slot is set to
-\code{"spss"}, \code{"stata"}, or \code{"sas"}, \code{to} resolves to
-that value; if
-the slot is at its \code{"none"} default, \code{jconvert()} errors
-with guidance naming the concrete options. The destructive
-\code{"baseR"} target is never auto-resolved -- it must always be
-passed explicitly.}
+reads the \code{missing.convention} setting in \code{\link{joptions}}: if
+the slot is set to \code{"spss"}, \code{"stata"}, or \code{"sas"},
+\code{to} resolves to that value; if the slot is at its \code{"none"}
+default, \code{jconvert()} errors with guidance naming the concrete
+options. The destructive \code{"baseR"} target is never auto-resolved --
+it must always be passed explicitly.}
 
 \item{...}{Optional unquoted variable names. When supplied, only the
 listed variables are scanned. Mutually exclusive with \code{vars}.}
@@ -38,9 +37,10 @@ the whole data frame.}
 \item{missing.notice}{Logical; \code{TRUE} (default) prints a notification
 summarizing what was converted (and what was skipped) along with a
 reminder of how to keep the result. \code{FALSE} suppresses the
-message. Always-on by default; does not consult \code{joutput()}
+message. The notification itself does not consult \code{joutput()},
 because the function reports an action it just performed rather than
-explaining system behavior.}
+explaining system behavior; only the keep-the-result reminder
+follows the tier, and is omitted at \code{"minimal"}.}
 
 \item{modify}{Logical. When \code{TRUE}, the converted data frame is
 written back onto the data frame named in the call (or onto the
@@ -71,7 +71,7 @@ The haven package and its documentation call these user-defined
 missing values.
 }
 \details{
-The three target formats:
+The four target formats:
 \describe{
 \item{\code{to = "baseR"}}{Strip all missing-value declarations and
 convert declared cells to plain \code{NA}. For SPSS-style columns
@@ -84,21 +84,22 @@ labeling. For columns carrying Stata-style missing values
 convert them to plain \code{NA}s.}
 \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
 values to SPSS-style numeric codes. Letter tags map to numeric
-codes via \code{joptions("missing.convention.codes")} (default
-\code{-99}, \code{-98}, \code{-97}):
+codes via the \code{missing.convention.codes} setting in
+\code{\link{joptions}} (default \code{-99}, \code{-98}, \code{-97}):
 \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
-(uppercase) tags are case-corrected to Stata-style (lowercase)
-before the numeric mapping -- for round-trip purposes the package
-treats \code{.A} and \code{.a} as the same conceptual marker, and
-mixed-case columns collapse to a single lowercase marker (SPSS has
-no parallel uppercase convention). The notification's per-column
-display shows the original (pre-correction) tag for SAS-corrected
-columns -- e.g. \code{.A "Refused" -> -99} -- so the user-visible
-mapping reflects what was actually in the data on input. Letter
-tags beyond those covered by the convention codes (default
-\code{.a}--\code{.c}, one letter per code, after case correction)
-are refused with guidance to use \code{jrecode()} for manual
-mapping.}
+(uppercase) tags are case-corrected to Stata-style (lowercase) before
+the numeric mapping -- for round-trip purposes the package treats
+\code{.A} and \code{.a} as the same conceptual marker, and mixed-case
+columns collapse to a single lowercase marker (SPSS has no parallel
+uppercase convention). The notification's per-column display shows the
+original (pre-correction) tag for SAS-corrected columns -- e.g.
+\code{.A "Refused" -> -99} -- so the user-visible mapping reflects
+what was actually in the data on input. Letter tags beyond those
+covered by the convention codes (default \code{.a}--\code{.c}, one
+letter per code, after case correction) are refused before any
+data is touched; the message offers scoping the call with
+\code{vars = c(...)} to leave those columns out, or reducing their
+declared codes first.}
 \item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 Stata-style missing values. Letter tags are assigned by ordering
 rather than by convention: each column's own declared
@@ -145,10 +146,11 @@ Pre-flight checks for \code{to = "spss"} include a collision check:
 if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
 present as genuine data in the column, the call errors before any
 data is touched. The error message lists every colliding column and
-presents three resolution paths: change the convention codes via
-\code{joptions(missing.convention.codes = ...)}, scope the call via
-\code{vars = c(...)} to exclude affected columns, or recode the real-
-data values via \code{jrecode()} first. Atomicity applies to every
+the remedy: change the convention codes via
+\code{joptions(missing.convention.codes = ...)}. When the same call
+also meets columns with more tags than codes, it adds the option of
+scoping the call with \code{vars = c(...)} to leave the affected
+columns out. Atomicity applies to every
 error mode -- the entire \code{jconvert()} call either succeeds or
 errors before mutating the data frame.
 

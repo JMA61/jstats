@@ -14,8 +14,8 @@ period before calling.}
 
 \item{convention_codes}{Optional numeric vector of UDM codes. When
 \code{NULL} (the default), the helper sources the value of
-\code{joptions("missing.convention.codes")} via the standard
-\code{getOption()} fallback.}
+the \code{missing.convention.codes} setting in \code{\link{joptions}} via
+the standard \code{getOption()} fallback.}
 }
 \value{
 Named numeric vector. Names are the input letters; values
@@ -26,8 +26,9 @@ letter count exceeded the convention code count.
 \description{
 Translates a vector of lowercase letter tags (e.g.
 \code{c("a", "b")}) into the equivalent numeric UDM codes drawn
-from \code{joptions("missing.convention.codes")}. Mapping is positional:
-\code{.a} maps to the first code, \code{.b} to the second, etc.
+from the \code{missing.convention.codes} setting in \code{\link{joptions}}.
+Mapping is positional: \code{.a} maps to the first code, \code{.b} to the
+second, etc.
 }
 \details{
 When \code{length(letters_in) > length(convention_codes)}, the

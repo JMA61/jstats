@@ -813,8 +813,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #' Map and labels rules can also produce missing values: plain system NA
 #' via the \code{NA} / \code{System} / \code{SYSMIS} aliases, or
-#' Stata-style tagged missing values (\code{.a} through \code{.z}) when
-#' the active convention is Stata. See \emph{Missing values in the map}
+#' tagged missing values (\code{.a} through \code{.z}, or \code{.A}
+#' through \code{.Z}) when the active convention is Stata or SAS. See
+#' \emph{Missing values in the map}
 #' below for the canonical patterns under each convention.
 #'
 #' @param data     A data frame containing the original variable.
@@ -832,8 +833,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     \item \code{else=NA} (also \code{else=System} or \code{else=SYSMIS}):
 #'       unmapped values are deliberately set to system NA.
 #'     \item \code{else=copy}: unmapped values are carried across unchanged.
-#'     \item \code{else=.a} (or any Stata-style missing-value token, Stata
-#'       convention only): unmapped values are set to that Stata-style missing value.
+#'     \item \code{else=.a} (or any tagged missing-value token; Stata or
+#'       SAS convention only): unmapped values are set to that tagged
+#'       missing value.
 #'   }
 #'
 #'   Individual values can also be mapped to system NA using the same
@@ -855,15 +857,15 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   (case-insensitive): the value is converted to your working
 #'   convention's own missing form -- a tagged marker under the Stata or
 #'   SAS convention, or the first code from
-#'   \code{joptions("missing.convention.codes")} under the SPSS convention,
-#'   declared on the result automatically. The same map string therefore
-#'   works under every setting: \code{"8=missing; else=copy"}. The NA
-#'   rule composes with it (\code{"NA=missing"} converts plain \code{NA}
-#'   cells the same way), and \code{labels = "missing=Refused"} labels
-#'   whatever the token produced. If the column already carries the other
-#'   convention's markers while your \code{missing.convention} setting
-#'   is set, the call stops and shows both resolutions rather than
-#'   guessing.
+#'   the \code{missing.convention.codes} setting in \code{\link{joptions}}
+#'   under the SPSS convention, declared on the result automatically. The
+#'   same map string therefore works under every setting:
+#'   \code{"8=missing; else=copy"}. The NA rule composes with it
+#'   (\code{"NA=missing"} converts plain \code{NA} cells the same way), and
+#'   \code{labels = "missing=Refused"} labels whatever the token produced.
+#'   If the column already carries the other convention's markers while
+#'   your \code{missing.convention} setting is set, the call stops and
+#'   shows both resolutions rather than guessing.
 #'
 #'   Examples:
 #'   \itemize{
@@ -880,9 +882,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   new variable, using the format \code{"code=Label Text"} with rules
 #'   separated by semicolons. If supplied, these labels are used as-is.
 #'
-#'   The left side of each rule may be a numeric code or, under Stata
-#'   convention, a Stata-style missing-value token (\code{.a} through
-#'   \code{.z}). Tagged-NA labels are stored on the tag itself, not on
+#'   The left side of each rule may be a numeric code or, under Stata or
+#'   SAS convention, a tagged missing-value token (\code{.a} through
+#'   \code{.z}, or \code{.A} through \code{.Z}). Tagged-NA labels are
+#'   stored on the tag itself, not on
 #'   a numeric code. It may also be the word \code{missing}, labelling
 #'   whatever the map's \code{missing} target produced:
 #'   \code{labels = "missing=Refused"}.
@@ -902,15 +905,17 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   and labels arguments. Token letters are matched case-insensitively;
 #'   the stored markers take the convention's letter case (lowercase
 #'   Stata-style under \code{"stata"}, uppercase SAS-style under
-#'   \code{"sas"}). Inert when no such tokens appear in either argument.
+#'   \code{"sas"}). Also decides what the \code{missing} keyword
+#'   produces. Inert when neither tokens nor \code{missing} appear in
+#'   either argument.
 #'
 #'   When \code{NULL}, the convention is resolved from
-#'   \code{joptions("missing.convention")}; if that is also unset, the
-#'   call stops with a guided error asking you to choose -- the package
-#'   never infers a convention. Most users set the convention once at
-#'   the top of a session via \code{joptions()} (or in their
-#'   \code{.Rprofile}) rather than supplying this argument on every
-#'   call. See \code{?joptions} for details.
+#'   the \code{missing.convention} setting in \code{\link{joptions}}; if that
+#'   is also unset, the call stops with a guided error asking you to choose --
+#'   the package never infers a convention. Most users set the convention once
+#'   at the top of a session via \code{joptions()} (or in their
+#'   \code{.Rprofile}) rather than supplying this argument on every call. See
+#'   \code{?joptions} for details.
 #'
 #' @return A \code{haven_labelled} vector with the recoded values, variable
 #'   label, and (if supplied or auto-transferred) value labels applied. Assign
@@ -942,21 +947,28 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' NA values in the original variable are carried across as NA unless the
 #' map names \code{NA} as an old value (for example \code{"NA=-98"}); the
 #' \code{else} setting never converts NA. An \code{NA} rule affects plain
-#' \code{NA} cells only --- Stata-style missing values (tagged NAs) are
-#' declared missings and are preserved with their tags regardless of the
-#' map.
+#' \code{NA} cells only --- tagged missing values (Stata-style or
+#' SAS-style) are declared missings and are preserved with their tags
+#' regardless of the map. Declared SPSS-style codes on the original
+#' variable are likewise preserved: they need not appear in the map, they
+#' are carried onto the result with their declaration, and a note says
+#' so (map them to \code{NA} explicitly to convert them instead).
 #'
-#' Values that appear to be coded missing values (e.g. -99, -9, 999) from SPSS
-#' or another package are automatically detected and set to NA, even when
-#' \code{else=copy} is used. A note is printed when this occurs.
+#' Values that merely look like coded missing values (e.g. -99, -9, 999)
+#' but are not declared are never changed on their own. Left unmapped
+#' with no \code{else} clause, they are named in the error that stops the
+#' call, with a nudge toward \code{jdeclare_missing()}; carried across by
+#' \code{else=copy}, they draw an advisory note at the full
+#' \code{joutput} tier. Recoding values \emph{to} a code that looks
+#' like a missing value draws a note suggesting the declaration.
 #'
 #' If the map does not include an \code{else} clause and there are unmapped
 #' values in the variable, the function stops with a message listing the
 #' unmapped values so you can fix the map before proceeding.
 #'
-#' If the map specifies values that do not exist in the original variable, a
-#' warning is issued (but the function continues). This helps catch typos in
-#' the map string.
+#' If the map specifies values that do not exist in the original variable,
+#' nothing is recoded for them and an advisory note says so at the full
+#' \code{joutput} tier. This helps catch typos in the map string.
 #'
 #' \strong{Missing values in the map.} The package supports three
 #' conventions for representing declared missing values, and the syntax
@@ -1013,9 +1025,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' switch convention with \code{joptions(missing.convention = ...)} (or
 #' with this call's \code{convention} argument). The error does not
 #' rewrite the call for you: the SPSS-style codes would have to be taken
-#' from \code{joptions("missing.convention.codes")}, which cannot be known
-#' to be free of collision with values already in the column. The
-#' two-call SPSS-style pattern is documented above.
+#' from the \code{missing.convention.codes} setting in \code{\link{joptions}},
+#' which cannot be known to be free of collision with values already in the
+#' column. The two-call SPSS-style pattern is documented above.
 #'
 #' @examples
 #' # Recode with explicit labels (a 1/2 dichotomy to 0/1)
@@ -2184,11 +2196,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   as typed.
 #'
 #'   Special left-hand sides: \code{blank=<number>} gives empty cells their
-#'   own code (by default they are left missing, with a note showing the
-#'   blank rule to use). Special targets: \code{else=NA} converts every
-#'   unmapped word to system missing; \code{else=.a} (through \code{.z})
-#'   converts them to a tagged missing value under the Stata or SAS
-#'   convention (see \code{convention}). \code{else=copy} is refused:
+#'   own code. With no map, blanks are left missing and a note shows the
+#'   blank rule to use; with a map, blanks count as unmapped, so a map
+#'   that neither names them nor carries an \code{else} rule stops with
+#'   the same incomplete-map error. Special targets: \code{else=NA}
+#'   converts every unmapped word to system missing; \code{else=.a}
+#'   (through \code{.z}) converts them to a tagged missing value under
+#'   the Stata or SAS convention (see \code{convention}).
+#'   \code{else=copy} is refused:
 #'   words cannot be kept in a numeric column. A word may also be sent to
 #'   the word \code{missing} -- your working convention's own missing
 #'   form, declared automatically under the SPSS convention (see
@@ -2211,15 +2226,16 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   targets. Token letters are matched case-insensitively; the stored
 #'   markers take the convention's letter case (lowercase Stata-style
 #'   under \code{"stata"}, uppercase SAS-style under \code{"sas"}).
-#'   Inert when no such tokens appear in the map.
+#'   Also decides what the \code{missing} keyword produces. Inert when
+#'   neither tokens nor \code{missing} appear in the map.
 #'
 #'   When \code{NULL}, the convention is resolved from
-#'   \code{joptions("missing.convention")}; if that is also unset, the
-#'   call stops with a guided error asking you to choose -- the package
-#'   never infers a convention. Most users set the convention once at
-#'   the top of a session via \code{joptions()} (or in their
-#'   \code{.Rprofile}) rather than supplying this argument on every
-#'   call. See \code{?joptions} for details.
+#'   the \code{missing.convention} setting in \code{\link{joptions}}; if that
+#'   is also unset, the call stops with a guided error asking you to choose --
+#'   the package never infers a convention. Most users set the convention once
+#'   at the top of a session via \code{joptions()} (or in their
+#'   \code{.Rprofile}) rather than supplying this argument on every call. See
+#'   \code{?joptions} for details.
 #'
 #' @return A \code{haven_labelled} numeric vector with the encoded values
 #'   and (unless overridden) the original words as value labels. The
@@ -2279,8 +2295,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' rather than losing it.
 #'
 #' \strong{Blanks are counted separately.} An empty cell ("") is neither
-#' a word nor an NA. By default blanks are left missing, with a note
-#' showing the \code{blank=} rule; mapping \code{blank=0} (or any code)
+#' a word nor an NA. In automatic mode blanks are left missing, with a
+#' note showing the \code{blank=} rule; with a map they must be named or
+#' swept by an \code{else} rule, and mapping \code{blank=0} (or any code)
 #' gives them their own category, which matters in field data where a
 #' blank often means "No".
 #'
@@ -3364,10 +3381,14 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' @param labels Optional. A quoted string in the form
 #'   \code{"value=label; value=label"} pairing labels with codes
 #'   (Option A only). Must be \code{NULL} when \code{codes} is named
-#'   (Option C). When a \code{range} is in effect (supplied in this
-#'   call, or already on the column), entries may also name values
-#'   inside the range: those attach as value labels on the in-range
-#'   values without becoming discrete declared codes (see the
+#'   (Option C). It may also stand alone, with no \code{codes}: the
+#'   values named in the string are then the codes declared, so
+#'   \code{labels = "-99=Refused; -98=Don't know"} declares and labels
+#'   both codes in one argument (and \code{labels = ".a=Refused"} names
+#'   a marker on a tagged column). When a \code{range} is in effect
+#'   (supplied in this call, or already on the column), entries may also
+#'   name values inside the range: those attach as value labels on the
+#'   in-range values without becoming discrete declared codes (see the
 #'   Missing-value ranges section).
 #' @param range Optional. A length-2 numeric vector declaring a
 #'   missing-value RANGE (band), e.g. \code{range = c(-99, -51)} --
@@ -3395,18 +3416,22 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   offence_cols} where \code{offence_cols} holds the names). Use
 #'   either \code{vars} or \code{...}, not both.
 #' @param convention Optional. One of \code{"spss"}, \code{"stata"}, or
-#'   \code{"sas"} (any capitalization is accepted); overrides the
-#'   convention resolution for this call. When
+#'   \code{"sas"} (any capitalization is accepted); sets the convention
+#'   for this call on columns that carry no missing-value declaration
+#'   yet. A column that already carries the other convention's missing
+#'   values is not overridden: the call stops and offers the two
+#'   remedies (drop the argument to follow the column's form, or
+#'   \code{jconvert()} the column first). When
 #'   \code{NULL} (the default), the convention is resolved from the
 #'   column's existing missing-value declaration (if any), then from
-#'   \code{joptions("missing.convention")}; when neither supplies one,
-#'   the call stops with a guided error asking you to choose -- the
-#'   package never infers a convention for a fresh declaration. A
-#'   \code{range} requires SPSS convention (see \code{range}).
-#'   The SAS convention behaves as the Stata convention with uppercase
-#'   markers: markers are stored and labeled as \code{.A}-\code{.Z}. Token
-#'   input is case-insensitive under both tagged conventions; the case
-#'   written to the column follows the resolved convention.
+#'   the \code{missing.convention} setting in \code{\link{joptions}}; when
+#'   neither supplies one, the call stops with a guided error asking you to
+#'   choose -- the package never infers a convention for a fresh declaration. A
+#'   \code{range} requires SPSS convention (see \code{range}). The SAS
+#'   convention behaves as the Stata convention with uppercase markers: markers
+#'   are stored and labeled as \code{.A}-\code{.Z}. Token input is
+#'   case-insensitive under both tagged conventions; the case written to the
+#'   column follows the resolved convention.
 #' @param missing.notice Logical. When \code{TRUE} (the default), the
 #'   function prints a notification summarizing what was declared,
 #'   plus a reminder of how to keep the result.
@@ -3458,16 +3483,16 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' happens to data (see the examples).
 #'
 #' Under Stata or SAS convention with numeric input, the function
-#' converts matching cells to tagged missing-value markers (Session 30
-#' design lock; SAS convention writes the same letters uppercase). The
+#' converts matching cells to tagged missing-value markers (SAS
+#' convention writes the same letters uppercase). The
 #' mapping is ordering-based: codes sorted by absolute value
 #' descending, more-negative-first as tie-breaker, then assigned
 #' \code{.a}, \code{.b}, \code{.c}, \code{.d} in that order (\code{.A},
 #' \code{.B}, ... under SAS convention). The
-#' assignment proceeds independently of \code{joptions("missing.convention.codes")}
-#' (which only governs the reverse Stata-to-SPSS direction). A
-#' conversion note in the standard/full \code{joutput} tier shows the
-#' Stata-style equivalent for future calls.
+#' assignment proceeds independently of the \code{missing.convention.codes}
+#' setting in \code{\link{joptions}} (which only governs the reverse
+#' Stata-to-SPSS direction). At the full \code{joutput} tier, a
+#' conversion note shows the tagged-marker equivalent for future calls.
 #'
 #' @section Missing-value ranges:
 #' A range declares a whole band of values missing at once -- the form
@@ -5517,13 +5542,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' @param to One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
 #'   \code{"sas"} (any capitalization is accepted). When \code{NULL} (the
 #'   default), \code{jconvert()}
-#'   reads \code{joptions("missing.convention")}: if the slot is set to
-#'   \code{"spss"}, \code{"stata"}, or \code{"sas"}, \code{to} resolves to
-#'   that value; if
-#'   the slot is at its \code{"none"} default, \code{jconvert()} errors
-#'   with guidance naming the concrete options. The destructive
-#'   \code{"baseR"} target is never auto-resolved -- it must always be
-#'   passed explicitly.
+#'   reads the \code{missing.convention} setting in \code{\link{joptions}}: if
+#'   the slot is set to \code{"spss"}, \code{"stata"}, or \code{"sas"},
+#'   \code{to} resolves to that value; if the slot is at its \code{"none"}
+#'   default, \code{jconvert()} errors with guidance naming the concrete
+#'   options. The destructive \code{"baseR"} target is never auto-resolved --
+#'   it must always be passed explicitly.
 #' @param ... Optional unquoted variable names. When supplied, only the
 #'   listed variables are scanned. Mutually exclusive with \code{vars}.
 #' @param vars Alternative scope-by-vector path: a character vector of
@@ -5533,9 +5557,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' @param missing.notice Logical; \code{TRUE} (default) prints a notification
 #'   summarizing what was converted (and what was skipped) along with a
 #'   reminder of how to keep the result. \code{FALSE} suppresses the
-#'   message. Always-on by default; does not consult \code{joutput()}
+#'   message. The notification itself does not consult \code{joutput()},
 #'   because the function reports an action it just performed rather than
-#'   explaining system behavior.
+#'   explaining system behavior; only the keep-the-result reminder
+#'   follows the tier, and is omitted at \code{"minimal"}.
 #' @param modify Logical. When \code{TRUE}, the converted data frame is
 #'   written back onto the data frame named in the call (or onto the
 #'   \code{juse()} default when the data argument is omitted), so no
@@ -5553,7 +5578,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'   caller's data frame, and the returned copy can be ignored.
 #'
 #' @details
-#' The three target formats:
+#' The four target formats:
 #' \describe{
 #'   \item{\code{to = "baseR"}}{Strip all missing-value declarations and
 #'     convert declared cells to plain \code{NA}. For SPSS-style columns
@@ -5566,21 +5591,22 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     convert them to plain \code{NA}s.}
 #'   \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
 #'     values to SPSS-style numeric codes. Letter tags map to numeric
-#'     codes via \code{joptions("missing.convention.codes")} (default
-#'     \code{-99}, \code{-98}, \code{-97}):
+#'     codes via the \code{missing.convention.codes} setting in
+#'     \code{\link{joptions}} (default \code{-99}, \code{-98}, \code{-97}):
 #'     \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
-#'     (uppercase) tags are case-corrected to Stata-style (lowercase)
-#'     before the numeric mapping -- for round-trip purposes the package
-#'     treats \code{.A} and \code{.a} as the same conceptual marker, and
-#'     mixed-case columns collapse to a single lowercase marker (SPSS has
-#'     no parallel uppercase convention). The notification's per-column
-#'     display shows the original (pre-correction) tag for SAS-corrected
-#'     columns -- e.g. \code{.A "Refused" -> -99} -- so the user-visible
-#'     mapping reflects what was actually in the data on input. Letter
-#'     tags beyond those covered by the convention codes (default
-#'     \code{.a}--\code{.c}, one letter per code, after case correction)
-#'     are refused with guidance to use \code{jrecode()} for manual
-#'     mapping.}
+#'     (uppercase) tags are case-corrected to Stata-style (lowercase) before
+#'     the numeric mapping -- for round-trip purposes the package treats
+#'     \code{.A} and \code{.a} as the same conceptual marker, and mixed-case
+#'     columns collapse to a single lowercase marker (SPSS has no parallel
+#'     uppercase convention). The notification's per-column display shows the
+#'     original (pre-correction) tag for SAS-corrected columns -- e.g.
+#'     \code{.A "Refused" -> -99} -- so the user-visible mapping reflects
+#'     what was actually in the data on input. Letter tags beyond those
+#'     covered by the convention codes (default \code{.a}--\code{.c}, one
+#'     letter per code, after case correction) are refused before any
+#'     data is touched; the message offers scoping the call with
+#'     \code{vars = c(...)} to leave those columns out, or reducing their
+#'     declared codes first.}
 #'   \item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 #'     Stata-style missing values. Letter tags are assigned by ordering
 #'     rather than by convention: each column's own declared
@@ -5627,10 +5653,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
 #' present as genuine data in the column, the call errors before any
 #' data is touched. The error message lists every colliding column and
-#' presents three resolution paths: change the convention codes via
-#' \code{joptions(missing.convention.codes = ...)}, scope the call via
-#' \code{vars = c(...)} to exclude affected columns, or recode the real-
-#' data values via \code{jrecode()} first. Atomicity applies to every
+#' the remedy: change the convention codes via
+#' \code{joptions(missing.convention.codes = ...)}. When the same call
+#' also meets columns with more tags than codes, it adds the option of
+#' scoping the call with \code{vars = c(...)} to leave the affected
+#' columns out. Atomicity applies to every
 #' error mode -- the entire \code{jconvert()} call either succeeds or
 #' errors before mutating the data frame.
 #'

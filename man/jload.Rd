@@ -123,8 +123,9 @@ R does not accept single backslashes in file paths.
 \item If the path contains a directory separator (\code{/}), the path
 is used directly.
 \item If the path is a bare filename, \code{jload()} checks:
-(a) the folder named by \code{joptions("data.dir")} if it is set
-and exists; (b) the working directory.
+(a) the folder named by the \code{data.dir} setting in
+\code{\link{joptions}} if it is set and exists; (b) the working
+directory.
 }
 
 \strong{Auto-naming:}

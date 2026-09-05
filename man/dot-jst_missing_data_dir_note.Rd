@@ -9,8 +9,8 @@
 \description{
 Resolution rules:
 \itemize{
-\item If \code{joptions("data.dir")} is set and that folder exists, it is
-searched first.
+\item If the \code{data.dir} setting in \code{\link{joptions}} is set and that
+folder exists, it is searched first.
 \item The working directory itself is always included as the final
 search location.
 }
