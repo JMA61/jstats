@@ -7,7 +7,8 @@
 .jst_jrecode_convention_error(
   parsed_map,
   parsed_labels,
-  per_call_convention = NULL
+  per_call_convention = NULL,
+  labels_tagged_raw = NULL
 )
 }
 \arguments{
@@ -24,6 +25,12 @@ routes to an SPSS resolution the message describes -- the call or
 the setting -- and therefore which remedy is offered; it plays no
 part in whether the error fires. It also seeds the display case for
 a marker that carries no recorded raw spelling.}
+
+\item{labels_tagged_raw}{Named character vector or \code{NULL}: the
+\code{tagged_raw} record the caller harvested off
+\code{parsed_labels} before stripping it (keyed by the canonical
+lowercase letter, values the typed spellings). Lets a marker seen
+only in \code{labels} be quoted as typed (S283).}
 }
 \value{
 Character scalar suitable for passing to \code{.jst_stop()}.

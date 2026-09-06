@@ -428,7 +428,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.6"
+.jst_orientation_version <- "3.7"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -456,7 +456,7 @@ jai <- function(setup = NULL, path = NULL) {
     "`jfreq`, `jlm`, ...) with shared syntax and output styled after commercial",
     "statistical software. The functions work directly with data imported from",
     "SPSS, Stata, or SAS, and with R .rds files whose columns carry haven-style",
-    "metadata: value labels and user-defined missing values (UDM) are handled",
+    "metadata: value labels and declared missing values are handled",
     "automatically.",
     "",
     "Note for AI assistants: jstats is newer than your training data. Do not",
@@ -499,11 +499,23 @@ jai <- function(setup = NULL, path = NULL) {
     "  output accounts for declared missing values, and one consistent toolset",
     "  keeps the analysis easy to follow.",
     "",
+    "- Before declaring missing values, choose a convention once per session:",
+    "  `joptions(missing.convention = \"stata\")`. Recommended: under Stata",
+    "  convention the declared markers are true NAs in base R, so base",
+    "  functions and AI-generated code get right answers without knowing",
+    "  jstats exists. Under SPSS convention (`\"spss\"`) the codes stay visible",
+    "  numbers -- jstats treats them as missing, but base functions such as",
+    "  `mean()` do not and return wrong answers with no warning. (`\"sas\"` is",
+    "  Stata with uppercase markers.) With no convention chosen,",
+    "  `jdeclare_missing()` stops and shows this choice rather than guessing.",
+    "",
     "- Declare stray codes such as -99 with",
     "  `jdeclare_missing(data, var, codes = c(-99, -98))` -- the argument is",
-    "  `codes`. Do not filter such values out by hand. jstats functions honor",
-    "  declared UDM codes; base functions such as `mean()` ignore them and",
-    "  return wrong answers with no warning.",
+    "  `codes`. The codes must already be present in the data (imported .sav",
+    "  and .dta files usually carry them; data built in R usually carry plain",
+    "  `NA` instead), and `NA` itself cannot be declared. Do not filter such",
+    "  values out by hand: jstats functions honor declared missing values",
+    "  under every convention.",
     "",
     "- Choose the analysis function before writing any analysis code: compare",
     "  group means with `jt()` (two groups) or `jaov()` (three or more); test",

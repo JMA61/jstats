@@ -1032,8 +1032,10 @@
 #'   user actually called (auto-detection is bypassed deliberately:
 #'   the stop fires inside a shared internal helper).
 #' @param marker Optional. For \code{act = "tagged"}: the first tagged
-#'   spelling in the user's call (e.g. \code{".a"},
-#'   parser-normalized lowercase), echoed in the gate's head.
+#'   spelling in the user's call (e.g. \code{".a"}), echoed in the
+#'   gate's head AS THE USER TYPED IT -- callers build it from the
+#'   parsers' tagged_raw record, not the normalized lowercase letter
+#'   (S283; a typed \code{.A} was echoed as \code{'.a'} before).
 #'
 #' @return Single character: \code{"spss"}, \code{"stata"}, or
 #'   \code{"sas"} -- or no return (the level-4 stop).

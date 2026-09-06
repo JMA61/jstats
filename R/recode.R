@@ -227,8 +227,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 # Retained from S245: the head QUOTES the marker as the user typed it
 # (tagged_raw, carried out of the parsers) and attaches no convention
 # style word to it. The PRESCRIPTIVE positions S245 split off went with
-# the echo-back. A letter seen ONLY in labels carries no raw spelling
-# and still falls back to the display case.
+# the echo-back. S283: the labels side now carries its raw spelling too
+# (the callers harvest it before stripping the attribute), so a letter
+# seen ONLY in labels is quoted as typed as well; the display-case
+# fallback remains only for a letter with no record on either side.
 # -----------------------------------------------------------------------------
 
 #' Internal helper: build the cross-convention error message
@@ -251,12 +253,18 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   the setting -- and therefore which remedy is offered; it plays no
 #'   part in whether the error fires. It also seeds the display case for
 #'   a marker that carries no recorded raw spelling.
+#' @param labels_tagged_raw Named character vector or \code{NULL}: the
+#'   \code{tagged_raw} record the caller harvested off
+#'   \code{parsed_labels} before stripping it (keyed by the canonical
+#'   lowercase letter, values the typed spellings). Lets a marker seen
+#'   only in \code{labels} be quoted as typed (S283).
 #'
 #' @return Character scalar suitable for passing to \code{.jst_stop()}.
 #'
 #' @keywords internal
 .jst_jrecode_convention_error <- function(parsed_map, parsed_labels,
-                                          per_call_convention = NULL) {
+                                          per_call_convention = NULL,
+                                          labels_tagged_raw   = NULL) {
 
   # --- Gather every tagged-NA letter that appeared --------------------------
   map_tags <- unlist(lapply(parsed_map$mappings, function(r) r$tagged))
@@ -285,9 +293,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # two spellings that a reader sees as different things. The style
   # contrast lives in the conflict sentence instead, as surface form --
   # lettered markers against numeric codes -- which is what a migrant
-  # actually sees. The labels side stores real tagged NAs and carries no
-  # raw spelling, so a letter seen ONLY in labels falls back to the display
-  # case. Logic below stays on the lowercase parsed letters (all_tags).
+  # actually sees. The labels side stores real tagged NAs, so its typed
+  # spelling travels separately: the caller harvests the labels parser's
+  # tagged_raw record before stripping it and passes it in (S283; before
+  # that, a letter seen only in labels fell back to the display case).
+  # Map spellings take precedence where a letter appears on both sides.
+  # Logic below stays on the lowercase parsed letters (all_tags).
   phr       <- .jst_phrasing_convention(per_call_convention)
   disp_tags <- .jst_canonical_tag(all_tags, phr)
 
@@ -305,6 +316,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       !is.null(parsed_map$na_rule$tagged) &&
       !is.null(parsed_map$na_rule$tagged_raw)) {
     raw_by_letter[parsed_map$na_rule$tagged] <- parsed_map$na_rule$tagged_raw
+  }
+  if (!is.null(labels_tagged_raw)) {
+    for (l in setdiff(names(labels_tagged_raw), names(raw_by_letter))) {
+      raw_by_letter[l] <- labels_tagged_raw[[l]]
+    }
   }
   quote_tags <- disp_tags
   hit        <- all_tags %in% names(raw_by_letter)
@@ -356,9 +372,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # too: the parsers normalize tags to lowercase, so it reads lowercase
   # however the user typed them. Only the raw channel survives both.
   # Caught by the S267 workstation run, where a typed ".A" still listed
-  # stata first. Mixed case keeps the stata-first default; a marker seen
-  # only in labels carries no raw spelling and falls back to the display
-  # case, which is the case the head shows it in.
+  # stata first. Mixed case keeps the stata-first default. A marker seen
+  # only in labels reads from the same raw channel since S283 (the
+  # callers harvest it), so it too leads the pair in the case the head
+  # shows it in; only a letter with no record anywhere falls back to the
+  # display case.
   own_first <- if (length(quote_tags) > 0L &&
                    all(quote_tags == toupper(quote_tags))) {
     c("sas", "stata")
@@ -1186,7 +1204,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # Parsed up front so the convention check below can scan both map
   # and labels for tagged-NA tokens in a single pass. The parsed
   # structure is consumed later in the value-label application step.
-  parsed_labels <- NULL
+  parsed_labels     <- NULL
+  labels_tagged_raw <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
       .jst_stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".")
@@ -1196,9 +1215,15 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                       conditionMessage(e)))
     )
-    # S249: jrecode does not quote markers back (Rule Y retired its echo-back
-    # at S246), and these labels become the column's value labels. Drop the
-    # raw-spelling record at the parse so it cannot reach a column.
+    # S249 stripped the raw-spelling record here on the reasoning that
+    # jrecode does not quote markers back (Rule Y retired the refusal's
+    # echo-back at S246). It does: the choose-first gate's head and the
+    # spss-conflict refusal's head both quote the first marker, and a
+    # marker seen only in labels was falling back to the display case --
+    # a typed .B echoed as '.b' (S283). So harvest first, as
+    # jdeclare_missing does, then strip: these labels become the column's
+    # value labels, and the record must not reach a column.
+    labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
     attr(parsed_labels, "tagged_raw") <- NULL
   }
 
@@ -1363,24 +1388,41 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   if (map_has_tag || labels_has_tag) {
     # First tagged spelling in the user's call, for the choose-first
-    # gate's head echo (parser-normalized lowercase; input case is
-    # accepted either way per Decision 13). Token-minted tags cannot
-    # reach the gate: minting them required a resolution, so a second
-    # resolution here cannot fall to level 4.
+    # gate's head echo. Quoted AS TYPED: the parsers normalize the
+    # letter to lowercase (input case is accepted either way per
+    # Decision 13) and record the typed spelling alongside it
+    # (tagged_raw), so the echo reads from the record and falls back to
+    # the normalized letter only where no record exists. S283: the
+    # gate had read the normalized letter, echoing a typed .A as
+    # '.a' while the spss-conflict refusal two lines below quoted the
+    # same token correctly. Token-minted tags cannot reach the gate:
+    # minting them required a resolution, so a second resolution here
+    # cannot fall to level 4.
     gate_marker <- NULL
     for (r in parsed_map$mappings) {
-      if (!is.null(r$tagged)) { gate_marker <- paste0(".", r$tagged); break }
+      if (!is.null(r$tagged)) {
+        gate_marker <- paste0(".", if (!is.null(r$tagged_raw)) r$tagged_raw
+                                   else r$tagged)
+        break
+      }
     }
     if (is.null(gate_marker) && identical(parsed_map$else_action, "tagged")) {
-      gate_marker <- paste0(".", parsed_map$else_tag)
+      gate_marker <- paste0(".", if (!is.null(parsed_map$else_tag_raw))
+                                   parsed_map$else_tag_raw
+                                 else parsed_map$else_tag)
     }
     if (is.null(gate_marker) && !is.null(parsed_map$na_rule) &&
         !is.null(parsed_map$na_rule$tagged)) {
-      gate_marker <- paste0(".", parsed_map$na_rule$tagged)
+      gate_marker <- paste0(".", if (!is.null(parsed_map$na_rule$tagged_raw))
+                                   parsed_map$na_rule$tagged_raw
+                                 else parsed_map$na_rule$tagged)
     }
     if (is.null(gate_marker) && labels_has_tag) {
-      lt <- haven::na_tag(parsed_labels)
-      gate_marker <- paste0(".", lt[!is.na(lt)][1L])
+      lt      <- haven::na_tag(parsed_labels)
+      lt      <- lt[!is.na(lt)][1L]
+      lt_raw  <- if (!is.null(labels_tagged_raw)) labels_tagged_raw[lt]
+                 else NA_character_
+      gate_marker <- paste0(".", if (!is.na(lt_raw)) unname(lt_raw) else lt)
     }
     resolved_convention <- .jst_resolve_convention(convention,
                                                    act    = "tagged",
@@ -1390,7 +1432,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       err_msg <- .jst_jrecode_convention_error(
         parsed_map          = parsed_map,
         parsed_labels       = parsed_labels,
-        per_call_convention = convention
+        per_call_convention = convention,
+        labels_tagged_raw   = labels_tagged_raw
       )
       .jst_stop(err_msg)
     }
@@ -2570,16 +2613,20 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
           "convert them to missing.")))
     }
 
-    parsed_labels <- NULL
+    parsed_labels     <- NULL
+    labels_tagged_raw <- NULL
     if (!is.null(labels)) {
       parsed_labels <- tryCatch(
         .jst_parse_labels(labels),
         error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                              conditionMessage(e)))
       )
-      # S249: jencode shares jrecode's builder and likewise does not quote
-      # markers back; these labels become the column's value labels. Drop the
-      # raw-spelling record at the parse so it cannot reach a column.
+      # S283: harvest the raw-spelling record, then strip it -- jencode
+      # shares jrecode's gate and refusal, both of which quote the first
+      # marker as typed (see jrecode's labels parse for the history).
+      # These labels become the column's value labels, so the record
+      # must not reach a column.
+      labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
       attr(parsed_labels, "tagged_raw") <- NULL
     }
 
@@ -2655,23 +2702,36 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 
     if (map_has_tag || labels_has_tag) {
       # First tagged spelling in the user's call, for the choose-first
-      # gate's head echo (parser-normalized lowercase; see jrecode's
-      # tagged site for the token-minted-tags argument).
+      # gate's head echo, quoted AS TYPED from the parsers' tagged_raw
+      # record (S283; see jrecode's tagged site for the rationale and
+      # the token-minted-tags argument).
       gate_marker <- NULL
       for (r in parsed_map$mappings) {
-        if (!is.null(r$tagged)) { gate_marker <- paste0(".", r$tagged); break }
+        if (!is.null(r$tagged)) {
+          gate_marker <- paste0(".", if (!is.null(r$tagged_raw)) r$tagged_raw
+                                     else r$tagged)
+          break
+        }
       }
       if (is.null(gate_marker) &&
           identical(parsed_map$else_action, "tagged")) {
-        gate_marker <- paste0(".", parsed_map$else_tag)
+        gate_marker <- paste0(".", if (!is.null(parsed_map$else_tag_raw))
+                                     parsed_map$else_tag_raw
+                                   else parsed_map$else_tag)
       }
       if (is.null(gate_marker) && !is.null(parsed_map$na_rule) &&
           !is.null(parsed_map$na_rule$tagged)) {
-        gate_marker <- paste0(".", parsed_map$na_rule$tagged)
+        gate_marker <- paste0(".",
+                              if (!is.null(parsed_map$na_rule$tagged_raw))
+                                parsed_map$na_rule$tagged_raw
+                              else parsed_map$na_rule$tagged)
       }
       if (is.null(gate_marker) && labels_has_tag) {
-        lt <- haven::na_tag(parsed_labels)
-        gate_marker <- paste0(".", lt[!is.na(lt)][1L])
+        lt     <- haven::na_tag(parsed_labels)
+        lt     <- lt[!is.na(lt)][1L]
+        lt_raw <- if (!is.null(labels_tagged_raw)) labels_tagged_raw[lt]
+                  else NA_character_
+        gate_marker <- paste0(".", if (!is.na(lt_raw)) unname(lt_raw) else lt)
       }
       resolved_convention <- .jst_resolve_convention(convention,
                                                      act    = "tagged",
@@ -2681,7 +2741,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         err_msg <- .jst_jrecode_convention_error(
           parsed_map          = parsed_map,
           parsed_labels       = parsed_labels,
-          per_call_convention = convention
+          per_call_convention = convention,
+          labels_tagged_raw   = labels_tagged_raw
         )
         .jst_stop(err_msg)
       }
@@ -3967,7 +4028,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   #   labels-only form   - the labels parser recorded it (S249), harvested
   #                        above at the same point and for the same reason.
   # A letter with no record anywhere falls back to the display case in the
-  # builder, which is what the jrecode sibling's labels side does.
+  # builder (the jrecode sibling harvests its labels side the same way
+  # since S283).
   codes_tagged_raw <- attr(parsed_codes, "tagged_raw", exact = TRUE)
   attr(parsed_codes, "tagged_raw") <- NULL
   if (is.null(codes_tagged_raw)) {
@@ -4012,11 +4074,19 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   has_numeric    <- length(num_idx) > 0L
 
   # First tagged token in the call, for the choose-first gate's head
-  # echo (S244; parser-normalized lowercase). Reachable at level 4 only
-  # from an ambiguous mixed-case column: a clean tagged column resolves
-  # itself at level 1, and tokens on a plain or SPSS-form column are
-  # refused at sign-off 3 before resolution.
-  gate_marker <- if (has_tagged) paste0(".", c_tags[tag_idx[1L]]) else NULL
+  # echo (S244), quoted AS TYPED from the codes_tagged_raw record
+  # harvested above (S283; it had read the normalized lowercase letter,
+  # so a typed .A gated as '.a' while the refusal below quoted it
+  # correctly). Reachable at level 4 only from an ambiguous mixed-case
+  # column: a clean tagged column resolves itself at level 1, and tokens
+  # on a plain or SPSS-form column are refused at sign-off 3 before
+  # resolution.
+  gate_marker <- if (has_tagged) {
+    first_letter <- c_tags[tag_idx[1L]]
+    first_raw    <- if (!is.null(codes_tagged_raw)) codes_tagged_raw[first_letter]
+                    else NA_character_
+    paste0(".", if (!is.na(first_raw)) unname(first_raw) else first_letter)
+  } else NULL
 
   # A range is SPSS-only; tagged tokens are Stata-form. The two cannot
   # appear in one declaration.
@@ -4652,9 +4722,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         # S242 (mv R2): the opening spends the full locked term
         # ("uses Stata-style missing values") on first mention and drops
         # to the bare style word for the second clause, matching shipped
-        # D2 read side by side. "Mixing forms is allowed." replaces the
-        # two-word "if desired" hedge, which was carrying the whole
-        # reassurance load. The remedy becomes a runnable Rule L line
+        # D2 read side by side. "Mixing forms is allowed." replaced the
+        # two-word "if desired" hedge at S242; S283 deleted it as
+        # unnecessary (Jeff's read at the S282 walk) -- the note now
+        # goes straight from the mismatch to the remedy. The remedy is
+        # a runnable Rule L line
         # (jconvert carries a vars formal); singular takes a bare
         # vars = "Income", plural takes c(...). One remedy only, not
         # D2's two -- here the frame is simply the frame, so Rule D's
@@ -4675,8 +4747,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         align_obj <- if (length(mismatched) == 1L) mismatched[1L] else "them"
         .jst_msg_out(
           head_line, "\n",
-          "Mixing forms is allowed. To align ", align_obj,
-          " with the rest, run:\n",
+          "To align ", align_obj, " with the rest, run:\n",
           "  jconvert(", data_name, ", to = \"", df_predominant,
           "\", vars = ", vars_arg, ", modify = TRUE)")
       }
