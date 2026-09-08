@@ -229,10 +229,14 @@
     # SPSS-form UDM masking activity from Step 0. udm_spss_active = TRUE
     # when at least one variable had declared SPSS-form codes/ranges masked
     # on the analysis copy; udm_spss_masked_vars carries the per-variable
-    # detail (entries + n_cells) consumed by jfreq's Missing section.
-    # SPSS-only is deliberate: Stata/SAS tag zapping is count-neutral and
-    # per-tag display counts come from the pre-pipeline frame -- one count
-    # source per number (see the helper's banner).
+    # detail (entries + n_cells) as a record of what Step 0 masked. These
+    # are FULL-frame counts taken before any row filter ran, so they are
+    # NOT a display count source: jfreq's Missing section read `entries`
+    # until S285 and reported pre-filter counts against a post-filter
+    # Total (S217); it now counts off pre_pipeline_data[surviving_ids]
+    # below, as the CPS bottom always has. SPSS-only is deliberate:
+    # Stata/SAS tag zapping is count-neutral and records nothing (see the
+    # helper's banner).
     udm_spss_active       = length(udm_result$converted) > 0L,
     udm_spss_masked_vars  = udm_result$converted,
     # CPS rendering inputs (Steps 3-6). pre_pipeline_data holds the original

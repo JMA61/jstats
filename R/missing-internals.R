@@ -295,17 +295,24 @@
 #               columns code_display, label, count (one row per declared
 #               na_values code, count possibly 0; plus one row per distinct
 #               observed in-band value when a na_range is declared), and
-#               n_cells is the aggregate OR-mask count. Consumed by jfreq's
-#               Missing section for per-code counts; n_cells drives
-#               udm_spss_active.
+#               n_cells is the aggregate OR-mask count. n_cells drives
+#               udm_spss_active (and the direct callers -- jcomplete's
+#               diagnostics, jsum, javg -- read only n_cells). entries is
+#               a RECORD of what this pass masked, counted on the column
+#               as it arrives here -- the full frame, before any pipeline
+#               row filter. It is not a display count source: jfreq's
+#               Missing section read it until S285 and, under jcomplete /
+#               jsubset / subset =, printed these pre-filter counts against
+#               a post-filter Total (S217). Display counts come from the
+#               pre-masking snapshot restricted to surviving rows
+#               (pre_pipeline_data[surviving_ids]) -- jfreq's Missing
+#               section and the CPS bottom (.jst_cps_var_rows) both count
+#               there.
 #
 #               converted deliberately records NOTHING for Stata/SAS
-#               columns. jfreq's per-tag Missing rows count tags off the
-#               ORIGINAL pre-pipeline frame (haven::na_tag on raw_col) and
-#               the Case Processing Summary reads the pre-pipeline
-#               snapshot; recording tag entries here would create a
-#               second, unsynchronized source for numbers that already
-#               have one.
+#               columns: tag zapping is count-neutral, and the per-tag
+#               display counts are taken from the pre-masking snapshot
+#               where the tags are intact.
 # -----------------------------------------------------------------------------
 
 #' Internal helper: mask declared UDM cells to NA on the analysis copy
@@ -340,14 +347,15 @@
     # Per-value entries: one row per declared na_values code (count may be
     # 0 when a declared code is absent from the data), plus one row per
     # DISTINCT OBSERVED value falling inside a declared na_range.
-    # code_display / label mirror .jst_missing_info()'s codes data frame
-    # so jfreq's Missing section and the future CPS per_code bottom share
-    # one per-value count source.
+    # code_display / label mirror .jst_missing_info()'s codes data frame.
+    # (Until S285 jfreq's Missing section read these counts; it now
+    # counts off the pool -- see the banner. No display surface reads
+    # `entries` today; it stays as the masking record.)
     #
     # `source` marks which declaration produced the row -- "code" for a
-    # discrete na_values code, "range" for an in-band value. Consumers
-    # that want the band collapsed sum the "range" rows; consumers that
-    # want it enumerated read them individually. This replaces the
+    # discrete na_values code, "range" for an in-band value. A consumer
+    # that wants the band collapsed sums the "range" rows; one that
+    # wants it enumerated reads them individually. This replaces the
     # earlier rule that identified the range row as "whatever row is not
     # a declared code", which was fragile the moment more than one range
     # row could exist.

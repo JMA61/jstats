@@ -825,16 +825,37 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # Row structure and labels are driven by .jst_missing_info() so the
     # format stays in sync with the load-time narrative produced by
     # .jst_format_udm_narrative (shared-rendering-conventions principle,
-    # Decision 7). Per-code COUNTS for SPSS-form variables come from the
-    # pipeline's declared-UDM masking pass (.jst_apply_declared_udms_as_na,
-    # via pipeline$pipeline_counts$udm_spss_masked_vars) rather than being
-    # re-counted here, so both readers share one count source. Stata/SAS-
-    # form tags are counted via haven::na_tag() on raw_col -- the ORIGINAL
-    # pre-pipeline column (arg1$data below) -- which is why Step 0's
-    # zapping of tags on the analysis copy (AUDIT-039) leaves these rows
-    # intact: the count source sits upstream of the masking.
-    raw_col   <- arg1$data[[variable_name]]
-    mi        <- .jst_missing_info(raw_col)
+    # Decision 7).
+    #
+    # TWO COLUMNS, TWO JOBS (S285). Both are the PRE-MASKING column from
+    # the pipeline's snapshot, so SPSS-form codes are still live values and
+    # Stata/SAS tags are still tagged (Step 0's zapping, AUDIT-039, never
+    # reaches them):
+    #   pre_col  -- the full column. Supplies the ROW SET, via
+    #               .jst_missing_info(): which codes / tags / band the
+    #               variable carries. Full-column evidence on purpose: the
+    #               CPS bottom and the load narrative take their row sets
+    #               from the same column, and for Stata/SAS-form an
+    #               UNLABELLED tag is evidenced only by its cells, so a
+    #               pool-derived row set would drop a tag's row outright
+    #               whenever a filter happened to exclude every cell
+    #               carrying it, where the SPSS-form twin prints at 0.
+    #   pool_col -- the same column restricted to the rows that survived
+    #               jcomplete / jsubset / subset = (surviving_ids: the
+    #               source/pool split .jst_cps_var_rows already reads).
+    #               Supplies every COUNT, so the Missing rows sit on the
+    #               same denominator as the Valid rows and the Total,
+    #               which come from the post-pipeline temp_var.
+    # Before S285 the SPSS branch read the Step-0 masking bundle
+    # (udm_spss_masked_vars$entries) and the Stata branch read arg1$data
+    # -- both FULL-frame counts recorded before any row filter -- so under
+    # a pipeline the Missing rows, their Total %, and the System/NA row
+    # were all on the wrong base and Valid + Missing != Total (S217,
+    # reproduced S284). With no pipeline active surviving_ids is every
+    # row, pool_col is pre_col, and nothing here changes.
+    pre_col   <- pipeline$pipeline_counts$pre_pipeline_data[[variable_name]]
+    pool_col  <- pre_col[pipeline$pipeline_counts$surviving_ids]
+    mi        <- .jst_missing_info(pre_col)
     udm_rows  <- data.frame(Value = character(0), Freq = integer(0),
                             stringsAsFactors = FALSE)
     udm_total <- 0L
@@ -845,7 +866,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
         # lowercase (.a, .b) from uppercase (.A, .B) markers, so SAS-
         # style declarations land in their own rows correctly. Tagged NAs
         # carry no range, so missing.detail has nothing to act on here.
-        tag_vec <- haven::na_tag(raw_col)
+        tag_vec <- haven::na_tag(pool_col)
         for (i in seq_len(nrow(mi$codes))) {
           r <- mi$codes[i, ]
           row_count <- as.integer(sum(!is.na(tag_vec) & tag_vec == r$tag))
@@ -856,16 +877,15 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
         }
       } else {
         # SPSS-form: per-code rows, plus range rows whose granularity is
-        # set by missing.detail. Counts come from the masking pass
-        # (udm_spss_masked_vars$entries), whose `source` marker says which
-        # declaration produced each row ("code" / "range"). A variable
-        # whose codes matched zero cells is absent from the bundle and its
-        # rows must still print (count 0) -- mi drives that, lookup -> 0.
-        ent <- pipeline$pipeline_counts$udm_spss_masked_vars[[variable_name]]$entries
-        code_count <- function(code_disp) {
-          if (is.null(ent)) return(0L)
-          hit <- ent$count[ent$source == "code" & ent$code_display == code_disp]
-          if (length(hit) == 0L) 0L else as.integer(hit[1])
+        # set by missing.detail. Each count is the number of pool cells
+        # equal to the value, taken off the unclassed pool column (the
+        # same comparison .jst_cps_var_rows and the Step-0 masking pass
+        # use). A declared code absent from the pool counts 0 and its row
+        # still prints -- the declaration, not the data, drives the row.
+        x_pool     <- suppressWarnings(as.numeric(unclass(pool_col)))
+        pool_count <- function(v) {
+          if (is.na(v)) return(0L)
+          as.integer(sum(!is.na(x_pool) & x_pool == v))
         }
 
         # (1) Declared discrete codes. These are the user's own explicit
@@ -877,7 +897,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
             r <- mi$codes[i, ]
             code_rows <- rbind(code_rows, data.frame(
               Value = .jst_udm_row_label(r$code, r$label),
-              Freq  = code_count(r$code),
+              Freq  = pool_count(as.numeric(r$numeric)),
               Sort  = as.numeric(r$numeric),
               stringsAsFactors = FALSE))
           }
@@ -889,9 +909,27 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
         overflow_row <- NULL
 
         if (!is.null(mi$na_range) && length(mi$na_range) == 2L) {
-          rg      <- mi$na_range
-          in_band <- if (is.null(ent)) NULL
-                     else ent[ent$source == "range", , drop = FALSE]
+          rg <- mi$na_range
+          # in_band: one row per DISTINCT in-band value present IN THE
+          # POOL, with its pool count. The enumeration is what the
+          # per_code / all tiers list, so it must come from the pool --
+          # a full-column enumeration would list values the table's
+          # population does not contain, at count 0, and the band would
+          # never collapse. This is the one place the pool column feeds
+          # .jst_missing_info(): observed = TRUE reads the cells, and the
+          # band declaration it needs rides on pool_col's attributes.
+          # range_values already excludes any value that is also declared
+          # discretely, so summing these rows never double-counts a code
+          # row.
+          rv      <- .jst_missing_info(pool_col, observed = TRUE)$range_values
+          in_band <- if (is.null(rv) || nrow(rv) == 0L) NULL
+                     else data.frame(
+                       code_display = rv$code,
+                       label        = rv$label,
+                       count        = vapply(as.numeric(rv$numeric),
+                                             pool_count, integer(1)),
+                       numeric      = as.numeric(rv$numeric),
+                       stringsAsFactors = FALSE)
 
           # Collapse the band into one row at "totals" always, and at
           # "per_code" / "all" when no in-band value occurs. With nothing
@@ -990,6 +1028,21 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     udm_total <- as.integer(sum(udm_rows$Freq, na.rm = TRUE))
 
     total_na <- as.integer(sum(is.na(temp_var)))
+
+    # INVARIANT (S285). udm_total counts declared-missing cells in the pool
+    # column; total_na counts NA cells in the post-masking analysis copy of
+    # the same rows, and masking turned exactly those declared cells into
+    # NA. So udm_total <= total_na always, and the difference is the true
+    # System/NA count. A violation means a Missing-row count has come off
+    # some other base than the pool -- the S217 defect, in which the
+    # max(0, ...) clamp below silently absorbed the over-count and hid the
+    # System/NA row with it. Internal invariant, not a user condition:
+    # bare stop, not the .jst_stop emitter.
+    if (udm_total > total_na) {
+      stop("jfreq(): internal error -- Missing-row counts (", udm_total,
+           ") exceed the missing cells in the analysis pool (", total_na,
+           ") for '", variable_name, "'", call. = FALSE)
+    }
     sys_na   <- max(0L, total_na - udm_total)
 
     # System NA row
