@@ -28,10 +28,13 @@ joutput(
 If \code{NULL}, resets to defaults (standard with no toggle overrides).
 \describe{
 \item{minimal}{Stripped-down output for power users. Core results
-only -- no Case Processing Summary, no variable labels, no
-reference categories, no effect sizes, no CIs.}
+only -- no Case Processing table (a one-line N statement in its
+place), no variable labels, no reference categories, no effect
+sizes, no CIs.}
 \item{standard}{Default. Suitable for teaching and routine use.
-Includes Case Processing Summary, reference categories, effect
+Includes the Case Processing table when a filter or listwise
+deletion excluded cases (otherwise a one-line N statement),
+reference categories, effect
 sizes, and confidence intervals for means and mean differences
 (\code{jt}, \code{jaov}); regression coefficient CIs (\code{jlm},
 \code{jlogistic}) are reserved for full. Variable labels are off by
@@ -40,8 +43,9 @@ in-table labels per call or via the \code{variable.id} toggle.}
 \item{full}{Everything in standard plus a variable label legend
 (\code{variable.id = "legend"}), regression coefficient confidence
 intervals, assumption checks (Levene's
-test), post-hoc tests, regression diagnostics, and the most
-detailed Case Processing Summary (per-code missing breakdown).}
+test), post-hoc tests, regression diagnostics, and the Case
+Processing table on every call, with the per-code missing
+breakdown.}
 }}
 
 \item{effect.size}{Logical or NULL. Override the level's default for
@@ -64,17 +68,38 @@ post-hoc test display (jaov only).}
 \item{diagnostics}{Logical or NULL. Override the level's default for
 regression diagnostic output (jlm only).}
 
-\item{case.processing}{Three-state toggle. \code{TRUE} forces the
-Case Processing Summary to print on every call. \code{FALSE}
-suppresses it on every call. \code{NULL} (the auto-suppress default
-at the standard tier) prints only when the call had something to
-report -- pipeline state was active (\code{jsubset},
-\code{jcomplete}, or per-call \code{subset}), listwise deletion
-excluded at least one case (in listwise functions like \code{jlm},
-\code{jt}), or a per-variable discrepancy notification fires (in
-\code{jdesc}/\code{jfreq}). The minimal tier sets this to
-\code{FALSE}; the full tier sets it to \code{TRUE}; the standard
-tier sets it to \code{NULL}.}
+\item{case.processing}{Three-state toggle for the Case Processing
+table -- the block at the top of every analysis function's output
+that accounts for the cases: the original N, each active filter
+(\code{jcomplete}, \code{jsubset}, per-call \code{subset}) with the
+cases it excluded, any cases dropped listwise by the analysis, and
+the N analyzed.
+
+Every call states its N. What the toggle decides is the FORM: when
+the table does not print, a one-line N statement takes its place
+(\code{Analysis N: 63} for the listwise functions; for
+\code{jdesc}, \code{jfreq}, and \code{jcorr}, the number of cases
+in the variable pool, adding the count complete on every variable
+when the per-variable Ns differ, and adding the excluded count
+whenever cases were excluded before the analysis).
+\itemize{
+\item \code{NULL} (auto; the standard tier's default) prints the
+table only when it has an exclusion row to show: a filter is
+active (shown even when it excluded 0 cases, as the reminder
+that it is active) or listwise deletion dropped at least one
+case. Otherwise the N statement. A clean call with no filter
+therefore gets one line, not a table of zeros.
+\item \code{TRUE} (the full tier's default) prints the table on
+every call, even when its only rows are Original and the final
+N.
+\item \code{FALSE} (the minimal tier's default) never prints the
+table or its missing-data breakdown; the N statement only.
+}
+In every form, a listwise-deletion row appears only when it dropped
+at least one case; a clean analysis never shows a
+\code{Auto-listwise 0} row. The missing-data breakdown beneath the
+table (or beneath the N statement) is governed separately by
+\code{case.processing.detail}.}
 
 \item{case.processing.detail}{Detail tier for the Case Processing
 Summary's missing-data breakdown: \code{"none"} (no bottom

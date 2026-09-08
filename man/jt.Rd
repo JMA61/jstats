@@ -77,7 +77,10 @@ no value labels. NULL (default) defers to \code{joutput()}'s
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},
 \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-uses the active \code{joutput()} level default.}
+uses the active \code{joutput()} level default. The Case
+Processing table itself prints only when a filter or listwise
+deletion excluded cases; otherwise a one-line N statement takes its
+place. See \code{?joutput} (\code{case.processing}).}
 
 \item{full}{Logical. If TRUE, turns on effect.size, levene, and ci
 all at once. Does not override explicit FALSE values.}

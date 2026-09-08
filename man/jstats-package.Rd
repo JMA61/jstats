@@ -176,11 +176,11 @@ preset levels -- \code{minimal}, \code{standard} (default), or
 \code{full} -- that modulate how much detail analysis functions
 print. Useful for stripping output in production scripts or
 expanding it during exploration. Per-call arguments always
-override session-level settings. The Case Processing Summary
-table follows an auto-suppress rule at the standard tier: it
-prints when something happened (pipeline state, listwise drops,
-or a per-variable discrepancy notification) and stays silent
-otherwise. See \code{?joutput} for the full toggle behavior.
+override session-level settings. The Case Processing table
+follows an auto rule at the standard tier: it prints when a filter
+or listwise deletion excluded cases, and a one-line N statement
+takes its place otherwise. See \code{?joutput} for the full toggle
+behavior.
 }
 
 \section{Where to go next}{

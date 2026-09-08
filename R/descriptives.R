@@ -107,7 +107,10 @@
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
                   numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, case.processing.detail = NULL,
@@ -438,7 +441,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     analysis_type         = "per_var_desc",
     detail                = case.processing.detail,
     notification_template = paste0(
-      "Note: Listwise deletion using jcomplete() first will reduce the Remaining N to %d."
+      "Note: Listwise deletion using jcomplete() first would leave %d cases."
     ),
     data          = data,
     analysis_vars = good_vars
@@ -642,7 +645,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' @param case.processing.detail Accepted for API symmetry. jfreq's
 #'   Case Processing Summary is top-table only (no missing-data
 #'   breakdown), so this argument has no effect; per-variable code
-#'   detail already appears in each variable's frequency table.
+#'   detail already appears in each variable's frequency table. The
+#'   table itself prints only when a filter excluded cases; otherwise a
+#'   one-line N statement takes its place. See \code{?joutput}
+#'   (\code{case.processing}).
 jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                   value.id = NULL, missing.detail = NULL,
                   case.processing.detail = NULL) {
@@ -731,7 +737,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     analysis_type         = "per_var_freq",
     detail                = case.processing.detail,
     notification_template = paste0(
-      "Note: Listwise deletion using jcomplete() first will reduce the Remaining N to %d."
+      "Note: Listwise deletion using jcomplete() first would leave %d cases."
     ),
     data          = data,
     analysis_vars = var_names_check

@@ -335,12 +335,14 @@
 
 # Output level preset defaults (used by .jst_resolve_toggle and joutput)
 #
-# case.processing supports three states:
-#   FALSE - never print CPS
-#   TRUE  - always print CPS (even when nothing was excluded)
-#   NULL  - "auto": print CPS only when something happened (any pipeline
-#           state active, or for listwise=TRUE callers, listwise excluded
-#           at least one case)
+# case.processing supports three states (the three CPS MODES, S284):
+#   FALSE - never print the CPS table: the one-line N statement only
+#   TRUE  - always print the table, even when its only rows are Original
+#           and the endpoint
+#   NULL  - "auto": the table prints only when it has an exclusion row (a
+#           pipeline step active, or listwise deletion excluded at least
+#           one case); otherwise the N line takes its slot. Rules in
+#           JStats_CPS_Rendering_Reference.txt.
 #
 # missing.notice supports three states. Standard and full both use TRUE (always
 # show); minimal uses FALSE. The NULL/auto state is retained internally but
@@ -1190,28 +1192,35 @@
 
 #' CPS rendering rule tables (data, not logic)
 #'
-#' Canonical source = JStats_CPS_Rendering_Reference.txt Tables 1-3. Per the
+#' Canonical source = JStats_CPS_Rendering_Reference.txt Tables 1-4. Per the
 #' locked lockstep commitment, any change to a rule here updates BOTH that
 #' reference file and this data frame in the same session. "any" is a
 #' wildcard; matching is first-match top-to-bottom, so reference rows whose
 #' value is "-" (not evaluated) are encoded as "any" with ordering preserved.
 #'
+#' Table 1 (S284 redesign): the upper table is gated by whether it would
+#' carry an EXCLUSION ROW -- a pipeline row (jcomplete / jsubset / subset =,
+#' shown even at 0 excluded) or a nonzero Auto-listwise row -- under the
+#' resolved MODE (never / auto / always). Missingness no longer enters this
+#' gate; it feeds the bottom breakdown only (Table 3). When the table does
+#' not print, a one-line N statement takes its slot.
+#'
 #' @keywords internal
 .jst_cps_visibility_rules <- data.frame(
-  level    = c("minimal", "standard", "standard", "standard", "full"),
-  pipeline = c("any",     "no",       "yes",      "any",      "any"),
-  missing  = c("any",     "no",       "any",      "yes",      "any"),
-  rendered = c(FALSE,     FALSE,      TRUE,       TRUE,       TRUE),
+  mode          = c("never", "auto", "auto", "always"),
+  exclusion_row = c("any",   "no",   "yes",  "any"),
+  table         = c(FALSE,   FALSE,  TRUE,   TRUE),
+  n_line        = c(TRUE,    TRUE,   FALSE,  FALSE),
   stringsAsFactors = FALSE
 )
 
 #' @keywords internal
 .jst_cps_layout_rules <- data.frame(
   layout         = c("listwise", "pairwise", "per_var_desc", "per_var_freq"),
-  top_default    = c("on",       "on",       "on",           "on"),
   bottom_default = c("on",       "on",       "on",           "off"),
   endpoint_label = c("Analysis N", "Remaining N", "Remaining N", "Remaining N"),
-  auto_listwise  = c("shown",    "hidden",   "hidden",       "hidden"),
+  auto_listwise  = c("eligible", "never",    "never",        "never"),
+  n_line_family  = c("analysis", "pool",     "pool",         "pool"),
   stringsAsFactors = FALSE
 )
 
@@ -1239,5 +1248,18 @@
                     NA,NA,"totals","totals",NA,"totals","per_code",
                     NA,NA,NA,NA,"per_code",
                     NA),
+  stringsAsFactors = FALSE
+)
+
+#' Table 4 (S284): which FORM the one-line N statement takes. Chosen by the
+#' layout's n_line_family and, for the pool family, whether the analysis
+#' variables' per-variable Ns differ. The excluded-count rider (appended
+#' whenever cases were excluded before the analysis) is orthogonal to the
+#' form and is applied by the renderer, not encoded here.
+#' @keywords internal
+.jst_cps_n_line_rules <- data.frame(
+  family     = c("analysis", "pool", "pool"),
+  unequal_ns = c("any",      "no",   "yes"),
+  form       = c("analysis", "pool", "pool_complete"),
   stringsAsFactors = FALSE
 )

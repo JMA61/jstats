@@ -100,7 +100,10 @@ and diagnostics. Does not override explicit FALSE values.}
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},
 \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-uses the active \code{joutput()} level default.}
+uses the active \code{joutput()} level default. The Case
+Processing table itself prints only when a filter or listwise
+deletion excluded cases; otherwise a one-line N statement takes its
+place. See \code{?joutput} (\code{case.processing}).}
 
 \item{digits}{Integer or NULL. Number of decimal places for continuous
 statistics in the output tables (range 0-7; \code{digits = 0} prints

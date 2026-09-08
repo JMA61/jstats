@@ -41,36 +41,40 @@
 #' @param has_transform_na Logical. At least one resolved formula-transform
 #'   term produced non-finite values that the resolver converted to NA
 #'   (transform-introduced missingness; the per-term counts travel in
-#'   sample_info$transform_na). Folded into the visibility layer's missing
-#'   coordinate and into the bottom lookup's has_sysna coordinate -- by the
-#'   time the model sees them these cells are ordinary case-level NAs, just
-#'   introduced by a computed term rather than present in a source column --
-#'   so the rule frames gain a new INPUT but no new rows (AUDIT-025).
-#' @return A list: render, render_top, render_bottom, endpoint_label,
-#'   show_auto_listwise, resolved_tier, hide_second_col_pair.
+#'   sample_info$transform_na). Folded into the bottom lookup's has_sysna
+#'   coordinate -- by the time the model sees them these cells are ordinary
+#'   case-level NAs, just introduced by a computed term rather than present
+#'   in a source column -- so the bottom frame gains an INPUT but no new
+#'   rows (AUDIT-025). Since S284 it no longer reaches the visibility gate:
+#'   a transform-driven exclusion shows up in n_excluded_missing, which is
+#'   what the gate now reads.
+#' @param n_excluded_missing Integer. Cases the analysis dropped listwise
+#'   after the pipeline (sample_info$n_excluded_missing). Decides whether an
+#'   eligible Auto-listwise row is shown (nonzero only, S284 rule 2), and
+#'   through it whether the upper table has an exclusion row.
+#' @param unequal_ns Logical. Pool family only: the analysis variables'
+#'   per-variable Ns differ, so the N line adds the complete-on-all count.
+#' @return A list: mode, render_top, render_n_line, render_bottom,
+#'   endpoint_label, show_auto_listwise, resolved_tier,
+#'   hide_second_col_pair, n_line_form.
 #' @keywords internal
 .jst_resolve_cps_render <- function(layout, pipeline_active,
                                     has_udms, has_sysna,
                                     output_level, detail_tier,
                                     cps_toggle = NULL,
-                                    has_transform_na = FALSE) {
+                                    has_transform_na = FALSE,
+                                    n_excluded_missing = 0L,
+                                    unequal_ns = FALSE) {
 
-  eff_level <- if (isTRUE(cps_toggle)) "full"
-               else if (identical(cps_toggle, FALSE)) "minimal"
-               else output_level
-  any_missing <- has_udms || has_sysna || has_transform_na
-
-  vi <- .jst_cps_match(
-    .jst_cps_visibility_rules,
-    list(level    = eff_level,
-         pipeline = if (pipeline_active) "yes" else "no",
-         missing  = if (any_missing) "yes" else "no"))
-  if (is.na(vi)) {
-    stop(".jst_resolve_cps_render(): no visibility rule for level='", eff_level,
-         "', pipeline=", pipeline_active, ", missing=", any_missing,
-         call. = FALSE)
-  }
-  if (!.jst_cps_visibility_rules$rendered[vi]) return(list(render = FALSE))
+  # Three MODES (S284): the case.processing toggle overrides; otherwise the
+  # output level supplies the default (minimal -> never, standard -> auto,
+  # full -> always).
+  mode <- if (isTRUE(cps_toggle)) "always"
+          else if (identical(cps_toggle, FALSE)) "never"
+          else switch(output_level, minimal = "never", standard = "auto",
+                      full = "always",
+                      stop(".jst_resolve_cps_render(): unknown output level '",
+                           output_level, "'", call. = FALSE))
 
   li <- match(layout, .jst_cps_layout_rules$layout)
   if (is.na(li)) {
@@ -78,6 +82,33 @@
          call. = FALSE)
   }
   base <- .jst_cps_layout_rules[li, ]
+
+  # Rule 2: an eligible Auto-listwise row is shown only when it excluded
+  # something. Rule 1: the table earns its slot only through an exclusion
+  # row -- a pipeline row (even at 0) or that nonzero Auto-listwise row.
+  show_auto_listwise <- (base$auto_listwise == "eligible") &&
+                        isTRUE(n_excluded_missing > 0L)
+  exclusion_row <- isTRUE(pipeline_active) || show_auto_listwise
+
+  vi <- .jst_cps_match(
+    .jst_cps_visibility_rules,
+    list(mode          = mode,
+         exclusion_row = if (exclusion_row) "yes" else "no"))
+  if (is.na(vi)) {
+    stop(".jst_resolve_cps_render(): no visibility rule for mode='", mode,
+         "', exclusion_row=", exclusion_row, call. = FALSE)
+  }
+  render_top    <- isTRUE(.jst_cps_visibility_rules$table[vi])
+  render_n_line <- isTRUE(.jst_cps_visibility_rules$n_line[vi])
+
+  ni <- .jst_cps_match(
+    .jst_cps_n_line_rules,
+    list(family     = base$n_line_family,
+         unequal_ns = if (isTRUE(unequal_ns)) "yes" else "no"))
+  if (is.na(ni)) {
+    stop(".jst_resolve_cps_render(): no N-line rule for family='",
+         base$n_line_family, "', unequal_ns=", unequal_ns, call. = FALSE)
+  }
 
   # Transform-introduced missingness enters the bottom lookup through the
   # has_sysna coordinate (see @param has_transform_na): it has no per-code
@@ -99,16 +130,21 @@
 
   # Base footnote (e): the refinement layer can suppress an "on" base default
   # but cannot promote an "off" one (so per_var_freq never grows a bottom).
-  render_bottom <- (base$bottom_default == "on") && isTRUE(ref$bottom)
+  # Never-mode (minimal, or case.processing = FALSE) is the whole block off:
+  # the N line only, no bottom (S284, confirmed S286).
+  render_bottom <- (mode != "never") &&
+                   (base$bottom_default == "on") && isTRUE(ref$bottom)
 
   list(
-    render               = TRUE,
-    render_top           = (base$top_default == "on"),
+    mode                 = mode,
+    render_top           = render_top,
+    render_n_line        = render_n_line,
     render_bottom        = render_bottom,
     endpoint_label       = base$endpoint_label,
-    show_auto_listwise   = (base$auto_listwise == "shown"),
+    show_auto_listwise   = show_auto_listwise,
     resolved_tier        = if (render_bottom) ref$resolved_tier else NA_character_,
-    hide_second_col_pair = !pipeline_active
+    hide_second_col_pair = !pipeline_active,
+    n_line_form          = .jst_cps_n_line_rules$form[ni]
   )
 }
 
@@ -256,10 +292,12 @@
 #' Internal helper: print the Case Processing Summary (CPS)
 #'
 #' Resolves a render spec from the .jst_cps_*_rules tables (via
-#' \code{.jst_resolve_cps_render}) and draws the top table (pipeline chain)
-#' and, where the spec calls for it, the bottom table (per-variable
-#' missing-data breakdown, totals or per_code tier). Contains no render-rule
-#' logic of its own; all show/hide decisions arrive pre-resolved.
+#' \code{.jst_resolve_cps_render}) and draws, in the block's slot at the
+#' top of the output, EITHER the top table (pipeline chain) OR the one-line
+#' N statement (S284 rule 3), and beneath whichever printed, where the spec
+#' calls for it, the bottom table (per-variable missing-data breakdown,
+#' totals or per_code tier). Contains no render-rule logic of its own; all
+#' show/hide decisions and the N line's form arrive pre-resolved.
 #'
 #' Display design = JStats_CPS_Rendering_Reference.txt (four layouts, Form B
 #' bottom). Missing-value semantics = JStats_Missing_Values_Reference.txt.
@@ -332,7 +370,11 @@
     msg <- if (grepl("%d", notification_template, fixed = TRUE)) {
       sprintf(notification_template, listwise_n)
     } else notification_template
-    cat(msg, "\n\n", sep = "")
+    # S286: routed through the stdout emitter so it width-wraps (it was a
+    # bare cat() at 82 columns against the 76 pin), then the one blank line
+    # every note carries (Rule F).
+    .jst_msg_out(msg)
+    cat("\n")
   }
 
   # ---- Resolve the render spec from the rule tables ------------------------
@@ -374,15 +416,34 @@
   detail_tier <- .jst_resolve_toggle("case.processing.detail", detail)
   out_level   <- getOption(".jst_output_level", "standard")
 
+  # N-line inputs (S284 rule 5). The pool is the post-pipeline row set. For
+  # the pool family the per-variable Ns and the complete-on-all count are
+  # both read from `data`, the masked analysis copy the caller supplies (so
+  # declared codes count as missing). Without it the line degrades to the
+  # plain pool form rather than re-deriving masking here. (Not
+  # sample_info$missing_by_var: it arrives unnamed from some callers.)
+  n_pool <- if (!is.null(pool)) nrow(pool) else sample_info$n_after_pipeline
+  have_frame <- !is.null(data) && all(cps_vars %in% names(data))
+  per_var_n  <- if (have_frame)
+                  vapply(cps_vars, function(v) sum(!is.na(data[[v]])),
+                         integer(1), USE.NAMES = FALSE)
+                else integer(0)
+  unequal_ns <- length(per_var_n) > 1L && length(unique(per_var_n)) > 1L
+  complete_n <- if (unequal_ns)
+                  sum(stats::complete.cases(data[, cps_vars, drop = FALSE]))
+                else NA_integer_
+
   spec <- .jst_resolve_cps_render(
-    layout           = analysis_type,
-    pipeline_active  = pipeline_active,
-    has_udms         = isTRUE(has_udms),
-    has_sysna        = isTRUE(has_sysna),
-    output_level     = out_level,
-    detail_tier      = detail_tier,
-    cps_toggle       = cps_toggle,
-    has_transform_na = has_transform_na)
+    layout             = analysis_type,
+    pipeline_active    = pipeline_active,
+    has_udms           = isTRUE(has_udms),
+    has_sysna          = isTRUE(has_sysna),
+    output_level       = out_level,
+    detail_tier        = detail_tier,
+    cps_toggle         = cps_toggle,
+    has_transform_na   = has_transform_na,
+    n_excluded_missing = sample_info$n_excluded_missing,
+    unequal_ns         = unequal_ns)
 
   fmt1 <- function(x) sprintf("%.1f", x)
   dash <- "--"
@@ -392,10 +453,29 @@
   # helpers are retired).
   dw <- function(x) nchar(as.character(x), type = "width")
 
-  if (isTRUE(spec$render)) {
+  {
 
     # Width of the widest rendered table; sizes the closing rule (Session 52).
+    # Stays 0 when only the N line prints: no rule follows a bare line.
     rule_w <- 0L
+
+    # ---- N LINE: the one-line statement in the table's slot (S284 rule 3) --
+    # Form from Table 4 (spec$n_line_form); wording confirmed S286.
+    if (isTRUE(spec$render_n_line)) {
+      k        <- length(cps_vars)
+      n_stated <- if (identical(spec$n_line_form, "analysis")) n_analysis
+                  else n_pool
+      n_line <- switch(spec$n_line_form,
+        analysis      = sprintf("Analysis N: %d", n_analysis),
+        pool          = sprintf("%d Cases in the %d Variable Pool", n_pool, k),
+        pool_complete = sprintf("%d Cases in the %d Variable Pool; %d Complete on All",
+                                n_pool, k, complete_n))
+      n_exc <- n_original - n_stated
+      if (isTRUE(n_exc > 0L)) {
+        n_line <- sprintf("%s (%d Excluded)", n_line, n_exc)
+      }
+      cat("\n", n_line, "\n", sep = "")
+    }
 
     # ---- TOP TABLE: pipeline chain ----
     if (isTRUE(spec$render_top)) {
@@ -605,9 +685,9 @@
     }
     if (rule_w > 0L) {
       # S267: ASCII hyphen rule (Sec. 3 sweep); the box-drawing glyph
-      # mojibakes on non-UTF-8 Windows consoles. Lockstep edit recorded in
-      # the CPS reference.
-      cat("\n", strrep("-", rule_w), "\n", sep = "")
+      # mojibakes on non-UTF-8 Windows consoles. S284 rule 8: the rule hugs
+      # the last table row (no blank before it); one blank after.
+      cat(strrep("-", rule_w), "\n", sep = "")
     }
     cat("\n")
   }

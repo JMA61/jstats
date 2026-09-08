@@ -61,7 +61,10 @@ variable with no declared range.}
 \item{case.processing.detail}{Accepted for API symmetry. jfreq's
 Case Processing Summary is top-table only (no missing-data
 breakdown), so this argument has no effect; per-variable code
-detail already appears in each variable's frequency table.}
+detail already appears in each variable's frequency table. The
+table itself prints only when a filter excluded cases; otherwise a
+one-line N statement takes its place. See \code{?joutput}
+(\code{case.processing}).}
 }
 \value{
 Invisibly returns a list of class \code{jst_freq} containing:

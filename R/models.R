@@ -92,7 +92,10 @@
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NULL,
                   numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, layout = NULL, case.processing.detail = NULL,
@@ -215,9 +218,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     n_analysis      = nrow(data)
   )
 
-  # Case Processing Summary (jcorr is pairwise; the helper suppresses
-  # the table when no pipeline stage was active).
-  .jst_print_case_processing(sample_info, analysis_type = "pairwise", detail = case.processing.detail)
+  # Case Processing Summary (jcorr is pairwise). data/analysis_vars are
+  # passed for the N line's complete-on-all count (S284 rule 5); no
+  # notification template, so the listwise-discrepancy note stays
+  # per-variable-only.
+  .jst_print_case_processing(sample_info, analysis_type = "pairwise",
+                             detail = case.processing.detail,
+                             data = data, analysis_vars = variable_names)
 
   cor_data <- data[, variable_names, drop = FALSE]
 
@@ -1396,7 +1403,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 #' @param ref.categories Logical or NULL. Per-call override for showing the
 #'   reference-categories block (the baseline level dropped from each set of
 #'   dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
@@ -2627,7 +2637,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 #' @param ref.categories Logical or NULL. Per-call override for showing the
 #'   reference-categories block (the baseline level dropped from each set of
 #'   dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
@@ -3612,7 +3625,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    value.id = NULL, case.processing.detail = NULL,
                    digits = NULL) {

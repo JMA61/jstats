@@ -105,7 +105,10 @@
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 jt <- function(formula, data, paired = FALSE, welch = FALSE,
                effect.size = NULL, levene = NULL, ci = NULL,
                subset = NULL, variable.id = NULL, value.id = NULL,
@@ -614,7 +617,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                  effect.size = NULL, levene = NULL, ci = NULL,
                  subset = NULL, variable.id = NULL, value.id = NULL,
@@ -1159,7 +1165,10 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
-#'   uses the active \code{joutput()} level default.
+#'   uses the active \code{joutput()} level default. The Case
+#'   Processing table itself prints only when a filter or listwise
+#'   deletion excluded cases; otherwise a one-line N statement takes its
+#'   place. See \code{?joutput} (\code{case.processing}).
 jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                       row.pct = TRUE, col.pct = FALSE, residuals = "none",
                       subset = NULL,

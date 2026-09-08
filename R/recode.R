@@ -4707,6 +4707,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       mismatched <- target_vars[vapply(results, function(r)
         r$resolved_convention != df_predominant, logical(1))]
       if (length(mismatched) > 0L) {
+        cat("\n")   # Rule F: a blank line off the block above (S283 item)
         this_conv  <- results[[match(mismatched[1L], target_vars)]]$resolved_convention
         this_form  <- .jst_convention_label(this_conv)
         other_form <- .jst_convention_label(df_predominant)
