@@ -293,9 +293,7 @@ m <- jlm(WellbeingScore ~ Income + Age, community)
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE      t      β      p  

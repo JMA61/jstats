@@ -101,9 +101,7 @@ jdesc(Age)                     # Uses only complete cases on those 3 vars
 #>     Original           --        103
 #>     jcomplete          12         91  Income, Education, +1 more
 #>     Remaining N        --         91
-#> 
 #> ----------------------------------------------------------------
-#> 
 #> 
 #> Variable  Total  Non_missing  Min  Max    Mean      SD
 #> --------  -----  -----------  ---  ---  ------  ------

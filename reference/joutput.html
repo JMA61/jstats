@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,12 +75,15 @@ precedence over joutput() settings.</p>
 (default), or <code>full</code>. If omitted, prints the current settings.
 If <code>NULL</code>, resets to defaults (standard with no toggle overrides).</p><dl><dt>minimal</dt>
 <dd><p>Stripped-down output for power users. Core results
-only – no Case Processing Summary, no variable labels, no
-reference categories, no effect sizes, no CIs.</p></dd>
+only – no Case Processing table (a one-line N statement in its
+place), no variable labels, no reference categories, no effect
+sizes, no CIs.</p></dd>
 
 <dt>standard</dt>
 <dd><p>Default. Suitable for teaching and routine use.
-Includes Case Processing Summary, reference categories, effect
+Includes the Case Processing table when a filter or listwise
+deletion excluded cases (otherwise a one-line N statement),
+reference categories, effect
 sizes, and confidence intervals for means and mean differences
 (<code>jt</code>, <code>jaov</code>); regression coefficient CIs (<code>jlm</code>,
 <code>jlogistic</code>) are reserved for full. Variable labels are off by
@@ -91,8 +94,9 @@ in-table labels per call or via the <code>variable.id</code> toggle.</p></dd>
 <dd><p>Everything in standard plus a variable label legend
 (<code>variable.id = "legend"</code>), regression coefficient confidence
 intervals, assumption checks (Levene's
-test), post-hoc tests, regression diagnostics, and the most
-detailed Case Processing Summary (per-code missing breakdown).</p></dd>
+test), post-hoc tests, regression diagnostics, and the Case
+Processing table on every call, with the per-code missing
+breakdown.</p></dd>
 
 
 </dl></dd>
@@ -131,17 +135,34 @@ regression diagnostic output (jlm only).</p></dd>
 
 
 <dt id="arg-case-processing">case.processing<a class="anchor" aria-label="anchor" href="#arg-case-processing"></a></dt>
-<dd><p>Three-state toggle. <code>TRUE</code> forces the
-Case Processing Summary to print on every call. <code>FALSE</code>
-suppresses it on every call. <code>NULL</code> (the auto-suppress default
-at the standard tier) prints only when the call had something to
-report – pipeline state was active (<code>jsubset</code>,
-<code>jcomplete</code>, or per-call <code>subset</code>), listwise deletion
-excluded at least one case (in listwise functions like <code>jlm</code>,
-<code>jt</code>), or a per-variable discrepancy notification fires (in
-<code>jdesc</code>/<code>jfreq</code>). The minimal tier sets this to
-<code>FALSE</code>; the full tier sets it to <code>TRUE</code>; the standard
-tier sets it to <code>NULL</code>.</p></dd>
+<dd><p>Three-state toggle for the Case Processing
+table – the block at the top of every analysis function's output
+that accounts for the cases: the original N, each active filter
+(<code>jcomplete</code>, <code>jsubset</code>, per-call <code>subset</code>) with the
+cases it excluded, any cases dropped listwise by the analysis, and
+the N analyzed.</p>
+<p>Every call states its N. What the toggle decides is the FORM: when
+the table does not print, a one-line N statement takes its place
+(<code>Analysis N: 63</code> for the listwise functions; for
+<code>jdesc</code>, <code>jfreq</code>, and <code>jcorr</code>, the number of cases
+in the variable pool, adding the count complete on every variable
+when the per-variable Ns differ, and adding the excluded count
+whenever cases were excluded before the analysis).</p><ul><li><p><code>NULL</code> (auto; the standard tier's default) prints the
+table only when it has an exclusion row to show: a filter is
+active (shown even when it excluded 0 cases, as the reminder
+that it is active) or listwise deletion dropped at least one
+case. Otherwise the N statement. A clean call with no filter
+therefore gets one line, not a table of zeros.</p></li>
+<li><p><code>TRUE</code> (the full tier's default) prints the table on
+every call, even when its only rows are Original and the final
+N.</p></li>
+<li><p><code>FALSE</code> (the minimal tier's default) never prints the
+table or its missing-data breakdown; the N statement only.</p></li>
+</ul><p>In every form, a listwise-deletion row appears only when it dropped
+at least one case; a clean analysis never shows a
+<code>Auto-listwise 0</code> row. The missing-data breakdown beneath the
+table (or beneath the N statement) is governed separately by
+<code>case.processing.detail</code>.</p></dd>
 
 
 <dt id="arg-case-processing-detail">case.processing.detail<a class="anchor" aria-label="anchor" href="#arg-case-processing-detail"></a></dt>

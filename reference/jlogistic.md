@@ -120,7 +120,11 @@ jlogistic(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - digits:
 
@@ -288,9 +292,7 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE     Wald   df    p    Exp(B)
@@ -335,9 +337,7 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE     Wald   df    p    Exp(B)
@@ -377,9 +377,7 @@ jlogistic(Volunteer ~ Income + Age)
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE     Wald   df    p    Exp(B)
@@ -411,6 +409,8 @@ jlogistic(Volunteer ~ Income + Age)
 jlogistic(Volunteer ~ Region + Age, categorical = "Region")
 #> Logistic Regression
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
 #> 
 #> Coefficients
 #>                            b      SE    Wald   df   p    Exp(B)
@@ -458,6 +458,8 @@ jlogistic(Volunteer ~ Region + Age)
 #> Logistic Regression
 #> Using default data frame: community
 #> 
+#> Analysis N: 103
+#> 
 #> Coefficients
 #>                            b      SE    Wald   df   p    Exp(B)
 #> -----------------------  ------  -----  -----  --  ----  ------
@@ -502,6 +504,8 @@ jlogistic(Volunteer ~ Region + Age)
 #> Logistic Regression
 #> Using default data frame: community
 #> 
+#> Analysis N: 103
+#> 
 #> Coefficients
 #>                           b      SE    Wald   df   p    Exp(B)
 #> ----------------------  ------  -----  -----  --  ----  ------
@@ -543,9 +547,7 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE     Wald   df    p    Exp(B)

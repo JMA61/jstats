@@ -38,16 +38,17 @@ joutput(
   minimal
 
   :   Stripped-down output for power users. Core results only – no Case
-      Processing Summary, no variable labels, no reference categories,
-      no effect sizes, no CIs.
+      Processing table (a one-line N statement in its place), no
+      variable labels, no reference categories, no effect sizes, no CIs.
 
   standard
 
-  :   Default. Suitable for teaching and routine use. Includes Case
-      Processing Summary, reference categories, effect sizes, and
-      confidence intervals for means and mean differences (`jt`,
-      `jaov`); regression coefficient CIs (`jlm`, `jlogistic`) are
-      reserved for full. Variable labels are off by default
+  :   Default. Suitable for teaching and routine use. Includes the Case
+      Processing table when a filter or listwise deletion excluded cases
+      (otherwise a one-line N statement), reference categories, effect
+      sizes, and confidence intervals for means and mean differences
+      (`jt`, `jaov`); regression coefficient CIs (`jlm`, `jlogistic`)
+      are reserved for full. Variable labels are off by default
       (`variable.id = "names"`); request a label legend or in-table
       labels per call or via the `variable.id` toggle.
 
@@ -56,8 +57,8 @@ joutput(
   :   Everything in standard plus a variable label legend
       (`variable.id = "legend"`), regression coefficient confidence
       intervals, assumption checks (Levene's test), post-hoc tests,
-      regression diagnostics, and the most detailed Case Processing
-      Summary (per-code missing breakdown).
+      regression diagnostics, and the Case Processing table on every
+      call, with the per-code missing breakdown.
 
 - effect.size:
 
@@ -92,15 +93,37 @@ joutput(
 
 - case.processing:
 
-  Three-state toggle. `TRUE` forces the Case Processing Summary to print
-  on every call. `FALSE` suppresses it on every call. `NULL` (the
-  auto-suppress default at the standard tier) prints only when the call
-  had something to report – pipeline state was active (`jsubset`,
-  `jcomplete`, or per-call `subset`), listwise deletion excluded at
-  least one case (in listwise functions like `jlm`, `jt`), or a
-  per-variable discrepancy notification fires (in `jdesc`/`jfreq`). The
-  minimal tier sets this to `FALSE`; the full tier sets it to `TRUE`;
-  the standard tier sets it to `NULL`.
+  Three-state toggle for the Case Processing table – the block at the
+  top of every analysis function's output that accounts for the cases:
+  the original N, each active filter (`jcomplete`, `jsubset`, per-call
+  `subset`) with the cases it excluded, any cases dropped listwise by
+  the analysis, and the N analyzed.
+
+  Every call states its N. What the toggle decides is the FORM: when the
+  table does not print, a one-line N statement takes its place
+  (`Analysis N: 63` for the listwise functions; for `jdesc`, `jfreq`,
+  and `jcorr`, the number of cases in the variable pool, adding the
+  count complete on every variable when the per-variable Ns differ, and
+  adding the excluded count whenever cases were excluded before the
+  analysis).
+
+  - `NULL` (auto; the standard tier's default) prints the table only
+    when it has an exclusion row to show: a filter is active (shown even
+    when it excluded 0 cases, as the reminder that it is active) or
+    listwise deletion dropped at least one case. Otherwise the N
+    statement. A clean call with no filter therefore gets one line, not
+    a table of zeros.
+
+  - `TRUE` (the full tier's default) prints the table on every call,
+    even when its only rows are Original and the final N.
+
+  - `FALSE` (the minimal tier's default) never prints the table or its
+    missing-data breakdown; the N statement only.
+
+  In every form, a listwise-deletion row appears only when it dropped at
+  least one case; a clean analysis never shows a `Auto-listwise 0` row.
+  The missing-data breakdown beneath the table (or beneath the N
+  statement) is governed separately by `case.processing.detail`.
 
 - case.processing.detail:
 

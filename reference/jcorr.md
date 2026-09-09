@@ -109,7 +109,11 @@ jcorr(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - digits:
 
@@ -146,14 +150,11 @@ listing.
 jcorr(community, Income, Age, WellbeingScore)
 #> Pearson Bivariate Correlations
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --        103
-#>     Remaining N        --        103
+#> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> -------------------------------------
 #> 
 #> Bivariate Correlations (Pearson)
@@ -170,14 +171,11 @@ jcorr(community, Income, Age, WellbeingScore)
 jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #> Spearman Bivariate Correlations
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --        103
-#>     Remaining N        --        103
+#> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> -------------------------------------
 #> 
 #> Bivariate Correlations (Spearman)
@@ -201,14 +199,11 @@ jcorr(Income, Age, WellbeingScore)
 #> Pearson Bivariate Correlations
 #> Using default data frame: community
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --        103
-#>     Remaining N        --        103
+#> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> -------------------------------------
 #> 
 #> Bivariate Correlations (Pearson)

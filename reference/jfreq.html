@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -118,7 +118,10 @@ variable with no declared range.</p></dd>
 <dd><p>Accepted for API symmetry. jfreq's
 Case Processing Summary is top-table only (no missing-data
 breakdown), so this argument has no effect; per-variable code
-detail already appears in each variable's frequency table.</p></dd>
+detail already appears in each variable's frequency table. The
+table itself prints only when a filter excluded cases; otherwise a
+one-line N statement takes its place. See <code><a href="joutput.html">?joutput</a></code>
+(<code>case.processing</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -162,6 +165,9 @@ workflow conventions, and complete function listing.</p></div>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># With explicit data frame</span></span></span>
 <span class="r-in"><span><span class="fu">jfreq</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Frequencies</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           Freq  Total %  Valid %  Cum. %</span>
@@ -177,11 +183,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jfreq</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, <span class="va">Education</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Frequencies</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 2 Variable Pool; 97 Complete on All</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -219,6 +221,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jfreq</span><span class="op">(</span><span class="va">Region</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Frequencies</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           Freq  Total %  Valid %  Cum. %</span>
@@ -235,11 +240,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Frequencies</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 2 Variable Pool; 97 Complete on All</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -274,6 +275,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># With a vector directly</span></span></span>
 <span class="r-in"><span><span class="fu">jfreq</span><span class="op">(</span><span class="va">community</span><span class="op">$</span><span class="va">Region</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Frequencies</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           Freq  Total %  Valid %  Cum. %</span>

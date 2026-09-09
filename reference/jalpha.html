@@ -17,7 +17,7 @@ reverse-coded or misfit items."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -108,7 +108,10 @@ missing variable. Leave at NULL (default).</p></dd>
 <dd><p>Per-call override of the Case
 Processing Summary detail tier: one of <code>"none"</code>,
 <code>"totals"</code>, or <code>"per_code"</code>. <code>NULL</code> (default)
-uses the active <code><a href="joutput.html">joutput()</a></code> level default.</p></dd>
+uses the active <code><a href="joutput.html">joutput()</a></code> level default. The Case
+Processing table itself prints only when a filter or listwise
+deletion excluded cases; otherwise a one-line N statement takes its
+place. See <code><a href="joutput.html">?joutput</a></code> (<code>case.processing</code>).</p></dd>
 
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
@@ -157,7 +160,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              12     11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Environment3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              12     11.7</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Reliability Statistics</span>
@@ -207,7 +209,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              12     11.7</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Environment3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              12     11.7</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Reliability Statistics</span>

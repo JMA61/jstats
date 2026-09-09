@@ -54,6 +54,8 @@ jdesc(Age, WellbeingScore)   # Uses community automatically
 #> Descriptive Statistics
 #> Using default data frame: community
 #> 
+#> 103 Cases in the 2 Variable Pool
+#> 
 #> Variable        Total  Non_missing  Min  Max    Mean      SD
 #> --------------  -----  -----------  ---  ---  ------  ------
 #> Age               103          103   18   71  40.650  11.620

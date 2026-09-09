@@ -11,7 +11,7 @@ its own. Errors loudly on a coordinate that matches no row."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,9 @@ its own. Errors loudly on a coordinate that matches no row.</p>
 <span>  <span class="va">output_level</span>,</span>
 <span>  <span class="va">detail_tier</span>,</span>
 <span>  cps_toggle <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  has_transform_na <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  has_transform_na <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  n_excluded_missing <span class="op">=</span> <span class="fl">0L</span>,</span>
+<span>  unequal_ns <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -96,17 +98,32 @@ missingness (in source or pool).</p></dd>
 <dd><p>Logical. At least one resolved formula-transform
 term produced non-finite values that the resolver converted to NA
 (transform-introduced missingness; the per-term counts travel in
-sample_info$transform_na). Folded into the visibility layer's missing
-coordinate and into the bottom lookup's has_sysna coordinate – by the
-time the model sees them these cells are ordinary case-level NAs, just
-introduced by a computed term rather than present in a source column –
-so the rule frames gain a new INPUT but no new rows (AUDIT-025).</p></dd>
+sample_info$transform_na). Folded into the bottom lookup's has_sysna
+coordinate – by the time the model sees them these cells are ordinary
+case-level NAs, just introduced by a computed term rather than present
+in a source column – so the bottom frame gains an INPUT but no new
+rows (AUDIT-025). Since S284 it no longer reaches the visibility gate:
+a transform-driven exclusion shows up in n_excluded_missing, which is
+what the gate now reads.</p></dd>
+
+
+<dt id="arg-n-excluded-missing">n_excluded_missing<a class="anchor" aria-label="anchor" href="#arg-n-excluded-missing"></a></dt>
+<dd><p>Integer. Cases the analysis dropped listwise
+after the pipeline (sample_info$n_excluded_missing). Decides whether an
+eligible Auto-listwise row is shown (nonzero only, S284 rule 2), and
+through it whether the upper table has an exclusion row.</p></dd>
+
+
+<dt id="arg-unequal-ns">unequal_ns<a class="anchor" aria-label="anchor" href="#arg-unequal-ns"></a></dt>
+<dd><p>Logical. Pool family only: the analysis variables'
+per-variable Ns differ, so the N line adds the complete-on-all count.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list: render, render_top, render_bottom, endpoint_label,
-show_auto_listwise, resolved_tier, hide_second_col_pair.</p>
+    <p>A list: mode, render_top, render_n_line, render_bottom,
+endpoint_label, show_auto_listwise, resolved_tier,
+hide_second_col_pair, n_line_form.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

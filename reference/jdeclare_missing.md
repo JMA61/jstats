@@ -291,6 +291,8 @@ df <- clinic
 jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 #> Descriptive Statistics
 #> 
+#> 70 Cases in the 1 Variable Pool
+#> 
 #> Variable    Total  Non_missing  Min  Max    Mean      SD
 #> ----------  -----  -----------  ---  ---  ------  ------
 #> MoodRating     70           70  -99    9  -4.943  31.477
@@ -312,12 +314,7 @@ jdeclare_missing(df, MoodRating,
 jdesc(df, MoodRating)        # codes now excluded as missing
 #> Descriptive Statistics
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --         70
-#>     Remaining N        --         70
-#> 
-#> ------------------------------------
-#> 
+#> 70 Cases in the 1 Variable Pool
 #> 
 #> Variable    Total  Non_missing  Min  Max  Mean     SD
 #> ----------  -----  -----------  ---  ---  ----  -----
@@ -402,9 +399,10 @@ jdeclare_missing(df5, Mood2,
 #>   jconvert(df5, to = "spss", modify = TRUE)
 #> To keep Stata-style instead, change the setting:
 #>   joptions(missing.convention = "stata")
+#> 
 #> Note: Mood2 uses Stata-style missing values, but other columns in df5
 #> are SPSS-style.
-#> Mixing forms is allowed. To align Mood2 with the rest, run:
+#> To align Mood2 with the rest, run:
 #>   jconvert(df5, to = "spss", vars = "Mood2", modify = TRUE)
 
 if (FALSE) { # \dontrun{

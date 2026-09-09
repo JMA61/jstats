@@ -16,7 +16,8 @@ level.
 .jst_jrecode_convention_error(
   parsed_map,
   parsed_labels,
-  per_call_convention = NULL
+  per_call_convention = NULL,
+  labels_tagged_raw = NULL
 )
 ```
 
@@ -45,6 +46,13 @@ level.
   describes – the call or the setting – and therefore which remedy is
   offered; it plays no part in whether the error fires. It also seeds
   the display case for a marker that carries no recorded raw spelling.
+
+- labels_tagged_raw:
+
+  Named character vector or `NULL`: the `tagged_raw` record the caller
+  harvested off `parsed_labels` before stripping it (keyed by the
+  canonical lowercase letter, values the typed spellings). Lets a marker
+  seen only in `labels` be quoted as typed (S283).
 
 ## Value
 

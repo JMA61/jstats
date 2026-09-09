@@ -36,7 +36,9 @@ joptions(
 - missing.convention:
 
   One of `"none"`, `"spss"`, `"stata"`, or `"sas"` (any capitalization
-  is accepted). See Slots.
+  is accepted). See Slots. A slot name arriving here unnamed and
+  positionally is read instead as a status query on that slot (see Call
+  patterns).
 
 - missing.convention.codes:
 
@@ -63,14 +65,16 @@ joptions(
 
   Logical; default FALSE. When TRUE, joptions() applies the change
   silently, suppressing the settings echo, its pointer, and the
-  convention nudge alike. A bare joptions() status query always prints
-  regardless of quiet.
+  convention nudge alike. It has no effect on a status query, which
+  makes no change to silence: the bare joptions() panel and a
+  joptions("slot") query both print regardless.
 
 ## Value
 
 Invisibly returns `NULL`. Called for the side effect of updating session
-options and printing the settings panel – in full for a status query or
-a reset, or as an echo of the slots a setting call touched.
+options and printing the settings panel – in full for a bare status
+query or a reset, as the named slots alone for a `joptions("slot")`
+query, or as an echo of the slots a setting call touched.
 
 ## Slots
 
@@ -177,6 +181,20 @@ a reset, or as an echo of the slots a setting call touched.
   SPSS-convention detail and appears only while `missing.convention` is
   `"spss"`.
 
+- `joptions("slot")`:
+
+  Print one slot and nothing else – `joptions("data.dir")`, or several
+  at once with `joptions(c("data.dir", "corr.layout"))` – closed by a
+  pointer to `joptions()` for the full panel. A slot name given WITHOUT
+  an argument name is read as a query rather than a setting; the six
+  slot names and the four `missing.convention` values share no string,
+  so the two readings cannot collide. A named argument is always a
+  setting, which leaves `joptions(missing.convention = "data.dir")` an
+  error. Only the slots named are shown: a query pulls in no related
+  slot, and `missing.convention.codes` appears whenever it is asked for,
+  whatever the convention. Like the full panel, a query prints
+  regardless of `quiet`.
+
 - `joptions(NULL)`:
 
   Reset all slots to defaults, then print the full panel – everything
@@ -231,6 +249,17 @@ joptions()                                        # show current settings
 #> Correlation layout: wide
 #> Missing-value detail: per_code
 #> Message width: Auto (currently 79)
+#> 
+joptions("data.dir")                              # show one slot
+#> Options Settings
+#> Data folder: Working directory
+#> Run joptions() to see all settings.
+#> 
+joptions(c("data.dir", "corr.layout"))            # show two
+#> Options Settings
+#> Data folder: Working directory
+#> Correlation layout: wide
+#> Run joptions() to see all settings.
 #> 
 
 # Setting a convention echoes the convention and its codes, then scans

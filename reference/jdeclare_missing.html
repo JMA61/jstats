@@ -61,7 +61,7 @@ declare on every column, pass vars = names(data) explicitly."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -380,6 +380,8 @@ ends up out of step with the rest of its DF.</p>
 <span class="r-in"><span><span class="fu"><a href="jdesc.html">jdesc</a></span><span class="op">(</span><span class="va">df</span>, <span class="va">MoodRating</span><span class="op">)</span>        <span class="co"># mean dragged far down by -99/-98</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70 Cases in the 1 Variable Pool</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable    Total  Non_missing  Min  Max    Mean      SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  -----  -----------  ---  ---  ------  ------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> MoodRating     70           70  -99    9  -4.943  31.477</span>
@@ -401,12 +403,7 @@ ends up out of step with the rest of its DF.</p>
 <span class="r-in"><span><span class="fu"><a href="jdesc.html">jdesc</a></span><span class="op">(</span><span class="va">df</span>, <span class="va">MoodRating</span><span class="op">)</span>        <span class="co"># codes now excluded as missing</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --         70</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --         70</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 70 Cases in the 1 Variable Pool</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable    Total  Non_missing  Min  Max  Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  -----  -----------  ---  ---  ----  -----</span>
@@ -491,9 +488,10 @@ ends up out of step with the rest of its DF.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jconvert(df5, to = "spss", modify = TRUE)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> To keep Stata-style instead, change the setting:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   joptions(missing.convention = "stata")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: Mood2 uses Stata-style missing values, but other columns in df5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> are SPSS-style.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Mixing forms is allowed. To align Mood2 with the rest, run:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> To align Mood2 with the rest, run:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jconvert(df5, to = "spss", vars = "Mood2", modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>

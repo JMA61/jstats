@@ -108,7 +108,11 @@ jaov(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - full:
 
@@ -157,6 +161,9 @@ listing.
 # With explicit data frame
 jaov(WellbeingScore ~ Region, data = community)
 #> One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
@@ -176,6 +183,9 @@ jaov(WellbeingScore ~ Region, data = community)
 #> 
 jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
 #> Welch's One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
@@ -197,6 +207,9 @@ jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
 #> 
 jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
 #> Levene's Test for Homogeneity of Variance
 #>     F  df1  df2  p   
 #> -----  ---  ---  ----
@@ -236,6 +249,9 @@ juse(community)
 jaov(WellbeingScore ~ Region)
 #> One-Way ANOVA
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N    Mean      SD  95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
@@ -256,6 +272,9 @@ jaov(WellbeingScore ~ Region)
 jaov(WellbeingScore ~ Region, full = TRUE)
 #> One-Way ANOVA
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
 #> Levene's Test for Homogeneity of Variance
 #>     F  df1  df2  p   
 #> -----  ---  ---  ----

@@ -25,7 +25,7 @@ option and an explicit &quot;none&quot; are identical."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,8 +111,10 @@ the stop fires inside a shared internal helper).</p></dd>
 
 <dt id="arg-marker">marker<a class="anchor" aria-label="anchor" href="#arg-marker"></a></dt>
 <dd><p>Optional. For <code>act = "tagged"</code>: the first tagged
-spelling in the user's call (e.g. <code>".a"</code>,
-parser-normalized lowercase), echoed in the gate's head.</p></dd>
+spelling in the user's call (e.g. <code>".a"</code>), echoed in the
+gate's head AS THE USER TYPED IT – callers build it from the
+parsers' tagged_raw record, not the normalized lowercase letter
+(S283; a typed <code>.A</code> was echoed as <code>'.a'</code> before).</p></dd>
 
 </dl></div>
     <div class="section level2">

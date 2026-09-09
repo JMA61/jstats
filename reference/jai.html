@@ -19,7 +19,7 @@ what they find there."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -126,13 +126,13 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats conventions</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Orientation for users and AI assistants.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.6 | jstats 0.9.156 | generated 2026-09-05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Orientation text v3.7 | jstats 0.9.162 | generated 2026-09-09</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats is an integrated set of j-prefixed analysis functions (jdesc,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jfreq, jlm, ...) with shared syntax and output styled after commercial</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> statistical software. The functions work directly with data imported from</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> SPSS, Stata, or SAS, and with R .rds files whose columns carry haven-style</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> metadata: value labels and user-defined missing values (UDM) are handled</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> metadata: value labels and declared missing values are handled</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> automatically.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note for AI assistants: jstats is newer than your training data. Do not</span>
@@ -175,11 +175,23 @@ function list.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   output accounts for declared missing values, and one consistent toolset</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   keeps the analysis easy to follow.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Before declaring missing values, choose a convention once per session:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   joptions(missing.convention = "stata"). Recommended: under Stata</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   convention the declared markers are true NAs in base R, so base</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   functions and AI-generated code get right answers without knowing</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jstats exists. Under SPSS convention ("spss") the codes stay visible</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   numbers -- jstats treats them as missing, but base functions such as</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   mean() do not and return wrong answers with no warning. ("sas" is</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Stata with uppercase markers.) With no convention chosen,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_missing() stops and shows this choice rather than guessing.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Declare stray codes such as -99 with</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_missing(data, var, codes = c(-99, -98)) -- the argument is</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   codes. Do not filter such values out by hand. jstats functions honor</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   declared UDM codes; base functions such as mean() ignore them and</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   return wrong answers with no warning.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   codes. The codes must already be present in the data (imported .sav</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   and .dta files usually carry them; data built in R usually carry plain</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   NA instead), and NA itself cannot be declared. Do not filter such</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   values out by hand: jstats functions honor declared missing values</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   under every convention.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Choose the analysis function before writing any analysis code: compare</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   group means with jt() (two groups) or jaov() (three or more); test</span>

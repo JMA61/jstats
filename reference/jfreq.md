@@ -78,7 +78,10 @@ jfreq(
   Accepted for API symmetry. jfreq's Case Processing Summary is
   top-table only (no missing-data breakdown), so this argument has no
   effect; per-variable code detail already appears in each variable's
-  frequency table.
+  frequency table. The table itself prints only when a filter excluded
+  cases; otherwise a one-line N statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 ## Value
 
@@ -123,6 +126,9 @@ listing.
 # With explicit data frame
 jfreq(community, Region)
 #> Frequencies
+#> 
+#> 103 Cases in the 1 Variable Pool
+#> 
 #> Region
 #> 
 #>           Freq  Total %  Valid %  Cum. %
@@ -138,11 +144,7 @@ jfreq(community, Region)
 jfreq(community, Region, Education)
 #> Frequencies
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --        103
-#>     Remaining N        --        103
-#> 
-#> ------------------------------------
+#> 103 Cases in the 2 Variable Pool; 97 Complete on All
 #> 
 #> Region
 #> 
@@ -180,6 +182,9 @@ juse(community)
 jfreq(Region)
 #> Frequencies
 #> Using default data frame: community
+#> 
+#> 103 Cases in the 1 Variable Pool
+#> 
 #> Region
 #> 
 #>           Freq  Total %  Valid %  Cum. %
@@ -196,11 +201,7 @@ jfreq(Region, Education)
 #> Frequencies
 #> Using default data frame: community
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --        103
-#>     Remaining N        --        103
-#> 
-#> ------------------------------------
+#> 103 Cases in the 2 Variable Pool; 97 Complete on All
 #> 
 #> Region
 #> 
@@ -235,6 +236,9 @@ jfreq(Region, Education)
 # With a vector directly
 jfreq(community$Region)
 #> Frequencies
+#> 
+#> 103 Cases in the 1 Variable Pool
+#> 
 #> Region
 #> 
 #>           Freq  Total %  Valid %  Cum. %

@@ -15,7 +15,7 @@ Warns when variables may be categorical rather than continuous."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -146,7 +146,10 @@ NULL (default) defers to the <code>corr.layout</code> setting in
 <dd><p>Per-call override of the Case
 Processing Summary detail tier: one of <code>"none"</code>,
 <code>"totals"</code>, or <code>"per_code"</code>. <code>NULL</code> (default)
-uses the active <code><a href="joutput.html">joutput()</a></code> level default.</p></dd>
+uses the active <code><a href="joutput.html">joutput()</a></code> level default. The Case
+Processing table itself prints only when a filter or listwise
+deletion excluded cases; otherwise a one-line N statement takes its
+place. See <code><a href="joutput.html">?joutput</a></code> (<code>case.processing</code>).</p></dd>
 
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
@@ -183,14 +186,11 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jcorr</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Pearson Bivariate Correlations</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 3 Variable Pool; 97 Complete on All</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-data breakdown  From 103    %</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Income</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              6      5.8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Bivariate Correlations (Pearson)</span>
@@ -207,14 +207,11 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jcorr</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span>, method <span class="op">=</span> <span class="st">"spearman"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Spearman Bivariate Correlations</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 3 Variable Pool; 97 Complete on All</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-data breakdown  From 103    %</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Income</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              6      5.8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Bivariate Correlations (Spearman)</span>
@@ -238,14 +235,11 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Pearson Bivariate Correlations</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 3 Variable Pool; 97 Complete on All</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-data breakdown  From 103    %</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Income</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Missing              6      5.8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Bivariate Correlations (Pearson)</span>

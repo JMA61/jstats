@@ -1,10 +1,12 @@
 # Internal helper: print the Case Processing Summary (CPS)
 
 Resolves a render spec from the .jst_cps\_\*\_rules tables (via
-`.jst_resolve_cps_render`) and draws the top table (pipeline chain) and,
-where the spec calls for it, the bottom table (per-variable missing-data
-breakdown, totals or per_code tier). Contains no render-rule logic of
-its own; all show/hide decisions arrive pre-resolved.
+`.jst_resolve_cps_render`) and draws, in the block's slot at the top of
+the output, EITHER the top table (pipeline chain) OR the one-line N
+statement (S284 rule 3), and beneath whichever printed, where the spec
+calls for it, the bottom table (per-variable missing-data breakdown,
+totals or per_code tier). Contains no render-rule logic of its own; all
+show/hide decisions and the N line's form arrive pre-resolved.
 
 ## Usage
 

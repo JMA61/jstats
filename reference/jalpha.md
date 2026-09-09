@@ -65,7 +65,11 @@ jalpha(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - digits:
 
@@ -115,7 +119,6 @@ jalpha(community, Environment1, Environment2, Environment3,
 #>       Missing              12     11.7
 #>     Environment3
 #>       Missing              12     11.7
-#> 
 #> --------------------------------------
 #> 
 #> Reliability Statistics
@@ -165,7 +168,6 @@ jalpha(Environment1, Environment2, Environment3, Environment4,
 #>       Missing              12     11.7
 #>     Environment3
 #>       Missing              12     11.7
-#> 
 #> --------------------------------------
 #> 
 #> Reliability Statistics

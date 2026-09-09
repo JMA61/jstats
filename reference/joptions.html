@@ -27,7 +27,7 @@ explicit transform path for data already in the workspace."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,7 +86,8 @@ explicit transform path for data already in the workspace.</p>
 <dl><dt id="arg-missing-convention">missing.convention<a class="anchor" aria-label="anchor" href="#arg-missing-convention"></a></dt>
 <dd><p>One of <code>"none"</code>, <code>"spss"</code>,
 <code>"stata"</code>, or <code>"sas"</code> (any capitalization is accepted).
-See Slots.</p></dd>
+See Slots. A slot name arriving here unnamed and positionally is
+read instead as a status query on that slot (see Call patterns).</p></dd>
 
 
 <dt id="arg-missing-convention-codes">missing.convention.codes<a class="anchor" aria-label="anchor" href="#arg-missing-convention-codes"></a></dt>
@@ -116,15 +117,17 @@ or <code>NULL</code>. See Slots.</p></dd>
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Logical; default FALSE. When TRUE, joptions() applies the
 change silently, suppressing the settings echo, its pointer, and the
-convention nudge alike. A bare joptions() status query always prints
-regardless of quiet.</p></dd>
+convention nudge alike. It has no effect on a status query, which
+makes no change to silence: the bare joptions() panel and a
+joptions("slot") query both print regardless.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly returns <code>NULL</code>. Called for the side effect of
 updating session options and printing the settings panel – in full
-for a status query or a reset, or as an echo of the slots a setting
+for a bare status query or a reset, as the named slots alone for a
+<code>joptions("slot")</code> query, or as an echo of the slots a setting
 call touched.</p>
     </div>
     <div class="section level2">
@@ -226,6 +229,21 @@ matrix mid-row would destroy the alignment that makes it readable.</p></dd>
 <code>missing.convention.codes</code> row is SPSS-convention detail and
 appears only while <code>missing.convention</code> is <code>"spss"</code>.</p></dd>
 
+<dt><code>joptions("slot")</code></dt>
+<dd><p>Print one slot and nothing else –
+<code>joptions("data.dir")</code>, or several at once with
+<code>joptions(c("data.dir", "corr.layout"))</code> – closed by a
+pointer to <code>joptions()</code> for the full panel. A slot name given
+WITHOUT an argument name is read as a query rather than a setting;
+the six slot names and the four <code>missing.convention</code> values
+share no string, so the two readings cannot collide. A named
+argument is always a setting, which leaves
+<code>joptions(missing.convention = "data.dir")</code> an error. Only
+the slots named are shown: a query pulls in no related slot, and
+<code>missing.convention.codes</code> appears whenever it is asked for,
+whatever the convention. Like the full panel, a query prints
+regardless of <code>quiet</code>.</p></dd>
+
 <dt><code>joptions(NULL)</code></dt>
 <dd><p>Reset all slots to defaults, then print
 the full panel – everything changed.</p></dd>
@@ -282,6 +300,17 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing-value detail: per_code</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Message width: Auto (currently 79)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span><span class="st">"data.dir"</span><span class="op">)</span>                              <span class="co"># show one slot</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data.dir"</span>, <span class="st">"corr.layout"</span><span class="op">)</span><span class="op">)</span>            <span class="co"># show two</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Correlation layout: wide</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting a convention echoes the convention and its codes, then scans</span></span></span>

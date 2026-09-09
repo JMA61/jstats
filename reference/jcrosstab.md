@@ -112,7 +112,11 @@ jcrosstab(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - digits:
 
@@ -161,7 +165,6 @@ jcrosstab(Education ~ Volunteer, data = community)
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -193,7 +196,6 @@ jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -230,7 +232,6 @@ jcrosstab(Education ~ Volunteer, data = community,
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -273,7 +274,6 @@ jcrosstab(Education ~ Volunteer, data = community, residuals = "adjusted")
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -313,7 +313,6 @@ jcrosstab(Education ~ Volunteer)
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -344,7 +343,6 @@ jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer

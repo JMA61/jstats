@@ -101,7 +101,11 @@ jdesc(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - digits:
 
@@ -155,6 +159,8 @@ listing.
 jdesc(community, Age)
 #> Descriptive Statistics
 #> 
+#> 103 Cases in the 1 Variable Pool
+#> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  -----  -----
 #> Age         103          103   18   71  40.65  11.62
@@ -162,12 +168,7 @@ jdesc(community, Age)
 jdesc(community, Income, Age, WellbeingScore)
 #> Descriptive Statistics
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --        103
-#>     Remaining N        --        103
-#> 
-#> ------------------------------------
-#> 
+#> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
 #> Variable        Total  Non_missing    Min    Max       Mean         SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
@@ -177,6 +178,8 @@ jdesc(community, Income, Age, WellbeingScore)
 #> 
 jdesc(community, WellbeingScore, by = Volunteer)
 #> Descriptive Statistics by Volunteer (2 levels)
+#> 
+#> 103 Cases in the 2 Variable Pool
 #> 
 #> WellbeingScore
 #> 
@@ -194,6 +197,8 @@ jdesc(Age)
 #> Descriptive Statistics
 #> Using default data frame: community
 #> 
+#> 103 Cases in the 1 Variable Pool
+#> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  -----  -----
 #> Age         103          103   18   71  40.65  11.62
@@ -202,12 +207,7 @@ jdesc(Income, Age, WellbeingScore)
 #> Descriptive Statistics
 #> Using default data frame: community
 #> 
-#> Case Processing  Excluded  Remaining
-#>     Original           --        103
-#>     Remaining N        --        103
-#> 
-#> ------------------------------------
-#> 
+#> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
 #> Variable        Total  Non_missing    Min    Max       Mean         SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
@@ -218,6 +218,8 @@ jdesc(Income, Age, WellbeingScore)
 jdesc(WellbeingScore, by = Volunteer)
 #> Descriptive Statistics by Volunteer (2 levels)
 #> Using default data frame: community
+#> 
+#> 103 Cases in the 2 Variable Pool
 #> 
 #> WellbeingScore
 #> 
@@ -231,6 +233,8 @@ jdesc(WellbeingScore, by = Volunteer)
 # With a vector directly
 jdesc(community$Age)
 #> Descriptive Statistics
+#> 
+#> 103 Cases in the 1 Variable Pool
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  -----  -----

@@ -110,7 +110,11 @@ jt(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - full:
 
@@ -159,6 +163,9 @@ listing.
 # With explicit data frame
 jt(WellbeingScore ~ Volunteer, data = community)
 #> Independent Samples T-Test
+#> 
+#> Analysis N: 103
+#> 
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
@@ -174,6 +181,9 @@ jt(WellbeingScore ~ Volunteer, data = community)
 #> 
 jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
 #> Welch's Independent Samples T-Test
+#> 
+#> Analysis N: 103
+#> 
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
@@ -189,6 +199,9 @@ jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
 #> 
 jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 #> Independent Samples T-Test
+#> 
+#> Analysis N: 103
+#> 
 #> Levene's Test for Homogeneity of Variance
 #>     F  df1  df2  p   
 #> -----  ---  ---  ----
@@ -214,6 +227,9 @@ juse(community)
 jt(WellbeingScore ~ Volunteer)
 #> Independent Samples T-Test
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N    Mean      SD
 #> ------  --  ------  ------
@@ -230,6 +246,9 @@ jt(WellbeingScore ~ Volunteer)
 jt(WellbeingScore ~ Volunteer, full = TRUE)
 #> Independent Samples T-Test
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
 #> Levene's Test for Homogeneity of Variance
 #>     F  df1  df2  p   
 #> -----  ---  ---  ----

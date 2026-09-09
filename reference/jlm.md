@@ -143,7 +143,11 @@ jlm(
   `"none"`, `"totals"`, or `"per_code"`. `NULL` (default) uses the
   active
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  level default.
+  level default. The Case Processing table itself prints only when a
+  filter or listwise deletion excluded cases; otherwise a one-line N
+  statement takes its place. See
+  [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
+  (`case.processing`).
 
 - digits:
 
@@ -337,9 +341,7 @@ jlm(WellbeingScore ~ Income + Age, data = community)
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE      t      β      p  
@@ -372,9 +374,7 @@ jlm(WellbeingScore ~ Income + Age, community)
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE      t      β      p  
@@ -410,9 +410,7 @@ jlm(WellbeingScore ~ Income + Age)
 #> Missing-data breakdown  From 103    %
 #>     Income
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE      t      β      p  
@@ -440,6 +438,8 @@ jlm(WellbeingScore ~ Income + Age)
 jlm(WellbeingScore ~ Region + Age, categorical = "Region")
 #> Linear Regression
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
 #> 
 #> Coefficients
 #>                            b      SE      t       β      p  
@@ -484,6 +484,8 @@ jlm(WellbeingScore ~ Region + Age)
 #> Linear Regression
 #> Using default data frame: community
 #> 
+#> Analysis N: 103
+#> 
 #> Coefficients
 #>                            b      SE      t       β      p  
 #> -----------------------  ------  -----  ------  -----  -----
@@ -524,6 +526,8 @@ jlm(WellbeingScore ~ Region + Age)
 #> Linear Regression
 #> Using default data frame: community
 #> 
+#> Analysis N: 103
+#> 
 #> Coefficients
 #>                           b      SE      t       β      p  
 #> ----------------------  ------  -----  ------  -----  -----
@@ -563,9 +567,7 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 #> Missing-data breakdown  From 103    %
 #>     Education
 #>       Missing              6      5.8
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                b      SE      t      β      p  
@@ -602,9 +604,7 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #>       Missing              6      5.8
 #>     Smoker
 #>       Missing              5      4.9
-#> 
 #> --------------------------------------
-#> 
 #> 
 #> Coefficients
 #>                 b      SE      t       β       p  

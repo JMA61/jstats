@@ -29,7 +29,7 @@ the broader social science research community."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -190,11 +190,11 @@ preset levels – <code>minimal</code>, <code>standard</code> (default), or
 <code>full</code> – that modulate how much detail analysis functions
 print. Useful for stripping output in production scripts or
 expanding it during exploration. Per-call arguments always
-override session-level settings. The Case Processing Summary
-table follows an auto-suppress rule at the standard tier: it
-prints when something happened (pipeline state, listwise drops,
-or a per-variable discrepancy notification) and stays silent
-otherwise. See <code><a href="joutput.html">?joutput</a></code> for the full toggle behavior.</p>
+override session-level settings. The Case Processing table
+follows an auto rule at the standard tier: it prints when a filter
+or listwise deletion excluded cases, and a one-line N statement
+takes its place otherwise. See <code><a href="joutput.html">?joutput</a></code> for the full toggle
+behavior.</p>
     </div>
     <div class="section level2">
     <h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a></h2>

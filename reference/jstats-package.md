@@ -195,10 +195,9 @@ one of three preset levels – `minimal`, `standard` (default), or `full`
 – that modulate how much detail analysis functions print. Useful for
 stripping output in production scripts or expanding it during
 exploration. Per-call arguments always override session-level settings.
-The Case Processing Summary table follows an auto-suppress rule at the
-standard tier: it prints when something happened (pipeline state,
-listwise drops, or a per-variable discrepancy notification) and stays
-silent otherwise. See
+The Case Processing table follows an auto rule at the standard tier: it
+prints when a filter or listwise deletion excluded cases, and a one-line
+N statement takes its place otherwise. See
 [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md) for
 the full toggle behavior.
 

@@ -17,7 +17,7 @@ joutput() level."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.156</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,7 +56,8 @@ per Rule Y it does not rewrite the user's call. One form at every
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jrecode_convention_error</span><span class="op">(</span></span>
 <span>  <span class="va">parsed_map</span>,</span>
 <span>  <span class="va">parsed_labels</span>,</span>
-<span>  per_call_convention <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  per_call_convention <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  labels_tagged_raw <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -82,6 +83,14 @@ routes to an SPSS resolution the message describes – the call or
 the setting – and therefore which remedy is offered; it plays no
 part in whether the error fires. It also seeds the display case for
 a marker that carries no recorded raw spelling.</p></dd>
+
+
+<dt id="arg-labels-tagged-raw">labels_tagged_raw<a class="anchor" aria-label="anchor" href="#arg-labels-tagged-raw"></a></dt>
+<dd><p>Named character vector or <code>NULL</code>: the
+<code>tagged_raw</code> record the caller harvested off
+<code>parsed_labels</code> before stripping it (keyed by the canonical
+lowercase letter, values the typed spellings). Lets a marker seen
+only in <code>labels</code> be quoted as typed (S283).</p></dd>
 
 </dl></div>
     <div class="section level2">

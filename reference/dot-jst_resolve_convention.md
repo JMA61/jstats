@@ -59,8 +59,10 @@ an explicit `"none"` are identical.
 - marker:
 
   Optional. For `act = "tagged"`: the first tagged spelling in the
-  user's call (e.g. `".a"`, parser-normalized lowercase), echoed in the
-  gate's head.
+  user's call (e.g. `".a"`), echoed in the gate's head AS THE USER TYPED
+  IT – callers build it from the parsers' tagged_raw record, not the
+  normalized lowercase letter (S283; a typed `.A` was echoed as `'.a'`
+  before).
 
 ## Value
 
