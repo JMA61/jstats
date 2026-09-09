@@ -345,7 +345,15 @@
 
   n_original <- sample_info$n_original
   n_analysis <- sample_info$n_analysis
-  if (is.null(n_original) || n_original == 0) return(invisible(NULL))
+  # Empty frame: no table, no N line -- there is no accounting to state. The
+  # closing blank IS still emitted, so the block's contract holds without
+  # exception: one blank line after it in every mode. The analysis functions
+  # rely on that (none of them prints a leading blank of its own), so an
+  # early return with no blank glued the results to the title. (Session 287.)
+  if (is.null(n_original) || n_original == 0) {
+    cat("\n")
+    return(invisible(NULL))
+  }
 
   is_per_var <- analysis_type %in% c("per_var_desc", "per_var_freq")
 

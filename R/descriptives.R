@@ -324,8 +324,11 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     } else {
       NULL
     }
-    cat("\n")
 
+    # No leading blank here either: the CPS block opens with its own blank
+    # under the title. This grouped path is jdesc's SECOND CPS call site and
+    # was missed by the S286 finding, which named only the ungrouped one;
+    # the doubling here predates S286. (Session 287.)
     .jst_print_case_processing(sample_info, analysis_type = "per_var_desc",
                                detail = case.processing.detail)
 
@@ -514,7 +517,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
         function(v) .jst_combine_id(v, .jst_label_or_name(data, v), vlmode, cap = TRUE),
         character(1))
     }
-    cat("\n")
+    # No leading blank here: the CPS block closes with one blank line in
+    # every mode (N line or table), so a cat("\n") at this point doubled it.
+    # (Session 287; the S284 N line made the doubling visible everywhere.)
     .jst_print_table(descriptives_disp)
     cat("\n")
   }

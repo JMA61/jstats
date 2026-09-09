@@ -2227,7 +2227,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
               "-- check your model specification.")
   }
 
-  cat("\n")
+  # No leading blank here: the CPS block closes with one blank line in every
+  # mode (N line or table), so a cat("\n") at this point doubled it.
+  # (Session 287; the S284 N line made the doubling visible everywhere.)
   out_coefs_disp <- out_coefs
   if (identical(vlmode, "labels")) {
     rownames(out_coefs_disp) <- .jst_relabel_coef_names(
@@ -3311,7 +3313,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     col_names <- c(col_names, "95% CI Lower", "95% CI Upper")
   }
 
-  cat("\n")
+  # No leading blank here: the CPS block closes with one blank line in every
+  # mode (N line or table), so a cat("\n") at this point doubled it.
+  # (Session 287; the S284 N line made the doubling visible everywhere.)
   out_coefs_disp <- out_coefs
   if (identical(vlmode, "labels")) {
     rownames(out_coefs_disp) <- .jst_relabel_coef_names(
