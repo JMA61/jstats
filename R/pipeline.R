@@ -109,14 +109,36 @@ juse <- function(data) {
 #' The expression applies whenever the matching dataset is used, regardless
 #' of whether it was supplied via \code{juse()} or specified explicitly in
 #' a function call. To bypass it temporarily without losing it, use
-#' \code{jsubset(off)} before the analysis and \code{jsubset(on)} afterward.
-#' This matches the SPSS FILTER / USE ALL convention.
+#' \code{jsubset(off)} before the analysis and \code{jsubset(on)} afterward
+#' (or \code{jsubset(d, off)} and \code{jsubset(d, on)} for a named
+#' dataset). This matches the SPSS FILTER / USE ALL convention.
 #'
 #' Expressions use standard R logical operators: \code{==}, \code{!=},
 #' \code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
 #' \code{!} (NOT), \code{xor()} (XOR), and `%in%`. Using \code{=} for
 #' equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
 #' produce a helpful error suggesting the correct R syntax.
+#'
+#' The expression must give one TRUE or FALSE for every row of the
+#' dataset. \code{jsubset()} runs it once when set and refuses anything
+#' else -- a single value (\code{TRUE}, or an aggregate such as
+#' \code{mean(Score) > 5}), numbers, text, or the wrong number of values --
+#' with an error that shows a corrected form. The same check runs when the
+#' filter is applied, so a filter that was valid when set but has since
+#' stopped matching the dataset stops the analysis rather than running on
+#' the wrong rows; that error names both ways out.
+#'
+#' A filter normally names only columns of the data frame, and such a
+#' filter can never fall out of step with the data. A filter may also
+#' refer to an object in your workspace, such as a cutoff
+#' (\code{Age < cutoff}) or a set of codes (\code{Region \%in\% keep_regions}).
+#' If you compute a keep/drop indicator separately, add it to the data
+#' frame as a column and filter on that column
+#' (\code{clinic$Keep <- clinic$Stress > 3}, then
+#' \code{jsubset(clinic, Keep == TRUE)}). A separate object holding one
+#' value per row stops matching the data frame if rows are later added or
+#' removed, and every analysis of that data frame then stops until the
+#' filter is set aside.
 #'
 #' @param data Optional data frame. If supplied, the expression is stored
 #'   on that dataset specifically. If omitted, the dataset set by
@@ -128,8 +150,14 @@ juse <- function(data) {
 #'     \item{\code{on}}{Reactivate a previously deactivated setting.}
 #'     \item{\code{NULL}}{Clear the setting entirely (forget the expression).}
 #'   }
-#'   If \code{expr} and \code{data} are both omitted, prints the current
-#'   jsubset status.
+#'   Each acts on the \code{juse()} default dataset when \code{data} is
+#'   omitted (\code{jsubset(off)}), or on the named dataset when it is
+#'   given (\code{jsubset(d, off)}, \code{jsubset(d, NULL)}). A bare
+#'   \code{jsubset(NULL)} clears every dataset's setting at once, as does
+#'   \code{clear.all = TRUE}. If \code{expr} and \code{data} are both
+#'   omitted, prints the current jsubset status.
+#' @param clear.all Logical. If \code{TRUE}, clears the jsubset setting on
+#'   every dataset; use on its own, \code{jsubset(clear.all = TRUE)}.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
@@ -140,8 +168,11 @@ juse <- function(data) {
 #' jsubset(Age < 40 & WellbeingScore > 50)  # Compound condition
 #' jsubset(off)                             # Deactivate
 #' jsubset(on)                              # Reactivate
+#' jsubset(community, off)                  # Deactivate on a named dataset
+#' jsubset(community, on)                   # ... and reactivate it
 #' jsubset()                                # Check status
-#' jsubset(NULL)                            # Clear entirely
+#' jsubset(community, NULL)                 # Clear one dataset's setting
+#' jsubset(NULL)                            # Clear every dataset's setting
 #' # Not normally needed. You'd clear a default or registration only to
 #' # undo a mistake, or -- as in this example -- to reset state for testing.
 #' juse(NULL)
@@ -150,7 +181,85 @@ juse <- function(data) {
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jsubset <- function(data, expr) {
+jsubset <- function(data, expr, clear.all = FALSE) {
+
+  # -- Shared branches, written once ----------------------------------------
+  # Three operations reach the registry by name: clear every frame, clear
+  # one frame, and toggle one frame. Each is reached from more than one
+  # call form (global / default-scoped / named-frame, plus the tolerated
+  # leading-comma form), so the bodies live here and the form-detection
+  # below only decides which to call and how to word the example. off/on
+  # DEACTIVATE-and-retain (fs$active, expr_str kept); NULL DELETES the
+  # entry (S288 decision 4: two operations, not one at two scopes).
+  clear_every <- function() {
+    all_filters <- getOption(".jst_filter", default = list())
+    if (length(all_filters) == 0) {
+      .jst_msg("No jsubset settings to clear.")
+      return(invisible(NULL))
+    }
+    dnames <- names(all_filters)
+    hads <- vapply(seq_along(all_filters), function(i) {
+      fs <- all_filters[[i]]
+      if (is.null(fs)) "no jsubset set" else paste0("had: ", fs$expr_str)
+    }, character(1))
+    options(.jst_filter = NULL)
+    .jst_render_clear("jsubset", dnames, hads)
+    invisible(NULL)
+  }
+  clear_one <- function(frame) {
+    fs <- .jst_get_filter(frame)
+    if (is.null(fs)) {
+      .jst_msg("No jsubset set for ", frame, ". Nothing to clear.")
+    } else {
+      .jst_set_filter(frame, NULL)
+      .jst_render_clear("jsubset", frame, paste0("had: ", fs$expr_str))
+    }
+    invisible(NULL)
+  }
+  toggle_one <- function(frame, which, set_example) {
+    fs <- .jst_get_filter(frame)
+    if (which == "off") {
+      if (is.null(fs)) {
+        .jst_msg("No jsubset set for ", frame, ". Nothing to deactivate.")
+      } else {
+        fs$active <- FALSE
+        .jst_set_filter(frame, fs)
+        .jst_msg("jsubset deactivated for ", frame, ".")
+      }
+    } else {
+      if (is.null(fs)) {
+        .jst_msg("No jsubset set for ", frame, ". Use ", set_example,
+                 " to set one.")
+      } else {
+        fs$active <- TRUE
+        .jst_set_filter(frame, fs)
+        .jst_msg("jsubset reactivated for ", frame, ": ", fs$expr_str)
+      }
+    }
+    invisible(NULL)
+  }
+  toggle_word <- function(sym) {
+    if (!is.symbol(sym)) return(NULL)
+    w <- tolower(as.character(sym))
+    if (w %in% c("off", "on")) w else NULL
+  }
+
+  # -- jsubset(clear.all = TRUE) --------------------------------------------
+  # The registration verbs' all-frames form (jdummy(clear.all = TRUE)),
+  # added here so the six per-frame setters can converge on one grammar
+  # (S289). jsubset(NULL) keeps its global meaning for now; the flip to
+  # default-frame NULL is a later item, after the reset lines in the
+  # regression files move to clear.all = TRUE.
+  if (!isFALSE(clear.all)) {
+    if (!isTRUE(clear.all)) {
+      .jst_stop("`clear.all` must be TRUE or FALSE.")
+    }
+    if (!missing(data) || !missing(expr)) {
+      .jst_stop("`clear.all` cannot be combined with a filter; ",
+                "use jsubset(clear.all = TRUE) on its own.")
+    }
+    return(clear_every())
+  }
 
   # -- No arguments: print session-wide status ------------------------------
   # Session-wide to match jsubset(NULL)'s scope. Collapse rule: 0 or 1 frame
@@ -186,63 +295,41 @@ jsubset <- function(data, expr) {
   raw_expr <- if (!missing(expr)) substitute(expr) else NULL
 
   # -- jsubset(NULL) — true global clear across all data frames -------------
-  # Mirrors jdummy(NULL) semantics. Ignores the juse default; always
-  # clears every per-data-frame jsubset setting. The condition
-  # "data was supplied AND substituted expression is NULL" detects the
-  # literal jsubset(NULL) call (cf. missing(data), which is FALSE here).
+  # Ignores the juse default; always clears every per-data-frame jsubset
+  # setting. NOTE this is NOT what jdummy(NULL) does any more: the four
+  # registration verbs (jdummy / jnumeric / jcount / jlikert) moved NULL to
+  # the default frame and use clear.all = TRUE for every frame. jsubset's
+  # global NULL is retained deliberately for now (S289) -- the regression
+  # files reset with it -- and flips in a later, separate change. The
+  # condition "data was supplied AND substituted expression is NULL"
+  # detects the literal jsubset(NULL) call (cf. missing(data), FALSE here).
   if (!missing(data) && is.null(raw_data)) {
-    all_filters <- getOption(".jst_filter", default = list())
-    if (length(all_filters) == 0) {
-      .jst_msg("No jsubset settings to clear.")
-      return(invisible(NULL))
-    }
-    dnames <- names(all_filters)
-    hads <- vapply(seq_along(all_filters), function(i) {
-      fs <- all_filters[[i]]
-      if (is.null(fs)) "no jsubset set" else paste0("had: ", fs$expr_str)
-    }, character(1))
-    options(.jst_filter = NULL)
-    .jst_render_clear("jsubset", dnames, hads)
-    return(invisible(NULL))
+    return(clear_every())
   }
 
-  # -- jsubset(off) / jsubset(on) — default-scoped --------------------------
-  # Symbol checks happen on raw_data BEFORE the helper, since `off` and
-  # `on` aren't real R objects and would fail evaluation.
-  if (!is.null(raw_data) && is.symbol(raw_data) && missing(expr)) {
-    sym_name <- tolower(as.character(raw_data))
-    default_name <- getOption(".jst_default_data", default = NULL)
-    if (sym_name == "off") {
-      if (is.null(default_name)) {
-        .jst_msg("No default data frame set.")
-        return(invisible(NULL))
-      }
-      fs <- .jst_get_filter(default_name)
-      if (is.null(fs)) {
-        .jst_msg("No jsubset set for ", default_name, ". Nothing to deactivate.")
-      } else {
-        fs$active <- FALSE
-        .jst_set_filter(default_name, fs)
-        .jst_msg("jsubset deactivated for ", default_name, ".")
-      }
+  # -- Default-scoped off / on / NULL ---------------------------------------
+  # Two call forms reach the default frame: the bare jsubset(off) (the symbol
+  # lands in `data`) and the tolerated leading-comma jsubset(, off) (it lands
+  # in `expr`). Symbol checks happen on the captured expressions BEFORE any
+  # evaluation, since `off` and `on` aren't real R objects. The leading-comma
+  # form is accepted, not advertised: it works everywhere in the data-first
+  # functions and is documented nowhere (S289).
+  default_name <- getOption(".jst_default_data", default = NULL)
+  default_word <- if (!is.null(raw_data) && missing(expr)) {
+    toggle_word(raw_data)
+  } else if (missing(data) && !missing(expr)) {
+    toggle_word(raw_expr)
+  } else {
+    NULL
+  }
+  default_null <- missing(data) && !missing(expr) && is.null(raw_expr)
+  if (!is.null(default_word) || default_null) {
+    if (is.null(default_name)) {
+      .jst_msg("No default data frame set.")
       return(invisible(NULL))
     }
-    if (sym_name == "on") {
-      if (is.null(default_name)) {
-        .jst_msg("No default data frame set.")
-        return(invisible(NULL))
-      }
-      fs <- .jst_get_filter(default_name)
-      if (is.null(fs)) {
-        .jst_msg("No jsubset set for ", default_name,
-                 ". Use jsubset(expression) to set one.")
-      } else {
-        fs$active <- TRUE
-        .jst_set_filter(default_name, fs)
-        .jst_msg("jsubset reactivated for ", default_name, ": ", fs$expr_str)
-      }
-      return(invisible(NULL))
-    }
+    if (default_null) return(clear_one(default_name))
+    return(toggle_one(default_name, default_word, "jsubset(expression)"))
   }
 
   # -- Resolve which arg is the data and which is the expression ------------
@@ -261,18 +348,24 @@ jsubset <- function(data, expr) {
   target_name <- arg1$name
 
   if (arg1$mode == "explicit") {
-    # jsubset(MyData, <expr>) — explicit data frame + expression slot
+    # jsubset(MyData, <expr>) — explicit data frame + expression slot.
+    # The named-frame forms of NULL / off / on are intercepted here, before
+    # the expression slot is treated as a filter (S288 decision 4).
     if (missing(expr)) {
       .jst_stop("the condition must be a logical expression. ",
            "Example: jsubset(", target_name, ", Age < 40)")
     }
+    if (is.null(raw_expr)) return(clear_one(target_name))
+    named_word <- toggle_word(raw_expr)
+    if (!is.null(named_word)) {
+      return(toggle_one(target_name, named_word,
+                        paste0("jsubset(", target_name, ", expression)")))
+    }
     filter_raw <- raw_expr
   } else if (arg1$mode == "default") {
-    # jsubset(, <expr>) — leading comma + juse default
-    if (is.null(raw_expr)) {
-      .jst_stop("no logical expression supplied. ",
-                "Example: jsubset(Age < 40)", fn = "jsubset")
-    }
+    # jsubset(, <expr>) — leading comma + juse default. A literal NULL in
+    # this slot was intercepted above (default_null), so raw_expr is a
+    # filter here.
     filter_raw <- raw_expr
   } else {
     # symbol_with_default — jsubset(<expr>) bare-expression form
@@ -283,9 +376,32 @@ jsubset <- function(data, expr) {
   expr_str_for_check <- deparse(filter_raw, width.cutoff = 500)
   .jst_check_filter_syntax(filter_raw, expr_str_for_check)
 
-  # -- Set and activate the expression --------------------------------------
+  # -- Dry run: refuse a filter that cannot select rows ---------------------
+  # Run the expression once against the resolved frame (S288 decision 3).
+  # STRICT on shape, SILENT on evaluation failure: an expression may
+  # legitimately name an object that does not exist yet, so an error here
+  # stores the filter as before and leaves the apply-time check to catch it
+  # if it is still wrong when used. Warnings and messages raised by the
+  # evaluation are muffled rather than caught -- a handler that caught them
+  # would abandon the evaluation and skip the shape check.
   expr_str <- deparse(filter_raw, width.cutoff = 500)
   prior <- .jst_get_filter(target_name)
+  dry <- tryCatch(
+    list(ok = TRUE, mask = withCallingHandlers(
+      eval(filter_raw, arg1$data, parent.frame()),
+      warning = function(w) invokeRestart("muffleWarning"),
+      message = function(m) invokeRestart("muffleMessage"))),
+    error = function(e) list(ok = FALSE, mask = NULL)
+  )
+  if (isTRUE(dry$ok)) {
+    .jst_check_mask_shape(dry$mask, nrow(arg1$data), filter_raw, expr_str,
+                          origin      = "set",
+                          data_name   = target_name,
+                          named_frame = identical(arg1$mode, "explicit"),
+                          prior       = !is.null(prior))
+  }
+
+  # -- Set and activate the expression --------------------------------------
   .jst_set_filter(target_name, list(
     expr     = filter_raw,
     expr_str = expr_str,
@@ -307,9 +423,27 @@ jsubset <- function(data, expr) {
 #' expressions and provide guidance toward standard R operators.
 #'
 #' Catches:
+#' - a bare variable name used as the whole expression (\code{jsubset(Gender)})
 #' - \code{=} used where \code{==} was meant (for equality comparison)
 #' - \code{AND} / \code{OR} / \code{NOT} / \code{XOR} used as identifiers
 #'   where \code{&} / \code{|} / \code{!} / \code{xor()} were meant
+#'
+#' Inspects the PARSED expression, so it can only see what R's parser let
+#' through: \code{Condition == 3 AND SoughtHelp == 1} and a top-level
+#' \code{Gender = 1} never reach it (the parser rejects the first; the
+#' second becomes a named argument to \code{jsubset()} itself). The
+#' \code{=} branch therefore fires only on an operator \code{=} that R
+#' accepted inside parentheses or braces, \code{(Gender = 1) & (Age < 40)},
+#' which without the check would evaluate as \code{1 & (Age < 40)} and
+#' silently drop the Gender test.
+#'
+#' \code{TRUE} / \code{FALSE} / \code{T} / \code{F} are not exempted (they
+#' were, until Session 289): a single value cannot select rows, and the
+#' set-time dry run in \code{jsubset()} refuses all four with the same
+#' shape error (\code{.jst_check_mask_shape()}). \code{T} and \code{F}
+#' are let past the bare-name branch here only so that they reach that
+#' error rather than the variable-name one, whose \code{T == 1} example
+#' would be nonsense.
 #'
 #' @param raw_expr The unevaluated expression (a language object).
 #' @param expr_str The deparsed expression string (for display in errors).
@@ -318,22 +452,15 @@ jsubset <- function(data, expr) {
 
   # Catch a bare symbol used as the entire subset expression, e.g.
   # jsubset(Gender). The user almost certainly meant a comparison
-  # like Gender == 1. Without this check, the symbol gets stored as
-  # the expression and later attempts to apply it produce cryptic
-  # errors from haven_labelled internals when subset_data is
-  # non-logical.
+  # like Gender == 1. T and F fall through to the dry run (see roxygen).
   if (is.symbol(raw_expr)) {
     sym <- as.character(raw_expr)
-    if (!sym %in% c("TRUE", "FALSE", "T", "F")) {
+    if (!sym %in% c("T", "F")) {
       .jst_stop(
-        "Subset expression `", sym, "` is just a variable name and ",
-        "cannot be used as a subset expression on its own. A subset ",
-        "expression must compare a variable to a value (or evaluate to ",
-        "TRUE/FALSE for each row).\n",
-        "  Examples:\n",
-        "    jsubset(", sym, " == 1)         # keep rows where ", sym, " is 1\n",
-        "    jsubset(!is.na(", sym, "))       # keep rows where ", sym, " is not missing\n",
-        "  You wrote: jsubset(", sym, ")"
+        sym, " on its own is a variable name, not a condition, ",
+        "so it cannot select rows.\n",
+        "Compare it to a value, for example:\n",
+        "  jsubset(", sym, " == 1)"
       )
     }
   }
@@ -363,19 +490,32 @@ jsubset <- function(data, expr) {
     )
   }
 
-  # Check for assignment (`=`) used where equality (`==`) was meant.
-  # R parses `Gender = 1` inside a function call as a named argument, but
-  # when deparsed it produces a `Gender = 1` string. Use the unevaluated
-  # expression's deparsed form for a text check — look for ` = ` that is
-  # not ` == ` and not a call argument like `method =`.
-  # Most robust: check if the deparsed expression contains a lone `=` sign
-  # that isn't part of `==`, `<=`, `>=`, or `!=`.
-  if (grepl("(?<![=<>!])=(?!=)", expr_str, perl = TRUE)) {
+  # Check for an operator `=` where `==` was meant. The test is on the
+  # parsed expression: an `=` CALL is an assignment R let through inside
+  # parentheses or braces. A named argument inside a call
+  # (ignore.case = TRUE) is not an `=` call, and an `=` inside a quoted
+  # string is text, so neither trips it. The deparsed-string regex this
+  # replaced, (?<![=<>!])=(?!=), matched all three and false-fired on
+  # jsubset(d, grepl("^A", Name, ignore.case = TRUE)) (S288 third face,
+  # reproduced on the workstation S289). The corrected call shown back
+  # is built by walking the expression and turning each `=` call into
+  # `==`, leaving every other node -- including named arguments -- as is.
+  if ("=" %in% all_names) {
+    fix_eq <- function(e) {
+      if (is.call(e)) {
+        if (identical(e[[1L]], as.name("="))) e[[1L]] <- as.name("==")
+        for (i in seq_along(e)[-1L]) {
+          if (!is.null(e[[i]]) && is.call(e[[i]])) e[[i]] <- fix_eq(e[[i]])
+        }
+      }
+      e
+    }
+    fixed <- paste(deparse(fix_eq(raw_expr), width.cutoff = 500),
+                   collapse = " ")
     .jst_stop(
-      "It looks like you used `=` in your subset expression. In R, `=` is ",
-      "assignment; equality comparison uses `==` (double equals).\n",
-      "  Example: jsubset(Volunteer == 1)\n",
-      "  You wrote: ", expr_str
+      expr_str, " uses a single =, which does not test equality in R.\n",
+      "Use == (two equals signs):\n",
+      "  jsubset(", fixed, ")"
     )
   }
 
@@ -708,7 +848,11 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   raw_data <- if (!missing(data)) substitute(data) else NULL
 
   # -- jcomplete(NULL) — true global clear across all data frames -----------
-  # Mirrors jdummy(NULL) and jsubset(NULL) semantics. Ignores juse default;
+  # Mirrors jsubset(NULL) (global) -- NOT jdummy(NULL), which has been
+  # frame-scoped since the registration verbs unified on .jst_handle_clear
+  # (jdummy(clear.all = TRUE) is the all-frames form there). jcomplete's
+  # per-frame off / on / NULL and clear.all, and the flip of NULL to the
+  # default frame, are a later item (S289). Ignores juse default;
   # always clears every per-data-frame jcomplete setting. The condition
   # "data was supplied AND substituted expression is NULL" detects the
   # literal jcomplete(NULL) call.

@@ -47,7 +47,8 @@ jcomplete and jsubset are keyed per-dataset. They apply whenever the
 matching dataset is used, regardless of whether that dataset was supplied
 via the juse() default or specified explicitly in the function call.
 This matches the SPSS FILTER model: persistent state remains in effect
-until explicitly turned off via jsubset(off) / jcomplete(off).
+until explicitly turned off via jsubset(off) / jcomplete(off) on the
+default dataset, or jsubset(d, off) on a named one.
 
 When the current dataset has no jsubset / jcomplete set but at least one
 other dataset does have an active setting, a yellow-colored note is

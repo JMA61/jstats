@@ -15,9 +15,28 @@ expressions and provide guidance toward standard R operators.}
 \description{
 Catches:
 \itemize{
+\item a bare variable name used as the whole expression (\code{jsubset(Gender)})
 \item \code{=} used where \code{==} was meant (for equality comparison)
 \item \code{AND} / \code{OR} / \code{NOT} / \code{XOR} used as identifiers
 where \code{&} / \code{|} / \code{!} / \code{xor()} were meant
 }
+}
+\details{
+Inspects the PARSED expression, so it can only see what R's parser let
+through: \code{Condition == 3 AND SoughtHelp == 1} and a top-level
+\code{Gender = 1} never reach it (the parser rejects the first; the
+second becomes a named argument to \code{jsubset()} itself). The
+\code{=} branch therefore fires only on an operator \code{=} that R
+accepted inside parentheses or braces, \code{(Gender = 1) & (Age < 40)},
+which without the check would evaluate as \code{1 & (Age < 40)} and
+silently drop the Gender test.
+
+\code{TRUE} / \code{FALSE} / \code{T} / \code{F} are not exempted (they
+were, until Session 289): a single value cannot select rows, and the
+set-time dry run in \code{jsubset()} refuses all four with the same
+shape error (\code{.jst_check_mask_shape()}). \code{T} and \code{F}
+are let past the bare-name branch here only so that they reach that
+error rather than the variable-name one, whose \code{T == 1} example
+would be nonsense.
 }
 \keyword{internal}

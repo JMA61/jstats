@@ -4,7 +4,16 @@
 \alias{.jst_apply_mask}
 \title{Internal helper: apply a logical mask expression to a data frame}
 \usage{
-.jst_apply_mask(data, expr, envir, on_error, stage_label)
+.jst_apply_mask(
+  data,
+  expr,
+  envir,
+  on_error,
+  stage_label,
+  origin,
+  expr_str,
+  data_name = NULL
+)
 }
 \arguments{
 \item{data}{Data frame to mask.}
@@ -14,16 +23,28 @@
 \item{envir}{Environment to evaluate \code{expr} in. Data columns
 take precedence; \code{envir} provides fallback bindings.}
 
-\item{on_error}{One of \code{"warn"} or \code{"stop"}. \code{"warn"}
-emits a warning and returns the data unchanged -- used for the
-persistent jsubset state, where the expression was validated when
-set and a runtime failure is unexpected. \code{"stop"} raises an
-error -- used for the per-call \code{subset =} argument, where a
-broken expression is a user error at call time.}
+\item{on_error}{One of \code{"warn"} or \code{"stop"}. Governs an
+EVALUATION failure only -- an error raised while running the
+expression, which can be transient (an object not created yet).
+\code{"warn"} emits a warning and returns the data unchanged -- used
+for the persistent jsubset state. \code{"stop"} raises an error --
+used for the per-call \code{subset =} argument, where a broken
+expression is a user error at call time. A SHAPE failure ignores this
+split and always stops (Session 288, decision 1).}
 
-\item{stage_label}{Character. Prefix used in the error/warning
-message (e.g. \code{"jsubset"} or \code{"Subset"}) so failures
-are attributable to the right pipeline stage.}
+\item{stage_label}{Character. Prefix used in the evaluation-failure
+message (e.g. \code{"jsubset"} or \code{"Subset"}) so failures are
+attributable to the right pipeline stage.}
+
+\item{origin}{One of \code{"stored"} or \code{"call"}; selects the
+shape-error wording. Passed explicitly rather than inferred from
+\code{on_error} or \code{stage_label}.}
+
+\item{expr_str}{Character. The deparsed expression, echoed in the shape
+error.}
+
+\item{data_name}{Character. The data frame's name; the stored-filter
+shape error builds its exits from it.}
 }
 \value{
 The data frame filtered to rows where \code{expr} evaluates
@@ -32,10 +53,14 @@ to \code{TRUE} (\code{NA} treated as \code{FALSE}).
 \description{
 Shared mechanic for Step 2 (persistent jsubset) and Step 3 (per-call
 \code{subset =} argument) of \code{.jst_apply_pipeline()}. Evaluates
-\code{expr} in the data + caller environment, coerces \code{NA}s in
-the resulting mask to \code{FALSE}, and returns the filtered data
-frame. The two callers differ in upstream source (joptions state vs.
-argument) and downstream bookkeeping (which \code{sample_info} slot
-is populated); the masking step itself is identical.
+\code{expr} in the data + caller environment, refuses a result that is
+not one TRUE/FALSE per row (via \code{.jst_check_mask_shape()}, which
+always stops), coerces \code{NA}s in the mask to \code{FALSE}, and
+returns the filtered data frame. The two callers differ in upstream
+source (joptions state vs. argument) and downstream bookkeeping (which
+\code{sample_info} slot is populated); the masking step itself is
+identical. This is the package's single row-selection site for user
+filters (Session 288 scan), so the shape check here is the safety net
+for both a stored filter that has gone stale and a per-call argument.
 }
 \keyword{internal}

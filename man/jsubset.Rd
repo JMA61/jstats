@@ -4,7 +4,7 @@
 \alias{jsubset}
 \title{Set, activate, deactivate, or clear a per-dataset case-selection expression}
 \usage{
-jsubset(data, expr)
+jsubset(data, expr, clear.all = FALSE)
 }
 \arguments{
 \item{data}{Optional data frame. If supplied, the expression is stored
@@ -18,8 +18,15 @@ or one of the following special values:
 \item{\code{on}}{Reactivate a previously deactivated setting.}
 \item{\code{NULL}}{Clear the setting entirely (forget the expression).}
 }
-If \code{expr} and \code{data} are both omitted, prints the current
-jsubset status.}
+Each acts on the \code{juse()} default dataset when \code{data} is
+omitted (\code{jsubset(off)}), or on the named dataset when it is
+given (\code{jsubset(d, off)}, \code{jsubset(d, NULL)}). A bare
+\code{jsubset(NULL)} clears every dataset's setting at once, as does
+\code{clear.all = TRUE}. If \code{expr} and \code{data} are both
+omitted, prints the current jsubset status.}
+
+\item{clear.all}{Logical. If \code{TRUE}, clears the jsubset setting on
+every dataset; use on its own, \code{jsubset(clear.all = TRUE)}.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect.
@@ -36,14 +43,36 @@ datasets preserves each dataset's setting independently.
 The expression applies whenever the matching dataset is used, regardless
 of whether it was supplied via \code{juse()} or specified explicitly in
 a function call. To bypass it temporarily without losing it, use
-\code{jsubset(off)} before the analysis and \code{jsubset(on)} afterward.
-This matches the SPSS FILTER / USE ALL convention.
+\code{jsubset(off)} before the analysis and \code{jsubset(on)} afterward
+(or \code{jsubset(d, off)} and \code{jsubset(d, on)} for a named
+dataset). This matches the SPSS FILTER / USE ALL convention.
 
 Expressions use standard R logical operators: \code{==}, \code{!=},
 \code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
 \code{!} (NOT), \code{xor()} (XOR), and \code{\%in\%}. Using \code{=} for
 equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
 produce a helpful error suggesting the correct R syntax.
+
+The expression must give one TRUE or FALSE for every row of the
+dataset. \code{jsubset()} runs it once when set and refuses anything
+else -- a single value (\code{TRUE}, or an aggregate such as
+\code{mean(Score) > 5}), numbers, text, or the wrong number of values --
+with an error that shows a corrected form. The same check runs when the
+filter is applied, so a filter that was valid when set but has since
+stopped matching the dataset stops the analysis rather than running on
+the wrong rows; that error names both ways out.
+
+A filter normally names only columns of the data frame, and such a
+filter can never fall out of step with the data. A filter may also
+refer to an object in your workspace, such as a cutoff
+(\code{Age < cutoff}) or a set of codes (\code{Region \%in\% keep_regions}).
+If you compute a keep/drop indicator separately, add it to the data
+frame as a column and filter on that column
+(\code{clinic$Keep <- clinic$Stress > 3}, then
+\code{jsubset(clinic, Keep == TRUE)}). A separate object holding one
+value per row stops matching the data frame if rows are later added or
+removed, and every analysis of that data frame then stops until the
+filter is set aside.
 }
 \examples{
 juse(community)
@@ -52,8 +81,11 @@ jsubset(community, Age < 40)             # Explicit dataset
 jsubset(Age < 40 & WellbeingScore > 50)  # Compound condition
 jsubset(off)                             # Deactivate
 jsubset(on)                              # Reactivate
+jsubset(community, off)                  # Deactivate on a named dataset
+jsubset(community, on)                   # ... and reactivate it
 jsubset()                                # Check status
-jsubset(NULL)                            # Clear entirely
+jsubset(community, NULL)                 # Clear one dataset's setting
+jsubset(NULL)                            # Clear every dataset's setting
 # Not normally needed. You'd clear a default or registration only to
 # undo a mistake, or -- as in this example -- to reset state for testing.
 juse(NULL)

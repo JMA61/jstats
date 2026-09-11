@@ -1,35 +1,205 @@
 #<<<FILE: pipeline-internals.R>>>
 
+#' Internal helper: refuse a filter result of the wrong shape
+#'
+#' A filter must give exactly one TRUE or FALSE (NA allowed) for every row
+#' of the data frame it is applied to. Anything else -- a single value,
+#' numbers, text, an empty result, or the wrong number of values -- cannot
+#' select rows and is refused with a guided error. ALWAYS stops: a
+#' wrong-shaped result is deterministic (it fails identically on every
+#' call), so there is no warn-and-continue variant, whatever the caller's
+#' \code{on_error} says (Session 288, decision 1). Refusing a single value
+#' is deliberate: TRUE / FALSE / T / F would mean "keep every row", but a
+#' single value is also the shape of \code{mean(Score) > 5}, \code{any(...)}
+#' and \code{nrow(...)} inside a filter -- a likely error reaching for a
+#' per-row comparison -- and allowing scalars would make that whole family
+#' silently keep every row (decision 2). A numeric result is refused for
+#' the same reason in the other direction: base R reads a numeric mask as
+#' ROW POSITIONS, so \code{subset = Keep01} on a 0/1 column analyzed row 1
+#' once per 1 and reported it with a case-processing table that added up
+#' (the Session 289 workstation reproduction).
+#'
+#' Three origins share the check and differ only in wording:
+#' \describe{
+#'   \item{\code{"set"}}{the set-time dry run in \code{jsubset()}. The user
+#'     has just typed the filter, so the fix is a corrected call. A quoted
+#'     keyword (\code{"null"}, \code{"off"}, \code{"on"}) is a reset typed
+#'     with quotes and gets the unquoted form back.}
+#'   \item{\code{"call"}}{the per-call \code{subset =} argument. The fix
+#'     names the analysis function that received it.}
+#'   \item{\code{"stored"}}{a persistent \code{jsubset()} filter applied at
+#'     analysis time. It was accepted when set and has since stopped
+#'     matching the data (an object it depends on changed, or the frame
+#'     gained or lost rows), and it re-runs on every analysis of that frame
+#'     until dealt with -- so the fix is BOTH exits, each naming the frame:
+#'     set aside (off, which keeps the text) first, delete (NULL) second.}
+#' }
+#'
+#' @param mask The evaluated filter result.
+#' @param n_rows Integer. Row count of the data frame the result must match.
+#' @param expr The unevaluated filter (a language object). A bare name that
+#'   gave numbers builds its own fix (\code{Keep01} -> \code{Keep01 == 1}).
+#' @param expr_str Character. The deparsed filter, echoed as the subject of
+#'   the message's first line (that echo is what locates the call in a
+#'   sourced script, where \code{call. = FALSE} shows no call).
+#' @param origin One of \code{"set"}, \code{"call"}, \code{"stored"}.
+#' @param data_name Character. The data frame's name. Required for
+#'   \code{"stored"} (the exits are built from it); used by \code{"set"} to
+#'   name the frame in the unchanged-filter line and the quoted-keyword fix.
+#' @param named_frame Logical. For \code{"set"}: whether the user named the
+#'   frame in the call, so the quoted-keyword fix echoes that form.
+#' @param prior Logical. For \code{"set"}: an earlier filter exists for the
+#'   frame; the message says it is unchanged.
+#'
+#' @return \code{invisible(NULL)} when the result is well-shaped; otherwise
+#'   stops via \code{.jst_stop()}, which supplies the "<fn>(): " prefix
+#'   from the call stack (\code{jsubset} at set time, the analysis function
+#'   otherwise).
+#'
+#' @keywords internal
+.jst_check_mask_shape <- function(mask, n_rows, expr, expr_str, origin,
+                                  data_name = NULL, named_frame = FALSE,
+                                  prior = FALSE) {
+  origin <- match.arg(origin, c("set", "call", "stored"))
+
+  # -- What did the filter give? --------------------------------------------
+  # Order matters: an empty result first (any type), then kind, then count.
+  # A single number is "numbers" (kind before count); a single logical is
+  # "a single value"; a logical of the wrong length is a count.
+  # The parenthetical value is dropped when the expression IS that literal
+  # ("null" gives text, TRUE gives a single value) and kept when it was
+  # computed (mean(Age) > 40 gives a single value (FALSE)).
+  what <- if (length(mask) == 0L) {
+    "no values at all"
+  } else if (is.character(mask)) {
+    if (is.character(expr)) "text" else paste0("text (\"", mask[1L], "\")")
+  } else if (!is.logical(mask)) {
+    if (is.numeric(mask)) "numbers" else paste0(class(mask)[1L], " values")
+  } else if (length(mask) == 1L) {
+    if (is.logical(expr)) "a single value"
+    else paste0("a single value (", as.character(mask), ")")
+  } else if (length(mask) != n_rows) {
+    paste0(length(mask), " values for ", n_rows, " rows")
+  } else {
+    NULL
+  }
+  if (is.null(what)) return(invisible(NULL))
+
+  bare_name <- if (is.symbol(expr)) as.character(expr) else NULL
+  is_count  <- is.logical(mask) && length(mask) > 1L
+  keyword   <- if (is.character(mask) && length(mask) == 1L &&
+                   tolower(mask[1L]) %in% c("null", "off", "on")) {
+    switch(tolower(mask[1L]), null = "NULL", off = "off", on = "on")
+  } else {
+    NULL
+  }
+
+  if (origin == "stored") {
+    .jst_stop(
+      "the jsubset filter for the ", data_name, " data frame, ", expr_str,
+      ", gives ", what, ".\n",
+      "A filter must give one TRUE or FALSE for every row.\n",
+      "To set it aside, run:\n",
+      "  jsubset(", data_name, ", off)\n",
+      "To delete it, run:\n",
+      "  jsubset(", data_name, ", NULL)"
+    )
+  }
+
+  if (origin == "call") {
+    fn  <- .jst_caller_fn()
+    fix <- if (!is.null(bare_name) && is.numeric(mask)) {
+      paste0("In your ", fn, "() call, use subset = ", bare_name, " == 1.")
+    } else {
+      paste0("In your ", fn, "() call, compare a variable to a value, ",
+             "for example subset = Age < 40.")
+    }
+    .jst_stop(
+      "subset = ", expr_str, " gives ", what,
+      ", not one TRUE or FALSE for every row.\n",
+      fix
+    )
+  }
+
+  # origin == "set"
+  frame_arg <- if (isTRUE(named_frame) && !is.null(data_name)) {
+    paste0(data_name, ", ")
+  } else {
+    ""
+  }
+  fix <- if (!is.null(keyword)) {
+    verb <- switch(keyword, NULL = "clear the filter", off = "turn the filter off",
+                   on = "turn the filter back on")
+    paste0("To ", verb, ", use ", keyword, " without quotes:\n",
+           "  jsubset(", frame_arg, keyword, ")")
+  } else if (is_count) {
+    paste0("Build the filter from the data frame's own columns, ",
+           "for example:\n",
+           "  jsubset(Age < 40)")
+  } else if (!is.null(bare_name) && is.numeric(mask)) {
+    paste0("Compare the variable to a value, for example:\n",
+           "  jsubset(", frame_arg, bare_name, " == 1)")
+  } else {
+    paste0("Compare a variable to a value, for example:\n",
+           "  jsubset(Age < 40)")
+  }
+  unchanged <- if (isTRUE(prior) && !is.null(data_name)) {
+    paste0("\nYour earlier filter for the ", data_name,
+           " data frame is unchanged.")
+  } else {
+    ""
+  }
+  .jst_stop(
+    expr_str, " gives ", what, ", not one TRUE or FALSE for every row.\n",
+    fix, unchanged
+  )
+}
+
 #' Internal helper: apply a logical mask expression to a data frame
 #'
 #' Shared mechanic for Step 2 (persistent jsubset) and Step 3 (per-call
 #' \code{subset =} argument) of \code{.jst_apply_pipeline()}. Evaluates
-#' \code{expr} in the data + caller environment, coerces \code{NA}s in
-#' the resulting mask to \code{FALSE}, and returns the filtered data
-#' frame. The two callers differ in upstream source (joptions state vs.
-#' argument) and downstream bookkeeping (which \code{sample_info} slot
-#' is populated); the masking step itself is identical.
+#' \code{expr} in the data + caller environment, refuses a result that is
+#' not one TRUE/FALSE per row (via \code{.jst_check_mask_shape()}, which
+#' always stops), coerces \code{NA}s in the mask to \code{FALSE}, and
+#' returns the filtered data frame. The two callers differ in upstream
+#' source (joptions state vs. argument) and downstream bookkeeping (which
+#' \code{sample_info} slot is populated); the masking step itself is
+#' identical. This is the package's single row-selection site for user
+#' filters (Session 288 scan), so the shape check here is the safety net
+#' for both a stored filter that has gone stale and a per-call argument.
 #'
 #' @param data Data frame to mask.
 #' @param expr Unevaluated logical expression (a language object).
 #' @param envir Environment to evaluate \code{expr} in. Data columns
 #'   take precedence; \code{envir} provides fallback bindings.
-#' @param on_error One of \code{"warn"} or \code{"stop"}. \code{"warn"}
-#'   emits a warning and returns the data unchanged -- used for the
-#'   persistent jsubset state, where the expression was validated when
-#'   set and a runtime failure is unexpected. \code{"stop"} raises an
-#'   error -- used for the per-call \code{subset =} argument, where a
-#'   broken expression is a user error at call time.
-#' @param stage_label Character. Prefix used in the error/warning
-#'   message (e.g. \code{"jsubset"} or \code{"Subset"}) so failures
-#'   are attributable to the right pipeline stage.
+#' @param on_error One of \code{"warn"} or \code{"stop"}. Governs an
+#'   EVALUATION failure only -- an error raised while running the
+#'   expression, which can be transient (an object not created yet).
+#'   \code{"warn"} emits a warning and returns the data unchanged -- used
+#'   for the persistent jsubset state. \code{"stop"} raises an error --
+#'   used for the per-call \code{subset =} argument, where a broken
+#'   expression is a user error at call time. A SHAPE failure ignores this
+#'   split and always stops (Session 288, decision 1).
+#' @param stage_label Character. Prefix used in the evaluation-failure
+#'   message (e.g. \code{"jsubset"} or \code{"Subset"}) so failures are
+#'   attributable to the right pipeline stage.
+#' @param origin One of \code{"stored"} or \code{"call"}; selects the
+#'   shape-error wording. Passed explicitly rather than inferred from
+#'   \code{on_error} or \code{stage_label}.
+#' @param expr_str Character. The deparsed expression, echoed in the shape
+#'   error.
+#' @param data_name Character. The data frame's name; the stored-filter
+#'   shape error builds its exits from it.
 #'
 #' @return The data frame filtered to rows where \code{expr} evaluates
 #'   to \code{TRUE} (\code{NA} treated as \code{FALSE}).
 #'
 #' @keywords internal
-.jst_apply_mask <- function(data, expr, envir, on_error, stage_label) {
+.jst_apply_mask <- function(data, expr, envir, on_error, stage_label,
+                            origin, expr_str, data_name = NULL) {
   on_error <- match.arg(on_error, c("warn", "stop"))
+  origin   <- match.arg(origin, c("stored", "call"))
   mask <- tryCatch(
     eval(expr, data, envir),
     error = function(e) {
@@ -39,10 +209,16 @@
         .jst_warn(msg)
         rep(TRUE, nrow(data))
       } else {
-        stop(msg, call. = FALSE)
+        .jst_stop(msg)
       }
     }
   )
+  # Shape check BEFORE the NA-to-FALSE line: on a non-logical result that
+  # line is where the cryptic haven/vctrs error used to surface (S284 face
+  # (b)), and on a numeric result the indexing below would have read row
+  # positions (S289). The check stops whatever on_error says.
+  .jst_check_mask_shape(mask, nrow(data), expr, expr_str, origin,
+                        data_name = data_name)
   mask[is.na(mask)] <- FALSE
   # Variable-label loss from `[.data.frame` row subsetting (plain atomic and
   # factor columns lose their label; haven_labelled keep theirs) is restored
@@ -64,7 +240,8 @@
 #' matching dataset is used, regardless of whether that dataset was supplied
 #' via the juse() default or specified explicitly in the function call.
 #' This matches the SPSS FILTER model: persistent state remains in effect
-#' until explicitly turned off via jsubset(off) / jcomplete(off).
+#' until explicitly turned off via jsubset(off) / jcomplete(off) on the
+#' default dataset, or jsubset(d, off) on a named one.
 #'
 #' When the current dataset has no jsubset / jcomplete set but at least one
 #' other dataset does have an active setting, a yellow-colored note is
@@ -173,7 +350,10 @@
       filter_expr_str <- fs$expr_str
       data            <- .jst_apply_mask(data, fs$expr, envir,
                                          on_error    = "warn",
-                                         stage_label = "jsubset")
+                                         stage_label = "jsubset",
+                                         origin      = "stored",
+                                         expr_str    = fs$expr_str,
+                                         data_name   = data_name)
       n_after_filter  <- nrow(data)
     } else {
       msgs <- c(msgs, "[YELLOW](jsubset set but inactive)")
@@ -193,7 +373,10 @@
     subset_expr_str <- paste(deparse(subset_expr), collapse = " ")
     data           <- .jst_apply_mask(data, subset_expr, envir,
                                       on_error    = "stop",
-                                      stage_label = "Subset")
+                                      stage_label = "Subset",
+                                      origin      = "call",
+                                      expr_str    = subset_expr_str,
+                                      data_name   = data_name)
     n_after_subset <- nrow(data)
   }
 
