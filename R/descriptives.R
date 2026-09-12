@@ -38,6 +38,10 @@
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
+#'   Written in R syntax and checked the way \code{jsubset()} checks a
+#'   filter: \code{subset = NOT(Age < 40)}, for example, is refused with
+#'   the corrected \code{subset = !(Age < 40)} shown (see
+#'   \code{\link{jsubset}} for a translation table).
 #' @param variable.id Character or NULL. Variable label display mode: one of
 #'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 #'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
@@ -146,6 +150,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jdesc")   # S290
 
   # Leading-comma-omitted: prepend the captured symbol to variables list
   if (arg1$mode == "symbol_with_default") {
@@ -587,6 +592,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
+#'   Written in R syntax and checked the way \code{jsubset()} checks a
+#'   filter: \code{subset = NOT(Age < 40)}, for example, is refused with
+#'   the corrected \code{subset = !(Age < 40)} shown (see
+#'   \code{\link{jsubset}} for a translation table).
 #' @param variable.id Character or NULL. Variable label display mode: one of
 #'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 #'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
@@ -690,6 +699,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   detail_tier <- .jst_resolve_missing_detail(missing.detail)
 
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jfreq")   # S290
 
   # Leading-comma-omitted: prepend the captured symbol to variables list
   if (arg1$mode == "symbol_with_default") {
@@ -1241,6 +1251,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
+#'   Written in R syntax and checked the way \code{jsubset()} checks a
+#'   filter: \code{subset = NOT(Age < 40)}, for example, is refused with
+#'   the corrected \code{subset = !(Age < 40)} shown (see
+#'   \code{\link{jsubset}} for a translation table).
 #' @param variable.id Character or NULL. Variable label display mode: one of
 #'   \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 #'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
@@ -1371,6 +1385,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
   # Determine which variables to screen
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jscreen")   # S290
 
   # Leading-comma-omitted: prepend the captured symbol to variables list
   if (arg1$mode == "symbol_with_default") {

@@ -32,7 +32,11 @@ output.}
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
-\code{Group == 1}) to subset cases for this call only.}
+\code{Group == 1}) to subset cases for this call only.
+Written in R syntax and checked the way \code{jsubset()} checks a
+filter: \code{subset = NOT(Age < 40)}, for example, is refused with
+the corrected \code{subset = !(Age < 40)} shown (see
+\code{\link{jsubset}} for a translation table).}
 
 \item{variable.id}{Character or NULL. Variable label display mode: one of
 \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or

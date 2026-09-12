@@ -97,6 +97,10 @@
 #'   +/- t*SEE; useful for teaching homoskedasticity), \code{none}.
 #' @param subset Optional unquoted logical expression to filter cases for
 #'   this call only (data-first form).
+#'   Written in R syntax and checked the way \code{jsubset()} checks a
+#'   filter: \code{subset = NOT(Age < 40)}, for example, is refused with
+#'   the corrected \code{subset = !(Age < 40)} shown (see
+#'   \code{\link{jsubset}} for a translation table).
 #' @param labels Character or NULL. Variable label display mode (data-first
 #'   and formula forms): one of \code{"both"}, \code{"names"}, \code{"labels"},
 #'   \code{"legend"}, or \code{"legend.bottom"}. \code{"names"} uses variable
@@ -251,6 +255,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   # Capture variable names
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jplot")   # S290
 
   # Leading-comma-omitted: prepend the captured symbol to variables list
   if (arg1$mode == "symbol_with_default") {

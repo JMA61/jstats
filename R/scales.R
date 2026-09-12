@@ -183,6 +183,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 
   # Resolve variable names (handles colon ranges)
   quos_list <- rlang::enquos(...)
+  .jst_check_named_variables(quos_list, arg1$data, "jsum")   # S290
 
   # Leading-comma-omitted: prepend the captured symbol to quos list
   if (arg1$mode == "symbol_with_default") {
@@ -449,6 +450,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
 
   # Resolve variable names (handles colon ranges)
   quos_list <- rlang::enquos(...)
+  .jst_check_named_variables(quos_list, arg1$data, "javg")   # S290
 
   # Leading-comma-omitted: prepend the captured symbol to quos list
   if (arg1$mode == "symbol_with_default") {

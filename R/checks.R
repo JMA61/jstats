@@ -251,6 +251,71 @@
   invisible(NULL)
 }
 
+#' Internal helper: catch a named item in a variable list
+#'
+#' A variable list (the \code{...} of \code{jdesc()}, \code{jsum()},
+#' \code{jsubset()} and the rest) takes unquoted names only; nothing reads
+#' the names of that list, so a NAMED item is always a mistake. Two
+#' mistakes arrive this way, and the name tells them apart (Session 290):
+#' - the name is a column of the frame: a condition typed with a single
+#'   \code{=}, \code{jdesc(community, Age, Gender = 1)}, where R's parser
+#'   has already turned \code{Gender = 1} into an argument named Gender.
+#'   Before Session 290 the value was looked up as a variable
+#'   ("Variable(s) not found in community: 1."), and \code{jsubset()},
+#'   which had no \code{...}, died inside R ("unused argument
+#'   (Gender = 1)"). The error now shows the fix in the form the caller
+#'   can take: \code{jsubset(Gender == 1)} for \code{jsubset()};
+#'   \code{subset = Gender == 1} where the caller has a \code{subset}
+#'   input (read from the caller's own formals, so the functions that do
+#'   are never listed by hand); "list the variable on its own" otherwise.
+#' - the name is not a column: a misspelled input that R could not
+#'   partial-match (formals after \code{...} match exactly),
+#'   \code{jdesc(community, Age, digit = 2)}. Routed to
+#'   \code{.jst_check_args()} for its "unused input(s)" message.
+#' Unnamed items pass through untouched. Called at every
+#' \code{rlang::enquos(...)} site directly after the capture, and from
+#' \code{jsubset()} before its argument grammar runs.
+#'
+#' @param quos The captured variable list (\code{rlang::enquos(...)}).
+#' @param data The resolved data frame, or \code{NULL} when no frame is in
+#'   hand (\code{jsubset()} calls before resolving one); then every named
+#'   item is treated as a condition.
+#' @param fn_name Character. The calling function's name, for the message
+#'   prefix and for the \code{jsubset()} fix form.
+#' @keywords internal
+.jst_check_named_variables <- function(quos, data, fn_name) {
+  nms <- names(quos)
+  if (is.null(nms) || !any(nzchar(nms))) return(invisible(NULL))
+  named <- nms[nzchar(nms)]
+  cols  <- if (is.data.frame(data)) names(data) else named
+  cond  <- named[named %in% cols]
+  if (length(cond) > 0L) {
+    nm  <- cond[1L]
+    q   <- quos[[which(nms == nm)[1L]]]
+    val <- if (rlang::is_quosure(q)) rlang::quo_get_expr(q) else q
+    val <- paste(deparse(val, width.cutoff = 500), collapse = " ")
+    typed <- paste0(nm, " = ", val)
+    fixed <- paste0(nm, " == ", val)
+    if (identical(fn_name, "jsubset")) {
+      .jst_stop(typed, " uses a single =, which does not test equality in R.\n",
+                "Use == (two equals signs):\n",
+                "  jsubset(", fixed, ")", fn = fn_name)
+    }
+    has_subset <- "subset" %in% names(formals(sys.function(sys.parent())))
+    if (has_subset) {
+      .jst_stop(typed, " uses a single =, and the variable list takes ",
+                "names, not conditions.\n",
+                "To select rows, use == (two equals signs) in subset =:\n",
+                "  subset = ", fixed, fn = fn_name)
+    }
+    .jst_stop(typed, " uses a single =, and the variable list takes ",
+              "names, not conditions.\n",
+              "List the variable on its own:\n",
+              "  ", nm, fn = fn_name)
+  }
+  .jst_check_args(quos[nms %in% named], aliases = character(0), fn_name)
+}
+
 #' Internal helper: resolve which data frame to use when none is explicitly given
 #'
 #' Looks up the data frame name set by \code{juse()} via the

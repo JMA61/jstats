@@ -4,7 +4,7 @@
 \alias{jsubset}
 \title{Set, activate, deactivate, or clear a per-dataset case-selection expression}
 \usage{
-jsubset(data, expr, clear.all = FALSE)
+jsubset(data, expr, clear.all = FALSE, ...)
 }
 \arguments{
 \item{data}{Optional data frame. If supplied, the expression is stored
@@ -27,6 +27,11 @@ omitted, prints the current jsubset status.}
 
 \item{clear.all}{Logical. If \code{TRUE}, clears the jsubset setting on
 every dataset; use on its own, \code{jsubset(clear.all = TRUE)}.}
+
+\item{...}{Not used for variables. Catches a condition typed with a
+single \code{=}, \code{jsubset(Gender = 1)}, so that the corrected
+\code{jsubset(Gender == 1)} can be shown in place of R's own "unused
+argument" error.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect.
@@ -48,10 +53,18 @@ a function call. To bypass it temporarily without losing it, use
 dataset). This matches the SPSS FILTER / USE ALL convention.
 
 Expressions use standard R logical operators: \code{==}, \code{!=},
-\code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
-\code{!} (NOT), \code{xor()} (XOR), and \code{\%in\%}. Using \code{=} for
-equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
-produce a helpful error suggesting the correct R syntax.
+\code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (and), \code{|} (or),
+\code{!} (not), \code{xor()}, and \code{\%in\%}. Two habits carried over from
+commercial statistical software are caught with an error that shows the
+corrected form: a single \code{=} where \code{==} was meant, and the
+words \code{AND} / \code{OR} / \code{NOT} used as operators. Not every
+spelling can be caught, because R's own parser reads the call before
+jstats does: \code{jsubset(Gender = 1)}, \code{(Gender = 1) & (Age < 40)}
+and \code{NOT(Age < 40)} are all shown their corrected form, but a
+keyword between two conditions, \code{Age < 40 AND Gender == 1}, is
+refused by R itself with a parser message ("unexpected symbol") that
+jstats cannot replace. The same checks run on the \code{subset =}
+input of the analysis functions. See the translation table below.
 
 The expression must give one TRUE or FALSE for every row of the
 dataset. \code{jsubset()} runs it once when set and refuses anything
@@ -74,6 +87,23 @@ value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
 filter is set aside.
 }
+\section{Writing a filter in R}{
+
+Stata already writes conditions the way R does. SPSS and SAS do not,
+and their forms translate as follows:
+\tabular{ll}{
+\strong{SPSS or SAS} \tab \strong{R} \cr
+\code{Gender = 1} \tab \code{Gender == 1} \cr
+\code{Gender NE 1} \tab \code{Gender != 1} \cr
+\code{Age GE 40} \tab \code{Age >= 40} \cr
+\code{Age < 40 AND Gender = 1} \tab \code{Age < 40 & Gender == 1} \cr
+\code{Age < 40 OR Age > 60} \tab \code{Age < 40 | Age > 60} \cr
+\code{NOT (Age < 40)} \tab \code{!(Age < 40)} \cr
+\code{MISSING(Age)} \tab \code{is.na(Age)} \cr
+\code{ANY(Region, 1, 3, 5)} \tab \code{Region \%in\% c(1, 3, 5)} \cr
+}
+}
+
 \examples{
 juse(community)
 jsubset(Age < 40)                        # Set using juse default

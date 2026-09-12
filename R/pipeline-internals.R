@@ -67,19 +67,23 @@
   # A single number is "numbers" (kind before count); a single logical is
   # "a single value"; a logical of the wrong length is a count.
   # The parenthetical value is dropped when the expression IS that literal
-  # ("null" gives text, TRUE gives a single value) and kept when it was
-  # computed (mean(Age) > 40 gives a single value (FALSE)).
+  # ("null" is text, TRUE is a single value) and kept when it was
+  # computed (mean(Age) > 40 is a single value (FALSE)).
+  # The lead reads "<typed> is text" / "is numeric" / "is a single value" /
+  # "has 3 values for 12 rows" / "has no values at all" -- a plain verb
+  # describing what was typed, never "gives", which read as a non sequitur
+  # to the FILTER BY user these messages are for (S290, Jeff's review).
   what <- if (length(mask) == 0L) {
-    "no values at all"
+    "has no values at all"
   } else if (is.character(mask)) {
-    if (is.character(expr)) "text" else paste0("text (\"", mask[1L], "\")")
+    if (is.character(expr)) "is text" else paste0("is text (\"", mask[1L], "\")")
   } else if (!is.logical(mask)) {
-    if (is.numeric(mask)) "numbers" else paste0(class(mask)[1L], " values")
+    if (is.numeric(mask)) "is numeric" else paste0("is ", class(mask)[1L], " values")
   } else if (length(mask) == 1L) {
-    if (is.logical(expr)) "a single value"
-    else paste0("a single value (", as.character(mask), ")")
+    if (is.logical(expr)) "is a single value"
+    else paste0("is a single value (", as.character(mask), ")")
   } else if (length(mask) != n_rows) {
-    paste0(length(mask), " values for ", n_rows, " rows")
+    paste0("has ", length(mask), " values for ", n_rows, " rows")
   } else {
     NULL
   }
@@ -97,7 +101,7 @@
   if (origin == "stored") {
     .jst_stop(
       "the jsubset filter for the ", data_name, " data frame, ", expr_str,
-      ", gives ", what, ".\n",
+      ", ", what, ".\n",
       "A filter must give one TRUE or FALSE for every row.\n",
       "To set it aside, run:\n",
       "  jsubset(", data_name, ", off)\n",
@@ -108,14 +112,23 @@
 
   if (origin == "call") {
     fn  <- .jst_caller_fn()
-    fix <- if (!is.null(bare_name) && is.numeric(mask)) {
-      paste0("In your ", fn, "() call, use subset = ", bare_name, " == 1.")
-    } else {
-      paste0("In your ", fn, "() call, compare a variable to a value, ",
-             "for example subset = Age < 40.")
+    # A bare name (subset = Gender): the SPSS FILTER BY habit. Since S290
+    # this is the only route a lone name takes (the syntax check's bare-name
+    # branch is gone), and the message names the mistake rather than what
+    # the variable holds -- "gives numbers" read as a non sequitur to the
+    # user it is for (S290; wording mirrors the single-= syntax error).
+    if (!is.null(bare_name) && is.numeric(mask)) {
+      .jst_stop(
+        "subset = ", bare_name, " on its own is a variable name, ",
+        "which does not select rows in R.\n",
+        "Use == (two equals signs) to compare it to a value:\n",
+        "  subset = ", bare_name, " == 1"
+      )
     }
+    fix <- paste0("In your ", fn, "() call, compare a variable to a value, ",
+                  "for example subset = Age < 40.")
     .jst_stop(
-      "subset = ", expr_str, " gives ", what,
+      "subset = ", expr_str, " ", what,
       ", not one TRUE or FALSE for every row.\n",
       fix
     )
@@ -136,9 +149,6 @@
     paste0("Build the filter from the data frame's own columns, ",
            "for example:\n",
            "  jsubset(Age < 40)")
-  } else if (!is.null(bare_name) && is.numeric(mask)) {
-    paste0("Compare the variable to a value, for example:\n",
-           "  jsubset(", frame_arg, bare_name, " == 1)")
   } else {
     paste0("Compare a variable to a value, for example:\n",
            "  jsubset(Age < 40)")
@@ -149,8 +159,19 @@
   } else {
     ""
   }
+  # A bare name (jsubset(d, Gender)): its own three-line message, mirroring
+  # the single-= syntax error -- the mistake, the two equals signs, the
+  # corrected call -- with nothing about what the variable holds (S290).
+  if (is.null(keyword) && !is.null(bare_name) && is.numeric(mask)) {
+    .jst_stop(
+      bare_name, " on its own is a variable name, ",
+      "which does not select rows in R.\n",
+      "Use == (two equals signs) to compare it to a value:\n",
+      "  jsubset(", frame_arg, bare_name, " == 1)", unchanged
+    )
+  }
   .jst_stop(
-    expr_str, " gives ", what, ", not one TRUE or FALSE for every row.\n",
+    expr_str, " ", what, ", not one TRUE or FALSE for every row.\n",
     fix, unchanged
   )
 }
@@ -371,6 +392,12 @@
   subset_expr_str <- NULL
   if (!is.null(subset_expr)) {
     subset_expr_str <- paste(deparse(subset_expr), collapse = " ")
+    # The same syntax check jsubset() runs at set time, in its per-call
+    # form (S290). Before it, subset = NOT(...) died as R's "could not
+    # find function", and subset = (Gender = 1) & (Age < 40) RAN, as
+    # 1 & (Age < 40), with the Gender test silently dropped. The shape of
+    # what the expression produces is the mask helper's job, below.
+    .jst_check_filter_syntax(subset_expr, subset_expr_str, origin = "call")
     data           <- .jst_apply_mask(data, subset_expr, envir,
                                       on_error    = "stop",
                                       stage_label = "Subset",

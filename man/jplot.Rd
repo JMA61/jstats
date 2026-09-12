@@ -92,7 +92,11 @@ for individual observations), \code{see} (constant-width band at
 +/- t*SEE; useful for teaching homoskedasticity), \code{none}.}
 
 \item{subset}{Optional unquoted logical expression to filter cases for
-this call only (data-first form).}
+this call only (data-first form).
+Written in R syntax and checked the way \code{jsubset()} checks a
+filter: \code{subset = NOT(Age < 40)}, for example, is refused with
+the corrected \code{subset = !(Age < 40)} shown (see
+\code{\link{jsubset}} for a translation table).}
 
 \item{labels}{Character or NULL. Variable label display mode (data-first
 and formula forms): one of \code{"both"}, \code{"names"}, \code{"labels"},

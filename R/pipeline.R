@@ -114,10 +114,18 @@ juse <- function(data) {
 #' dataset). This matches the SPSS FILTER / USE ALL convention.
 #'
 #' Expressions use standard R logical operators: \code{==}, \code{!=},
-#' \code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (AND), \code{|} (OR),
-#' \code{!} (NOT), \code{xor()} (XOR), and `%in%`. Using \code{=} for
-#' equality or the SPSS-style keywords \code{AND}/\code{OR}/\code{NOT} will
-#' produce a helpful error suggesting the correct R syntax.
+#' \code{<}, \code{<=}, \code{>}, \code{>=}, \code{&} (and), \code{|} (or),
+#' \code{!} (not), \code{xor()}, and `%in%`. Two habits carried over from
+#' commercial statistical software are caught with an error that shows the
+#' corrected form: a single \code{=} where \code{==} was meant, and the
+#' words \code{AND} / \code{OR} / \code{NOT} used as operators. Not every
+#' spelling can be caught, because R's own parser reads the call before
+#' jstats does: \code{jsubset(Gender = 1)}, \code{(Gender = 1) & (Age < 40)}
+#' and \code{NOT(Age < 40)} are all shown their corrected form, but a
+#' keyword between two conditions, \code{Age < 40 AND Gender == 1}, is
+#' refused by R itself with a parser message ("unexpected symbol") that
+#' jstats cannot replace. The same checks run on the \code{subset =}
+#' input of the analysis functions. See the translation table below.
 #'
 #' The expression must give one TRUE or FALSE for every row of the
 #' dataset. \code{jsubset()} runs it once when set and refuses anything
@@ -158,6 +166,25 @@ juse <- function(data) {
 #'   omitted, prints the current jsubset status.
 #' @param clear.all Logical. If \code{TRUE}, clears the jsubset setting on
 #'   every dataset; use on its own, \code{jsubset(clear.all = TRUE)}.
+#' @param ... Not used for variables. Catches a condition typed with a
+#'   single \code{=}, \code{jsubset(Gender = 1)}, so that the corrected
+#'   \code{jsubset(Gender == 1)} can be shown in place of R's own "unused
+#'   argument" error.
+#'
+#' @section Writing a filter in R:
+#' Stata already writes conditions the way R does. SPSS and SAS do not,
+#' and their forms translate as follows:
+#' \tabular{ll}{
+#'   \strong{SPSS or SAS} \tab \strong{R} \cr
+#'   \code{Gender = 1} \tab \code{Gender == 1} \cr
+#'   \code{Gender NE 1} \tab \code{Gender != 1} \cr
+#'   \code{Age GE 40} \tab \code{Age >= 40} \cr
+#'   \code{Age < 40 AND Gender = 1} \tab \code{Age < 40 & Gender == 1} \cr
+#'   \code{Age < 40 OR Age > 60} \tab \code{Age < 40 | Age > 60} \cr
+#'   \code{NOT (Age < 40)} \tab \code{!(Age < 40)} \cr
+#'   \code{MISSING(Age)} \tab \code{is.na(Age)} \cr
+#'   \code{ANY(Region, 1, 3, 5)} \tab \code{Region \%in\% c(1, 3, 5)} \cr
+#' }
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect.
 #'
@@ -181,7 +208,7 @@ juse <- function(data) {
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jsubset <- function(data, expr, clear.all = FALSE) {
+jsubset <- function(data, expr, clear.all = FALSE, ...) {
 
   # -- Shared branches, written once ----------------------------------------
   # Three operations reach the registry by name: clear every frame, clear
@@ -260,6 +287,16 @@ jsubset <- function(data, expr, clear.all = FALSE) {
     }
     return(clear_every())
   }
+
+  # -- A named input: jsubset(Gender = 1) -----------------------------------
+  # jsubset() takes no named inputs beyond clear.all, so anything in ...
+  # is a condition typed with a single = -- R's parser has already made
+  # it an argument named Gender, and before ... was added (S290) R itself
+  # refused the call ("unused argument (Gender = 1)") before jstats could
+  # say anything. Checked before the grammar below, since the call has
+  # data and expr both missing. No frame is resolved yet, so every named
+  # item is read as a condition; jsubset() has no other input to misspell.
+  .jst_check_named_variables(rlang::enquos(...), NULL, "jsubset")
 
   # -- No arguments: print session-wide status ------------------------------
   # Session-wide to match jsubset(NULL)'s scope. Collapse rule: 0 or 1 frame
@@ -374,7 +411,7 @@ jsubset <- function(data, expr, clear.all = FALSE) {
 
   # -- Detect common syntax mistakes before trying to evaluate --------------
   expr_str_for_check <- deparse(filter_raw, width.cutoff = 500)
-  .jst_check_filter_syntax(filter_raw, expr_str_for_check)
+  .jst_check_filter_syntax(filter_raw, expr_str_for_check, origin = "set")
 
   # -- Dry run: refuse a filter that cannot select rows ---------------------
   # Run the expression once against the resolved frame (S288 decision 3).
@@ -419,74 +456,115 @@ jsubset <- function(data, expr, clear.all = FALSE) {
 
 # -- .jst_check_filter_syntax -------------------------------------------------
 
-#' Internal helper: detect common SPSS-style syntax mistakes in jsubset
-#' expressions and provide guidance toward standard R operators.
+#' Internal helper: detect common SPSS-style syntax mistakes in a filter
+#' expression and show the corrected form
 #'
-#' Catches:
-#' - a bare variable name used as the whole expression (\code{jsubset(Gender)})
-#' - \code{=} used where \code{==} was meant (for equality comparison)
-#' - \code{AND} / \code{OR} / \code{NOT} / \code{XOR} used as identifiers
-#'   where \code{&} / \code{|} / \code{!} / \code{xor()} were meant
+#' Called on the PARSED filter expression from two places: \code{jsubset()}
+#' at set time (\code{origin = "set"}, before the dry run) and
+#' \code{.jst_apply_pipeline()} at apply time for a per-call
+#' \code{subset =} (\code{origin = "call"}, before \code{.jst_apply_mask()};
+#' Session 290 -- before that the per-call route had no syntax check at
+#' all). Two branches:
+#' - the SPSS keywords \code{AND} / \code{OR} / \code{NOT} / \code{XOR}
+#'   used as identifiers where \code{&} / \code{|} / \code{!} /
+#'   \code{xor()} were meant. Matching is case-insensitive (SPSS is), but
+#'   the real \code{xor()} is exempt (Session 290; it used to be refused,
+#'   with a message recommending itself).
+#' - an operator \code{=} where \code{==} was meant.
+#' Each error shows the corrected call, built from the input by walking the
+#' expression: a keyword call head becomes its R operator (the operand of
+#' \code{NOT} is parenthesized so the result reads \code{!(Age < 40)}), an
+#' \code{=} call becomes \code{==}, and every other node -- named arguments
+#' included -- is left as is. When a keyword is present but not as a call
+#' head, so nothing can be rewritten, a one-line generic example of the
+#' operator stands in. The lead and the fix line follow \code{origin}:
+#' \code{NOT(Age < 40)} ... \code{jsubset(!(Age < 40))} at set time,
+#' \code{subset = NOT(Age < 40)} ... \code{subset = !(Age < 40)} per call.
 #'
 #' Inspects the PARSED expression, so it can only see what R's parser let
 #' through: \code{Condition == 3 AND SoughtHelp == 1} and a top-level
 #' \code{Gender = 1} never reach it (the parser rejects the first; the
-#' second becomes a named argument to \code{jsubset()} itself). The
-#' \code{=} branch therefore fires only on an operator \code{=} that R
-#' accepted inside parentheses or braces, \code{(Gender = 1) & (Age < 40)},
-#' which without the check would evaluate as \code{1 & (Age < 40)} and
-#' silently drop the Gender test.
+#' second becomes a named argument, which \code{.jst_check_named_variables()}
+#' catches). The \code{=} branch therefore fires only on an operator
+#' \code{=} that R accepted inside parentheses or braces,
+#' \code{(Gender = 1) & (Age < 40)}, which without the check evaluates as
+#' \code{1 & (Age < 40)} and silently drops the Gender test -- on the
+#' per-call route, before Session 290, that is exactly what happened.
 #'
-#' \code{TRUE} / \code{FALSE} / \code{T} / \code{F} are not exempted (they
-#' were, until Session 289): a single value cannot select rows, and the
-#' set-time dry run in \code{jsubset()} refuses all four with the same
-#' shape error (\code{.jst_check_mask_shape()}). \code{T} and \code{F}
-#' are let past the bare-name branch here only so that they reach that
-#' error rather than the variable-name one, whose \code{T == 1} example
-#' would be nonsense.
+#' A bare variable name as the whole expression (\code{jsubset(Gender)}) is
+#' no longer refused here (Session 290, the bare-name branch removed on both
+#' routes): the set-time dry run and the apply-time shape check judge it by
+#' what it produces, so a genuine TRUE/FALSE column passes and a numeric one
+#' gets the shape check's bare-name error ("Gender on its own is a variable
+#' name, which does not select rows in R", with \code{Gender == 1} as the
+#' fix). The T / F special case that branch carried went with it.
 #'
 #' @param raw_expr The unevaluated expression (a language object).
 #' @param expr_str The deparsed expression string (for display in errors).
+#' @param origin \code{"set"} (\code{jsubset()}) or \code{"call"} (a
+#'   per-call \code{subset =}); chooses the lead and the fix-line form.
 #' @keywords internal
-.jst_check_filter_syntax <- function(raw_expr, expr_str) {
-
-  # Catch a bare symbol used as the entire subset expression, e.g.
-  # jsubset(Gender). The user almost certainly meant a comparison
-  # like Gender == 1. T and F fall through to the dry run (see roxygen).
-  if (is.symbol(raw_expr)) {
-    sym <- as.character(raw_expr)
-    if (!sym %in% c("T", "F")) {
-      .jst_stop(
-        sym, " on its own is a variable name, not a condition, ",
-        "so it cannot select rows.\n",
-        "Compare it to a value, for example:\n",
-        "  jsubset(", sym, " == 1)"
-      )
-    }
+.jst_check_filter_syntax <- function(raw_expr, expr_str,
+                                     origin = c("set", "call")) {
+  origin <- match.arg(origin)
+  lead <- if (origin == "call") paste0("subset = ", expr_str) else expr_str
+  fixline <- function(fixed) {
+    if (origin == "call") paste0("  subset = ", fixed)
+    else paste0("  jsubset(", fixed, ")")
   }
+  dep <- function(e) paste(deparse(e, width.cutoff = 500), collapse = " ")
 
   # Collect all symbols referenced in the expression
   all_names <- all.names(raw_expr, unique = FALSE)
 
-  # Check for SPSS-style logical keywords used as identifiers
+  # Check for SPSS-style logical keywords used as identifiers. The real
+  # xor() is R's own spelling of XOR and is left alone (S290).
   spss_kw <- c("AND", "OR", "NOT", "XOR")
-  hit <- intersect(toupper(all_names), spss_kw)
+  r_op    <- c(AND = "&", OR = "|", NOT = "!", XOR = "xor")
+  is_kw   <- function(nm) toupper(nm) %in% spss_kw && nm != "xor"
+  hit <- all_names[vapply(all_names, is_kw, logical(1))]
   if (length(hit) > 0) {
-    kw <- hit[1]
-    replacement <- switch(kw,
-                          AND = "`&` (single ampersand)",
-                          OR  = "`|` (pipe symbol)",
-                          NOT = "`!` (exclamation mark)",
-                          XOR = "`xor()` (a function call)")
+    kw <- hit[1L]
+    replacement <- switch(toupper(kw),
+                          AND = "& (single ampersand)",
+                          OR  = "| (pipe symbol)",
+                          NOT = "! (exclamation mark)",
+                          XOR = "xor() (a function call)")
+    # The corrected call: each keyword call head becomes its R operator,
+    # nothing else moves. NOT's operand is wrapped in parentheses so the
+    # result deparses as !(Age < 40) rather than the equivalent but
+    # odd-looking !Age < 40.
+    fix_kw <- function(e) {
+      if (is.call(e)) {
+        head <- e[[1L]]
+        if (is.symbol(head) && is_kw(as.character(head))) {
+          new_op <- r_op[[toupper(as.character(head))]]
+          e[[1L]] <- as.name(new_op)
+          if (new_op == "!" && length(e) == 2L && is.call(e[[2L]])) {
+            e[[2L]] <- call("(", e[[2L]])
+          }
+        }
+        for (i in seq_along(e)[-1L]) {
+          if (!is.null(e[[i]]) && is.call(e[[i]])) e[[i]] <- fix_kw(e[[i]])
+        }
+      }
+      e
+    }
+    fixed <- dep(fix_kw(raw_expr))
+    if (identical(fixed, dep(raw_expr))) {
+      # The keyword is not a call head (NOT(...) is the reachable form;
+      # this is the fallback), so there is nothing to rewrite: show a
+      # generic example of the operator instead.
+      fixed <- switch(toupper(kw),
+                      AND = "Age < 40 & Volunteer == 1",
+                      OR  = "Age < 40 | Age > 60",
+                      NOT = "!is.na(Age)",
+                      XOR = "xor(Age < 40, Volunteer == 1)")
+    }
     .jst_stop(
-      "It looks like you used `", kw, "` in your subset expression, ",
-      "which R treats as a variable name, not a logical operator.\n",
-      "  In R, use ", replacement, " instead.\n",
-      "  Examples:\n",
-      "    jsubset(Age < 40 & Volunteer == 1)  # AND\n",
-      "    jsubset(Age < 40 | Age > 60)        # OR\n",
-      "    jsubset(!is.na(Age))                # NOT\n",
-      "  You wrote: ", expr_str
+      lead, " uses ", kw, ", which R does not recognize.\n",
+      "Use ", replacement, ":\n",
+      fixline(fixed)
     )
   }
 
@@ -510,12 +588,11 @@ jsubset <- function(data, expr, clear.all = FALSE) {
       }
       e
     }
-    fixed <- paste(deparse(fix_eq(raw_expr), width.cutoff = 500),
-                   collapse = " ")
+    fixed <- dep(fix_eq(raw_expr))
     .jst_stop(
-      expr_str, " uses a single =, which does not test equality in R.\n",
+      lead, " uses a single =, which does not test equality in R.\n",
       "Use == (two equals signs):\n",
-      "  jsubset(", fixed, ")"
+      fixline(fixed)
     )
   }
 
@@ -932,6 +1009,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jcomplete")   # S290
 
   # Bare-symbol form: prepend the captured first symbol to the variables list
   if (arg1$mode == "symbol_with_default") {
@@ -1265,6 +1343,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   # ref/show/remove sit after the dots and are therefore always named, which
   # removes the need for the old positional-argument guard.
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jdummy")   # S290
   if (arg1$mode == "symbol_with_default") {
     extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
     variables <- c(list(extra_quo), variables)
@@ -1567,6 +1646,7 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jnumeric")   # S290
   if (arg1$mode == "symbol_with_default") {
     extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
     variables <- c(list(extra_quo), variables)
@@ -1656,6 +1736,7 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jcount")   # S290
   if (arg1$mode == "symbol_with_default") {
     extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
     variables <- c(list(extra_quo), variables)
@@ -1756,6 +1837,7 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jlikert")   # S290
   if (arg1$mode == "symbol_with_default") {
     extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
     variables <- c(list(extra_quo), variables)

@@ -3697,6 +3697,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # route (vars = names(data)) is named in the error instead. Do not
   # "fix" this asymmetry into consistency with jconvert; it is the point.
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jdeclare_missing")   # S290
 
   # Leading-comma-omitted form: if first arg was captured as a bare symbol
   # alongside an active juse() default, prepend it to the variables list.
@@ -5882,6 +5883,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
 
   # --- Resolve variable list (... vs vars; mutually exclusive) ---------------
   variables <- rlang::enquos(...)
+  .jst_check_named_variables(variables, arg1$data, "jconvert")   # S290
 
   # Leading-comma-omitted form: if first arg was captured as a bare symbol
   # alongside an active juse() default, prepend it to the variables list.

@@ -2,41 +2,61 @@
 % Please edit documentation in R/pipeline.R
 \name{.jst_check_filter_syntax}
 \alias{.jst_check_filter_syntax}
-\title{Internal helper: detect common SPSS-style syntax mistakes in jsubset
-expressions and provide guidance toward standard R operators.}
+\title{Internal helper: detect common SPSS-style syntax mistakes in a filter
+expression and show the corrected form}
 \usage{
-.jst_check_filter_syntax(raw_expr, expr_str)
+.jst_check_filter_syntax(raw_expr, expr_str, origin = c("set", "call"))
 }
 \arguments{
 \item{raw_expr}{The unevaluated expression (a language object).}
 
 \item{expr_str}{The deparsed expression string (for display in errors).}
+
+\item{origin}{\code{"set"} (\code{jsubset()}) or \code{"call"} (a
+per-call \code{subset =}); chooses the lead and the fix-line form.}
 }
 \description{
-Catches:
+Called on the PARSED filter expression from two places: \code{jsubset()}
+at set time (\code{origin = "set"}, before the dry run) and
+\code{.jst_apply_pipeline()} at apply time for a per-call
+\code{subset =} (\code{origin = "call"}, before \code{.jst_apply_mask()};
+Session 290 -- before that the per-call route had no syntax check at
+all). Two branches:
 \itemize{
-\item a bare variable name used as the whole expression (\code{jsubset(Gender)})
-\item \code{=} used where \code{==} was meant (for equality comparison)
-\item \code{AND} / \code{OR} / \code{NOT} / \code{XOR} used as identifiers
-where \code{&} / \code{|} / \code{!} / \code{xor()} were meant
+\item the SPSS keywords \code{AND} / \code{OR} / \code{NOT} / \code{XOR}
+used as identifiers where \code{&} / \code{|} / \code{!} /
+\code{xor()} were meant. Matching is case-insensitive (SPSS is), but
+the real \code{xor()} is exempt (Session 290; it used to be refused,
+with a message recommending itself).
+\item an operator \code{=} where \code{==} was meant.
+Each error shows the corrected call, built from the input by walking the
+expression: a keyword call head becomes its R operator (the operand of
+\code{NOT} is parenthesized so the result reads \code{!(Age < 40)}), an
+\code{=} call becomes \code{==}, and every other node -- named arguments
+included -- is left as is. When a keyword is present but not as a call
+head, so nothing can be rewritten, a one-line generic example of the
+operator stands in. The lead and the fix line follow \code{origin}:
+\code{NOT(Age < 40)} ... \code{jsubset(!(Age < 40))} at set time,
+\code{subset = NOT(Age < 40)} ... \code{subset = !(Age < 40)} per call.
 }
 }
 \details{
 Inspects the PARSED expression, so it can only see what R's parser let
 through: \code{Condition == 3 AND SoughtHelp == 1} and a top-level
 \code{Gender = 1} never reach it (the parser rejects the first; the
-second becomes a named argument to \code{jsubset()} itself). The
-\code{=} branch therefore fires only on an operator \code{=} that R
-accepted inside parentheses or braces, \code{(Gender = 1) & (Age < 40)},
-which without the check would evaluate as \code{1 & (Age < 40)} and
-silently drop the Gender test.
+second becomes a named argument, which \code{.jst_check_named_variables()}
+catches). The \code{=} branch therefore fires only on an operator
+\code{=} that R accepted inside parentheses or braces,
+\code{(Gender = 1) & (Age < 40)}, which without the check evaluates as
+\code{1 & (Age < 40)} and silently drops the Gender test -- on the
+per-call route, before Session 290, that is exactly what happened.
 
-\code{TRUE} / \code{FALSE} / \code{T} / \code{F} are not exempted (they
-were, until Session 289): a single value cannot select rows, and the
-set-time dry run in \code{jsubset()} refuses all four with the same
-shape error (\code{.jst_check_mask_shape()}). \code{T} and \code{F}
-are let past the bare-name branch here only so that they reach that
-error rather than the variable-name one, whose \code{T == 1} example
-would be nonsense.
+A bare variable name as the whole expression (\code{jsubset(Gender)}) is
+no longer refused here (Session 290, the bare-name branch removed on both
+routes): the set-time dry run and the apply-time shape check judge it by
+what it produces, so a genuine TRUE/FALSE column passes and a numeric one
+gets the shape check's bare-name error ("Gender on its own is a variable
+name, which does not select rows in R", with \code{Gender == 1} as the
+fix). The T / F special case that branch carried went with it.
 }
 \keyword{internal}

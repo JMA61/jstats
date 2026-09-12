@@ -29,7 +29,11 @@ titled table per dependent variable.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after
-jcomplete and jsubset. Does not affect other function calls.}
+jcomplete and jsubset. Does not affect other function calls.
+Written in R syntax and checked the way \code{jsubset()} checks a
+filter: \code{subset = NOT(Age < 40)}, for example, is refused with
+the corrected \code{subset = !(Age < 40)} shown (see
+\code{\link{jsubset}} for a translation table).}
 
 \item{variable.id}{Character or NULL. Variable label display mode: one of
 \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
