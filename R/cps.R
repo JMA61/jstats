@@ -234,9 +234,12 @@
 #' Internal helper: truncate a string to a display-width cap with ellipsis
 #'
 #' Single source of truth for the package's table-cell width cap. A string
-#' wider than \code{max_width} display columns is cut to \code{max_width - 1}
-#' columns and given a trailing ellipsis character; shorter strings are
-#' returned unchanged. Display width is measured with
+#' wider than \code{max_width} display columns is cut to \code{max_width - 3}
+#' columns and given a trailing three-period marker ("..."), so the result
+#' occupies exactly \code{max_width} columns; shorter strings are returned
+#' unchanged. The marker is plain ASCII (Session 293; was the Unicode
+#' ellipsis U+2026 from Session 57), matching the ASCII closing rule adopted
+#' for the CPS block at Session 267. Display width is measured with
 #' \code{nchar(type = "width")} so double-width characters are counted
 #' correctly. The default 40-column cap is shared across every in-table label
 #' surface -- CPS pipeline detail (via \code{.jst_cps_cap_label}), jfreq value
@@ -255,7 +258,7 @@
   content <- as.character(content)[1L]
   if (is.na(content)) return(content)
   if (nchar(content, type = "width") <= max_width) return(content)
-  paste0(substr(content, 1L, max_width - 1L), "\u2026")
+  paste0(substr(content, 1L, max_width - 3L), "...")
 }
 
 #' Internal helper: cap a pipeline-row label's parenthetical content for CPS
@@ -268,11 +271,13 @@
 #'             followed by ", +N more". The full set stays visible via
 #'             jcomplete()'s own status query.
 #'   "expr" -- a single expression string (filter_expr / subset_expr).
-#'             Truncated to max_width display columns with a trailing
-#'             ellipsis when longer.
+#'             Truncated to max_width display columns, ending in "..."
+#'             (three ASCII periods; see .jst_truncate_ellipsis), when
+#'             longer.
 #' Returns the (possibly shortened) content only; the caller supplies the
-#' operation prefix, e.g. sprintf("jcomplete (%s)", ...). Display width is
-#' measured with nchar(type = "width"), matching the renderer's dw().
+#' row label ("jcomplete()", "jsubset()", "subset =") and places the content
+#' in the trailing detail column. Display width is measured with
+#' nchar(type = "width"), matching the renderer's dw().
 #' @keywords internal
 .jst_cps_cap_label <- function(content, mode = c("list", "expr"),
                                max_items = 2L, max_width = 40L) {
@@ -497,7 +502,7 @@
                    length(sample_info$complete_vars))
                  .jst_cps_cap_label(sample_info$complete_vars, mode = "list")
                else ""
-        labels <- c(labels, "jcomplete"); detail <- c(detail, det)
+        labels <- c(labels, "jcomplete()"); detail <- c(detail, det)
         exc_v  <- c(exc_v, prior - sample_info$n_after_complete)
         surv_v <- c(surv_v, sample_info$n_after_complete)
         prior  <- sample_info$n_after_complete
@@ -508,7 +513,7 @@
                    nzchar(sample_info$filter_expr))
                  .jst_cps_cap_label(sample_info$filter_expr, mode = "expr")
                else ""
-        labels <- c(labels, "jsubset"); detail <- c(detail, det)
+        labels <- c(labels, "jsubset()"); detail <- c(detail, det)
         exc_v  <- c(exc_v, prior - sample_info$n_after_filter)
         surv_v <- c(surv_v, sample_info$n_after_filter)
         prior  <- sample_info$n_after_filter
@@ -541,7 +546,11 @@
       # 0); data rows indented 4. (Session 52: dropped "% Surviving", renamed
       # "Surviving" -> "Remaining". Session 57: pipeline detail moved to the
       # trailing column; .jst_cps_cap_label truncation retained as a line-
-      # length guard only.)
+      # length guard only. Session 293: pipeline-row labels read "what you
+      # typed, in R's notation" -- a function shows its parentheses, an
+      # argument its equals sign: jcomplete() / jsubset() / subset =. Width-
+      # neutral: lab_end is floored at dw("Case Processing") = 15, and the
+      # widest row label is still Auto-listwise, so no column moves.)
       exc_strs  <- vapply(seq_along(labels), function(i)
                      if (is.na(exc_v[i])) dash else as.character(exc_v[i]),
                      character(1))
