@@ -113,44 +113,52 @@
 
 # List the sentinel-managed .R files currently in R/ (first line is a sentinel).
 .jdev_wrap_violations <- function(exprs) {
-  # Structural gate (Session 255). A builder must not wrap its own prose when
-  # the assembled text is handed to something that wraps it again:
-  #   - .jst_stop() / .jst_stop_arg() wrap with a reserve computed from the
-  #     real "<fn>(): " prefix, which the builder cannot know;
-  #   - cat() has an emitter now, .jst_msg_out(), so a builder wrapping ahead
-  #     of a cat() is wrapping on a route that no longer needs it.
-  # .jst_wrap_indent() is deliberately NOT checked: at those sites the call
-  # supplies the indent, not just the wrap, so the emitter cannot replace it.
-  # Walks the parse tree rather than the text, so a call split across lines is
-  # caught and a mention inside a string or comment is not. (A line-based grep
-  # missed exactly one multi-line cat(paste0(.jst_wrap_prose(...))) site while
-  # this was being written, which is why it is an AST walk.)
-  wrapper  <- ".jst_wrap_prose"
-  emitters <- c(".jst_stop", ".jst_stop_arg", "cat")
+  # Structural gate -- a CALL-SITE WHITELIST (Session 292; replaces the
+  # Session 255 lexical test outright). The wrapping primitives,
+  # .jst_wrap_prose() and strwrap(), may be called only from the wrapper
+  # layer: .jst_wrap_message() and .jst_wrap_indent(). Every emitter
+  # (.jst_stop, .jst_stop_arg, .jst_warn, .jst_msg, .jst_advisory_note,
+  # .jst_msg_out) wraps the assembled message at the REAL prefix reserve
+  # and treats existing breaks as hard, so a builder that wraps its own
+  # prose at a guessed reserve produces two sets of break points -- the
+  # S287 jencode double wrap, where the word list landed as 15 and 24
+  # columns when one line held it.
+  # Why a whitelist and not the old "wrap lexically inside an emitter's
+  # argument list" test: that test could not see a wrap assigned to a
+  # variable and emitted a statement later (the jencode site), nor tell a
+  # harmless reserve-0 wrap from a harmful one -- reserve 0 double-wraps
+  # just as badly once the text reaches .jst_stop() (reserve 19) or
+  # .jst_warn() (9). Where a builder wraps, it is wrong wherever the text
+  # is going; so the rule is about the CALLER, not the route.
+  # .jst_wrap_indent() stays available to builders: there the call
+  # supplies the indent, not merely the wrap, and its output is
+  # classified "indent" and left alone by the emitter's own wrap.
+  # Walks the parse tree rather than the text, so a call split across
+  # lines is caught and a mention inside a string or comment is not.
+  wrappers <- c(".jst_wrap_prose", "strwrap")
+  allowed  <- c(".jst_wrap_message", ".jst_wrap_indent", ".jst_wrap_prose")
   empty    <- list(quote(expr = ))
   found    <- character(0)
 
-  walk <- function(e, fn, inside) {
+  walk <- function(e, fn) {
     if (is.call(e)) {
       head_nm <- if (is.name(e[[1L]])) as.character(e[[1L]]) else ""
-      if (nzchar(inside) && identical(head_nm, wrapper)) {
-        found <<- c(found,
-                    paste0(fn, ": ", wrapper, "() inside ", inside, "()"))
+      if (head_nm %in% wrappers && !(fn %in% allowed)) {
+        found <<- c(found, paste0(fn, ": ", head_nm, "()"))
       }
-      nxt   <- if (head_nm %in% emitters) head_nm else inside
       parts <- as.list(e)
       for (i in seq_along(parts)) {
         # An omitted argument (as in x[i, ]) parses to the empty symbol. Test
         # it in place: binding it to a variable makes every later use of that
         # variable raise "argument is missing, with no default".
         if (identical(parts[i], empty)) next
-        walk(parts[[i]], fn, nxt)
+        walk(parts[[i]], fn)
       }
     } else if (is.pairlist(e) || is.list(e)) {
       parts <- as.list(e)
       for (i in seq_along(parts)) {
         if (identical(parts[i], empty)) next
-        walk(parts[[i]], fn, inside)
+        walk(parts[[i]], fn)
       }
     }
     invisible(NULL)
@@ -162,9 +170,11 @@
         as.character(ex[[1L]])[1L] %in% c("<-", "=") && is.name(ex[[2L]])) {
       fn <- as.character(ex[[2L]])
     }
-    walk(ex, fn, "")
+    walk(ex, fn)
   }
-  unique(found)
+  # One entry per SITE, not unique(): the count reported by the gate is the
+  # number of calls to fix, and two wraps in one builder are two fixes.
+  found
 }
 
 .jdev_managed_files <- function() {
@@ -226,16 +236,20 @@ receive_package <- function(file = "jstats_source.R") {
       "| sentinels:", length(chunks),
       "| marker occurrences:", n_marker, ")\n")
 
-  ## -- 2b. structural gate: no builder wrap ahead of a wrapping emitter -------
+  ## -- 2b. structural gate: wrapping only from the wrapper layer (S292) -----
   wrap_bad <- .jdev_wrap_violations(parsed)
   if (length(wrap_bad)) {
     stop("Structural gate failed -- ", length(wrap_bad),
-         " builder wrap(s) sit inside an emitter that already wraps:\n  ",
+         " wrap call(s) outside the wrapper layer (.jst_wrap_message / ",
+         ".jst_wrap_indent):\n  ",
          paste(wrap_bad, collapse = "\n  "),
-         "\nStrip the .jst_wrap_prose() call and let the emitter wrap.",
+         "\nRoute the text through an emitter (.jst_stop, .jst_warn, ",
+         ".jst_msg, .jst_msg_out) and let it wrap; a builder never calls ",
+         ".jst_wrap_prose() or strwrap() itself. Stripping the wrap alone ",
+         "is wrong on a cat() route -- convert the cat() to .jst_msg_out().",
          call. = FALSE)
   }
-  cat("Structural gate:    OK ( no builder wrap inside a wrapping emitter )\n")
+  cat("Structural gate:    OK ( no wrap call outside the wrapper layer )\n")
 
   ## -- 3. one-time migration guard ---------------------------------------------
   # if a sentinel-less copy of the monolith is still in R/, every function

@@ -585,11 +585,14 @@ joutput <- function(level, effect.size = NULL,
         # below it are NOT wrapped, per Rule U.
         head_txt <- sprintf("Note: the %s %s %s %s missing values.",
                             df_list, kind, verb, label)
-        notes <- c(notes, paste0(.jst_wrap_prose(head_txt), "\n",
+        notes <- c(notes, paste0(head_txt, "\n",
                                  intro, "\n", calls, "\n"))
       }
     }
-    cat(paste(notes, collapse = "\n"))
+    # S292: routed through the stdout emitter, which wraps the head
+    # sentence at message.width and passes the runnable lines; the
+    # builder no longer wraps its own prose.
+    .jst_msg_out(paste(notes, collapse = "\n"))
   }
 
   invisible(NULL)

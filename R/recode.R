@@ -1770,18 +1770,18 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     } else "your missing.convention.codes setting"
     if (isTRUE(tok_reused)) {
       .jst_msg(paste0(
-        .jst_wrap_prose(paste0(
+        paste0(
           "Note: ", .jst_fmt_code(tok_mint_code), " was used for ",
-          "missing, from ", cc_src, ".")), "\n",
-        .jst_wrap_prose(paste0(
+          "missing, from ", cc_src, "."), "\n",
+        paste0(
           orig_name, " already declares ", .jst_fmt_code(tok_mint_code),
           " as a missing value, so the recoded variable carries the ",
-          "existing declaration."))))
+          "existing declaration.")))
     } else {
-      .jst_msg(.jst_wrap_prose(paste0(
+      .jst_msg(paste0(
         "Note: ", .jst_fmt_code(tok_mint_code), " was used for missing, ",
         "from ", cc_src, ", and declared as a ",
-        "missing value on the recoded variable.")))
+        "missing value on the recoded variable."))
     }
   }
 
@@ -1855,11 +1855,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         } else {
           # Plain convention name ("SPSS convention"), not the -style
           # label, which doubled as "SPSS-style convention" (S267).
-          .jst_wrap_prose(paste0(
+          paste0(
             "To make the value", if (one) "" else "s",
             " missing under ",
             c(spss = "SPSS", stata = "Stata", sas = "SAS")[[d1_conv]],
-            " convention, map ", if (one) "it" else "them", " directly:"))
+            " convention, map ", if (one) "it" else "them", " directly:")
         }
         # The remedy call carries convention = only when this call did:
         # bare-call users stay on the setting; per-call users keep their
@@ -1868,10 +1868,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
           paste0(", convention = \"", convention, "\"")
         } else ""
         .jst_msg(paste0(
-          .jst_wrap_prose(paste0(
+          paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
             if (one) "looks like a coded missing value."
-            else "look like coded missing values.")), "\n",
+            else "look like coded missing values."), "\n",
           d1_lead, "\n",
           "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
           .jst_data_name, ", ", orig_name, ", map = \"",
@@ -2511,12 +2511,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       }
       big <- which.max(vals)
       msgs <- c(msgs, paste0(
-        .jst_wrap_prose(paste0(
+        paste0(
           "Note: every value in '", var_name, "' is a number stored as ",
           "text; each was converted to its own value (\"", words_u[big],
-          "\" -> ", .jst_fmt_code(vals[big]), ", never renumbered).")), "\n",
-        .jst_wrap_prose(paste0(
-          "No value labels were attached. To add labels, use jrelabel()."))))
+          "\" -> ", .jst_fmt_code(vals[big]), ", never renumbered)."), "\n",
+        paste0(
+          "No value labels were attached. To add labels, use jrelabel().")))
       assigned_rules <- paste0(words_u, "=", vapply(vals, .jst_fmt_code,
                                                     character(1)))
 
@@ -2553,9 +2553,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       msgs <- c(msgs, paste0(
         "Note: '", var_name, "' was encoded alphabetically:\n",
         paste(listing, collapse = "\n"), "\n",
-        .jst_wrap_prose(paste0(
+        paste0(
           "If these categories have a natural order (like ",
-          "Low/Medium/High), rerun with a map to choose the numbers:")),
+          "Low/Medium/High), rerun with a map to choose the numbers:"),
         "\n",
         .jst_jencode_map_call(.jst_data_name, var_name,
                               paste(assigned_rules, collapse = "; "))))
@@ -2567,24 +2567,24 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     if (any(trim_mask)) {
       n_t    <- sum(trim_mask)
       ex_raw <- txt[trim_mask][1]
-      msgs <- c(msgs, .jst_wrap_prose(paste0(
+      msgs <- c(msgs, paste0(
         "Note: ", .jst_fmt_n(n_t), " cell", if (n_t == 1L) "" else "s",
         " in '", var_name,
         "' had outer spaces removed before encoding (e.g. \"", ex_raw,
-        "\" was read as \"", trimws(ex_raw), "\").")))
+        "\" was read as \"", trimws(ex_raw), "\")."))
     }
 
     # Blanks go to plain NA in automatic mode -- no convention sensitivity.
     if (n_blank > 0) {
       msgs <- c(msgs, paste0(
-        .jst_wrap_prose(paste0(
+        paste0(
           "Note: ", .jst_fmt_n(n_blank), " blank cell",
           if (n_blank == 1L) "" else "s",
           " in '", var_name, "' ", if (n_blank == 1L) "was" else "were",
-          " left missing (NA).")), "\n",
-        .jst_wrap_prose(paste0(
+          " left missing (NA)."), "\n",
+        paste0(
           "To give blank cells their own category, rerun with a map ",
-          "naming them:")), "\n",
+          "naming them:"), "\n",
         .jst_jencode_map_call(.jst_data_name, var_name,
                               paste(c(assigned_rules, "blank=0"),
                                     collapse = "; "))))
@@ -2863,12 +2863,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         paste0("Add a blank rule to the map, or add an else rule to send ",
                "blank cells to missing:")
       }, "  map = \"...; else=NA\"")
-      # First line carries the fn(): prefix; the trailing Rule L line is
-      # runnable and never wrapped.
-      lines <- vapply(seq_along(lines), function(i) {
-        if (grepl("^\\s\\s", lines[i])) lines[i]
-        else .jst_wrap_prose(lines[i], reserve = if (i == 1L) 11L else 0L)
-      }, character(1))
+      # The emitter wraps: .jst_stop() knows the real "jencode(): " prefix
+      # and leaves the trailing Rule L line alone. The builder's own wrap
+      # at a guessed reserve of 11 was re-wrapped at 19 and broke the word
+      # list in two (S287 finding; S292 fix).
       .jst_stop(paste(lines, collapse = "\n"))
     }
 
@@ -2892,13 +2890,13 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       }
       big <- which.max(face_vals)
       n_face <- sum(word_mask & words %in% face_words)
-      msgs <- c(msgs, .jst_wrap_prose(paste0(
+      msgs <- c(msgs, paste0(
         "Note: ", .jst_fmt_n(n_face), " value",
         if (n_face == 1L) "" else "s", " in '", var_name,
         "' stored as text ", if (n_face == 1L) "was" else "were",
         " kept at ", if (n_face == 1L) "its" else "their",
         " own value (\"", face_words[big], "\" -> ",
-        .jst_fmt_code(face_vals[big]), ", never renumbered).")))
+        .jst_fmt_code(face_vals[big]), ", never renumbered)."))
       # The words routed to the else clause are the evidence: a swept
       # "Refused" says this column carried missing-value codes.
       msgs <- c(msgs, .jst_jencode_suspicious_note(new_num, var_name,
@@ -2910,11 +2908,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     if (any(trim_mask)) {
       n_t    <- sum(trim_mask)
       ex_raw <- txt[trim_mask][1]
-      msgs <- c(msgs, .jst_wrap_prose(paste0(
+      msgs <- c(msgs, paste0(
         "Note: ", .jst_fmt_n(n_t), " cell", if (n_t == 1L) "" else "s",
         " in '", var_name,
         "' matched the map only after removing outer spaces (e.g. \"",
-        ex_raw, "\" matched \"", trimws(ex_raw), "\").")))
+        ex_raw, "\" matched \"", trimws(ex_raw), "\")."))
     }
 
     # --- else clause -------------------------------------------------------
@@ -2978,9 +2976,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
             "Note: else=NA converted ", what, " in '", var_name,
             "' to missing (NA).")
         }
-        msgs <- c(msgs, paste(c(.jst_wrap_prose(head_txt),
+        msgs <- c(msgs, paste(c(head_txt,
                                 if (!is.null(name_line)) {
-                                  .jst_wrap_prose(name_line)
+                                  name_line
                                 }),
                               collapse = "\n"))
       }
@@ -3073,18 +3071,18 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
           paste0("  ", disp, " <- ", .jst_quote_words(tg$words))
         }, character(1))
         collapse_msg <- paste0(
-          .jst_wrap_prose(paste0(
+          paste0(
             "Note: Some numbers combine two or more words, so no label ",
-            "could be chosen for them:")),
+            "could be chosen for them:"),
           "\n", paste(lines, collapse = "\n"))
         if (length(entries) > 0) {
           collapse_msg <- paste0(collapse_msg,
             "\nThe other numbers keep their original words as labels.")
         }
         collapse_msg <- paste0(collapse_msg, "\n",
-          .jst_wrap_prose(paste0(
+          paste0(
             "Name each combined number with the labels argument, or later ",
-            "with jrelabel().")))
+            "with jrelabel()."))
         msgs <- c(msgs, collapse_msg)
       }
     }
@@ -3106,10 +3104,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
                         ".jst_options_missing_convention_codes"))) {
           "the missing.convention.codes default"
         } else "your missing.convention.codes setting"
-        msgs <- c(msgs, .jst_wrap_prose(paste0(
+        msgs <- c(msgs, paste0(
           "Note: ", .jst_fmt_code(tok_mint_code), " was used for ",
           "missing, from ", cc_src, ", and declared ",
-          "as a missing value on the encoded variable.")))
+          "as a missing value on the encoded variable."))
       }
     }
 
@@ -3193,17 +3191,17 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
                    prefixed  = FALSE), "\n",
                  "Then map ", if (one) "it" else "them", " directly:")
         } else {
-          .jst_wrap_prose(paste0(
+          paste0(
             "To make the value", if (one) "" else "s",
             " missing under ",
             c(spss = "SPSS", stata = "Stata", sas = "SAS")[[d1_conv]],
-            " convention, map ", if (one) "it" else "them", " directly:"))
+            " convention, map ", if (one) "it" else "them", " directly:")
         }
         msgs <- c(msgs, paste0(
-          .jst_wrap_prose(paste0(
+          paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
             if (one) "looks like a coded missing value."
-            else "look like coded missing values.")), "\n",
+            else "look like coded missing values."), "\n",
           d1_lead, "\n",
           # S249: the rendered map is escaped before it goes inside the
           # double-quoted map = argument. .jst_jencode_lhs_render re-quotes
@@ -3337,10 +3335,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   }
 
   paste0(
-    .jst_wrap_prose(paste0(head_txt, ".")), "\n",
-    .jst_wrap_prose(paste0(
+    paste0(head_txt, "."), "\n",
+    paste0(
       "Declare ", .jst_and_list(codes), " with jdeclare_missing() so analyses ",
-      "exclude ", if (length(all_vals) == 1L) "it." else "them.")))
+      "exclude ", if (length(all_vals) == 1L) "it." else "them."))
 }
 
 
@@ -4517,12 +4515,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       up_tags <- sort(post_tags[post_tags %in% LETTERS])
       if (length(lo_tags) > 0L && length(up_tags) > 0L) {
         mixed_notes <- c(mixed_notes, paste0(
-          .jst_wrap_prose(paste0(
+          paste0(
             "Note: ", vn, " carries both Stata-style (",
             paste0(".", lo_tags, collapse = ", "),
             ") and SAS-style (",
             paste0(".", up_tags, collapse = ", "),
-            ") missing-value markers.")),
+            ") missing-value markers."),
           "\n",
           "To collapse them to one form:\n",
           "  jconvert(", data_name,
@@ -4648,7 +4646,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         modify        = modify
       )
     }
-    cat(notif, sep = "")
+    # S292: the stdout emitter wraps the block at message.width (header
+    # prose, the indented variable echo) and passes the runnable lines;
+    # both builders return one trailing newline, which the emitter
+    # normalizes.
+    .jst_msg_out(notif)
   }
 
   # D2 override notes, grouped by the column form. The primary
@@ -4666,10 +4668,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                         `[[`, character(1), "var")
       verb <- if (length(vars_cv) == 1L) "uses" else "use"
       d2_msgs <- c(d2_msgs, paste0(
-        .jst_wrap_prose(paste0(
+        paste0(
           "Note: ", .jst_format_var_list(vars_cv, and = TRUE), " ", verb,
           " ", .jst_convention_label(cv), " missing values, but your ",
-          "missing.convention setting is \"", d2_opt, "\".")), "\n",
+          "missing.convention setting is \"", d2_opt, "\"."), "\n",
         "To convert the data frame, run:\n",
         "  jconvert(", data_name, ", to = \"", d2_opt,
         "\", modify = TRUE)\n",
@@ -4677,7 +4679,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         " instead, change the setting:\n",
         "  joptions(missing.convention = \"", cv, "\")"))
     }
-    cat(paste(d2_msgs, collapse = "\n\n"), "\n", sep = "")
+    .jst_msg_out(paste(d2_msgs, collapse = "\n\n"))   # S292: emitter wraps
   }
 
   # Drop notices fire after the main notification (consistent with the
@@ -4692,7 +4694,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # notices are on; column-level before the frame-level mismatch notice.
   if (length(mixed_notes) > 0L && isTRUE(missing.notice)) {
     cat("\n")   # Rule F: a blank line off the block above (S267)
-    cat(paste(mixed_notes, collapse = "\n"), "\n", sep = "")
+    .jst_msg_out(paste(mixed_notes, collapse = "\n"))   # S292: emitter wraps
   }
 
   # --- Post-declaration mismatch notice (Decision 11 closing rule) ---------
@@ -5188,11 +5190,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
            scaffold_var, ", ", code_arg, ")")
   }
   paste0(
-    .jst_wrap_prose(paste0(
+    paste0(
       "Note: jdeclare_missing made no change to ", var_phrase, ". ",
       if (isTRUE(plural)) "Their" else "Its",
       " markers are already missing values, so a bare marker has ",
-      "nothing to name."), reserve = 0L), "\n",
+      "nothing to name."), "\n",
     "To name one:\n",
     scaffold, "\n"
   )
@@ -5467,11 +5469,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       paste0(header, length(vn_set),
              if (length(vn_set) == 1L) " variable:" else " variables:")
     }
-    # Echo the variable list (wrapped): the user supplied it via vars= or
-    # the dots, and the echo confirms exactly which columns changed.
-    var_line <- paste(strwrap(paste(vn_set, collapse = ", "),
-                              width = 70, initial = "  ", prefix = "  "),
-                      collapse = "\n")
+    # Echo the variable list: the user supplied it via vars= or the dots,
+    # and the echo confirms exactly which columns changed. One indented
+    # line; the stdout emitter wraps it at message.width, keeping the
+    # indent on every continuation line (S292 -- this was a strwrap() at a
+    # hardcoded width of 70, the one line that ignored the setting).
+    var_line <- paste0("  ", paste(vn_set, collapse = ", "))
 
     body_lines <- character(0)
     if (br == "stata_conversion") {

@@ -15,8 +15,8 @@ Invisibly NULL; called for the message it emits.
 \description{
 Concatenates its ... arguments into a message and emits it via message().
 The assembled text is width-wrapped here via .jst_wrap_message(), so a
-builder need not wrap its own prose, and a builder that already wrapped is
-unaffected: the wrapper is idempotent at a given width.
+builder never wraps its own prose (receive_package()'s structural gate
+refuses the file; see .jst_wrap_prose()).
 }
 \details{
 Notes carry no function-name prefix. An error attributes a failure to a

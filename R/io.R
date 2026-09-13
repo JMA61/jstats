@@ -1345,13 +1345,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- preserve.declarations = FALSE: conversion report, never compacted ----
   if (!preserve.declarations) {
     head_str <- if (uniform) {
-      .jst_wrap_prose(sprintf(
+      sprintf(
         "%d %s had %s missing values, converted to plain NA per preserve.declarations = FALSE:",
-        n_vars, verb_noun, disp_label(present)))
+        n_vars, verb_noun, disp_label(present))
     } else {
-      .jst_wrap_prose(sprintf(
+      sprintf(
         "%d %s had missing values (%s), converted to plain NA per preserve.declarations = FALSE:",
-        n_vars, verb_noun, count_parens))
+        n_vars, verb_noun, count_parens)
     }
     return(paste0(
       head_str, "\n", list_str,
@@ -1380,9 +1380,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # neither recommended -- which is right depends on whether the user
       # regards the data or the setting as the truth.
       note_lines <- c(
-        .jst_wrap_prose(sprintf(
+        sprintf(
           "Note: these variables are %s, but your missing.convention setting is \"%s\".",
-          disp_label(st), opt)),
+          disp_label(st), opt),
         sprintf("To use %s missing values, run:", disp_label(st)),
         sprintf("  joptions(missing.convention = \"%s\")", st),
         sprintf("To use %s missing values, run:", disp_label(opt)),
@@ -1422,9 +1422,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 if (length(vars_g) == 1L) "is" else "are",
                 disp_label(g))
       }, character(1))
-      note_first <- .jst_wrap_prose(sprintf(
+      note_first <- sprintf(
         "Note: %s, but your missing.convention setting is \"%s\".",
-        paste(seg, collapse = " and "), opt))
+        paste(seg, collapse = " and "), opt)
       remedy_styles <- c(intersect(opt, styles_present),
                          setdiff(styles_present, opt))
       # Rule L form (S230): the intro clause ends in a colon and each
@@ -2478,11 +2478,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   is_sg <- (n_changed == 1)
   noun  <- if (is_sg) "variable" else "variables"
 
-  .jst_wrap_prose(paste0(
+  paste0(
     "Note: ", n_changed, " ", noun, " had SAS-style missing values ",
     "(.A, .B, ...) converted to Stata-style missing values ",
     "(.a, .b, ...) for .dta files."
-  ))
+  )
 }
 
 #' Internal: convert SAS-style missing values to Stata-style in a data frame
@@ -2660,7 +2660,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   " and save again, run",
                   if (n_lines == 2L) " both:" else ":")
 
-  paste0(.jst_wrap_prose(head1), "\n", .jst_wrap_prose(head2), "\n",
+  paste0(head1, "\n", head2, "\n",
          intro, "\n", paste(decl_lines, collapse = "\n"), "\n",
          jsave_line)
 }

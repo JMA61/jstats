@@ -1993,8 +1993,14 @@ jai <- function(setup = NULL, path = NULL) {
 #'     .jst_stop() and .jst_warn() for the per-route budgets.)
 #'
 #' Scope: prose only. Runnable command lines follow Rule L (their own
-#' indented line) and are never passed through this helper. Applied at
-#' the S230 sites; other messages adopt it as they are touched.
+#' indented line) and are never passed through this helper. Called ONLY
+#' from the wrapper layer -- .jst_wrap_message() and .jst_wrap_indent()
+#' -- never from a message builder: the emitters wrap every message at
+#' the real prefix reserve and treat existing breaks as hard, so a
+#' builder-side wrap at a guessed reserve produces two sets of break
+#' points (the S287 jencode double wrap). receive_package()'s structural
+#' gate enforces this as a call-site whitelist (S292). A builder that
+#' needs an indent for its own layout may still call .jst_wrap_indent().
 #'
 #' @param text Character scalar: one sentence/paragraph, no embedded newlines.
 #' @param width Target line width. Defaults to the resolved
