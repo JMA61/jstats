@@ -54,5 +54,16 @@ When the current dataset has no jsubset / jcomplete set but at least one
 other dataset does have an active setting, a yellow-colored note is
 included in the pipeline messages to remind the user that case selection
 is not active for this particular dataset.
+
+Ahead of all three steps, a zero-row input frame stops the call. The count
+is read before step 1, so the guard fires only when the frame ARRIVED
+empty; a filter that empties a non-empty frame is a different condition and
+is left alone, because there the Case Processing Summary prints with a
+Remaining N of 0 and the counts below it are informative. The guard lives
+here rather than in each caller so that all thirteen call sites (nine
+analysis functions, with jdesc entering twice, plus jscreen and the two
+jplot paths) raise one consistent error; the emitter names the user-facing
+function from the call stack, so no caller passes one in. Decided
+Session 287, added Session 295.
 }
 \keyword{internal}

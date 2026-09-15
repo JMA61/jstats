@@ -4,13 +4,27 @@
 \alias{jcomplete}
 \title{Set a listwise complete-case filter for matching N across analyses}
 \usage{
-jcomplete(data, ..., preview = FALSE, console = FALSE, non.deletes = FALSE)
+jcomplete(
+  data,
+  ...,
+  preview = FALSE,
+  console = FALSE,
+  non.deletes = FALSE,
+  clear.all = FALSE
+)
 }
 \arguments{
 \item{data}{A data frame. If omitted, uses the default set by
-\code{juse()}. Pass \code{NULL} to clear the filter entirely.
-Pass the bare word \code{off} to deactivate, or \code{on} to
-reactivate. Call with no arguments to check the current status.}
+\code{juse()}. Instead of variable names, the call may carry one of
+three special values: the bare word \code{off} deactivates the
+setting but remembers the variables, \code{on} reactivates it, and
+\code{NULL} clears it entirely. Each acts on the \code{juse()}
+default dataset when \code{data} is omitted (\code{jcomplete(off)},
+\code{jcomplete(NULL)}), or on the named dataset when it is given
+(\code{jcomplete(d, off)}, \code{jcomplete(d, NULL)}). With no
+default set, \code{jcomplete(NULL)} clears the one dataset that
+carries a setting, and asks you to name one when several do. Call
+with no arguments to check the current status.}
 
 \item{...}{Unquoted variable names to include in the listwise check.}
 
@@ -32,6 +46,13 @@ console. Default \code{FALSE}.}
 (with \code{DeletionCheck} marking which will drop) rather than only the
 dropped rows. Affects the viewer only; the console listing stays
 deleted-rows-only. Default \code{FALSE}.}
+
+\item{clear.all}{Logical. If \code{TRUE}, clears the jcomplete setting
+on every dataset; use on its own, \code{jcomplete(clear.all = TRUE)}.
+This is the same grammar as \code{jsubset()} and the registration
+functions (\code{jdummy()}, \code{jnumeric()}, \code{jcount()},
+\code{jlikert()}): \code{NULL} clears one dataset,
+\code{clear.all = TRUE} clears them all.}
 }
 \value{
 Invisibly returns \code{NULL}. When a preview is requested,
@@ -66,8 +87,12 @@ jcomplete(console = 10)        # Console only -- first 10 dropped rows
 jcomplete(preview = TRUE, console = 25)        # Viewer and console
 jcomplete(off)                 # Deactivate
 jcomplete(on)                  # Reactivate
+jcomplete(community, off)      # Deactivate on a named dataset
+jcomplete(community, on)       # ... and reactivate it
 jcomplete()                    # Check status
-jcomplete(NULL)                # Clear entirely
+jcomplete(NULL)                # Clear the default dataset's setting
+jcomplete(community, NULL)     # Clear a named dataset's setting
+jcomplete(clear.all = TRUE)    # Clear every dataset's setting
 # Not normally needed. You'd clear a default or registration only to
 # undo a mistake, or -- as in this example -- to reset state for testing.
 juse(NULL)

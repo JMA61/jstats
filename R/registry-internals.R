@@ -780,13 +780,49 @@
   invisible(NULL)
 }
 
+#' Internal helper: resolve which data frame a bare \code{f(NULL)} clears
+#'
+#' The single decision point for the bare-\code{NULL} form of the two
+#' toggleable pipeline setters, \code{jsubset(NULL)} and
+#' \code{jcomplete(NULL)}, so the pair resolves a frame exactly as the
+#' registration verbs' \code{.jst_handle_clear()} does (S289 alignment,
+#' shipped S294): the \code{juse()} default frame when one is set;
+#' otherwise the sole frame carrying a setting when exactly one does;
+#' otherwise -- more than one frame and no default -- stop and ask the
+#' user to name a frame or pass \code{clear.all = TRUE}, never a silent
+#' multi-frame wipe. The caller performs the clear and emits its own
+#' message; this helper only chooses the frame, or stops.
+#'
+#' @param fn_label Character function label (\code{"jsubset"} or
+#'   \code{"jcomplete"}), used in the ambiguity error.
+#' @param frames Character vector of the data frame names currently
+#'   carrying a setting of this kind (NULL entries already dropped).
+#' @param default_name The \code{juse()} default frame name, or \code{NULL}.
+#'
+#' @return The name of the frame to clear, or \code{NULL} when no frame
+#'   carries a setting and no default is set (the caller reports "nothing
+#'   to clear"). Never returns when the choice is ambiguous.
+#'
+#' @keywords internal
+.jst_pipeline_clear_target <- function(fn_label, frames, default_name = NULL) {
+  if (!is.null(default_name)) return(default_name)
+  if (length(frames) == 0L) return(NULL)
+  if (length(frames) == 1L) return(frames)
+  .jst_stop("more than one data frame carries a ", fn_label, " setting: ",
+            paste(frames, collapse = ", "), ".\n",
+            "Name the one to clear, e.g. ", fn_label, "(", frames[1L],
+            ", NULL), or clear them all with ", fn_label,
+            "(clear.all = TRUE).")
+}
+
 #' Internal helper: render a pipeline-state clear message
 #'
-#' Shared formatter for the \code{(NULL)} clear messages of
-#' \code{jsubset()}, \code{jcomplete()}, and \code{jdummy()}. Owns the
-#' collapse layout so the three setters stay byte-identical: one data
-#' frame renders on a single line; two or more render a header line plus
-#' one indented \code{"  - "} line per data frame.
+#' Shared formatter for the clear messages of \code{jsubset()} and
+#' \code{jcomplete()} (\code{jdummy()} used it too until the registration
+#' verbs unified on \code{.jst_handle_clear()}, which renders its own).
+#' Owns the collapse layout so the two setters stay byte-identical: one
+#' data frame renders on a single line; two or more render a header line
+#' plus one indented \code{"  - "} line per data frame.
 #'
 #' @param fn_label Character function label used in the message prefix
 #'   (e.g. \code{"jsubset"}).

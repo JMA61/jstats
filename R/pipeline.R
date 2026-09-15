@@ -159,13 +159,18 @@ juse <- function(data) {
 #'     \item{\code{NULL}}{Clear the setting entirely (forget the expression).}
 #'   }
 #'   Each acts on the \code{juse()} default dataset when \code{data} is
-#'   omitted (\code{jsubset(off)}), or on the named dataset when it is
-#'   given (\code{jsubset(d, off)}, \code{jsubset(d, NULL)}). A bare
-#'   \code{jsubset(NULL)} clears every dataset's setting at once, as does
+#'   omitted (\code{jsubset(off)}, \code{jsubset(NULL)}), or on the named
+#'   dataset when it is given (\code{jsubset(d, off)},
+#'   \code{jsubset(d, NULL)}). With no default set, \code{jsubset(NULL)}
+#'   clears the one dataset that carries a setting, and asks you to name
+#'   one when several do. To clear every dataset's setting at once, use
 #'   \code{clear.all = TRUE}. If \code{expr} and \code{data} are both
 #'   omitted, prints the current jsubset status.
 #' @param clear.all Logical. If \code{TRUE}, clears the jsubset setting on
-#'   every dataset; use on its own, \code{jsubset(clear.all = TRUE)}.
+#'   every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This
+#'   is the same grammar as the registration functions (\code{jdummy()},
+#'   \code{jnumeric()}, \code{jcount()}, \code{jlikert()}): \code{NULL}
+#'   clears one dataset, \code{clear.all = TRUE} clears them all.
 #' @param ... Not used for variables. Catches a condition typed with a
 #'   single \code{=}, \code{jsubset(Gender = 1)}, so that the corrected
 #'   \code{jsubset(Gender == 1)} can be shown in place of R's own "unused
@@ -198,8 +203,9 @@ juse <- function(data) {
 #' jsubset(community, off)                  # Deactivate on a named dataset
 #' jsubset(community, on)                   # ... and reactivate it
 #' jsubset()                                # Check status
-#' jsubset(community, NULL)                 # Clear one dataset's setting
-#' jsubset(NULL)                            # Clear every dataset's setting
+#' jsubset(NULL)                            # Clear default dataset's setting
+#' jsubset(community, NULL)                 # Clear a named dataset's setting
+#' jsubset(clear.all = TRUE)                # Clear every dataset's setting
 #' # Not normally needed. You'd clear a default or registration only to
 #' # undo a mistake, or -- as in this example -- to reset state for testing.
 #' juse(NULL)
@@ -213,11 +219,14 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   # -- Shared branches, written once ----------------------------------------
   # Three operations reach the registry by name: clear every frame, clear
   # one frame, and toggle one frame. Each is reached from more than one
-  # call form (global / default-scoped / named-frame, plus the tolerated
-  # leading-comma form), so the bodies live here and the form-detection
-  # below only decides which to call and how to word the example. off/on
-  # DEACTIVATE-and-retain (fs$active, expr_str kept); NULL DELETES the
-  # entry (S288 decision 4: two operations, not one at two scopes).
+  # call form (all-frames / default-scoped / named-frame, plus the
+  # tolerated leading-comma form), so the bodies live here and the
+  # form-detection below only decides which to call and how to word the
+  # example. off/on DEACTIVATE-and-retain (fs$active, expr_str kept); NULL
+  # DELETES the entry (S288 decision 4: two operations, not one at two
+  # scopes). clear_default() is the bare jsubset(NULL) form: it resolves a
+  # frame the way the registration verbs do (default, else sole, else ask;
+  # .jst_pipeline_clear_target) and then clears that ONE frame.
   clear_every <- function() {
     all_filters <- getOption(".jst_filter", default = list())
     if (length(all_filters) == 0) {
@@ -242,6 +251,17 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
       .jst_render_clear("jsubset", frame, paste0("had: ", fs$expr_str))
     }
     invisible(NULL)
+  }
+  clear_default <- function() {
+    reg <- getOption(".jst_filter", default = list())
+    reg <- reg[!vapply(reg, is.null, logical(1))]
+    target <- .jst_pipeline_clear_target(
+      "jsubset", names(reg), getOption(".jst_default_data", default = NULL))
+    if (is.null(target)) {
+      .jst_msg("No jsubset settings to clear.")
+      return(invisible(NULL))
+    }
+    clear_one(target)
   }
   toggle_one <- function(frame, which, set_example) {
     fs <- .jst_get_filter(frame)
@@ -273,10 +293,9 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 
   # -- jsubset(clear.all = TRUE) --------------------------------------------
   # The registration verbs' all-frames form (jdummy(clear.all = TRUE)),
-  # added here so the six per-frame setters can converge on one grammar
-  # (S289). jsubset(NULL) keeps its global meaning for now; the flip to
-  # default-frame NULL is a later item, after the reset lines in the
-  # regression files move to clear.all = TRUE.
+  # added S289 so the six per-frame setters converge on one grammar; the
+  # only all-frames form since S294, when jsubset(NULL) became the
+  # default-frame clear (below).
   if (!isFALSE(clear.all)) {
     if (!isTRUE(clear.all)) {
       .jst_stop("`clear.all` must be TRUE or FALSE.")
@@ -299,7 +318,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   .jst_check_named_variables(rlang::enquos(...), NULL, "jsubset")
 
   # -- No arguments: print session-wide status ------------------------------
-  # Session-wide to match jsubset(NULL)'s scope. Collapse rule: 0 or 1 frame
+  # Session-wide (the clear.all = TRUE scope). Collapse rule: 0 or 1 frame
   # renders on a single line; 2+ frames render a header line plus one
   # indented line per frame, with the juse() default marked.
   if (missing(data) && missing(expr)) {
@@ -331,17 +350,17 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   raw_data <- if (!missing(data)) substitute(data) else NULL
   raw_expr <- if (!missing(expr)) substitute(expr) else NULL
 
-  # -- jsubset(NULL) — true global clear across all data frames -------------
-  # Ignores the juse default; always clears every per-data-frame jsubset
-  # setting. NOTE this is NOT what jdummy(NULL) does any more: the four
-  # registration verbs (jdummy / jnumeric / jcount / jlikert) moved NULL to
-  # the default frame and use clear.all = TRUE for every frame. jsubset's
-  # global NULL is retained deliberately for now (S289) -- the regression
-  # files reset with it -- and flips in a later, separate change. The
-  # condition "data was supplied AND substituted expression is NULL"
-  # detects the literal jsubset(NULL) call (cf. missing(data), FALSE here).
+  # -- jsubset(NULL) -- clear the default frame -----------------------------
+  # Since S294 the same grammar as jdummy(NULL) and its three siblings: the
+  # juse() default frame when one is set; otherwise the sole frame carrying
+  # a setting; otherwise stop and ask (never a silent multi-frame wipe --
+  # that is clear.all = TRUE's job, above). Before S294 this form cleared
+  # EVERY frame; the regression files' reset lines moved to clear.all =
+  # TRUE in the same change. The condition "data was supplied AND
+  # substituted expression is NULL" detects the literal jsubset(NULL) call
+  # (cf. missing(data), FALSE here).
   if (!missing(data) && is.null(raw_data)) {
-    return(clear_every())
+    return(clear_default())
   }
 
   # -- Default-scoped off / on / NULL ---------------------------------------
@@ -350,7 +369,8 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   # in `expr`). Symbol checks happen on the captured expressions BEFORE any
   # evaluation, since `off` and `on` aren't real R objects. The leading-comma
   # form is accepted, not advertised: it works everywhere in the data-first
-  # functions and is documented nowhere (S289).
+  # functions and is documented nowhere (S289). jsubset(, NULL) is the bare
+  # jsubset(NULL) by another route, so it resolves the same way.
   default_name <- getOption(".jst_default_data", default = NULL)
   default_word <- if (!is.null(raw_data) && missing(expr)) {
     toggle_word(raw_data)
@@ -360,12 +380,12 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     NULL
   }
   default_null <- missing(data) && !missing(expr) && is.null(raw_expr)
-  if (!is.null(default_word) || default_null) {
+  if (default_null) return(clear_default())
+  if (!is.null(default_word)) {
     if (is.null(default_name)) {
       .jst_msg("No default data frame set.")
       return(invisible(NULL))
     }
-    if (default_null) return(clear_one(default_name))
     return(toggle_one(default_name, default_word, "jsubset(expression)"))
   }
 
@@ -753,10 +773,23 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' FILTER convention.
 #'
 #' @param data A data frame. If omitted, uses the default set by
-#'   \code{juse()}. Pass \code{NULL} to clear the filter entirely.
-#'   Pass the bare word \code{off} to deactivate, or \code{on} to
-#'   reactivate. Call with no arguments to check the current status.
+#'   \code{juse()}. Instead of variable names, the call may carry one of
+#'   three special values: the bare word \code{off} deactivates the
+#'   setting but remembers the variables, \code{on} reactivates it, and
+#'   \code{NULL} clears it entirely. Each acts on the \code{juse()}
+#'   default dataset when \code{data} is omitted (\code{jcomplete(off)},
+#'   \code{jcomplete(NULL)}), or on the named dataset when it is given
+#'   (\code{jcomplete(d, off)}, \code{jcomplete(d, NULL)}). With no
+#'   default set, \code{jcomplete(NULL)} clears the one dataset that
+#'   carries a setting, and asks you to name one when several do. Call
+#'   with no arguments to check the current status.
 #' @param ... Unquoted variable names to include in the listwise check.
+#' @param clear.all Logical. If \code{TRUE}, clears the jcomplete setting
+#'   on every dataset; use on its own, \code{jcomplete(clear.all = TRUE)}.
+#'   This is the same grammar as \code{jsubset()} and the registration
+#'   functions (\code{jdummy()}, \code{jnumeric()}, \code{jcount()},
+#'   \code{jlikert()}): \code{NULL} clears one dataset,
+#'   \code{clear.all = TRUE} clears them all.
 #' @param preview Logical. If \code{TRUE}, open a viewer (RStudio data tab)
 #'   showing the rows the listwise filter will drop, with a leading
 #'   \code{Row} column (original data position) and a trailing
@@ -789,8 +822,12 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' jcomplete(preview = TRUE, console = 25)        # Viewer and console
 #' jcomplete(off)                 # Deactivate
 #' jcomplete(on)                  # Reactivate
+#' jcomplete(community, off)      # Deactivate on a named dataset
+#' jcomplete(community, on)       # ... and reactivate it
 #' jcomplete()                    # Check status
-#' jcomplete(NULL)                # Clear entirely
+#' jcomplete(NULL)                # Clear the default dataset's setting
+#' jcomplete(community, NULL)     # Clear a named dataset's setting
+#' jcomplete(clear.all = TRUE)    # Clear every dataset's setting
 #' # Not normally needed. You'd clear a default or registration only to
 #' # undo a mistake, or -- as in this example -- to reset state for testing.
 #' juse(NULL)
@@ -800,12 +837,13 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #'
 #' @export
 jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
-                      non.deletes = FALSE) {
+                      non.deletes = FALSE, clear.all = FALSE) {
   # Validate flags up front. `console` is a hybrid: FALSE/0 turns the console
   # off, TRUE shows 10 rows, a positive number shows that many rows (negative
   # values are caught by their own dedicated check below).
   .jst_check_flag(preview, "preview")
   .jst_check_flag(non.deletes, "non.deletes")
+  .jst_check_flag(clear.all, "clear.all")
   if (!((is.logical(console) || is.numeric(console)) &&
         length(console) == 1L && !is.na(console))) {
     .jst_stop("`console` must be TRUE or FALSE, or the number of rows ",
@@ -813,6 +851,96 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   }
 
   default_name <- getOption(".jst_default_data", default = NULL)
+
+  # -- Shared branches, written once (the jsubset() pattern, S294) ----------
+  # Three operations reach the registry by name: clear every frame, clear
+  # one frame, and toggle one frame. Each is reached from more than one
+  # call form (all-frames / default-scoped / named-frame, plus the
+  # tolerated leading-comma form), so the bodies live here and the
+  # form-detection below only decides which to call and how to word the
+  # example. off/on DEACTIVATE-and-retain (cs$active, vars kept); NULL
+  # DELETES the entry. clear_default() is the bare jcomplete(NULL) form:
+  # it resolves a frame the way the registration verbs do (default, else
+  # sole, else ask; .jst_pipeline_clear_target) and clears that ONE frame.
+  vars_of <- function(cs) paste(cs$vars, collapse = ", ")
+  clear_every <- function() {
+    all_complete <- getOption(".jst_complete", default = list())
+    if (length(all_complete) == 0) {
+      .jst_msg("No jcomplete settings to clear.")
+      return(invisible(NULL))
+    }
+    dnames <- names(all_complete)
+    hads <- vapply(seq_along(all_complete), function(i) {
+      cs <- all_complete[[i]]
+      if (is.null(cs)) "no settings" else paste0("had: ", vars_of(cs))
+    }, character(1))
+    options(.jst_complete = NULL)
+    .jst_render_clear("jcomplete", dnames, hads)
+    invisible(NULL)
+  }
+  clear_one <- function(frame) {
+    cs <- .jst_get_complete(frame)
+    if (is.null(cs)) {
+      .jst_msg("No jcomplete filter set for ", frame, ". Nothing to clear.")
+    } else {
+      .jst_set_complete(frame, NULL)
+      .jst_render_clear("jcomplete", frame, paste0("had: ", vars_of(cs)))
+    }
+    invisible(NULL)
+  }
+  clear_default <- function() {
+    reg <- getOption(".jst_complete", default = list())
+    reg <- reg[!vapply(reg, is.null, logical(1))]
+    target <- .jst_pipeline_clear_target("jcomplete", names(reg), default_name)
+    if (is.null(target)) {
+      .jst_msg("No jcomplete settings to clear.")
+      return(invisible(NULL))
+    }
+    clear_one(target)
+  }
+  toggle_one <- function(frame, which, set_example) {
+    cs <- .jst_get_complete(frame)
+    if (which == "off") {
+      if (is.null(cs)) {
+        .jst_msg("No jcomplete filter set for ", frame, ".")
+      } else {
+        cs$active <- FALSE
+        .jst_set_complete(frame, cs)
+        .jst_msg("jcomplete deactivated for ", frame, ".")
+      }
+    } else {
+      if (is.null(cs)) {
+        .jst_msg("No jcomplete filter set for ", frame, ". Use ", set_example,
+                 " to set one.")
+      } else {
+        cs$active <- TRUE
+        .jst_set_complete(frame, cs)
+        .jst_msg("jcomplete reactivated for ", frame, ": ", vars_of(cs))
+      }
+    }
+    invisible(NULL)
+  }
+  toggle_word <- function(sym) {
+    if (!is.symbol(sym)) return(NULL)
+    w <- tolower(as.character(sym))
+    if (w %in% c("off", "on")) w else NULL
+  }
+
+  # The variable slot, unevaluated: off / on are not R objects and a
+  # literal NULL must be seen as itself, so the special values are read
+  # from the captured expressions, never from evaluated dots.
+  dots_raw <- as.list(substitute(list(...)))[-1L]
+
+  # -- jcomplete(clear.all = TRUE) ------------------------------------------
+  # The registration verbs' all-frames form (jdummy(clear.all = TRUE)); the
+  # only all-frames form, since jcomplete(NULL) is the default-frame clear.
+  if (isTRUE(clear.all)) {
+    if (!missing(data) || length(dots_raw) > 0L) {
+      .jst_stop("`clear.all` cannot be combined with variables; ",
+                "use jcomplete(clear.all = TRUE) on its own.")
+    }
+    return(clear_every())
+  }
 
   # Any preview surface requested? console and non.deletes both imply the
   # viewer, so any of the three turns the preview on.
@@ -830,8 +958,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   }
 
   # -- No arguments: print session-wide status ------------------------------
-  # Session-wide to match jcomplete(NULL). Collapse rule: 0 or 1 frame on a
-  # single line (the single active frame appends a live complete-case count
+  # Session-wide (the clear.all = TRUE scope). Collapse rule: 0 or 1 frame on
+  # a single line (the single active frame appends a live complete-case count
   # when the data frame is reachable from the caller); 2+ frames render a
   # header plus one indented line per frame, with the juse() default marked.
   if (missing(data) && ...length() == 0) {
@@ -924,71 +1052,45 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   # bare symbols like off/on cause "object not found" errors.
   raw_data <- if (!missing(data)) substitute(data) else NULL
 
-  # -- jcomplete(NULL) — true global clear across all data frames -----------
-  # Mirrors jsubset(NULL) (global) -- NOT jdummy(NULL), which has been
-  # frame-scoped since the registration verbs unified on .jst_handle_clear
-  # (jdummy(clear.all = TRUE) is the all-frames form there). jcomplete's
-  # per-frame off / on / NULL and clear.all, and the flip of NULL to the
-  # default frame, are a later item (S289). Ignores juse default;
-  # always clears every per-data-frame jcomplete setting. The condition
-  # "data was supplied AND substituted expression is NULL" detects the
-  # literal jcomplete(NULL) call.
+  # -- jcomplete(NULL) -- clear the default frame ---------------------------
+  # Since S294 the same grammar as jdummy(NULL) and its three siblings: the
+  # juse() default frame when one is set; otherwise the sole frame carrying
+  # a setting; otherwise stop and ask (never a silent multi-frame wipe --
+  # that is clear.all = TRUE's job, above). Before S294 this form cleared
+  # EVERY frame; the regression files' reset lines moved to clear.all =
+  # TRUE in the same change. The condition "data was supplied AND
+  # substituted expression is NULL" detects the literal jcomplete(NULL)
+  # call.
   if (!missing(data) && is.null(raw_data)) {
-    all_complete <- getOption(".jst_complete", default = list())
-    if (length(all_complete) == 0) {
-      .jst_msg("No jcomplete settings to clear.")
-      return(invisible(NULL))
-    }
-    dnames <- names(all_complete)
-    hads <- vapply(seq_along(all_complete), function(i) {
-      cs <- all_complete[[i]]
-      if (is.null(cs)) "no settings"
-      else paste0("had: ", paste(cs$vars, collapse = ", "))
-    }, character(1))
-    options(.jst_complete = NULL)
-    .jst_render_clear("jcomplete", dnames, hads)
-    return(invisible(NULL))
+    return(clear_default())
   }
 
-  # -- jcomplete(off) / jcomplete(on) — default-scoped ----------------------
-  # Symbol checks happen on raw_data BEFORE the helper, since `off` and
-  # `on` aren't real R objects and would fail evaluation. The
-  # ...length() == 0 guard avoids interpreting a variable named "off"
-  # accompanied by other variables as the off command.
-  if (!is.null(raw_data) && is.symbol(raw_data) && ...length() == 0) {
-    sym_name <- tolower(as.character(raw_data))
-    if (sym_name == "off") {
-      if (is.null(default_name)) {
-        .jst_msg("No default data frame set.")
-        return(invisible(NULL))
-      }
-      cs <- .jst_get_complete(default_name)
-      if (is.null(cs)) {
-        .jst_msg("No jcomplete filter set for ", default_name, ".")
-      } else {
-        cs$active <- FALSE
-        .jst_set_complete(default_name, cs)
-        .jst_msg("jcomplete deactivated for ", default_name, ".")
-      }
+  # -- Default-scoped off / on / NULL ---------------------------------------
+  # Two call forms reach the default frame: the bare jcomplete(off) (the
+  # symbol lands in `data`, nothing in the dots) and the tolerated
+  # leading-comma jcomplete(, off) (it lands in the dots, alone). Symbol
+  # checks happen on the captured expressions BEFORE any evaluation. The
+  # dots-empty guard on the bare form keeps a variable named "off" listed
+  # with other variables from reading as the command. The leading-comma
+  # form is accepted, not advertised (S289); jcomplete(, NULL) is the bare
+  # jcomplete(NULL) by another route, so it resolves the same way.
+  default_word <- if (!is.null(raw_data) && length(dots_raw) == 0L) {
+    toggle_word(raw_data)
+  } else if (missing(data) && length(dots_raw) == 1L) {
+    toggle_word(dots_raw[[1L]])
+  } else {
+    NULL
+  }
+  default_null <- missing(data) && length(dots_raw) == 1L &&
+    is.null(dots_raw[[1L]])
+  if (default_null) return(clear_default())
+  if (!is.null(default_word)) {
+    if (is.null(default_name)) {
+      .jst_msg("No default data frame set.")
       return(invisible(NULL))
     }
-    if (sym_name == "on") {
-      if (is.null(default_name)) {
-        .jst_msg("No default data frame set.")
-        return(invisible(NULL))
-      }
-      cs <- .jst_get_complete(default_name)
-      if (is.null(cs)) {
-        .jst_msg("No jcomplete filter set for ", default_name,
-                 ". Use jcomplete(var1, var2, ...) to set one.")
-      } else {
-        cs$active <- TRUE
-        .jst_set_complete(default_name, cs)
-        .jst_msg("jcomplete reactivated for ", default_name, ": ",
-                 paste(cs$vars, collapse = ", "))
-      }
-      return(invisible(NULL))
-    }
+    return(toggle_one(default_name, default_word,
+                      "jcomplete(var1, var2, ...)"))
   }
 
   # -- Resolve the first argument via the standard helper -------------------
@@ -1007,6 +1109,21 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   data              <- arg1$data
   .jst_data_name    <- arg1$name
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  # -- Named-frame off / on / NULL: jcomplete(d, off), jcomplete(d, NULL) ---
+  # Intercepted here, once `data` is known to be a frame and before the
+  # variable slot is treated as a variable list (the jsubset(d, off)
+  # counterpart, S294). One item in the slot, and that item a control word
+  # or a literal NULL; anything else is variables.
+  if (arg1$mode == "explicit" && length(dots_raw) == 1L) {
+    if (is.null(dots_raw[[1L]])) return(clear_one(.jst_data_name))
+    named_word <- toggle_word(dots_raw[[1L]])
+    if (!is.null(named_word)) {
+      return(toggle_one(.jst_data_name, named_word,
+                        paste0("jcomplete(", .jst_data_name,
+                               ", var1, var2, ...)")))
+    }
+  }
 
   variables <- rlang::enquos(...)
   .jst_check_named_variables(variables, arg1$data, "jcomplete")   # S290

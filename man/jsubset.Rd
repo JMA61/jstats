@@ -19,14 +19,19 @@ or one of the following special values:
 \item{\code{NULL}}{Clear the setting entirely (forget the expression).}
 }
 Each acts on the \code{juse()} default dataset when \code{data} is
-omitted (\code{jsubset(off)}), or on the named dataset when it is
-given (\code{jsubset(d, off)}, \code{jsubset(d, NULL)}). A bare
-\code{jsubset(NULL)} clears every dataset's setting at once, as does
+omitted (\code{jsubset(off)}, \code{jsubset(NULL)}), or on the named
+dataset when it is given (\code{jsubset(d, off)},
+\code{jsubset(d, NULL)}). With no default set, \code{jsubset(NULL)}
+clears the one dataset that carries a setting, and asks you to name
+one when several do. To clear every dataset's setting at once, use
 \code{clear.all = TRUE}. If \code{expr} and \code{data} are both
 omitted, prints the current jsubset status.}
 
 \item{clear.all}{Logical. If \code{TRUE}, clears the jsubset setting on
-every dataset; use on its own, \code{jsubset(clear.all = TRUE)}.}
+every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This
+is the same grammar as the registration functions (\code{jdummy()},
+\code{jnumeric()}, \code{jcount()}, \code{jlikert()}): \code{NULL}
+clears one dataset, \code{clear.all = TRUE} clears them all.}
 
 \item{...}{Not used for variables. Catches a condition typed with a
 single \code{=}, \code{jsubset(Gender = 1)}, so that the corrected
@@ -114,8 +119,9 @@ jsubset(on)                              # Reactivate
 jsubset(community, off)                  # Deactivate on a named dataset
 jsubset(community, on)                   # ... and reactivate it
 jsubset()                                # Check status
-jsubset(community, NULL)                 # Clear one dataset's setting
-jsubset(NULL)                            # Clear every dataset's setting
+jsubset(NULL)                            # Clear default dataset's setting
+jsubset(community, NULL)                 # Clear a named dataset's setting
+jsubset(clear.all = TRUE)                # Clear every dataset's setting
 # Not normally needed. You'd clear a default or registration only to
 # undo a mistake, or -- as in this example -- to reset state for testing.
 juse(NULL)

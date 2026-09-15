@@ -20,10 +20,11 @@ parenthesised "what was lost" text for each frame (e.g.
 \code{invisible(NULL)}. Called for its message side effect.
 }
 \description{
-Shared formatter for the \code{(NULL)} clear messages of
-\code{jsubset()}, \code{jcomplete()}, and \code{jdummy()}. Owns the
-collapse layout so the three setters stay byte-identical: one data
-frame renders on a single line; two or more render a header line plus
-one indented \code{"  - "} line per data frame.
+Shared formatter for the clear messages of \code{jsubset()} and
+\code{jcomplete()} (\code{jdummy()} used it too until the registration
+verbs unified on \code{.jst_handle_clear()}, which renders its own).
+Owns the collapse layout so the two setters stay byte-identical: one
+data frame renders on a single line; two or more render a header line
+plus one indented \code{"  - "} line per data frame.
 }
 \keyword{internal}

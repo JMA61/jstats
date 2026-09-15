@@ -269,6 +269,17 @@
 #' included in the pipeline messages to remind the user that case selection
 #' is not active for this particular dataset.
 #'
+#' Ahead of all three steps, a zero-row input frame stops the call. The count
+#' is read before step 1, so the guard fires only when the frame ARRIVED
+#' empty; a filter that empties a non-empty frame is a different condition and
+#' is left alone, because there the Case Processing Summary prints with a
+#' Remaining N of 0 and the counts below it are informative. The guard lives
+#' here rather than in each caller so that all thirteen call sites (nine
+#' analysis functions, with jdesc entering twice, plus jscreen and the two
+#' jplot paths) raise one consistent error; the emitter names the user-facing
+#' function from the call stack, so no caller passes one in. Decided
+#' Session 287, added Session 295.
+#'
 #' @param data The data frame.
 #' @param data_name Character string name of the data frame.
 #' @param is_default Logical. TRUE if the data frame came from juse().
@@ -291,6 +302,34 @@
 
   msgs <- character(0)
   n_original <- nrow(data)
+
+  # -- Zero-row input frame (Session 295) ------------------------------------
+  # Read before step 1, so this fires only when the frame ARRIVED empty. A
+  # filter that empties a non-empty frame passes through here and is handled
+  # by the steps below: there the Case Processing Summary prints with a
+  # Remaining N of 0, and the zeros beneath it are informative.
+  #
+  # Without the guard the callers split three ways on one condition: jt,
+  # jaov, jcrosstab, jlm and jlogistic stop late with a pipeline-flavored
+  # message; jfreq, jdesc, jcorr and jalpha render something useless (a table
+  # of zeros ending "Total 0 100.00", a descriptives header with no rows, a
+  # NaN alpha); and jplot hands ggplot an empty frame. Decided S287 for
+  # consistency across the ten, extended at S295 to the two jplot paths,
+  # which enter through this same helper.
+  #
+  # Rule T (S227): a frame takes an article and its kind noun rather than a
+  # bare lowercase name at the head of a sentence, and the same sentence then
+  # serves the unnamed-frame case unchanged. No fn = is passed -- .jst_stop()
+  # walks sys.calls() outermost-first for the first ^j[a-z] name, which is
+  # the user-facing function (jt, jplot, ...), not this helper.
+  if (n_original == 0L) {
+    frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
+      paste0("the ", data_name, " data frame")
+    } else {
+      "the data frame"
+    }
+    .jst_stop(frame_ref, " has no rows, so there is nothing to analyze.")
+  }
 
   # Snapshot the pre-masking data so the CPS bottom can compute source/pool
   # per-code counts from intact UDM codes (the masking pass below converts
