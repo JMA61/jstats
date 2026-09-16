@@ -1,12 +1,14 @@
 # Internal helper: render a pipeline-state clear message
 
-Shared formatter for the `(NULL)` clear messages of
-[`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md),
-[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md),
-and [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md).
-Owns the collapse layout so the three setters stay byte-identical: one
-data frame renders on a single line; two or more render a header line
-plus one indented `" - "` line per data frame.
+Shared formatter for the clear messages of
+[`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) and
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+([`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md) used
+it too until the registration verbs unified on
+[`.jst_handle_clear()`](https://jma61.github.io/jstats/reference/dot-jst_handle_clear.md),
+which renders its own). Owns the collapse layout so the two setters stay
+byte-identical: one data frame renders on a single line; two or more
+render a header line plus one indented `" - "` line per data frame.
 
 ## Usage
 

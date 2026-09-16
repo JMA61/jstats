@@ -8,13 +8,41 @@ datasets preserves each dataset's setting independently.
 The expression applies whenever the matching dataset is used, regardless
 of whether it was supplied via juse() or specified explicitly in
 a function call. To bypass it temporarily without losing it, use
-jsubset(off) before the analysis and jsubset(on) afterward.
-This matches the SPSS FILTER / USE ALL convention.
+jsubset(off) before the analysis and jsubset(on) afterward
+(or jsubset(d, off) and jsubset(d, on) for a named
+dataset). This matches the SPSS FILTER / USE ALL convention.
 Expressions use standard R logical operators: ==, !=,
-&amp;lt;, &amp;lt;=, &amp;gt;, &amp;gt;=, &amp;amp; (AND), | (OR),
-! (NOT), xor() (XOR), and %in%. Using = for
-equality or the SPSS-style keywords AND/OR/NOT will
-produce a helpful error suggesting the correct R syntax."><meta property="og:description" content="jsubset() sets a persistent case-selection expression that is
+&amp;lt;, &amp;lt;=, &amp;gt;, &amp;gt;=, &amp;amp; (and), | (or),
+! (not), xor(), and %in%. Two habits carried over from
+commercial statistical software are caught with an error that shows the
+corrected form: a single = where == was meant, and the
+words AND / OR / NOT used as operators. Not every
+spelling can be caught, because R's own parser reads the call before
+jstats does: jsubset(Gender = 1), (Gender = 1) &amp;amp; (Age &amp;lt; 40)
+and NOT(Age &amp;lt; 40) are all shown their corrected form, but a
+keyword between two conditions, Age &amp;lt; 40 AND Gender == 1, is
+refused by R itself with a parser message (&quot;unexpected symbol&quot;) that
+jstats cannot replace. The same checks run on the subset =
+input of the analysis functions. See the translation table below.
+The expression must give one TRUE or FALSE for every row of the
+dataset. jsubset() runs it once when set and refuses anything
+else – a single value (TRUE, or an aggregate such as
+mean(Score) &amp;gt; 5), numbers, text, or the wrong number of values –
+with an error that shows a corrected form. The same check runs when the
+filter is applied, so a filter that was valid when set but has since
+stopped matching the dataset stops the analysis rather than running on
+the wrong rows; that error names both ways out.
+A filter normally names only columns of the data frame, and such a
+filter can never fall out of step with the data. A filter may also
+refer to an object in your workspace, such as a cutoff
+(Age &amp;lt; cutoff) or a set of codes (Region %in% keep_regions).
+If you compute a keep/drop indicator separately, add it to the data
+frame as a column and filter on that column
+(clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
+jsubset(clinic, Keep == TRUE)). A separate object holding one
+value per row stops matching the data frame if rows are later added or
+removed, and every analysis of that data frame then stops until the
+filter is set aside."><meta property="og:description" content="jsubset() sets a persistent case-selection expression that is
 applied automatically by jstats analysis functions when the
 default data frame (set by juse()) is in use. This is analogous
 to the SPSS FILTER command.
@@ -23,13 +51,41 @@ datasets preserves each dataset's setting independently.
 The expression applies whenever the matching dataset is used, regardless
 of whether it was supplied via juse() or specified explicitly in
 a function call. To bypass it temporarily without losing it, use
-jsubset(off) before the analysis and jsubset(on) afterward.
-This matches the SPSS FILTER / USE ALL convention.
+jsubset(off) before the analysis and jsubset(on) afterward
+(or jsubset(d, off) and jsubset(d, on) for a named
+dataset). This matches the SPSS FILTER / USE ALL convention.
 Expressions use standard R logical operators: ==, !=,
-&amp;lt;, &amp;lt;=, &amp;gt;, &amp;gt;=, &amp;amp; (AND), | (OR),
-! (NOT), xor() (XOR), and %in%. Using = for
-equality or the SPSS-style keywords AND/OR/NOT will
-produce a helpful error suggesting the correct R syntax."></head><body>
+&amp;lt;, &amp;lt;=, &amp;gt;, &amp;gt;=, &amp;amp; (and), | (or),
+! (not), xor(), and %in%. Two habits carried over from
+commercial statistical software are caught with an error that shows the
+corrected form: a single = where == was meant, and the
+words AND / OR / NOT used as operators. Not every
+spelling can be caught, because R's own parser reads the call before
+jstats does: jsubset(Gender = 1), (Gender = 1) &amp;amp; (Age &amp;lt; 40)
+and NOT(Age &amp;lt; 40) are all shown their corrected form, but a
+keyword between two conditions, Age &amp;lt; 40 AND Gender == 1, is
+refused by R itself with a parser message (&quot;unexpected symbol&quot;) that
+jstats cannot replace. The same checks run on the subset =
+input of the analysis functions. See the translation table below.
+The expression must give one TRUE or FALSE for every row of the
+dataset. jsubset() runs it once when set and refuses anything
+else – a single value (TRUE, or an aggregate such as
+mean(Score) &amp;gt; 5), numbers, text, or the wrong number of values –
+with an error that shows a corrected form. The same check runs when the
+filter is applied, so a filter that was valid when set but has since
+stopped matching the dataset stops the analysis rather than running on
+the wrong rows; that error names both ways out.
+A filter normally names only columns of the data frame, and such a
+filter can never fall out of step with the data. A filter may also
+refer to an object in your workspace, such as a cutoff
+(Age &amp;lt; cutoff) or a set of codes (Region %in% keep_regions).
+If you compute a keep/drop indicator separately, add it to the data
+frame as a column and filter on that column
+(clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
+jsubset(clinic, Keep == TRUE)). A separate object holding one
+value per row stops matching the data frame if rows are later added or
+removed, and every analysis of that data frame then stops until the
+filter is set aside."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -37,7 +93,7 @@ produce a helpful error suggesting the correct R syntax."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.168</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,18 +128,46 @@ datasets preserves each dataset's setting independently.</p>
 <p>The expression applies whenever the matching dataset is used, regardless
 of whether it was supplied via <code><a href="juse.html">juse()</a></code> or specified explicitly in
 a function call. To bypass it temporarily without losing it, use
-<code>jsubset(off)</code> before the analysis and <code>jsubset(on)</code> afterward.
-This matches the SPSS FILTER / USE ALL convention.</p>
+<code>jsubset(off)</code> before the analysis and <code>jsubset(on)</code> afterward
+(or <code>jsubset(d, off)</code> and <code>jsubset(d, on)</code> for a named
+dataset). This matches the SPSS FILTER / USE ALL convention.</p>
 <p>Expressions use standard R logical operators: <code>==</code>, <code>!=</code>,
-<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&amp;</code> (AND), <code>|</code> (OR),
-<code>!</code> (NOT), <code><a href="https://rdrr.io/r/base/Logic.html" class="external-link">xor()</a></code> (XOR), and <code>%in%</code>. Using <code>=</code> for
-equality or the SPSS-style keywords <code>AND</code>/<code>OR</code>/<code>NOT</code> will
-produce a helpful error suggesting the correct R syntax.</p>
+<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&amp;</code> (and), <code>|</code> (or),
+<code>!</code> (not), <code><a href="https://rdrr.io/r/base/Logic.html" class="external-link">xor()</a></code>, and <code>%in%</code>. Two habits carried over from
+commercial statistical software are caught with an error that shows the
+corrected form: a single <code>=</code> where <code>==</code> was meant, and the
+words <code>AND</code> / <code>OR</code> / <code>NOT</code> used as operators. Not every
+spelling can be caught, because R's own parser reads the call before
+jstats does: <code>jsubset(Gender = 1)</code>, <code>(Gender = 1) &amp; (Age &lt; 40)</code>
+and <code>NOT(Age &lt; 40)</code> are all shown their corrected form, but a
+keyword between two conditions, <code>Age &lt; 40 AND Gender == 1</code>, is
+refused by R itself with a parser message ("unexpected symbol") that
+jstats cannot replace. The same checks run on the <code>subset =</code>
+input of the analysis functions. See the translation table below.</p>
+<p>The expression must give one TRUE or FALSE for every row of the
+dataset. <code>jsubset()</code> runs it once when set and refuses anything
+else – a single value (<code>TRUE</code>, or an aggregate such as
+<code>mean(Score) &gt; 5</code>), numbers, text, or the wrong number of values –
+with an error that shows a corrected form. The same check runs when the
+filter is applied, so a filter that was valid when set but has since
+stopped matching the dataset stops the analysis rather than running on
+the wrong rows; that error names both ways out.</p>
+<p>A filter normally names only columns of the data frame, and such a
+filter can never fall out of step with the data. A filter may also
+refer to an object in your workspace, such as a cutoff
+(<code>Age &lt; cutoff</code>) or a set of codes (<code>Region %in% keep_regions</code>).
+If you compute a keep/drop indicator separately, add it to the data
+frame as a column and filter on that column
+(<code>clinic$Keep &lt;- clinic$Stress &gt; 3</code>, then
+<code>jsubset(clinic, Keep == TRUE)</code>). A separate object holding one
+value per row stops matching the data frame if rows are later added or
+removed, and every analysis of that data frame then stops until the
+filter is set aside.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">data</span>, <span class="va">expr</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">data</span>, <span class="va">expr</span>, clear.all <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -108,14 +192,41 @@ or one of the following special values:</p><dl><dt><code>off</code></dt>
 <dd><p>Clear the setting entirely (forget the expression).</p></dd>
 
 
-</dl><p>If <code>expr</code> and <code>data</code> are both omitted, prints the current
-jsubset status.</p></dd>
+</dl><p>Each acts on the <code><a href="juse.html">juse()</a></code> default dataset when <code>data</code> is
+omitted (<code>jsubset(off)</code>, <code>jsubset(NULL)</code>), or on the named
+dataset when it is given (<code>jsubset(d, off)</code>,
+<code>jsubset(d, NULL)</code>). With no default set, <code>jsubset(NULL)</code>
+clears the one dataset that carries a setting, and asks you to name
+one when several do. To clear every dataset's setting at once, use
+<code>clear.all = TRUE</code>. If <code>expr</code> and <code>data</code> are both
+omitted, prints the current jsubset status.</p></dd>
+
+
+<dt id="arg-clear-all">clear.all<a class="anchor" aria-label="anchor" href="#arg-clear-all"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, clears the jsubset setting on
+every dataset; use on its own, <code>jsubset(clear.all = TRUE)</code>. This
+is the same grammar as the registration functions (<code><a href="jdummy.html">jdummy()</a></code>,
+<code><a href="jnumeric.html">jnumeric()</a></code>, <code><a href="jcount.html">jcount()</a></code>, <code><a href="jlikert.html">jlikert()</a></code>): <code>NULL</code>
+clears one dataset, <code>clear.all = TRUE</code> clears them all.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Not used for variables. Catches a condition typed with a
+single <code>=</code>, <code>jsubset(Gender = 1)</code>, so that the corrected
+<code>jsubset(Gender == 1)</code> can be shown in place of R's own "unused
+argument" error.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly returns <code>NULL</code>. Called for its side effect.</p>
     </div>
+    <div class="section level2">
+    <h2 id="writing-a-filter-in-r">Writing a filter in R<a class="anchor" aria-label="anchor" href="#writing-a-filter-in-r"></a></h2>
+
+
+<p>Stata already writes conditions the way R does. SPSS and SAS do not,
+and their forms translate as follows:</p><table class="table table"><tr><td><strong>SPSS or SAS</strong></td><td><strong>R</strong></td></tr><tr><td><code>Gender = 1</code></td><td><code>Gender == 1</code></td></tr><tr><td><code>Gender NE 1</code></td><td><code>Gender != 1</code></td></tr><tr><td><code>Age GE 40</code></td><td><code>Age &gt;= 40</code></td></tr><tr><td><code>Age &lt; 40 AND Gender = 1</code></td><td><code>Age &lt; 40 &amp; Gender == 1</code></td></tr><tr><td><code>Age &lt; 40 OR Age &gt; 60</code></td><td><code>Age &lt; 40 | Age &gt; 60</code></td></tr><tr><td><code>NOT (Age &lt; 40)</code></td><td><code>!(Age &lt; 40)</code></td></tr><tr><td><code>MISSING(Age)</code></td><td><code>is.na(Age)</code></td></tr><tr><td><code>ANY(Region, 1, 3, 5)</code></td><td><code>Region %in% c(1, 3, 5)</code></td></tr></table></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="jstats-package.html">jstats</a></code> for the package overview,
@@ -136,10 +247,18 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset deactivated for community.</span>
 <span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">on</span><span class="op">)</span>                              <span class="co"># Reactivate</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset reactivated for community: Age &lt; 40 &amp; WellbeingScore &gt; 50</span>
+<span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">community</span>, <span class="va">off</span><span class="op">)</span>                  <span class="co"># Deactivate on a named dataset</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset deactivated for community.</span>
+<span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">community</span>, <span class="va">on</span><span class="op">)</span>                   <span class="co"># ... and reactivate it</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset reactivated for community: Age &lt; 40 &amp; WellbeingScore &gt; 50</span>
 <span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="op">)</span>                                <span class="co"># Check status</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset active for community: Age &lt; 40 &amp; WellbeingScore &gt; 50</span>
-<span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                            <span class="co"># Clear entirely</span></span></span>
+<span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                            <span class="co"># Clear default dataset's setting</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset cleared for community (had: Age &lt; 40 &amp; WellbeingScore &gt; 50).</span>
+<span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">community</span>, <span class="cn">NULL</span><span class="op">)</span>                 <span class="co"># Clear a named dataset's setting</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> No jsubset set for community. Nothing to clear.</span>
+<span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span>clear.all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>                <span class="co"># Clear every dataset's setting</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> No jsubset settings to clear.</span>
 <span class="r-in"><span><span class="co"># Not normally needed. You'd clear a default or registration only to</span></span></span>
 <span class="r-in"><span><span class="co"># undo a mistake, or -- as in this example -- to reset state for testing.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></span>

@@ -31,7 +31,7 @@ FILTER convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.168</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,7 +74,14 @@ FILTER convention.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">data</span>, <span class="va">...</span>, preview <span class="op">=</span> <span class="cn">FALSE</span>, console <span class="op">=</span> <span class="cn">FALSE</span>, non.deletes <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jcomplete</span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  preview <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  console <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  non.deletes <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  clear.all <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -83,9 +90,16 @@ FILTER convention.</p>
 
 <dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>A data frame. If omitted, uses the default set by
-<code><a href="juse.html">juse()</a></code>. Pass <code>NULL</code> to clear the filter entirely.
-Pass the bare word <code>off</code> to deactivate, or <code>on</code> to
-reactivate. Call with no arguments to check the current status.</p></dd>
+<code><a href="juse.html">juse()</a></code>. Instead of variable names, the call may carry one of
+three special values: the bare word <code>off</code> deactivates the
+setting but remembers the variables, <code>on</code> reactivates it, and
+<code>NULL</code> clears it entirely. Each acts on the <code><a href="juse.html">juse()</a></code>
+default dataset when <code>data</code> is omitted (<code>jcomplete(off)</code>,
+<code>jcomplete(NULL)</code>), or on the named dataset when it is given
+(<code>jcomplete(d, off)</code>, <code>jcomplete(d, NULL)</code>). With no
+default set, <code>jcomplete(NULL)</code> clears the one dataset that
+carries a setting, and asks you to name one when several do. Call
+with no arguments to check the current status.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -115,6 +129,15 @@ console. Default <code>FALSE</code>.</p></dd>
 (with <code>DeletionCheck</code> marking which will drop) rather than only the
 dropped rows. Affects the viewer only; the console listing stays
 deleted-rows-only. Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-clear-all">clear.all<a class="anchor" aria-label="anchor" href="#arg-clear-all"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, clears the jcomplete setting
+on every dataset; use on its own, <code>jcomplete(clear.all = TRUE)</code>.
+This is the same grammar as <code><a href="jsubset.html">jsubset()</a></code> and the registration
+functions (<code><a href="jdummy.html">jdummy()</a></code>, <code><a href="jnumeric.html">jnumeric()</a></code>, <code><a href="jcount.html">jcount()</a></code>,
+<code><a href="jlikert.html">jlikert()</a></code>): <code>NULL</code> clears one dataset,
+<code>clear.all = TRUE</code> clears them all.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -152,7 +175,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     jcomplete          12         91  Income, Education, +1 more</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     jcomplete()        12         91  Income, Education, +1 more</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Remaining N        --         91</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -262,11 +285,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete deactivated for community.</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">on</span><span class="op">)</span>                  <span class="co"># Reactivate</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete reactivated for community: Income, Education, Age</span>
+<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">community</span>, <span class="va">off</span><span class="op">)</span>      <span class="co"># Deactivate on a named dataset</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete deactivated for community.</span>
+<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">community</span>, <span class="va">on</span><span class="op">)</span>       <span class="co"># ... and reactivate it</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete reactivated for community: Income, Education, Age</span>
 <span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="op">)</span>                    <span class="co"># Check status</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete active for community: Income, Education, Age (91 of 103</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> complete cases)</span>
-<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                <span class="co"># Clear entirely</span></span></span>
+<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span>                <span class="co"># Clear the default dataset's setting</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jcomplete cleared for community (had: Income, Education, Age).</span>
+<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">community</span>, <span class="cn">NULL</span><span class="op">)</span>     <span class="co"># Clear a named dataset's setting</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> No jcomplete filter set for community. Nothing to clear.</span>
+<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span>clear.all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>    <span class="co"># Clear every dataset's setting</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> No jcomplete settings to clear.</span>
 <span class="r-in"><span><span class="co"># Not normally needed. You'd clear a default or registration only to</span></span></span>
 <span class="r-in"><span><span class="co"># undo a mistake, or -- as in this example -- to reset state for testing.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></span>

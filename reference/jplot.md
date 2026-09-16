@@ -112,7 +112,12 @@ jplot(x, which = "core", ...)
 - subset:
 
   Optional unquoted logical expression to filter cases for this call
-  only (data-first form).
+  only (data-first form). Written in R syntax and checked the way
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
+  checks a filter: `subset = NOT(Age < 40)`, for example, is refused
+  with the corrected `subset = !(Age < 40)` shown (see
+  [`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md) for a
+  translation table).
 
 - labels:
 

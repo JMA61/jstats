@@ -7,11 +7,13 @@ more than max_items entries, returns the first max_items
 followed by &quot;, +N more&quot;. The full set stays visible via
 jcomplete()'s own status query.
 &quot;expr&quot; – a single expression string (filter_expr / subset_expr).
-Truncated to max_width display columns with a trailing
-ellipsis when longer.
+Truncated to max_width display columns, ending in &quot;...&quot;
+(three ASCII periods; see .jst_truncate_ellipsis), when
+longer.
 Returns the (possibly shortened) content only; the caller supplies the
-operation prefix, e.g. sprintf(&quot;jcomplete (%s)&quot;, ...). Display width is
-measured with nchar(type = &quot;width&quot;), matching the renderer's dw()."><meta property="og:description" content="Keeps the Case-Processing top table readable when a long jcomplete()
+row label (&quot;jcomplete()&quot;, &quot;jsubset()&quot;, &quot;subset =&quot;) and places the content
+in the trailing detail column. Display width is measured with
+nchar(type = &quot;width&quot;), matching the renderer's dw()."><meta property="og:description" content="Keeps the Case-Processing top table readable when a long jcomplete()
 variable set or a jsubset()/subset = expression would otherwise blow out
 the dynamic column width. Two modes:
 &quot;list&quot; – a character vector of names (jcomplete's complete_vars). With
@@ -19,11 +21,13 @@ more than max_items entries, returns the first max_items
 followed by &quot;, +N more&quot;. The full set stays visible via
 jcomplete()'s own status query.
 &quot;expr&quot; – a single expression string (filter_expr / subset_expr).
-Truncated to max_width display columns with a trailing
-ellipsis when longer.
+Truncated to max_width display columns, ending in &quot;...&quot;
+(three ASCII periods; see .jst_truncate_ellipsis), when
+longer.
 Returns the (possibly shortened) content only; the caller supplies the
-operation prefix, e.g. sprintf(&quot;jcomplete (%s)&quot;, ...). Display width is
-measured with nchar(type = &quot;width&quot;), matching the renderer's dw()."></head><body>
+row label (&quot;jcomplete()&quot;, &quot;jsubset()&quot;, &quot;subset =&quot;) and places the content
+in the trailing detail column. Display width is measured with
+nchar(type = &quot;width&quot;), matching the renderer's dw()."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -31,7 +35,7 @@ measured with nchar(type = &quot;width&quot;), matching the renderer's dw()."></
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.168</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,11 +69,13 @@ more than max_items entries, returns the first max_items
 followed by ", +N more". The full set stays visible via
 jcomplete()'s own status query.
 "expr" – a single expression string (filter_expr / subset_expr).
-Truncated to max_width display columns with a trailing
-ellipsis when longer.
+Truncated to max_width display columns, ending in "..."
+(three ASCII periods; see .jst_truncate_ellipsis), when
+longer.
 Returns the (possibly shortened) content only; the caller supplies the
-operation prefix, e.g. sprintf("jcomplete (%s)", ...). Display width is
-measured with nchar(type = "width"), matching the renderer's dw().</p>
+row label ("jcomplete()", "jsubset()", "subset =") and places the content
+in the trailing detail column. Display width is measured with
+nchar(type = "width"), matching the renderer's dw().</p>
     </div>
 
     <div class="section level2">

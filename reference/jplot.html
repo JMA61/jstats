@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.168</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -149,7 +149,11 @@ for individual observations), <code>see</code> (constant-width band at
 
 <dt id="arg-subset">subset<a class="anchor" aria-label="anchor" href="#arg-subset"></a></dt>
 <dd><p>Optional unquoted logical expression to filter cases for
-this call only (data-first form).</p></dd>
+this call only (data-first form).
+Written in R syntax and checked the way <code><a href="jsubset.html">jsubset()</a></code> checks a
+filter: <code>subset = NOT(Age &lt; 40)</code>, for example, is refused with
+the corrected <code>subset = !(Age &lt; 40)</code> shown (see
+<code><a href="jsubset.html">jsubset</a></code> for a translation table).</p></dd>
 
 
 <dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>

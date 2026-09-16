@@ -80,7 +80,12 @@ jcrosstab(
 
   An optional unquoted logical expression (e.g. `Group == 1`) to subset
   cases for this call only. Applied after jcomplete and jsubset. Does
-  not affect other function calls.
+  not affect other function calls. Written in R syntax and checked the
+  way [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
+  checks a filter: `subset = NOT(Age < 40)`, for example, is refused
+  with the corrected `subset = !(Age < 40)` shown (see
+  [`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md) for a
+  translation table).
 
 - variable.id:
 

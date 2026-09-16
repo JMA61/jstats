@@ -89,7 +89,7 @@ the emitters also count R's own inline chrome in reserve; see
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.168</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -213,8 +213,14 @@ multi-word tail such as "to show." (Session 257).</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Scope: prose only. Runnable command lines follow Rule L (their own
-indented line) and are never passed through this helper. Applied at
-the S230 sites; other messages adopt it as they are touched.</p>
+indented line) and are never passed through this helper. Called ONLY
+from the wrapper layer – .jst_wrap_message() and .jst_wrap_indent()
+– never from a message builder: the emitters wrap every message at
+the real prefix reserve and treat existing breaks as hard, so a
+builder-side wrap at a guessed reserve produces two sets of break
+points (the S287 jencode double wrap). receive_package()'s structural
+gate enforces this as a call-site whitelist (S292). A builder that
+needs an indent for its own layout may still call .jst_wrap_indent().</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

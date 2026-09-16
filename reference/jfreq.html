@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.162</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.168</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,7 +71,11 @@ also accepts a plain vector.</p>
 <dt id="arg-subset">subset<a class="anchor" aria-label="anchor" href="#arg-subset"></a></dt>
 <dd><p>An optional unquoted logical expression (e.g.
 <code>Group == 1</code>) to subset cases for this call only. Applied after
-jcomplete and jsubset. Does not affect other function calls.</p></dd>
+jcomplete and jsubset. Does not affect other function calls.
+Written in R syntax and checked the way <code><a href="jsubset.html">jsubset()</a></code> checks a
+filter: <code>subset = NOT(Age &lt; 40)</code>, for example, is refused with
+the corrected <code>subset = !(Age &lt; 40)</code> shown (see
+<code><a href="jsubset.html">jsubset</a></code> for a translation table).</p></dd>
 
 
 <dt id="arg-variable-id">variable.id<a class="anchor" aria-label="anchor" href="#arg-variable-id"></a></dt>

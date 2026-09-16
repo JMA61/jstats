@@ -21,7 +21,14 @@ convention.
 ## Usage
 
 ``` r
-jcomplete(data, ..., preview = FALSE, console = FALSE, non.deletes = FALSE)
+jcomplete(
+  data,
+  ...,
+  preview = FALSE,
+  console = FALSE,
+  non.deletes = FALSE,
+  clear.all = FALSE
+)
 ```
 
 ## Arguments
@@ -29,10 +36,16 @@ jcomplete(data, ..., preview = FALSE, console = FALSE, non.deletes = FALSE)
 - data:
 
   A data frame. If omitted, uses the default set by
-  [`juse()`](https://jma61.github.io/jstats/reference/juse.md). Pass
-  `NULL` to clear the filter entirely. Pass the bare word `off` to
-  deactivate, or `on` to reactivate. Call with no arguments to check the
-  current status.
+  [`juse()`](https://jma61.github.io/jstats/reference/juse.md). Instead
+  of variable names, the call may carry one of three special values: the
+  bare word `off` deactivates the setting but remembers the variables,
+  `on` reactivates it, and `NULL` clears it entirely. Each acts on the
+  [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default
+  dataset when `data` is omitted (`jcomplete(off)`, `jcomplete(NULL)`),
+  or on the named dataset when it is given (`jcomplete(d, off)`,
+  `jcomplete(d, NULL)`). With no default set, `jcomplete(NULL)` clears
+  the one dataset that carries a setting, and asks you to name one when
+  several do. Call with no arguments to check the current status.
 
 - ...:
 
@@ -62,6 +75,18 @@ jcomplete(data, ..., preview = FALSE, console = FALSE, non.deletes = FALSE)
   marking which will drop) rather than only the dropped rows. Affects
   the viewer only; the console listing stays deleted-rows-only. Default
   `FALSE`.
+
+- clear.all:
+
+  Logical. If `TRUE`, clears the jcomplete setting on every dataset; use
+  on its own, `jcomplete(clear.all = TRUE)`. This is the same grammar as
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) and
+  the registration functions
+  ([`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md),
+  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md),
+  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md),
+  [`jlikert()`](https://jma61.github.io/jstats/reference/jlikert.md)):
+  `NULL` clears one dataset, `clear.all = TRUE` clears them all.
 
 ## Value
 
@@ -99,7 +124,7 @@ jdesc(Age)                     # Uses only complete cases on those 3 vars
 #> 
 #> Case Processing  Excluded  Remaining
 #>     Original           --        103
-#>     jcomplete          12         91  Income, Education, +1 more
+#>     jcomplete()        12         91  Income, Education, +1 more
 #>     Remaining N        --         91
 #> ----------------------------------------------------------------
 #> 
@@ -209,11 +234,19 @@ jcomplete(off)                 # Deactivate
 #> jcomplete deactivated for community.
 jcomplete(on)                  # Reactivate
 #> jcomplete reactivated for community: Income, Education, Age
+jcomplete(community, off)      # Deactivate on a named dataset
+#> jcomplete deactivated for community.
+jcomplete(community, on)       # ... and reactivate it
+#> jcomplete reactivated for community: Income, Education, Age
 jcomplete()                    # Check status
 #> jcomplete active for community: Income, Education, Age (91 of 103
 #> complete cases)
-jcomplete(NULL)                # Clear entirely
+jcomplete(NULL)                # Clear the default dataset's setting
 #> jcomplete cleared for community (had: Income, Education, Age).
+jcomplete(community, NULL)     # Clear a named dataset's setting
+#> No jcomplete filter set for community. Nothing to clear.
+jcomplete(clear.all = TRUE)    # Clear every dataset's setting
+#> No jcomplete settings to clear.
 # Not normally needed. You'd clear a default or registration only to
 # undo a mistake, or -- as in this example -- to reset state for testing.
 juse(NULL)

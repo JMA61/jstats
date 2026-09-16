@@ -3,16 +3,30 @@
 Shared mechanic for Step 2 (persistent jsubset) and Step 3 (per-call
 `subset =` argument) of
 [`.jst_apply_pipeline()`](https://jma61.github.io/jstats/reference/dot-jst_apply_pipeline.md).
-Evaluates `expr` in the data + caller environment, coerces `NA`s in the
-resulting mask to `FALSE`, and returns the filtered data frame. The two
-callers differ in upstream source (joptions state vs. argument) and
-downstream bookkeeping (which `sample_info` slot is populated); the
-masking step itself is identical.
+Evaluates `expr` in the data + caller environment, refuses a result that
+is not one TRUE/FALSE per row (via
+[`.jst_check_mask_shape()`](https://jma61.github.io/jstats/reference/dot-jst_check_mask_shape.md),
+which always stops), coerces `NA`s in the mask to `FALSE`, and returns
+the filtered data frame. The two callers differ in upstream source
+(joptions state vs. argument) and downstream bookkeeping (which
+`sample_info` slot is populated); the masking step itself is identical.
+This is the package's single row-selection site for user filters
+(Session 288 scan), so the shape check here is the safety net for both a
+stored filter that has gone stale and a per-call argument.
 
 ## Usage
 
 ``` r
-.jst_apply_mask(data, expr, envir, on_error, stage_label)
+.jst_apply_mask(
+  data,
+  expr,
+  envir,
+  on_error,
+  stage_label,
+  origin,
+  expr_str,
+  data_name = NULL
+)
 ```
 
 ## Arguments
@@ -32,17 +46,33 @@ masking step itself is identical.
 
 - on_error:
 
-  One of `"warn"` or `"stop"`. `"warn"` emits a warning and returns the
-  data unchanged – used for the persistent jsubset state, where the
-  expression was validated when set and a runtime failure is unexpected.
-  `"stop"` raises an error – used for the per-call `subset =` argument,
-  where a broken expression is a user error at call time.
+  One of `"warn"` or `"stop"`. Governs an EVALUATION failure only – an
+  error raised while running the expression, which can be transient (an
+  object not created yet). `"warn"` emits a warning and returns the data
+  unchanged – used for the persistent jsubset state. `"stop"` raises an
+  error – used for the per-call `subset =` argument, where a broken
+  expression is a user error at call time. A SHAPE failure ignores this
+  split and always stops (Session 288, decision 1).
 
 - stage_label:
 
-  Character. Prefix used in the error/warning message (e.g. `"jsubset"`
-  or `"Subset"`) so failures are attributable to the right pipeline
-  stage.
+  Character. Prefix used in the evaluation-failure message (e.g.
+  `"jsubset"` or `"Subset"`) so failures are attributable to the right
+  pipeline stage.
+
+- origin:
+
+  One of `"stored"` or `"call"`; selects the shape-error wording. Passed
+  explicitly rather than inferred from `on_error` or `stage_label`.
+
+- expr_str:
+
+  Character. The deparsed expression, echoed in the shape error.
+
+- data_name:
+
+  Character. The data frame's name; the stored-filter shape error builds
+  its exits from it.
 
 ## Value
 
