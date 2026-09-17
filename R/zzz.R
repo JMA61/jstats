@@ -325,6 +325,18 @@
 # stays silent exactly as before.
 
 .onAttach <- function(libname, pkgname) {
+  # R passes .onAttach() the package name WITH a names attribute --
+  # c(name = "jstats"), from getNamespaceName() inside attachNamespace() --
+  # where .onLoad() receives a plain string. identical() counts attributes,
+  # so compared as passed, the successor guard below reads the gist's plain
+  # "jstats" as a DIFFERENT package and prints the rename notice on every
+  # load (suppressing the version check and the jai() pointer). Strip the
+  # name once, here, for all three uses below. Do NOT remove this line: the
+  # same defect was fixed at v0.9.63 (by comparing against a literal) and
+  # reintroduced at v0.9.153 (Session 277) when the comparison was made
+  # name-agnostic. Locked by regression/startup_check.R. (Session 298)
+  pkgname <- unname(pkgname)
+
   if (!interactive() &&
       !isTRUE(getOption("jstats.attach.noninteractive", FALSE))) {
     return()
