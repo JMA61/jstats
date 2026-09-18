@@ -2545,7 +2545,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
 
     if (changed) {
-      data[[vname]] <- col
+      # A label rewrite above went through labelled::val_labels<-, which
+      # rebuilds without the haven display format -- and this column is
+      # on its way to write_dta(), which reads format.stata. Restore the
+      # passengers from the untouched original (S299).
+      data[[vname]] <- .jst_carry_col_attrs(data[[vname]], col)
       n_changed   <- n_changed + 1L
     }
   }

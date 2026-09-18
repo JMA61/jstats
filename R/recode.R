@@ -194,6 +194,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     labelled::var_label(result) <- var.label
   }
 
+  # labelled::val_labels<- rebuilds the column and keeps only what it is
+  # told, so a haven display format (format.spss, format.stata) and the
+  # Data Editor width would leave here (S299). Restore the passengers.
+  result <- .jst_carry_col_attrs(x, result)
+
   return(invisible(result))
 }
 
@@ -2033,6 +2038,15 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       "original and the new column.")
   }
 
+  # The rebuilds above (haven::labelled_spss(), labelled::labelled(), and
+  # every labelled::val_labels<-) keep only what they are told, so the
+  # original's haven display format and Data Editor width would leave
+  # here (S299). The recoded values inherit the original's format --
+  # SPSS's in-place RECODE behavior; a recode whose results outgrow it
+  # (an income category to its dollar midpoint under F2.0) displays
+  # narrowly in SPSS until the format is widened there.
+  result <- .jst_carry_col_attrs(orig, result)
+
   return(invisible(result))
 }
 
@@ -3242,6 +3256,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   # The missing token's spss-arm mint is declared on the fresh column
   # (Decision 14); otherwise a plain labelled vector, with any tagged
   # mints already in the double payload.
+  # Deliberately NOT routed through .jst_carry_col_attrs() (S299): the
+  # source is text and the result numeric, so the source's haven display
+  # format ("A<n>") would be wrong on the result. The fresh column carries
+  # no format; haven's writers supply their numeric default at save.
   if (!is.null(tok_mint_code) && isTRUE(tok_minted_any)) {
     result <- haven::labelled_spss(new_num, na_values = tok_mint_code)
   } else {
@@ -4918,13 +4936,17 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # composed above: a band survives a codes-only call (omitting it here
   # silently promoted every in-band cell back to ordinary data,
   # AUDIT-038), and discrete codes survive a range-only call.
-  haven::labelled_spss(
+  # The constructor keeps only what it is told: the column's haven display
+  # format and Data Editor width are restored by the carry (S299, field
+  # finding 2 -- 52 declared columns read back F8.2).
+  out <- haven::labelled_spss(
     x         = as.numeric(unclass(col)),
     labels    = combined_labs,
     na_values = if (length(eff_codes) > 0L) eff_codes else NULL,
     na_range  = eff_range,
     label     = attr(col, "label", exact = TRUE)
   )
+  .jst_carry_col_attrs(col, out)
 }
 
 
@@ -4978,12 +5000,15 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   if (length(combined_labs) == 0L) combined_labs <- NULL
 
   # Plain labelled (not labelled_spss); strip na_values if it leaked in.
+  # The carry restores the haven display format and Data Editor width the
+  # constructor drops; na_values / na_range are in its exclusion set, so
+  # the strip holds (S299).
   out <- haven::labelled(
     x      = as.numeric(unclass(col)),
     labels = combined_labs,
     label  = attr(col, "label", exact = TRUE)
   )
-  out
+  .jst_carry_col_attrs(col, out)
 }
 
 
@@ -5077,6 +5102,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     labels = combined_labs,
     label  = attr(col, "label", exact = TRUE)
   )
+  # Storage kind is unchanged (numeric in, numeric out with tagged cells),
+  # so the haven display format still applies: restore it and the Data
+  # Editor width the constructor dropped (S299).
+  out <- .jst_carry_col_attrs(col, out)
 
   list(
     new_col       = out,
@@ -6022,7 +6051,9 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       }
 
       if (cell_changed || label_changed) {
-        data[[vname]]      <- col
+        # labelled::val_labels<- above rebuilt col without its haven
+        # display format; restore it from the untouched original (S299).
+        data[[vname]]      <- .jst_carry_col_attrs(data[[vname]], col)
         sas_corrected_vars <- c(sas_corrected_vars, vname)
         # Refresh info_list so the downstream validation and conversion
         # loops see post-correction tags rather than the original .A/.B.
@@ -6359,12 +6390,12 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       }
 
       used_codes <- unname(code_for_tag[unique_tags])
-      data[[vname]] <- haven::labelled_spss(
+      data[[vname]] <- .jst_carry_col_attrs(col, haven::labelled_spss(
         x         = x_num,
         labels    = new_val_labs,
         na_values = used_codes,
         label     = attr(col, "label", exact = TRUE)
-      )
+      ))
 
       # Build display entries — source tag -> destination code, with the
       # label on the source side. Sort by tag (a, b, c, d) for stable
@@ -6438,7 +6469,9 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
             labelled::val_labels(col) <- new_vl
           }
         }
-        data[[vname]] <- col
+        # A label flip above went through labelled::val_labels<-, which
+        # rebuilds without the haven display format; restore it (S299).
+        data[[vname]] <- .jst_carry_col_attrs(data[[vname]], col)
 
         # Display: original tag (with its label, if any) -> flipped tag.
         display_entries <- character(0)
@@ -6491,11 +6524,11 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         }
       }
 
-      data[[vname]] <- haven::labelled(
+      data[[vname]] <- .jst_carry_col_attrs(col, haven::labelled(
         x      = new_col,
         labels = new_val_labs,
         label  = attr(col, "label", exact = TRUE)
-      )
+      ))
 
       # Build display entries — source value -> destination tag, with the
       # label shown on the source side, emitted in sorted order (largest

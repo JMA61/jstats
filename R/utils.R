@@ -1634,6 +1634,55 @@ jai <- function(setup = NULL, path = NULL) {
   max(dec)
 }
 
+#' Internal helper: carry passenger attributes through a column rebuild
+#'
+#' A haven-imported column carries attributes beyond its labels and its
+#' missing-value declaration: the platform display format
+#' (\code{format.spss} such as "F2.0" or "A20", \code{format.stata} such as
+#' "%9.0g"), the SPSS Data Editor column width (\code{display_width}), and
+#' whatever a future haven attaches. R never reads them; haven's writers
+#' do, and a writer that finds none invents a default (F8.2 for a .sav
+#' numeric), so a rebuild that drops them changes how the column displays
+#' when the file goes back to its platform (S298 field finding 2: 52
+#' declared columns read back F8.2 in place of their delivered format).
+#'
+#' Rebuilding through \code{haven::labelled()},
+#' \code{haven::labelled_spss()}, or \code{labelled::val_labels<-}
+#' (which rebuilds internally) keeps only what the constructor is told.
+#' This helper copies onto \code{to} every attribute of \code{from} that
+#' the rebuild does not own -- everything except the structural set
+#' (\code{class}, \code{levels}, \code{names}, \code{dim},
+#' \code{dimnames}) and the owned set (\code{label}, \code{labels},
+#' \code{na_values}, \code{na_range}) -- and fills only attributes
+#' \code{to} lacks, so it restores what was dropped and never overrides
+#' what the rebuild set. A plain vector with no attributes passes
+#' through unchanged.
+#'
+#' Called at the exit of every column rebuild that keeps the column's
+#' storage kind: jrelabel(), jrecode(), the three jdeclare_missing()
+#' branch builders, jconvert()'s write-backs, and jsave's .dta
+#' pre-write. jencode() does NOT call it by design: its source is text and
+#' its result numeric, so the source's "A<n>" format would be wrong on
+#' the result (S299).
+#'
+#' @param from The column before the rebuild.
+#' @param to The rebuilt column.
+#'
+#' @return \code{to}, with the passenger attributes of \code{from} added.
+#'
+#' @keywords internal
+.jst_carry_col_attrs <- function(from, to) {
+  keep_out <- c("class", "levels", "names", "dim", "dimnames",
+                "label", "labels", "na_values", "na_range")
+  a <- attributes(from)
+  if (is.null(a)) return(to)
+  a <- a[setdiff(names(a), keep_out)]
+  for (nm in names(a)) {
+    if (is.null(attr(to, nm, exact = TRUE))) attr(to, nm) <- a[[nm]]
+  }
+  to
+}
+
 #' Internal helper: print a formatted table with precise column alignment
 #'
 #' Purpose-built table printer that replaces knitr::kable() for console output.
