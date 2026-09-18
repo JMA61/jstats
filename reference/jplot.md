@@ -187,8 +187,11 @@ package's analysis functions. Produces appropriate plots for each class
 of result (see valid plot names below).
 
 **Formula form** (for plots that distinguish DV from IV): Pass a formula
-as the first argument, followed optionally by a data frame. Used for
-scatterplots and boxplots, consistent with the formula syntax of
+as the first argument, followed optionally by a data frame, given either
+positionally or as `data = `:
+`jplot(WellbeingScore ~ Income, data = community)` is the same plot as
+`jplot(WellbeingScore ~ Income, community)`. Used for scatterplots and
+boxplots, consistent with the formula syntax of
 [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md),
 [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md), and
 [`jt()`](https://jma61.github.io/jstats/reference/jt.md). The DV on the
