@@ -155,7 +155,10 @@ package's analysis functions. Produces appropriate plots for each class of
 result (see valid plot names below).
 
 \strong{Formula form} (for plots that distinguish DV from IV): Pass a
-formula as the first argument, followed optionally by a data frame. Used
+formula as the first argument, followed optionally by a data frame, given
+either positionally or as \code{data = }:
+\code{jplot(WellbeingScore ~ Income, data = community)} is the same plot
+as \code{jplot(WellbeingScore ~ Income, community)}. Used
 for scatterplots and boxplots, consistent with the formula syntax of
 \code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
 \code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only

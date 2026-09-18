@@ -16,7 +16,10 @@
 #' result (see valid plot names below).
 #'
 #' \strong{Formula form} (for plots that distinguish DV from IV): Pass a
-#' formula as the first argument, followed optionally by a data frame. Used
+#' formula as the first argument, followed optionally by a data frame, given
+#' either positionally or as \code{data = }:
+#' \code{jplot(WellbeingScore ~ Income, data = community)} is the same plot
+#' as \code{jplot(WellbeingScore ~ Income, community)}. Used
 #' for scatterplots and boxplots, consistent with the formula syntax of
 #' \code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
 #' \code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only
@@ -574,35 +577,60 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   x_name <- x_vars[1]
 
   # -- Resolve data frame ----------------------------------------------------
-  # The first UNNAMED argument in ..., or the juse default.
+  # The first UNNAMED argument in ..., or a data = argument, or the juse
+  # default -- in that order of lookup, and never both of the first two.
+  # `data` is not a formal of jplot.default (the generic's first formal is
+  # `x`, for S3), so data = d arrives in the NAMED dots. (Session 300: until
+  # then this block read only the unnamed dots, so jplot(y ~ x, data = d)
+  # fell through to the juse() branch -- a false "No data frame specified"
+  # error with no default set, and the DEFAULT frame silently plotted in
+  # place of d with one set.)
   dots <- list(...)
   dot_names <- names(dots)
   if (is.null(dot_names)) dot_names <- rep("", length(dots))
   positional_dots <- dots[!nzchar(dot_names)]
+  has_data_named  <- "data" %in% dot_names
+
+  # The frame's expression as typed, recovered from the captured call, for
+  # messages and for the registry lookups keyed on it (jsubset, jcomplete,
+  # jdummy). match.call() has already bound the formula to the `x` formal,
+  # so a positional frame is the FIRST unnamed element of the call, not the
+  # second. (Session 296: the test used to read ">= 2" and take element
+  # [[2]], which no formula call can satisfy, so .jst_data_name stayed NULL
+  # on every positional formula call -- stored jsubset / jcomplete settings
+  # were silently skipped on this path, with a false "not active for this
+  # dataset" note, and every message said "the data frame".)
+  mc_args  <- as.list(jplot_call)[-1L]
+  mc_names <- names(mc_args)
+  if (is.null(mc_names)) mc_names <- rep("", length(mc_args))
+  mc_positional <- mc_args[!nzchar(mc_names)]
+  .typed <- function(e) paste(deparse(e), collapse = "")
+
+  # A frame given both ways stops, ahead of the extra-positional stop, so
+  # jplot(y ~ x, d, data = e) names the clash rather than silently plotting
+  # whichever form happened to be read first.
+  if (has_data_named && length(positional_dots) >= 1) {
+    .jst_stop("data = ", .typed(mc_args[["data"]]),
+              " is a second data frame alongside ",
+              .typed(mc_positional[[1]]), ".\n",
+              "Give the data frame once, after the formula.", fn = "jplot")
+  }
 
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
   if (length(positional_dots) >= 1) {
     data <- positional_dots[[1]]
-    # Recover the frame's original expression from the captured call, for
-    # messages and for the registry lookups keyed on it (jsubset, jcomplete,
-    # jdummy). match.call() has already bound the formula to the `x` formal,
-    # so the frame is the FIRST unnamed element of the call, not the second.
-    # (Session 296: the test used to read ">= 2" and take element [[2]],
-    # which no formula call can satisfy, so .jst_data_name stayed NULL on
-    # every positional formula call -- stored jsubset / jcomplete settings
-    # were silently skipped on this path, with a false "not active for this
-    # dataset" note, and every message said "the data frame".)
-    mc_args  <- as.list(jplot_call)[-1L]
-    mc_names <- names(mc_args)
-    if (is.null(mc_names)) mc_names <- rep("", length(mc_args))
-    mc_positional <- mc_args[!nzchar(mc_names)]
     if (length(mc_positional) >= 1) {
-      .jst_data_name <- paste(deparse(mc_positional[[1]]), collapse = "")
+      .jst_data_name <- .typed(mc_positional[[1]])
     }
     if (length(positional_dots) > 1) {
       .jst_stop("Only one data argument is expected after ",
            "the formula. Extra positional arguments were supplied.")
+    }
+  } else if (has_data_named) {
+    data <- dots[["data"]]
+    if ("data" %in% mc_names) {
+      .jst_data_name <- .typed(mc_args[["data"]])
     }
   } else {
     resolved <- .jst_resolve_data(envir = parent_env)
