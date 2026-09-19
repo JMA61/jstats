@@ -37,7 +37,10 @@ words cannot be kept in a numeric column. A word may also be sent to
 the word \code{missing} -- your working convention's own missing
 form, declared automatically under the SPSS convention (see
 \code{jrecode()}'s \code{map} for the full rule); \code{blank=missing}
-composes the two tokens.
+composes the two tokens. Under the SPSS convention the code the token
+uses must be free: if the map also assigns it as an ordinary value,
+or a number stored as text is kept at that same value, the call stops
+rather than sweep those cases into missingness.
 
 By default an incomplete map is an error that names the unmatched
 words (nothing is dropped silently); add an \code{else} rule to sweep

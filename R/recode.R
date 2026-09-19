@@ -1488,8 +1488,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         # declaration the token attaches, with the confirmation note
         # reporting only the mint. Under else=NA or no else the undeclared
         # cells do not reach the result as values (NA, or the unmapped
-        # error), so only these two routes collide. jencode's mint is a
-        # separate surface and is not guarded here.
+        # error), so only these two routes collide. jencode's mint has its
+        # own twin of this guard (S304), after its incomplete-map error.
         plain_targets <- unlist(lapply(parsed_map$mappings, function(r) {
           if (is.null(r$tagged) && !is.na(r$new_val) && !isTRUE(r$missing)) {
             r$new_val
@@ -2609,7 +2609,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   the word \code{missing} -- your working convention's own missing
 #'   form, declared automatically under the SPSS convention (see
 #'   \code{jrecode()}'s \code{map} for the full rule); \code{blank=missing}
-#'   composes the two tokens.
+#'   composes the two tokens. Under the SPSS convention the code the token
+#'   uses must be free: if the map also assigns it as an ordinary value,
+#'   or a number stored as text is kept at that same value, the call stops
+#'   rather than sweep those cases into missingness.
 #'
 #'   By default an incomplete map is an error that names the unmatched
 #'   words (nothing is dropped silently); add an \code{else} rule to sweep
@@ -2993,7 +2996,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     # convention's own missing form. jencode builds its column from
     # scratch, so no existing form can disagree (no conflict gate) and no
     # declarations can crowd a cap (no cap error); the spss arm's mint is
-    # declared on the fresh result below. The unset-state behavior stays
+    # declared on the fresh result below. A mint that would equal an
+    # ordinary value of the result stops at the collision guard (S304),
+    # after the incomplete-map error. The unset-state behavior stays
     # inside .jst_resolve_convention() -- see jrecode's token block.
     tok_rule_idx <- which(vapply(parsed_map$mappings,
                                  function(r) isTRUE(r$missing), logical(1)))
@@ -3226,6 +3231,129 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       # at a guessed reserve of 11 was re-wrapped at 19 and broke the word
       # list in two (S287 finding; S292 fix).
       .jst_stop(paste(lines, collapse = "\n"))
+    }
+
+    # --- Mint collision guard (S304; the S247 item's jencode half) --------
+    # The jrecode twin (S302) states the rule: under spss the token's mint
+    # is declared on the result, so it must not equal a value the result
+    # will hold as an ordinary value, or the declaration sweeps those
+    # cases into missingness while the confirmation note reports only the
+    # mint. jencode's routes differ from jrecode's in two ways. There is
+    # no else=copy, so the only source cells the result can hold as
+    # ordinary values are numbers stored as text kept at face value under
+    # the repair reading above. And a text source carries no
+    # declarations, so there is no benign reuse to exempt.
+    # The target check reads the MAP, not the cells, as jrecode's does:
+    # the call stops whether or not a cell reaches the token, so a script
+    # cannot pass on one data wave and merge on the next. It sits after
+    # the incomplete-map error so the rewritten map it prints is complete
+    # (a pasted remedy that met a second error is the shape S250 rejected).
+    # Stata and SAS arms mint a tag, not a declared code, and are not
+    # guarded here -- as in jrecode.
+    if (!is.null(tok_mint_code)) {
+      col_fmt      <- .jst_fmt_code(tok_mint_code)
+      col_conv_arg <- if (!is.null(convention)) {
+        paste0(", convention = \"", convention, "\"")
+      } else ""
+      col_cc_src <- if (is.null(getOption(
+                          ".jst_options_missing_convention_codes"))) {
+        "the missing.convention.codes default"
+      } else "your missing.convention.codes setting"
+      col_head <- paste0("'missing' would use ", col_fmt, ", from ",
+                         col_cc_src, ", but ")
+      # What a rule's left side covers, in prose: words quoted, the empty
+      # string (the blank rule) as blank cells. The NA rule is added as NA
+      # by the caller.
+      col_who <- function(old_vals) {
+        vapply(old_vals, function(w) {
+          if (!nzchar(w)) "blank cells" else paste0("\"", w, "\"")
+        }, character(1), USE.NAMES = FALSE)
+      }
+
+      # Face-value route: a number stored as text, kept at its own value,
+      # that equals the mint. Checked first, as jrecode checks cells first.
+      face_hit <- character(0)
+      if (length(face_words) > 0) {
+        face_hit <- face_words[as.numeric(face_words) == tok_mint_code]
+      }
+      if (length(face_hit) > 0) {
+        n_cells <- sum(word_mask & words %in% face_hit)
+        tok_who <- unique(unlist(lapply(parsed_map$mappings[tok_rule_idx],
+                                        function(r) col_who(r$old_vals))))
+        if (tok_in_na) tok_who <- c(tok_who, "NA")
+        # The first remedy is the map with the token's rules removed --
+        # under the repair reading that leaves the else rule, which sends
+        # blanks to NA -- followed by the declare line for the code the
+        # data already hold (Rule Y: named, not minted).
+        no_tok <- parsed_map
+        if (length(tok_rule_idx) > 0L) {
+          no_tok$mappings <- no_tok$mappings[-tok_rule_idx]
+        }
+        if (tok_in_na) no_tok$na_rule <- NULL
+        .jst_stop(
+          paste0(col_head, "'", var_name, "' holds ",
+                 .jst_and_list(paste0("\"", face_hit, "\"")), " in ",
+                 .jst_fmt_n(n_cells), if (n_cells == 1L) " case" else " cases",
+                 ", which the encode keeps as ", col_fmt,
+                 ", and declaring it would make ",
+                 if (n_cells == 1L) "that case" else "those cases",
+                 " missing too."), "\n",
+          paste0("If ", col_fmt, " marks missing data in '", var_name,
+                 "', drop missing from the map and declare ", col_fmt,
+                 " after the encode:"), "\n",
+          "  ", .jst_data_name, "$", var_name, "R <- jencode(",
+          .jst_data_name, ", ", var_name, ", map = \"",
+          gsub("\"", "\\\"",
+               .jst_render_map_string(no_tok,
+                                      lhs_render = .jst_jencode_lhs_render),
+               fixed = TRUE),
+          "\"", col_conv_arg, ")\n",
+          "  jdeclare_missing(", .jst_data_name, ", ", var_name,
+          "R, codes = c(", format(tok_mint_code, trim = TRUE,
+                                  scientific = FALSE),
+          ")", col_conv_arg, ", modify = TRUE)\n",
+          paste0("Otherwise map ", .jst_and_list(tok_who), " to a code '",
+                 var_name, "' does not hold, and declare that code after ",
+                 "the encode with jdeclare_missing()."))
+      }
+
+      # Map-target route: a plain numeric target of the user's own rules
+      # (a word, the blank rule, or the NA rule) that equals the mint.
+      col_plain <- Filter(function(r) {
+        is.null(r$tagged) && !is.na(r$new_val) && !isTRUE(r$missing) &&
+          r$new_val == tok_mint_code
+      }, parsed_map$mappings)
+      col_na_hit <- !is.null(parsed_map$na_rule) &&
+        is.null(parsed_map$na_rule$tagged) &&
+        !is.na(parsed_map$na_rule$new_val) &&
+        !isTRUE(parsed_map$na_rule$missing) &&
+        parsed_map$na_rule$new_val == tok_mint_code
+      if (length(col_plain) > 0L || col_na_hit) {
+        rule_txt <- vapply(col_plain, function(r) {
+          paste0(.jst_jencode_lhs_render(r$old_vals), "=", col_fmt)
+        }, character(1))
+        hit_who  <- unique(unlist(lapply(col_plain,
+                                         function(r) col_who(r$old_vals))))
+        if (col_na_hit) {
+          rule_txt <- c(rule_txt, paste0("NA=", col_fmt))
+          hit_who  <- c(hit_who, "NA")
+        }
+        .jst_stop(
+          paste0(col_head, "the map also assigns ", col_fmt,
+                 " as an ordinary value (", paste(rule_txt, collapse = "; "),
+                 "), and declaring it would make those cases missing ",
+                 "too."), "\n",
+          "To make both missing, use missing for both:\n",
+          "  ", .jst_data_name, "$", var_name, "R <- jencode(",
+          .jst_data_name, ", ", var_name, ", map = \"",
+          gsub("\"", "\\\"",
+               .jst_render_map_string(parsed_map,
+                                      lhs_render = .jst_jencode_lhs_render,
+                                      targets_to_missing = tok_mint_code),
+               fixed = TRUE),
+          "\"", col_conv_arg, ")\n",
+          paste0("Or give ", .jst_and_list(hit_who), " a different code."))
+      }
     }
 
     # Apply the rules. A blank rule is an ordinary mapping whose old value
@@ -3480,9 +3608,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       } else NULL
     }))
     plain_targets <- unique(plain_targets)
-    if (!is.null(tok_mint_code)) {
-      plain_targets <- setdiff(plain_targets, tok_mint_code)
-    }
+    # Until S304 the spss mint was dropped from plain_targets here, so a
+    # user target equal to it was never nudged -- a collision switched off
+    # the one note that might have named it, and it did so even when no
+    # cell reached the token. The collision guard above now stops on any
+    # such map first, so no user target can equal the mint by this point.
     if (length(plain_targets) > 0) {
       susp    <- .jst_detect_suspicious_values(new_num, var_name)
       flagged <- sort(intersect(susp, plain_targets))
