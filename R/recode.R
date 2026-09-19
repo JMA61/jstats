@@ -2186,13 +2186,28 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
           .jst_data_name, ", ", orig_name, ", map = \"",
           .jst_render_map_string(parsed_map, targets_to_missing = flagged),
           "\"", d1_conv_arg, ")\n",
+          # S303: the declare remedy names the RESULT. From S267 it
+          # named the source column in the assignment form -- a
+          # declaration where no cell holds the code, leaving the recoded
+          # column's value untouched unless the recode was re-run. jrecode
+          # cannot see the column the user assigns to (Rule S's scope
+          # note), so the remedy is the documented two-step pair: the
+          # user's own recode into <var>R, then the declaration on that
+          # same column. The pair names only what it creates, so it runs
+          # whatever the user called theirs. The declaration teaches
+          # modify = TRUE alone (Rule S, S229 corollary: a suggestion,
+          # not a report).
           "Or declare ", .jst_and_list(codes),
-          " as missing instead:\n",
-          "  ", .jst_data_name, " <- jdeclare_missing(", .jst_data_name, ", ",
-          orig_name, ", codes = c(",
+          " as missing on the recoded variable:\n",
+          "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+          .jst_data_name, ", ", orig_name, ", map = \"",
+          .jst_render_map_string(parsed_map),
+          "\"", d1_conv_arg, ")\n",
+          "  jdeclare_missing(", .jst_data_name, ", ", orig_name,
+          "R, codes = c(",
           paste(format(flagged, trim = TRUE, scientific = FALSE),
                 collapse = ", "),
-          ")", d1_conv_arg, ")"))
+          ")", d1_conv_arg, ", modify = TRUE)"))
       }
     }
   }
@@ -3568,13 +3583,24 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
                                       targets_to_missing = flagged),
                fixed = TRUE),
           "\"", d1_conv_arg, ")\n",
+          # S303: see the jrecode twin. Here the S267 form was not merely
+          # inert but an error -- the source is text, and a text column
+          # cannot carry a missing-value code. The pair's encode line is
+          # escaped exactly as the first remedy's is (S249).
           "Or declare ", .jst_and_list(codes),
-          " as missing instead:\n",
-          "  ", .jst_data_name, " <- jdeclare_missing(", .jst_data_name, ", ",
-          var_name, ", codes = c(",
+          " as missing on the encoded variable:\n",
+          "  ", .jst_data_name, "$", var_name, "R <- jencode(",
+          .jst_data_name, ", ", var_name, ", map = \"",
+          gsub("\"", "\\\"",
+               .jst_render_map_string(parsed_map,
+                                      lhs_render = .jst_jencode_lhs_render),
+               fixed = TRUE),
+          "\"", d1_conv_arg, ")\n",
+          "  jdeclare_missing(", .jst_data_name, ", ", var_name,
+          "R, codes = c(",
           paste(format(flagged, trim = TRUE, scientific = FALSE),
                 collapse = ", "),
-          ")", d1_conv_arg, ")"))
+          ")", d1_conv_arg, ", modify = TRUE)"))
       }
     }
   }
