@@ -58,6 +58,15 @@ If the column already carries the other convention's markers while
 your \code{missing.convention} setting is set, the call stops and
 shows both resolutions rather than guessing.
 
+Under the SPSS convention the code the token uses must be free: if
+the column already declares it, discretely or inside a declared
+range, the existing declaration is reused rather than added to; if
+it is an ordinary value in the column that the map leaves in place,
+or a value the map itself assigns, the call stops rather than sweep
+those cases into missingness; and if the declared codes the result
+keeps already fill what SPSS allows (three codes, or a range plus one
+code), the call stops and offers a declared code instead.
+
 Examples:
 \itemize{
 \item \code{"1=1; 2=0"}
@@ -71,7 +80,10 @@ Examples:
 
 \item{labels}{Optional. A quoted string specifying value labels for the
 new variable, using the format \code{"code=Label Text"} with rules
-separated by semicolons. If supplied, these labels are used as-is.
+separated by semicolons. If supplied, these labels are used for the
+codes they name; the labels of declared missing values the result
+keeps (see Details) ride alongside them unless the string labels the
+same code.
 
 The left side of each rule may be a numeric code or, under Stata or
 SAS convention, a tagged missing-value token (\code{.a} through
@@ -154,10 +166,23 @@ map names \code{NA} as an old value (for example \code{"NA=-98"}); the
 \code{else} setting never converts NA. An \code{NA} rule affects plain
 \code{NA} cells only --- tagged missing values (Stata-style or
 SAS-style) are declared missings and are preserved with their tags
-regardless of the map. Declared SPSS-style codes on the original
-variable are likewise preserved: they need not appear in the map, they
-are carried onto the result with their declaration, and a note says
-so (map them to \code{NA} explicitly to convert them instead).
+regardless of the map. Declared SPSS-style missing values on the
+original variable are likewise preserved, whether declared as discrete
+codes or as a range: a declared code the map does not name, and every
+value inside a declared range, are carried onto the result with the
+declaration and their labels under every \code{else} setting, and a
+note names the values the data hold (map them to \code{NA} explicitly
+to convert them instead). A declared code the map names is recoded like
+any other value; a range always carries whole, so a value the map
+recodes into the range is missing on the result.
+
+A variable holds one convention. When the original variable's
+SPSS-style declaration survives the map (a range always does; a discrete
+code does unless the map names it), Stata-style or SAS-style tokens in
+the map or labels are refused with a pointer to \code{jconvert()}. A map
+that names every declared code (\code{"-99=.a; -98=.b; else=copy"}
+under Stata convention) leaves nothing SPSS-style behind and is the
+one-column migration pattern.
 
 Values that merely look like coded missing values (e.g. -99, -9, 999)
 but are not declared are never changed on their own. Left unmapped
@@ -206,17 +231,20 @@ plain \code{NA} (data born in R, or read from a CSV): \code{map =
 
 Under \strong{Stata convention}, declared missing values are typed
 missing cells marked with Stata-style tags (\code{.a} through
-\code{.z}). The single-call canonical pattern is:
+\code{.z}). The single-call canonical pattern names the same codes:
 
 \preformatted{
 df$EducR <- jrecode(df, Education,
-                    map    = "1,2=1; 3=2; 4,5=3; else=.a",
+                    map    = "1,2=1; 3=2; 4,5=3; -99,-98=.a",
                     labels = "1=High school or less; 2=Some college; 3=Degree; .a=Refused")
 }
 
 Under Stata convention, \code{jdeclare_missing()} is not needed for this
 pattern --- \code{jrecode()} handles both the value recoding and the
-Stata-style missing-value labeling in one call.
+Stata-style missing-value labeling in one call. Naming the declared
+codes is what makes the call legal on a column that carries SPSS-style
+missing values: a map that left \code{-99} and \code{-98} in place
+(\code{else=.a} alone) would put a marker beside them and is refused.
 
 \strong{SAS convention} works the same way with SAS-style missing
 values (\code{.A} through \code{.Z}). Map and labels tokens are
@@ -267,16 +295,18 @@ df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
 df <- jdeclare_missing(df, AgeR, codes = c("Not recorded" = -98))
 
 # Stata convention: Stata-style missing-value tokens in map and labels
-# (single call; convention = "stata" scopes the choice to this call only)
+# (single call; convention = "stata" scopes the choice to this call only).
+# Education carries SPSS-style missing values (-99, -98); naming them in
+# the map moves them to the marker in the same call.
 df$EducR4 <- jrecode(df, Education,
-                     map    = "1,2=1; 3,4,5=2; else=.a",
+                     map    = "1,2=1; 3,4,5=2; -99,-98=.a",
                      labels = "1=No college; 2=College; .a=Refused",
                      convention = "stata")
 
 # SAS convention: the same single-call pattern; tokens are matched
 # case-insensitively and the markers store in uppercase (.A)
 df$EducR5 <- jrecode(df, Education,
-                     map    = "1,2=1; 3,4,5=2; else=.a",
+                     map    = "1,2=1; 3,4,5=2; -99,-98=.a",
                      labels = "1=No college; 2=College; .a=Refused",
                      convention = "sas")
 
