@@ -187,7 +187,13 @@ labels (if present), then the coefficient table and model fit statistics.
 \strong{Handling of variables:}
 \itemize{
 \item Variables registered with \code{jdummy()} are expanded into dummy
-variables using the registered reference category.
+variables using the registered reference category. A registered
+category with no case in the analysis sample (removed by a filter,
+or emptied by listwise deletion) is left out of that model; if it
+is the reference category, the first remaining category is the
+reference for that model instead. A note reports either, and the
+coefficient table's header names the reference actually used. The
+registration itself is not changed.
 \item Unregistered haven-labelled variables with value labels are
 automatically treated as categorical (converted to factors). The
 first category is used as the reference, and an informational

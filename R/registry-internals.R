@@ -1465,3 +1465,63 @@
        dummy_coef_names = dummy_coef_names,
        expanded_originals = expanded_originals)
 }
+
+
+#' Internal helper: remove dummy columns from an expanded formula
+#'
+#' Drops named dummy symbols from the \code{+} chains
+#' \code{.jst_expand_one_dummy()} wrote, walking the parsed formula the
+#' same way that helper substituted them (by identity, never by text),
+#' so an interaction term keeps its shape: \code{x * (g_b + g_c + g_d)}
+#' with \code{g_b} dropped becomes \code{x * (g_c + g_d)}. Used by
+#' \code{.jst_prune_absent_categories()} (Session 306), which drops the
+#' dummies of categories that have no case in the analysis sample; that
+#' caller guarantees at least one dummy of every block survives, so a
+#' block never empties.
+#'
+#' @param formula The expanded model formula.
+#' @param drop Character vector of dummy column names to remove.
+#' @return The formula with those symbols removed.
+#' @keywords internal
+.jst_drop_formula_terms <- function(formula, drop) {
+  drop_syms  <- lapply(drop, as.name)
+  is_dropped <- function(e) {
+    any(vapply(drop_syms, function(s) identical(s, e), logical(1)))
+  }
+  walk <- function(e) {
+    if (is.name(e)) return(if (is_dropped(e)) NULL else e)
+    if (!is.call(e)) return(e)
+    if (identical(e[[1L]], as.name("+")) && length(e) == 3L) {
+      a <- walk(e[[2L]])
+      b <- walk(e[[3L]])
+      if (is.null(a)) return(b)
+      if (is.null(b)) return(a)
+      return(call("+", a, b))
+    }
+    if (identical(e[[1L]], as.name("(")) && length(e) == 2L) {
+      inner <- walk(e[[2L]])
+      if (is.null(inner)) return(NULL)
+      return(call("(", inner))
+    }
+    for (k in seq_along(e)) {
+      if (k == 1L) next
+      if (identical(as.list(e)[[k]], substitute())) next
+      r <- walk(e[[k]])
+      if (is.null(r)) {
+        stop("internal: a dropped dummy stood alone in the formula",
+             call. = FALSE)
+      }
+      e[[k]] <- r
+    }
+    e
+  }
+  for (k in 2:length(formula)) {
+    r <- walk(formula[[k]])
+    if (is.null(r)) {
+      stop("internal: a dropped dummy stood alone in the formula",
+           call. = FALSE)
+    }
+    formula[[k]] <- r
+  }
+  formula
+}

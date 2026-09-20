@@ -467,6 +467,37 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   NULL
 }
 
+#' Internal helper: value labels for a dummy registration's categories
+#'
+#' The one lookup behind a coefficient-table header, its category rows,
+#' and the absent-category note (Session 306), so the three cannot label
+#' a category three ways. A factor or character registration is labeled
+#' from its own category values (Session 305, AUDIT-037 rider): the
+#' column in hand is the post-filter frame's, and a synthetic 1..k built
+#' from it shifted every label after a filtered-out category onto the
+#' wrong row. The other types read the column's value labels through
+#' \code{.jst_var_value_labels()}.
+#'
+#' @param reg A registration object (\code{var_type}, \code{codes},
+#'   \code{labels}, optionally \code{values}).
+#' @param col The variable's column: the label source for the non-position
+#'   types, and the reconstruction source for a factor or character
+#'   registration saved without \code{values}.
+#'
+#' @return A named vector in val_labels() form (names are the labels,
+#'   values the codes), or NULL.
+#'
+#' @keywords internal
+.jst_reg_value_labels <- function(reg, col) {
+  if (identical(reg$var_type, "factor") ||
+      identical(reg$var_type, "character")) {
+    vals <- .jst_dummy_category_values(reg, col)
+    keep <- !is.na(vals)
+    return(stats::setNames(reg$codes[keep], vals[keep]))
+  }
+  .jst_var_value_labels(col)
+}
+
 #' Internal helper: collect multi-category dummy registrations for grouping
 #'
 #' Gathers the registration-shaped objects for the MULTI-category dummy
@@ -513,6 +544,207 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     }
   }
   out
+}
+
+#' Internal helper: drop the dummies of categories absent from the analysis sample
+#'
+#' A dummy registration describes the categories a variable HAD when it
+#' was registered (or, for an in-flight registration, when the filtered
+#' frame was expanded). The analysis sample can hold fewer: a
+#' \code{jsubset()} or \code{subset =} filter removes a category, or
+#' listwise deletion on another variable takes every case of one. Before
+#' Session 306 the dummies were fit as registered. An absent
+#' NON-reference category gave an all-zero dummy, and the zero-variance
+#' guard stopped on its internal column name with a single-category
+#' diagnosis. An absent REFERENCE category was worse: its dummies
+#' partitioned the sample, so the fit dropped the last one as aliased and
+#' silently re-referenced the contrasts to that category, while the
+#' coefficient table's header still named the registered reference over
+#' rows that no longer compared against it, the collinearity warning the
+#' only hint.
+#'
+#' This helper runs once the listwise-complete model frame exists, so
+#' presence is judged on the analysis sample itself, whichever stage
+#' emptied a category. For each expanded registration, stored or
+#' in-flight, it finds the registered categories with no case among the
+#' analysis rows. An absent reference is replaced by the first present
+#' category in registration order (the \code{ref = "auto"} rule): because
+#' the dummies are plain indicators, that is done by dropping the new
+#' reference's own dummy from the formula, which leaves the remaining
+#' dummies as exactly the treatment coding against it. An absent
+#' non-reference category's dummy is dropped. Both are reported in one
+#' consequential note per variable (Rule R names the condition; Rule F
+#' spaces several), and a per-call copy of the registration carrying the
+#' new reference and the trimmed dummy set replaces the original in the
+#' returned lists, so the header, the category rows and the returned
+#' \code{ref_cats} describe the model that was fit. The stored
+#' registration is never touched. A variable left with fewer than two
+#' present categories cannot be dummy-coded and stops with a guided
+#' error naming the VARIABLE, where the zero-variance guard named its
+#' dummy columns.
+#'
+#' The dropped dummy columns stay in \code{data}; only the formula, the
+#' model frame and \code{dummy_coef_names} lose them. Dropping a column
+#' cannot change the analysis rows -- a variable's dummies are missing
+#' together -- so the rebuilt frame has the same rows, which is asserted.
+#'
+#' @param mf The listwise-complete model frame built from \code{formula}
+#'   on \code{data}.
+#' @param data The post-pipeline analysis frame the model frame was built
+#'   from, holding both the dummy columns and the original variables.
+#' @param formula The expanded model formula.
+#' @param dummy_regs The frame's stored registration list, or NULL.
+#' @param expanded_originals Names of the registered variables actually
+#'   expanded (a per-call numeric =/count = skip is not).
+#' @param auto_cat_regs Named list of in-flight registrations, keyed by
+#'   variable name.
+#' @param dummy_coef_names Character vector of dummy column names in the
+#'   model.
+#' @param ref_cats,auto_ref_cats The "Var = RefLabel" vectors for the
+#'   stored and in-flight registrations.
+#' @param value_mode Resolved value.id mode for the category labels in
+#'   the note, the same one the coefficient table uses.
+#'
+#' @return A list with the possibly-updated \code{formula}, \code{mf},
+#'   \code{dummy_regs}, \code{auto_cat_regs}, \code{dummy_coef_names},
+#'   \code{ref_cats} and \code{auto_ref_cats}, plus \code{dropped}, the
+#'   dummy column names removed (empty when nothing was).
+#'
+#' @keywords internal
+.jst_prune_absent_categories <- function(mf, data, formula, dummy_regs,
+                                         expanded_originals, auto_cat_regs,
+                                         dummy_coef_names, ref_cats,
+                                         auto_ref_cats, value_mode) {
+  rows <- match(rownames(mf), rownames(data))
+  if (anyNA(rows)) {
+    stop("internal: the analysis rows do not map onto the analysis frame",
+         call. = FALSE)
+  }
+  dropped <- character(0)
+  notes   <- character(0)
+
+  # One registration: NULL when every category is present, else the
+  # per-call copy. Side effects: the dropped names and the note text.
+  prune_one <- function(reg, registered) {
+    v    <- reg$var_name
+    full <- data[[v]]
+    col  <- full[rows]
+    pos_space <- identical(reg$var_type, "factor") ||
+                 identical(reg$var_type, "character")
+    present <- if (pos_space) {
+      vals <- .jst_dummy_category_values(reg, full)
+      !is.na(vals) & vals %in% as.character(col)
+    } else {
+      reg$codes %in% .jst_as_numeric(col)
+    }
+    if (all(present)) return(NULL)
+
+    vl   <- .jst_reg_value_labels(reg, full)
+    disp <- function(idx) .jst_format_value_labels(reg$codes[idx], vl,
+                                                   value_mode)
+    n_present <- sum(present)
+    if (n_present < 2L) {
+      have <- if (n_present == 0L) {
+        "has none of its categories in the analysis sample"
+      } else {
+        paste0("has only one category in the analysis sample (",
+               disp(which(present)), ")")
+      }
+      .jst_stop(
+        v, " ", have, "; a dummy-coded predictor requires at least two.\n",
+        "This often happens when jsubset() restricts the sample to a ",
+        "single category of a variable that is then used as a predictor."
+      )
+    }
+
+    ref_absent <- !present[reg$ref_idx]
+    new_ref    <- if (ref_absent) which(present)[1L] else reg$ref_idx
+    absent     <- which(!present)
+    drop_idx   <- if (ref_absent) c(absent, new_ref) else absent
+    drop_pos   <- match(drop_idx, reg$non_ref_idx)
+    drop_pos   <- drop_pos[!is.na(drop_pos)]
+    keep_pos   <- setdiff(seq_along(reg$dummy_names), drop_pos)
+    dropped    <<- c(dropped, reg$dummy_names[drop_pos])
+
+    reg2 <- reg
+    reg2$dummy_names <- reg$dummy_names[keep_pos]
+    reg2$non_ref_idx <- reg$non_ref_idx[keep_pos]
+    reg2$ref_idx     <- new_ref
+    reg2$ref_code    <- reg$codes[new_ref]
+    reg2$ref_label   <- reg$labels[new_ref]
+
+    others <- setdiff(absent, reg$ref_idx)
+    kind   <- if (registered) " registered" else ""
+    one    <- length(others) == 1L
+    if (ref_absent) {
+      lines <- c(
+        paste0("Note: ", v, "'s", kind, " reference category, ",
+               disp(reg$ref_idx), ", has no cases in the analysis sample."),
+        paste0(disp(new_ref), " is the reference category for this model.")
+      )
+      if (length(others) > 0L) {
+        lines <- c(lines, paste0(
+          .jst_format_var_list(disp(others), and = TRUE),
+          if (one) " is" else " are", " left out of this model."))
+      }
+    } else {
+      lines <- paste0(
+        "Note: ", v, "'s", kind, if (one) " category " else " categories ",
+        .jst_format_var_list(disp(others), and = TRUE),
+        if (one) " has" else " have",
+        " no cases in the analysis sample and ",
+        if (one) "is" else "are", " left out of this model.")
+    }
+    if (registered) lines <- c(lines, "The registration is unchanged.")
+    notes <<- c(notes, paste(lines, collapse = "\n"))
+    reg2
+  }
+
+  if (!is.null(dummy_regs)) {
+    for (i in seq_along(dummy_regs)) {
+      reg <- dummy_regs[[i]]
+      if (!(reg$var_name %in% expanded_originals)) next
+      reg2 <- prune_one(reg, registered = TRUE)
+      if (is.null(reg2)) next
+      dummy_regs[[i]] <- reg2
+      hit <- which(startsWith(ref_cats, paste0(reg$var_name, " = ")))
+      if (length(hit) > 0L) {
+        ref_cats[hit[1L]] <- paste0(reg$var_name, " = ", reg2$ref_label)
+      }
+    }
+  }
+  if (length(auto_cat_regs) > 0L) {
+    for (vn in names(auto_cat_regs)) {
+      reg <- auto_cat_regs[[vn]]
+      reg$var_name <- vn
+      reg2 <- prune_one(reg, registered = FALSE)
+      if (is.null(reg2)) next
+      auto_cat_regs[[vn]] <- reg2
+      hit <- which(startsWith(auto_ref_cats, paste0(vn, " = ")))
+      if (length(hit) > 0L) {
+        auto_ref_cats[hit[1L]] <- paste0(vn, " = ", reg2$ref_label)
+      }
+    }
+  }
+
+  if (length(notes) > 0L) .jst_msg(paste(notes, collapse = "\n\n"))
+
+  if (length(dropped) > 0L) {
+    formula          <- .jst_drop_formula_terms(formula, dropped)
+    dummy_coef_names <- setdiff(dummy_coef_names, dropped)
+    mf2 <- stats::model.frame(formula, data = data,
+                              na.action = stats::na.omit)
+    if (nrow(mf2) != nrow(mf)) {
+      stop("internal: dropping a dummy column changed the analysis rows",
+           call. = FALSE)
+    }
+    mf <- mf2
+  }
+
+  list(formula = formula, mf = mf, dummy_regs = dummy_regs,
+       auto_cat_regs = auto_cat_regs, dummy_coef_names = dummy_coef_names,
+       ref_cats = ref_cats, auto_ref_cats = auto_ref_cats,
+       dropped = dropped)
 }
 
 #' Internal helper: group multi-category dummy rows in a coefficient table
@@ -575,18 +807,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     if (is.null(gkey) || !nzchar(gkey)) next
     col <- if (gkey %in% names(lab_src)) lab_src[[gkey]] else NULL
     # Factor and character rows are labeled from the REGISTRATION's own
-    # category values (Session 305, AUDIT-037 rider): lab_src is the
-    # post-filter frame, so a synthetic 1..k built from its column
-    # shifted every label after a filtered-out category onto the wrong
-    # row. The other types read the column's value labels as before.
-    vl <- if (identical(reg$var_type, "factor") ||
-              identical(reg$var_type, "character")) {
-      vals <- .jst_dummy_category_values(reg, col)
-      keep <- !is.na(vals)
-      stats::setNames(reg$codes[keep], vals[keep])
-    } else {
-      .jst_var_value_labels(col)
-    }
+    # category values (Session 305, AUDIT-037 rider); the lookup is
+    # shared with the absent-category note since Session 306.
+    vl <- .jst_reg_value_labels(reg, col)
 
     head_name <- if (identical(vlmode, "labels")) {
       .jst_label_or_name(lab_src, gkey)
@@ -1227,7 +1450,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' \strong{Handling of variables:}
 #' \itemize{
 #'   \item Variables registered with \code{jdummy()} are expanded into dummy
-#'     variables using the registered reference category.
+#'     variables using the registered reference category. A registered
+#'     category with no case in the analysis sample (removed by a filter,
+#'     or emptied by listwise deletion) is left out of that model; if it
+#'     is the reference category, the first remaining category is the
+#'     reference for that model instead. A note reports either, and the
+#'     coefficient table's header names the reference actually used. The
+#'     registration itself is not changed.
 #'   \item Unregistered haven-labelled variables with value labels are
 #'     automatically treated as categorical (converted to factors). The
 #'     first category is used as the reference, and an informational
@@ -2014,11 +2243,6 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
-  # Reference categories are printed later, under the Outcome: line (just above
-  # the Coefficients table they describe). Build the vector here unconditionally
-  # because downstream code (the return object) uses it regardless of display.
-  all_ref_cats <- c(ref_cats, auto_ref_cats)
-
   # Pre-fit checks: catch conditions that would otherwise produce the
   # confusing lm.fit error "0 (non-NA) cases" — distinguishing the two
   # different underlying conditions for a clearer message.
@@ -2028,6 +2252,30 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
          "deletion; no model can be fit. See the Case Processing ",
          "Summary above to identify which stage(s) excluded the cases.")
   }
+
+  # A registered category with no case in the analysis sample (Session
+  # 306): its dummy is dropped, and an absent reference is replaced by
+  # the first present category, with a note. Runs on the model frame so
+  # a category emptied by listwise deletion is caught as well as one a
+  # filter removed; the per-call registration copies it returns feed the
+  # coefficient-table header and the returned ref_cats. Placed before the
+  # zero-variance guard, which otherwise stopped on the absent category's
+  # all-zero dummy under its internal column name.
+  pruned <- .jst_prune_absent_categories(
+    mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
+    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef)
+  formula          <- pruned$formula
+  mf               <- pruned$mf
+  dummy_regs       <- pruned$dummy_regs
+  auto_cat_regs    <- pruned$auto_cat_regs
+  dummy_coef_names <- pruned$dummy_coef_names
+  ref_cats         <- pruned$ref_cats
+  auto_ref_cats    <- pruned$auto_ref_cats
+
+  # Reference categories are printed later, under the Outcome: line (just above
+  # the Coefficients table they describe). Build the vector here unconditionally
+  # because downstream code (the return object) uses it regardless of display.
+  all_ref_cats <- c(ref_cats, auto_ref_cats)
 
   # Zero-variance predictor check: any IV with only one unique value in
   # the analytic sample. Skip the response (column 1 of mf) and intercept.
@@ -3229,6 +3477,24 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
          "deletion; no model can be fit. See the Case Processing ",
          "Summary above to identify which stage(s) excluded the cases.")
   }
+
+  # A registered category with no case in the analysis sample (Session
+  # 306), as in jlm: its dummy is dropped, an absent reference is
+  # replaced by the first present category, and a note says so; the
+  # per-call registration copies feed the header and the returned
+  # ref_cats. Before the zero-variance guard, which otherwise stopped on
+  # the absent category's all-zero dummy under its internal column name.
+  pruned <- .jst_prune_absent_categories(
+    mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
+    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef)
+  formula          <- pruned$formula
+  mf               <- pruned$mf
+  dummy_regs       <- pruned$dummy_regs
+  auto_cat_regs    <- pruned$auto_cat_regs
+  dummy_coef_names <- pruned$dummy_coef_names
+  ref_cats         <- pruned$ref_cats
+  auto_ref_cats    <- pruned$auto_ref_cats
+  all_ref_cats     <- c(ref_cats, auto_ref_cats)
 
   # Zero-variance predictor check: any IV with only one unique value in
   # the analytic sample. Skip the response (column 1 of mf) and intercept.
