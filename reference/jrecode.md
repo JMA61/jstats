@@ -87,7 +87,11 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   the map itself assigns, the call stops rather than sweep those cases
   into missingness; and if the declared codes the result keeps already
   fill what SPSS allows (three codes, or a range plus one code), the
-  call stops and offers a declared code instead.
+  call stops and offers a declared code instead. Under the Stata or SAS
+  convention the token always uses the first marker (`.a`, or `.A`), so
+  a map that also assigns that marker itself stops rather than merge two
+  missing categories onto one marker; the message offers the next free
+  marker, or the same marker for both when that is what you mean.
 
   Examples:
 

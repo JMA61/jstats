@@ -1,0 +1,110 @@
+# Internal helper: stop when the missing token's marker is also named by the map (S308)
+
+Under a stata or sas resolution the missing token mints one marker – .a,
+or .A under sas – the one jconvert pairs with the first
+missing.convention.codes value, and it never advances to the next
+letter, for the same reason the spss mint never advances to the next
+code (S302): a map must mint the same marker on every data wave, and
+labels = "missing=..." must land on it. A map that also names that
+marker itself – in a rule, the NA rule, or as else – would put two
+DISTINCT missing categories on one marker with no message: the stata/sas
+form of the collision the spss arm has stopped on since S302 (jrecode)
+and S304 (jencode). The map is read, not the cells, so a script cannot
+pass on one data wave and merge on the next.
+
+## Usage
+
+``` r
+.jst_tag_collision_guard(
+  parsed_map,
+  tok_tag,
+  tok_rule_idx,
+  tok_in_na,
+  parsed_labels,
+  source_tags,
+  conv,
+  fn,
+  data_name,
+  var_name,
+  conv_arg,
+  lhs_render,
+  who
+)
+```
+
+## Arguments
+
+- parsed_map:
+
+  The parsed map after token resolution and tag canonicalization (token
+  rules carry tagged = tok_tag).
+
+- tok_tag:
+
+  The token's canonical tag letter.
+
+- tok_rule_idx:
+
+  Indices of the token's rules in parsed_map\$mappings.
+
+- tok_in_na:
+
+  Logical; the NA rule was the token.
+
+- parsed_labels:
+
+  The parsed labels vector, or NULL.
+
+- source_tags:
+
+  Character; the source column's cell tags (NA where a cell carries
+  none), or character(0) for a text source.
+
+- conv:
+
+  The resolved convention, "stata" or "sas".
+
+- fn:
+
+  "jrecode" or "jencode": the error prefix and the remedy call.
+
+- data_name, var_name:
+
+  Names for the remedy lines.
+
+- conv_arg:
+
+  The ", convention = ..." suffix, or "".
+
+- lhs_render:
+
+  NULL for jrecode; .jst_jencode_lhs_render for jencode.
+
+- who:
+
+  Function rendering one rule's old_vals for prose (numbers for jrecode;
+  quoted words, and "blank cells", for jencode).
+
+## Value
+
+Invisible NULL when the map does not name the token's marker; otherwise
+never returns.
+
+## Details
+
+A source column's own cells already carrying the marker, kept by
+else=copy, are NOT a collision here: a tag is missing by construction,
+so that route is the tag form of the spss arm's benign reuse, and it
+stays silent under the S239 texture (recorded at S308, not ruled).
+
+The stop offers the two readings as runnable lines: the token's rules
+re-rendered to the first marker free of the map, the labels and the
+source column (keeps the categories distinct), then re-rendered to the
+map's own marker (merges them on purpose – what the call would have done
+silently). Both render through .jst_render_map_string()'s missing_as, so
+a rule, the NA rule and else=.a take one shape; else=missing is not a
+legal map, which is why the merge line names the marker rather than the
+word.
+
+Callers place it AFTER the marker refusal, so a pasted line cannot meet
+that error next.

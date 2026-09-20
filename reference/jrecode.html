@@ -25,7 +25,7 @@ below for the canonical patterns under each convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.178</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.179</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -126,7 +126,12 @@ it is an ordinary value in the column that the map leaves in place,
 or a value the map itself assigns, the call stops rather than sweep
 those cases into missingness; and if the declared codes the result
 keeps already fill what SPSS allows (three codes, or a range plus one
-code), the call stops and offers a declared code instead.</p>
+code), the call stops and offers a declared code instead. Under the
+Stata or SAS convention the token always uses the first marker
+(<code>.a</code>, or <code>.A</code>), so a map that also assigns that marker
+itself stops rather than merge two missing categories onto one
+marker; the message offers the next free marker, or the same marker
+for both when that is what you mean.</p>
 <p>Examples:</p><ul><li><p><code>"1=1; 2=0"</code></p></li>
 <li><p><code>"1=1; 2,3=2; 4,5=3; else=NA"</code></p></li>
 <li><p><code>"1=1; 2=0; else=copy"</code></p></li>
