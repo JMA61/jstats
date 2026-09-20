@@ -27,7 +27,10 @@
 #' \code{jlm()} and pass the result to \code{jplot()}.
 #'
 #' \strong{Variable-list form} (for distributions and counts): Pass a data
-#' frame followed by one or two unquoted variable names. Used for histograms
+#' frame followed by one or two unquoted variable names. The data frame is
+#' given either positionally or as \code{data = }:
+#' \code{jplot(data = community, Age)} is the same plot as
+#' \code{jplot(community, Age)}. Used for histograms
 #' (1 numeric), bar charts (1 categorical), and grouped bar charts (2
 #' categorical). Calls that would otherwise auto-detect to a scatter or
 #' boxplot produce a helpful error directing you to the formula form.
@@ -157,14 +160,18 @@
 #'
 #' # Variable-list form (distributions and counts)
 #' jplot(community, Age)                      # histogram
+#' jplot(data = community, Age)               # the same, data frame as data =
 #' jplot(community, Region)                   # bar chart
 #' jplot(community, Region, Volunteer,        # grouped bar chart
 #'       categorical = c("Region", "Volunteer"))
 #'
-#' # Using juse() default (formula form; omit the data frame)
+#' # Using juse() default (omit the data frame in either form)
 #' juse(community)
 #' jplot(WellbeingScore ~ Income)               # scatter
 #' jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
+#' jplot(Age)                                   # histogram
+#' jplot(Region, Volunteer,                     # grouped bar chart
+#'       categorical = c("Region", "Volunteer"))
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -174,21 +181,55 @@
 #' @importFrom utils tail
 jplot <- function(x, which = "core", ...) {
   # S3 dispatch evaluates `x` to pick a method, which kills a bare-symbol
-  # variable name under a juse() default -- jplot(Age) errors with "object
-  # 'Age' not found" before jplot.default's resolver can treat Age as a
-  # variable. Guard the dispatch: if forcing `x` fails, route the original
-  # (still unevaluated) call to jplot.default, whose .jst_resolve_first_arg
-  # then handles the symbol_with_default case. Result objects, data frames,
-  # and formulas all force successfully and dispatch as normal.
-  if (!missing(x)) {
-    ok <- tryCatch({ force(x); TRUE }, error = function(e) FALSE)
-    if (!ok) {
-      mc <- match.call()
-      mc[[1L]] <- quote(jplot.default)
-      return(eval(mc, parent.frame()))
+  # variable name -- jplot(Age) under a juse() default, or
+  # jplot(data = community, Age) -- with "object 'Age' not found" before
+  # jplot.default's resolver can treat Age as a variable. So the generic
+  # sorts the call itself before dispatching (Session 307, v0.9.178):
+  #   1. `x` evaluates to a formula, a result object, or a data frame with
+  #      no data = alongside it: dispatch as normal.
+  #   2. `x` evaluates to a data frame AND data = is present: stop -- the
+  #      frame was given twice.
+  #   3. `x` is a bare column name (does not evaluate), or data = is present
+  #      and `x` evaluated to some non-frame value that shares the column's
+  #      name: rebuild the call for jplot.default AS TYPED -- `x` unnamed,
+  #      `which` unnamed unless the user typed it (match.call() binds the
+  #      second variable of jplot(Region, Volunteer) to `which`), and a
+  #      data = frame moved to the front -- and evaluate it in a child of
+  #      the caller's frame that carries jplot.default itself. The method
+  #      is registered, not exported, so evaluating its NAME in the
+  #      caller's frame fails under library(jstats) (it worked only under
+  #      load_all()).
+  # `which` is a formal of this frame, so base which() must not be called
+  # here: looking the function up would force the promise.
+  mc       <- match.call(expand.dots = TRUE)
+  has_data <- "data" %in% names(mc)
+  x_ok     <- if (missing(x)) FALSE else
+                tryCatch({ force(x); TRUE }, error = function(e) FALSE)
+  rewrite  <- !x_ok || (has_data && is.atomic(x) && !is.null(x))
+  if (!rewrite) {
+    if (has_data && is.data.frame(x)) {
+      .typed <- function(e) paste(deparse(e), collapse = "")
+      .jst_stop("data = ", .typed(mc[["data"]]),
+                " is a second data frame alongside ", .typed(mc[["x"]]), ".\n",
+                "Specify the data frame once, before the variable names.",
+                fn = "jplot")
     }
+    UseMethod("jplot")
   }
-  UseMethod("jplot")
+  sc_names    <- names(sys.call())
+  which_typed <- !is.null(sc_names) && "which" %in% sc_names
+  args <- as.list(mc)[-1L]
+  nm   <- names(args)
+  nm[nm == "x"] <- ""
+  if (!which_typed) nm[nm == "which"] <- ""
+  names(args) <- nm
+  if (has_data) {
+    i    <- match("data", nm)
+    args <- c(list(args[[i]]), args[-i])
+  }
+  env <- new.env(parent = parent.frame())
+  env$jplot.default <- jplot.default
+  eval(as.call(c(list(quote(jplot.default)), args)), env)
 }
 
 #' @describeIn jplot the default method: a scatter or box plot from a formula (\code{DV ~ IV}), or a histogram or bar chart from a data frame and one or more variables.
@@ -613,7 +654,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     .jst_stop("data = ", .typed(mc_args[["data"]]),
               " is a second data frame alongside ",
               .typed(mc_positional[[1]]), ".\n",
-              "Give the data frame once, after the formula.", fn = "jplot")
+              "Specify the data frame once, after the formula.", fn = "jplot")
   }
 
   .jst_default_used <- FALSE

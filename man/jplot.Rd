@@ -166,7 +166,10 @@ single-IV formulas are supported here; for multi-IV models, fit with
 \code{jlm()} and pass the result to \code{jplot()}.
 
 \strong{Variable-list form} (for distributions and counts): Pass a data
-frame followed by one or two unquoted variable names. Used for histograms
+frame followed by one or two unquoted variable names. The data frame is
+given either positionally or as \code{data = }:
+\code{jplot(data = community, Age)} is the same plot as
+\code{jplot(community, Age)}. Used for histograms
 (1 numeric), bar charts (1 categorical), and grouped bar charts (2
 categorical). Calls that would otherwise auto-detect to a scatter or
 boxplot produce a helpful error directing you to the formula form.
@@ -243,14 +246,18 @@ jplot(WellbeingScore ~ Region, community, categorical = "Region")
 
 # Variable-list form (distributions and counts)
 jplot(community, Age)                      # histogram
+jplot(data = community, Age)               # the same, data frame as data =
 jplot(community, Region)                   # bar chart
 jplot(community, Region, Volunteer,        # grouped bar chart
       categorical = c("Region", "Volunteer"))
 
-# Using juse() default (formula form; omit the data frame)
+# Using juse() default (omit the data frame in either form)
 juse(community)
 jplot(WellbeingScore ~ Income)               # scatter
 jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
+jplot(Age)                                   # histogram
+jplot(Region, Volunteer,                     # grouped bar chart
+      categorical = c("Region", "Volunteer"))
 
 }
 \seealso{
