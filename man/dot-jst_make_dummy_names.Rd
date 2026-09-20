@@ -40,10 +40,14 @@ build the suggested-fix call shown in the over-the-limit error. May be
 \value{
 A list with components: \code{codes}, \code{labels}
 (canonical, used for display), \code{dummy_names} (canonical, for
-non-reference categories only), \code{var_type}, \code{ref_idx},
-\code{ref_code}, \code{ref_label}, \code{non_ref_idx}, \code{notes}
-(character vector of informational messages), \code{warnings_msg}
-(character vector of warnings).
+non-reference categories only), \code{var_type}, \code{values} (the
+raw category value behind each code, in code order: the factor
+levels or the sorted character values, otherwise the codes
+themselves -- what \code{.jst_expand_one_dummy()} matches cases
+against for factor and character variables; Session 305),
+\code{ref_idx}, \code{ref_code}, \code{ref_label},
+\code{non_ref_idx}, \code{notes} (character vector of informational
+messages), \code{warnings_msg} (character vector of warnings).
 }
 \description{
 Single source of truth for how categorical variables are turned into named

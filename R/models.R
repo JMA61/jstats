@@ -443,7 +443,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' no labels and return NULL (so value.id degrades to bare codes). Factor and
 #' character variables get synthetic 1..k codes whose ordering mirrors
 #' \code{.jst_make_dummy_names()}, so they line up with a dummy registration
-#' built from the same column.
+#' built from the same column -- the SAME column: since Session 305 the
+#' grouped coefficient rows read a factor or character registration's own
+#' \code{values} instead (via \code{.jst_dummy_category_values()}), because
+#' the column they had in hand was the post-filter frame's, and a filtered
+#' out category shifted every label after it onto the wrong row.
 #'
 #' @param x A variable (haven-labelled, factor, character, or numeric).
 #'
@@ -569,8 +573,20 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   for (reg in regs) {
     gkey <- reg$var_name
     if (is.null(gkey) || !nzchar(gkey)) next
-    vl <- .jst_var_value_labels(
-      if (gkey %in% names(lab_src)) lab_src[[gkey]] else NULL)
+    col <- if (gkey %in% names(lab_src)) lab_src[[gkey]] else NULL
+    # Factor and character rows are labeled from the REGISTRATION's own
+    # category values (Session 305, AUDIT-037 rider): lab_src is the
+    # post-filter frame, so a synthetic 1..k built from its column
+    # shifted every label after a filtered-out category onto the wrong
+    # row. The other types read the column's value labels as before.
+    vl <- if (identical(reg$var_type, "factor") ||
+              identical(reg$var_type, "character")) {
+      vals <- .jst_dummy_category_values(reg, col)
+      keep <- !is.na(vals)
+      stats::setNames(reg$codes[keep], vals[keep])
+    } else {
+      .jst_var_value_labels(col)
+    }
 
     head_name <- if (identical(vlmode, "labels")) {
       .jst_label_or_name(lab_src, gkey)
@@ -3203,10 +3219,43 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # output.
   digits_n <- .jst_resolve_digits(digits)
 
+  # Pre-fit checks, the same two jlm makes (Session 305): without them an
+  # empty analysis sample reached glm() and leaked R's own "Argument mu
+  # must be a nonempty numeric vector", and a constant predictor was
+  # silently dropped by the fit and then crashed the return object.
+
+  if (nrow(mf) == 0L) {
+    .jst_stop("All cases were excluded by the pipeline and/or listwise ",
+         "deletion; no model can be fit. See the Case Processing ",
+         "Summary above to identify which stage(s) excluded the cases.")
+  }
+
+  # Zero-variance predictor check: any IV with only one unique value in
+  # the analytic sample. Skip the response (column 1 of mf) and intercept.
+  iv_cols <- mf[, -1L, drop = FALSE]
+  if (ncol(iv_cols) > 0L) {
+    n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
+    constant_ivs <- names(n_unique)[n_unique < 2L]
+    if (length(constant_ivs) > 0L) {
+      .jst_stop("The following predictor(s) have no variation in the ",
+           "analysis sample (only one unique value); cannot fit slope: ",
+           paste(constant_ivs, collapse = ", "), ". This often happens ",
+           "when jsubset() restricts the sample to a single category of ",
+           "a variable that is then used as a predictor.")
+    }
+  }
+
   model <- stats::glm(formula, data = data, family = stats::binomial,
                        na.action = stats::na.omit)
   model_summary <- summary(model)
   n_obs         <- stats::nobs(model)
+
+  # A predictor the fit dropped as an exact linear combination of the
+  # others has no coefficient row; say so, as jlm does (Session 305).
+  if (any(is.na(stats::coef(model)))) {
+    .jst_warn("One or more variables have been removed from the model ",
+              "due to collinearity.")
+  }
 
   # The modeled (event) category is reported in the Dependent Variable Encoding
   # block at the end of the output, not as an up-front line. predicts_str feeds
@@ -3316,8 +3365,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     exp_ci_lower_raw <- rep(NA_real_, nrow(coefs))
     exp_ci_upper_raw <- rep(NA_real_, nrow(coefs))
   } else {
-    exp_ci_lower_raw <- exp(ci_raw[, 1])
-    exp_ci_upper_raw <- exp(ci_raw[, 2])
+    # Align to the coefficient rows by name: a predictor the fit dropped
+    # for collinearity keeps an all-NA row in confint() but has none in
+    # the coefficient table, and the length mismatch crashed the return
+    # object's data frame (Session 305).
+    ci_rows <- match(term_keys, .jst_unbacktick(rownames(ci_raw)))
+    exp_ci_lower_raw <- exp(unname(ci_raw[ci_rows, 1]))
+    exp_ci_upper_raw <- exp(unname(ci_raw[ci_rows, 2]))
   }
 
   if (ci) {

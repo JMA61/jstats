@@ -12,7 +12,8 @@
 \item{formula}{The model formula (a formula object).}
 
 \item{reg}{A registration object (must have \code{var_name},
-\code{codes}, \code{non_ref_idx}, \code{dummy_names}).}
+\code{var_type}, \code{codes}, \code{non_ref_idx},
+\code{dummy_names}; \code{values} when built since Session 305).}
 }
 \value{
 A list with components \code{data}, \code{formula},

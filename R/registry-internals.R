@@ -946,10 +946,14 @@
 #'
 #' @return A list with components: \code{codes}, \code{labels}
 #'   (canonical, used for display), \code{dummy_names} (canonical, for
-#'   non-reference categories only), \code{var_type}, \code{ref_idx},
-#'   \code{ref_code}, \code{ref_label}, \code{non_ref_idx}, \code{notes}
-#'   (character vector of informational messages), \code{warnings_msg}
-#'   (character vector of warnings).
+#'   non-reference categories only), \code{var_type}, \code{values} (the
+#'   raw category value behind each code, in code order: the factor
+#'   levels or the sorted character values, otherwise the codes
+#'   themselves -- what \code{.jst_expand_one_dummy()} matches cases
+#'   against for factor and character variables; Session 305),
+#'   \code{ref_idx}, \code{ref_code}, \code{ref_label},
+#'   \code{non_ref_idx}, \code{notes} (character vector of informational
+#'   messages), \code{warnings_msg} (character vector of warnings).
 #'
 #' @keywords internal
 .jst_make_dummy_names <- function(x, var_name, ref = "auto",
@@ -967,6 +971,7 @@
     var_type   <- "haven_labelled"
     val_labels <- labelled::val_labels(x)
     codes      <- .jst_as_numeric(sort(unique(x[!is.na(x)])))
+    values     <- codes
     raw_labels <- character(length(codes))
     for (i in seq_along(codes)) {
       match_idx <- which(val_labels == codes[i])
@@ -977,14 +982,20 @@
       }
     }
   } else if (is.factor(x)) {
+    # Factor and character codes are POSITION indices, so the raw values
+    # travel with the registration as `values` (Session 305, AUDIT-037):
+    # the expansion matches cases against them, never against the column
+    # coerced to numeric.
     var_type   <- "factor"
     lvls       <- levels(droplevels(x))
     codes      <- seq_along(lvls)
+    values     <- lvls
     raw_labels <- lvls
   } else if (is.character(x)) {
     var_type   <- "character"
     uniq       <- sort(unique(x[!is.na(x) & nzchar(x)]))
     codes      <- seq_along(uniq)
+    values     <- uniq
     raw_labels <- uniq
   } else if (is.logical(x)) {
     # Logical (TRUE/FALSE) predictors (AUDIT-004): treat as a two-category
@@ -996,10 +1007,12 @@
     # lm()/glm() name a logical predictor's coefficient.
     var_type   <- "logical"
     codes      <- sort(unique(as.numeric(x[!is.na(x)])))
+    values     <- codes
     raw_labels <- ifelse(codes == 1, "TRUE", "FALSE")
   } else if (is.numeric(x)) {
     var_type   <- "numeric"
     codes      <- sort(unique(x[!is.na(x)]))
+    values     <- codes
     raw_labels <- as.character(codes)
   } else {
     .jst_stop("'", var_name, "' has an unsupported type for dummy coding ",
@@ -1183,6 +1196,7 @@
     labels       = final_labels,
     dummy_names  = dummy_names,
     var_type     = var_type,
+    values       = values,
     ref_idx      = ref_idx,
     ref_code     = ref_code,
     ref_label    = ref_label,
@@ -1190,6 +1204,60 @@
     notes        = notes,
     warnings_msg = warnings_msg
   )
+}
+
+
+#' Internal helper: the category values behind a dummy registration
+#'
+#' Returns the raw category value each registration code stands for, in
+#' code order. Registrations built since Session 305 carry them as the
+#' \code{values} field, which is returned as stored. A registration
+#' saved by an earlier version (a jdummy() card in an older .rds file)
+#' has no such field, so the values are reconstructed. For a factor or
+#' character variable the codes are POSITION indices 1..k, and the
+#' reconstruction cannot simply re-sort the column: a category absent
+#' from the frame in hand -- filtered out, or not in this file -- would
+#' shift every later position onto the wrong code. Instead each candidate
+#' value in the column is canonicalized exactly as
+#' \code{.jst_make_dummy_names()} builds a dummy name and matched against
+#' the registration's stored labels, which pins each value to the code it
+#' was registered under. A registered category with no matching value in
+#' the column is left NA, so its dummy comes out all zero, as an absent
+#' numeric code does. For numeric, haven-labelled and logical variables
+#' the codes are the values themselves.
+#'
+#' @param reg A registration object (\code{var_name}, \code{var_type},
+#'   \code{codes}, \code{labels}, optionally \code{values}).
+#' @param col The variable's column, used only for the reconstruction.
+#' @return A vector the length of \code{reg$codes}: character for factor
+#'   and character registrations, numeric otherwise.
+#' @keywords internal
+.jst_dummy_category_values <- function(reg, col) {
+  if (!is.null(reg$values)) return(reg$values)
+  if (!identical(reg$var_type, "factor") &&
+      !identical(reg$var_type, "character")) {
+    return(reg$codes)
+  }
+  cand <- if (is.factor(col)) {
+    levels(droplevels(col))
+  } else {
+    col_chr <- as.character(col)
+    sort(unique(col_chr[!is.na(col_chr) & nzchar(col_chr)]))
+  }
+  # The same canonicalization and anti-stutter steps as
+  # .jst_make_dummy_names(); a value whose canonical form is empty fell
+  # back to its code there, which cannot be recovered here and stays NA.
+  canon  <- gsub("[^A-Za-z0-9]+", "_", cand)
+  canon  <- gsub("^_+|_+$", "", canon)
+  prefix <- paste0(reg$var_name, "_")
+  canon  <- ifelse(nzchar(canon),
+                   ifelse(startsWith(canon, prefix), canon,
+                          paste0(prefix, canon)),
+                   NA_character_)
+  values <- rep(NA_character_, length(reg$codes))
+  hit    <- match(canon, reg$labels)
+  values[hit[!is.na(hit)]] <- cand[!is.na(hit)]
+  values
 }
 
 
@@ -1209,13 +1277,36 @@
 #' @param data The data frame.
 #' @param formula The model formula (a formula object).
 #' @param reg A registration object (must have \code{var_name},
-#'   \code{codes}, \code{non_ref_idx}, \code{dummy_names}).
+#'   \code{var_type}, \code{codes}, \code{non_ref_idx},
+#'   \code{dummy_names}; \code{values} when built since Session 305).
 #' @return A list with components \code{data}, \code{formula},
 #'   \code{dummy_coef_names}.
 #' @keywords internal
 .jst_expand_one_dummy <- function(data, formula, reg) {
 
-  orig_col         <- .jst_as_numeric(data[[reg$var_name]])
+  col <- data[[reg$var_name]]
+  # Factor and character variables are matched in POSITION space (Session
+  # 305, AUDIT-037): their registration codes are position indices 1..k,
+  # not values, so each case is matched against the registration's
+  # category values rather than against the column coerced to numeric --
+  # which made every text value NA (the logged crash, every case
+  # listwise-deleted) and let a factor's unused level shift the later
+  # positions onto the wrong codes (all-zero dummies). Numeric,
+  # haven-labelled and logical columns keep the value comparison,
+  # unchanged. An NA cell, or a blank "" text cell (excluded from the
+  # category set at registration), is missing on every dummy; a
+  # non-missing value the registration does not know is zero on every
+  # dummy, as an unregistered numeric code is.
+  pos_space <- identical(reg$var_type, "factor") ||
+               identical(reg$var_type, "character")
+  if (pos_space) {
+    col_chr <- as.character(col)
+    is_miss <- is.na(col_chr)
+    if (is.character(col)) is_miss <- is_miss | !nzchar(col_chr)
+    pos     <- match(col_chr, .jst_dummy_category_values(reg, col))
+  } else {
+    orig_col <- .jst_as_numeric(col)
+  }
   dummy_coef_names <- character(0)
 
   # Collision guard (AUDIT-013): if a generated dummy name already matches an
@@ -1235,8 +1326,12 @@
   for (j in seq_along(reg$non_ref_idx)) {
     idx   <- reg$non_ref_idx[j]
     dname <- reg$dummy_names[j]
-    data[[dname]] <- ifelse(is.na(orig_col), NA_integer_,
-                            as.integer(orig_col == reg$codes[idx]))
+    data[[dname]] <- if (pos_space) {
+      ifelse(is_miss, NA_integer_, as.integer(!is.na(pos) & pos == idx))
+    } else {
+      ifelse(is.na(orig_col), NA_integer_,
+             as.integer(orig_col == reg$codes[idx]))
+    }
     dummy_coef_names <- c(dummy_coef_names, dname)
   }
 

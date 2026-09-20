@@ -1578,6 +1578,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
       ref_label   = built$ref_label,
       dummy_names = built$dummy_names,
       non_ref_idx = built$non_ref_idx,
+      values      = built$values,
       n_total     = n_total,
       n_missing   = n_missing
     )
