@@ -201,7 +201,9 @@ with [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) and pass
 the result to `jplot()`.
 
 **Variable-list form** (for distributions and counts): Pass a data frame
-followed by one or two unquoted variable names. Used for histograms (1
+followed by one or two unquoted variable names. The data frame is given
+either positionally or as `data = `: `jplot(data = community, Age)` is
+the same plot as `jplot(community, Age)`. Used for histograms (1
 numeric), bar charts (1 categorical), and grouped bar charts (2
 categorical). Calls that would otherwise auto-detect to a scatter or
 boxplot produce a helpful error directing you to the formula form.
@@ -364,6 +366,10 @@ jplot(community, Age)                      # histogram
 #> Histogram: Age
 #> 
 
+jplot(data = community, Age)               # the same, data frame as data =
+#> Histogram: Age
+#> 
+
 jplot(community, Region)                   # bar chart
 #> Bar Chart: Region
 #> 
@@ -374,7 +380,7 @@ jplot(community, Region, Volunteer,        # grouped bar chart
 #> 
 
 
-# Using juse() default (formula form; omit the data frame)
+# Using juse() default (omit the data frame in either form)
 juse(community)
 #> Default data frame set to: community
 jplot(WellbeingScore ~ Income)               # scatter
@@ -384,6 +390,17 @@ jplot(WellbeingScore ~ Income)               # scatter
 
 jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
 #> Scatterplot: WellbeingScore and Income
+#> Using default data frame: community
+#> 
+
+jplot(Age)                                   # histogram
+#> Histogram: Age
+#> Using default data frame: community
+#> 
+
+jplot(Region, Volunteer,                     # grouped bar chart
+      categorical = c("Region", "Volunteer"))
+#> Grouped Bar Chart: Region and Volunteer
 #> Using default data frame: community
 #> 
 

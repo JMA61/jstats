@@ -9,7 +9,12 @@ Plain numeric variables have no labels and return NULL (so value.id
 degrades to bare codes). Factor and character variables get synthetic
 1..k codes whose ordering mirrors
 [`.jst_make_dummy_names()`](https://jma61.github.io/jstats/reference/dot-jst_make_dummy_names.md),
-so they line up with a dummy registration built from the same column.
+so they line up with a dummy registration built from the same column –
+the SAME column: since Session 305 the grouped coefficient rows read a
+factor or character registration's own `values` instead (via
+[`.jst_dummy_category_values()`](https://jma61.github.io/jstats/reference/dot-jst_dummy_category_values.md)),
+because the column they had in hand was the post-filter frame's, and a
+filtered out category shifted every label after it onto the wrong row.
 
 ## Usage
 

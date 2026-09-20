@@ -288,6 +288,12 @@ statistics.
 - Variables registered with
   [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md) are
   expanded into dummy variables using the registered reference category.
+  A registered category with no case in the analysis sample (removed by
+  a filter, or emptied by listwise deletion) is left out of that model;
+  if it is the reference category, the first remaining category is the
+  reference for that model instead. A note reports either, and the
+  coefficient table's header names the reference actually used. The
+  registration itself is not changed.
 
 - Unregistered haven-labelled variables with value labels are
   automatically treated as categorical (converted to factors). The first

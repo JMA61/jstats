@@ -17,7 +17,7 @@ to a rank.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.173</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.178</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,7 +94,10 @@ words cannot be kept in a numeric column. A word may also be sent to
 the word <code>missing</code> – your working convention's own missing
 form, declared automatically under the SPSS convention (see
 <code><a href="jrecode.html">jrecode()</a></code>'s <code>map</code> for the full rule); <code>blank=missing</code>
-composes the two tokens.</p>
+composes the two tokens. Under the SPSS convention the code the token
+uses must be free: if the map also assigns it as an ordinary value,
+or a number stored as text is kept at that same value, the call stops
+rather than sweep those cases into missingness.</p>
 <p>By default an incomplete map is an error that names the unmatched
 words (nothing is dropped silently); add an <code>else</code> rule to sweep
 the remainder deliberately, and the note then names the words it swept.</p></dd>

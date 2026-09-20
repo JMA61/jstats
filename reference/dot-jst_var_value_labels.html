@@ -5,13 +5,21 @@ straight to .jst_format_value_labels(). Plain numeric variables have
 no labels and return NULL (so value.id degrades to bare codes). Factor and
 character variables get synthetic 1..k codes whose ordering mirrors
 .jst_make_dummy_names(), so they line up with a dummy registration
-built from the same column."><meta property="og:description" content="Returns the variable's value labels in labelled::val_labels() form
+built from the same column – the SAME column: since Session 305 the
+grouped coefficient rows read a factor or character registration's own
+values instead (via .jst_dummy_category_values()), because
+the column they had in hand was the post-filter frame's, and a filtered
+out category shifted every label after it onto the wrong row."><meta property="og:description" content="Returns the variable's value labels in labelled::val_labels() form
 (names are the labels, values are the codes) so the result can be fed
 straight to .jst_format_value_labels(). Plain numeric variables have
 no labels and return NULL (so value.id degrades to bare codes). Factor and
 character variables get synthetic 1..k codes whose ordering mirrors
 .jst_make_dummy_names(), so they line up with a dummy registration
-built from the same column."></head><body>
+built from the same column – the SAME column: since Session 305 the
+grouped coefficient rows read a factor or character registration's own
+values instead (via .jst_dummy_category_values()), because
+the column they had in hand was the post-filter frame's, and a filtered
+out category shifted every label after it onto the wrong row."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -19,7 +27,7 @@ built from the same column."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.173</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.178</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +59,11 @@ straight to <code><a href="dot-jst_format_value_labels.html">.jst_format_value_l
 no labels and return NULL (so value.id degrades to bare codes). Factor and
 character variables get synthetic 1..k codes whose ordering mirrors
 <code><a href="dot-jst_make_dummy_names.html">.jst_make_dummy_names()</a></code>, so they line up with a dummy registration
-built from the same column.</p>
+built from the same column – the SAME column: since Session 305 the
+grouped coefficient rows read a factor or character registration's own
+<code>values</code> instead (via <code><a href="dot-jst_dummy_category_values.html">.jst_dummy_category_values()</a></code>), because
+the column they had in hand was the post-filter frame's, and a filtered
+out category shifted every label after it onto the wrong row.</p>
     </div>
 
     <div class="section level2">

@@ -76,6 +76,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declaration_plausibility.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_detect_suspicious_values.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_drop_formula_terms.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_category_values.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_durability_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_evidence_admits_missing_values.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_dummies.html</loc></url>
@@ -183,8 +185,10 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_msgs.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_outcome_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_table.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_prune_absent_categories.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_quote_words.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_refresh_registrations.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_reg_value_labels.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_register_intent.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registry_status.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_coef_names.html</loc></url>

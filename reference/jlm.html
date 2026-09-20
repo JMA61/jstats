@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.173</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.178</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -290,7 +290,13 @@ is printed.</p>
 <p>A red "Linear Regression" title is printed first, followed by variable
 labels (if present), then the coefficient table and model fit statistics.</p>
 <p><strong>Handling of variables:</strong></p><ul><li><p>Variables registered with <code><a href="jdummy.html">jdummy()</a></code> are expanded into dummy
-variables using the registered reference category.</p></li>
+variables using the registered reference category. A registered
+category with no case in the analysis sample (removed by a filter,
+or emptied by listwise deletion) is left out of that model; if it
+is the reference category, the first remaining category is the
+reference for that model instead. A note reports either, and the
+coefficient table's header names the reference actually used. The
+registration itself is not changed.</p></li>
 <li><p>Unregistered haven-labelled variables with value labels are
 automatically treated as categorical (converted to factors). The
 first category is used as the reference, and an informational

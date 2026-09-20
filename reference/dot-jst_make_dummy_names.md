@@ -61,9 +61,14 @@ IVs.
 
 A list with components: `codes`, `labels` (canonical, used for display),
 `dummy_names` (canonical, for non-reference categories only),
-`var_type`, `ref_idx`, `ref_code`, `ref_label`, `non_ref_idx`, `notes`
-(character vector of informational messages), `warnings_msg` (character
-vector of warnings).
+`var_type`, `values` (the raw category value behind each code, in code
+order: the factor levels or the sorted character values, otherwise the
+codes themselves – what
+[`.jst_expand_one_dummy()`](https://jma61.github.io/jstats/reference/dot-jst_expand_one_dummy.md)
+matches cases against for factor and character variables; Session 305),
+`ref_idx`, `ref_code`, `ref_label`, `non_ref_idx`, `notes` (character
+vector of informational messages), `warnings_msg` (character vector of
+warnings).
 
 ## Details
 

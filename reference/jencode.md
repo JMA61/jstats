@@ -52,6 +52,10 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
   the SPSS convention (see
   [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)'s
   `map` for the full rule); `blank=missing` composes the two tokens.
+  Under the SPSS convention the code the token uses must be free: if the
+  map also assigns it as an ordinary value, or a number stored as text
+  is kept at that same value, the call stops rather than sweep those
+  cases into missingness.
 
   By default an incomplete map is an error that names the unmatched
   words (nothing is dropped silently); add an `else` rule to sweep the

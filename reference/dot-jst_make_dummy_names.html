@@ -13,7 +13,7 @@ categorical = arguments and auto-detected categorical IVs."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.173</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.178</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,10 +100,14 @@ build the suggested-fix call shown in the over-the-limit error. May be
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list with components: <code>codes</code>, <code>labels</code>
 (canonical, used for display), <code>dummy_names</code> (canonical, for
-non-reference categories only), <code>var_type</code>, <code>ref_idx</code>,
-<code>ref_code</code>, <code>ref_label</code>, <code>non_ref_idx</code>, <code>notes</code>
-(character vector of informational messages), <code>warnings_msg</code>
-(character vector of warnings).</p>
+non-reference categories only), <code>var_type</code>, <code>values</code> (the
+raw category value behind each code, in code order: the factor
+levels or the sorted character values, otherwise the codes
+themselves – what <code><a href="dot-jst_expand_one_dummy.html">.jst_expand_one_dummy()</a></code> matches cases
+against for factor and character variables; Session 305),
+<code>ref_idx</code>, <code>ref_code</code>, <code>ref_label</code>,
+<code>non_ref_idx</code>, <code>notes</code> (character vector of informational
+messages), <code>warnings_msg</code> (character vector of warnings).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

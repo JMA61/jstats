@@ -30,8 +30,8 @@ and by the auto-categorical pathways in jlm and jlogistic.
 
 - reg:
 
-  A registration object (must have `var_name`, `codes`, `non_ref_idx`,
-  `dummy_names`).
+  A registration object (must have `var_name`, `var_type`, `codes`,
+  `non_ref_idx`, `dummy_names`; `values` when built since Session 305).
 
 ## Value
 
