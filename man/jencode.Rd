@@ -40,7 +40,10 @@ form, declared automatically under the SPSS convention (see
 composes the two tokens. Under the SPSS convention the code the token
 uses must be free: if the map also assigns it as an ordinary value,
 or a number stored as text is kept at that same value, the call stops
-rather than sweep those cases into missingness.
+rather than sweep those cases into missingness. Under the Stata or
+SAS convention the token always uses the first marker (\code{.a}, or
+\code{.A}), so a map that also assigns that marker itself stops
+rather than merge two missing categories onto one marker.
 
 By default an incomplete map is an error that names the unmatched
 words (nothing is dropped silently); add an \code{else} rule to sweep

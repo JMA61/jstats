@@ -897,7 +897,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   or a value the map itself assigns, the call stops rather than sweep
 #'   those cases into missingness; and if the declared codes the result
 #'   keeps already fill what SPSS allows (three codes, or a range plus one
-#'   code), the call stops and offers a declared code instead.
+#'   code), the call stops and offers a declared code instead. Under the
+#'   Stata or SAS convention the token always uses the first marker
+#'   (\code{.a}, or \code{.A}), so a map that also assigns that marker
+#'   itself stops rather than merge two missing categories onto one
+#'   marker; the message offers the next free marker, or the same marker
+#'   for both when that is what you mean.
 #'
 #'   Examples:
 #'   \itemize{
@@ -1400,6 +1405,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       cc_src <- if (is.null(getOption(".jst_options_missing_convention_codes"))) {
         "the missing.convention.codes default"
       } else "your missing.convention.codes setting"
+      # The guard's remedy lines carry convention = only when this call
+      # did (S267's rule, applied here at S308).
+      tok_conv_arg <- if (!is.null(convention)) {
+        paste0(", convention = \"", convention, "\"")
+      } else ""
       if (tok_mint_code %in% src_codes) {
         # Benign reuse (S239): the minted code is the user's own
         # declaration, not a fourth code -- no cap arithmetic, and the
@@ -1530,9 +1540,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
               paste0("If ", .jst_fmt_code(tok_mint_code),
                      " marks missing data in ", orig_name,
                      ", declare it first:"), "\n",
-              "  ", .jst_data_name, " <- jdeclare_missing(", .jst_data_name,
-              ", ", orig_name, ", codes = c(", .jst_fmt_code(tok_mint_code),
-              "))\n",
+              # S308 (the S303 mv item): the suggestion teaches
+              # modify = TRUE alone (Rule S, S229 corollary), and carries
+              # convention = when this call did (S267), so it neither
+              # names the assignment form nor gates under an unset
+              # setting when pasted.
+              "  jdeclare_missing(", .jst_data_name, ", ", orig_name,
+              ", codes = c(", .jst_fmt_code(tok_mint_code), ")",
+              tok_conv_arg, ", modify = TRUE)\n",
               paste0("Otherwise map ", .jst_and_list(tok_lhs_txt),
                      " to a code ", orig_name, " does not hold, and ",
                      "declare that code after the recode with ",
@@ -1563,7 +1578,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
             .jst_data_name, ", ", orig_name, ", map = \"",
             .jst_render_map_string(parsed_map,
                                    targets_to_missing = tok_mint_code),
-            "\")\n",
+            "\"", tok_conv_arg, ")\n",
             paste0("Or give ", .jst_and_list(hit_lhs),
                    " a different code."))
         }
@@ -1747,6 +1762,33 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         parsed_labels[tagged_idx] <- haven::tagged_na(canon)
       }
     }
+  }
+
+  # --- Tag collision guard (S308; the S304 tag-merge item) -----------------
+  # The stata/sas twin of the spss collision guard above: the token's
+  # marker named again by the map (a rule, the NA rule, else=.a) would
+  # merge two distinct missing categories with no message. Placed after
+  # the marker refusal so a pasted remedy cannot meet that error next;
+  # the mechanics and the routes are in .jst_tag_collision_guard().
+  if (!is.null(tok_tag)) {
+    .jst_tag_collision_guard(
+      parsed_map    = parsed_map,
+      tok_tag       = tok_tag,
+      tok_rule_idx  = tok_rule_idx,
+      tok_in_na     = tok_in_na,
+      parsed_labels = parsed_labels,
+      source_tags   = haven::na_tag(orig_num),
+      conv          = tok_conv,
+      fn            = "jrecode",
+      data_name     = .jst_data_name,
+      var_name      = orig_name,
+      conv_arg      = if (!is.null(convention)) {
+        paste0(", convention = \"", convention, "\"")
+      } else "",
+      lhs_render    = NULL,
+      who           = function(old_vals) {
+        vapply(as.numeric(old_vals), .jst_fmt_code, character(1))
+      })
   }
 
   # --- Apply recode ---
@@ -2153,6 +2195,15 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                      getOption(".jst_options_missing_convention",
                                .jst_options_defaults$missing.convention)
         d1_unset <- !isTRUE(d1_conv %in% c("spss", "stata", "sas"))
+        # S308: the token remedy is offered for ONE flagged value only.
+        # The token mints one value per convention, so with two or more
+        # flagged targets the rendered map ("8=missing; 9=missing")
+        # merged distinct codes onto one mint with nothing said (the
+        # S250 plural item). The plural note now leads with the declare
+        # pair, which keeps every code distinct under every convention,
+        # and names the merge in prose without printing it.
+        d1_tail <- if (one) "map it directly:"
+                   else "declare them on the recoded variable:"
         d1_lead <- if (d1_unset) {
           paste0(.jst_choose_convention_error(
                    variant   = "menu",
@@ -2160,7 +2211,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                    head_tail = paste0("the value", if (one) "" else "s",
                                       " cannot be made missing yet."),
                    prefixed  = FALSE), "\n",
-                 "Then map ", if (one) "it" else "them", " directly:")
+                 "Then ", d1_tail)
         } else {
           # Plain convention name ("SPSS convention"), not the -style
           # label, which doubled as "SPSS-style convention" (S267).
@@ -2168,7 +2219,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
             "To make the value", if (one) "" else "s",
             " missing under ",
             c(spss = "SPSS", stata = "Stata", sas = "SAS")[[d1_conv]],
-            " convention, map ", if (one) "it" else "them", " directly:")
+            " convention, ", d1_tail)
         }
         # The remedy call carries convention = only when this call did:
         # bare-call users stay on the setting; per-call users keep their
@@ -2176,29 +2227,18 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         d1_conv_arg <- if (!is.null(convention)) {
           paste0(", convention = \"", convention, "\"")
         } else ""
-        .jst_msg(paste0(
-          paste0(
-            "Note: ", .jst_and_list(pairs), ", which ",
-            if (one) "looks like a coded missing value."
-            else "look like coded missing values."), "\n",
-          d1_lead, "\n",
-          "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
-          .jst_data_name, ", ", orig_name, ", map = \"",
-          .jst_render_map_string(parsed_map, targets_to_missing = flagged),
-          "\"", d1_conv_arg, ")\n",
-          # S303: the declare remedy names the RESULT. From S267 it
-          # named the source column in the assignment form -- a
-          # declaration where no cell holds the code, leaving the recoded
-          # column's value untouched unless the recode was re-run. jrecode
-          # cannot see the column the user assigns to (Rule S's scope
-          # note), so the remedy is the documented two-step pair: the
-          # user's own recode into <var>R, then the declaration on that
-          # same column. The pair names only what it creates, so it runs
-          # whatever the user called theirs. The declaration teaches
-          # modify = TRUE alone (Rule S, S229 corollary: a suggestion,
-          # not a report).
-          "Or declare ", .jst_and_list(codes),
-          " as missing on the recoded variable:\n",
+        # S303: the declare remedy names the RESULT. From S267 it
+        # named the source column in the assignment form -- a
+        # declaration where no cell holds the code, leaving the recoded
+        # column's value untouched unless the recode was re-run. jrecode
+        # cannot see the column the user assigns to (Rule S's scope
+        # note), so the remedy is the documented two-step pair: the
+        # user's own recode into <var>R, then the declaration on that
+        # same column. The pair names only what it creates, so it runs
+        # whatever the user called theirs. The declaration teaches
+        # modify = TRUE alone (Rule S, S229 corollary: a suggestion,
+        # not a report).
+        d1_pair <- paste0(
           "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
           .jst_data_name, ", ", orig_name, ", map = \"",
           .jst_render_map_string(parsed_map),
@@ -2207,7 +2247,29 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
           "R, codes = c(",
           paste(format(flagged, trim = TRUE, scientific = FALSE),
                 collapse = ", "),
-          ")", d1_conv_arg, ", modify = TRUE)"))
+          ")", d1_conv_arg, ", modify = TRUE)")
+        d1_body <- if (one) {
+          paste0(
+            "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+            .jst_data_name, ", ", orig_name, ", map = \"",
+            .jst_render_map_string(parsed_map, targets_to_missing = flagged),
+            "\"", d1_conv_arg, ")\n",
+            "Or declare ", .jst_and_list(codes),
+            " as missing on the recoded variable:\n",
+            d1_pair)
+        } else {
+          paste0(d1_pair, "\n",
+                 "To make them one missing value instead, map ",
+                 if (length(flagged) == 2L) "both" else "them all",
+                 " to missing.")
+        }
+        .jst_msg(paste0(
+          paste0(
+            "Note: ", .jst_and_list(pairs), ", which ",
+            if (one) "looks like a coded missing value."
+            else "look like coded missing values."), "\n",
+          d1_lead, "\n",
+          d1_body))
       }
     }
   }
@@ -2491,6 +2553,140 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 }
 
 
+#' Internal helper: stop when the missing token's marker is also named by
+#' the map (S308)
+#'
+#' Under a stata or sas resolution the missing token mints one marker --
+#' .a, or .A under sas -- the one jconvert pairs with the first
+#' missing.convention.codes value, and it never advances to the next
+#' letter, for the same reason the spss mint never advances to the next
+#' code (S302): a map must mint the same marker on every data wave, and
+#' labels = "missing=..." must land on it. A map that also names that
+#' marker itself -- in a rule, the NA rule, or as else -- would put two
+#' DISTINCT missing categories on one marker with no message: the
+#' stata/sas form of the collision the spss arm has stopped on since S302
+#' (jrecode) and S304 (jencode). The map is read, not the cells, so a
+#' script cannot pass on one data wave and merge on the next.
+#'
+#' A source column's own cells already carrying the marker, kept by
+#' else=copy, are NOT a collision here: a tag is missing by construction,
+#' so that route is the tag form of the spss arm's benign reuse, and it
+#' stays silent under the S239 texture (recorded at S308, not ruled).
+#'
+#' The stop offers the two readings as runnable lines: the token's rules
+#' re-rendered to the first marker free of the map, the labels and the
+#' source column (keeps the categories distinct), then re-rendered to the
+#' map's own marker (merges them on purpose -- what the call would have
+#' done silently). Both render through .jst_render_map_string()'s
+#' missing_as, so a rule, the NA rule and else=.a take one shape;
+#' else=missing is not a legal map, which is why the merge line names
+#' the marker rather than the word.
+#'
+#' Callers place it AFTER the marker refusal, so a pasted line cannot
+#' meet that error next.
+#'
+#' @param parsed_map The parsed map after token resolution and tag
+#'   canonicalization (token rules carry tagged = tok_tag).
+#' @param tok_tag The token's canonical tag letter.
+#' @param tok_rule_idx Indices of the token's rules in parsed_map$mappings.
+#' @param tok_in_na Logical; the NA rule was the token.
+#' @param parsed_labels The parsed labels vector, or NULL.
+#' @param source_tags Character; the source column's cell tags (NA where
+#'   a cell carries none), or character(0) for a text source.
+#' @param conv The resolved convention, "stata" or "sas".
+#' @param fn "jrecode" or "jencode": the error prefix and the remedy call.
+#' @param data_name,var_name Names for the remedy lines.
+#' @param conv_arg The ", convention = ..." suffix, or "".
+#' @param lhs_render NULL for jrecode; .jst_jencode_lhs_render for jencode.
+#' @param who Function rendering one rule's old_vals for prose (numbers
+#'   for jrecode; quoted words, and "blank cells", for jencode).
+#'
+#' @return Invisible NULL when the map does not name the token's marker;
+#'   otherwise never returns.
+#'
+#' @keywords internal
+.jst_tag_collision_guard <- function(parsed_map, tok_tag, tok_rule_idx,
+                                     tok_in_na, parsed_labels, source_tags,
+                                     conv, fn, data_name, var_name,
+                                     conv_arg, lhs_render, who) {
+  marker   <- paste0(".", tok_tag)
+  user_idx <- setdiff(seq_along(parsed_map$mappings), tok_rule_idx)
+  hit_idx  <- user_idx[vapply(user_idx, function(i) {
+    identical(parsed_map$mappings[[i]]$tagged, tok_tag)
+  }, logical(1))]
+  na_hit   <- !tok_in_na && !is.null(parsed_map$na_rule) &&
+    identical(parsed_map$na_rule$tagged, tok_tag)
+  else_hit <- identical(parsed_map$else_action, "tagged") &&
+    identical(parsed_map$else_tag, tok_tag)
+  if (length(hit_idx) == 0L && !na_hit && !else_hit) {
+    return(invisible(NULL))
+  }
+
+  fmt_lhs <- function(old_vals) {
+    if (is.null(lhs_render)) {
+      paste(vapply(as.numeric(old_vals), .jst_fmt_code, character(1)),
+            collapse = ",")
+    } else lhs_render(old_vals)
+  }
+  # The map's own use of the marker, as rules: "8=.a", "NA=.a", "else=.a".
+  rule_txt <- c(
+    vapply(parsed_map$mappings[hit_idx], function(r) {
+      paste0(fmt_lhs(r$old_vals), "=", marker)
+    }, character(1)),
+    if (na_hit) paste0("NA=", marker),
+    if (else_hit) paste0("else=", marker))
+  # Who would share the marker: the map's own cases in map order, the
+  # token's, and an else rule's remainder last.
+  hit_who <- c(
+    unique(unlist(lapply(parsed_map$mappings[hit_idx],
+                         function(r) who(r$old_vals)))),
+    if (na_hit) "NA")
+  tok_who <- c(
+    unique(unlist(lapply(parsed_map$mappings[tok_rule_idx],
+                         function(r) who(r$old_vals)))),
+    if (tok_in_na) "NA")
+  sharers <- c(hit_who, tok_who, if (else_hit) "every other value")
+
+  # The first marker free of the map, the labels and the source column.
+  alphabet <- if (identical(conv, "sas")) LETTERS else letters
+  used <- c(tok_tag,
+            unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
+            parsed_map$na_rule$tagged,
+            parsed_map$else_tag,
+            if (!is.null(parsed_labels)) haven::na_tag(parsed_labels),
+            source_tags)
+  used <- as.character(used[!is.na(used)])
+  free <- setdiff(alphabet, .jst_canonical_tag(used, conv))[1L]
+
+  conv_word <- if (identical(conv, "sas")) "SAS" else "Stata"
+  render <- function(as) {
+    s <- .jst_render_map_string(parsed_map, lhs_render = lhs_render,
+                                missing_as = as)
+    # jencode's map goes inside a double-quoted argument (S249).
+    if (!is.null(lhs_render)) gsub("\"", "\\\"", s, fixed = TRUE) else s
+  }
+  line <- function(map_str) {
+    paste0("  ", data_name, "$", var_name, "R <- ", fn, "(", data_name,
+           ", ", var_name, ", map = \"", map_str, "\"", conv_arg, ")")
+  }
+  distinct <- paste0("To keep them distinct, give missing a marker the ",
+                     "map does not use", if (is.na(free)) "." else ":")
+  if (!is.na(free)) {
+    distinct <- paste0(distinct, "\n", line(render(paste0(".", free))))
+  }
+  .jst_stop(
+    paste0("'missing' would use ", marker, " under ", conv_word,
+           " convention, but the map also assigns ", marker, " (",
+           paste(rule_txt, collapse = "; "), "), so ",
+           .jst_and_list(sharers), " would share one missing value."),
+    "\n", distinct, "\n",
+    paste0("Or, if they mean the same thing, use ", marker, " for ",
+           if (length(sharers) > 2L) "all of them" else "both", ":"),
+    "\n", line(render(marker)),
+    fn = fn)
+}
+
+
 #' Internal helper: pad a character vector to a common width
 #'
 #' Right-pads with spaces so a two-column listing lines up. Used by
@@ -2612,7 +2808,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   composes the two tokens. Under the SPSS convention the code the token
 #'   uses must be free: if the map also assigns it as an ordinary value,
 #'   or a number stored as text is kept at that same value, the call stops
-#'   rather than sweep those cases into missingness.
+#'   rather than sweep those cases into missingness. Under the Stata or
+#'   SAS convention the token always uses the first marker (\code{.a}, or
+#'   \code{.A}), so a map that also assigns that marker itself stops
+#'   rather than merge two missing categories onto one marker.
 #'
 #'   By default an incomplete map is an error that names the unmatched
 #'   words (nothing is dropped silently); add an \code{else} rule to sweep
@@ -3356,6 +3555,36 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       }
     }
 
+    # --- Tag collision guard (S308; the S304 tag-merge item) ---------------
+    # The stata/sas twin of the guard above, shared with jrecode: the
+    # token's marker named again by the map would merge two distinct
+    # missing categories, hinted only by the label-collapse note. A text
+    # source carries no tags, so the free-marker search reads the map and
+    # the labels alone. Sits after the incomplete-map error, as the spss
+    # guard does, so every map it prints is complete.
+    if (!is.null(tok_tag)) {
+      .jst_tag_collision_guard(
+        parsed_map    = parsed_map,
+        tok_tag       = tok_tag,
+        tok_rule_idx  = tok_rule_idx,
+        tok_in_na     = tok_in_na,
+        parsed_labels = parsed_labels,
+        source_tags   = character(0),
+        conv          = tok_conv,
+        fn            = "jencode",
+        data_name     = .jst_data_name,
+        var_name      = var_name,
+        conv_arg      = if (!is.null(convention)) {
+          paste0(", convention = \"", convention, "\"")
+        } else "",
+        lhs_render    = .jst_jencode_lhs_render,
+        who           = function(old_vals) {
+          vapply(old_vals, function(w) {
+            if (!nzchar(w)) "blank cells" else paste0("\"", w, "\"")
+          }, character(1), USE.NAMES = FALSE)
+        })
+    }
+
     # Apply the rules. A blank rule is an ordinary mapping whose old value
     # is the empty string, so blank cells fall out of this loop unaided.
     for (rule in parsed_map$mappings) {
@@ -3670,6 +3899,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         d1_conv_arg <- if (!is.null(convention)) {
           paste0(", convention = \"", convention, "\"")
         } else ""
+        # S308: the token remedy for ONE flagged value only; the plural
+        # note leads with the declare pair (see the jrecode twin).
+        d1_tail <- if (one) "map it directly:"
+                   else "declare them on the encoded variable:"
         d1_lead <- if (d1_unset) {
           paste0(.jst_choose_convention_error(
                    variant   = "menu",
@@ -3677,48 +3910,34 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
                    head_tail = paste0("the value", if (one) "" else "s",
                                       " cannot be made missing yet."),
                    prefixed  = FALSE), "\n",
-                 "Then map ", if (one) "it" else "them", " directly:")
+                 "Then ", d1_tail)
         } else {
           paste0(
             "To make the value", if (one) "" else "s",
             " missing under ",
             c(spss = "SPSS", stata = "Stata", sas = "SAS")[[d1_conv]],
-            " convention, map ", if (one) "it" else "them", " directly:")
+            " convention, ", d1_tail)
         }
-        msgs <- c(msgs, paste0(
-          paste0(
-            "Note: ", .jst_and_list(pairs), ", which ",
-            if (one) "looks like a coded missing value."
-            else "look like coded missing values."), "\n",
-          d1_lead, "\n",
-          # S249: the rendered map is escaped before it goes inside the
-          # double-quoted map = argument. .jst_jencode_lhs_render re-quotes
-          # any word containing ; = or , with double quotes, and an
-          # unescaped inner quote closed the argument early -- the suggested
-          # line did not parse. Escaping, rather than switching the outer
-          # quote to ', is the form that survives both hazards at once: a
-          # map can carry an apostrophe word and a quoted phrase together,
-          # and single outer quotes break on the apostrophe.
-          #
-          # Deliberately NOT routed through .jst_jencode_map_call(): that
-          # builder packs long maps across lines by splitting on ";", which
-          # is quote-naive, so a quoted phrase holding a semicolon would be
-          # broken across the split and the pasted word would no longer
-          # match the data. This line stays whole.
-          "  ", .jst_data_name, "$", var_name, "R <- jencode(",
-          .jst_data_name, ", ", var_name, ", map = \"",
-          gsub("\"", "\\\"",
-               .jst_render_map_string(parsed_map,
-                                      lhs_render = .jst_jencode_lhs_render,
-                                      targets_to_missing = flagged),
-               fixed = TRUE),
-          "\"", d1_conv_arg, ")\n",
-          # S303: see the jrecode twin. Here the S267 form was not merely
-          # inert but an error -- the source is text, and a text column
-          # cannot carry a missing-value code. The pair's encode line is
-          # escaped exactly as the first remedy's is (S249).
-          "Or declare ", .jst_and_list(codes),
-          " as missing on the encoded variable:\n",
+        # S249: the rendered map is escaped before it goes inside the
+        # double-quoted map = argument. .jst_jencode_lhs_render re-quotes
+        # any word containing ; = or , with double quotes, and an
+        # unescaped inner quote closed the argument early -- the suggested
+        # line did not parse. Escaping, rather than switching the outer
+        # quote to ', is the form that survives both hazards at once: a
+        # map can carry an apostrophe word and a quoted phrase together,
+        # and single outer quotes break on the apostrophe.
+        #
+        # Deliberately NOT routed through .jst_jencode_map_call(): that
+        # builder packs long maps across lines by splitting on ";", which
+        # is quote-naive, so a quoted phrase holding a semicolon would be
+        # broken across the split and the pasted word would no longer
+        # match the data. These lines stay whole.
+        #
+        # S303: see the jrecode twin. Here the S267 form was not merely
+        # inert but an error -- the source is text, and a text column
+        # cannot carry a missing-value code. The pair's encode line is
+        # escaped exactly as the token line is (S249).
+        d1_pair <- paste0(
           "  ", .jst_data_name, "$", var_name, "R <- jencode(",
           .jst_data_name, ", ", var_name, ", map = \"",
           gsub("\"", "\\\"",
@@ -3730,7 +3949,33 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
           "R, codes = c(",
           paste(format(flagged, trim = TRUE, scientific = FALSE),
                 collapse = ", "),
-          ")", d1_conv_arg, ", modify = TRUE)"))
+          ")", d1_conv_arg, ", modify = TRUE)")
+        d1_body <- if (one) {
+          paste0(
+            "  ", .jst_data_name, "$", var_name, "R <- jencode(",
+            .jst_data_name, ", ", var_name, ", map = \"",
+            gsub("\"", "\\\"",
+                 .jst_render_map_string(parsed_map,
+                                        lhs_render = .jst_jencode_lhs_render,
+                                        targets_to_missing = flagged),
+                 fixed = TRUE),
+            "\"", d1_conv_arg, ")\n",
+            "Or declare ", .jst_and_list(codes),
+            " as missing on the encoded variable:\n",
+            d1_pair)
+        } else {
+          paste0(d1_pair, "\n",
+                 "To make them one missing value instead, map ",
+                 if (length(flagged) == 2L) "both" else "them all",
+                 " to missing.")
+        }
+        msgs <- c(msgs, paste0(
+          paste0(
+            "Note: ", .jst_and_list(pairs), ", which ",
+            if (one) "looks like a coded missing value."
+            else "look like coded missing values."), "\n",
+          d1_lead, "\n",
+          d1_body))
       }
     }
   }
