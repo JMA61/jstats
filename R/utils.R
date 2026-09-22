@@ -202,10 +202,44 @@
 #' document.
 #'
 #' The function checks for an internet connection first; if jstats is already
-#' up to date it says so and stops. The install runs in a separate R process so
-#' the copy of jstats loaded in your session does not lock its own files during
-#' the install (the usual cause of a failed update on Windows). After a
-#' successful update you restart R once to load the new version.
+#' up to date it says so and stops. Otherwise it installs the update and then
+#' confirms that the update actually happened before reporting success.
+#'
+#' @details
+#' \strong{Where the update goes.} The update is installed into the library
+#' folder that holds the copy of jstats currently loaded, so the version in
+#' use is the one replaced. This matters when a computer has more than one
+#' library folder (a system-wide one and a personal one, say): a plain
+#' \code{install.packages("jstats")} puts the new version in whichever folder
+#' is first on \code{.libPaths()}, which can leave a second copy of jstats
+#' beside the original rather than replacing it. jupdate() follows the rule
+#' \code{update.packages()} uses instead, and installs where the loaded copy
+#' lives. To see where that is, run \code{find.package("jstats")}.
+#'
+#' \strong{If the folder cannot be written to.} Before installing, jupdate()
+#' checks that R can create files in that folder. If it cannot -- typically
+#' a system-wide folder such as Program Files on Windows, or a folder locked
+#' by an institution's IT policy -- jupdate() stops and names the folder,
+#' rather than installing a second copy somewhere else. Run R with permission
+#' to write there (on your own Windows computer, usually by starting RStudio
+#' as an administrator), or ask your IT department to install the update.
+#'
+#' \strong{How success is confirmed.} \code{install.packages()} only warns
+#' when it cannot download or install a package; it does not stop. jupdate()
+#' therefore does not take a quiet install as success. After the install it
+#' reads the version now on disk in the target folder, and reports success
+#' only when that version is newer than the one loaded. If it is not -- a
+#' dropped connection part-way through, a repository the network cannot
+#' reach, or a failed build -- jupdate() stops, states that the folder still
+#' holds the old version, and repeats what \code{install.packages()} reported
+#' about the cause so you can see why.
+#'
+#' \strong{The separate process.} The install runs in a separate R process
+#' so the copy of jstats loaded in your session does not lock its own files
+#' during the install (the usual cause of a failed update on Windows).
+#'
+#' \strong{After the update.} Restart R once to load the new version; the
+#' success message shows how.
 #'
 #' @param ask Logical. When \code{TRUE} and the session is interactive,
 #'   jupdate() shows the available and installed versions and asks for
@@ -284,21 +318,34 @@ jupdate <- function(ask = FALSE) {
     }
   }
 
+  # Install into the library holding the copy of jstats in use, so the update
+  # replaces that copy rather than adding a second one wherever the child's
+  # .libPaths()[1] happens to point (S309; the rule update.packages() itself
+  # follows). Probe the folder first: the child is non-interactive, so an
+  # unwritable target would die there with R's bare "unable to install
+  # packages" and nothing to act on.
+  lib <- .jst_update_target_lib()
+  if (!.jst_lib_writable(lib)) {
+    .jst_stop(
+      "R cannot write to the folder where jstats is installed:\n",
+      "  ", lib, "\n",
+      "Run R with permission to write to that folder (on your own Windows ",
+      "computer, this usually means starting RStudio as an administrator), ",
+      "then run jupdate() again.\n",
+      "On a work or university computer, your IT department can do this ",
+      "for you."
+    )
+  }
+
   .jst_msg("Updating jstats ... (this may take a moment)")
 
   # Install in a clean, separate R process (via callr, an Imports dependency, so
   # always available). Because that process never loads jstats, the package
   # files are not locked, and the install completes even on Windows. A genuine
   # install failure makes the child error, which is surfaced honestly.
+  reported <- character(0)
   err <- tryCatch({
-    callr::r(
-      function() {
-        install.packages(
-          "jstats",
-          repos = c("https://jma61.r-universe.dev", "https://cloud.r-project.org")
-        )
-      }
-    )
+    reported <- .jst_update_install(lib)
     NULL
   }, error = function(e) conditionMessage(e))
 
@@ -306,8 +353,37 @@ jupdate <- function(ask = FALSE) {
     .jst_stop("the update did not complete. The error was: ", err)
   }
 
+  # install.packages() only WARNS when it cannot download or install a
+  # package, so a child that returns normally proves nothing (S309). Success
+  # is the version now on disk in the target library being newer than the
+  # one this session loaded; anything else is a failure, reported with ONE
+  # of the child's warnings: the first that names a web address (R's
+  # download layer warns about byte counts before it says what it could not
+  # reach, and the address survives translation where the wording does
+  # not), else the first there is.
+  now <- .jst_update_installed_version(lib)
+  if (is.null(now) ||
+      package_version(now) <= package_version(installed_ver)) {
+    reason <- if (length(reported)) {
+      named <- grep("://", reported, fixed = TRUE)
+      pick  <- if (length(named)) named[[1L]] else 1L
+      gsub("[[:space:]]+", " ", trimws(reported[[pick]]))
+    } else NULL
+    .jst_stop(
+      "the update did not complete.\n",
+      "The copy in this folder is still version ", installed_ver, ":\n",
+      "  ", lib,
+      if (!is.null(reason)) {
+        paste0("\nR reported:\n  ", reason,
+               "\nOnce that is fixed, run jupdate() again.")
+      } else {
+        "\nRun jupdate() again."
+      }
+    )
+  }
+
   .jst_msg(
-    "jstats has been updated.\n",
+    "jstats has been updated to version ", now, ".\n",
     "\n",
     "Restart R to load it in RStudio:\n",
     "  - open the Session menu > choose Restart R\n",
@@ -319,6 +395,108 @@ jupdate <- function(ask = FALSE) {
   )
 
   invisible(NULL)
+}
+
+
+#' Internal helper: the library folder an update of jstats should go into
+#'
+#' Returns the library holding the copy of jstats in use, so that jupdate()
+#' replaces that copy rather than installing beside it. find.package() with no
+#' lib.loc lists the LOADED namespace's path first, so the answer is the copy
+#' actually running even when .libPaths() was changed after startup. Under
+#' devtools::load_all() that path is a source folder, not a library; a result
+#' that is not one of .libPaths() therefore falls back to
+#' \code{.libPaths()[1]} -- install.packages()'s own default, and a developer
+#' state, so it is silent. Same rule as update.packages()'s instlib default.
+#' (S309)
+#'
+#' @param pkg_path The installed (or loaded) package's folder; defaults to
+#'   find.package("jstats"). Supplied only by tests.
+#' @return A single library path, normalized.
+#' @keywords internal
+.jst_update_target_lib <- function(pkg_path = find.package("jstats")) {
+  lib  <- normalizePath(dirname(pkg_path), winslash = "/", mustWork = FALSE)
+  libs <- normalizePath(.libPaths(), winslash = "/", mustWork = FALSE)
+  if (lib %in% libs) lib else libs[1L]
+}
+
+
+#' Internal helper: can this session write into a library folder?
+#'
+#' Tries to create and remove a scratch directory inside lib, R core's own
+#' test in install.packages() ("file.access is unreliable on Windows ... the
+#' only known reliable way is to try it"); used on every platform because the
+#' attempt is the ground truth on all of them. A folder that does not exist
+#' is not writable. (S309)
+#'
+#' @param lib A single library path.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_lib_writable <- function(lib) {
+  if (!dir.exists(lib)) return(FALSE)
+  probe <- file.path(lib, paste0("_test_dir_", Sys.getpid()))
+  unlink(probe, recursive = TRUE)
+  made <- tryCatch(dir.create(probe, showWarnings = FALSE),
+                   error = function(e) FALSE)
+  if (isTRUE(made)) unlink(probe, recursive = TRUE)
+  isTRUE(made)
+}
+
+
+#' Internal helper: install the latest jstats into lib in a child R process
+#'
+#' The callr hand-off jupdate() makes, factored out so a test can stand in
+#' for it and see the library it was handed. The child never loads jstats,
+#' so the package files are not locked (the usual cause of a failed update
+#' on Windows). install.packages() reports every failure it meets -- a
+#' repository it cannot reach, a package it cannot find, an install that
+#' exits non-zero -- as a WARNING and returns normally, so the child
+#' collects those warnings and returns them for the caller to act on; the
+#' caller decides success by what is on disk afterwards. Errors propagate.
+#' (S309)
+#'
+#' @param lib The library folder to install into.
+#' @return A character vector of the warnings install.packages() raised in
+#'   the child, in order; empty when it raised none.
+#' @keywords internal
+.jst_update_install <- function(lib) {
+  callr::r(
+    function(lib) {
+      reported <- character(0)
+      withCallingHandlers(
+        install.packages(
+          "jstats",
+          lib   = lib,
+          repos = c("https://jma61.r-universe.dev", "https://cloud.r-project.org")
+        ),
+        warning = function(w) {
+          reported <<- c(reported, conditionMessage(w))
+          invokeRestart("muffleWarning")
+        }
+      )
+      reported
+    },
+    args = list(lib = lib)
+  )
+}
+
+
+#' Internal helper: the version of jstats now installed in a library folder
+#'
+#' Reads the installed package's metadata from lib on disk -- not the
+#' loaded namespace -- so that after a child process has installed an
+#' update the answer reflects what the child left there. (S309)
+#'
+#' @param lib A single library path.
+#' @return The version string, or NULL when no jstats is installed in lib.
+#' @keywords internal
+.jst_update_installed_version <- function(lib) {
+  d <- tryCatch(
+    suppressWarnings(utils::packageDescription("jstats", lib.loc = lib)),
+    error = function(e) NULL
+  )
+  if (!is.list(d) || is.null(d$Version)) return(NULL)
+  as.character(d$Version)
 }
 
 
