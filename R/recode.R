@@ -162,13 +162,13 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     if (is.factor(x)) {
       .jst_stop("'", var_name, "' is a factor; value labels can only be ",
                 "applied to numeric variables.\n",
-                "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
+                "Convert it to numbers first with jencode().")
     }
     if (is.character(x) ||
         (haven::is.labelled(x) && typeof(x) == "character")) {
       .jst_stop("'", var_name, "' is a character (text) variable; value ",
                 "labels can only be applied to numeric variables.\n",
-                "If the values are numbers stored as text, convert with as.numeric() first.")
+                "Convert it to numbers first with jencode().")
     }
     if (!is.numeric(x) && !is.logical(x) && !haven::is.labelled(x)) {
       .jst_stop("'", var_name, "' is of type ", typeof(x),
@@ -1217,13 +1217,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   if (is.factor(orig)) {
     .jst_stop("'", orig_name, "' is a factor; values can only be recoded ",
               "on numeric variables.\n",
-              "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
+              "Convert it to numbers first with jencode().")
   }
   if (is.character(orig) ||
       (haven::is.labelled(orig) && typeof(orig) == "character")) {
     .jst_stop("'", orig_name, "' is a character (text) variable; values can ",
               "only be recoded on numeric variables.\n",
-              "If the values are numbers stored as text, convert with as.numeric() first.")
+              "Convert it to numbers first with jencode().")
   }
   if (!is.numeric(orig) && !is.logical(orig) && !haven::is.labelled(orig)) {
     .jst_stop("'", orig_name, "' is of type ", typeof(orig),
@@ -2768,21 +2768,22 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 }
 
 
-#' Encode a text variable as labelled numbers
+#' Encode a text or factor variable as labelled numbers
 #'
-#' Converts a character (text) variable into numeric codes, attaching the
-#' original words as value labels so every later table still shows the
-#' words. With no \code{map}, codes are assigned alphabetically and the
+#' Converts a character (text) or factor variable into numeric codes,
+#' attaching the original words as value labels so every later table
+#' still shows the words. With no \code{map}, codes are assigned
+#' alphabetically (a factor's levels keep their own order) and the
 #' assignment is printed; with a \code{map}, you choose the numbers.
 #' Numbers stored as text ("34") always convert to their own value, never
 #' to a rank.
 #'
 #' @param data A data frame containing the variable to encode. Can be
 #'   omitted if a default data frame has been set with \code{juse()}.
-#' @param var The text variable to encode (unquoted name). Only character
-#'   variables are accepted: factors, numeric, logical, and date/time
-#'   variables are refused with a message naming the right tool (for
-#'   numeric variables, that is \code{jrecode()}).
+#' @param var The text or factor variable to encode (unquoted name).
+#'   Character variables and factors are accepted; numeric, logical, and
+#'   date/time variables are refused with a message naming the right tool
+#'   (for numeric variables, that is \code{jrecode()}).
 #' @param map Optional. A single string of semicolon-separated rules, each
 #'   \code{word=number}: for example
 #'   \code{"Bail=1; Parole=2; Remand=3"}. Matching against the data is
@@ -2879,6 +2880,21 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' ordered set (Low / Medium / High) can be renumbered deliberately
 #' rather than accepted alphabetically.
 #'
+#' \strong{A factor is text with a declared order.} R's \code{factor()}
+#' stores categories as level text in a set order, so \code{jencode()}
+#' accepts a factor as it accepts a text variable, with two differences
+#' that honor the declaration: the codes follow the level order rather
+#' than the alphabet (the same thing for a factor built without
+#' \code{levels =}, whose levels are alphabetical), and a level with no
+#' cases keeps its code and label, tagged \code{(no cases)} in the
+#' listing. An ordered factor (\code{ordered = TRUE}) has already declared
+#' its order, so the rerun-with-a-map suggestion is not printed for it.
+#' Levels that are all numbers convert by face value, like numbers stored
+#' as text. With a \code{map}, the rules name the level text exactly as
+#' they name words. This is also the route from a factor to
+#' \code{jrecode()}, \code{jrelabel()} and \code{jdeclare_missing()},
+#' which work on numeric variables only.
+#'
 #' \strong{Numbers stored as text convert by face value.} Here the two
 #' part company. \code{AUTORECODE} treats "34" as just another string and
 #' renumbers it to its alphabetical rank; \code{jencode()} always
@@ -2925,6 +2941,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'
 #' # Repair mode: keep the numbers at face value, sweep words and blanks
 #' MyData$Age <- jencode(MyData, AgeTxt, map = "else=NA")
+#'
+#' # A factor: level order kept; an empty level keeps its code and label
+#' MyData$Sev <- factor(c("Low", "High", "Low", "High"),
+#'                      levels = c("Low", "Medium", "High"))
+#' MyData$SevR <- jencode(MyData, Sev)
 #'
 #' @seealso \code{\link{jrecode}} for changing numeric values,
 #'   \code{\link{jrelabel}} for value labels,
@@ -2995,27 +3016,26 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   # --- Type guard -----------------------------------------------------------
   # jencode() is the text counterpart of jrecode(): it encodes words, so
   # everything jrecode() accepts is refused here, and the message points
-  # back at jrecode() where that is the right tool.
-  is_text <- is.character(orig) ||
-             (haven::is.labelled(orig) && typeof(orig) == "character")
+  # back at jrecode() where that is the right tool. A factor is accepted
+  # as text that already carries an order: its levels are the words, in
+  # level order, and a level with no cases keeps its code and label
+  # (Session 310).
+  is_factor <- is.factor(orig)
+  is_text   <- is_factor || is.character(orig) ||
+               (haven::is.labelled(orig) && typeof(orig) == "character")
   if (!is_text) {
-    if (is.factor(orig)) {
-      .jst_stop("'", var_name, "' is a factor; only text variables can be ",
-                "encoded.\n",
-                "Convert it to text first with as.character().")
-    }
     if (inherits(orig, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
-      .jst_stop("'", var_name, "' is a date/time variable; only text ",
-                "variables can be encoded.")
+      .jst_stop("'", var_name, "' is a date/time variable; only text and ",
+                "factor variables can be encoded.")
     }
     if (is.numeric(orig) || haven::is.labelled(orig)) {
-      .jst_stop("'", var_name, "' is a numeric variable; only text variables ",
-                "can be encoded.\n",
+      .jst_stop("'", var_name, "' is a numeric variable; only text and ",
+                "factor variables can be encoded.\n",
                 "To change numeric values, use jrecode().")
     }
     if (is.logical(orig)) {
-      .jst_stop("'", var_name, "' is a logical variable; only text variables ",
-                "can be encoded.")
+      .jst_stop("'", var_name, "' is a logical variable; only text and ",
+                "factor variables can be encoded.")
     }
     .jst_stop("'", var_name, "' is of type ", typeof(orig),
               " and cannot be encoded.")
@@ -3026,7 +3046,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   # ("" or all spaces once outer whitespace is trimmed -- real data in the
   # field, where blank often means No), and a plain NA. Outer whitespace is
   # trimmed on both the data side and the map side before matching.
-  txt        <- as.character(unclass(orig))
+  # A factor converts by its level TEXT (as.character()), never by
+  # unclass(), which would hand over the internal integer codes.
+  txt        <- if (is_factor) as.character(orig) else
+                                as.character(unclass(orig))
   na_mask    <- is.na(txt)
   words      <- txt
   words[!na_mask] <- trimws(txt[!na_mask])
@@ -3034,10 +3057,22 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   word_mask  <- !na_mask & !blank_mask
   n_blank    <- sum(blank_mask)
 
-  words_u <- unique(words[word_mask])
-  # "Alphabetical" = radix sort on the lowercased word, tie-broken by the
-  # word itself: deterministic across locales, and reads as alphabetical.
-  words_u <- words_u[order(tolower(words_u), words_u, method = "radix")]
+  words_obs <- unique(words[word_mask])
+  if (is_factor) {
+    # The factor's levels are the words, in level order. A level that is
+    # blank after trimming is not a word. In automatic mode a level with
+    # no cases keeps its place -- it is a declared category, as a map rule
+    # naming an absent word already is; in map mode the user's rules say
+    # which words exist, so only observed words are in play.
+    lvls    <- unique(trimws(levels(orig)))
+    lvls    <- lvls[!is.na(lvls) & nzchar(lvls)]
+    words_u <- if (is.null(map)) lvls else lvls[lvls %in% words_obs]
+  } else {
+    # "Alphabetical" = radix sort on the lowercased word, tie-broken by the
+    # word itself: deterministic across locales, and reads as alphabetical.
+    words_u <- words_obs[order(tolower(words_obs), words_obs,
+                               method = "radix")]
+  }
 
   new_num        <- rep(NA_real_, length(txt))
   val_labels_out <- c()
@@ -3072,8 +3107,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       big <- which.max(vals)
       msgs <- c(msgs, paste0(
         paste0(
-          "Note: every value in '", var_name, "' is a number stored as ",
-          "text; each was converted to its own value (\"", words_u[big],
+          "Note: every ",
+          if (is_factor) "level of '" else "value in '", var_name,
+          if (is_factor) "' is a number; " else
+                         "' is a number stored as text; ",
+          "each was converted to its own value (\"", words_u[big],
           "\" -> ", .jst_fmt_code(vals[big]), ", never renumbered)."), "\n",
         paste0(
           "No value labels were attached. To add labels, use jrelabel().")))
@@ -3089,8 +3127,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       word_only <- words_u[!num_like]
       .jst_stop(paste0(
         paste0(
-          "'", var_name, "' mixes numbers stored as text with words: ",
-          .jst_jencode_show_words(word_only), "."), "\n",
+          "'", var_name, "' mixes ",
+          if (is_factor) "numeric levels" else "numbers stored as text",
+          " with words: ", .jst_jencode_show_words(word_only), "."), "\n",
         paste0(
           "The numbers convert to their own values, so the words cannot ",
           "be numbered automatically."), "\n",
@@ -3108,17 +3147,33 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       val_labels_out <- stats::setNames(as.numeric(codes), words_u)
       assigned_rules <- paste0(words_u, "=", codes)
 
+      # A factor level with no cases is still listed (it keeps its code and
+      # label) and is tagged, since jfreq() on the encoded column will not
+      # show it. Text words are all observed, so the tag never fires there.
+      n_per   <- vapply(words_u, function(w) sum(word_mask & words == w),
+                        integer(1))
       listing <- paste0("  ", .jst_pad_right(paste0("\"", words_u, "\"")),
-                        " -> ", codes)
-      msgs <- c(msgs, paste0(
-        "Note: '", var_name, "' was encoded alphabetically:\n",
-        paste(listing, collapse = "\n"), "\n",
-        paste0(
-          "If these categories have a natural order (like ",
-          "Low/Medium/High), rerun with a map to choose the numbers:"),
-        "\n",
-        .jst_jencode_map_call(.jst_data_name, var_name,
-                              paste(assigned_rules, collapse = "; "))))
+                        " -> ", codes,
+                        ifelse(n_per == 0L, "  (no cases)", ""))
+      note <- paste0(
+        "Note: '", var_name, "' was encoded ",
+        if (is_factor) "in its level order:" else "alphabetically:", "\n",
+        paste(listing, collapse = "\n"))
+      # An ordered factor has declared its order, so the rerun nudge is
+      # noise there. A plain factor's level order is R's default
+      # (alphabetical) unless the user set it, and the two cannot be told
+      # apart, so it keeps the nudge as text does.
+      if (!(is_factor && is.ordered(orig))) {
+        note <- paste0(
+          note, "\n",
+          paste0(
+            "If these categories have a natural order (like ",
+            "Low/Medium/High), rerun with a map to choose the numbers:"),
+          "\n",
+          .jst_jencode_map_call(.jst_data_name, var_name,
+                                paste(assigned_rules, collapse = "; ")))
+      }
+      msgs <- c(msgs, note)
     }
 
     # Outer spaces removed before encoding: the stray spaces are still in
@@ -4873,14 +4928,14 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       # by its internal integer codes), so both are refused with a fix.
       if (is.character(col) ||
           (haven::is.labelled(col) && typeof(col) == "character")) {
-        .jst_stop("'", vn, "' is a character (text) variable; missing-value ",
-             "codes can only be declared on numeric variables.\n",
-             "If the values are numbers stored as text, convert with as.numeric() first.")
+        .jst_stop("'", vn, "' is a character (text) variable; missing ",
+             "values can only be declared on numeric variables.\n",
+             "Convert it to numbers first with jencode().")
       }
       if (is.factor(col)) {
-        .jst_stop("'", vn, "' is a factor; missing-value codes can only be ",
+        .jst_stop("'", vn, "' is a factor; missing values can only be ",
              "declared on numeric variables.\n",
-             "If the categories are numbers, convert with as.numeric(as.character(...)) first.")
+             "Convert it to numbers first with jencode().")
       }
 
       # --- Read existing UDM info on the column ----------------------------

@@ -1290,10 +1290,13 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'   \code{jdummy(NULL)} clears the dummy registrations on the \code{juse()}
 #'   default data frame (or, with no default set, the only frame that carries
 #'   them; if several do, it asks rather than wiping all).
-#' @param ... One or more unquoted variable names to register. Omit (along
-#'   with data) to display all current registrations. A lone \code{NULL} in the
-#'   variable slot -- \code{jdummy(data, NULL)} -- clears that frame's dummy
-#'   registrations.
+#' @param ... One or more unquoted variable names to register. The variable
+#'   may be haven-labelled, numeric, logical, character, or a factor: for a
+#'   factor the levels are the categories, in level order, and a level with
+#'   no cases is left out; for a text variable the distinct values are the
+#'   categories, in alphabetical order. Omit (along with data) to display
+#'   all current registrations. A lone \code{NULL} in the variable slot --
+#'   \code{jdummy(data, NULL)} -- clears that frame's dummy registrations.
 #' @param ref The reference category (excluded from the regression model).
 #'   Can be a numeric code, a quoted label name, \code{first}, \code{last},
 #'   or \code{auto} (the default). Under \code{auto}, a variable with
@@ -1719,7 +1722,9 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 #'   \code{jnumeric(data, NULL)} clears that one frame's numeric registrations.
 #'   Called with no arguments, \code{jnumeric()} lists the session's numeric
 #'   and count registrations.
-#' @param ... One or more unquoted variable names to register.
+#' @param ... One or more unquoted variable names to register. The
+#'   registration applies to numeric and haven-labelled variables; a factor
+#'   or text variable is categorical regardless and is unaffected by it.
 #' @param remove Logical; if \code{TRUE}, remove the numeric registration for
 #'   the named variables instead of adding it.
 #' @param clear.all Logical; if \code{TRUE}, clear numeric registrations on
@@ -1809,7 +1814,9 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'   if several do, it asks rather than wiping all). \code{jcount(data, NULL)}
 #'   clears that one frame's count registrations. Called with no arguments,
 #'   \code{jcount()} lists the session's numeric and count registrations.
-#' @param ... One or more unquoted variable names to register.
+#' @param ... One or more unquoted variable names to register. The
+#'   registration applies to numeric and haven-labelled variables; a factor
+#'   or text variable is categorical regardless and is unaffected by it.
 #' @param remove Logical; if \code{TRUE}, remove the count registration for the
 #'   named variables instead of adding it.
 #' @param clear.all Logical; if \code{TRUE}, clear count registrations on every
@@ -1901,6 +1908,9 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
 #' @param ... One or more unquoted variable names to register, or a single
 #'   \code{NULL} to clear this frame's Likert registrations (see Details).
+#'   The registration applies to numeric and haven-labelled variables; a
+#'   factor or text variable is categorical regardless and is unaffected by
+#'   it.
 #' @param remove Logical; if TRUE, remove the named variables' Likert
 #'   registrations instead of adding them.
 #' @param clear.all Logical; if TRUE, clear Likert registrations on every data

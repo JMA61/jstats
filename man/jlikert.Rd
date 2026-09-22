@@ -10,7 +10,10 @@ jlikert(data, ..., remove = FALSE, clear.all = FALSE)
 \item{data}{A data frame, or omitted to use the \code{\link{juse}} default.}
 
 \item{...}{One or more unquoted variable names to register, or a single
-\code{NULL} to clear this frame's Likert registrations (see Details).}
+\code{NULL} to clear this frame's Likert registrations (see Details).
+The registration applies to numeric and haven-labelled variables; a
+factor or text variable is categorical regardless and is unaffected by
+it.}
 
 \item{remove}{Logical; if TRUE, remove the named variables' Likert
 registrations instead of adding them.}

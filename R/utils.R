@@ -60,8 +60,8 @@
 #'     value labels
 #'   \item \code{\link{jrelabel}} -- apply or replace value labels and
 #'     variable label
-#'   \item \code{\link{jencode}} -- encode a text variable as labelled
-#'     numeric codes
+#'   \item \code{\link{jencode}} -- encode a text or factor variable as
+#'     labelled numeric codes
 #'   \item \code{\link{jsum}} -- row-wise sum across variables, with
 #'     min-valid handling
 #'   \item \code{\link{javg}} -- row-wise mean across variables, with

@@ -2,7 +2,7 @@
 % Please edit documentation in R/recode.R
 \name{jencode}
 \alias{jencode}
-\title{Encode a text variable as labelled numbers}
+\title{Encode a text or factor variable as labelled numbers}
 \usage{
 jencode(data, var, map = NULL, labels = NULL, convention = NULL)
 }
@@ -10,10 +10,10 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
 \item{data}{A data frame containing the variable to encode. Can be
 omitted if a default data frame has been set with \code{juse()}.}
 
-\item{var}{The text variable to encode (unquoted name). Only character
-variables are accepted: factors, numeric, logical, and date/time
-variables are refused with a message naming the right tool (for
-numeric variables, that is \code{jrecode()}).}
+\item{var}{The text or factor variable to encode (unquoted name).
+Character variables and factors are accepted; numeric, logical, and
+date/time variables are refused with a message naming the right tool
+(for numeric variables, that is \code{jrecode()}).}
 
 \item{map}{Optional. A single string of semicolon-separated rules, each
 \code{word=number}: for example
@@ -97,9 +97,10 @@ own text-to-numbers command (\code{AUTORECODE}, below) offers only
 the preserving form.
 }
 \description{
-Converts a character (text) variable into numeric codes, attaching the
-original words as value labels so every later table still shows the
-words. With no \code{map}, codes are assigned alphabetically and the
+Converts a character (text) or factor variable into numeric codes,
+attaching the original words as value labels so every later table
+still shows the words. With no \code{map}, codes are assigned
+alphabetically (a factor's levels keep their own order) and the
 assignment is printed; with a \code{map}, you choose the numbers.
 Numbers stored as text ("34") always convert to their own value, never
 to a rank.
@@ -121,6 +122,21 @@ with value labels  1 "Bail"  2 "Parole"  3 "Remand"}
 prints the assignment listing plus a ready-made \code{map} call so an
 ordered set (Low / Medium / High) can be renumbered deliberately
 rather than accepted alphabetically.
+
+\strong{A factor is text with a declared order.} R's \code{factor()}
+stores categories as level text in a set order, so \code{jencode()}
+accepts a factor as it accepts a text variable, with two differences
+that honor the declaration: the codes follow the level order rather
+than the alphabet (the same thing for a factor built without
+\code{levels =}, whose levels are alphabetical), and a level with no
+cases keeps its code and label, tagged \code{(no cases)} in the
+listing. An ordered factor (\code{ordered = TRUE}) has already declared
+its order, so the rerun-with-a-map suggestion is not printed for it.
+Levels that are all numbers convert by face value, like numbers stored
+as text. With a \code{map}, the rules name the level text exactly as
+they name words. This is also the route from a factor to
+\code{jrecode()}, \code{jrelabel()} and \code{jdeclare_missing()},
+which work on numeric variables only.
 
 \strong{Numbers stored as text convert by face value.} Here the two
 part company. \code{AUTORECODE} treats "34" as just another string and
@@ -168,6 +184,11 @@ MyData$AnswerR <- jencode(MyData, Answer,
 
 # Repair mode: keep the numbers at face value, sweep words and blanks
 MyData$Age <- jencode(MyData, AgeTxt, map = "else=NA")
+
+# A factor: level order kept; an empty level keeps its code and label
+MyData$Sev <- factor(c("Low", "High", "Low", "High"),
+                     levels = c("Low", "Medium", "High"))
+MyData$SevR <- jencode(MyData, Sev)
 
 }
 \seealso{

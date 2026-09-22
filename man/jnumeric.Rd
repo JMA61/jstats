@@ -15,7 +15,9 @@ that carries them; if several do, it asks rather than wiping all).
 Called with no arguments, \code{jnumeric()} lists the session's numeric
 and count registrations.}
 
-\item{...}{One or more unquoted variable names to register.}
+\item{...}{One or more unquoted variable names to register. The
+registration applies to numeric and haven-labelled variables; a factor
+or text variable is categorical regardless and is unaffected by it.}
 
 \item{remove}{Logical; if \code{TRUE}, remove the numeric registration for
 the named variables instead of adding it.}
