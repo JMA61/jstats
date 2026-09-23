@@ -19,6 +19,7 @@
 #    receive_package("jstats_source.R")
 #        Takes an assembled master file received from Claude and installs it
 #        into R/. Steps: parse-check and anchor-check the inbound file ->
+#        structural gates (wrap call sites; overview links, S311) ->
 #        timestamped backup of R/ -> split on sentinels and write the R/
 #        files -> reassemble-and-diff self-check (restores the backup and
 #        aborts on any mismatch) -> devtools::load_all() -> document() ->
@@ -111,7 +112,6 @@
   chunks
 }
 
-# List the sentinel-managed .R files currently in R/ (first line is a sentinel).
 .jdev_wrap_violations <- function(exprs) {
   # Structural gate -- a CALL-SITE WHITELIST (Session 292; replaces the
   # Session 255 lexical test outright). The wrapping primitives,
@@ -177,6 +177,65 @@
   found
 }
 
+# Overview gate helper (Session 311). Returns the exported functions that
+# the package overview page (?jstats -- the roxygen block ending in the
+# "_PACKAGE" line) does not \link. The page lists every user-facing
+# function by purpose, and jai() sends AI assistants to it for the full
+# function list, but it is hand-curated: jencode shipped at S238 and
+# reached the page only at S277, and nothing failed in between (R CMD
+# check does not know what the page is FOR). This makes the omission loud
+# at the moment it is introduced.
+# An export is an S3 METHOD, and exempt, when a leading part of its name up
+# to a dot is itself exported (jplot.default, jplot.jst_lm): the page links
+# the generic. Reads the TEXT, not the parse tree -- roxygen lives in
+# comments, which parse() discards. Both @export forms are read: a bare tag
+# (the function defined after the block) and "@export name".
+.jdev_overview_missing <- function(txt) {
+  lines  <- strsplit(txt, "\n", fixed = TRUE)[[1L]]
+  pkg_at <- grep('^"_PACKAGE"[[:space:]]*$', lines)
+  if (length(pkg_at) != 1L) {
+    stop("Overview gate: expected exactly one \"_PACKAGE\" line in the ",
+         "inbound file, found ", length(pkg_at), ". The package overview ",
+         "block has moved, been renamed, or been duplicated -- aborting.",
+         call. = FALSE)
+  }
+  top <- pkg_at
+  while (top > 1L && grepl("^#'", lines[top - 1L])) top <- top - 1L
+  block  <- paste(lines[top:pkg_at], collapse = "\n")
+  hits   <- regmatches(block, gregexpr("\\\\link(\\[[^]]*\\])?\\{[^}]+\\}",
+                                       block))[[1L]]
+  linked <- sub("^\\\\link(\\[[^]]*\\])?\\{([^}]+)\\}$", "\\2", hits)
+
+  exports <- character(0)
+  for (i in grep("^#'[[:space:]]*@export\\b", lines, perl = TRUE)) {
+    named <- trimws(sub("^#'[[:space:]]*@export", "", lines[i]))
+    if (nzchar(named)) {
+      exports <- c(exports, strsplit(named, "[[:space:]]+")[[1L]])
+      next
+    }
+    j <- i + 1L
+    while (j <= length(lines) && grepl("^#'", lines[j])) j <- j + 1L
+    if (j > length(lines)) next
+    m <- regmatches(lines[j], regexec(
+      "^([A-Za-z.][A-Za-z0-9._]*)[[:space:]]*(<-|=)[[:space:]]*function\\b",
+      lines[j], perl = TRUE))[[1L]]
+    if (length(m)) exports <- c(exports, m[2L])
+  }
+  exports <- unique(exports)
+
+  is_method <- vapply(exports, function(e) {
+    parts <- strsplit(e, ".", fixed = TRUE)[[1L]]
+    if (length(parts) < 2L) return(FALSE)
+    lead <- vapply(seq_len(length(parts) - 1L), function(k)
+      paste(parts[seq_len(k)], collapse = "."), character(1))
+    any(lead %in% setdiff(exports, e))
+  }, logical(1))
+
+  list(exports = exports[!is_method], linked = unique(linked),
+       missing = setdiff(exports[!is_method], linked))
+}
+
+# List the sentinel-managed .R files currently in R/ (first line is a sentinel).
 .jdev_managed_files <- function() {
   fs <- list.files("R", pattern = "\\.R$", full.names = FALSE)
   keep <- vapply(fs, function(f) {
@@ -250,6 +309,21 @@ receive_package <- function(file = "jstats_source.R") {
          call. = FALSE)
   }
   cat("Structural gate:    OK ( no wrap call outside the wrapper layer )\n")
+
+  ## -- 2c. overview gate: every export linked from ?jstats (S311) ----------
+  ov <- .jdev_overview_missing(txt_in)
+  if (length(ov$missing)) {
+    stop("Overview gate failed -- ", length(ov$missing), " exported ",
+         "function(s) not linked from the package overview (?jstats):\n  ",
+         paste(ov$missing, collapse = "\n  "),
+         "\nAdd each to its purpose group in the roxygen block that ends ",
+         "with \"_PACKAGE\" (utils.R), as \\code{\\link{name}} -- text. ",
+         "Then check _pkgdown.yml (pkgdown::check_pkgdown()) and the ",
+         "guides' reference.qmd, the two other hand-curated lists.",
+         call. = FALSE)
+  }
+  cat("Overview gate:      OK ( all", length(ov$exports),
+      "exported functions linked from ?jstats )\n")
 
   ## -- 3. one-time migration guard ---------------------------------------------
   # if a sentinel-less copy of the monolith is still in R/, every function
