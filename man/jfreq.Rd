@@ -66,8 +66,9 @@ variable with no declared range.}
 Case Processing Summary is top-table only (no missing-data
 breakdown), so this argument has no effect; per-variable code
 detail already appears in each variable's frequency table. The
-table itself prints only when a filter excluded cases; otherwise a
-one-line N statement takes its place. See \code{?joutput}
+table itself prints only when a filter is active (even one that
+excluded no cases); otherwise a one-line N statement takes its
+place. See \code{?joutput}
 (\code{case.processing}).}
 }
 \value{
@@ -90,19 +91,18 @@ also accepts a plain vector.
 \details{
 Output is structured consistently with \code{jdesc()}: a single red
 "Frequencies" title is printed first, followed by the default-data note
-(if a juse() default was used), any pipeline messages, and the Case
-Processing Summary (when at least one pipeline stage was active for
-this call). Each variable then gets its own block consisting of the
-variable name on its own line, indented Type and Variable label lines
-(suppressed when \code{joutput()}'s \code{variable.id} toggle is off),
-a blank line, and the frequency table. The frequency table ends with
-a Total row showing the post-pipeline N.
+(if a juse() default was used), any pipeline messages, and then either
+the Case Processing table (when a filter is active) or a one-line
+statement of the N. Each variable then gets its own block: its caption
+on its own line (the name, or name and label, as \code{variable.id}
+directs), a blank line, and the frequency table. Declared missing
+values get Missing rows of their own below the valid rows. The
+frequency table ends with a Total row showing the post-pipeline N.
 
 For haven-labelled variables, value labels and numeric codes are combined
-in the frequency table rows (e.g. \code{1: Strongly Oppose}). The type
-line reports \code{haven_labelled (Categorical)} and suppresses the
-uninformative \code{vctrs_vctr} class. Variable labels are shown for all
-variable types, not only haven-labelled ones.
+in the frequency table rows (e.g. \code{1: Strongly Oppose}) at the
+default \code{value.id} setting. Where variable labels are shown, they
+are shown for all variable types, not only haven-labelled ones.
 }
 \examples{
 # With explicit data frame

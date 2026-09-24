@@ -240,12 +240,23 @@
   # positions (S289). The check stops whatever on_error says.
   .jst_check_mask_shape(mask, nrow(data), expr, expr_str, origin,
                         data_name = data_name)
+  # A case whose condition evaluates to NA is dropped, as R's subset() does.
+  # The count is taken here, before the NA-to-FALSE line erases it, and
+  # handed back on the result as the "jst_mask_na" attribute for the Case
+  # Processing Summary's "(k missing)" annotation on the filter row (S312);
+  # the pipeline reads it off and strips it. Because the pipeline evaluates
+  # the condition on the analysis copy, a declared missing-value code counts
+  # here too, and an expression that keeps missing cases on purpose
+  # (x > 5 | is.na(x)) counts nothing.
+  n_na <- sum(is.na(mask))
   mask[is.na(mask)] <- FALSE
   # Variable-label loss from `[.data.frame` row subsetting (plain atomic and
   # factor columns lose their label; haven_labelled keep theirs) is restored
   # once at the end of .jst_apply_pipeline, from the pre-pipeline snapshot, which
   # covers this path plus jcomplete's direct subset uniformly.
-  data[mask, , drop = FALSE]
+  out <- data[mask, , drop = FALSE]
+  attr(out, "jst_mask_na") <- as.integer(n_na)
+  out
 }
 
 #' Internal helper: apply the full data pipeline and return filtered data + messages
@@ -344,6 +355,8 @@
   n_after_complete <- NULL
   n_after_filter   <- NULL
   n_after_subset   <- NULL
+  filter_na_n      <- NULL
+  subset_na_n      <- NULL
   complete_active  <- FALSE
   filter_active    <- FALSE
   filter_expr_str  <- NULL
@@ -414,6 +427,8 @@
                                          origin      = "stored",
                                          expr_str    = fs$expr_str,
                                          data_name   = data_name)
+      filter_na_n     <- attr(data, "jst_mask_na", exact = TRUE)
+      attr(data, "jst_mask_na") <- NULL
       n_after_filter  <- nrow(data)
     } else {
       msgs <- c(msgs, "[YELLOW](jsubset set but inactive)")
@@ -443,6 +458,8 @@
                                       origin      = "call",
                                       expr_str    = subset_expr_str,
                                       data_name   = data_name)
+    subset_na_n    <- attr(data, "jst_mask_na", exact = TRUE)
+    attr(data, "jst_mask_na") <- NULL
     n_after_subset <- nrow(data)
   }
 
@@ -475,6 +492,11 @@
     filter_active    = filter_active,
     filter_expr      = filter_expr_str,
     subset_expr      = subset_expr_str,
+    # Cases each filter step dropped because its condition evaluated to NA
+    # (S312): the "(k missing)" annotation on the jsubset() and subset = rows
+    # of the Case Processing Summary. NULL when the step did not run.
+    filter_na        = filter_na_n,
+    subset_na        = subset_na_n,
     # SPSS-form UDM masking activity from Step 0. udm_spss_active = TRUE
     # when at least one variable had declared SPSS-form codes/ranges masked
     # on the analysis copy; udm_spss_masked_vars carries the per-variable
@@ -574,6 +596,8 @@
     filter_active      = pipeline_counts$filter_active,
     filter_expr        = pipeline_counts$filter_expr,
     subset_expr        = pipeline_counts$subset_expr,
+    filter_na          = pipeline_counts$filter_na,
+    subset_na          = pipeline_counts$subset_na,
     udm_spss_active         = pipeline_counts$udm_spss_active,
     udm_spss_masked_vars    = pipeline_counts$udm_spss_masked_vars,
     pre_pipeline_data  = pipeline_counts$pre_pipeline_data,
@@ -593,6 +617,14 @@
 #           one case); otherwise the N line takes its slot. Rules in
 #           JStats_CPS_Rendering_Reference.txt.
 #
+# case.processing.filter (S312) governs the breakdown's jcomplete()-ONLY
+# rows -- variables in jcomplete()'s list that the analysis never uses:
+#   "list"     - one row per jcomplete()-only variable with missingness
+#   "collapse" - one "jcomplete()-only variables (k)" row for two or more
+#   "auto"     - named up to .jst_cps_filter_named_max, collapsed beyond
+# A lone jcomplete()-only variable is always named. A jsubset() / subset =
+# variable is accounted for on its own row's "(k missing)" annotation.
+#
 # missing.notice supports three states. Standard and full both use TRUE (always
 # show); minimal uses FALSE. The NULL/auto state is retained internally but
 # no preset level selects it and joutput() cannot set it, so the narrative
@@ -606,6 +638,7 @@
                   regression.ci = FALSE, means.ci = FALSE, levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = FALSE, case.processing.detail = "none",
+                  case.processing.filter = "collapse",
                   variable.id = "names", value.id = "labels",
                   ref.categories = FALSE, digits = 3,
                   missing.notice = FALSE),
@@ -613,6 +646,7 @@
                   regression.ci = FALSE, means.ci = TRUE,  levene = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = NULL,  case.processing.detail = "totals",
+                  case.processing.filter = "auto",
                   variable.id = "names", value.id = "both",
                   ref.categories = TRUE, digits = 3,
                   missing.notice = TRUE),
@@ -620,6 +654,7 @@
                   regression.ci = TRUE,  means.ci = TRUE,  levene = TRUE,
                   posthoc = TRUE,  diagnostics = TRUE,
                   case.processing = TRUE,  case.processing.detail = "per_code",
+                  case.processing.filter = "list",
                   variable.id = "legend", value.id = "both",
                   ref.categories = TRUE, digits = 3,
                   missing.notice = TRUE)
@@ -1512,3 +1547,12 @@
   form       = c("analysis", "pool", "pool_complete"),
   stringsAsFactors = FALSE
 )
+
+# jcomplete()-only rows in the bottom breakdown (Session 312): under the
+# case.processing.filter slot's "auto" setting, jcomplete()-only variables
+# with missingness are named one per row up to this many; from the next one
+# on they collapse into a single "jcomplete()-only variables (k)" row. A
+# render refinement noted under Table 3 in the reference, not a rule-frame
+# row. The jcomplete() detail column's cap (2 names, then "+N more") is the
+# nearest precedent.
+.jst_cps_filter_named_max <- 3L

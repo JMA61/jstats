@@ -86,6 +86,28 @@
 #'   or \code{"per_code"} (per declared missing-value code plus
 #'   system-missing). The minimal tier defaults to \code{"none"},
 #'   standard to \code{"totals"}, full to \code{"per_code"}.
+#'   The breakdown lists the analysis variables and, after them, any
+#'   variables in the \code{jcomplete()} list that the analysis itself
+#'   does not use, each tagged \code{(jcomplete() only)}: every case
+#'   \code{jcomplete()} drops is missing, and these rows say on which
+#'   variable. The breakdown counts each variable's missing cases, so a
+#'   case missing on two variables appears under both. A case that a
+#'   \code{jsubset()} or per-call \code{subset} condition dropped because
+#'   the condition could not be evaluated for it (a missing value in the
+#'   condition's variables) is counted on that row of the upper table
+#'   instead, as a \code{(k missing)} note after the condition, and gets no
+#'   row here. Row form for the \code{jcomplete()}-only variables is set
+#'   by \code{case.processing.filter}.
+#' @param case.processing.filter Row form for the \code{jcomplete()}-only
+#'   variables in the missing-data breakdown: \code{"list"} (one row per
+#'   variable), \code{"collapse"} (a single
+#'   \code{jcomplete()-only variables (k)} row counting the cases missing
+#'   on at least one of them), or \code{"auto"} (named up to three
+#'   variables, collapsed from four; the \code{jcomplete()} list of a long
+#'   survey battery is the case that collapses). A lone variable is always
+#'   named. The minimal tier defaults to \code{"collapse"}, standard to
+#'   \code{"auto"}, full to \code{"list"}. Session-level only; the analysis
+#'   functions take no per-call form of it.
 #' @param variable.id Character or NULL. Variable label display mode, one
 #'   of \code{"both"}, \code{"names"}, \code{"labels"}, \code{"legend"}, or
 #'   \code{"legend.bottom"}. \code{"names"} shows variable names only;
@@ -113,8 +135,8 @@
 #'   table and print a value-label legend after it (\code{"legend"}
 #'   per-table, \code{"legend.bottom"} consolidated where multiple tables
 #'   are produced). Variables with no value labels
-#'   render identically under all three modes, so this is a no-op for plain
-#'   numeric data. The minimal tier defaults to \code{"values"}; the standard
+#'   render identically under every mode, so this is a no-op for plain
+#'   numeric data. The minimal tier defaults to \code{"labels"}; the standard
 #'   and full tiers default to \code{"both"}. Distinct from
 #'   \code{variable.id}, which governs the one-per-variable descriptive
 #'   label. Not a logical.
@@ -167,6 +189,7 @@ joutput <- function(level, effect.size = NULL,
                     regression.ci = NULL, means.ci = NULL, levene = NULL,
                     posthoc = NULL, diagnostics = NULL,
                     case.processing = NULL, case.processing.detail = NULL,
+                    case.processing.filter = NULL,
                     variable.id = NULL, value.id = NULL,
                     ref.categories = NULL, missing.notice = NULL,
                     digits = NULL, quiet = FALSE) {
@@ -213,6 +236,14 @@ joutput <- function(level, effect.size = NULL,
       .jst_stop_arg("joutput", "case.processing.detail", choices = c("none", "totals", "per_code"))
     }
     toggle_args$case.processing.detail <- case.processing.detail
+  }
+  if (!is.null(case.processing.filter)) {
+    if (!is.character(case.processing.filter) ||
+        length(case.processing.filter) != 1 ||
+        !(case.processing.filter %in% c("auto", "list", "collapse"))) {
+      .jst_stop_arg("joutput", "case.processing.filter", choices = c("auto", "list", "collapse"))
+    }
+    toggle_args$case.processing.filter <- case.processing.filter
   }
   if (!is.null(variable.id)) {
     if (!is.character(variable.id) || length(variable.id) != 1 ||
@@ -286,6 +317,7 @@ joutput <- function(level, effect.size = NULL,
   toggle_names <- c("effect.size", "regression.ci", "means.ci", "levene",
                     "posthoc", "diagnostics",
                     "case.processing", "case.processing.detail",
+                    "case.processing.filter",
                     "variable.id", "value.id", "ref.categories",
                     "missing.notice", "digits")
   defaults     <- .jst_output_defaults[[level]]
@@ -300,14 +332,15 @@ joutput <- function(level, effect.size = NULL,
     override_str <- if (!identical(effective, default_val)) " (override)" else ""
 
     # case.processing.detail carries a string tier (none/totals/per_code);
+    # case.processing.filter a string mode (auto/list/collapse);
     # variable.id (both/names/labels/legend/legend.bottom) and value.id
     # (both/values/labels/legend/legend.bottom) likewise carry string
     # tiers -- show the token,
     # not ON/OFF. digits is an integer (0-7) -- show the number. case.processing
     # and missing.notice support three states (TRUE/FALSE/NULL=AUTO); the remaining
     # toggles are binary.
-    label <- if (nm %in% c("case.processing.detail", "variable.id",
-                           "value.id")) {
+    label <- if (nm %in% c("case.processing.detail", "case.processing.filter",
+                           "variable.id", "value.id")) {
       toupper(effective)
     } else if (nm == "digits") {
       as.character(effective)

@@ -27,7 +27,8 @@ If omitted, any existing variable label is preserved. If the variable
 has no existing label, no variable label is set.}
 }
 \value{
-The variable with the requested labels applied. The variable keeps
+The variable with the requested labels applied, returned
+invisibly (nothing prints at the console). The variable keeps
 its class: haven-labelled input stays haven-labelled with any declared
 SPSS-style or Stata-style missing values intact; plain numeric and
 logical input becomes \code{haven_labelled} when value labels are
@@ -48,8 +49,9 @@ dates stay dates, factors stay factors, and text stays text. Value labels
 (\code{labels}) can be applied to haven-labelled, plain numeric, and
 logical variables; logical values are stored as 1 (TRUE) and 0 (FALSE).
 Factor, character, and date/time variables cannot carry value labels, and
-\code{jrelabel()} refuses the \code{labels} argument for these with a
-message naming the fix.
+\code{jrelabel()} refuses the \code{labels} argument for these; for
+factor and text variables the message names \code{\link{jencode}} as the
+fix.
 
 \code{jrelabel()} never rebuilds the variable it is given. Existing value
 labels, SPSS-style missing values (\code{na_values} / \code{na_range}),
@@ -59,7 +61,10 @@ replace the full existing set (as \code{VALUE LABELS} does in SPSS), and
 a new variable label replaces the old one. A replacement set clears any
 labels attached to declared missing-value codes; the declaration itself
 is unaffected, but re-supply its label alongside the new value labels to
-keep it.
+keep it. On a column with Stata-style or SAS-style missing values, a
+marker that no case carries is declared only by its label, so a
+replacement set that leaves it out removes that declaration too;
+re-supply it as a token, e.g. \code{labels = "1=Low; .c=Refused"}.
 
 Both the \code{labels} and \code{var.label} arguments are optional. If
 neither is supplied, the function returns the variable unchanged.

@@ -12,7 +12,8 @@ jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
 
 \item{file}{Character string. The filename with extension (e.g.
 \code{"mydata.sav"}) or a full file path. Use forward slashes in
-file paths.}
+file paths. If the extension is omitted, \code{.rds} is used and
+added to the filename.}
 
 \item{overwrite}{Logical. If \code{TRUE}, overwrites an existing file
 without prompting. If \code{FALSE} (default), prompts for confirmation
@@ -52,8 +53,8 @@ By default, \code{jsave()} writes bare-filename saves to the working
 directory, matching base R's \code{saveRDS()} and \code{write.csv()}.
 To save into a subfolder, set \code{\link{joptions}(data.dir = "...")}
 once per session (or in \code{.Rprofile}). Filenames containing a
-directory separator (\code{/}) bypass this setting and are taken
-literally.
+directory separator (\code{/}, or a backslash) bypass this setting and
+are taken literally.
 
 If the \code{data} argument is omitted, the default data frame set by
 \code{juse()} is used.
@@ -67,7 +68,7 @@ R does not accept single backslashes in file paths.
 \strong{File location:}
 \itemize{
 \item If the path contains a directory separator, the file is saved
-to that exact location.
+to that exact location; the folder must already exist.
 \item If the path is a bare filename and the \code{data.dir} setting in
 \code{\link{joptions}} is set, the file is saved to that folder
 (auto-created if it doesn't yet exist).
@@ -84,6 +85,19 @@ labels and value labels.
 variable or value labels.
 \item R native (\code{.rds}) preserves the data frame exactly as it
 exists in R, including all attributes.
+\item R native (\code{.rds}) also carries the active classification
+registrations (see \code{\link{jdummy}}, \code{\link{jnumeric}},
+\code{\link{jcount}}, and \code{\link{jlikert}}), which
+\code{\link{jload}} restores. Other formats cannot store them, and
+a note says so when any are lost.
+\item Before writing \code{.sav}, \code{.dta}, or \code{.xpt},
+\code{jsave()} checks for anything the format cannot store and
+stops, naming every problem at once: complex, raw, list, or
+POSIXlt columns; missing values of a form the format cannot hold
+(Stata-style in \code{.sav}, SPSS-style in \code{.dta}, either in
+\code{.xpt}); and, for \code{.sav}, more than three declared codes,
+or a range plus more than one code, on one column. No file is
+written until the problems are fixed.
 \item Stata files are written as version 14 format.
 \item Legacy Excel format (\code{.xls}) is not supported for saving.
 Use \code{.xlsx} instead.
@@ -101,16 +115,19 @@ jsave(community, "community.xlsx")        # Excel
 jsave(community, "community.csv")         # CSV
 jsave(community, "community.rds")         # R native
 
-# Stata and SAS formats cannot carry community's SPSS-style missing-value
-# declarations -- convert first (jsave() pre-flights this and says so)
-jsave(jconvert(community, to = "stata"), "community.dta")   # Stata
-jsave(jconvert(community, to = "baseR"), "community.xpt")   # SAS interchange
-
 # Using juse() default
-jsave(, "community.sav")
+juse(community)
+jsave("community.sav")
 
 # Full file path
 jsave(community, "C:/Output/community.sav")
+
+# Stata and SAS formats cannot carry community's SPSS-style missing-value
+# declarations -- convert first (jsave() pre-flights this and says so)
+jconvert(community, to = "stata", modify = TRUE)
+jsave(community, "community.dta")                  # Stata
+jconvert(community, to = "baseR", modify = TRUE)
+jsave(community, "community.xpt")                  # SAS interchange
 }
 
 }

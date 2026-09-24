@@ -1184,8 +1184,11 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   cat("\n  Complete cases: ", n_complete, " of ", n_total,
       " (", sprintf("%.1f", n_complete / n_total * 100), "%)\n", sep = "")
   if (n_excluded > 0) {
+    # Rule O: the count is in hand, so the noun agrees ("1 case", "5 cases";
+    # it read "1 cases" until Session 312).
     .jst_msg_out("  Listwise filter activated -- ", n_excluded,
-                 " cases will be excluded from subsequent analyses.")
+                 if (n_excluded == 1L) " case" else " cases",
+                 " will be excluded from subsequent analyses.")
   } else {
     .jst_msg_out("  Listwise filter activated -- no cases will be ",
                  "excluded (no missing values).")

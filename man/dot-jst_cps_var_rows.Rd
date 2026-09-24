@@ -17,7 +17,8 @@
 data.frame(code_label, src, pool); empty if no missingness.
 }
 \description{
-Computes, for one analysis variable, the per-code (and System/NA) counts
+Computes, for one variable (an analysis variable, or since Session 312 a
+jcomplete()-only one), the per-code (and System/NA) counts
 in the source (full original) and pool (surviving rows) columns. Counts
 come from the pre-masking columns so SPSS-form UDM codes are still live
 values; pool counts are post-filter-correct (this is also why the Session

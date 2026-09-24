@@ -150,7 +150,8 @@
 
 #' Internal helper: per-variable source/pool missing rows for the CPS bottom
 #'
-#' Computes, for one analysis variable, the per-code (and System/NA) counts
+#' Computes, for one variable (an analysis variable, or since Session 312 a
+#' jcomplete()-only one), the per-code (and System/NA) counts
 #' in the source (full original) and pool (surviving rows) columns. Counts
 #' come from the pre-masking columns so SPSS-form UDM codes are still live
 #' values; pool counts are post-filter-correct (this is also why the Session
@@ -301,8 +302,9 @@
 #' top of the output, EITHER the top table (pipeline chain) OR the one-line
 #' N statement (S284 rule 3), and beneath whichever printed, where the spec
 #' calls for it, the bottom table (per-variable missing-data breakdown,
-#' totals or per_code tier). Contains no render-rule logic of its own; all
-#' show/hide decisions and the N line's form arrive pre-resolved.
+#' totals or per_code tier, with the jcomplete()-only variables' rows after
+#' the analysis variables' -- Session 312). Contains no render-rule logic of its
+#' own; all show/hide decisions and the N line's form arrive pre-resolved.
 #'
 #' Display design = JStats_CPS_Rendering_Reference.txt (four layouts, Form B
 #' bottom). Missing-value semantics = JStats_Missing_Values_Reference.txt.
@@ -397,17 +399,43 @@
   } else {
     pool <- NULL
   }
-  cps_vars <- intersect(sample_info$analysis_vars,
-                        if (is.null(pre)) character(0) else names(pre))
+  pre_names <- if (is.null(pre)) character(0) else names(pre)
+  cps_vars  <- intersect(sample_info$analysis_vars, pre_names)
 
-  mi_list  <- if (length(cps_vars))
-                lapply(cps_vars, function(v) .jst_missing_info(pre[[v]]))
+  # jcomplete()-only variables (Session 312): the variables in jcomplete()'s
+  # list that the analysis itself never uses. Every case jcomplete() drops
+  # is missing by definition, so its row cannot say WHICH variable cost the
+  # cases; the analysis-variable rows cannot either when the variable is
+  # not in the analysis (the S311 field report: jcomplete() excluded 12,
+  # the breakdown showed 11; when the analysis variables were clean, no
+  # breakdown printed at all). They enter the Table 3 coordinates below
+  # and render as their own rows at the foot of the breakdown, in
+  # jcomplete()'s order. A variable a jsubset() or subset = condition
+  # tested is NOT drawn in: a condition drops a missing case as a side
+  # effect of being unevaluable, and that count belongs on the filter row
+  # itself, as its "(k missing)" annotation -- which is where the reader
+  # meets the exclusion. (S312's first form drew the condition variables in
+  # too, and the count then printed twice.)
+  filter_vars <- character(0)
+  if (isTRUE(sample_info$complete_active)) {
+    filter_vars <- as.character(sample_info$complete_vars)
+  }
+  filter_vars <- setdiff(unique(filter_vars), cps_vars)
+  filter_vars <- filter_vars[filter_vars %in% pre_names]
+
+  # Table 3's "Has UDMs" / "Has system NAs" read the analysis AND the
+  # jcomplete()-only variables (Session 312; they read the analysis
+  # variables alone before, so a case missing only on a jcomplete()-only
+  # variable left no trace when the analysis variables were clean).
+  all_vars <- c(cps_vars, filter_vars)
+  mi_list  <- if (length(all_vars))
+                lapply(all_vars, function(v) .jst_missing_info(pre[[v]]))
               else list()
-  names(mi_list) <- cps_vars
+  names(mi_list) <- all_vars
   has_udms  <- any(vapply(mi_list, function(mi)
                  !is.null(mi) && !is.null(mi$codes) && nrow(mi$codes) > 0L,
                  logical(1)))
-  has_sysna <- any(vapply(cps_vars, function(v) sum(is.na(pre[[v]])) > 0L,
+  has_sysna <- any(vapply(all_vars, function(v) sum(is.na(pre[[v]])) > 0L,
                           logical(1)))
 
   # Transform-introduced missingness (AUDIT-025): non-finite results the
@@ -507,12 +535,26 @@
         surv_v <- c(surv_v, sample_info$n_after_complete)
         prior  <- sample_info$n_after_complete
       }
+      # "(k missing)" on a filter row (S312): the cases that step dropped
+      # because its condition evaluated to NA, so the reader can separate
+      # them from the cases the condition ruled out (7 excluded, 3 missing:
+      # 4 did not meet the condition). Appended after the capped
+      # expression; absent when the count is zero, so the ordinary row is
+      # unchanged. jcomplete() and Auto-listwise rows carry no counterpart:
+      # every case they drop is missing, and the bottom says on which
+      # variable.
+      na_note <- function(det, k) {
+        if (is.null(k) || !is.finite(k) || k <= 0L) return(det)
+        note <- sprintf("(%d missing)", as.integer(k))
+        if (nzchar(det)) paste(det, note) else note
+      }
       if (isTRUE(sample_info$filter_active) &&
           !is.null(sample_info$n_after_filter)) {
         det <- if (!is.null(sample_info$filter_expr) &&
                    nzchar(sample_info$filter_expr))
                  .jst_cps_cap_label(sample_info$filter_expr, mode = "expr")
                else ""
+        det <- na_note(det, sample_info$filter_na)
         labels <- c(labels, "jsubset()"); detail <- c(detail, det)
         exc_v  <- c(exc_v, prior - sample_info$n_after_filter)
         surv_v <- c(surv_v, sample_info$n_after_filter)
@@ -523,6 +565,7 @@
                    nzchar(sample_info$subset_expr))
                  .jst_cps_cap_label(sample_info$subset_expr, mode = "expr")
                else ""
+        det <- na_note(det, sample_info$subset_na)
         labels <- c(labels, "subset ="); detail <- c(detail, det)
         exc_v  <- c(exc_v, prior - sample_info$n_after_subset)
         surv_v <- c(surv_v, sample_info$n_after_subset)
@@ -619,6 +662,57 @@
               src        = if (n_pool == n_original) cnt else NA_integer_,
               pool       = cnt,
               stringsAsFactors = FALSE))
+        }
+      }
+
+      # jcomplete()-only rows (Session 312): the same per-variable rows as
+      # the analysis variables, tagged on the variable line so the reader
+      # knows the variable is not in the analysis, placed last as the
+      # accounting residue. The source column is exact (the variable was
+      # missing on those cases in the original data); the pool column is
+      # computed, not dashed -- jcomplete() admits no missing case to the
+      # pool, so it reads 0, and a nonzero would be a defect. Under
+      # case.processing.filter = "auto" the variables are named up to
+      # .jst_cps_filter_named_max and collapse beyond it into one
+      # "jcomplete()-only variables (k)" row; "list" always names;
+      # "collapse" collapses at two or more. A lone variable is always
+      # named: a group of one is the variable. The collapsed row counts
+      # CASES missing on at least one of the group, so it means what a
+      # named row means (cases missing on this variable) without the
+      # cross-row over-count, and it is one flat line at either tier:
+      # variables with different declarations have no shared code
+      # structure to break out (the transform row's precedent).
+      fdisp <- list()
+      for (v in filter_vars) {
+        vr <- .jst_cps_var_rows(pre[[v]], pool[[v]], mi_list[[v]])
+        if (nrow(vr) == 0L || (sum(vr$src) == 0L && sum(vr$pool) == 0L)) next
+        rows <- if (per_code) vr
+                else data.frame(code_label = "Missing", src = sum(vr$src),
+                                pool = sum(vr$pool), stringsAsFactors = FALSE)
+        fdisp[[length(fdisp) + 1L]] <-
+          list(var = paste0(v, " (jcomplete() only)"), rows = rows, name = v)
+      }
+      if (length(fdisp) > 0L) {
+        filt_mode <- .jst_resolve_toggle("case.processing.filter", NULL)
+        k         <- length(fdisp)
+        collapse  <- k >= 2L &&
+                     (identical(filt_mode, "collapse") ||
+                      (identical(filt_mode, "auto") &&
+                       k > .jst_cps_filter_named_max))
+        if (collapse) {
+          fv      <- vapply(fdisp, `[[`, character(1), "name")
+          any_src <- Reduce(`|`, lapply(fv, function(v) is.na(pre[[v]])))
+          any_pl  <- Reduce(`|`, lapply(fv, function(v) is.na(pool[[v]])))
+          disp[[length(disp) + 1L]] <- list(
+            var  = sprintf("jcomplete()-only variables (%d)", k),
+            rows = data.frame(code_label = "Missing on any",
+                              src  = sum(any_src),
+                              pool = sum(any_pl),
+                              stringsAsFactors = FALSE))
+        } else {
+          for (f in fdisp) {
+            disp[[length(disp) + 1L]] <- list(var = f$var, rows = f$rows)
+          }
         }
       }
 

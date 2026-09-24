@@ -34,7 +34,7 @@
 #' @param overwrite Logical. If \code{TRUE}, overwrites an existing object
 #'   with the same name without prompting. If \code{FALSE} (default),
 #'   prompts for confirmation in interactive sessions. In non-interactive
-#'   sessions, overwrites with a warning message. In a script, state it
+#'   sessions, overwrites and says so in a note. In a script, state it
 #'   explicitly: \code{jload("mydata.rds", overwrite = TRUE)}. Otherwise,
 #'   if the name already exists in your environment, and the script was
 #'   run by pasting or with RStudio's Run button, the call stops with an
@@ -55,12 +55,13 @@
 #'   a message lists the available sheets.
 #' @param preserve.declarations Logical. If \code{TRUE} (default), declared
 #'   missing values arriving with the file are preserved: SPSS-style
-#'   codes such as -99 keep their original numeric values in the data
-#'   frame, with metadata attached so the package's analysis functions
-#'   still treat them as missing, and Stata-style tagged values
-#'   (\code{.a}, \code{.b}, ...) are kept as read. If \code{FALSE},
-#'   both forms are converted to plain \code{NA} on import and the
-#'   metadata is stripped. Applies to any loaded file whose columns
+#'   codes such as -99, and declared ranges, keep their original numeric
+#'   values in the data frame, with the declaration attached so the
+#'   package's analysis functions still treat them as missing, and
+#'   Stata-style tagged values (\code{.a}, \code{.b}, ...) are kept as
+#'   read. If \code{FALSE}, both forms are converted to plain \code{NA}
+#'   on import and the declarations are removed; value labels are kept.
+#'   Applies to any loaded file whose columns
 #'   carry missing-value declarations --- typically \code{.sav},
 #'   \code{.dta}, and \code{.sas7bdat} files, and \code{.rds} files
 #'   saved from such data. For \code{.sav} files, \code{TRUE}
@@ -79,9 +80,11 @@
 #' @return Invisibly returns \code{NULL}; jload() is called for its side
 #'   effects. The loaded data frame is placed in the calling environment
 #'   under the file's name (or \code{name}), and any classification
-#'   registrations saved with an .rds file are restored for that name. Do
-#'   not assign the result: \code{x <- jload("mydata.rds")} binds only
-#'   \code{NULL}, while the data frame still arrives under its own name.
+#'   registrations saved with an .rds file are restored for that name.
+#'   Loading a file that carries none clears any registrations set this
+#'   session under that name, with a note saying so. Do not assign the
+#'   result: \code{x <- jload("mydata.rds")} binds only \code{NULL},
+#'   while the data frame still arrives under its own name.
 #'
 #' @details
 #' \strong{File paths:}
@@ -91,18 +94,26 @@
 #'
 #' \strong{File search order:}
 #' \enumerate{
-#'   \item If the path contains a directory separator (\code{/}), the path
-#'     is used directly.
+#'   \item If the path contains a directory separator (\code{/}, or a
+#'     backslash), the path is used directly.
 #'   \item If the path is a bare filename, \code{jload()} checks:
 #'     (a) the folder named by the \code{data.dir} setting in
 #'     \code{\link{joptions}} if it is set and exists; (b) the working
 #'     directory.
 #' }
+#' When the extension is omitted, both locations are searched for every
+#' supported extension, and more than one match (two extensions, or the
+#' same file in both locations) is an error that asks for the extension.
+#' If nothing matches on disk, a bare name falls back to a shipped example
+#' dataset of that name (see below).
 #'
 #' \strong{Auto-naming:}
 #' The data frame name is derived from the filename by stripping the
 #' extension. If the resulting name starts with a digit (which R does not
 #' allow as a variable name), you must supply the \code{name} argument.
+#' Other characters R does not allow in a name, such as spaces and
+#' hyphens, become dots: \code{"my data-1.sav"} loads as
+#' \code{my.data.1}.
 #'
 #' \strong{Excel files:}
 #' Excel files (\code{.xlsx}, \code{.xls}) do not contain variable or
@@ -114,24 +125,30 @@
 #' Missing-value declarations are stored in the file itself, but they
 #' only survive the trip back if the reader requests them.
 #' \code{jload()} always does, so declarations written by
-#' \code{jsave()} are present after every jstats load. Other ways of
+#' \code{jsave()} are present after every jstats load (unless
+#' \code{preserve.declarations = FALSE}). Other ways of
 #' reading the same file may convert the declared cells to plain
 #' \code{NA} and discard the declarations, so the same file can show
 #' different numbers of valid cases depending on how it was read.
 #'
 #' \strong{Coded missing values:}
 #' When \code{check.missing = TRUE}, the function scans numeric variables
-#' for values that appear to be coded missing values. Only whole-number
-#' values are considered (coded missing values are always integers like
-#' -99, 999, etc.). Two detection methods are used:
+#' for values that look like coded missing values but are not declared as
+#' missing. (Declared missing values are reported in the load's own
+#' notification, never by the scan.) Only whole-number values are
+#' considered. A value is flagged when it is
 #' \itemize{
-#'   \item For SPSS files, missing values declared in the file metadata
-#'     are reported with high confidence.
-#'   \item A heuristic scan detects negative values among otherwise positive
-#'     data and extreme outlier values (5x the range of other values).
+#'   \item a negative number at least three times the size of the
+#'     variable's largest non-negative value (-99 on a 1-to-5 scale), or
+#'   \item at least five times the size of every other value in the
+#'     variable (999 on a 1-to-7 scale).
 #' }
-#' Detected values are reported but not changed. Use \code{\link{jrecode}}
-#' to convert them to \code{NA} if needed.
+#' A flagged value whose value label suggests missingness (such as
+#' "Refused" or "Don't know") is reported as label-only; the rest are
+#' reported as suspected. Flagged values are reported but not changed. If
+#' they are missing values, declare them with
+#' \code{\link{jdeclare_missing}}, which keeps the codes and their labels;
+#' the report shows the call.
 #'
 #' \strong{Package example datasets and .rda / .RData files:}
 #' \code{jload()} opens the example datasets shipped with jstats --
@@ -189,9 +206,13 @@
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, suppresses jload()'s
 #'   informational messages (the directory-resolution note, file found,
-#'   load summary, default-data note, and the narrative about declared
-#'   missing values, overriding missing.notice). Errors, warnings, the
-#'   multi-sheet advisory, and the overwrite prompt are still shown.
+#'   load summary, default-data note, registration notes, and the
+#'   narrative about declared missing values, overriding missing.notice).
+#'   Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
+#'   note that a local file shadowed a shipped dataset, and the note that
+#'   an existing object was replaced are still shown, as is the
+#'   coded-missing scan report; turn that off with
+#'   \code{check.missing = FALSE}.
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
                   preserve.declarations = TRUE, missing.notice = NULL, quiet = FALSE) {
@@ -2779,8 +2800,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' directory, matching base R's \code{saveRDS()} and \code{write.csv()}.
 #' To save into a subfolder, set \code{\link{joptions}(data.dir = "...")}
 #' once per session (or in \code{.Rprofile}). Filenames containing a
-#' directory separator (\code{/}) bypass this setting and are taken
-#' literally.
+#' directory separator (\code{/}, or a backslash) bypass this setting and
+#' are taken literally.
 #'
 #' If the \code{data} argument is omitted, the default data frame set by
 #' \code{juse()} is used.
@@ -2789,7 +2810,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{juse()}.
 #' @param file Character string. The filename with extension (e.g.
 #'   \code{"mydata.sav"}) or a full file path. Use forward slashes in
-#'   file paths.
+#'   file paths. If the extension is omitted, \code{.rds} is used and
+#'   added to the filename.
 #' @param overwrite Logical. If \code{TRUE}, overwrites an existing file
 #'   without prompting. If \code{FALSE} (default), prompts for confirmation
 #'   in interactive sessions. In non-interactive sessions, stops with an
@@ -2821,7 +2843,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \strong{File location:}
 #' \itemize{
 #'   \item If the path contains a directory separator, the file is saved
-#'     to that exact location.
+#'     to that exact location; the folder must already exist.
 #'   \item If the path is a bare filename and the \code{data.dir} setting in
 #'     \code{\link{joptions}} is set, the file is saved to that folder
 #'     (auto-created if it doesn't yet exist).
@@ -2838,6 +2860,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     variable or value labels.
 #'   \item R native (\code{.rds}) preserves the data frame exactly as it
 #'     exists in R, including all attributes.
+#'   \item R native (\code{.rds}) also carries the active classification
+#'     registrations (see \code{\link{jdummy}}, \code{\link{jnumeric}},
+#'     \code{\link{jcount}}, and \code{\link{jlikert}}), which
+#'     \code{\link{jload}} restores. Other formats cannot store them, and
+#'     a note says so when any are lost.
+#'   \item Before writing \code{.sav}, \code{.dta}, or \code{.xpt},
+#'     \code{jsave()} checks for anything the format cannot store and
+#'     stops, naming every problem at once: complex, raw, list, or
+#'     POSIXlt columns; missing values of a form the format cannot hold
+#'     (Stata-style in \code{.sav}, SPSS-style in \code{.dta}, either in
+#'     \code{.xpt}); and, for \code{.sav}, more than three declared codes,
+#'     or a range plus more than one code, on one column. No file is
+#'     written until the problems are fixed.
 #'   \item Stata files are written as version 14 format.
 #'   \item Legacy Excel format (\code{.xls}) is not supported for saving.
 #'     Use \code{.xlsx} instead.
@@ -2855,16 +2890,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' jsave(community, "community.csv")         # CSV
 #' jsave(community, "community.rds")         # R native
 #'
-#' # Stata and SAS formats cannot carry community's SPSS-style missing-value
-#' # declarations -- convert first (jsave() pre-flights this and says so)
-#' jsave(jconvert(community, to = "stata"), "community.dta")   # Stata
-#' jsave(jconvert(community, to = "baseR"), "community.xpt")   # SAS interchange
-#'
 #' # Using juse() default
-#' jsave(, "community.sav")
+#' juse(community)
+#' jsave("community.sav")
 #'
 #' # Full file path
 #' jsave(community, "C:/Output/community.sav")
+#'
+#' # Stata and SAS formats cannot carry community's SPSS-style missing-value
+#' # declarations -- convert first (jsave() pre-flights this and says so)
+#' jconvert(community, to = "stata", modify = TRUE)
+#' jsave(community, "community.dta")                  # Stata
+#' jconvert(community, to = "baseR", modify = TRUE)
+#' jsave(community, "community.xpt")                  # SAS interchange
 #' }
 #'
 #' @seealso \code{\link{jstats}} for the package overview,

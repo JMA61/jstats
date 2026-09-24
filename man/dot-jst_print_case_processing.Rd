@@ -35,8 +35,9 @@ Resolves a render spec from the .jst_cps_*_rules tables (via
 top of the output, EITHER the top table (pipeline chain) OR the one-line
 N statement (S284 rule 3), and beneath whichever printed, where the spec
 calls for it, the bottom table (per-variable missing-data breakdown,
-totals or per_code tier). Contains no render-rule logic of its own; all
-show/hide decisions and the N line's form arrive pre-resolved.
+totals or per_code tier, with the jcomplete()-only variables' rows after
+the analysis variables' -- Session 312). Contains no render-rule logic of its
+own; all show/hide decisions and the N line's form arrive pre-resolved.
 }
 \details{
 Display design = JStats_CPS_Rendering_Reference.txt (four layouts, Form B
