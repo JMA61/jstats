@@ -1,10 +1,11 @@
 # Internal helper: per-variable source/pool missing rows for the CPS bottom
 
-Computes, for one analysis variable, the per-code (and System/NA) counts
-in the source (full original) and pool (surviving rows) columns. Counts
-come from the pre-masking columns so SPSS-form UDM codes are still live
-values; pool counts are post-filter-correct (this is also why the
-Session 29 pre/post UDM count quirk does not affect the CPS bottom).
+Computes, for one variable (an analysis variable, or since Session 312 a
+jcomplete()-only one), the per-code (and System/NA) counts in the source
+(full original) and pool (surviving rows) columns. Counts come from the
+pre-masking columns so SPSS-form UDM codes are still live values; pool
+counts are post-filter-correct (this is also why the Session 29 pre/post
+UDM count quirk does not affect the CPS bottom).
 
 ## Usage
 

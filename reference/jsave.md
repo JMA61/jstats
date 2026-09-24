@@ -16,7 +16,8 @@ directory, matching base R's
 a subfolder, set
 [`joptions`](https://jma61.github.io/jstats/reference/joptions.md)`(data.dir = "...")`
 once per session (or in `.Rprofile`). Filenames containing a directory
-separator (`/`) bypass this setting and are taken literally.
+separator (`/`, or a backslash) bypass this setting and are taken
+literally.
 
 If the `data` argument is omitted, the default data frame set by
 [`juse()`](https://jma61.github.io/jstats/reference/juse.md) is used.
@@ -37,7 +38,8 @@ jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
 - file:
 
   Character string. The filename with extension (e.g. `"mydata.sav"`) or
-  a full file path. Use forward slashes in file paths.
+  a full file path. Use forward slashes in file paths. If the extension
+  is omitted, `.rds` is used and added to the filename.
 
 - overwrite:
 
@@ -76,7 +78,7 @@ slashes. R does not accept single backslashes in file paths.
 **File location:**
 
 - If the path contains a directory separator, the file is saved to that
-  exact location.
+  exact location; the folder must already exist.
 
 - If the path is a bare filename and the `data.dir` setting in
   [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) is
@@ -98,6 +100,23 @@ slashes. R does not accept single backslashes in file paths.
 - R native (`.rds`) preserves the data frame exactly as it exists in R,
   including all attributes.
 
+- R native (`.rds`) also carries the active classification registrations
+  (see [`jdummy`](https://jma61.github.io/jstats/reference/jdummy.md),
+  [`jnumeric`](https://jma61.github.io/jstats/reference/jnumeric.md),
+  [`jcount`](https://jma61.github.io/jstats/reference/jcount.md), and
+  [`jlikert`](https://jma61.github.io/jstats/reference/jlikert.md)),
+  which [`jload`](https://jma61.github.io/jstats/reference/jload.md)
+  restores. Other formats cannot store them, and a note says so when any
+  are lost.
+
+- Before writing `.sav`, `.dta`, or `.xpt`, `jsave()` checks for
+  anything the format cannot store and stops, naming every problem at
+  once: complex, raw, list, or POSIXlt columns; missing values of a form
+  the format cannot hold (Stata-style in `.sav`, SPSS-style in `.dta`,
+  either in `.xpt`); and, for `.sav`, more than three declared codes, or
+  a range plus more than one code, on one column. No file is written
+  until the problems are fixed.
+
 - Stata files are written as version 14 format.
 
 - Legacy Excel format (`.xls`) is not supported for saving. Use `.xlsx`
@@ -114,7 +133,7 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmplyybV8/community.sav
+#> Saved community to /tmp/Rtmp0yYYVG/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
@@ -125,15 +144,18 @@ jsave(community, "community.xlsx")        # Excel
 jsave(community, "community.csv")         # CSV
 jsave(community, "community.rds")         # R native
 
-# Stata and SAS formats cannot carry community's SPSS-style missing-value
-# declarations -- convert first (jsave() pre-flights this and says so)
-jsave(jconvert(community, to = "stata"), "community.dta")   # Stata
-jsave(jconvert(community, to = "baseR"), "community.xpt")   # SAS interchange
-
 # Using juse() default
-jsave(, "community.sav")
+juse(community)
+jsave("community.sav")
 
 # Full file path
 jsave(community, "C:/Output/community.sav")
+
+# Stata and SAS formats cannot carry community's SPSS-style missing-value
+# declarations -- convert first (jsave() pre-flights this and says so)
+jconvert(community, to = "stata", modify = TRUE)
+jsave(community, "community.dta")                  # Stata
+jconvert(community, to = "baseR", modify = TRUE)
+jsave(community, "community.xpt")                  # SAS interchange
 } # }
 ```

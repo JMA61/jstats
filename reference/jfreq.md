@@ -83,8 +83,9 @@ jfreq(
   Accepted for API symmetry. jfreq's Case Processing Summary is
   top-table only (no missing-data breakdown), so this argument has no
   effect; per-variable code detail already appears in each variable's
-  frequency table. The table itself prints only when a filter excluded
-  cases; otherwise a one-line N statement takes its place. See
+  frequency table. The table itself prints only when a filter is active
+  (even one that excluded no cases); otherwise a one-line N statement
+  takes its place. See
   [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
   (`case.processing`).
 
@@ -104,20 +105,18 @@ the case counts; and `var_label`, the variable's display label) and
 Output is structured consistently with
 [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md): a single
 red "Frequencies" title is printed first, followed by the default-data
-note (if a juse() default was used), any pipeline messages, and the Case
-Processing Summary (when at least one pipeline stage was active for this
-call). Each variable then gets its own block consisting of the variable
-name on its own line, indented Type and Variable label lines (suppressed
-when
-[`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
-`variable.id` toggle is off), a blank line, and the frequency table. The
-frequency table ends with a Total row showing the post-pipeline N.
+note (if a juse() default was used), any pipeline messages, and then
+either the Case Processing table (when a filter is active) or a one-line
+statement of the N. Each variable then gets its own block: its caption
+on its own line (the name, or name and label, as `variable.id` directs),
+a blank line, and the frequency table. Declared missing values get
+Missing rows of their own below the valid rows. The frequency table ends
+with a Total row showing the post-pipeline N.
 
 For haven-labelled variables, value labels and numeric codes are
-combined in the frequency table rows (e.g. `1: Strongly Oppose`). The
-type line reports `haven_labelled (Categorical)` and suppresses the
-uninformative `vctrs_vctr` class. Variable labels are shown for all
-variable types, not only haven-labelled ones.
+combined in the frequency table rows (e.g. `1: Strongly Oppose`) at the
+default `value.id` setting. Where variable labels are shown, they are
+shown for all variable types, not only haven-labelled ones.
 
 ## See also
 

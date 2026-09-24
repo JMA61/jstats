@@ -156,8 +156,9 @@ community$EnvAvg <- javg(community, Environment1, Environment3,
 #>   community$<name> <- javg(...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
-# Not normally needed. You'd clear a default or registration only to
-# undo a mistake, or -- as in this example -- to reset state for testing.
+# juse(NULL) clears the default dataset -- not normally needed. You'd
+# clear a default or registration only to undo a mistake, or -- as in
+# this example -- to reset state for testing.
 juse(NULL)
 #> Default data frame cleared.
 ```

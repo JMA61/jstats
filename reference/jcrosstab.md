@@ -167,9 +167,9 @@ jcrosstab(Education ~ Volunteer, data = community)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -198,9 +198,9 @@ jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -234,9 +234,9 @@ jcrosstab(Education ~ Volunteer, data = community,
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -276,9 +276,9 @@ jcrosstab(Education ~ Volunteer, data = community, residuals = "adjusted")
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -315,9 +315,9 @@ jcrosstab(Education ~ Volunteer)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
@@ -345,9 +345,9 @@ jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer

@@ -19,7 +19,7 @@ datasets preserves each dataset's registrations independently."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -79,10 +79,13 @@ them; if several do, it asks rather than wiping all).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>One or more unquoted variable names to register. Omit (along
-with data) to display all current registrations. A lone <code>NULL</code> in the
-variable slot – <code>jdummy(data, NULL)</code> – clears that frame's dummy
-registrations.</p></dd>
+<dd><p>One or more unquoted variable names to register. The variable
+may be haven-labelled, numeric, logical, character, or a factor: for a
+factor the levels are the categories, in level order, and a level with
+no cases is left out; for a text variable the distinct values are the
+categories, in alphabetical order. Omit (along with data) to display
+all current registrations. A lone <code>NULL</code> in the variable slot –
+<code>jdummy(data, NULL)</code> – clears that frame's dummy registrations.</p></dd>
 
 
 <dt id="arg-ref">ref<a class="anchor" aria-label="anchor" href="#arg-ref"></a></dt>
@@ -279,8 +282,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No dummy registrations to clear for community (the default data frame).</span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span>clear.all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>             <span class="co"># Clear every frame's dummy registrations</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No dummy registrations to clear.</span>
-<span class="r-in"><span><span class="co"># Not normally needed. You'd clear a default or registration only to</span></span></span>
-<span class="r-in"><span><span class="co"># undo a mistake, or -- as in this example -- to reset state for testing.</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># juse(NULL) clears the default dataset -- not normally needed. You'd</span></span></span>
+<span class="r-in"><span><span class="co"># clear a default or registration only to undo a mistake, or -- as in</span></span></span>
+<span class="r-in"><span><span class="co"># this example -- to reset state for testing.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame cleared.</span>
 <span class="r-in"><span></span></span>

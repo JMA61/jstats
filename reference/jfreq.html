@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -123,8 +123,9 @@ variable with no declared range.</p></dd>
 Case Processing Summary is top-table only (no missing-data
 breakdown), so this argument has no effect; per-variable code
 detail already appears in each variable's frequency table. The
-table itself prints only when a filter excluded cases; otherwise a
-one-line N statement takes its place. See <code><a href="joutput.html">?joutput</a></code>
+table itself prints only when a filter is active (even one that
+excluded no cases); otherwise a one-line N statement takes its
+place. See <code><a href="joutput.html">?joutput</a></code>
 (<code>case.processing</code>).</p></dd>
 
 </dl></div>
@@ -145,18 +146,17 @@ frame, or <code>NULL</code> when there are none; <code>total</code>,
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Output is structured consistently with <code><a href="jdesc.html">jdesc()</a></code>: a single red
 "Frequencies" title is printed first, followed by the default-data note
-(if a juse() default was used), any pipeline messages, and the Case
-Processing Summary (when at least one pipeline stage was active for
-this call). Each variable then gets its own block consisting of the
-variable name on its own line, indented Type and Variable label lines
-(suppressed when <code><a href="joutput.html">joutput()</a></code>'s <code>variable.id</code> toggle is off),
-a blank line, and the frequency table. The frequency table ends with
-a Total row showing the post-pipeline N.</p>
+(if a juse() default was used), any pipeline messages, and then either
+the Case Processing table (when a filter is active) or a one-line
+statement of the N. Each variable then gets its own block: its caption
+on its own line (the name, or name and label, as <code>variable.id</code>
+directs), a blank line, and the frequency table. Declared missing
+values get Missing rows of their own below the valid rows. The
+frequency table ends with a Total row showing the post-pipeline N.</p>
 <p>For haven-labelled variables, value labels and numeric codes are combined
-in the frequency table rows (e.g. <code>1: Strongly Oppose</code>). The type
-line reports <code>haven_labelled (Categorical)</code> and suppresses the
-uninformative <code>vctrs_vctr</code> class. Variable labels are shown for all
-variable types, not only haven-labelled ones.</p>
+in the frequency table rows (e.g. <code>1: Strongly Oppose</code>) at the
+default <code>value.id</code> setting. Where variable labels are shown, they
+are shown for all variable types, not only haven-labelled ones.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

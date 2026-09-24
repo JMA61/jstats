@@ -10,8 +10,8 @@ By default, jsave() writes bare-filename saves to the working
 directory, matching base R's saveRDS() and write.csv().
 To save into a subfolder, set joptions(data.dir = &quot;...&quot;)
 once per session (or in .Rprofile). Filenames containing a
-directory separator (/) bypass this setting and are taken
-literally.
+directory separator (/, or a backslash) bypass this setting and
+are taken literally.
 If the data argument is omitted, the default data frame set by
 juse() is used."><meta property="og:description" content="jsave() writes a data frame to a file. Supports SPSS (.sav),
 Stata (.dta), SAS interchange (.xpt), Excel (.xlsx),
@@ -24,8 +24,8 @@ By default, jsave() writes bare-filename saves to the working
 directory, matching base R's saveRDS() and write.csv().
 To save into a subfolder, set joptions(data.dir = &quot;...&quot;)
 once per session (or in .Rprofile). Filenames containing a
-directory separator (/) bypass this setting and are taken
-literally.
+directory separator (/, or a backslash) bypass this setting and
+are taken literally.
 If the data argument is omitted, the default data frame set by
 juse() is used."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -35,7 +35,7 @@ juse() is used."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,8 +72,8 @@ as Excel. Changing the extension changes the format.</p>
 directory, matching base R's <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> and <code><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv()</a></code>.
 To save into a subfolder, set <code><a href="joptions.html">joptions</a>(data.dir = "...")</code>
 once per session (or in <code>.Rprofile</code>). Filenames containing a
-directory separator (<code>/</code>) bypass this setting and are taken
-literally.</p>
+directory separator (<code>/</code>, or a backslash) bypass this setting and
+are taken literally.</p>
 <p>If the <code>data</code> argument is omitted, the default data frame set by
 <code><a href="juse.html">juse()</a></code> is used.</p>
     </div>
@@ -95,7 +95,8 @@ literally.</p>
 <dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
 <dd><p>Character string. The filename with extension (e.g.
 <code>"mydata.sav"</code>) or a full file path. Use forward slashes in
-file paths.</p></dd>
+file paths. If the extension is omitted, <code>.rds</code> is used and
+added to the filename.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
@@ -134,7 +135,7 @@ Use forward slashes (<code>/</code>) in file paths. If you copy a path from
 Windows File Explorer, replace the backslashes with forward slashes.
 R does not accept single backslashes in file paths.</p>
 <p><strong>File location:</strong></p><ul><li><p>If the path contains a directory separator, the file is saved
-to that exact location.</p></li>
+to that exact location; the folder must already exist.</p></li>
 <li><p>If the path is a bare filename and the <code>data.dir</code> setting in
 <code><a href="joptions.html">joptions</a></code> is set, the file is saved to that folder
 (auto-created if it doesn't yet exist).</p></li>
@@ -147,6 +148,19 @@ labels and value labels.</p></li>
 variable or value labels.</p></li>
 <li><p>R native (<code>.rds</code>) preserves the data frame exactly as it
 exists in R, including all attributes.</p></li>
+<li><p>R native (<code>.rds</code>) also carries the active classification
+registrations (see <code><a href="jdummy.html">jdummy</a></code>, <code><a href="jnumeric.html">jnumeric</a></code>,
+<code><a href="jcount.html">jcount</a></code>, and <code><a href="jlikert.html">jlikert</a></code>), which
+<code><a href="jload.html">jload</a></code> restores. Other formats cannot store them, and
+a note says so when any are lost.</p></li>
+<li><p>Before writing <code>.sav</code>, <code>.dta</code>, or <code>.xpt</code>,
+<code>jsave()</code> checks for anything the format cannot store and
+stops, naming every problem at once: complex, raw, list, or
+POSIXlt columns; missing values of a form the format cannot hold
+(Stata-style in <code>.sav</code>, SPSS-style in <code>.dta</code>, either in
+<code>.xpt</code>); and, for <code>.sav</code>, more than three declared codes,
+or a range plus more than one code, on one column. No file is
+written until the problems are fixed.</p></li>
 <li><p>Stata files are written as version 14 format.</p></li>
 <li><p>Legacy Excel format (<code>.xls</code>) is not supported for saving.
 Use <code>.xlsx</code> instead.</p></li>
@@ -161,7 +175,7 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A runnable save into R's session temporary folder</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmplyybV8/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/Rtmp0yYYVG/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
@@ -172,16 +186,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="st">"community.csv"</span><span class="op">)</span>         <span class="co"># CSV</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="st">"community.rds"</span><span class="op">)</span>         <span class="co"># R native</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Stata and SAS formats cannot carry community's SPSS-style missing-value</span></span></span>
-<span class="r-in"><span><span class="co"># declarations -- convert first (jsave() pre-flights this and says so)</span></span></span>
-<span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="fu"><a href="jconvert.html">jconvert</a></span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span>, <span class="st">"community.dta"</span><span class="op">)</span>   <span class="co"># Stata</span></span></span>
-<span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="fu"><a href="jconvert.html">jconvert</a></span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span><span class="op">)</span>, <span class="st">"community.xpt"</span><span class="op">)</span>   <span class="co"># SAS interchange</span></span></span>
-<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
-<span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span>, <span class="st">"community.sav"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="st">"community.sav"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Full file path</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="st">"C:/Output/community.sav"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Stata and SAS formats cannot carry community's SPSS-style missing-value</span></span></span>
+<span class="r-in"><span><span class="co"># declarations -- convert first (jsave() pre-flights this and says so)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="jconvert.html">jconvert</a></span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"stata"</span>, modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="st">"community.dta"</span><span class="op">)</span>                  <span class="co"># Stata</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="jconvert.html">jconvert</a></span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="st">"community.xpt"</span><span class="op">)</span>                  <span class="co"># SAS interchange</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

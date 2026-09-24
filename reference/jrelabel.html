@@ -10,8 +10,9 @@ dates stay dates, factors stay factors, and text stays text. Value labels
 (labels) can be applied to haven-labelled, plain numeric, and
 logical variables; logical values are stored as 1 (TRUE) and 0 (FALSE).
 Factor, character, and date/time variables cannot carry value labels, and
-jrelabel() refuses the labels argument for these with a
-message naming the fix.
+jrelabel() refuses the labels argument for these; for
+factor and text variables the message names jencode as the
+fix.
 jrelabel() never rebuilds the variable it is given. Existing value
 labels, SPSS-style missing values (na_values / na_range),
 Stata-style missing values, and the variable's class all pass through
@@ -20,7 +21,10 @@ replace the full existing set (as VALUE LABELS does in SPSS), and
 a new variable label replaces the old one. A replacement set clears any
 labels attached to declared missing-value codes; the declaration itself
 is unaffected, but re-supply its label alongside the new value labels to
-keep it.
+keep it. On a column with Stata-style or SAS-style missing values, a
+marker that no case carries is declared only by its label, so a
+replacement set that leaves it out removes that declaration too;
+re-supply it as a token, e.g. labels = &quot;1=Low; .c=Refused&quot;.
 Both the labels and var.label arguments are optional. If
 neither is supplied, the function returns the variable unchanged."><meta property="og:description" content="jrelabel() attaches a variable label and/or value labels to any
 variable in a data frame. It is designed as a simple label applicator —
@@ -33,8 +37,9 @@ dates stay dates, factors stay factors, and text stays text. Value labels
 (labels) can be applied to haven-labelled, plain numeric, and
 logical variables; logical values are stored as 1 (TRUE) and 0 (FALSE).
 Factor, character, and date/time variables cannot carry value labels, and
-jrelabel() refuses the labels argument for these with a
-message naming the fix.
+jrelabel() refuses the labels argument for these; for
+factor and text variables the message names jencode as the
+fix.
 jrelabel() never rebuilds the variable it is given. Existing value
 labels, SPSS-style missing values (na_values / na_range),
 Stata-style missing values, and the variable's class all pass through
@@ -43,7 +48,10 @@ replace the full existing set (as VALUE LABELS does in SPSS), and
 a new variable label replaces the old one. A replacement set clears any
 labels attached to declared missing-value codes; the declaration itself
 is unaffected, but re-supply its label alongside the new value labels to
-keep it.
+keep it. On a column with Stata-style or SAS-style missing values, a
+marker that no case carries is declared only by its label, so a
+replacement set that leaves it out removes that declaration too;
+re-supply it as a token, e.g. labels = &quot;1=Low; .c=Refused&quot;.
 Both the labels and var.label arguments are optional. If
 neither is supplied, the function returns the variable unchanged."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -53,7 +61,7 @@ neither is supplied, the function returns the variable unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -90,8 +98,9 @@ dates stay dates, factors stay factors, and text stays text. Value labels
 (<code>labels</code>) can be applied to haven-labelled, plain numeric, and
 logical variables; logical values are stored as 1 (TRUE) and 0 (FALSE).
 Factor, character, and date/time variables cannot carry value labels, and
-<code>jrelabel()</code> refuses the <code>labels</code> argument for these with a
-message naming the fix.</p>
+<code>jrelabel()</code> refuses the <code>labels</code> argument for these; for
+factor and text variables the message names <code><a href="jencode.html">jencode</a></code> as the
+fix.</p>
 <p><code>jrelabel()</code> never rebuilds the variable it is given. Existing value
 labels, SPSS-style missing values (<code>na_values</code> / <code>na_range</code>),
 Stata-style missing values, and the variable's class all pass through
@@ -100,7 +109,10 @@ replace the full existing set (as <code>VALUE LABELS</code> does in SPSS), and
 a new variable label replaces the old one. A replacement set clears any
 labels attached to declared missing-value codes; the declaration itself
 is unaffected, but re-supply its label alongside the new value labels to
-keep it.</p>
+keep it. On a column with Stata-style or SAS-style missing values, a
+marker that no case carries is declared only by its label, so a
+replacement set that leaves it out removes that declaration too;
+re-supply it as a token, e.g. <code>labels = "1=Low; .c=Refused"</code>.</p>
 <p>Both the <code>labels</code> and <code>var.label</code> arguments are optional. If
 neither is supplied, the function returns the variable unchanged.</p>
     </div>
@@ -140,7 +152,8 @@ has no existing label, no variable label is set.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>The variable with the requested labels applied. The variable keeps
+    <p>The variable with the requested labels applied, returned
+invisibly (nothing prints at the console). The variable keeps
 its class: haven-labelled input stays haven-labelled with any declared
 SPSS-style or Stata-style missing values intact; plain numeric and
 logical input becomes <code>haven_labelled</code> when value labels are

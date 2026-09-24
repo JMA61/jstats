@@ -61,7 +61,7 @@ declare on every column, pass vars = names(data) explicitly."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -170,8 +170,8 @@ label (see the Missing-Values Convention section).</p>
 <p>A token may name a marker that no case currently carries – useful
 for FORWARD-DECLARING a label before recoding values into it. The
 label attaches, nothing in the data changes, and the notification
-says the marker is not present in the data. Such a label survives
-both a Stata and an SPSS round trip.</p>
+says the marker is not present in the data. Such a label survives a
+save to Stata format (.dta) and the load back.</p>
 <p>A token given with no label is a no-op on an already-tagged
 column: the cells are already missing, so the only act available
 is naming a marker, and the call reports that it changed nothing.

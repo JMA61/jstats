@@ -157,10 +157,10 @@ jcorr(community, Income, Age, WellbeingScore)
 #> 
 #> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
-#> -------------------------------------
+#>       Missing     6      5.8
+#> ----------------------------
 #> 
 #> Bivariate Correlations (Pearson)
 #>                 Income          Age             WellbeingScore
@@ -178,10 +178,10 @@ jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #> 
 #> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
-#> -------------------------------------
+#>       Missing     6      5.8
+#> ----------------------------
 #> 
 #> Bivariate Correlations (Spearman)
 #>                 Income          Age             WellbeingScore
@@ -206,10 +206,10 @@ jcorr(Income, Age, WellbeingScore)
 #> 
 #> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
-#> -------------------------------------
+#>       Missing     6      5.8
+#> ----------------------------
 #> 
 #> Bivariate Correlations (Pearson)
 #>                 Income          Age             WellbeingScore

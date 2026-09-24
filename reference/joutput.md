@@ -18,6 +18,7 @@ joutput(
   diagnostics = NULL,
   case.processing = NULL,
   case.processing.detail = NULL,
+  case.processing.filter = NULL,
   variable.id = NULL,
   value.id = NULL,
   ref.categories = NULL,
@@ -131,7 +132,40 @@ joutput(
   `"none"` (no bottom table), `"totals"` (one summed missing row per
   variable), or `"per_code"` (per declared missing-value code plus
   system-missing). The minimal tier defaults to `"none"`, standard to
-  `"totals"`, full to `"per_code"`.
+  `"totals"`, full to `"per_code"`. Each row counts the variable's
+  missing cases in the original data (`From N` and its percent); when a
+  filter step ran, the row also shows how many of those cases the filter
+  removed (`Filtered`) and how many remain in the analysis pool (the
+  second `From N`), where listwise deletion takes them. The breakdown
+  lists the analysis variables and, after them, any variables in the
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+  list that the analysis itself does not use, each tagged
+  `(jcomplete() only)`: every case
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+  drops is missing, and these rows say on which variable. The breakdown
+  counts each variable's missing cases, so a case missing on two
+  variables appears under both. A case that a
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) or
+  per-call `subset` condition dropped because the condition could not be
+  evaluated for it (a missing value in the condition's variables) is
+  counted on that row of the upper table instead, as a `(k missing)`
+  note after the condition, and gets no row here. Row form for the
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)-only
+  variables is set by `case.processing.filter`.
+
+- case.processing.filter:
+
+  Row form for the
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)-only
+  variables in the missing-data breakdown: `"list"` (one row per
+  variable), `"collapse"` (a single `jcomplete()-only variables (k)` row
+  counting the cases missing on at least one of them), or `"auto"`
+  (named up to three variables, collapsed from four; the
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+  list of a long survey battery is the case that collapses). A lone
+  variable is always named. The minimal tier defaults to `"collapse"`,
+  standard to `"auto"`, full to `"list"`. Session-level only; the
+  analysis functions take no per-call form of it.
 
 - variable.id:
 
@@ -161,9 +195,9 @@ joutput(
   `"legend.bottom"` keep the bare code in the table and print a
   value-label legend after it (`"legend"` per-table, `"legend.bottom"`
   consolidated where multiple tables are produced). Variables with no
-  value labels render identically under all three modes, so this is a
-  no-op for plain numeric data. The minimal tier defaults to `"values"`;
-  the standard and full tiers default to `"both"`. Distinct from
+  value labels render identically under every mode, so this is a no-op
+  for plain numeric data. The minimal tier defaults to `"labels"`; the
+  standard and full tiers default to `"both"`. Distinct from
   `variable.id`, which governs the one-per-variable descriptive label.
   Not a logical.
 
@@ -236,6 +270,7 @@ joutput("standard")                       # effect sizes + means/diff CIs (jt, j
 #>   diagnostics: OFF
 #>   case.processing: AUTO
 #>   case.processing.detail: TOTALS
+#>   case.processing.filter: AUTO
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
@@ -253,6 +288,7 @@ joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient 
 #>   diagnostics: OFF
 #>   case.processing: AUTO
 #>   case.processing.detail: TOTALS
+#>   case.processing.filter: AUTO
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
@@ -270,6 +306,7 @@ joutput("full")                         # everything
 #>   diagnostics: ON
 #>   case.processing: ON
 #>   case.processing.detail: PER_CODE
+#>   case.processing.filter: LIST
 #>   variable.id: LEGEND
 #>   value.id: BOTH
 #>   ref.categories: ON
@@ -287,6 +324,7 @@ joutput()                               # show current settings
 #>   diagnostics: ON
 #>   case.processing: ON
 #>   case.processing.detail: PER_CODE
+#>   case.processing.filter: LIST
 #>   variable.id: LEGEND
 #>   value.id: BOTH
 #>   ref.categories: ON

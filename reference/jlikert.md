@@ -28,7 +28,9 @@ jlikert(data, ..., remove = FALSE, clear.all = FALSE)
 - ...:
 
   One or more unquoted variable names to register, or a single `NULL` to
-  clear this frame's Likert registrations (see Details).
+  clear this frame's Likert registrations (see Details). The
+  registration applies to numeric and haven-labelled variables; a factor
+  or text variable is categorical regardless and is unaffected by it.
 
 - remove:
 

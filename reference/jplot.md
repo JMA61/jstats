@@ -300,9 +300,9 @@ m <- jlm(WellbeingScore ~ Income + Age, community)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients

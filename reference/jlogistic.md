@@ -294,9 +294,9 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -339,9 +339,9 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -379,9 +379,9 @@ jlogistic(Volunteer ~ Income + Age)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -549,9 +549,9 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -577,8 +577,9 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #>   Modeled (1):   Yes
 #>   Reference (0): No
 
-# Not normally needed. You'd clear a default or registration only to
-# undo a mistake, or -- as in this example -- to reset state for testing.
+# jdummy(community, NULL) clears its registration -- not normally needed.
+# You'd clear a default or registration only to undo a mistake, or -- as
+# in this example -- to reset state for testing.
 jdummy(community, NULL)
 #> Dummy registrations cleared for community: Region.
 juse(NULL)

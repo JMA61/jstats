@@ -58,8 +58,8 @@ jload(
 
   Logical. If `TRUE`, overwrites an existing object with the same name
   without prompting. If `FALSE` (default), prompts for confirmation in
-  interactive sessions. In non-interactive sessions, overwrites with a
-  warning message. In a script, state it explicitly:
+  interactive sessions. In non-interactive sessions, overwrites and says
+  so in a note. In a script, state it explicitly:
   `jload("mydata.rds", overwrite = TRUE)`. Otherwise, if the name
   already exists in your environment, and the script was run by pasting
   or with RStudio's Run button, the call stops with an error.
@@ -90,14 +90,15 @@ jload(
 - preserve.declarations:
 
   Logical. If `TRUE` (default), declared missing values arriving with
-  the file are preserved: SPSS-style codes such as -99 keep their
-  original numeric values in the data frame, with metadata attached so
-  the package's analysis functions still treat them as missing, and
-  Stata-style tagged values (`.a`, `.b`, ...) are kept as read. If
-  `FALSE`, both forms are converted to plain `NA` on import and the
-  metadata is stripped. Applies to any loaded file whose columns carry
-  missing-value declarations — typically `.sav`, `.dta`, and `.sas7bdat`
-  files, and `.rds` files saved from such data. For `.sav` files, `TRUE`
+  the file are preserved: SPSS-style codes such as -99, and declared
+  ranges, keep their original numeric values in the data frame, with the
+  declaration attached so the package's analysis functions still treat
+  them as missing, and Stata-style tagged values (`.a`, `.b`, ...) are
+  kept as read. If `FALSE`, both forms are converted to plain `NA` on
+  import and the declarations are removed; value labels are kept.
+  Applies to any loaded file whose columns carry missing-value
+  declarations — typically `.sav`, `.dta`, and `.sas7bdat` files, and
+  `.rds` files saved from such data. For `.sav` files, `TRUE`
   corresponds to haven's `user_na = TRUE`. The haven package and its
   documentation call these user-defined missing values.
 
@@ -119,18 +120,22 @@ jload(
 
   Logical; default FALSE. When TRUE, suppresses jload()'s informational
   messages (the directory-resolution note, file found, load summary,
-  default-data note, and the narrative about declared missing values,
-  overriding missing.notice). Errors, warnings, the multi-sheet
-  advisory, and the overwrite prompt are still shown.
+  default-data note, registration notes, and the narrative about
+  declared missing values, overriding missing.notice). Errors, warnings,
+  the multi-sheet advisory, the overwrite prompt, the note that a local
+  file shadowed a shipped dataset, and the note that an existing object
+  was replaced are still shown, as is the coded-missing scan report;
+  turn that off with `check.missing = FALSE`.
 
 ## Value
 
 Invisibly returns `NULL`; jload() is called for its side effects. The
 loaded data frame is placed in the calling environment under the file's
 name (or `name`), and any classification registrations saved with an
-.rds file are restored for that name. Do not assign the result:
-`x <- jload("mydata.rds")` binds only `NULL`, while the data frame still
-arrives under its own name.
+.rds file are restored for that name. Loading a file that carries none
+clears any registrations set this session under that name, with a note
+saying so. Do not assign the result: `x <- jload("mydata.rds")` binds
+only `NULL`, while the data frame still arrives under its own name.
 
 ## Details
 
@@ -140,18 +145,25 @@ slashes. R does not accept single backslashes in file paths.
 
 **File search order:**
 
-1.  If the path contains a directory separator (`/`), the path is used
-    directly.
+1.  If the path contains a directory separator (`/`, or a backslash),
+    the path is used directly.
 
 2.  If the path is a bare filename, `jload()` checks: (a) the folder
     named by the `data.dir` setting in
     [`joptions`](https://jma61.github.io/jstats/reference/joptions.md)
     if it is set and exists; (b) the working directory.
 
+When the extension is omitted, both locations are searched for every
+supported extension, and more than one match (two extensions, or the
+same file in both locations) is an error that asks for the extension. If
+nothing matches on disk, a bare name falls back to a shipped example
+dataset of that name (see below).
+
 **Auto-naming:** The data frame name is derived from the filename by
 stripping the extension. If the resulting name starts with a digit
 (which R does not allow as a variable name), you must supply the `name`
-argument.
+argument. Other characters R does not allow in a name, such as spaces
+and hyphens, become dots: `"my data-1.sav"` loads as `my.data.1`.
 
 **Excel files:** Excel files (`.xlsx`, `.xls`) do not contain variable
 or value labels. The data will be loaded as plain numeric, character, or
@@ -163,26 +175,30 @@ add labels after loading if needed.
 the file itself, but they only survive the trip back if the reader
 requests them. `jload()` always does, so declarations written by
 [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) are
-present after every jstats load. Other ways of reading the same file may
-convert the declared cells to plain `NA` and discard the declarations,
-so the same file can show different numbers of valid cases depending on
-how it was read.
+present after every jstats load (unless
+`preserve.declarations = FALSE`). Other ways of reading the same file
+may convert the declared cells to plain `NA` and discard the
+declarations, so the same file can show different numbers of valid cases
+depending on how it was read.
 
 **Coded missing values:** When `check.missing = TRUE`, the function
-scans numeric variables for values that appear to be coded missing
-values. Only whole-number values are considered (coded missing values
-are always integers like -99, 999, etc.). Two detection methods are
-used:
+scans numeric variables for values that look like coded missing values
+but are not declared as missing. (Declared missing values are reported
+in the load's own notification, never by the scan.) Only whole-number
+values are considered. A value is flagged when it is
 
-- For SPSS files, missing values declared in the file metadata are
-  reported with high confidence.
+- a negative number at least three times the size of the variable's
+  largest non-negative value (-99 on a 1-to-5 scale), or
 
-- A heuristic scan detects negative values among otherwise positive data
-  and extreme outlier values (5x the range of other values).
+- at least five times the size of every other value in the variable (999
+  on a 1-to-7 scale).
 
-Detected values are reported but not changed. Use
-[`jrecode`](https://jma61.github.io/jstats/reference/jrecode.md) to
-convert them to `NA` if needed.
+A flagged value whose value label suggests missingness (such as
+"Refused" or "Don't know") is reported as label-only; the rest are
+reported as suspected. Flagged values are reported but not changed. If
+they are missing values, declare them with
+[`jdeclare_missing`](https://jma61.github.io/jstats/reference/jdeclare_missing.md),
+which keeps the codes and their labels; the report shows the call.
 
 **Package example datasets and .rda / .RData files:** `jload()` opens
 the example datasets shipped with jstats – currently `community` and

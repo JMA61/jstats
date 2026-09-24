@@ -72,7 +72,7 @@ package's GitHub repository.
   apply or replace value labels and variable label
 
 - [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) –
-  encode a text variable as labelled numeric codes
+  encode a text or factor variable as labelled numeric codes
 
 - [`jsum`](https://jma61.github.io/jstats/reference/jsum.md) – row-wise
   sum across variables, with min-valid handling

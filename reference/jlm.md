@@ -349,9 +349,9 @@ jlm(WellbeingScore ~ Income + Age, data = community)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -382,9 +382,9 @@ jlm(WellbeingScore ~ Income + Age, community)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -418,9 +418,9 @@ jlm(WellbeingScore ~ Income + Age)
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Income
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -575,9 +575,9 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 #>     Auto-listwise         6         97
 #>     Analysis N           --         97
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -610,11 +610,11 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #>     Auto-listwise        11         92
 #>     Analysis N           --         92
 #> 
-#> Missing-data breakdown  From 103    %
+#> Missing data   From 103   %
 #>     Education
-#>       Missing              6      5.8
+#>       Missing     6      5.8
 #>     Smoker
-#>       Missing              5      4.9
+#>       Missing     5      4.9
 #> --------------------------------------
 #> 
 #> Coefficients
@@ -637,8 +637,9 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #>   Total:      12339.859
 #> 
 
-# Not normally needed. You'd clear a default or registration only to
-# undo a mistake, or -- as in this example -- to reset state for testing.
+# jdummy(community, NULL) clears its registration -- not normally needed.
+# You'd clear a default or registration only to undo a mistake, or -- as
+# in this example -- to reset state for testing.
 jdummy(community, NULL)
 #> Dummy registrations cleared for community: Region.
 juse(NULL)

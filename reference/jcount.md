@@ -32,7 +32,9 @@ jcount(data, ..., remove = FALSE, clear.all = FALSE)
 
 - ...:
 
-  One or more unquoted variable names to register.
+  One or more unquoted variable names to register. The registration
+  applies to numeric and haven-labelled variables; a factor or text
+  variable is categorical regardless and is unaffected by it.
 
 - remove:
 

@@ -38,10 +38,13 @@ jdummy(
 
 - ...:
 
-  One or more unquoted variable names to register. Omit (along with
-  data) to display all current registrations. A lone `NULL` in the
-  variable slot – `jdummy(data, NULL)` – clears that frame's dummy
-  registrations.
+  One or more unquoted variable names to register. The variable may be
+  haven-labelled, numeric, logical, character, or a factor: for a factor
+  the levels are the categories, in level order, and a level with no
+  cases is left out; for a text variable the distinct values are the
+  categories, in alphabetical order. Omit (along with data) to display
+  all current registrations. A lone `NULL` in the variable slot –
+  `jdummy(data, NULL)` – clears that frame's dummy registrations.
 
 - ref:
 
@@ -239,8 +242,10 @@ jdummy(NULL)                         # Clear the default frame's (or ask)
 #> No dummy registrations to clear for community (the default data frame).
 jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
 #> No dummy registrations to clear.
-# Not normally needed. You'd clear a default or registration only to
-# undo a mistake, or -- as in this example -- to reset state for testing.
+
+# juse(NULL) clears the default dataset -- not normally needed. You'd
+# clear a default or registration only to undo a mistake, or -- as in
+# this example -- to reset state for testing.
 juse(NULL)
 #> Default data frame cleared.
 ```

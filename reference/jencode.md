@@ -1,11 +1,11 @@
-# Encode a text variable as labelled numbers
+# Encode a text or factor variable as labelled numbers
 
-Converts a character (text) variable into numeric codes, attaching the
-original words as value labels so every later table still shows the
-words. With no `map`, codes are assigned alphabetically and the
-assignment is printed; with a `map`, you choose the numbers. Numbers
-stored as text ("34") always convert to their own value, never to a
-rank.
+Converts a character (text) or factor variable into numeric codes,
+attaching the original words as value labels so every later table still
+shows the words. With no `map`, codes are assigned alphabetically (a
+factor's levels keep their own order) and the assignment is printed;
+with a `map`, you choose the numbers. Numbers stored as text ("34")
+always convert to their own value, never to a rank.
 
 ## Usage
 
@@ -23,10 +23,10 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
 
 - var:
 
-  The text variable to encode (unquoted name). Only character variables
-  are accepted: factors, numeric, logical, and date/time variables are
-  refused with a message naming the right tool (for numeric variables,
-  that is
+  The text or factor variable to encode (unquoted name). Character
+  variables and factors are accepted; numeric, logical, and date/time
+  variables are refused with a message naming the right tool (for
+  numeric variables, that is
   [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)).
 
 - map:
@@ -137,6 +137,23 @@ the assignment listing plus a ready-made `map` call so an ordered set
 (Low / Medium / High) can be renumbered deliberately rather than
 accepted alphabetically.
 
+**A factor is text with a declared order.** R's
+[`factor()`](https://rdrr.io/r/base/factor.html) stores categories as
+level text in a set order, so `jencode()` accepts a factor as it accepts
+a text variable, with two differences that honor the declaration: the
+codes follow the level order rather than the alphabet (the same thing
+for a factor built without `levels =`, whose levels are alphabetical),
+and a level with no cases keeps its code and label, tagged `(no cases)`
+in the listing. An ordered factor (`ordered = TRUE`) has already
+declared its order, so the rerun-with-a-map suggestion is not printed
+for it. Levels that are all numbers convert by face value, like numbers
+stored as text. With a `map`, the rules name the level text exactly as
+they name words. This is also the route from a factor to
+[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md),
+[`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) and
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md),
+which work on numeric variables only.
+
 **Numbers stored as text convert by face value.** Here the two part
 company. `AUTORECODE` treats "34" as just another string and renumbers
 it to its alphabetical rank; `jencode()` always converts a number stored
@@ -222,6 +239,23 @@ MyData$Age <- jencode(MyData, AgeTxt, map = "else=NA")
 #> 
 #> Note: else=NA converted 1 unmapped word (1 cell) in 'AgeTxt' to missing (NA).
 #> The unmapped word was "Refused".
+#> 
+#> Note: This call changes MyData only if you assign the result:
+#>   MyData$<name> <- jencode(...)
+#> To check the encoding landed correctly, compare jfreq() on the original and the
+#> new column.
+
+# A factor: level order kept; an empty level keeps its code and label
+MyData$Sev <- factor(c("Low", "High", "Low", "High"),
+                     levels = c("Low", "Medium", "High"))
+MyData$SevR <- jencode(MyData, Sev)
+#> Note: 'Sev' was encoded in its level order:
+#>   "Low"    -> 1
+#>   "Medium" -> 2  (no cases)
+#>   "High"   -> 3
+#> If these categories have a natural order (like Low/Medium/High), rerun with a
+#> map to choose the numbers:
+#>   MyData$SevR <- jencode(MyData, Sev, map = "Low=1; Medium=2; High=3")
 #> 
 #> Note: This call changes MyData only if you assign the result:
 #>   MyData$<name> <- jencode(...)

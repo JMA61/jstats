@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,6 +57,7 @@ precedence over joutput() settings.</p>
 <span>  diagnostics <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  case.processing <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  case.processing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  case.processing.filter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  variable.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ref.categories <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -171,7 +172,37 @@ Summary's missing-data breakdown: <code>"none"</code> (no bottom
 table), <code>"totals"</code> (one summed missing row per variable),
 or <code>"per_code"</code> (per declared missing-value code plus
 system-missing). The minimal tier defaults to <code>"none"</code>,
-standard to <code>"totals"</code>, full to <code>"per_code"</code>.</p></dd>
+standard to <code>"totals"</code>, full to <code>"per_code"</code>.
+Each row counts the variable's missing cases in the original data
+(<code>From N</code> and its percent); when a filter step ran, the row also
+shows how many of those cases the filter removed (<code>Filtered</code>)
+and how many remain in the analysis pool (the second <code>From N</code>),
+where listwise deletion takes them.
+The breakdown lists the analysis variables and, after them, any
+variables in the <code><a href="jcomplete.html">jcomplete()</a></code> list that the analysis itself
+does not use, each tagged <code>(jcomplete() only)</code>: every case
+<code><a href="jcomplete.html">jcomplete()</a></code> drops is missing, and these rows say on which
+variable. The breakdown counts each variable's missing cases, so a
+case missing on two variables appears under both. A case that a
+<code><a href="jsubset.html">jsubset()</a></code> or per-call <code>subset</code> condition dropped because
+the condition could not be evaluated for it (a missing value in the
+condition's variables) is counted on that row of the upper table
+instead, as a <code>(k missing)</code> note after the condition, and gets no
+row here. Row form for the <code><a href="jcomplete.html">jcomplete()</a></code>-only variables is set
+by <code>case.processing.filter</code>.</p></dd>
+
+
+<dt id="arg-case-processing-filter">case.processing.filter<a class="anchor" aria-label="anchor" href="#arg-case-processing-filter"></a></dt>
+<dd><p>Row form for the <code><a href="jcomplete.html">jcomplete()</a></code>-only
+variables in the missing-data breakdown: <code>"list"</code> (one row per
+variable), <code>"collapse"</code> (a single
+<code>jcomplete()-only variables (k)</code> row counting the cases missing
+on at least one of them), or <code>"auto"</code> (named up to three
+variables, collapsed from four; the <code><a href="jcomplete.html">jcomplete()</a></code> list of a long
+survey battery is the case that collapses). A lone variable is always
+named. The minimal tier defaults to <code>"collapse"</code>, standard to
+<code>"auto"</code>, full to <code>"list"</code>. Session-level only; the analysis
+functions take no per-call form of it.</p></dd>
 
 
 <dt id="arg-variable-id">variable.id<a class="anchor" aria-label="anchor" href="#arg-variable-id"></a></dt>
@@ -205,8 +236,8 @@ bare code per code where none exists).
 table and print a value-label legend after it (<code>"legend"</code>
 per-table, <code>"legend.bottom"</code> consolidated where multiple tables
 are produced). Variables with no value labels
-render identically under all three modes, so this is a no-op for plain
-numeric data. The minimal tier defaults to <code>"values"</code>; the standard
+render identically under every mode, so this is a no-op for plain
+numeric data. The minimal tier defaults to <code>"labels"</code>; the standard
 and full tiers default to <code>"both"</code>. Distinct from
 <code>variable.id</code>, which governs the one-per-variable descriptive
 label. Not a logical.</p></dd>
@@ -280,6 +311,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: AUTO</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.detail: TOTALS</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.filter: AUTO</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
@@ -297,6 +329,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: AUTO</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.detail: TOTALS</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.filter: AUTO</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
@@ -314,6 +347,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.detail: PER_CODE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.filter: LIST</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: LEGEND</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
@@ -331,6 +365,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.detail: PER_CODE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.filter: LIST</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: LEGEND</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>

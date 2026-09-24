@@ -119,11 +119,11 @@ jalpha(community, Environment1, Environment2, Environment3,
 #>     Auto-listwise        19         84
 #>     Analysis N           --         84
 #> 
-#> Missing-data breakdown  From 103     %
+#> Missing data   From 103   %
 #>     Environment1
-#>       Missing              12     11.7
+#>       Missing     12     11.7
 #>     Environment3
-#>       Missing              12     11.7
+#>       Missing     12     11.7
 #> --------------------------------------
 #> 
 #> Reliability Statistics
@@ -168,11 +168,11 @@ jalpha(Environment1, Environment2, Environment3, Environment4,
 #>     Auto-listwise        19         84
 #>     Analysis N           --         84
 #> 
-#> Missing-data breakdown  From 103     %
+#> Missing data   From 103   %
 #>     Environment1
-#>       Missing              12     11.7
+#>       Missing     12     11.7
 #>     Environment3
-#>       Missing              12     11.7
+#>       Missing     12     11.7
 #> --------------------------------------
 #> 
 #> Reliability Statistics

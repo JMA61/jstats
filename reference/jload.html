@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -114,7 +114,7 @@ functions. Default is <code>FALSE</code>.</p></dd>
 <dd><p>Logical. If <code>TRUE</code>, overwrites an existing object
 with the same name without prompting. If <code>FALSE</code> (default),
 prompts for confirmation in interactive sessions. In non-interactive
-sessions, overwrites with a warning message. In a script, state it
+sessions, overwrites and says so in a note. In a script, state it
 explicitly: <code>jload("mydata.rds", overwrite = TRUE)</code>. Otherwise,
 if the name already exists in your environment, and the script was
 run by pasting or with RStudio's Run button, the call stops with an
@@ -147,12 +147,13 @@ a message lists the available sheets.</p></dd>
 <dt id="arg-preserve-declarations">preserve.declarations<a class="anchor" aria-label="anchor" href="#arg-preserve-declarations"></a></dt>
 <dd><p>Logical. If <code>TRUE</code> (default), declared
 missing values arriving with the file are preserved: SPSS-style
-codes such as -99 keep their original numeric values in the data
-frame, with metadata attached so the package's analysis functions
-still treat them as missing, and Stata-style tagged values
-(<code>.a</code>, <code>.b</code>, ...) are kept as read. If <code>FALSE</code>,
-both forms are converted to plain <code>NA</code> on import and the
-metadata is stripped. Applies to any loaded file whose columns
+codes such as -99, and declared ranges, keep their original numeric
+values in the data frame, with the declaration attached so the
+package's analysis functions still treat them as missing, and
+Stata-style tagged values (<code>.a</code>, <code>.b</code>, ...) are kept as
+read. If <code>FALSE</code>, both forms are converted to plain <code>NA</code>
+on import and the declarations are removed; value labels are kept.
+Applies to any loaded file whose columns
 carry missing-value declarations — typically <code>.sav</code>,
 <code>.dta</code>, and <code>.sas7bdat</code> files, and <code>.rds</code> files
 saved from such data. For <code>.sav</code> files, <code>TRUE</code>
@@ -175,9 +176,13 @@ notification. See <code><a href="joutput.html">?joutput</a></code> for the full 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Logical; default FALSE. When TRUE, suppresses jload()'s
 informational messages (the directory-resolution note, file found,
-load summary, default-data note, and the narrative about declared
-missing values, overriding missing.notice). Errors, warnings, the
-multi-sheet advisory, and the overwrite prompt are still shown.</p></dd>
+load summary, default-data note, registration notes, and the
+narrative about declared missing values, overriding missing.notice).
+Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
+note that a local file shadowed a shipped dataset, and the note that
+an existing object was replaced are still shown, as is the
+coded-missing scan report; turn that off with
+<code>check.missing = FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -185,9 +190,11 @@ multi-sheet advisory, and the overwrite prompt are still shown.</p></dd>
     <p>Invisibly returns <code>NULL</code>; jload() is called for its side
 effects. The loaded data frame is placed in the calling environment
 under the file's name (or <code>name</code>), and any classification
-registrations saved with an .rds file are restored for that name. Do
-not assign the result: <code>x &lt;- jload("mydata.rds")</code> binds only
-<code>NULL</code>, while the data frame still arrives under its own name.</p>
+registrations saved with an .rds file are restored for that name.
+Loading a file that carries none clears any registrations set this
+session under that name, with a note saying so. Do not assign the
+result: <code>x &lt;- jload("mydata.rds")</code> binds only <code>NULL</code>,
+while the data frame still arrives under its own name.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -195,16 +202,24 @@ not assign the result: <code>x &lt;- jload("mydata.rds")</code> binds only
 Use forward slashes (<code>/</code>) in file paths. If you copy a path from
 Windows File Explorer, replace the backslashes with forward slashes.
 R does not accept single backslashes in file paths.</p>
-<p><strong>File search order:</strong></p><ol><li><p>If the path contains a directory separator (<code>/</code>), the path
-is used directly.</p></li>
+<p><strong>File search order:</strong></p><ol><li><p>If the path contains a directory separator (<code>/</code>, or a
+backslash), the path is used directly.</p></li>
 <li><p>If the path is a bare filename, <code>jload()</code> checks:
 (a) the folder named by the <code>data.dir</code> setting in
 <code><a href="joptions.html">joptions</a></code> if it is set and exists; (b) the working
 directory.</p></li>
-</ol><p><strong>Auto-naming:</strong>
+</ol><p>When the extension is omitted, both locations are searched for every
+supported extension, and more than one match (two extensions, or the
+same file in both locations) is an error that asks for the extension.
+If nothing matches on disk, a bare name falls back to a shipped example
+dataset of that name (see below).</p>
+<p><strong>Auto-naming:</strong>
 The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
-allow as a variable name), you must supply the <code>name</code> argument.</p>
+allow as a variable name), you must supply the <code>name</code> argument.
+Other characters R does not allow in a name, such as spaces and
+hyphens, become dots: <code>"my data-1.sav"</code> loads as
+<code>my.data.1</code>.</p>
 <p><strong>Excel files:</strong>
 Excel files (<code>.xlsx</code>, <code>.xls</code>) do not contain variable or
 value labels. The data will be loaded as plain numeric, character, or
@@ -214,20 +229,26 @@ if needed.</p>
 Missing-value declarations are stored in the file itself, but they
 only survive the trip back if the reader requests them.
 <code>jload()</code> always does, so declarations written by
-<code><a href="jsave.html">jsave()</a></code> are present after every jstats load. Other ways of
+<code><a href="jsave.html">jsave()</a></code> are present after every jstats load (unless
+<code>preserve.declarations = FALSE</code>). Other ways of
 reading the same file may convert the declared cells to plain
 <code>NA</code> and discard the declarations, so the same file can show
 different numbers of valid cases depending on how it was read.</p>
 <p><strong>Coded missing values:</strong>
 When <code>check.missing = TRUE</code>, the function scans numeric variables
-for values that appear to be coded missing values. Only whole-number
-values are considered (coded missing values are always integers like
--99, 999, etc.). Two detection methods are used:</p><ul><li><p>For SPSS files, missing values declared in the file metadata
-are reported with high confidence.</p></li>
-<li><p>A heuristic scan detects negative values among otherwise positive
-data and extreme outlier values (5x the range of other values).</p></li>
-</ul><p>Detected values are reported but not changed. Use <code><a href="jrecode.html">jrecode</a></code>
-to convert them to <code>NA</code> if needed.</p>
+for values that look like coded missing values but are not declared as
+missing. (Declared missing values are reported in the load's own
+notification, never by the scan.) Only whole-number values are
+considered. A value is flagged when it is</p><ul><li><p>a negative number at least three times the size of the
+variable's largest non-negative value (-99 on a 1-to-5 scale), or</p></li>
+<li><p>at least five times the size of every other value in the
+variable (999 on a 1-to-7 scale).</p></li>
+</ul><p>A flagged value whose value label suggests missingness (such as
+"Refused" or "Don't know") is reported as label-only; the rest are
+reported as suspected. Flagged values are reported but not changed. If
+they are missing values, declare them with
+<code><a href="jdeclare_missing.html">jdeclare_missing</a></code>, which keeps the codes and their labels;
+the report shows the call.</p>
 <p><strong>Package example datasets and .rda / .RData files:</strong>
 <code>jload()</code> opens the example datasets shipped with jstats –
 currently <code>community</code> and <code>clinic</code> – by bare name:

@@ -12,8 +12,10 @@ stay dates, factors stay factors, and text stays text. Value labels
 (`labels`) can be applied to haven-labelled, plain numeric, and logical
 variables; logical values are stored as 1 (TRUE) and 0 (FALSE). Factor,
 character, and date/time variables cannot carry value labels, and
-`jrelabel()` refuses the `labels` argument for these with a message
-naming the fix.
+`jrelabel()` refuses the `labels` argument for these; for factor and
+text variables the message names
+[`jencode`](https://jma61.github.io/jstats/reference/jencode.md) as the
+fix.
 
 `jrelabel()` never rebuilds the variable it is given. Existing value
 labels, SPSS-style missing values (`na_values` / `na_range`),
@@ -23,7 +25,10 @@ replace the full existing set (as `VALUE LABELS` does in SPSS), and a
 new variable label replaces the old one. A replacement set clears any
 labels attached to declared missing-value codes; the declaration itself
 is unaffected, but re-supply its label alongside the new value labels to
-keep it.
+keep it. On a column with Stata-style or SAS-style missing values, a
+marker that no case carries is declared only by its label, so a
+replacement set that leaves it out removes that declaration too;
+re-supply it as a token, e.g. `labels = "1=Low; .c=Refused"`.
 
 Both the `labels` and `var.label` arguments are optional. If neither is
 supplied, the function returns the variable unchanged.
@@ -67,12 +72,13 @@ jrelabel(data, var, labels = NULL, var.label = NULL)
 
 ## Value
 
-The variable with the requested labels applied. The variable keeps its
-class: haven-labelled input stays haven-labelled with any declared
-SPSS-style or Stata-style missing values intact; plain numeric and
-logical input becomes `haven_labelled` when value labels are applied;
-any other type is returned unchanged apart from the labels. Assign the
-result back to a column in your data frame:
+The variable with the requested labels applied, returned invisibly
+(nothing prints at the console). The variable keeps its class:
+haven-labelled input stays haven-labelled with any declared SPSS-style
+or Stata-style missing values intact; plain numeric and logical input
+becomes `haven_labelled` when value labels are applied; any other type
+is returned unchanged apart from the labels. Assign the result back to a
+column in your data frame:
 `MyData$VarName <- jrelabel(MyData, VarName, ...)`
 
 ## See also

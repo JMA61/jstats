@@ -19,7 +19,7 @@ count, or dummy registration on it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.180</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.185</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,10 @@ count, or dummy registration on it.</p>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>One or more unquoted variable names to register, or a single
-<code>NULL</code> to clear this frame's Likert registrations (see Details).</p></dd>
+<code>NULL</code> to clear this frame's Likert registrations (see Details).
+The registration applies to numeric and haven-labelled variables; a
+factor or text variable is categorical regardless and is unaffected by
+it.</p></dd>
 
 
 <dt id="arg-remove">remove<a class="anchor" aria-label="anchor" href="#arg-remove"></a></dt>
