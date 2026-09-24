@@ -265,8 +265,9 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 jlm(WellbeingScore ~ Education + Environment4 + Smoker,
     numeric = c("Education", "Environment4"), categorical = "Smoker")
 
-# Not normally needed. You'd clear a default or registration only to
-# undo a mistake, or -- as in this example -- to reset state for testing.
+# jdummy(community, NULL) clears its registration -- not normally needed.
+# You'd clear a default or registration only to undo a mistake, or -- as
+# in this example -- to reset state for testing.
 jdummy(community, NULL)
 juse(NULL)
 

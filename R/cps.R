@@ -729,17 +729,35 @@
                            fmt1(all_src / n_original * 100))
         all_plp  <- fmt1(all_pool / n_pool * 100)
 
+        # The "Filtered" column (Session 312): the variable's missing cases
+        # that a pipeline step removed before the pool -- source minus pool
+        # -- stated rather than left to the reader's subtraction (the same
+        # principle as the "(k missing)" note on the filter rows). Shown
+        # exactly when the pool pair is shown; an NA source (a transform row
+        # under a pipeline) renders as the dash here too.
+        all_filt  <- all_src - all_pool
+        all_filts <- ifelse(is.na(all_filt), dash, as.character(all_filt))
+        filt_hdr  <- "Filtered"
+
+        # Header text "Missing data" (Session 312; was "Missing-data
+        # breakdown"): the per-variable rows are the breakdown, and the
+        # shorter header narrows the label column to the rows' own width at
+        # the totals tier, paying for the new column.
         h_ind <- 0L; c_ind <- 6L
-        lab_end <- max(h_ind + dw("Missing-data breakdown"),
+        lab_end <- max(h_ind + dw("Missing data"),
                        c_ind + max(dw(all_lab)))
         # The "From N" header defines each count column's width; the count
         # value-block is sized to the widest count in that column and centred
-        # within the column (counts right-justified within the block). Percent
-        # columns keep their right-justified rendering. (Session 52.)
+        # within the column (counts right-justified within the block).
+        # (Session 52.) Percent VALUES stay right-justified; the "%" headers
+        # are centred over their columns (Session 312), through the same
+        # helper the counts use, so header and counts agree by construction.
         src_count_w  <- max(dw(all_srcs))
         pool_count_w <- max(dw(all_pool))
+        filt_count_w <- max(dw(all_filts))
         srcn_w  <- max(dw(src_hdr),  src_count_w)
         pooln_w <- max(dw(pool_hdr), pool_count_w)
+        filtn_w <- max(dw(filt_hdr), filt_count_w)
         pct_w   <- max(dw("%"), max(dw(all_srcp), dw(all_plp)))
         g <- "  "
 
@@ -756,25 +774,31 @@
         # printing, so header and label-only rows carry no trailing blanks
         # (Session 52). centre_counts = FALSE on the header keeps the "From N"
         # labels right-justified, since they define the column width.
-        emit <- function(indent, lab, lab_w, c1, p1, c2, p2,
+        emit <- function(indent, lab, lab_w, c1, p1, c2, p2, f1 = "",
                          centre_counts = TRUE) {
           c1_cell <- if (centre_counts) ctr_count(c1, src_count_w, srcn_w)
                      else formatC(c1, width = srcn_w)
+          p1_cell <- if (centre_counts) formatC(p1, width = pct_w)
+                     else ctr_count(p1, dw(p1), pct_w)
           line <- paste0(strrep(" ", indent),
                          formatC(lab, width = lab_w, flag = "-"), g,
-                         c1_cell, g, formatC(p1, width = pct_w))
+                         c1_cell, g, p1_cell)
           if (two_cols) {
+            f1_cell <- if (centre_counts) ctr_count(f1, filt_count_w, filtn_w)
+                       else formatC(f1, width = filtn_w)
             c2_cell <- if (centre_counts) ctr_count(c2, pool_count_w, pooln_w)
                        else formatC(c2, width = pooln_w)
-            line <- paste0(line, g, c2_cell, g,
-                           formatC(p2, width = pct_w))
+            p2_cell <- if (centre_counts) formatC(p2, width = pct_w)
+                       else ctr_count(p2, dw(p2), pct_w)
+            line <- paste0(line, g, f1_cell, g, c2_cell, g, p2_cell)
           }
           cat(sub("[ ]+$", "", line), "\n", sep = "")
         }
 
         cat("\n")
-        emit(h_ind, "Missing-data breakdown", lab_end - h_ind,
-             src_hdr, "%", pool_hdr, "%", centre_counts = FALSE)
+        emit(h_ind, "Missing data", lab_end - h_ind,
+             src_hdr, "%", pool_hdr, "%", f1 = filt_hdr,
+             centre_counts = FALSE)
         for (d in disp) {
           cat(strrep(" ", 4L), d$var, "\n", sep = "")
           for (j in seq_len(nrow(d$rows))) {
@@ -783,12 +807,13 @@
             sp_str <- if (is.na(sc)) dash else fmt1(sc / n_original * 100)
             emit(c_ind, d$rows$code_label[j], lab_end - c_ind,
                  sc_str, sp_str,
-                 as.character(pl), fmt1(pl / n_pool * 100))
+                 as.character(pl), fmt1(pl / n_pool * 100),
+                 f1 = if (is.na(sc)) dash else as.character(sc - pl))
           }
         }
 
         bottom_w <- if (two_cols)
-                      lab_end + srcn_w + pooln_w + 2L * pct_w + 8L
+                      lab_end + srcn_w + filtn_w + pooln_w + 2L * pct_w + 10L
                     else
                       lab_end + srcn_w + pct_w + 4L
         rule_w <- max(rule_w, bottom_w)

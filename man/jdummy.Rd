@@ -83,8 +83,10 @@ jdummy(Region, remove = TRUE)        # Remove one registration
 jdummy(community, NULL)              # Clear community's dummy registrations
 jdummy(NULL)                         # Clear the default frame's (or ask)
 jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
-# Not normally needed. You'd clear a default or registration only to
-# undo a mistake, or -- as in this example -- to reset state for testing.
+
+# juse(NULL) clears the default dataset -- not normally needed. You'd
+# clear a default or registration only to undo a mistake, or -- as in
+# this example -- to reset state for testing.
 juse(NULL)
 
 }

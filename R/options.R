@@ -86,6 +86,11 @@
 #'   or \code{"per_code"} (per declared missing-value code plus
 #'   system-missing). The minimal tier defaults to \code{"none"},
 #'   standard to \code{"totals"}, full to \code{"per_code"}.
+#'   Each row counts the variable's missing cases in the original data
+#'   (\code{From N} and its percent); when a filter step ran, the row also
+#'   shows how many of those cases the filter removed (\code{Filtered})
+#'   and how many remain in the analysis pool (the second \code{From N}),
+#'   where listwise deletion takes them.
 #'   The breakdown lists the analysis variables and, after them, any
 #'   variables in the \code{jcomplete()} list that the analysis itself
 #'   does not use, each tagged \code{(jcomplete() only)}: every case

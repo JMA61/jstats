@@ -122,8 +122,10 @@ jsubset()                                # Check status
 jsubset(NULL)                            # Clear default dataset's setting
 jsubset(community, NULL)                 # Clear a named dataset's setting
 jsubset(clear.all = TRUE)                # Clear every dataset's setting
-# Not normally needed. You'd clear a default or registration only to
-# undo a mistake, or -- as in this example -- to reset state for testing.
+
+# juse(NULL) clears the default dataset -- not normally needed. You'd
+# clear a default or registration only to undo a mistake, or -- as in
+# this example -- to reset state for testing.
 juse(NULL)
 
 }

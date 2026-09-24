@@ -206,8 +206,10 @@ juse <- function(data) {
 #' jsubset(NULL)                            # Clear default dataset's setting
 #' jsubset(community, NULL)                 # Clear a named dataset's setting
 #' jsubset(clear.all = TRUE)                # Clear every dataset's setting
-#' # Not normally needed. You'd clear a default or registration only to
-#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#'
+#' # juse(NULL) clears the default dataset -- not normally needed. You'd
+#' # clear a default or registration only to undo a mistake, or -- as in
+#' # this example -- to reset state for testing.
 #' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
@@ -828,8 +830,10 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' jcomplete(NULL)                # Clear the default dataset's setting
 #' jcomplete(community, NULL)     # Clear a named dataset's setting
 #' jcomplete(clear.all = TRUE)    # Clear every dataset's setting
-#' # Not normally needed. You'd clear a default or registration only to
-#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#'
+#' # juse(NULL) clears the default dataset -- not normally needed. You'd
+#' # clear a default or registration only to undo a mistake, or -- as in
+#' # this example -- to reset state for testing.
 #' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
@@ -1340,8 +1344,10 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' jdummy(community, NULL)              # Clear community's dummy registrations
 #' jdummy(NULL)                         # Clear the default frame's (or ask)
 #' jdummy(clear.all = TRUE)             # Clear every frame's dummy registrations
-#' # Not normally needed. You'd clear a default or registration only to
-#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#'
+#' # juse(NULL) clears the default dataset -- not normally needed. You'd
+#' # clear a default or registration only to undo a mistake, or -- as in
+#' # this example -- to reset state for testing.
 #' juse(NULL)
 #'
 #' @seealso \code{\link{jstats}} for the package overview,

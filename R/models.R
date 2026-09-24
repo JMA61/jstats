@@ -1639,8 +1639,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #'     numeric = c("Education", "Environment4"), categorical = "Smoker")
 #'
-#' # Not normally needed. You'd clear a default or registration only to
-#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' # jdummy(community, NULL) clears its registration -- not normally needed.
+#' # You'd clear a default or registration only to undo a mistake, or -- as
+#' # in this example -- to reset state for testing.
 #' jdummy(community, NULL)
 #' juse(NULL)
 #'
@@ -2897,8 +2898,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' # Use numeric = ... when a labelled variable should enter as a score.
 #' jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #'
-#' # Not normally needed. You'd clear a default or registration only to
-#' # undo a mistake, or -- as in this example -- to reset state for testing.
+#' # jdummy(community, NULL) clears its registration -- not normally needed.
+#' # You'd clear a default or registration only to undo a mistake, or -- as
+#' # in this example -- to reset state for testing.
 #' jdummy(community, NULL)
 #' juse(NULL)
 #'
