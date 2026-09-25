@@ -2234,17 +2234,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # Inspect tag case across the flagged columns to pick the right
   # style phrase. Stata convention uses lowercase letters (.a, .b, ...);
   # SAS convention uses uppercase (.A, .B, ...); both can in principle
-  # coexist either across columns or within a single column.
+  # coexist either across columns or within a single column. The probe
+  # reads the labels as well as the cells (S314): a column is flagged when
+  # a value label alone declares its marker, and such a column has a case
+  # too -- before, a label-only .A column read as "Stata-style".
   has_lower <- FALSE
   has_upper <- FALSE
   for (v in vars) {
-    col <- data[[v]]
-    if (is.double(col)) {
-      tags <- unique(haven::na_tag(col))
-      tags <- tags[!is.na(tags)]
-      if (any(grepl("[a-z]", tags))) has_lower <- TRUE
-      if (any(grepl("[A-Z]", tags))) has_upper <- TRUE
-    }
+    tags <- .jst_marker_tags(data[[v]])$all
+    if (any(grepl("[a-z]", tags))) has_lower <- TRUE
+    if (any(grepl("[A-Z]", tags))) has_upper <- TRUE
   }
   style_phrase <- if (has_lower && has_upper) {
     "Stata-style or SAS-style missing values"

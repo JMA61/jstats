@@ -83,10 +83,13 @@ labeling. For columns carrying Stata-style missing values
 (\code{tagged_na} markers), uses \code{haven::zap_missing()} to
 convert them to plain \code{NA}s.}
 \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
-values to SPSS-style numeric codes. Letter tags map to numeric
-codes via the \code{missing.convention.codes} setting in
-\code{\link{joptions}} (default \code{-99}, \code{-98}, \code{-97}):
-\code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
+values to SPSS-style numeric codes. Each column's distinct letter
+tags, in letter order, take the \code{missing.convention.codes}
+setting in \code{\link{joptions}} (default \code{-99}, \code{-98},
+\code{-97}) in order: the lowest letter takes the first code, the
+next the second, and so on, whatever the letters are -- a column
+carrying \code{.d}, \code{.n} and \code{.r} converts exactly as one
+carrying \code{.a}, \code{.b} and \code{.c} does. SAS-style
 (uppercase) tags are case-corrected to Stata-style (lowercase) before
 the numeric mapping -- for round-trip purposes the package treats
 \code{.A} and \code{.a} as the same conceptual marker, and mixed-case
@@ -94,12 +97,18 @@ columns collapse to a single lowercase marker (SPSS has no parallel
 uppercase convention). The notification's per-column display shows the
 original (pre-correction) tag for SAS-corrected columns -- e.g.
 \code{.A "Refused" -> -99} -- so the user-visible mapping reflects
-what was actually in the data on input. Letter tags beyond those
-covered by the convention codes (default \code{.a}--\code{.c}, one
-letter per code, after case correction) are refused before any
-data is touched; the message offers scoping the call with
-\code{vars = c(...)} to leave those columns out, or reducing their
-declared codes first.}
+what was actually in the data on input. A marker declared only
+through a value label, with no case carrying it yet, converts like
+one that cases carry: its label moves to the code and the code is
+declared missing. A column with more distinct tags than the setting
+has codes (at most 3, SPSS's limit) is refused before any data is
+touched; the message lists the column's tags and offers scoping the
+call with \code{vars = c(...)} to leave such columns out, or
+reducing their tags first. Because the SPSS-to-Stata direction
+assigns letters by code order, a tag set other than the leading
+letters comes back as the leading letters (\code{.d}, \code{.n},
+\code{.r} return as \code{.a}, \code{.b}, \code{.c}) with the same
+labels; the notification says so whenever it applies.}
 \item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 Stata-style missing values. Letter tags are assigned by ordering
 rather than by convention: each column's own declared
@@ -145,8 +154,9 @@ supports lowercase letters.}
 Pre-flight checks for \code{to = "spss"} include a collision check:
 if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
 present as genuine data in the column, the call errors before any
-data is touched. The error message lists every colliding column and
-the remedy: change the convention codes via
+data is touched. The check covers a marker declared only through a
+value label as well as one that cases carry. The error message lists
+every colliding column and the remedy: change the convention codes via
 \code{joptions(missing.convention.codes = ...)}. When the same call
 also meets columns with more tags than codes, it adds the option of
 scoping the call with \code{vars = c(...)} to leave the affected

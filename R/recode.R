@@ -4238,7 +4238,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   for FORWARD-DECLARING a label before recoding values into it. The
 #'   label attaches, nothing in the data changes, and the notification
 #'   says the marker is not present in the data. Such a label survives a
-#'   save to Stata format (.dta) and the load back.
+#'   save to Stata format (.dta) and the load back, and
+#'   \code{jconvert(to = "spss")} declares its code like any other
+#'   marker's.
 #'
 #'   A token given with no label is a no-op on an already-tagged
 #'   column: the cells are already missing, so the only act available
@@ -6487,10 +6489,13 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     (\code{tagged_na} markers), uses \code{haven::zap_missing()} to
 #'     convert them to plain \code{NA}s.}
 #'   \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
-#'     values to SPSS-style numeric codes. Letter tags map to numeric
-#'     codes via the \code{missing.convention.codes} setting in
-#'     \code{\link{joptions}} (default \code{-99}, \code{-98}, \code{-97}):
-#'     \code{.a -> codes[1]}, \code{.b -> codes[2]}, and so on. SAS-style
+#'     values to SPSS-style numeric codes. Each column's distinct letter
+#'     tags, in letter order, take the \code{missing.convention.codes}
+#'     setting in \code{\link{joptions}} (default \code{-99}, \code{-98},
+#'     \code{-97}) in order: the lowest letter takes the first code, the
+#'     next the second, and so on, whatever the letters are -- a column
+#'     carrying \code{.d}, \code{.n} and \code{.r} converts exactly as one
+#'     carrying \code{.a}, \code{.b} and \code{.c} does. SAS-style
 #'     (uppercase) tags are case-corrected to Stata-style (lowercase) before
 #'     the numeric mapping -- for round-trip purposes the package treats
 #'     \code{.A} and \code{.a} as the same conceptual marker, and mixed-case
@@ -6498,12 +6503,18 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     uppercase convention). The notification's per-column display shows the
 #'     original (pre-correction) tag for SAS-corrected columns -- e.g.
 #'     \code{.A "Refused" -> -99} -- so the user-visible mapping reflects
-#'     what was actually in the data on input. Letter tags beyond those
-#'     covered by the convention codes (default \code{.a}--\code{.c}, one
-#'     letter per code, after case correction) are refused before any
-#'     data is touched; the message offers scoping the call with
-#'     \code{vars = c(...)} to leave those columns out, or reducing their
-#'     declared codes first.}
+#'     what was actually in the data on input. A marker declared only
+#'     through a value label, with no case carrying it yet, converts like
+#'     one that cases carry: its label moves to the code and the code is
+#'     declared missing. A column with more distinct tags than the setting
+#'     has codes (at most 3, SPSS's limit) is refused before any data is
+#'     touched; the message lists the column's tags and offers scoping the
+#'     call with \code{vars = c(...)} to leave such columns out, or
+#'     reducing their tags first. Because the SPSS-to-Stata direction
+#'     assigns letters by code order, a tag set other than the leading
+#'     letters comes back as the leading letters (\code{.d}, \code{.n},
+#'     \code{.r} return as \code{.a}, \code{.b}, \code{.c}) with the same
+#'     labels; the notification says so whenever it applies.}
 #'   \item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 #'     Stata-style missing values. Letter tags are assigned by ordering
 #'     rather than by convention: each column's own declared
@@ -6549,8 +6560,9 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' Pre-flight checks for \code{to = "spss"} include a collision check:
 #' if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
 #' present as genuine data in the column, the call errors before any
-#' data is touched. The error message lists every colliding column and
-#' the remedy: change the convention codes via
+#' data is touched. The check covers a marker declared only through a
+#' value label as well as one that cases carry. The error message lists
+#' every colliding column and the remedy: change the convention codes via
 #' \code{joptions(missing.convention.codes = ...)}. When the same call
 #' also meets columns with more tags than codes, it adds the option of
 #' scoping the call with \code{vars = c(...)} to leave the affected
@@ -6793,9 +6805,15 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
   # --- Pre-flight checks: Q3 strict atomicity --------------------------------
   convention_codes <- getOption(".jst_options_missing_convention_codes",
                                 .jst_options_defaults$missing.convention.codes)
-  letter_codes <- letters[seq_along(convention_codes)]
-  code_for_tag <- .jst_tag_letters_to_codes(letter_codes, convention_codes)
-  tag_for_code <- stats::setNames(letter_codes, as.character(convention_codes))
+  # Stata-to-SPSS mapping (S314, 0.9.189): a column's distinct markers,
+  # sorted, take the convention codes in LETTER ORDER -- the lowest letter
+  # the first code -- so .d, .n and .r convert as .a, .b and .c would. This
+  # replaces the positional rule (.a -> codes[1] only), which refused any
+  # other letters and preserved nothing on the return trip that this does
+  # not: the SPSS-to-Stata direction assigns letters by code order either
+  # way. The plan is built per column in the pre-flight below (spss_plan)
+  # and consumed by the conversion loop; the limit is the codes set, 1 to 3
+  # per joptions, matching SPSS's three.
 
   # Tracking for SAS-style (uppercase) tagged-NA case correction performed
   # inside the to = "spss" branch. Declared at function scope so the
@@ -6853,27 +6871,37 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       }
     }
 
-    # Stata-to-SPSS: check for letter-tag-beyond-.d and collisions.
-    beyond_d_vars  <- list()
+    # Stata-to-SPSS: build each column's mapping, then two checks. Every
+    # marker the column declares takes part -- the tags its cells carry AND
+    # those declared only through value labels (forward-declared markers,
+    # the S218 evidence rule; before S314 the cells alone, AUDIT-051). The
+    # distinct markers, sorted, take the convention codes in letter order
+    # (.jst_tag_letters_to_codes assigns codes in the order the letters
+    # arrive; its "unmapped" attribute names the leftovers). A column with
+    # more markers than codes is refused, and so is a mapped code that is
+    # present as real data.
+    over_vars      <- list()
     collision_vars <- list()
+    spss_plan      <- list()
 
     for (vname in names(info_list)) {
       info <- info_list[[vname]]
       if (info$representation != "stata") next
 
       col  <- data[[vname]]
-      tags <- haven::na_tag(col)
-      unique_tags <- unique(tags[!is.na(tags)])
-
-      bad_tags <- unique_tags[!unique_tags %in% letter_codes]
-      if (length(bad_tags) > 0L) {
-        beyond_d_vars[[length(beyond_d_vars) + 1L]] <- list(
-          var = vname, n = length(unique_tags))
+      mk   <- .jst_marker_tags(col)
+      tags <- sort(unique(mk$all), method = "radix")
+      plan <- .jst_tag_letters_to_codes(tags, convention_codes)
+      if (length(attr(plan, "unmapped")) > 0L) {
+        over_vars[[length(over_vars) + 1L]] <- list(
+          var = vname, tags = tags, label_only = mk$label_only,
+          sas = vname %in% sas_corrected_vars)
       }
-      good_tags <- intersect(unique_tags, letter_codes)
-      if (length(good_tags) > 0L) {
+      attr(plan, "unmapped") <- NULL
+      spss_plan[[vname]] <- plan
+      if (length(plan) > 0L) {
         x_num         <- suppressWarnings(as.numeric(unclass(col)))
-        target_codes  <- unname(code_for_tag[good_tags])
+        target_codes  <- unname(plan)
         real_values   <- x_num[!is.na(x_num)]
         hits <- target_codes[
           vapply(target_codes,
@@ -6887,17 +6915,27 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       }
     }
 
-    if (length(beyond_d_vars) > 0L || length(collision_vars) > 0L) {
-      has_over <- length(beyond_d_vars) > 0L
+    if (length(over_vars) > 0L || length(collision_vars) > 0L) {
+      has_over <- length(over_vars) > 0L
       has_coll <- length(collision_vars) > 0L
 
-      over_lines <- .jst_cap_var_lines(vapply(beyond_d_vars,
-        function(e) sprintf("  %s: %d codes", e$var, e$n), character(1)))
+      # One line per over-limit variable listing its markers, in the
+      # column's own case (a SAS-corrected column shows .E, matching the
+      # conversion report's display), with " (no cases)" on a marker that
+      # only a value label declares -- the cheapest one to drop. The count
+      # is the list's length; the letters say which ones to reduce.
+      over_lines <- .jst_cap_var_lines(vapply(over_vars, function(e) {
+        shown <- vapply(e$tags, function(tg) {
+          d <- paste0(".", if (e$sas) toupper(tg) else tg)
+          if (tg %in% e$label_only) paste(d, "(no cases)") else d
+        }, character(1))
+        sprintf("  %s: %s", e$var, paste(shown, collapse = ", "))
+      }, character(1)))
       coll_lines <- .jst_cap_var_lines(vapply(collision_vars,
         function(e) sprintf("  %s: %s", e$var,
                             paste(e$codes, collapse = ", ")), character(1)))
 
-      n_over <- length(beyond_d_vars)
+      n_over <- length(over_vars)
       n_coll <- length(collision_vars)
       over_lead <- if (n_over == 1L) "This variable" else "These variables"
       over_verb <- if (n_over == 1L) "has" else "have"
@@ -6905,35 +6943,41 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       coll_verb <- if (n_coll == 1L) "is" else "are"
 
       # S281: the binding limit is the codes set (1 to 3 per joptions), not
-      # SPSS's 3 outright. At 3 codes the two coincide and the S267 text
-      # stands byte for byte. Below 3 the heading names the real limit, and
-      # widening the setting is offered only where it can succeed (no
-      # flagged variable beyond SPSS's own ceiling of 3); past that, the
-      # existing remedies stand against the corrected number. The "because"
-      # clause is Rule I's fix-pointing boundary: it names the setting the
-      # fix acts on.
+      # SPSS's 3 outright. At 3 codes the two coincide and the heading names
+      # SPSS's limit -- the family form (jsave, jdeclare_missing and jrecode
+      # all state it), and the reason a fourth code cannot be set (S314).
+      # Below 3 the heading names the setting; the "because" clause is Rule
+      # I's fix-pointing boundary, naming the setting the fix acts on.
+      # Widening the setting is offered only where it can succeed: no
+      # flagged variable above SPSS's own ceiling of 3. With markers mapped
+      # in letter order (0.9.189) the limit is a COUNT again, so this count
+      # test is exact; 0.9.188's letter framing lived one build.
       n_codes  <- length(convention_codes)
       max_tags <- if (has_over) {
-        max(vapply(beyond_d_vars, function(e) as.integer(e$n), integer(1)))
+        max(vapply(over_vars, function(e) length(e$tags), integer(1)))
       } else 0L
       narrowed  <- n_codes < 3L
       can_widen <- narrowed && max_tags <= 3L
       over_head <- if (narrowed) {
-        sprintf(paste0("at most %d declared missing %s per variable can be ",
+        sprintf(paste0("at most %d lettered %s per variable can be ",
                        "converted because your missing.convention.codes ",
                        "setting currently has only %d %s."),
-                n_codes, if (n_codes == 1L) "value" else "values",
+                n_codes, if (n_codes == 1L) "marker" else "markers",
                 n_codes, if (n_codes == 1L) "code" else "codes")
       } else {
-        "SPSS supports at most 3 declared missing values per variable."
+        paste0("SPSS allows at most 3 separate missing-value codes per ",
+               "variable, so at most 3 lettered markers can be converted.")
       }
-      widen_lines <- c("To allow more, set up to three codes:",
+      widen_lines <- c(paste0("To allow more, set up to three codes, the ",
+                              "maximum SPSS allows:"),
                        "  joptions(missing.convention.codes = c(...))")
+      # Rule O: the remedy's object agrees with the flagged-variable count.
+      reduce_obj <- if (n_over == 1L) "its markers" else
+        "each variable's markers"
 
-      # S267 redraft: "declared missing values" (locked generic), Rule X
-      # (no method named for the many-ways reduction), Rule L two-space
-      # remedies, and unnumbered alternatives so a wrapped intro cannot
-      # hang at a list number's indent.
+      # S267 redraft: Rule X (no method named for the many-ways reduction),
+      # Rule L two-space remedies, and unnumbered alternatives so a wrapped
+      # intro cannot hang at a list number's indent.
       if (has_over && !has_coll) {
         msg_lines <- c(
           over_head,
@@ -6945,7 +6989,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
             "To convert a narrower set, leaving out those above:",
             sprintf("  jconvert(%s, to = \"spss\", vars = c(...), modify = TRUE)",
                     data_name),
-            sprintf("Or reduce each variable to %d or fewer declared codes first.",
+            sprintf("Or first reduce %s to %d or fewer.", reduce_obj,
                     n_codes)))
       } else if (has_coll && !has_over) {
         msg_lines <- c(
@@ -6957,11 +7001,11 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           "To change the codes:",
           "  joptions(missing.convention.codes = c(...))")
       } else {
-        # Mid-message paragraph, so the narrowed heading takes a capital.
-        # Where widening can succeed, one joptions() call clears BOTH
-        # problems, so the two per-paragraph fixes fold into one.
-        both_head <- if (narrowed) sub("^at most", "At most", over_head) else
-          over_head
+        # Mid-message paragraph, so the narrowed heading takes a capital
+        # (the default heading already opens with "SPSS"). Where widening
+        # can succeed, one joptions() call clears BOTH problems, so the two
+        # per-paragraph fixes fold into one.
+        both_head <- sub("^at most", "At most", over_head)
         msg_lines <- c(
           sprintf("cannot convert %s to SPSS -- two problems:", data_name),
           "",
@@ -6969,8 +7013,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           sprintf("%s %s more:", over_lead, over_verb),
           over_lines,
           if (!can_widen)
-            sprintf("To fix, reduce each to %d or fewer declared codes.",
-                    n_codes),
+            sprintf("To fix, reduce %s to %d or fewer.", reduce_obj, n_codes),
           "",
           "The missing.convention.codes values overlap with real data values.",
           sprintf("%s %s affected:", coll_lead, coll_verb),
@@ -7100,6 +7143,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
   converted_info   <- list()
   skipped_already  <- character(0)   # in target format already (user_specified only)
   banded_converted <- character(0)   # converted vars that carried an na_range
+  reletter_notes   <- list()         # to = "spss": marker sets not .a, .b, ...
 
   for (vname in names(info_list)) {
     info <- info_list[[vname]]
@@ -7162,12 +7206,16 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         next
       }
 
+      # The column's plan (pre-flight): every marker it carries -- cells
+      # and label-only alike (AUDIT-051) -- mapped to a code in letter
+      # order. The pre-flight has already refused a column with more
+      # markers than codes, so every tag met here has a code.
+      plan  <- spss_plan[[vname]]
       tags  <- haven::na_tag(col)
       x_num <- suppressWarnings(as.numeric(unclass(col)))
-      unique_tags <- unique(tags[!is.na(tags)])
-      for (tg in unique_tags) {
+      for (tg in names(plan)) {
         pos <- which(!is.na(tags) & tags == tg)
-        x_num[pos] <- code_for_tag[[tg]]
+        if (length(pos) > 0L) x_num[pos] <- plan[[tg]]
       }
 
       val_labs     <- labelled::val_labels(col)
@@ -7175,13 +7223,15 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       if (!is.null(new_val_labs) && length(new_val_labs) > 0L) {
         vl_tags <- haven::na_tag(new_val_labs)
         for (i in seq_along(new_val_labs)) {
-          if (!is.na(vl_tags[i]) && vl_tags[i] %in% letter_codes) {
-            new_val_labs[i] <- code_for_tag[[vl_tags[i]]]
+          if (!is.na(vl_tags[i]) && vl_tags[i] %in% names(plan)) {
+            new_val_labs[i] <- plan[[vl_tags[i]]]
           }
         }
       }
 
-      used_codes <- unname(code_for_tag[unique_tags])
+      # Declared in letter order, the order the plan and the report use
+      # (0.9.189; until 0.9.188 the cells' order of first appearance).
+      used_codes <- unname(plan)
       data[[vname]] <- .jst_carry_col_attrs(col, haven::labelled_spss(
         x         = x_num,
         labels    = new_val_labs,
@@ -7190,15 +7240,15 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       ))
 
       # Build display entries — source tag -> destination code, with the
-      # label on the source side. Sort by tag (a, b, c, d) for stable
-      # display order regardless of order-of-appearance in the data.
-      # SAS-corrected columns display the original uppercase tag, since
-      # post-correction `.a`/`.b` would obscure what the user actually
-      # had in their data on input.
+      # label on the source side, in the plan's letter order (stable
+      # regardless of order-of-appearance in the data). SAS-corrected
+      # columns display the original uppercase tag, since post-correction
+      # `.a`/`.b` would obscure what the user actually had in their data
+      # on input.
       was_sas <- vname %in% sas_corrected_vars
       display_entries <- character(0)
-      for (tg in sort(unique_tags)) {
-        code <- code_for_tag[[tg]]
+      for (tg in names(plan)) {
+        code <- plan[[tg]]
         display_tag <- if (was_sas) toupper(tg) else tg
         source_disp <- paste0(".", display_tag)
         lbl  <- NA_character_
@@ -7217,6 +7267,21 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       }
       converted_vars         <- c(converted_vars, vname)
       converted_info[[vname]] <- list(display = display_entries)
+
+      # Return-trip note (S314, 0.9.189). A marker set other than the
+      # leading letters comes back as the leading letters: the
+      # SPSS-to-Stata direction assigns .a, .b, .c by code order, and the
+      # labels travel. Recorded here, emitted with the report below.
+      lead_tags <- letters[seq_along(plan)]
+      if (!identical(names(plan), lead_tags)) {
+        show_case <- function(t) paste0(".", if (was_sas) toupper(t) else t)
+        reletter_notes[[vname]] <- list(
+          var   = vname,
+          n     = length(plan),
+          from  = paste(show_case(names(plan)), collapse = ", "),
+          to    = paste(show_case(lead_tags), collapse = ", "),
+          style = if (was_sas) "SAS-style" else "Stata-style")
+      }
 
     } else if (to %in% c("stata", "sas")) {
 
@@ -7433,6 +7498,35 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         msg_lines <- c(msg_lines, paste0(
           "  ", format(vname, width = max_name_len),
           "  (", paste(ci$display, collapse = ", "), ")"))
+      }
+
+      # Return-trip note (S314): a column whose markers were not the
+      # leading letters comes back from SPSS form as the leading letters,
+      # labels intact. A consequential note -- the call did something the
+      # user may not expect -- so it rides on the message channel, inside
+      # the missing.notice gate like the range-loss note below. One
+      # variable names both letter sets; several share one note.
+      if (length(reletter_notes) > 0L) {
+        styles <- unique(vapply(reletter_notes, `[[`, character(1), "style"))
+        style_phrase <- if (length(styles) == 1L) styles else
+          "Stata-style or SAS-style"
+        if (length(reletter_notes) == 1L) {
+          rn <- reletter_notes[[1L]]
+          note <- sprintf(paste0("Note: converting %s back to %s missing ",
+                                 "values would give its %s %s with the ",
+                                 "same labels, not %s."),
+                          rn$var, style_phrase,
+                          if (rn$n == 1L) "marker" else "markers",
+                          rn$to, rn$from)
+        } else {
+          vnames <- vapply(reletter_notes, `[[`, character(1), "var")
+          note <- sprintf(paste0("Note: converting %s back to %s missing ",
+                                 "values would give their markers the ",
+                                 "leading letters (.a, .b, ...) with the ",
+                                 "same labels, not the letters above."),
+                          .jst_and_list(vnames), style_phrase)
+        }
+        msg_lines <- c(msg_lines, "", note)
       }
 
       # Range-loss note (S218). Whenever a converted column carried an

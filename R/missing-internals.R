@@ -499,3 +499,46 @@
 
   result
 }
+
+#' Internal: the lettered markers a column carries, in cells and labels
+#'
+#' @description
+#' Returns the distinct tagged missing-value letters on a column: those
+#' carried by its cells, in order of first appearance, followed by those
+#' declared only through value labels (forward-declared markers, which no
+#' case carries yet), in label order. This is the same union that
+#' \code{.jst_missing_info()} takes under the Session 218 evidence rule,
+#' returned unsorted; each caller orders it as it needs (jconvert sorts
+#' by letter, since 0.9.189 the order that assigns the codes).
+#'
+#' @details
+#' Added Session 314 (AUDIT-051). \code{jconvert(to = "spss")} built its
+#' declared-code set from cell tags alone, so a label-only marker kept its
+#' label but lost its declaration. The pre-flight, the conversion, and
+#' the jsave .sav error's style probe now read this helper.
+#'
+#' @param col A column (any type; only a double can carry tags).
+#'
+#' @return A list with two character vectors, without the leading period:
+#'   \code{all}, every marker the column carries; and \code{label_only},
+#'   the markers found in value labels and in no cell. Both are empty for
+#'   a column that is not a double.
+#'
+#' @keywords internal
+.jst_marker_tags <- function(col) {
+  if (!is.double(col)) {
+    return(list(all = character(0), label_only = character(0)))
+  }
+  cell_tags <- unique(haven::na_tag(col))
+  cell_tags <- cell_tags[!is.na(cell_tags)]
+  lab_tags  <- character(0)
+  if (haven::is.labelled(col)) {
+    vl <- labelled::val_labels(col)
+    if (!is.null(vl) && length(vl) > 0L) {
+      lab_tags <- unique(haven::na_tag(vl))
+      lab_tags <- lab_tags[!is.na(lab_tags)]
+    }
+  }
+  label_only <- setdiff(lab_tags, cell_tags)
+  list(all = c(cell_tags, label_only), label_only = label_only)
+}
