@@ -1181,8 +1181,14 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   .cat_red("Listwise Case Filter\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name, extra_newline = TRUE)
 
+  # The three count columns are block-centered ("bc", Session 313): each
+  # value right-justified in a block the width of the column's widest value,
+  # the block centered under its header. Before this the counts were
+  # right-justified and "% Missing", a formatted string, left-justified,
+  # so the table read right-heavy with one column pulling left.
   .jst_print_table(missing_info,
                    col.names = c("Variable", "N", "Missing", "% Missing"),
+                   align     = c("l", "bc", "bc", "bc"),
                    row.names = FALSE)
 
   cat("\n  Complete cases: ", n_complete, " of ", n_total,

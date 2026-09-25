@@ -1715,7 +1715,9 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
                                format(miss, trim = TRUE))
       t2$Pct_Missing <- ifelse(is.na(pct), "--", sprintf("%.1f", pct))
       heads  <- c(heads, "Missing", "% Missing")
-      aligns <- c(aligns, "r", "r")
+      # Block-centered (Session 313; was "r"): the values sit under the
+      # middle of their headers, aligned on the ones digit / the decimal.
+      aligns <- c(aligns, "bc", "bc")
     }
     if (any_outliers) {
       out <- st$Outliers

@@ -1872,10 +1872,17 @@ jai <- function(setup = NULL, path = NULL) {
 #'   uses \code{names(df)}.
 #' @param row.names Logical. If TRUE, includes row names as the first column.
 #' @param align Optional character vector of alignment codes ("l", "r", "c",
-#'   or "d"), one per displayed column. If NULL, auto-detects: numeric = right,
-#'   character/other = left. Code "d" is a decimal-tab: data cells are
-#'   right-justified (so a uniform decimal-places column aligns on the decimal
-#'   point) while the header stays centered over the column.
+#'   "d", "ln", or "bc"), one per displayed column. If NULL, auto-detects:
+#'   numeric = right, character/other = left. Code "d" is a decimal-tab: data
+#'   cells are right-justified (so a uniform decimal-places column aligns on
+#'   the decimal point) while the header stays centered over the column.
+#'   Code "ln" is left, no-trim (a caller-supplied leading space survives).
+#'   Code "bc" is block-centered: each value is right-justified in a block
+#'   the width of the column's widest value, and that block is centered
+#'   under the header, so counts align on their ones digit down the column
+#'   while the column reads centered rather than right-heavy (the Case
+#'   Processing bottom table's Session 52 rule, available to any table since
+#'   Session 313). The header is right-justified, as in an "r" column.
 #' @param caption Optional title string printed above the table.
 #' @param indent Number of leading spaces for each data row. Default 0,
 #'   so data rows sit flush at column 1, aligned with the caption, header,
@@ -1971,11 +1978,17 @@ jai <- function(setup = NULL, path = NULL) {
     col_widths[j] <- max(nchar(headers[j]), max(data_widths, 0L, na.rm = TRUE))
   }
 
+  # Block widths for "bc" (block-centered) columns: the widest trimmed value
+  # in the column, header excluded. Zero for an empty column. (Session 313)
+  block_widths <- vapply(seq_len(n_cols), function(j) {
+    max(nchar(trimws(display[, j])), 0L, na.rm = TRUE)
+  }, integer(1))
+
   gap    <- "  "
   prefix <- paste(rep(" ", indent), collapse = "")
   header_prefix <- paste(rep(" ", header.indent), collapse = "")
 
-  fmt_cell <- function(text, width, alignment) {
+  fmt_cell <- function(text, width, alignment, block = width) {
     # "ln" (left, no-trim): left-justify but preserve the caller's leading
     # whitespace (used by jcorr to reserve a sign slot so r decimals line up
     # under a leading minus). Must NOT trim, unlike every other alignment.
@@ -1991,6 +2004,18 @@ jai <- function(setup = NULL, path = NULL) {
              right <- pad - left
              paste0(strrep(" ", left), text, strrep(" ", right))
            },
+           # "bc" (block-centered): right-justify within the value block,
+           # then center that block within the column -- the same two steps
+           # as ctr_count() in .jst_print_case_processing (Session 52), so
+           # a one-digit and a two-digit count align on their ones digit
+           # while the block sits under the middle of the header. Applies
+           # to DATA cells only; the header resolves to "r" below.
+           "bc" = {
+             s     <- formatC(text, width = block, flag = " ")
+             extra <- max(0L, width - block)
+             left  <- extra %/% 2
+             paste0(strrep(" ", left), s, strrep(" ", extra - left))
+           },
            formatC(text, width = -width, flag = "-")
     )
   }
@@ -2001,8 +2026,12 @@ jai <- function(setup = NULL, path = NULL) {
 
   # Decimal-tab columns ("d"): right-justify data so a uniform-dp column
   # aligns on the decimal point, while the header stays centered over
-  # the column. Resolve "d" here; fmt_cell never sees "d".
-  header_align <- ifelse(align == "d", "c", ifelse(align == "ln", "l", align))
+  # the column. Resolve "d" here; fmt_cell never sees "d". Block-centered
+  # columns ("bc") keep a right-justified header (Session 313); their data
+  # cells reach fmt_cell as "bc" with the column's block width.
+  header_align <- ifelse(align == "d", "c",
+                  ifelse(align == "ln", "l",
+                  ifelse(align == "bc", "r", align)))
   data_align   <- ifelse(align == "d", "r", align)
 
   # Header
@@ -2020,7 +2049,7 @@ jai <- function(setup = NULL, path = NULL) {
   # Data rows
   for (i in seq_len(n_rows)) {
     row_cells <- vapply(seq_len(n_cols), function(j) {
-      fmt_cell(display[i, j], col_widths[j], data_align[j])
+      fmt_cell(display[i, j], col_widths[j], data_align[j], block_widths[j])
     }, character(1))
     cat(prefix, paste(row_cells, collapse = gap), "\n", sep = "")
   }

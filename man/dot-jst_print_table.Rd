@@ -23,10 +23,17 @@ uses \code{names(df)}.}
 \item{row.names}{Logical. If TRUE, includes row names as the first column.}
 
 \item{align}{Optional character vector of alignment codes ("l", "r", "c",
-or "d"), one per displayed column. If NULL, auto-detects: numeric = right,
-character/other = left. Code "d" is a decimal-tab: data cells are
-right-justified (so a uniform decimal-places column aligns on the decimal
-point) while the header stays centered over the column.}
+"d", "ln", or "bc"), one per displayed column. If NULL, auto-detects:
+numeric = right, character/other = left. Code "d" is a decimal-tab: data
+cells are right-justified (so a uniform decimal-places column aligns on
+the decimal point) while the header stays centered over the column.
+Code "ln" is left, no-trim (a caller-supplied leading space survives).
+Code "bc" is block-centered: each value is right-justified in a block
+the width of the column's widest value, and that block is centered
+under the header, so counts align on their ones digit down the column
+while the column reads centered rather than right-heavy (the Case
+Processing bottom table's Session 52 rule, available to any table since
+Session 313). The header is right-justified, as in an "r" column.}
 
 \item{caption}{Optional title string printed above the table.}
 
