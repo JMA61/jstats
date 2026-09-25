@@ -33,7 +33,7 @@ the width of the column's widest value, and that block is centered
 under the header, so counts align on their ones digit down the column
 while the column reads centered rather than right-heavy (the Case
 Processing bottom table's Session 52 rule, available to any table since
-Session 313). The header is right-justified, as in an "r" column.}
+Session 313). The header is centered over the column, as for "d".}
 
 \item{caption}{Optional title string printed above the table.}
 

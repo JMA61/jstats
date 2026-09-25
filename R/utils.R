@@ -1882,7 +1882,7 @@ jai <- function(setup = NULL, path = NULL) {
 #'   under the header, so counts align on their ones digit down the column
 #'   while the column reads centered rather than right-heavy (the Case
 #'   Processing bottom table's Session 52 rule, available to any table since
-#'   Session 313). The header is right-justified, as in an "r" column.
+#'   Session 313). The header is centered over the column, as for "d".
 #' @param caption Optional title string printed above the table.
 #' @param indent Number of leading spaces for each data row. Default 0,
 #'   so data rows sit flush at column 1, aligned with the caption, header,
@@ -2009,7 +2009,7 @@ jai <- function(setup = NULL, path = NULL) {
            # as ctr_count() in .jst_print_case_processing (Session 52), so
            # a one-digit and a two-digit count align on their ones digit
            # while the block sits under the middle of the header. Applies
-           # to DATA cells only; the header resolves to "r" below.
+           # to DATA cells only; the header resolves to "c" below.
            "bc" = {
              s     <- formatC(text, width = block, flag = " ")
              extra <- max(0L, width - block)
@@ -2027,11 +2027,12 @@ jai <- function(setup = NULL, path = NULL) {
   # Decimal-tab columns ("d"): right-justify data so a uniform-dp column
   # aligns on the decimal point, while the header stays centered over
   # the column. Resolve "d" here; fmt_cell never sees "d". Block-centered
-  # columns ("bc") keep a right-justified header (Session 313); their data
-  # cells reach fmt_cell as "bc" with the column's block width.
+  # columns ("bc") center their header the same way (Session 313; a header
+  # narrower than its values, "N" over 103, sits over the middle digit);
+  # their data cells reach fmt_cell as "bc" with the column's block width.
   header_align <- ifelse(align == "d", "c",
                   ifelse(align == "ln", "l",
-                  ifelse(align == "bc", "r", align)))
+                  ifelse(align == "bc", "c", align)))
   data_align   <- ifelse(align == "d", "r", align)
 
   # Header

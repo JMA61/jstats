@@ -1724,7 +1724,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       out[!is.na(out) & out == 0] <- NA_integer_
       t2$Outliers <- ifelse(is.na(out), "--", format(out, trim = TRUE))
       heads  <- c(heads, "Outliers")
-      aligns <- c(aligns, "r")
+      aligns <- c(aligns, "bc")   # block-centered like its neighbors (S313)
     }
     if (vlmode %in% c("labels", "both")) {
       t2$Variable <- vapply(t2$Variable,
