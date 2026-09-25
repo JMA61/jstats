@@ -195,11 +195,11 @@ jscreen(community)
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable      Missing  % Missing
 #> ------------  -------  ---------
-#> Income              6        5.8
-#> Education           6        5.8
-#> Smoker              5        4.9
-#> Environment1       12       11.7
-#> Environment3       12       11.7
+#> Income           6        5.8   
+#> Education        6        5.8   
+#> Smoker           5        4.9   
+#> Environment1    12       11.7   
+#> Environment3    12       11.7   
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
@@ -235,13 +235,13 @@ jscreen(community, outlier.sd = 2.5)
 #> Missing Data & Outliers (outliers > 2.5 SD from mean)
 #> Variable        Missing  % Missing  Outliers
 #> --------------  -------  ---------  --------
-#> Income                6        5.8        --
-#> Education             6        5.8        --
-#> Age                  --         --         1
-#> WellbeingScore       --         --         1
-#> Smoker                5        4.9        --
-#> Environment1         12       11.7        --
-#> Environment3         12       11.7        --
+#> Income             6        5.8        --   
+#> Education          6        5.8        --   
+#> Age               --         --         1   
+#> WellbeingScore    --         --         1   
+#> Smoker             5        4.9        --   
+#> Environment1      12       11.7        --   
+#> Environment3      12       11.7        --   
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
@@ -279,11 +279,11 @@ jscreen(community, r.type = TRUE)
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable      Missing  % Missing
 #> ------------  -------  ---------
-#> Income              6        5.8
-#> Education           6        5.8
-#> Smoker              5        4.9
-#> Environment1       12       11.7
-#> Environment3       12       11.7
+#> Income           6        5.8   
+#> Education        6        5.8   
+#> Smoker           5        4.9   
+#> Environment1    12       11.7   
+#> Environment3    12       11.7   
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
@@ -321,11 +321,11 @@ jscreen(community, stats = TRUE)
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable      Missing  % Missing
 #> ------------  -------  ---------
-#> Income              6        5.8
-#> Education           6        5.8
-#> Smoker              5        4.9
-#> Environment1       12       11.7
-#> Environment3       12       11.7
+#> Income           6        5.8   
+#> Education        6        5.8   
+#> Smoker           5        4.9   
+#> Environment1    12       11.7   
+#> Environment3    12       11.7   
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
@@ -379,11 +379,11 @@ jscreen()
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable      Missing  % Missing
 #> ------------  -------  ---------
-#> Income              6        5.8
-#> Education           6        5.8
-#> Smoker              5        4.9
-#> Environment1       12       11.7
-#> Environment3       12       11.7
+#> Income           6        5.8   
+#> Education        6        5.8   
+#> Smoker           5        4.9   
+#> Environment1    12       11.7   
+#> Environment3    12       11.7   
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
@@ -407,7 +407,7 @@ jscreen(Income, Age, WellbeingScore)
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable  Missing  % Missing
 #> --------  -------  ---------
-#> Income          6        5.8
+#> Income       6        5.8   
 #> 
 #> Note: SPSS-style declared missing values on: Income.
 #> jstats treats these as missing; base R functions do not.
@@ -431,7 +431,7 @@ jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable  Missing  % Missing
 #> --------  -------  ---------
-#> Income          4        8.2
+#> Income       4        8.2   
 #> 
 #> Note: SPSS-style declared missing values on: Income.
 #> jstats treats these as missing; base R functions do not.

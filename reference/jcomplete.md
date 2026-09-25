@@ -109,11 +109,11 @@ jcomplete(Income, Education, Age)
 #> Listwise Case Filter
 #> Using default data frame: community
 #> 
-#> Variable     N  Missing  % Missing
+#> Variable    N   Missing  % Missing
 #> ---------  ---  -------  ---------
-#> Income     103        6  5.8%     
-#> Education  103        6  5.8%     
-#> Age        103        0  0.0%     
+#> Income     103     6       5.8%   
+#> Education  103     6       5.8%   
+#> Age        103     0       0.0%   
 #> 
 #>   Complete cases: 91 of 103 (88.3%)
 #>   Listwise filter activated -- 12 cases will be excluded from
@@ -136,11 +136,11 @@ jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #> Listwise Case Filter
 #> Using default data frame: community
 #> 
-#> Variable     N  Missing  % Missing
+#> Variable    N   Missing  % Missing
 #> ---------  ---  -------  ---------
-#> Income     103        6  5.8%     
-#> Education  103        6  5.8%     
-#> Age        103        0  0.0%     
+#> Income     103     6       5.8%   
+#> Education  103     6       5.8%   
+#> Age        103     0       0.0%   
 #> 
 #>   Complete cases: 91 of 103 (88.3%)
 #>   Listwise filter activated -- 12 cases will be excluded from

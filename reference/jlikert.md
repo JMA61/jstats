@@ -124,11 +124,11 @@ Clearing mirrors the other registration verbs:
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable      Missing  % Missing
 #> ------------  -------  ---------
-#> Income              6        5.8
-#> Education           6        5.8
-#> Smoker              5        4.9
-#> Environment1       12       11.7
-#> Environment3       12       11.7
+#> Income           6        5.8   
+#> Education        6        5.8   
+#> Smoker           5        4.9   
+#> Environment1    12       11.7   
+#> Environment3    12       11.7   
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
