@@ -148,6 +148,28 @@
   )
 }
 
+#' Internal helper: count a column's true system-missing cells
+#'
+#' Counts the cells missing in the raw data, leaving out declared missing
+#' values: a live labelled_spss column reports its declared codes and range
+#' cells as NA under \code{is.na()}, and a Stata- or SAS-form column reports
+#' its marker cells the same way. Shared by the System/NA row of
+#' .jst_cps_var_rows() and the "Has system NAs" flag in
+#' .jst_print_case_processing(), so the two cannot disagree (AUDIT-007,
+#' Session 315).
+#'
+#' @param col A column.
+#' @param mi The column's .jst_missing_info() result, or \code{NULL}.
+#' @return An integer count.
+#' @keywords internal
+.jst_system_na_count <- function(col, mi = NULL) {
+  if (!is.null(mi) && identical(mi$representation, "stata")) {
+    sum(is.na(col) & is.na(haven::na_tag(col)))
+  } else {
+    sum(is.na(unclass(col)))
+  }
+}
+
 #' Internal helper: per-variable source/pool missing rows for the CPS bottom
 #'
 #' Computes, for one variable (an analysis variable, or since Session 312 a
@@ -217,13 +239,10 @@
   # is.na(pre_col) would double-count them. unclass() drops the class that
   # triggers that flagging, leaving only true system-missing (and is a harmless
   # no-op for plain numeric / factor / character / non-spss labelled columns).
-  if (!is.null(mi) && identical(mi$representation, "stata")) {
-    sys_src  <- sum(is.na(pre_col)  & is.na(haven::na_tag(pre_col)))
-    sys_pool <- sum(is.na(pool_col) & is.na(haven::na_tag(pool_col)))
-  } else {
-    sys_src  <- sum(is.na(unclass(pre_col)))
-    sys_pool <- sum(is.na(unclass(pool_col)))
-  }
+  # The count lives in .jst_system_na_count(), which Table 3's "Has system
+  # NAs" flag shares, so the flag and this row cannot disagree (S315).
+  sys_src  <- .jst_system_na_count(pre_col,  mi)
+  sys_pool <- .jst_system_na_count(pool_col, mi)
   if (sys_src > 0L || sys_pool > 0L) {
     rows <- rbind(rows, data.frame(code_label = .jst_label_system_missing,
                                    src = sys_src, pool = sys_pool,
@@ -432,11 +451,16 @@
                 lapply(all_vars, function(v) .jst_missing_info(pre[[v]]))
               else list()
   names(mi_list) <- all_vars
-  has_udms  <- any(vapply(mi_list, function(mi)
-                 !is.null(mi) && !is.null(mi$codes) && nrow(mi$codes) > 0L,
+  # "Has UDMs" is a declaration of ANY kind -- discrete codes, a range, or
+  # markers -- which is exactly when .jst_missing_info() is non-NULL.
+  # Testing its codes table alone missed a range-only declaration, whose
+  # per-code breakdown then never rendered (AUDIT-007). "Has system NAs"
+  # counts true system-missing cells, the System/NA row's own count: is.na()
+  # on a live labelled_spss column also flags its declared cells.
+  has_udms  <- any(!vapply(mi_list, is.null, logical(1)))
+  has_sysna <- any(vapply(all_vars, function(v)
+                 .jst_system_na_count(pre[[v]], mi_list[[v]]) > 0L,
                  logical(1)))
-  has_sysna <- any(vapply(all_vars, function(v) sum(is.na(pre[[v]])) > 0L,
-                          logical(1)))
 
   # Transform-introduced missingness (AUDIT-025): non-finite results the
   # transform resolver converted to NA, carried per computed term in

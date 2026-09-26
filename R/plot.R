@@ -254,11 +254,18 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # distinction is meaningful.  Detected BEFORE the data-frame branch because
   # `x` in this case is a formula, not a data frame.
   # ---------------------------------------------------------------------------
-  # inherits() forces x; a bare-symbol variable name routed here from the
-  # generic (jplot(Age) under a juse() default) is not evaluable, so guard the
-  # force -- an unevaluable x is not a formula, and falls through to the
-  # resolver below, which treats it as a variable name.
-  if (!missing(x) && tryCatch(inherits(x, "formula"), error = function(e) FALSE)) {
+  # x is read ONCE here, and the result serves both the formula test and the
+  # resolver below (AUDIT-052's jplot sibling): the resolver used to evaluate
+  # the expression again, so jplot(jconvert(...), Age) ran jconvert() twice.
+  # The generic has usually forced x already, which makes this read free. A
+  # bare-symbol variable name routed here from the generic (jplot(Age) under
+  # a juse() default) is not evaluable, so the read is guarded: it is
+  # recorded as failed, exactly as the resolver's own evaluation would record
+  # it, is not a formula, and the resolver treats it as a variable name.
+  x_eval <- if (missing(x)) NULL else
+    tryCatch(list(value = x, failed = FALSE),
+             error = function(e) list(value = NULL, failed = TRUE))
+  if (!is.null(x_eval) && !x_eval$failed && inherits(x_eval$value, "formula")) {
     by_sub <- substitute(by)
     return(.jst_jplot_formula(x, jplot_call, ...,
                               by_expr = by_sub, type = type, line = line,
@@ -277,7 +284,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     data_missing  = missing(x),
     fn_name       = "jplot",
     envir         = parent.frame(),
-    accept_vector = FALSE
+    accept_vector = FALSE,
+    pre_eval      = x_eval
   )
 
   # Alias to `data` internally for clarity; the generic uses `x` for S3 consistency

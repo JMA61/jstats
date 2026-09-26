@@ -132,17 +132,24 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     accept_vector = TRUE
   )
 
-  # Vector-input path (e.g. jdesc(community$Age)) — wrap and recurse
+  # Vector-input path (e.g. jdesc(community$Age)) -- wrap and recurse. Every
+  # argument reaches the re-call, and what a single column cannot serve is
+  # refused with the data-frame form as the fix (AUDIT-008). Named items are
+  # checked here, not in the helper, so the detector reads jdesc's formals.
   if (arg1$mode == "vector_input") {
-    var_name <- paste(deparse(arg1$first_arg_sub), collapse = "")
-    if (grepl("\\$", var_name)) {
-      var_name <- sub("^.*\\$", "", var_name)
-    }
-    temp_df  <- data.frame(x = arg1$first_arg_value)
-    names(temp_df) <- var_name
-    return(jdesc(temp_df, !!rlang::sym(var_name), variable.id = variable.id,
-                 numeric = numeric, categorical = categorical, count = count,
-                 value.id = value.id))
+    wrapped    <- .jst_vector_frame(arg1)
+    dots       <- rlang::enquos(...)
+    .jst_check_named_variables(dots, wrapped$frame, "jdesc")
+    subset_sub <- substitute(subset)
+    by_quo     <- rlang::enquo(by)
+    return(.jst_vector_recurse(
+      jdesc, "jdesc", wrapped, parent.frame(), dots = dots,
+      subset_sub = subset_sub, by_quo = by_quo,
+      args = list(variable.id = variable.id, numeric = numeric,
+                  categorical = categorical, count = count,
+                  value.id = value.id,
+                  case.processing.detail = case.processing.detail,
+                  digits = digits)))
   }
 
   data              <- arg1$data
@@ -677,16 +684,19 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     accept_vector = TRUE
   )
 
-  # Vector-input path (e.g. jfreq(community$Region)) — wrap and recurse
+  # Vector-input path (e.g. jfreq(community$Region)) -- wrap and recurse,
+  # forwarding every argument (AUDIT-008; see jdesc and .jst_vector_recurse).
   if (arg1$mode == "vector_input") {
-    var_name <- paste(deparse(arg1$first_arg_sub), collapse = "")
-    if (grepl("\\$", var_name)) {
-      var_name <- sub("^.*\\$", "", var_name)
-    }
-    temp_df  <- data.frame(x = arg1$first_arg_value)
-    names(temp_df) <- var_name
-    return(jfreq(temp_df, !!rlang::sym(var_name), variable.id = variable.id,
-                 value.id = value.id, missing.detail = missing.detail))
+    wrapped    <- .jst_vector_frame(arg1)
+    dots       <- rlang::enquos(...)
+    .jst_check_named_variables(dots, wrapped$frame, "jfreq")
+    subset_sub <- substitute(subset)
+    return(.jst_vector_recurse(
+      jfreq, "jfreq", wrapped, parent.frame(), dots = dots,
+      subset_sub = subset_sub,
+      args = list(variable.id = variable.id, value.id = value.id,
+                  missing.detail = missing.detail,
+                  case.processing.detail = case.processing.detail)))
   }
 
   data              <- arg1$data

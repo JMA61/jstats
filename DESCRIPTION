@@ -1,6 +1,6 @@
 Package: jstats
 Title: Simplified Statistical Analysis Tools for Social Science
-Version: 0.9.189
+Version: 0.9.190
 Authors@R:
     person("Jeff", "Ackerman", , "SurveyCentre@griffith.edu.au", role = c("aut", "cre"))
 Description: Provides simplified tools for common statistical analyses
@@ -15,7 +15,7 @@ Description: Provides simplified tools for common statistical analyses
     import and export for 'SPSS', 'Stata', 'SAS', 'Excel', CSV, and R
     formats. Declared missing values are read and written faithfully in
     each platform's own convention, can be declared or converted between
-    conventions within R, and suspected but undeclared missing-value
+    conventions within R, and suspected but undeclared missing-value  
     codes are detected automatically. Functions accept unquoted variable
     names and formula syntax, handle 'haven'-labelled variables directly,
     and return results invisibly while printing readable tables. The

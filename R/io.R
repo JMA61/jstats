@@ -2939,6 +2939,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # the first slot is also passed through, since the resolver has a
   # dedicated message for that case.
   data_sub <- substitute(data)
+  pre_eval <- NULL
   if (!missing(data) && !is.null(data_sub)) {
 
     # Case 1: bare symbol that doesn't exist
@@ -2960,6 +2961,10 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
            "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
     }
 
+    # Handed to the resolver below so the expression is not evaluated a
+    # second time (AUDIT-052): an argument that prints a message, such as
+    # jsave(jconvert(...), ...), printed it twice.
+    pre_eval <- eval_result
     val <- eval_result$value
     if (is.null(val)) {
       data_str <- paste(deparse(data_sub), collapse = "")
@@ -3009,7 +3014,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
     data_missing  = missing(data),
     fn_name       = "jsave",
     envir         = parent.frame(),
-    accept_vector = FALSE
+    accept_vector = FALSE,
+    pre_eval      = pre_eval
   )
 
   data      <- arg1$data
@@ -3023,7 +3029,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
                 "Use jsave(file = \"yourfile.ext\")",
                 fn = "jsave")
     }
-    file <- eval(arg1$first_arg_sub, envir = parent.frame())
+    file <- if (!is.null(pre_eval)) pre_eval$value else
+              eval(arg1$first_arg_sub, envir = parent.frame())
   }
 
   # --- Validate data is a data frame -----------------------------------------
@@ -3420,8 +3427,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
 #' Copy a data frame, carrying its classification registrations
 #'
 #' Copies a data frame to a new name AND clones any classification
-#' registrations (jnumeric / jcount / jdummy) attached to it, so the copy
-#' behaves the same as the original under later analysis calls. A plain
+#' registrations (jnumeric / jcount / jlikert / jdummy) attached to it, so
+#' the copy behaves the same as the original under later analysis calls. A plain
 #' assignment (newdata <- mydata) copies the data but not the registrations,
 #' because registrations live in a name-keyed session notebook rather than on
 #' the data object; jcopy() is the verb that keeps the two together across a

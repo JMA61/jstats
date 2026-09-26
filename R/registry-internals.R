@@ -438,9 +438,9 @@
     return(NULL)
   }
   paste0(
-    "Note: classification registrations (jnumeric/jcount/jdummy) are not ",
-    "kept in ", .jst_format_label(ext), " (.", ext, "); they persist only ",
-    "in R format (.rds).")
+    "Note: classification registrations (jnumeric/jcount/jlikert/jdummy) ",
+    "are not kept in ", .jst_format_label(ext), " (.", ext, "); they ",
+    "persist only in R format (.rds).")
 }
 
 #' Internal helper: human-readable label for a registered intent kind

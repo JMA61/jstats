@@ -408,6 +408,13 @@
 #'   \code{vector_input} for the caller to handle. Defaults to
 #'   \code{FALSE}, in which case such inputs are treated as bare-symbol
 #'   variable-name attempts (mode \code{symbol_with_default}).
+#' @param pre_eval Optional. The caller's own evaluation of the first
+#'   argument, as \code{list(value = , failed = )} in the shape this
+#'   function builds for itself. When supplied it is used instead of
+#'   evaluating \code{data_sub} again, so an argument that prints a message,
+#'   or is slow to compute, runs once (AUDIT-052: jsave's pre-check and
+#'   jplot's formula test both evaluate the argument first). Defaults to
+#'   \code{NULL}, which evaluates as before.
 #'
 #' @return A list with components:
 #'   \describe{
@@ -430,7 +437,8 @@
 .jst_resolve_first_arg <- function(data_sub, data_missing, fn_name,
                                    envir         = parent.frame(),
                                    allow_null    = FALSE,
-                                   accept_vector = FALSE) {
+                                   accept_vector = FALSE,
+                                   pre_eval      = NULL) {
 
   # -- Case 1: data argument truly missing ----------------------------------
   if (data_missing) {
@@ -453,7 +461,9 @@
   }
 
   # -- Try to evaluate the substituted first argument -----------------------
-  eval_result <- tryCatch(
+  # A caller that has already evaluated the argument passes the result in
+  # (pre_eval), so the user's expression runs exactly once (AUDIT-052).
+  eval_result <- if (!is.null(pre_eval)) pre_eval else tryCatch(
     list(value = eval(data_sub, envir = envir), failed = FALSE),
     error = function(e) list(value = NULL, failed = TRUE)
   )
@@ -509,4 +519,103 @@
   list(mode = "symbol_with_default",
        data = resolved$data, name = resolved$name,
        first_arg_sub = data_sub, first_arg_value = NULL)
+}
+#' Internal helper: wrap a bare column for the vector-input path
+#'
+#' Builds the one-column data frame that jdesc() and jfreq() analyze when
+#' given a bare column, as in \code{jdesc(community$Age)}, plus the names
+#' their messages use: the column as typed, the variable name (the part
+#' after the last dollar sign), and the frame it came from when typed as
+#' frame dollar column -- MyData, the placeholder frame, otherwise.
+#'
+#' @param arg1 The \code{.jst_resolve_first_arg()} result, mode
+#'   \code{vector_input}.
+#' @return A list with \code{frame}, \code{typed}, \code{var} and
+#'   \code{frame_nm}.
+#' @keywords internal
+.jst_vector_frame <- function(arg1) {
+  typed <- paste(deparse(arg1$first_arg_sub), collapse = "")
+  var   <- sub("^.*\\$", "", typed)
+  frame <- data.frame(x = arg1$first_arg_value)
+  names(frame) <- var
+  list(frame = frame, typed = typed, var = var,
+       frame_nm = if (grepl("\\$", typed)) sub("\\$[^$]*$", "", typed)
+                  else "MyData")
+}
+
+#' Internal helper: re-call jdesc() or jfreq() on a wrapped bare column
+#'
+#' The vector-input path's re-call. Every argument the caller received is
+#' forwarded (AUDIT-008: the re-call once passed only some of them, so
+#' digits, subset and case.processing.detail were silently ignored), and the
+#' call is evaluated in a child of the caller's environment, so a subset
+#' condition finds the same objects it would in the data-frame form. What a
+#' single column cannot serve is refused, each time with the data-frame form
+#' as the fix: further variables, a by grouping, and a subset condition
+#' naming another variable. A condition may name the wrapped variable, an
+#' object in the caller's environment, or a column reached through a frame
+#' with the dollar sign.
+#'
+#' @param fn The calling function, called again.
+#' @param fn_name Character: its name, for messages and the re-call.
+#' @param wrapped The \code{.jst_vector_frame()} result.
+#' @param user_env The caller's parent frame.
+#' @param dots The caller's \code{rlang::enquos(...)}; named items have
+#'   already been refused by \code{.jst_check_named_variables()}.
+#' @param subset_sub The caller's \code{substitute(subset)}, or \code{NULL}.
+#' @param by_quo The caller's \code{rlang::enquo(by)}, or \code{NULL} for a
+#'   function without a by argument.
+#' @param args Named list of the remaining arguments' values.
+#' @return The re-call's value.
+#' @keywords internal
+.jst_vector_recurse <- function(fn, fn_name, wrapped, user_env, dots = list(),
+                                subset_sub = NULL, by_quo = NULL,
+                                args = list()) {
+  typed    <- wrapped$typed
+  var      <- wrapped$var
+  lead     <- paste0(" the data frame, not the single column ", typed, ".\n")
+  first    <- "Name the data frame first:\n"
+  no_frame <- function(x) sub("^.*\\$", "", x)
+  fix      <- function(tail) paste0("  ", fn_name, "(", wrapped$frame_nm,
+                                    ", ", var, ", ", tail, ")")
+
+  if (length(dots) > 0L) {
+    extra <- vapply(dots, rlang::quo_name, character(1), USE.NAMES = FALSE)
+    .jst_stop(.jst_format_var_list(extra, and = TRUE),
+              if (length(extra) == 1L) " needs" else " need", lead, first,
+              fix(paste(no_frame(extra), collapse = ", ")), fn = fn_name)
+  }
+  if (!is.null(by_quo) && !rlang::quo_is_null(by_quo)) {
+    by_typed <- paste(deparse(rlang::quo_get_expr(by_quo)), collapse = "")
+    .jst_stop("by = ", by_typed, " needs", lead, first,
+              fix(paste0("by = ", no_frame(by_typed))), fn = fn_name)
+  }
+  if (!is.null(subset_sub)) {
+    # Names the condition uses as values: the right side of frame$column is
+    # not a free name, and a call's function position is not walked.
+    syms <- function(e) {
+      if (is.symbol(e)) return(setdiff(as.character(e), ""))
+      if (!is.call(e)) return(character(0))
+      h <- e[[1L]]
+      if (is.symbol(h) && as.character(h) %in% c("$", "@")) return(syms(e[[2L]]))
+      unlist(lapply(as.list(e)[-1L], syms), use.names = FALSE)
+    }
+    other <- setdiff(unique(syms(subset_sub)), var)
+    known <- vapply(other, function(nm) exists(nm, envir = user_env) &&
+                      !is.function(get(nm, envir = user_env)), logical(1))
+    other <- other[!known]
+    if (length(other) > 0L) {
+      sub_typed <- paste(deparse(subset_sub), collapse = " ")
+      .jst_stop("subset = ", sub_typed, " refers to ", other[1L],
+                ", which the single column ", typed, " does not contain.\n",
+                first, fix(paste0("subset = ", sub_typed)), fn = fn_name)
+    }
+  }
+
+  env <- new.env(parent = user_env)
+  assign("temp_df", wrapped$frame, envir = env)
+  assign(fn_name, fn, envir = env)
+  cl <- as.call(c(list(as.symbol(fn_name), as.symbol("temp_df"), as.symbol(var)),
+                  args, list(subset = subset_sub)))
+  eval(cl, env)
 }

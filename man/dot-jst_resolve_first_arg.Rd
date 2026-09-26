@@ -10,7 +10,8 @@
   fn_name,
   envir = parent.frame(),
   allow_null = FALSE,
-  accept_vector = FALSE
+  accept_vector = FALSE,
+  pre_eval = NULL
 )
 }
 \arguments{
@@ -38,6 +39,14 @@ evaluates to a non-data-frame value is returned with mode
 \code{vector_input} for the caller to handle. Defaults to
 \code{FALSE}, in which case such inputs are treated as bare-symbol
 variable-name attempts (mode \code{symbol_with_default}).}
+
+\item{pre_eval}{Optional. The caller's own evaluation of the first
+argument, as \code{list(value = , failed = )} in the shape this
+function builds for itself. When supplied it is used instead of
+evaluating \code{data_sub} again, so an argument that prints a message,
+or is slow to compute, runs once (AUDIT-052: jsave's pre-check and
+jplot's formula test both evaluate the argument first). Defaults to
+\code{NULL}, which evaluates as before.}
 }
 \value{
 A list with components:
