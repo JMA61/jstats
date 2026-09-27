@@ -11,7 +11,8 @@
   align = NULL,
   caption = NULL,
   indent = 0,
-  header.indent = 0
+  header.indent = 0,
+  trim = FALSE
 )
 }
 \arguments{
@@ -46,6 +47,14 @@ nested/indented sub-table pass a positive value (e.g. \code{indent = 4}).}
 header row, and separator row. Defaults to 0. With the default
 \code{indent}, header and data share the same left edge; raise one
 relative to the other only for special layouts.}
+
+\item{trim}{Logical. When TRUE, trailing spaces are removed from the
+header row and every data row before printing. A centered header or a
+left-aligned or block-centered cell in the LAST column is padded to
+the column's width, so without the trim those lines end in spaces --
+invisible on screen but carried into anything copied or captured.
+Default FALSE. jdesc's two tables pass TRUE (Session 316); making it
+the default for every table is a separate, package-wide decision.}
 }
 \description{
 Purpose-built table printer that replaces knitr::kable() for console output.

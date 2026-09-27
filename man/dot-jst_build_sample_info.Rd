@@ -9,7 +9,8 @@
   data,
   analysis_vars,
   n_analysis,
-  transform_na = NULL
+  transform_na = NULL,
+  by_var = NULL
 )
 }
 \arguments{
@@ -28,11 +29,19 @@ deletion on analysis variables.}
 term, the count of non-finite results the resolver converted to NA
 (AUDIT-025). NULL (the default) for callers without formula
 transforms; carried through for the Case Processing Summary.}
+
+\item{by_var}{Character scalar, or NULL (the default): the grouping
+variable of a jdesc(by =) call (Session 316, AUDIT-027). When set,
+\code{n_analysis} is the count of cases that have a group, so
+\code{n_excluded_missing} is the count missing on the grouping
+variable; the Case Processing Summary renders it as the by = row and
+leaves the variable out of the N line's variable count.}
 }
 \value{
 A list with elements: n_original, n_after_complete, n_after_filter,
 n_after_subset, n_analysis, n_excluded_missing, missing_by_var,
-complete_active, filter_active, filter_expr.
+complete_active, filter_active, filter_expr, by_var (and the rest of
+the pipeline counts).
 }
 \description{
 Combines pipeline counts from .jst_apply_pipeline() with analysis-level

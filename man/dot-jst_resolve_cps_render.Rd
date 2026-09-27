@@ -47,17 +47,20 @@ rows (AUDIT-025). Since S284 it no longer reaches the visibility gate:
 a transform-driven exclusion shows up in n_excluded_missing, which is
 what the gate now reads.}
 
-\item{n_excluded_missing}{Integer. Cases the analysis dropped listwise
-after the pipeline (sample_info$n_excluded_missing). Decides whether an
-eligible Auto-listwise row is shown (nonzero only, S284 rule 2), and
-through it whether the upper table has an exclusion row.}
+\item{n_excluded_missing}{Integer. Cases the analysis dropped after the
+pipeline (sample_info$n_excluded_missing): listwise on the listwise
+layout, or, on the per-variable descriptives layout, cases missing on
+the grouping variable of a jdesc(by =) call (Session 316). Decides
+whether an eligible Auto-listwise row or by = row is shown (nonzero
+only, S284 rule 2), and through it whether the upper table has an
+exclusion row.}
 
 \item{unequal_ns}{Logical. Pool family only: the analysis variables'
 per-variable Ns differ, so the N line adds the complete-on-all count.}
 }
 \value{
 A list: mode, render_top, render_n_line, render_bottom,
-endpoint_label, show_auto_listwise, resolved_tier,
+endpoint_label, show_auto_listwise, show_by_row, resolved_tier,
 hide_second_col_pair, n_line_form.
 }
 \description{

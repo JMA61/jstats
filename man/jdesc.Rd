@@ -25,7 +25,14 @@ jdesc(
 
 \item{by}{An optional unquoted grouping variable name. When provided,
 descriptives are computed separately for each group, with a separate
-titled table per dependent variable.}
+titled table per dependent variable. Each table's \code{Total} is the
+group's size and \code{Non_missing} the cases in it with a value on
+that variable, the same two columns as the ungrouped table. A case
+with a missing value on the grouping variable belongs to no group and
+so to no table; the Case Processing Summary reports those cases on a
+\code{by =} row (shown only when there are any), and its N counts the
+cases that have a group. The grouping variable cannot also be one of
+the variables described.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after

@@ -34,7 +34,14 @@
 #' @param ... Unquoted variable names within \code{data} (ignored if data is a vector).
 #' @param by An optional unquoted grouping variable name. When provided,
 #'   descriptives are computed separately for each group, with a separate
-#'   titled table per dependent variable.
+#'   titled table per dependent variable. Each table's \code{Total} is the
+#'   group's size and \code{Non_missing} the cases in it with a value on
+#'   that variable, the same two columns as the ungrouped table. A case
+#'   with a missing value on the grouping variable belongs to no group and
+#'   so to no table; the Case Processing Summary reports those cases on a
+#'   \code{by =} row (shown only when there are any), and its N counts the
+#'   cases that have a group. The grouping variable cannot also be one of
+#'   the variables described.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
@@ -257,6 +264,15 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   if (!rlang::quo_is_null(by_quo)) {
     by_name <- rlang::quo_name(by_quo)
 
+    # The grouping variable cannot also be described (Session 316): the
+    # column is converted to group labels below before the per-variable
+    # loop reads it, which described it as two empty groups. Refused before
+    # the pipeline runs, so nothing has printed.
+    if (by_name %in% variable_names) {
+      .jst_stop(by_name, " is the grouping variable (by = ", by_name,
+                ") and cannot also be described.")
+    }
+
     # Apply the data pipeline (jcomplete, jsubset, subset) BEFORE converting
     # the grouping variable, mirroring jt (compare.R). The pipeline's Step 0
     # masks SPSS-style declared-missing cells to NA, so declared-missing
@@ -299,14 +315,36 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
     group_levels <- levels(data[[by_name]])
 
+    # No groups at all (Session 316): every case is missing on the grouping
+    # variable, in the data or after a pipeline step. Stopped here, before
+    # the title prints, instead of falling through to an empty group table
+    # and a raw base R error. The active steps are named the way the Case
+    # Processing rows name them.
+    if (length(group_levels) == 0L) {
+      pc    <- pipeline$pipeline_counts
+      steps <- c(if (isTRUE(pc$complete_active)) "jcomplete()",
+                 if (isTRUE(pc$filter_active))   "jsubset()",
+                 if (!is.null(pc$n_after_subset)) "subset =")
+      .jst_stop(by_name, " has no non-missing values",
+                if (length(steps)) paste0(" after ",
+                                          paste(steps, collapse = " and "))
+                else "",
+                ", so there are no groups to describe.")
+    }
+
     # Build sample_info once for the entire by-group output. Only the
-    # summarizable (good) analysis variables contribute. Per-variable Ns are
-    # reported in each mini-table.
+    # summarizable (good) analysis variables contribute; the grouping
+    # variable joins them so its missingness reaches the breakdown. The
+    # analysis N is the cases that have a group (Session 316, AUDIT-027): a
+    # case missing on the grouping variable is in no table, and the
+    # difference from the pool is what the Case Processing Summary renders
+    # as the by = row. Per-variable Ns are reported in each mini-table.
     sample_info <- .jst_build_sample_info(
       pipeline_counts = pipeline$pipeline_counts,
       data            = pipeline$data,
       analysis_vars   = c(good_vars, by_name),
-      n_analysis      = nrow(data)
+      n_analysis      = sum(!is.na(data[[by_name]])),
+      by_var          = by_name
     )
     # Shared header for the whole by-group output: printed once (parallels
     # the no-by path), not repeated per variable. The grouping variable's
@@ -373,9 +411,15 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
           lvl
         }
 
+        # Total and Non_missing (Session 316): the ungrouped table's two
+        # columns, per group -- the group's size, and its cases with a value
+        # on this variable -- so the Totals sum to the Case Processing
+        # Summary's N and each row states its own missing count. Before,
+        # the one N column left a variable's missing cases unaccounted for.
         df <- data.frame(
           GROUP_PLACEHOLDER = group_label,
-          N     = n,
+          Total       = sum(group_var_chr == lvl, na.rm = TRUE),
+          Non_missing = n,
           Min   = if (n > 0) round(min(subset_data), digits_n) else NA,
           Max   = if (n > 0) round(max(subset_data), digits_n) else NA,
           Mean  = if (n > 0) round(m, digits_n) else NA,
@@ -387,7 +431,14 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       })
       group_table <- do.call(rbind, group_rows)
 
-      .jst_print_table(group_table, row.names = FALSE)
+      # Block-centered numeric columns and trimmed lines (Session 316): each
+      # header sits over the middle of its column, counts sit centered under
+      # Total and Non_missing on their ones digit, the statistics keep their
+      # decimal alignment, and no line ends in padding. The ungrouped table
+      # below takes the same form, so the two read alike.
+      .jst_print_table(group_table, row.names = FALSE,
+                       align = c("l", rep("bc", ncol(group_table) - 1L)),
+                       trim = TRUE)
       cat("\n")
     }
 
@@ -406,7 +457,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       .print_value_labels(stats::setNames(list(by_var), by_name), by_name)
     }
 
-    cat("\n")
+    # No closing blank (Session 316): the last group table and each legend
+    # already end with one, so the grouped output closes on one blank line
+    # like the ungrouped output; a further cat("\n") here made it two.
 
     ret <- list(
       descriptives = NULL,
@@ -532,7 +585,11 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # No leading blank here: the CPS block closes with one blank line in
     # every mode (N line or table), so a cat("\n") at this point doubled it.
     # (Session 287; the S284 N line made the doubling visible everywhere.)
-    .jst_print_table(descriptives_disp)
+    # Block-centered numeric columns and trimmed lines, as the grouped
+    # table (Session 316).
+    .jst_print_table(descriptives_disp,
+                     align = c("l", rep("bc", ncol(descriptives_disp) - 1L)),
+                     trim = TRUE)
     cat("\n")
   }
 

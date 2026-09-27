@@ -48,14 +48,17 @@
 #'   rows (AUDIT-025). Since S284 it no longer reaches the visibility gate:
 #'   a transform-driven exclusion shows up in n_excluded_missing, which is
 #'   what the gate now reads.
-#' @param n_excluded_missing Integer. Cases the analysis dropped listwise
-#'   after the pipeline (sample_info$n_excluded_missing). Decides whether an
-#'   eligible Auto-listwise row is shown (nonzero only, S284 rule 2), and
-#'   through it whether the upper table has an exclusion row.
+#' @param n_excluded_missing Integer. Cases the analysis dropped after the
+#'   pipeline (sample_info$n_excluded_missing): listwise on the listwise
+#'   layout, or, on the per-variable descriptives layout, cases missing on
+#'   the grouping variable of a jdesc(by =) call (Session 316). Decides
+#'   whether an eligible Auto-listwise row or by = row is shown (nonzero
+#'   only, S284 rule 2), and through it whether the upper table has an
+#'   exclusion row.
 #' @param unequal_ns Logical. Pool family only: the analysis variables'
 #'   per-variable Ns differ, so the N line adds the complete-on-all count.
 #' @return A list: mode, render_top, render_n_line, render_bottom,
-#'   endpoint_label, show_auto_listwise, resolved_tier,
+#'   endpoint_label, show_auto_listwise, show_by_row, resolved_tier,
 #'   hide_second_col_pair, n_line_form.
 #' @keywords internal
 .jst_resolve_cps_render <- function(layout, pipeline_active,
@@ -84,11 +87,16 @@
   base <- .jst_cps_layout_rules[li, ]
 
   # Rule 2: an eligible Auto-listwise row is shown only when it excluded
-  # something. Rule 1: the table earns its slot only through an exclusion
-  # row -- a pipeline row (even at 0) or that nonzero Auto-listwise row.
+  # something; the by = row (Table 2's by_row column, Session 316) follows
+  # the same rule on the per-variable descriptives layout. Rule 1: the
+  # table earns its slot only through an exclusion row -- a pipeline row
+  # (even at 0) or one of those nonzero rows.
   show_auto_listwise <- (base$auto_listwise == "eligible") &&
                         isTRUE(n_excluded_missing > 0L)
-  exclusion_row <- isTRUE(pipeline_active) || show_auto_listwise
+  show_by_row        <- (base$by_row == "eligible") &&
+                        isTRUE(n_excluded_missing > 0L)
+  exclusion_row <- isTRUE(pipeline_active) || show_auto_listwise ||
+                   show_by_row
 
   vi <- .jst_cps_match(
     .jst_cps_visibility_rules,
@@ -142,6 +150,7 @@
     render_bottom        = render_bottom,
     endpoint_label       = base$endpoint_label,
     show_auto_listwise   = show_auto_listwise,
+    show_by_row          = show_by_row,
     resolved_tier        = if (render_bottom) ref$resolved_tier else NA_character_,
     hide_second_col_pair = !pipeline_active,
     n_line_form          = .jst_cps_n_line_rules$form[ni]
@@ -526,15 +535,20 @@
 
     # ---- N LINE: the one-line statement in the table's slot (S284 rule 3) --
     # Form from Table 4 (spec$n_line_form); wording confirmed S286.
+    # Session 316: on a grouped jdesc the pool the line states is the cases
+    # that have a group (the by = row's Remaining), and the variable count
+    # is the described variables -- the grouping variable is in
+    # analysis_vars for the breakdown, not as a member of the pool.
     if (isTRUE(spec$render_n_line)) {
-      k        <- length(cps_vars)
+      k        <- length(setdiff(cps_vars, sample_info$by_var))
+      n_line_n <- if (isTRUE(spec$show_by_row)) n_analysis else n_pool
       n_stated <- if (identical(spec$n_line_form, "analysis")) n_analysis
-                  else n_pool
+                  else n_line_n
       n_line <- switch(spec$n_line_form,
         analysis      = sprintf("Analysis N: %d", n_analysis),
-        pool          = sprintf("%d Cases in the %d Variable Pool", n_pool, k),
+        pool          = sprintf("%d Cases in the %d Variable Pool", n_line_n, k),
         pool_complete = sprintf("%d Cases in the %d Variable Pool; %d Complete on All",
-                                n_pool, k, complete_n))
+                                n_line_n, k, complete_n))
       n_exc <- n_original - n_stated
       if (isTRUE(n_exc > 0L)) {
         n_line <- sprintf("%s (%d Excluded)", n_line, n_exc)
@@ -595,6 +609,21 @@
         surv_v <- c(surv_v, sample_info$n_after_subset)
         prior  <- sample_info$n_after_subset
       }
+      # The by = row (Session 316, AUDIT-027): cases missing on the grouping
+      # variable of a jdesc(by =) call, which belong to no group and so to
+      # no table. Labeled the way the pipeline rows are -- the argument as
+      # typed -- with the variable in the detail column; nonzero only (rule
+      # 2), so an ordinary grouped call with a clean grouping variable is
+      # unchanged. The grouping variable's own per-code rows stay in the
+      # breakdown: they give the code detail the row cannot.
+      if (isTRUE(spec$show_by_row)) {
+        labels <- c(labels, "by =")
+        detail <- c(detail, if (!is.null(sample_info$by_var))
+                              as.character(sample_info$by_var)[1L] else "")
+        exc_v  <- c(exc_v, sample_info$n_excluded_missing)
+        surv_v <- c(surv_v, n_analysis)
+        prior  <- n_analysis
+      }
       if (isTRUE(spec$show_auto_listwise)) {
         labels <- c(labels, "Auto-listwise"); detail <- c(detail, "")
         exc_v  <- c(exc_v, sample_info$n_excluded_missing)
@@ -617,7 +646,8 @@
       # typed, in R's notation" -- a function shows its parentheses, an
       # argument its equals sign: jcomplete() / jsubset() / subset =. Width-
       # neutral: lab_end is floored at dw("Case Processing") = 15, and the
-      # widest row label is still Auto-listwise, so no column moves.)
+      # widest row label is still Auto-listwise, so no column moves. The
+      # by = row (Session 316) is four characters and moves nothing either.)
       exc_strs  <- vapply(seq_along(labels), function(i)
                      if (is.na(exc_v[i])) dash else as.character(exc_v[i]),
                      character(1))

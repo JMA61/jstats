@@ -1892,11 +1892,18 @@ jai <- function(setup = NULL, path = NULL) {
 #'   header row, and separator row. Defaults to 0. With the default
 #'   \code{indent}, header and data share the same left edge; raise one
 #'   relative to the other only for special layouts.
+#' @param trim Logical. When TRUE, trailing spaces are removed from the
+#'   header row and every data row before printing. A centered header or a
+#'   left-aligned or block-centered cell in the LAST column is padded to
+#'   the column's width, so without the trim those lines end in spaces --
+#'   invisible on screen but carried into anything copied or captured.
+#'   Default FALSE. jdesc's two tables pass TRUE (Session 316); making it
+#'   the default for every table is a separate, package-wide decision.
 #'
 #' @keywords internal
 .jst_print_table <- function(df, col.names = NULL, row.names = TRUE,
                              align = NULL, caption = NULL, indent = 0,
-                             header.indent = 0) {
+                             header.indent = 0, trim = FALSE) {
 
   headers <- if (!is.null(col.names)) col.names else names(df)
 
@@ -2035,11 +2042,19 @@ jai <- function(setup = NULL, path = NULL) {
                   ifelse(align == "bc", "c", align)))
   data_align   <- ifelse(align == "d", "r", align)
 
+  # emit(): one table line, its trailing spaces removed when trim = TRUE
+  # (Session 316). The separator row never ends in a space, so it is
+  # printed as before.
+  emit <- function(line) {
+    if (isTRUE(trim)) line <- sub("[ ]+$", "", line)
+    cat(line, "\n", sep = "")
+  }
+
   # Header
   header_cells <- vapply(seq_len(n_cols), function(j) {
     fmt_cell(headers[j], col_widths[j], header_align[j])
   }, character(1))
-  cat(header_prefix, paste(header_cells, collapse = gap), "\n", sep = "")
+  emit(paste0(header_prefix, paste(header_cells, collapse = gap)))
 
   # Separator
   sep_cells <- vapply(col_widths, function(w) {
@@ -2052,7 +2067,7 @@ jai <- function(setup = NULL, path = NULL) {
     row_cells <- vapply(seq_len(n_cols), function(j) {
       fmt_cell(display[i, j], col_widths[j], data_align[j], block_widths[j])
     }, character(1))
-    cat(prefix, paste(row_cells, collapse = gap), "\n", sep = "")
+    emit(paste0(prefix, paste(row_cells, collapse = gap)))
   }
 }
 

@@ -98,7 +98,9 @@ table or its missing-data breakdown; the N statement only.
 }
 In every form, a listwise-deletion row appears only when it dropped
 at least one case; a clean analysis never shows a
-\code{Auto-listwise 0} row. The missing-data breakdown beneath the
+\code{Auto-listwise 0} row. A grouped \code{jdesc()} call has the
+same kind of row for cases missing on its grouping variable, labeled
+\code{by =}, shown on the same terms. The missing-data breakdown beneath the
 table (or beneath the N statement) is governed separately by
 \code{case.processing.detail}.}
 

@@ -564,14 +564,22 @@
 #'   term, the count of non-finite results the resolver converted to NA
 #'   (AUDIT-025). NULL (the default) for callers without formula
 #'   transforms; carried through for the Case Processing Summary.
+#' @param by_var Character scalar, or NULL (the default): the grouping
+#'   variable of a jdesc(by =) call (Session 316, AUDIT-027). When set,
+#'   \code{n_analysis} is the count of cases that have a group, so
+#'   \code{n_excluded_missing} is the count missing on the grouping
+#'   variable; the Case Processing Summary renders it as the by = row and
+#'   leaves the variable out of the N line's variable count.
 #'
 #' @return A list with elements: n_original, n_after_complete, n_after_filter,
 #'   n_after_subset, n_analysis, n_excluded_missing, missing_by_var,
-#'   complete_active, filter_active, filter_expr.
+#'   complete_active, filter_active, filter_expr, by_var (and the rest of
+#'   the pipeline counts).
 #'
 #' @keywords internal
 .jst_build_sample_info <- function(pipeline_counts, data, analysis_vars,
-                                   n_analysis, transform_na = NULL) {
+                                   n_analysis, transform_na = NULL,
+                                   by_var = NULL) {
 
   # Count missing values per analysis variable in the post-pipeline data
   missing_by_var <- vapply(analysis_vars, function(v) {
@@ -602,7 +610,8 @@
     udm_spss_masked_vars    = pipeline_counts$udm_spss_masked_vars,
     pre_pipeline_data  = pipeline_counts$pre_pipeline_data,
     surviving_ids      = pipeline_counts$surviving_ids,
-    transform_na       = transform_na
+    transform_na       = transform_na,
+    by_var             = by_var
   )
 }
 
@@ -1484,10 +1493,19 @@
 #'
 #' Table 1 (S284 redesign): the upper table is gated by whether it would
 #' carry an EXCLUSION ROW -- a pipeline row (jcomplete / jsubset / subset =,
-#' shown even at 0 excluded) or a nonzero Auto-listwise row -- under the
-#' resolved MODE (never / auto / always). Missingness no longer enters this
-#' gate; it feeds the bottom breakdown only (Table 3). When the table does
-#' not print, a one-line N statement takes its slot.
+#' shown even at 0 excluded), a nonzero Auto-listwise row, or (Session 316)
+#' a nonzero by = row -- under the resolved MODE (never / auto / always).
+#' Missingness no longer enters this gate; it feeds the bottom breakdown
+#' only (Table 3). When the table does not print, a one-line N statement
+#' takes its slot.
+#'
+#' Table 2's by_row column (Session 316, AUDIT-027): the per-variable
+#' descriptives layout is the only one whose analysis can exclude cases
+#' AFTER the pipeline without listwise deletion -- jdesc(by =) describes
+#' the cases that have a group, so a case missing on the grouping variable
+#' is in no table. That exclusion is the layout's counterpart of the
+#' listwise layout's Auto-listwise row: eligible on per_var_desc only,
+#' shown when nonzero (rule 2), and an exclusion row for Table 1.
 #'
 #' @keywords internal
 .jst_cps_visibility_rules <- data.frame(
@@ -1504,6 +1522,7 @@
   bottom_default = c("on",       "on",       "on",           "off"),
   endpoint_label = c("Analysis N", "Remaining N", "Remaining N", "Remaining N"),
   auto_listwise  = c("eligible", "never",    "never",        "never"),
+  by_row         = c("never",    "never",    "eligible",     "never"),
   n_line_family  = c("analysis", "pool",     "pool",         "pool"),
   stringsAsFactors = FALSE
 )
