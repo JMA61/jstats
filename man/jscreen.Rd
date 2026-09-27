@@ -125,9 +125,10 @@ sub-class cell, since its raw mean is not a proportion; the marker shows
 even when \code{stats} is off, surfacing the recode need.
 
 When variable names are supplied, only those variables are screened. When
-omitted, all variables in the data frame are screened. If a \code{subset}
-expression references variables not already in the screening list, they
-are included automatically.
+omitted, all variables in the data frame are screened. Settings stored
+with \code{jsubset()} and \code{jcomplete()}, and a \code{subset}
+expression, apply to the whole data frame before the named variables are
+taken, so they may refer to variables that are not screened.
 }
 \examples{
 # With explicit data frame

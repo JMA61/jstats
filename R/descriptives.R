@@ -1305,9 +1305,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' even when \code{stats} is off, surfacing the recode need.
 #'
 #' When variable names are supplied, only those variables are screened. When
-#' omitted, all variables in the data frame are screened. If a \code{subset}
-#' expression references variables not already in the screening list, they
-#' are included automatically.
+#' omitted, all variables in the data frame are screened. Settings stored
+#' with \code{jsubset()} and \code{jcomplete()}, and a \code{subset}
+#' expression, apply to the whole data frame before the named variables are
+#' taken, so they may refer to variables that are not screened.
 #'
 #' @param data A data frame.
 #' @param ... Optional unquoted variable names to screen. If omitted,
@@ -1465,29 +1466,28 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   if (length(variables) > 0) {
     var_names <- vapply(variables, rlang::quo_name, character(1))
     .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
-
-    # Auto-include variables from subset expression
-    if (!is.null(subset_expr)) {
-      subset_vars <- all.vars(subset_expr)
-      extra_vars  <- setdiff(subset_vars, var_names)
-      extra_vars  <- extra_vars[extra_vars %in% names(data)]
-      if (length(extra_vars) > 0) {
-        var_names <- c(var_names, extra_vars)
-      }
-    }
-
-    data <- data[, var_names, drop = FALSE]
   }
 
   # Red title
   .cat_red("Data Screening\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jsubset, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset) to the WHOLE frame, and
+  # only then narrow to the named variables. Narrowing first (before S317)
+  # left a stored setting on an unnamed column nothing to act on: jsubset()
+  # warned that its expression could not be evaluated, jcomplete() was
+  # skipped without a word, and every case was screened. A per-call subset =
+  # had its variables added to the screen so it stayed evaluable; with the
+  # whole frame in hand it needs no such help, so only the named variables
+  # are screened, as in every other function.
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
+
+  if (length(variables) > 0) {
+    data <- data[, var_names, drop = FALSE]
+  }
 
   # POSIXlt columns are list-backed; stats::complete.cases() and unique()
   # below either abort or misbehave on them. Capture each column's original
