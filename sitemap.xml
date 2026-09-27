@@ -149,6 +149,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_lowercase_tagged_na_df.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_make_dummy_names.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_make_fmt.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_marker_tags.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_match_binary_tokens.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_md5_of_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_missing_data_dir_note.html</loc></url>
@@ -229,6 +230,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_stop_arg.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_surviving_value_labels.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_system_na_count.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_tag_collision_guard.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_tag_letters_to_codes.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_term_text.html</loc></url>
@@ -242,6 +244,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_update_target_lib.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_var_kind.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_var_value_labels.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_vector_frame.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_vector_recurse.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_warn.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_warns_seems_categorical.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_wrap_indent.html</loc></url>

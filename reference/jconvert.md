@@ -103,22 +103,31 @@ The four target formats:
 - `to = "spss"`:
 
   Convert Stata-style or SAS-style missing values to SPSS-style numeric
-  codes. Letter tags map to numeric codes via the
+  codes. Each column's distinct letter tags, in letter order, take the
   `missing.convention.codes` setting in
   [`joptions`](https://jma61.github.io/jstats/reference/joptions.md)
-  (default `-99`, `-98`, `-97`): `.a -> codes[1]`, `.b -> codes[2]`, and
-  so on. SAS-style (uppercase) tags are case-corrected to Stata-style
-  (lowercase) before the numeric mapping – for round-trip purposes the
-  package treats `.A` and `.a` as the same conceptual marker, and
-  mixed-case columns collapse to a single lowercase marker (SPSS has no
-  parallel uppercase convention). The notification's per-column display
-  shows the original (pre-correction) tag for SAS-corrected columns –
-  e.g. `.A "Refused" -> -99` – so the user-visible mapping reflects what
-  was actually in the data on input. Letter tags beyond those covered by
-  the convention codes (default `.a`–`.c`, one letter per code, after
-  case correction) are refused before any data is touched; the message
-  offers scoping the call with `vars = c(...)` to leave those columns
-  out, or reducing their declared codes first.
+  (default `-99`, `-98`, `-97`) in order: the lowest letter takes the
+  first code, the next the second, and so on, whatever the letters are –
+  a column carrying `.d`, `.n` and `.r` converts exactly as one carrying
+  `.a`, `.b` and `.c` does. SAS-style (uppercase) tags are
+  case-corrected to Stata-style (lowercase) before the numeric mapping –
+  for round-trip purposes the package treats `.A` and `.a` as the same
+  conceptual marker, and mixed-case columns collapse to a single
+  lowercase marker (SPSS has no parallel uppercase convention). The
+  notification's per-column display shows the original (pre-correction)
+  tag for SAS-corrected columns – e.g. `.A "Refused" -> -99` – so the
+  user-visible mapping reflects what was actually in the data on input.
+  A marker declared only through a value label, with no case carrying it
+  yet, converts like one that cases carry: its label moves to the code
+  and the code is declared missing. A column with more distinct tags
+  than the setting has codes (at most 3, SPSS's limit) is refused before
+  any data is touched; the message lists the column's tags and offers
+  scoping the call with `vars = c(...)` to leave such columns out, or
+  reducing their tags first. Because the SPSS-to-Stata direction assigns
+  letters by code order, a tag set other than the leading letters comes
+  back as the leading letters (`.d`, `.n`, `.r` return as `.a`, `.b`,
+  `.c`) with the same labels; the notification says so whenever it
+  applies.
 
 - `to = "stata"`:
 
@@ -162,13 +171,14 @@ The four target formats:
 Pre-flight checks for `to = "spss"` include a collision check: if a
 column's target numeric code (e.g. `-99` for `.a`) is present as genuine
 data in the column, the call errors before any data is touched. The
-error message lists every colliding column and the remedy: change the
-convention codes via `joptions(missing.convention.codes = ...)`. When
-the same call also meets columns with more tags than codes, it adds the
-option of scoping the call with `vars = c(...)` to leave the affected
-columns out. Atomicity applies to every error mode – the entire
-`jconvert()` call either succeeds or errors before mutating the data
-frame.
+check covers a marker declared only through a value label as well as one
+that cases carry. The error message lists every colliding column and the
+remedy: change the convention codes via
+`joptions(missing.convention.codes = ...)`. When the same call also
+meets columns with more tags than codes, it adds the option of scoping
+the call with `vars = c(...)` to leave the affected columns out.
+Atomicity applies to every error mode – the entire `jconvert()` call
+either succeeds or errors before mutating the data frame.
 
 **Pattern A – value labels suggest missingness but no formal
 declaration.** When a column has no formal missing-value declaration but

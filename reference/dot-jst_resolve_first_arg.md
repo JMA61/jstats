@@ -17,7 +17,8 @@ user's first content argument).
   fn_name,
   envir = parent.frame(),
   allow_null = FALSE,
-  accept_vector = FALSE
+  accept_vector = FALSE,
+  pre_eval = NULL
 )
 ```
 
@@ -57,6 +58,16 @@ user's first content argument).
   value is returned with mode `vector_input` for the caller to handle.
   Defaults to `FALSE`, in which case such inputs are treated as
   bare-symbol variable-name attempts (mode `symbol_with_default`).
+
+- pre_eval:
+
+  Optional. The caller's own evaluation of the first argument, as
+  `list(value = , failed = )` in the shape this function builds for
+  itself. When supplied it is used instead of evaluating `data_sub`
+  again, so an argument that prints a message, or is slow to compute,
+  runs once (AUDIT-052: jsave's pre-check and jplot's formula test both
+  evaluate the argument first). Defaults to `NULL`, which evaluates as
+  before.
 
 ## Value
 

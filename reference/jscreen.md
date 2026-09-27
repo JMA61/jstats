@@ -151,9 +151,13 @@ its raw mean is not a proportion; the marker shows even when `stats` is
 off, surfacing the recode need.
 
 When variable names are supplied, only those variables are screened.
-When omitted, all variables in the data frame are screened. If a
-`subset` expression references variables not already in the screening
-list, they are included automatically.
+When omitted, all variables in the data frame are screened. Settings
+stored with
+[`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) and
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md),
+and a `subset` expression, apply to the whole data frame before the
+named variables are taken, so they may refer to variables that are not
+screened.
 
 ## See also
 
@@ -416,17 +420,16 @@ jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 #> Data Screening
 #> Using default data frame: community
 #>   Cases: 49 
-#>   Variables: 4 
+#>   Variables: 3 
 #>   Cases with missing data: 4 
 #>   Variables with outliers: 0 
 #> 
 #> Variable Types
-#> Variable        jstats Class  Sub-class   Unique Values
-#> --------------  ------------  ----------  -------------
-#> Income          Numeric                              30
-#> Age             Numeric                              31
-#> WellbeingScore  Numeric                              25
-#> Volunteer       Categorical   1-category              1
+#> Variable        jstats Class  Unique Values
+#> --------------  ------------  -------------
+#> Income          Numeric                  30
+#> Age             Numeric                  31
+#> WellbeingScore  Numeric                  25
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable  Missing  % Missing

@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -161,7 +161,9 @@ N.</p></li>
 table or its missing-data breakdown; the N statement only.</p></li>
 </ul><p>In every form, a listwise-deletion row appears only when it dropped
 at least one case; a clean analysis never shows a
-<code>Auto-listwise 0</code> row. The missing-data breakdown beneath the
+<code>Auto-listwise 0</code> row. A grouped <code><a href="jdesc.html">jdesc()</a></code> call has the
+same kind of row for cases missing on its grouping variable, labeled
+<code>by =</code>, shown on the same terms. The missing-data breakdown beneath the
 table (or beneath the N statement) is governed separately by
 <code>case.processing.detail</code>.</p></dd>
 

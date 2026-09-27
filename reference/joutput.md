@@ -123,8 +123,12 @@ joutput(
 
   In every form, a listwise-deletion row appears only when it dropped at
   least one case; a clean analysis never shows a `Auto-listwise 0` row.
-  The missing-data breakdown beneath the table (or beneath the N
-  statement) is governed separately by `case.processing.detail`.
+  A grouped
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) call
+  has the same kind of row for cases missing on its grouping variable,
+  labeled `by =`, shown on the same terms. The missing-data breakdown
+  beneath the table (or beneath the N statement) is governed separately
+  by `case.processing.detail`.
 
 - case.processing.detail:
 

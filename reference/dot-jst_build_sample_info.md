@@ -12,7 +12,8 @@ every analysis function's return value.
   data,
   analysis_vars,
   n_analysis,
-  transform_na = NULL
+  transform_na = NULL,
+  by_var = NULL
 )
 ```
 
@@ -44,8 +45,18 @@ every analysis function's return value.
   (AUDIT-025). NULL (the default) for callers without formula
   transforms; carried through for the Case Processing Summary.
 
+- by_var:
+
+  Character scalar, or NULL (the default): the grouping variable of a
+  jdesc(by =) call (Session 316, AUDIT-027). When set, `n_analysis` is
+  the count of cases that have a group, so `n_excluded_missing` is the
+  count missing on the grouping variable; the Case Processing Summary
+  renders it as the by = row and leaves the variable out of the N line's
+  variable count.
+
 ## Value
 
 A list with elements: n_original, n_after_complete, n_after_filter,
 n_after_subset, n_analysis, n_excluded_missing, missing_by_var,
-complete_active, filter_active, filter_expr.
+complete_active, filter_active, filter_expr, by_var (and the rest of the
+pipeline counts).

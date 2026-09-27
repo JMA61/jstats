@@ -128,9 +128,9 @@ jdesc(Age)                     # Uses only complete cases on those 3 vars
 #>     Remaining N        --         91
 #> ----------------------------------------------------------------
 #> 
-#> Variable  Total  Non_missing  Min  Max    Mean      SD
+#> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  ------  ------
-#> Age          91           91   18   71  40.484  11.933
+#> Age        91        91       18   71   40.484  11.933
 #> 
 jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #> Listwise Case Filter

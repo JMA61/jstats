@@ -11,7 +11,7 @@ every analysis function's return value."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,7 +49,8 @@ every analysis function's return value.</p>
 <span>  <span class="va">data</span>,</span>
 <span>  <span class="va">analysis_vars</span>,</span>
 <span>  <span class="va">n_analysis</span>,</span>
-<span>  transform_na <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  transform_na <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  by_var <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -82,12 +83,22 @@ term, the count of non-finite results the resolver converted to NA
 (AUDIT-025). NULL (the default) for callers without formula
 transforms; carried through for the Case Processing Summary.</p></dd>
 
+
+<dt id="arg-by-var">by_var<a class="anchor" aria-label="anchor" href="#arg-by-var"></a></dt>
+<dd><p>Character scalar, or NULL (the default): the grouping
+variable of a jdesc(by =) call (Session 316, AUDIT-027). When set,
+<code>n_analysis</code> is the count of cases that have a group, so
+<code>n_excluded_missing</code> is the count missing on the grouping
+variable; the Case Processing Summary renders it as the by = row and
+leaves the variable out of the N line's variable count.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list with elements: n_original, n_after_complete, n_after_filter,
 n_after_subset, n_analysis, n_excluded_missing, missing_by_var,
-complete_active, filter_active, filter_expr.</p>
+complete_active, filter_active, filter_expr, by_var (and the rest of
+the pipeline counts).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

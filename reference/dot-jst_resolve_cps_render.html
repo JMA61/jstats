@@ -11,7 +11,7 @@ its own. Errors loudly on a coordinate that matches no row."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -108,10 +108,13 @@ what the gate now reads.</p></dd>
 
 
 <dt id="arg-n-excluded-missing">n_excluded_missing<a class="anchor" aria-label="anchor" href="#arg-n-excluded-missing"></a></dt>
-<dd><p>Integer. Cases the analysis dropped listwise
-after the pipeline (sample_info$n_excluded_missing). Decides whether an
-eligible Auto-listwise row is shown (nonzero only, S284 rule 2), and
-through it whether the upper table has an exclusion row.</p></dd>
+<dd><p>Integer. Cases the analysis dropped after the
+pipeline (sample_info$n_excluded_missing): listwise on the listwise
+layout, or, on the per-variable descriptives layout, cases missing on
+the grouping variable of a jdesc(by =) call (Session 316). Decides
+whether an eligible Auto-listwise row or by = row is shown (nonzero
+only, S284 rule 2), and through it whether the upper table has an
+exclusion row.</p></dd>
 
 
 <dt id="arg-unequal-ns">unequal_ns<a class="anchor" aria-label="anchor" href="#arg-unequal-ns"></a></dt>
@@ -122,7 +125,7 @@ per-variable Ns differ, so the N line adds the complete-on-all count.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list: mode, render_top, render_n_line, render_bottom,
-endpoint_label, show_auto_listwise, resolved_tier,
+endpoint_label, show_auto_listwise, show_by_row, resolved_tier,
 hide_second_col_pair, n_line_form.</p>
     </div>
 

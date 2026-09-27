@@ -17,7 +17,7 @@ argument)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,8 @@ argument).</p>
 <span>  <span class="va">fn_name</span>,</span>
 <span>  envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sys.parent.html" class="external-link">parent.frame</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  allow_null <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  accept_vector <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  accept_vector <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  pre_eval <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -102,6 +103,16 @@ evaluates to a non-data-frame value is returned with mode
 <code>vector_input</code> for the caller to handle. Defaults to
 <code>FALSE</code>, in which case such inputs are treated as bare-symbol
 variable-name attempts (mode <code>symbol_with_default</code>).</p></dd>
+
+
+<dt id="arg-pre-eval">pre_eval<a class="anchor" aria-label="anchor" href="#arg-pre-eval"></a></dt>
+<dd><p>Optional. The caller's own evaluation of the first
+argument, as <code>list(value = , failed = )</code> in the shape this
+function builds for itself. When supplied it is used instead of
+evaluating <code>data_sub</code> again, so an argument that prints a message,
+or is slow to compute, runs once (AUDIT-052: jsave's pre-check and
+jplot's formula test both evaluate the argument first). Defaults to
+<code>NULL</code>, which evaluates as before.</p></dd>
 
 </dl></div>
     <div class="section level2">

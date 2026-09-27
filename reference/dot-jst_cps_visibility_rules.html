@@ -15,7 +15,7 @@ value is "-" (not evaluated) are encoded as "any" with ordering preserved.'></he
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,10 +57,18 @@ value is "-" (not evaluated) are encoded as "any" with ordering preserved.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Table 1 (S284 redesign): the upper table is gated by whether it would
 carry an EXCLUSION ROW – a pipeline row (jcomplete / jsubset / subset =,
-shown even at 0 excluded) or a nonzero Auto-listwise row – under the
-resolved MODE (never / auto / always). Missingness no longer enters this
-gate; it feeds the bottom breakdown only (Table 3). When the table does
-not print, a one-line N statement takes its slot.</p>
+shown even at 0 excluded), a nonzero Auto-listwise row, or (Session 316)
+a nonzero by = row – under the resolved MODE (never / auto / always).
+Missingness no longer enters this gate; it feeds the bottom breakdown
+only (Table 3). When the table does not print, a one-line N statement
+takes its slot.</p>
+<p>Table 2's by_row column (Session 316, AUDIT-027): the per-variable
+descriptives layout is the only one whose analysis can exclude cases
+AFTER the pipeline without listwise deletion – jdesc(by =) describes
+the cases that have a group, so a case missing on the grouping variable
+is in no table. That exclusion is the layout's counterpart of the
+listwise layout's Auto-listwise row: eligible on per_var_desc only,
+shown when nonzero (rule 2), and an exclusion row for Table 1.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

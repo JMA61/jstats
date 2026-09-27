@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -149,10 +149,13 @@ convert them to plain <code>NA</code>s.</p></dd>
 
 <dt><code>to = "spss"</code></dt>
 <dd><p>Convert Stata-style or SAS-style missing
-values to SPSS-style numeric codes. Letter tags map to numeric
-codes via the <code>missing.convention.codes</code> setting in
-<code><a href="joptions.html">joptions</a></code> (default <code>-99</code>, <code>-98</code>, <code>-97</code>):
-<code>.a -&gt; codes[1]</code>, <code>.b -&gt; codes[2]</code>, and so on. SAS-style
+values to SPSS-style numeric codes. Each column's distinct letter
+tags, in letter order, take the <code>missing.convention.codes</code>
+setting in <code><a href="joptions.html">joptions</a></code> (default <code>-99</code>, <code>-98</code>,
+<code>-97</code>) in order: the lowest letter takes the first code, the
+next the second, and so on, whatever the letters are – a column
+carrying <code>.d</code>, <code>.n</code> and <code>.r</code> converts exactly as one
+carrying <code>.a</code>, <code>.b</code> and <code>.c</code> does. SAS-style
 (uppercase) tags are case-corrected to Stata-style (lowercase) before
 the numeric mapping – for round-trip purposes the package treats
 <code>.A</code> and <code>.a</code> as the same conceptual marker, and mixed-case
@@ -160,12 +163,18 @@ columns collapse to a single lowercase marker (SPSS has no parallel
 uppercase convention). The notification's per-column display shows the
 original (pre-correction) tag for SAS-corrected columns – e.g.
 <code>.A "Refused" -&gt; -99</code> – so the user-visible mapping reflects
-what was actually in the data on input. Letter tags beyond those
-covered by the convention codes (default <code>.a</code>–<code>.c</code>, one
-letter per code, after case correction) are refused before any
-data is touched; the message offers scoping the call with
-<code>vars = c(...)</code> to leave those columns out, or reducing their
-declared codes first.</p></dd>
+what was actually in the data on input. A marker declared only
+through a value label, with no case carrying it yet, converts like
+one that cases carry: its label moves to the code and the code is
+declared missing. A column with more distinct tags than the setting
+has codes (at most 3, SPSS's limit) is refused before any data is
+touched; the message lists the column's tags and offers scoping the
+call with <code>vars = c(...)</code> to leave such columns out, or
+reducing their tags first. Because the SPSS-to-Stata direction
+assigns letters by code order, a tag set other than the leading
+letters comes back as the leading letters (<code>.d</code>, <code>.n</code>,
+<code>.r</code> return as <code>.a</code>, <code>.b</code>, <code>.c</code>) with the same
+labels; the notification says so whenever it applies.</p></dd>
 
 <dt><code>to = "stata"</code></dt>
 <dd><p>Convert SPSS-style numeric codes to
@@ -215,8 +224,9 @@ supports lowercase letters.</p></dd>
 </dl><p>Pre-flight checks for <code>to = "spss"</code> include a collision check:
 if a column's target numeric code (e.g. <code>-99</code> for <code>.a</code>) is
 present as genuine data in the column, the call errors before any
-data is touched. The error message lists every colliding column and
-the remedy: change the convention codes via
+data is touched. The check covers a marker declared only through a
+value label as well as one that cases carry. The error message lists
+every colliding column and the remedy: change the convention codes via
 <code>joptions(missing.convention.codes = ...)</code>. When the same call
 also meets columns with more tags than codes, it adds the option of
 scoping the call with <code>vars = c(...)</code> to leave the affected

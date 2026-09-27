@@ -1,9 +1,9 @@
 # Copy a data frame, carrying its classification registrations
 
 Copies a data frame to a new name AND clones any classification
-registrations (jnumeric / jcount / jdummy) attached to it, so the copy
-behaves the same as the original under later analysis calls. A plain
-assignment (newdata \<- mydata) copies the data but not the
+registrations (jnumeric / jcount / jlikert / jdummy) attached to it, so
+the copy behaves the same as the original under later analysis calls. A
+plain assignment (newdata \<- mydata) copies the data but not the
 registrations, because registrations live in a name-keyed session
 notebook rather than on the data object; jcopy() is the verb that keeps
 the two together across a rename or copy.

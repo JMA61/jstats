@@ -36,7 +36,14 @@ jdesc(
 
   An optional unquoted grouping variable name. When provided,
   descriptives are computed separately for each group, with a separate
-  titled table per dependent variable.
+  titled table per dependent variable. Each table's `Total` is the
+  group's size and `Non_missing` the cases in it with a value on that
+  variable, the same two columns as the ungrouped table. A case with a
+  missing value on the grouping variable belongs to no group and so to
+  no table; the Case Processing Summary reports those cases on a `by =`
+  row (shown only when there are any), and its N counts the cases that
+  have a group. The grouping variable cannot also be one of the
+  variables described.
 
 - subset:
 
@@ -166,33 +173,32 @@ jdesc(community, Age)
 #> 
 #> 103 Cases in the 1 Variable Pool
 #> 
-#> Variable  Total  Non_missing  Min  Max   Mean     SD
+#> Variable  Total  Non_missing  Min  Max  Mean    SD
 #> --------  -----  -----------  ---  ---  -----  -----
-#> Age         103          103   18   71  40.65  11.62
+#> Age        103       103      18   71   40.65  11.62
 #> 
 jdesc(community, Income, Age, WellbeingScore)
 #> Descriptive Statistics
 #> 
 #> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
-#> Variable        Total  Non_missing    Min    Max       Mean         SD
+#> Variable        Total  Non_missing   Min    Max     Mean        SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
-#> Income            103           97  14000  93000  49855.670  17427.223
-#> Age               103          103     18     71     40.650     11.620
-#> WellbeingScore    103          103     25     81     50.893     11.481
+#> Income           103        97      14000  93000  49855.670  17427.223
+#> Age              103       103         18     71     40.650     11.620
+#> WellbeingScore   103       103         25     81     50.893     11.481
 #> 
 jdesc(community, WellbeingScore, by = Volunteer)
 #> Descriptive Statistics by Volunteer (2 levels)
 #> 
-#> 103 Cases in the 2 Variable Pool
+#> 103 Cases in the 1 Variable Pool
 #> 
 #> WellbeingScore
 #> 
-#> Volunteer   N  Min  Max    Mean      SD
-#> ---------  --  ---  ---  ------  ------
-#> 0: No      54   25   76  47.463  11.699
-#> 1: Yes     49   29   81  54.673  10.059
-#> 
+#> Volunteer  Total  Non_missing  Min  Max   Mean     SD
+#> ---------  -----  -----------  ---  ---  ------  ------
+#> 0: No       54        54       25   76   47.463  11.699
+#> 1: Yes      49        49       29   81   54.673  10.059
 #> 
 
 # Using juse() default
@@ -204,9 +210,9 @@ jdesc(Age)
 #> 
 #> 103 Cases in the 1 Variable Pool
 #> 
-#> Variable  Total  Non_missing  Min  Max   Mean     SD
+#> Variable  Total  Non_missing  Min  Max  Mean    SD
 #> --------  -----  -----------  ---  ---  -----  -----
-#> Age         103          103   18   71  40.65  11.62
+#> Age        103       103      18   71   40.65  11.62
 #> 
 jdesc(Income, Age, WellbeingScore)
 #> Descriptive Statistics
@@ -214,25 +220,24 @@ jdesc(Income, Age, WellbeingScore)
 #> 
 #> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
-#> Variable        Total  Non_missing    Min    Max       Mean         SD
+#> Variable        Total  Non_missing   Min    Max     Mean        SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
-#> Income            103           97  14000  93000  49855.670  17427.223
-#> Age               103          103     18     71     40.650     11.620
-#> WellbeingScore    103          103     25     81     50.893     11.481
+#> Income           103        97      14000  93000  49855.670  17427.223
+#> Age              103       103         18     71     40.650     11.620
+#> WellbeingScore   103       103         25     81     50.893     11.481
 #> 
 jdesc(WellbeingScore, by = Volunteer)
 #> Descriptive Statistics by Volunteer (2 levels)
 #> Using default data frame: community
 #> 
-#> 103 Cases in the 2 Variable Pool
+#> 103 Cases in the 1 Variable Pool
 #> 
 #> WellbeingScore
 #> 
-#> Volunteer   N  Min  Max    Mean      SD
-#> ---------  --  ---  ---  ------  ------
-#> 0: No      54   25   76  47.463  11.699
-#> 1: Yes     49   29   81  54.673  10.059
-#> 
+#> Volunteer  Total  Non_missing  Min  Max   Mean     SD
+#> ---------  -----  -----------  ---  ---  ------  ------
+#> 0: No       54        54       25   76   47.463  11.699
+#> 1: Yes      49        49       29   81   54.673  10.059
 #> 
 
 # With a vector directly
@@ -241,8 +246,8 @@ jdesc(community$Age)
 #> 
 #> 103 Cases in the 1 Variable Pool
 #> 
-#> Variable  Total  Non_missing  Min  Max   Mean     SD
+#> Variable  Total  Non_missing  Min  Max  Mean    SD
 #> --------  -----  -----------  ---  ---  -----  -----
-#> Age         103          103   18   71  40.65  11.62
+#> Age        103       103      18   71   40.65  11.62
 #> 
 ```

@@ -87,7 +87,8 @@ jdeclare_missing(
   FORWARD-DECLARING a label before recoding values into it. The label
   attaches, nothing in the data changes, and the notification says the
   marker is not present in the data. Such a label survives a save to
-  Stata format (.dta) and the load back.
+  Stata format (.dta) and the load back, and `jconvert(to = "spss")`
+  declares its code like any other marker's.
 
   A token given with no label is a no-op on an already-tagged column:
   the cells are already missing, so the only act available is naming a
@@ -293,9 +294,9 @@ jdesc(df, MoodRating)        # mean dragged far down by -99/-98
 #> 
 #> 70 Cases in the 1 Variable Pool
 #> 
-#> Variable    Total  Non_missing  Min  Max    Mean      SD
+#> Variable    Total  Non_missing  Min  Max   Mean     SD
 #> ----------  -----  -----------  ---  ---  ------  ------
-#> MoodRating     70           70  -99    9  -4.943  31.477
+#> MoodRating   70        70       -99   9   -4.943  31.477
 #> 
 
 # SPSS form: declare -99 and -98 as missing, with labels. modify = TRUE
@@ -316,9 +317,9 @@ jdesc(df, MoodRating)        # codes now excluded as missing
 #> 
 #> 70 Cases in the 1 Variable Pool
 #> 
-#> Variable    Total  Non_missing  Min  Max  Mean     SD
+#> Variable    Total  Non_missing  Min  Max  Mean   SD
 #> ----------  -----  -----------  ---  ---  ----  -----
-#> MoodRating     70           63    1    9  5.46  1.702
+#> MoodRating   70        63        1    9   5.46  1.702
 #> 
 
 # Equivalent without modify: assign the returned data frame back

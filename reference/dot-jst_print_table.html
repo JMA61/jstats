@@ -11,7 +11,7 @@ and consistent indentation. No external dependencies — pure base R."></head><b
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,8 @@ and consistent indentation. No external dependencies — pure base R.</p>
 <span>  align <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  caption <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  indent <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  header.indent <span class="op">=</span> <span class="fl">0</span></span>
+<span>  header.indent <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  trim <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -103,6 +104,16 @@ nested/indented sub-table pass a positive value (e.g. <code>indent = 4</code>).<
 header row, and separator row. Defaults to 0. With the default
 <code>indent</code>, header and data share the same left edge; raise one
 relative to the other only for special layouts.</p></dd>
+
+
+<dt id="arg-trim">trim<a class="anchor" aria-label="anchor" href="#arg-trim"></a></dt>
+<dd><p>Logical. When TRUE, trailing spaces are removed from the
+header row and every data row before printing. A centered header or a
+left-aligned or block-centered cell in the LAST column is padded to
+the column's width, so without the trim those lines end in spaces –
+invisible on screen but carried into anything copied or captured.
+Default FALSE. jdesc's two tables pass TRUE (Session 316); making it
+the default for every table is a separate, package-wide decision.</p></dd>
 
 </dl></div>
 

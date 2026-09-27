@@ -23,7 +23,7 @@ and date/time variables gracefully.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.187</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -198,9 +198,10 @@ other than 0/1 (e.g. the 1/2 Group-4 coding) is flagged with a "*" on its
 sub-class cell, since its raw mean is not a proportion; the marker shows
 even when <code>stats</code> is off, surfacing the recode need.</p>
 <p>When variable names are supplied, only those variables are screened. When
-omitted, all variables in the data frame are screened. If a <code>subset</code>
-expression references variables not already in the screening list, they
-are included automatically.</p>
+omitted, all variables in the data frame are screened. Settings stored
+with <code><a href="jsubset.html">jsubset()</a></code> and <code><a href="jcomplete.html">jcomplete()</a></code>, and a <code>subset</code>
+expression, apply to the whole data frame before the named variables are
+taken, so they may refer to variables that are not screened.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -462,17 +463,16 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 49 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 3 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 4 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Sub-class   Unique Values</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  ----------  -------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                              30</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                              31</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                              25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer       Categorical   1-category              1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        jstats Class  Unique Values</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------  ------------  -------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income          Numeric                  30</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age             Numeric                  31</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore  Numeric                  25</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Missing  % Missing</span>
