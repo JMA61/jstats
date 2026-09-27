@@ -11,7 +11,11 @@ regardless of whether it was supplied via juse() or specified
 explicitly in a function call. To bypass temporarily without losing
 the setting, use jcomplete(off) before the analysis and
 jcomplete(on) afterward. This matches the SPSS USE ALL /
-FILTER convention."><meta property="og:description" content="jcomplete() registers a set of variables and activates a listwise
+FILTER convention.
+If a variable in the setting is later dropped from the dataset or
+renamed, each analysis warns and applies the setting to the variables
+that remain; run jcomplete() again with the current names, or
+clear the setting."><meta property="og:description" content="jcomplete() registers a set of variables and activates a listwise
 deletion filter that excludes any case with a missing value on any of
 the registered variables. This ensures that all subsequent analyses use
 the same set of complete cases, which is essential when preliminary
@@ -23,7 +27,11 @@ regardless of whether it was supplied via juse() or specified
 explicitly in a function call. To bypass temporarily without losing
 the setting, use jcomplete(off) before the analysis and
 jcomplete(on) afterward. This matches the SPSS USE ALL /
-FILTER convention."></head><body>
+FILTER convention.
+If a variable in the setting is later dropped from the dataset or
+renamed, each analysis warns and applies the setting to the variables
+that remain; run jcomplete() again with the current names, or
+clear the setting."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -31,7 +39,7 @@ FILTER convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.193</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.194</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -70,6 +78,10 @@ explicitly in a function call. To bypass temporarily without losing
 the setting, use <code>jcomplete(off)</code> before the analysis and
 <code>jcomplete(on)</code> afterward. This matches the SPSS USE ALL /
 FILTER convention.</p>
+<p>If a variable in the setting is later dropped from the dataset or
+renamed, each analysis warns and applies the setting to the variables
+that remain; run <code>jcomplete()</code> again with the current names, or
+clear the setting.</p>
     </div>
 
     <div class="section level2">

@@ -18,6 +18,11 @@ losing the setting, use `jcomplete(off)` before the analysis and
 `jcomplete(on)` afterward. This matches the SPSS USE ALL / FILTER
 convention.
 
+If a variable in the setting is later dropped from the dataset or
+renamed, each analysis warns and applies the setting to the variables
+that remain; run `jcomplete()` again with the current names, or clear
+the setting.
+
 ## Usage
 
 ``` r
