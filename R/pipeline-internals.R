@@ -398,6 +398,23 @@
       complete_active <- TRUE
       valid_vars <- cs$vars[cs$vars %in% names(data)]
       complete_vars <- valid_vars
+      # A stored setting can outlive its columns: one dropped or renamed
+      # after jcomplete() was set, or the name reassigned to a frame without
+      # it. Step 1 kept the names still present and skipped the rest without
+      # a word (the CPS row read 0 when none was left), where Step 2 warns
+      # for a stored jsubset() in the same state. Say so (S318).
+      gone_vars <- setdiff(cs$vars, valid_vars)
+      if (length(gone_vars) > 0L) {
+        .jst_warn(
+          "The jcomplete setting for the ", data_name, " data frame names ",
+          .jst_format_var_list(gone_vars, and = TRUE),
+          ", which the data frame no longer has, so no cases were removed ",
+          "for ", if (length(gone_vars) == 1L) "it" else "them", ".\n",
+          "Run jcomplete() again with the current variable names, or clear ",
+          "the setting:\n",
+          "  jcomplete(", data_name, ", NULL)"
+        )
+      }
       if (length(valid_vars) > 0) {
         complete_mask    <- stats::complete.cases(data[, valid_vars, drop = FALSE])
         data             <- data[complete_mask, , drop = FALSE]

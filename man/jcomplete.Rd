@@ -75,6 +75,11 @@ explicitly in a function call. To bypass temporarily without losing
 the setting, use \code{jcomplete(off)} before the analysis and
 \code{jcomplete(on)} afterward. This matches the SPSS USE ALL /
 FILTER convention.
+
+If a variable in the setting is later dropped from the dataset or
+renamed, each analysis warns and applies the setting to the variables
+that remain; run \code{jcomplete()} again with the current names, or
+clear the setting.
 }
 \examples{
 juse(community)

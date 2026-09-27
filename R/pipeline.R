@@ -774,6 +774,11 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' \code{jcomplete(on)} afterward. This matches the SPSS USE ALL /
 #' FILTER convention.
 #'
+#' If a variable in the setting is later dropped from the dataset or
+#' renamed, each analysis warns and applies the setting to the variables
+#' that remain; run \code{jcomplete()} again with the current names, or
+#' clear the setting.
+#'
 #' @param data A data frame. If omitted, uses the default set by
 #'   \code{juse()}. Instead of variable names, the call may carry one of
 #'   three special values: the bare word \code{off} deactivates the
