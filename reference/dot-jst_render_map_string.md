@@ -6,7 +6,9 @@ the conflict gate re-shows the map verbatim, the cap error swaps the
 missing target for a declared code, and the map-target mint note swaps a
 flagged numeric target for the missing token. Token rules render as the
 word missing whether or not they have been substituted yet, so the same
-renderer serves pre- and post-resolution callers.
+renderer serves pre- and post-resolution callers. Lettered markers named
+as old values (`old_tags_raw`, Session 319) render after a rule's
+numbers, as typed.
 
 ## Usage
 

@@ -4,8 +4,15 @@ Translates a vector of lowercase letter tags (e.g. `c("a", "b")`) into
 the equivalent numeric UDM codes drawn from the
 `missing.convention.codes` setting in
 [`joptions`](https://jma61.github.io/jstats/reference/joptions.md).
-Mapping is positional: `.a` maps to the first code, `.b` to the second,
-etc.
+Mapping is by INPUT position: the first letter given takes the first
+code, the second letter the second, and so on, whatever the letters are.
+Since Session 314
+[`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
+passes a column's markers sorted by letter, so the lowest letter takes
+the first code (`.d`, `.n`, `.r` map as `.a`, `.b`, `.c` would). A
+column with more markers than codes is mapped onto a range by
+[`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
+itself (Session 319), not by this helper.
 
 ## Usage
 

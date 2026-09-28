@@ -25,7 +25,7 @@ below for the canonical patterns under each convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.194</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.195</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,7 +46,7 @@ below for the canonical patterns under each convention."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Recode a variable with explicit value mapping and optional labels</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.194/R/recode.R" class="external-link"><code>R/recode.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/recode.R" class="external-link"><code>R/recode.R</code></a></small>
       <div class="d-none name"><code>jrecode.Rd</code></div>
     </div>
 
@@ -106,6 +106,14 @@ missing values are never converted by an <code>NA</code> rule. Under
 Stata or SAS convention the target may itself be a token: <code>"NA=.a"</code>.</p>
 <p>Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 <code>"-99=.a; -98=.b"</code>.</p>
+<p>A lettered marker can also be an OLD value, recoding the cells that
+carry it (either case: <code>.a</code> also names a SAS-style <code>.A</code>):
+<code>".a=-99"</code> gives them a number, <code>".a=NA"</code> makes them plain
+<code>NA</code>, and <code>".e=.c"</code> re-letters them, merging them into
+<code>.c</code> if the variable already has it (a marker on the right needs
+Stata or SAS convention, as always). Markers and numbers may share a
+rule (<code>"9,.a=-99"</code>). A marker the map does not name is kept,
+with its label, whatever the <code>else</code> setting.</p>
 <p>The right-hand side may also be the word <code>missing</code>
 (case-insensitive): the value is converted to your working
 convention's own missing form – a tagged marker under the Stata or
@@ -138,6 +146,8 @@ for both when that is what you mean.</p>
 <li><p><code>"-5=System; else=copy"</code></p></li>
 <li><p><code>"NA=-98; else=copy"</code></p></li>
 <li><p><code>"3=1; 4=2; else=.a"</code> (Stata or SAS convention only)</p></li>
+<li><p><code>".a=-99; .b=-98; else=copy"</code> (a Stata-style variable to
+numeric codes, declared on the result)</p></li>
 <li><p><code>"8=missing; else=copy"</code> (any convention)</p></li>
 </ul></dd>
 
@@ -207,13 +217,25 @@ the mapping is one-to-one (no collapsing). For example, recoding 1/2 to
 1/0 will carry "Yes" and "No" across to the new codes automatically.</p></li>
 <li><p>If categories are collapsed (multiple old values map to one new
 value), automatic transfer is not possible and a note is printed
-directing you to supply labels manually.</p></li>
-</ol><p>NA values in the original variable are carried across as NA unless the
+directing you to supply labels manually. Recoding onto a value that
+<code>else=copy</code> also carries across (<code>"5=4; else=copy"</code>)
+collapses two categories the same way.</p></li>
+</ol><p>Labels move with lettered markers as they do with numbers: a marker
+recoded to a number or to another marker takes its label along, and a
+value recoded to a marker gives the marker its label. Where a label
+would land on a value that keeps a label of its own (<code>"-99=-98"</code>,
+or <code>".b=.a"</code> on a variable with both markers), the value keeps
+its own; several different labels landing on one new value are all
+dropped. Labels that move onto a declared missing value or a marker
+also ride beside a supplied <code>labels</code> string, as the labels of
+kept declared values do.</p>
+<p>NA values in the original variable are carried across as NA unless the
 map names <code>NA</code> as an old value (for example <code>"NA=-98"</code>); the
 <code>else</code> setting never converts NA. An <code>NA</code> rule affects plain
 <code>NA</code> cells only — tagged missing values (Stata-style or
 SAS-style) are declared missings and are preserved with their tags
-regardless of the map. Declared SPSS-style missing values on the
+unless the map names them as old values (<code>".a=-99"</code>). Declared
+SPSS-style missing values on the
 original variable are likewise preserved, whether declared as discrete
 codes or as a range: a declared code the map does not name, and every
 value inside a declared range, are carried onto the result with the
@@ -222,6 +244,21 @@ note names the values the data hold (map them to <code>NA</code> explicitly
 to convert them instead). A declared code the map names is recoded like
 any other value; a range always carries whole, so a value the map
 recodes into the range is missing on the result.</p>
+<p>A declared missing value the map moves onto a new code stays missing
+when the new code looks like a coded missing value (the check
+<code><a href="jload.html">jload</a></code> describes under <em>Coded missing values</em>):
+<code>"-99=-88; else=copy"</code> on a variable declaring <code>-99</code> declares
+<code>-88</code> on the result, with the label of <code>-99</code> and a note
+saying so, and <code>-99</code> is no longer declared. A lettered marker
+recoded to a number works the same way (<code>".a=-99"</code>). A new code
+that does not pass the check becomes an ordinary value – deliberately
+so for <code>"-99=6"</code>, which makes refusals a category, but also for a
+negative code on a variable with large values, such as incomes, where
+the check finds nothing unusual; declare such a code with
+<code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>. So does a new code that also receives
+ordinary values. A result that would hold both such a declared code and
+a lettered marker, or more declared codes than SPSS allows, stops the
+call with a message.</p>
 <p>A variable holds one convention. When the original variable's
 SPSS-style declaration survives the map (a range always does; a discrete
 code does unless the map names it), Stata-style or SAS-style tokens in
@@ -266,6 +303,11 @@ argument is unnecessary — <code><a href="jdeclare_missing.html">jdeclare_missi
 plain <code>NA</code> (data born in R, or read from a CSV): <code>map =
 "NA=-98; else=copy"</code> converts the NA cells to the numeric code, and
 <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> declares it.</p>
+<p>Missingness that arrived as Stata-style or SAS-style markers takes one
+step: naming the markers moves them to codes that are declared on the
+result (<code>map = ".a=-99; .b=-98; else=copy"</code>), as described
+above. <code>jconvert(to = "spss")</code> does the same for every such
+variable in a data frame, taking the codes from your setting.</p>
 <p>Under <strong>Stata convention</strong>, declared missing values are typed
 missing cells marked with Stata-style tags (<code>.a</code> through
 <code>.z</code>). The single-call canonical pattern names the same codes:</p>

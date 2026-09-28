@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.194</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.195</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,7 @@ missing values."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Convert missing-value declarations between formats</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.194/R/recode.R" class="external-link"><code>R/recode.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/recode.R" class="external-link"><code>R/recode.R</code></a></small>
       <div class="d-none name"><code>jconvert.Rd</code></div>
     </div>
 
@@ -167,10 +167,17 @@ what was actually in the data on input. A marker declared only
 through a value label, with no case carrying it yet, converts like
 one that cases carry: its label moves to the code and the code is
 declared missing. A column with more distinct tags than the setting
-has codes (at most 3, SPSS's limit) is refused before any data is
-touched; the message lists the column's tags and offers scoping the
-call with <code>vars = c(...)</code> to leave such columns out, or
-reducing their tags first. Because the SPSS-to-Stata direction
+has codes is declared with a missing-value range instead, SPSS's
+own form for more than three: the codes start at the first
+<code>missing.convention.codes</code> value and run one per tag in the
+direction the codes run, from the first toward the second – with
+the defaults, toward zero, so five tags take <code>-99</code> through
+<code>-95</code>, declared as the range <code>[-99, -95]</code>, each tag's
+label on its code. The first tags keep their usual codes whenever
+the setting's codes are consecutive, and the notification shows the
+range and says why it was used. A setting with a single code (which
+gives no direction), or one whose range would reach zero, is refused
+before any data is touched, with the fix. Because the SPSS-to-Stata direction
 assigns letters by code order, a tag set other than the leading
 letters comes back as the leading letters (<code>.d</code>, <code>.n</code>,
 <code>.r</code> return as <code>.a</code>, <code>.b</code>, <code>.c</code>) with the same
@@ -224,7 +231,8 @@ supports lowercase letters.</p></dd>
 </dl><p>Pre-flight checks for <code>to = "spss"</code> include a collision check:
 if a column's target numeric code (e.g. <code>-99</code> for <code>.a</code>) is
 present as genuine data in the column, the call errors before any
-data is touched. The check covers a marker declared only through a
+data is touched; for a column declared with a range, any value inside
+the range counts. The check covers a marker declared only through a
 value label as well as one that cases carry. The error message lists
 every colliding column and the remedy: change the convention codes via
 <code>joptions(missing.convention.codes = ...)</code>. When the same call

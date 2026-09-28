@@ -120,14 +120,20 @@ The four target formats:
   A marker declared only through a value label, with no case carrying it
   yet, converts like one that cases carry: its label moves to the code
   and the code is declared missing. A column with more distinct tags
-  than the setting has codes (at most 3, SPSS's limit) is refused before
-  any data is touched; the message lists the column's tags and offers
-  scoping the call with `vars = c(...)` to leave such columns out, or
-  reducing their tags first. Because the SPSS-to-Stata direction assigns
-  letters by code order, a tag set other than the leading letters comes
-  back as the leading letters (`.d`, `.n`, `.r` return as `.a`, `.b`,
-  `.c`) with the same labels; the notification says so whenever it
-  applies.
+  than the setting has codes is declared with a missing-value range
+  instead, SPSS's own form for more than three: the codes start at the
+  first `missing.convention.codes` value and run one per tag in the
+  direction the codes run, from the first toward the second – with the
+  defaults, toward zero, so five tags take `-99` through `-95`, declared
+  as the range `[-99, -95]`, each tag's label on its code. The first
+  tags keep their usual codes whenever the setting's codes are
+  consecutive, and the notification shows the range and says why it was
+  used. A setting with a single code (which gives no direction), or one
+  whose range would reach zero, is refused before any data is touched,
+  with the fix. Because the SPSS-to-Stata direction assigns letters by
+  code order, a tag set other than the leading letters comes back as the
+  leading letters (`.d`, `.n`, `.r` return as `.a`, `.b`, `.c`) with the
+  same labels; the notification says so whenever it applies.
 
 - `to = "stata"`:
 
@@ -170,7 +176,8 @@ The four target formats:
 
 Pre-flight checks for `to = "spss"` include a collision check: if a
 column's target numeric code (e.g. `-99` for `.a`) is present as genuine
-data in the column, the call errors before any data is touched. The
+data in the column, the call errors before any data is touched; for a
+column declared with a range, any value inside the range counts. The
 check covers a marker declared only through a value label as well as one
 that cases carry. The error message lists every colliding column and the
 remedy: change the convention codes via

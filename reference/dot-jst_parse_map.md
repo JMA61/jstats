@@ -31,9 +31,12 @@ Invisibly, a list with components:
 - mappings:
 
   List of lists; each inner list has `old_vals` (numeric vector),
-  `new_val` (single numeric; `NA_real_` for system-NA and tagged-NA
-  rules), and `tagged` (NULL for numeric or system-NA rules; a single
-  lowercase letter character for tagged-NA rules).
+  `old_tags` (character: the lowercase letters of any lettered markers
+  named as old values, e.g. `"a"` for `.a` or `.A`; `character(0)` when
+  none, S319), `old_tags_raw` (the same letters as typed), `new_val`
+  (single numeric; `NA_real_` for system-NA and tagged-NA rules), and
+  `tagged` (NULL for numeric or system-NA rules; a single lowercase
+  letter character for tagged-NA rules).
 
 - else_action:
 
