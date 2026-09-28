@@ -881,6 +881,15 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 #'   \code{"-99=.a; -98=.b"}.
 #'
+#'   A lettered marker can also be an OLD value, recoding the cells that
+#'   carry it (either case: \code{.a} also names a SAS-style \code{.A}):
+#'   \code{".a=-99"} gives them a number, \code{".a=NA"} makes them plain
+#'   \code{NA}, and \code{".e=.c"} re-letters them, merging them into
+#'   \code{.c} if the variable already has it (a marker on the right needs
+#'   Stata or SAS convention, as always). Markers and numbers may share a
+#'   rule (\code{"9,.a=-99"}). A marker the map does not name is kept,
+#'   with its label, whatever the \code{else} setting.
+#'
 #'   The right-hand side may also be the word \code{missing}
 #'   (case-insensitive): the value is converted to your working
 #'   convention's own missing form -- a tagged marker under the Stata or
@@ -917,6 +926,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     \item \code{"-5=System; else=copy"}
 #'     \item \code{"NA=-98; else=copy"}
 #'     \item \code{"3=1; 4=2; else=.a"} (Stata or SAS convention only)
+#'     \item \code{".a=-99; .b=-98; else=copy"} (a Stata-style variable to
+#'       numeric codes, declared on the result)
 #'     \item \code{"8=missing; else=copy"} (any convention)
 #'   }
 #'
@@ -986,15 +997,28 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     1/0 will carry "Yes" and "No" across to the new codes automatically.
 #'   \item If categories are collapsed (multiple old values map to one new
 #'     value), automatic transfer is not possible and a note is printed
-#'     directing you to supply labels manually.
+#'     directing you to supply labels manually. Recoding onto a value that
+#'     \code{else=copy} also carries across (\code{"5=4; else=copy"})
+#'     collapses two categories the same way.
 #' }
+#'
+#' Labels move with lettered markers as they do with numbers: a marker
+#' recoded to a number or to another marker takes its label along, and a
+#' value recoded to a marker gives the marker its label. Where a label
+#' would land on a value that keeps a label of its own (\code{"-99=-98"},
+#' or \code{".b=.a"} on a variable with both markers), the value keeps
+#' its own; several different labels landing on one new value are all
+#' dropped. Labels that move onto a declared missing value or a marker
+#' also ride beside a supplied \code{labels} string, as the labels of
+#' kept declared values do.
 #'
 #' NA values in the original variable are carried across as NA unless the
 #' map names \code{NA} as an old value (for example \code{"NA=-98"}); the
 #' \code{else} setting never converts NA. An \code{NA} rule affects plain
 #' \code{NA} cells only --- tagged missing values (Stata-style or
 #' SAS-style) are declared missings and are preserved with their tags
-#' regardless of the map. Declared SPSS-style missing values on the
+#' unless the map names them as old values (\code{".a=-99"}). Declared
+#' SPSS-style missing values on the
 #' original variable are likewise preserved, whether declared as discrete
 #' codes or as a range: a declared code the map does not name, and every
 #' value inside a declared range, are carried onto the result with the
@@ -1003,6 +1027,22 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' to convert them instead). A declared code the map names is recoded like
 #' any other value; a range always carries whole, so a value the map
 #' recodes into the range is missing on the result.
+#'
+#' A declared missing value the map moves onto a new code stays missing
+#' when the new code looks like a coded missing value (the check
+#' \code{\link{jload}} describes under \emph{Coded missing values}):
+#' \code{"-99=-88; else=copy"} on a variable declaring \code{-99} declares
+#' \code{-88} on the result, with the label of \code{-99} and a note
+#' saying so, and \code{-99} is no longer declared. A lettered marker
+#' recoded to a number works the same way (\code{".a=-99"}). A new code
+#' that does not pass the check becomes an ordinary value -- deliberately
+#' so for \code{"-99=6"}, which makes refusals a category, but also for a
+#' negative code on a variable with large values, such as incomes, where
+#' the check finds nothing unusual; declare such a code with
+#' \code{jdeclare_missing()}. So does a new code that also receives
+#' ordinary values. A result that would hold both such a declared code and
+#' a lettered marker, or more declared codes than SPSS allows, stops the
+#' call with a message.
 #'
 #' A variable holds one convention. When the original variable's
 #' SPSS-style declaration survives the map (a range always does; a discrete
@@ -1056,6 +1096,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' plain \code{NA} (data born in R, or read from a CSV): \code{map =
 #' "NA=-98; else=copy"} converts the NA cells to the numeric code, and
 #' \code{jdeclare_missing()} declares it.
+#'
+#' Missingness that arrived as Stata-style or SAS-style markers takes one
+#' step: naming the markers moves them to codes that are declared on the
+#' result (\code{map = ".a=-99; .b=-98; else=copy"}), as described
+#' above. \code{jconvert(to = "spss")} does the same for every such
+#' variable in a data frame, taking the codes from your setting.
 #'
 #' Under \strong{Stata convention}, declared missing values are typed
 #' missing cells marked with Stata-style tags (\code{.a} through
@@ -1522,10 +1568,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                 !(orig_num %in% lhs_all))
         hits_target <- tok_mint_code %in% plain_targets
         if (hits_cells || hits_target) {
+          # Marker old values (S319) follow the numbers, as typed.
           tok_lhs_txt <- vapply(parsed_map$mappings[tok_rule_idx],
-                                function(r) paste(vapply(as.numeric(r$old_vals),
-                                                         .jst_fmt_code,
-                                                         character(1)),
+                                function(r) paste(c(vapply(as.numeric(r$old_vals),
+                                                           .jst_fmt_code,
+                                                           character(1)),
+                                                    if (length(r$old_tags_raw) > 0)
+                                                      paste0(".", r$old_tags_raw)),
                                                   collapse = ","),
                                 character(1))
           if (tok_in_na) tok_lhs_txt <- c(tok_lhs_txt, "NA")
@@ -1564,8 +1613,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
               r$new_val == tok_mint_code
           }, parsed_map$mappings)
           hit_lhs <- vapply(hit_rules, function(r) {
-            paste(vapply(as.numeric(r$old_vals), .jst_fmt_code,
-                         character(1)), collapse = ",")
+            paste(c(vapply(as.numeric(r$old_vals), .jst_fmt_code,
+                           character(1)),
+                    if (length(r$old_tags_raw) > 0)
+                      paste0(".", r$old_tags_raw)), collapse = ",")
           }, character(1))
           if (na_rule_plain && parsed_map$na_rule$new_val == tok_mint_code) {
             hit_lhs <- c(hit_lhs, "NA")
@@ -1798,8 +1849,23 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   # --- Apply recode ---
   # orig_num (the unclass()ed double payload) was taken at the declaration
-  # read above.
-  new_num   <- rep(NA_real_, length(orig_num))
+  # read above. orig_tags reads the source's lettered markers once (S319):
+  # the marker old values below match against it, and the preservation
+  # step re-applies the markers the map does not name.
+  new_num      <- rep(NA_real_, length(orig_num))
+  # haven::na_tag() accepts only doubles, and a labels vector can be integer
+  # (a labelled integer column); an integer vector carries no marker.
+  .tags_of     <- function(x) {
+    if (is.double(x)) haven::na_tag(x) else rep(NA_character_, length(x))
+  }
+  orig_tags    <- haven::na_tag(orig_num)
+  orig_tags_lc <- tolower(orig_tags)
+  # Markers the map names as OLD values (S319; the S314 markers item, half
+  # 1). The parser records them lowercase, so ".a" names a SAS-style .A as
+  # well; their cells take the rule's target, and every other marker is
+  # preserved as before.
+  lhs_tags_all <- unique(unlist(lapply(parsed_map$mappings, `[[`,
+                                       "old_tags")))
 
   all_specified_old <- c()
 
@@ -1808,18 +1874,29 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     all_specified_old <- c(all_specified_old, old_vals)
 
     # Map value(s) absent from the data: a no-op for those values, not a
-    # problem -- a default-silent advisory note (full output only).
+    # problem -- a default-silent advisory note (full output only). A
+    # marker no cell carries counts the same way (S319).
     actual_vals       <- unique(orig_num[!is.na(orig_num)])
     missing_from_data <- setdiff(old_vals, actual_vals)
-    if (length(missing_from_data) > 0) {
+    absent_tags       <- rule$old_tags_raw[
+      !(rule$old_tags %in% orig_tags_lc[!is.na(orig_tags_lc)])]
+    if (length(missing_from_data) > 0 || length(absent_tags) > 0) {
       .jst_advisory_note(paste0(
         "Note: '", orig_name, "' contained none of the map values ",
-        paste(missing_from_data, collapse = ", "),
+        paste(c(if (length(missing_from_data) > 0)
+                  paste(missing_from_data, collapse = ", "),
+                if (length(absent_tags) > 0)
+                  paste0(".", absent_tags, collapse = ", ")),
+              collapse = ", "),
         " -- nothing was recoded for them."
       ))
     }
 
     rule_mask <- !is.na(orig_num) & orig_num %in% old_vals
+    if (length(rule$old_tags) > 0) {
+      rule_mask <- rule_mask |
+        (!is.na(orig_tags_lc) & orig_tags_lc %in% rule$old_tags)
+    }
     if (!is.null(rule$tagged)) {
       # Stata-style tagged-NA: assign haven::tagged_na(<letter>) so the
       # tag attribute is preserved on the underlying double storage.
@@ -1937,6 +2014,204 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     }
   }
 
+  # NAs in original: plain-NA cells follow the map's NA rule when one is
+  # present (E11) and stay NA otherwise; the else setting never converts
+  # NA. Stata-form tagged NAs are declared missings and are never targeted
+  # by the NA rule (or by a numeric map rule) -- their tags are re-applied
+  # below, so all of them are preserved regardless of the else setting,
+  # except the markers the map names as old values (S319), whose cells took
+  # their rule's target in the loop above. Moved above the notes at S319:
+  # the result's declarations are composed from the finished values before
+  # any note prints, so a refusal below never follows a note.
+  plain_na_mask <- is.na(orig_num) & is.na(orig_tags)
+  if (!is.null(parsed_map$na_rule)) {
+    if (!is.null(parsed_map$na_rule$tagged)) {
+      new_num[plain_na_mask] <- haven::tagged_na(parsed_map$na_rule$tagged)
+    } else {
+      new_num[plain_na_mask] <- parsed_map$na_rule$new_val
+    }
+  } else {
+    new_num[plain_na_mask] <- NA_real_
+  }
+  tagged_pos <- which(!is.na(orig_tags) & !(orig_tags_lc %in% lhs_tags_all))
+  if (length(tagged_pos) > 0) {
+    new_num[tagged_pos] <- haven::tagged_na(orig_tags[tagged_pos])
+  }
+
+  # --- Declarations the result will carry -----------------------------------
+  # Four sources compose: the declared codes the map does not name
+  # (carried whether or not a cell holds them, S302), the declared codes
+  # the map recodes INTO, the codes that take over from declared missing
+  # values (S319, below), and the missing token's spss-arm mint -- unless
+  # the mint fell inside the source's range, where the band itself is the
+  # declaration and an na_values entry would only repeat it (or, beside a
+  # surviving code, exceed what a range allows). The band rides separately,
+  # as na_range, at result construction. The first two sets were computed
+  # at the declaration read above.
+  if (!is.null(tok_mint_code)) {
+    tok_lhs  <- unlist(lapply(parsed_map$mappings[tok_rule_idx],
+                              `[[`, "old_vals"))
+    tok_tags <- unlist(lapply(parsed_map$mappings[tok_rule_idx],
+                              `[[`, "old_tags"))
+    tok_minted_any <-
+      (length(tok_lhs) > 0 &&
+         any(!is.na(orig_num) & orig_num %in% tok_lhs)) ||
+      (length(tok_tags) > 0 &&
+         any(!is.na(orig_tags_lc) & orig_tags_lc %in% tok_tags)) ||
+      (tok_in_na && any(is.na(orig_num) & is.na(orig_tags)))
+  }
+
+  # --- Declared missing values moved onto a new code (S319) -----------------
+  # The S318 ruling (option A), Missing Values Reference Decision 14's S319
+  # amendment. A rule that moves cells the source declares missing -- a
+  # declared code, a value inside the declared range, or a lettered marker
+  # the map names -- onto a plain numeric code that looks like a coded
+  # missing value (the D1 test: .jst_detect_suspicious_values() on the
+  # result) declares that code missing on the result, which carries the
+  # label (the value-labels step below) and says so in a note. Only when
+  # every cell the result holds at that code was missing before: a code that
+  # also receives ordinary values -- a rule mixing both, or the same value
+  # kept by else=copy -- stays valid, as before, and the D1 note speaks for
+  # it. A code the heuristic does not flag stays valid too ("-99=6" makes
+  # refusals a category). The emptied source code is not carried, as a code
+  # a rule names on the left never was. Before S319 the declaration stayed
+  # behind: "-99=-88; else=copy" moved the "Refused" label to -88 and left
+  # the refusals counted as data.
+  r2_codes <- numeric(0)
+  r2_from  <- list()
+  # S319, the companion note (Jeff's option b): a declared missing value
+  # moved onto a code that stays valid -- one the check does not flag,
+  # such as -88 among incomes, or a deliberate "-99=6" -- is reported, with
+  # the declare pair. A flagged code that also holds ordinary values is the
+  # D1 note's, not this one's.
+  rel_from <- list()
+  r2_rules <- Filter(function(r) {
+    is.null(r$tagged) && !is.na(r$new_val) && !isTRUE(r$missing)
+  }, parsed_map$mappings)
+  r2_cand <- unique(vapply(r2_rules, `[[`, numeric(1), "new_val"))
+  r2_cand <- r2_cand[!(r2_cand %in% carried_codes) & !.in_band(r2_cand)]
+  if (length(r2_cand) > 0) {
+    susp_r2 <- .jst_detect_suspicious_values(new_num, orig_name)
+    for (v in r2_cand) {
+      from_codes <- numeric(0)
+      from_tags  <- character(0)
+      ordinary   <- FALSE
+      for (r in r2_rules) {
+        if (r$new_val != v) next
+        hit_v <- unique(orig_num[!is.na(orig_num) & orig_num %in% r$old_vals])
+        dec_v <- hit_v[hit_v %in% src_codes | .in_band(hit_v)]
+        if (length(dec_v) < length(hit_v)) ordinary <- TRUE
+        from_codes <- c(from_codes, dec_v)
+        # The markers as the data store them (a SAS-style .A named ".a").
+        from_tags  <- c(from_tags, orig_tags[!is.na(orig_tags_lc) &
+                                               orig_tags_lc %in% r$old_tags])
+      }
+      if (identical(parsed_map$else_action, "copy") &&
+          any(!is.na(orig_num) & orig_num == v &
+                !(orig_num %in% all_specified_old))) {
+        ordinary <- TRUE
+      }
+      if (length(from_codes) + length(from_tags) == 0) next
+      entry <- list(code       = v,
+                    from_codes = sort(unique(from_codes)),
+                    from_tags  = unique(from_tags))
+      if (!(v %in% susp_r2)) {
+        rel_from[[length(rel_from) + 1L]] <- entry
+      } else if (!ordinary) {
+        r2_codes <- c(r2_codes, v)
+        r2_from[[length(r2_from) + 1L]] <- entry
+      }
+    }
+  }
+
+  result_na_values <- sort(unique(c(
+    carried_codes, r2_codes,
+    if (isTRUE(tok_minted_any) && !isTRUE(tok_in_band)) tok_mint_code)))
+
+  tok_spss_minted <- !is.null(tok_mint_code) && isTRUE(tok_minted_any)
+  if (length(r2_codes) > 0 || tok_spss_minted) {
+    # One column, one form (the S302 marker refusal's mirror). A code
+    # declared here makes the result SPSS-form, so it cannot keep a lettered
+    # marker beside it -- one the map leaves in place (cells or a value
+    # label), or one the map or the labels produce. The missing token's
+    # SPSS code counts too (folded in at S319, Jeff): with convention =
+    # "spss" given in the call on a Stata-style column, the D7 teach-gate
+    # stands aside -- a per-call convention never conflicts -- and until
+    # S319 the result was an SPSS-form column whose markers every reader
+    # took for plain NA ("Refused" and "Don't know" gone from jfreq).
+    src_mk   <- .jst_marker_tags(orig)
+    surv     <- src_mk$all[!(tolower(src_mk$all) %in% lhs_tags_all)]
+    res_cell <- unique(haven::na_tag(new_num))
+    res_cell <- res_cell[!is.na(res_cell)]
+    lab_made <- if (!is.null(parsed_labels)) .tags_of(parsed_labels)
+                else character(0)
+    made     <- setdiff(unique(c(res_cell, lab_made[!is.na(lab_made)])),
+                        surv)
+    if (length(surv) > 0 || length(made) > 0) {
+      shown    <- paste0(".", if (length(surv) > 0) surv else made)
+      beside   <- character(0)
+      if (length(r2_codes) > 0) {
+        from_all <- unique(unlist(lapply(r2_from, function(e) {
+          c(vapply(e$from_codes, .jst_fmt_code, character(1)),
+            if (length(e$from_tags) > 0) paste0(".", e$from_tags))
+        })))
+        beside <- c(beside, paste0(
+          .jst_and_list(vapply(r2_codes, .jst_fmt_code, character(1))),
+          ", ", if (length(r2_codes) == 1L) "a declared missing value" else
+            "declared missing values",
+          " from ", .jst_and_list(from_all)))
+      }
+      if (tok_spss_minted) {
+        beside <- c(beside, paste0(.jst_fmt_code(tok_mint_code),
+                                   ", which 'missing' declares under SPSS ",
+                                   "convention"))
+      }
+      convert1 <- length(src_mk$all) > 0
+      .jst_stop(
+        paste0("the recoded variable would hold the marker",
+               if (length(shown) > 1L) "s" else "", " ",
+               .jst_and_list(shown), " beside ",
+               paste(beside, collapse = " and "), ", and a variable ",
+               "holds SPSS-style missing values or lettered markers, not ",
+               "both."), "\n",
+        if (convert1) paste0(
+          "Convert the data frame first, then recode:\n",
+          "  jconvert(", .jst_data_name, ", to = \"spss\", modify = TRUE)\n")
+        else "",
+        if (length(surv) > 0) paste0(
+          if (convert1) "Or map " else "Map ",
+          .jst_and_list(shown), " as well, so no lettered marker remains.")
+        else paste0(
+          if (convert1) "Or recode " else "Recode ",
+          "to numbers or NA only, so no lettered marker remains."))
+    }
+
+  }
+  if (length(r2_codes) > 0) {
+    # SPSS's cap on the result (Decision 12's acceptance rule): three codes,
+    # or a range plus one. Reachable through the S319 rule alone -- a
+    # Stata-style column with four or more markers mapped to four codes, or
+    # a band column whose in-range values move outside it.
+    n_res   <- length(result_na_values)
+    res_txt <- .jst_and_list(vapply(result_na_values, .jst_fmt_code,
+                                    character(1)))
+    if (!has_band && n_res > 3L) {
+      .jst_stop(
+        paste0("SPSS allows at most 3 separate missing-value codes per ",
+               "variable, but the recoded variable would declare ", n_res,
+               " (", res_txt, ")."), "\n",
+        "Recode the declared missing values onto 3 or fewer codes.")
+    }
+    if (has_band && n_res > 1L) {
+      .jst_stop(
+        paste0("a missing-value range allows at most 1 separate code ",
+               "beside it, but the recoded variable would declare ", n_res,
+               " beside its range ", band_txt, ": ", res_txt, "."), "\n",
+        "Recode the declared missing values outside the range onto 1 ",
+        "code, or into the range.")
+    }
+  }
+
   # --- Notes for preserved declared codes and carried-through heuristics ---
   # Declared SPSS-form UDM codes that were preserved (M1): a standard-tier
   # note, since it states a fact about a declared thing. Heuristic-suspected
@@ -2050,7 +2325,17 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       } else {
         format(na_code)
       }
-      if (n_plain_na == 1L) {
+      if (na_code %in% result_na_values || .in_band(na_code)) {
+        # S319: the code is declared missing on the result already -- a
+        # declared code the map recodes into (S302), or one the S319 rule
+        # declared -- so the declare remedy below would be false. It has
+        # been since S302 whenever the NA rule targeted a declared code.
+        .jst_msg(paste0(
+          "Note: ", if (n_plain_na == 1L) "1 NA value" else
+            paste0(n_plain_na, " NA values"), " in '", orig_name, "' ",
+          if (n_plain_na == 1L) "was" else "were", " recoded to ",
+          code_txt, ", a declared missing value on the recoded variable."))
+      } else if (n_plain_na == 1L) {
         .jst_msg(paste0(
           "Note: 1 NA value in '", orig_name, "' was recoded to ",
           code_txt, ".\n",
@@ -2065,48 +2350,6 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       }
     }
   }
-
-  # NAs in original: plain-NA cells follow the map's NA rule when one is
-  # present (E11) and stay NA otherwise; the else setting never converts
-  # NA. Stata-form tagged NAs are declared missings and are never targeted
-  # by the NA rule (or by a numeric map rule) -- their tags are re-applied
-  # below, so all of them are preserved regardless of the else setting.
-  orig_tags     <- haven::na_tag(orig_num)
-  plain_na_mask <- is.na(orig_num) & is.na(orig_tags)
-  if (!is.null(parsed_map$na_rule)) {
-    if (!is.null(parsed_map$na_rule$tagged)) {
-      new_num[plain_na_mask] <- haven::tagged_na(parsed_map$na_rule$tagged)
-    } else {
-      new_num[plain_na_mask] <- parsed_map$na_rule$new_val
-    }
-  } else {
-    new_num[plain_na_mask] <- NA_real_
-  }
-  tagged_pos <- which(!is.na(orig_tags))
-  if (length(tagged_pos) > 0) {
-    new_num[tagged_pos] <- haven::tagged_na(orig_tags[tagged_pos])
-  }
-
-  # --- Declarations the result will carry -----------------------------------
-  # Three sources compose: the declared codes the map does not name
-  # (carried whether or not a cell holds them, S302), the declared codes
-  # the map recodes INTO, and the missing token's spss-arm mint -- unless
-  # the mint fell inside the source's range, where the band itself is the
-  # declaration and an na_values entry would only repeat it (or, beside a
-  # surviving code, exceed what a range allows). The band rides separately,
-  # as na_range, at result construction. The first two sets were computed
-  # at the declaration read above.
-  if (!is.null(tok_mint_code)) {
-    tok_lhs <- unlist(lapply(parsed_map$mappings[tok_rule_idx],
-                             `[[`, "old_vals"))
-    tok_minted_any <-
-      (length(tok_lhs) > 0 &&
-         any(!is.na(orig_num) & orig_num %in% tok_lhs)) ||
-      (tok_in_na && any(is.na(orig_num) & is.na(orig_tags)))
-  }
-  result_na_values <- sort(unique(c(
-    carried_codes,
-    if (isTRUE(tok_minted_any) && !isTRUE(tok_in_band)) tok_mint_code)))
 
   # Missing-token confirmation (D4, spss arm only; Rule R). Under a
   # stata/sas resolution the user wrote missing and got missing --
@@ -2137,6 +2380,53 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     }
   }
 
+  # Shared by the two S319 notes below: a source marker with its label, as
+  # .code_with_label() renders a code; the source values a note names; and
+  # whether a note has already printed (Rule F: a blank line before the
+  # next one).
+  .tag_with_label <- function(tag) {
+    lab <- NULL
+    if (!is.null(orig_val_labels_for_note) &&
+        length(orig_val_labels_for_note) > 0) {
+      lt  <- .tags_of(orig_val_labels_for_note)
+      hit <- which(!is.na(lt) & lt == tag)
+      if (length(hit) >= 1L) lab <- names(orig_val_labels_for_note)[hit[1]]
+    }
+    if (!is.null(lab) && !is.na(lab) && nzchar(lab)) {
+      paste0(".", tag, " (\"", lab, "\")")
+    } else paste0(".", tag)
+  }
+  .srcs_of <- function(entries) {
+    unique(unlist(lapply(entries, function(e) {
+      c(vapply(e$from_codes, .code_with_label, character(1)),
+        vapply(e$from_tags, .tag_with_label, character(1)))
+    })))
+  }
+  e11_fired <- !is.null(parsed_map$na_rule) &&
+    any(is.na(orig_num) & is.na(orig_tags)) &&
+    is.null(parsed_map$na_rule$tagged) &&
+    !is.na(parsed_map$na_rule$new_val) &&
+    !isTRUE(parsed_map$na_rule$missing)
+  notes_before <- length(preserved_udm_codes) > 0 ||
+    length(preserved_band_vals) > 0 || e11_fired ||
+    (!is.null(tok_mint_code) && isTRUE(tok_minted_any))
+
+  # Declared missing values moved onto a new code (S319; Rule R): the codes
+  # the S319 rule declared, and the source values and markers they took
+  # over from, with their labels. Consequential -- the package attached the
+  # declaration.
+  if (length(r2_codes) > 0) {
+    r2_srcs <- .srcs_of(r2_from)
+    .jst_msg(paste0(
+      if (notes_before) "\n" else "", "Note: ",
+      .jst_and_list(vapply(r2_codes, .jst_fmt_code, character(1))),
+      if (length(r2_codes) == 1L) " was declared as a missing value"
+      else " were declared as missing values",
+      " on the recoded variable, as ", .jst_and_list(r2_srcs),
+      if (length(r2_srcs) == 1L) " is" else " are", " on ", orig_name, "."))
+    notes_before <- TRUE
+  }
+
   # Map-target mint note (D1, S239 row 5): plain numeric targets the map
   # minted that look like coded missing values. The result vector is the
   # judge (the same heuristic jencode's target-side note uses); token
@@ -2159,7 +2449,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       flagged  <- sort(intersect(susp_res, d1_targets))
       flagged  <- as.numeric(Filter(function(v) {
         any(vapply(d1_rules, function(r) {
-          r$new_val == v && any(!is.na(orig_num) & orig_num %in% r$old_vals)
+          r$new_val == v &&
+            (any(!is.na(orig_num) & orig_num %in% r$old_vals) ||
+               any(!is.na(orig_tags_lc) & orig_tags_lc %in% r$old_tags))
         }, logical(1)))
       }, flagged))
       if (length(flagged) > 0) {
@@ -2172,8 +2464,15 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
               r$old_vals[r$old_vals %in% orig_num[!is.na(orig_num)]]
             } else NULL
           }))))
-          shown <- .jst_and_list(vapply(ov, .jst_fmt_code, character(1)))
-          if (i == 1L) plural <- length(ov) > 1L
+          # Markers the rule names and the data carry (S319), as stored.
+          ot <- unique(unlist(lapply(d1_rules, function(r) {
+            if (r$new_val == v) {
+              orig_tags[!is.na(orig_tags_lc) & orig_tags_lc %in% r$old_tags]
+            } else NULL
+          })))
+          shown <- .jst_and_list(c(vapply(ov, .jst_fmt_code, character(1)),
+                                   if (length(ot) > 0) paste0(".", ot)))
+          if (i == 1L) plural <- (length(ov) + length(ot)) > 1L
           pairs <- c(pairs, if (i == 1L) {
             paste0(shown, if (plural) " were" else " was",
                    " recoded to ", .jst_fmt_code(v))
@@ -2250,7 +2549,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
           "\"", d1_conv_arg, ")\n",
           "  jdeclare_missing(", .jst_data_name, ", ", orig_name,
           "R, codes = c(",
-          paste(format(flagged, trim = TRUE, scientific = FALSE),
+          # S319: jdeclare_missing() REPLACES a column's discrete codes, so
+          # the line lists the codes the recoded variable already declares
+          # beside the flagged ones. Naming the flagged codes alone (S303 to
+          # S319) dropped the rest when pasted -- "5=-88; else=copy" on
+          # Education lost -99 "Refused" and -98 "Don't know".
+          paste(format(c(result_na_values, flagged), trim = TRUE,
+                       scientific = FALSE),
                 collapse = ", "),
           ")", d1_conv_arg, ", modify = TRUE)")
         d1_body <- if (one) {
@@ -2268,7 +2573,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                  if (length(flagged) == 2L) "both" else "them all",
                  " to missing.")
         }
+        notes_before <- TRUE
         .jst_msg(paste0(
+          if (length(r2_codes) > 0) "
+" else "",
           paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
             if (one) "looks like a coded missing value."
@@ -2277,6 +2585,85 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
           d1_body))
       }
     }
+  }
+
+  # Declared missing values moved onto a code that stays valid (S319, the
+  # companion note; Jeff's option b). The S319 rule declares the new code
+  # only when the missing-code check flags it, and that check reads -88
+  # among incomes as an ordinary value, so on such a variable the moved
+  # cells become data -- as a deliberate "-99=6" does, where the note is
+  # still true. Consequential: the call changed the status of cases that
+  # were declared missing. The remedy is the D1 note's declare pair on the
+  # RESULT (S303: jrecode cannot see the name the user assigns the result
+  # to, so a lone declare line would guess it), with the same convention
+  # handling: the per-call convention carried when the call gave one.
+  # jdeclare_missing() REPLACES a column's discrete codes, as SPSS's MISSING
+  # VALUES does, so the declare line lists every code the recoded variable
+  # already declares beside the new ones -- naming the new code alone would
+  # drop the others. The choose-first menu leads only where the declare line
+  # would meet the gate: no convention chosen and no declaration on the
+  # result for jdeclare_missing() to follow. Where the result keeps lettered
+  # markers there is no remedy line: declaring the code there would turn it
+  # back into a marker.
+  if (length(rel_from) > 0) {
+    rel_srcs  <- .srcs_of(rel_from)
+    rel_codes <- vapply(rel_from, `[[`, numeric(1), "code")
+    n_src     <- length(rel_srcs)
+    n_code    <- length(rel_codes)
+    codes_txt <- .jst_and_list(vapply(rel_codes, .jst_fmt_code, character(1)))
+    rel_head  <- paste0(
+      "Note: ", .jst_and_list(rel_srcs),
+      if (n_src == 1L) " is a declared missing value" else
+        " are declared missing values",
+      " on ", orig_name, ", but ", if (n_src == 1L) "its" else "their",
+      if (n_code == 1L) " new code, " else " new codes, ", codes_txt,
+      if (n_code == 1L) ", is not declared" else ", are not declared",
+      ", so those cases now count as data.")
+    rel_markers_left <- any(!is.na(haven::na_tag(new_num))) || {
+      mk_rel <- .jst_marker_tags(orig)
+      any(!(tolower(mk_rel$label_only) %in% lhs_tags_all))
+    }
+    rel_body <- ""
+    if (!rel_markers_left) {
+      rel_conv <- if (!is.null(convention)) convention else
+        getOption(".jst_options_missing_convention",
+                  .jst_options_defaults$missing.convention)
+      rel_set  <- isTRUE(rel_conv %in% c("spss", "stata", "sas"))
+      # The setting decides the declaration's form only on a PLAIN result;
+      # a result already carrying SPSS-style codes keeps that form whatever
+      # the setting says, so the lead names the convention only where it
+      # applies.
+      rel_plain <- length(result_na_values) == 0 && !has_band
+      rel_lead <- if (!rel_set && rel_plain) {
+        paste0(.jst_choose_convention_error(
+                 variant   = "menu",
+                 fn        = "jrecode",
+                 head_tail = "those cases cannot be kept missing yet.",
+                 prefixed  = FALSE), "\n",
+               "Then declare ", codes_txt, " on the recoded variable:")
+      } else {
+        paste0("To keep those cases missing",
+               if (rel_set && rel_plain) paste0(
+                 " under ", c(spss = "SPSS", stata = "Stata",
+                              sas = "SAS")[[rel_conv]], " convention")
+               else "",
+               ", declare ", codes_txt, " on the recoded variable:")
+      }
+      rel_conv_arg <- if (!is.null(convention)) {
+        paste0(", convention = \"", convention, "\"")
+      } else ""
+      rel_body <- paste0(
+        "\n", rel_lead, "\n",
+        "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+        .jst_data_name, ", ", orig_name, ", map = \"",
+        .jst_render_map_string(parsed_map), "\"", rel_conv_arg, ")\n",
+        "  jdeclare_missing(", .jst_data_name, ", ", orig_name,
+        "R, codes = c(",
+        paste(format(c(result_na_values, rel_codes), trim = TRUE,
+                     scientific = FALSE), collapse = ", "),
+        ")", rel_conv_arg, ", modify = TRUE)")
+    }
+    .jst_msg(paste0(if (notes_before) "\n" else "", rel_head, rel_body))
   }
 
   # --- Variable label ---
@@ -2320,10 +2707,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # (one-to-one transfer) or is dropped (an NA target). Before S302 a
   # supplied labels string stripped every kept code's label -- "Refused"
   # gone from a -99 the note had just reported as kept.
+  # S319: a lettered marker the map does not name is kept the same way --
+  # its cells always were, but its label survived only under else=copy, so
+  # a Stata-style column recoded with no else, or with labels, lost them.
   orig_val_labels <- if (is_haven) labelled::val_labels(orig) else NULL
   carry_labels <- NULL
   if (!is.null(orig_val_labels) && length(orig_val_labels) > 0) {
     lab_codes <- suppressWarnings(as.numeric(orig_val_labels))
+    lab_tags  <- .tags_of(orig_val_labels)
     keep <- !is.na(lab_codes) &
       (lab_codes %in% result_na_values | .in_band(lab_codes)) &
       !(lab_codes %in% lhs_all)
@@ -2331,19 +2722,86 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       carry_labels <- stats::setNames(lab_codes[keep],
                                       names(orig_val_labels)[keep])
     }
+    keep_tag <- !is.na(lab_tags) & !(tolower(lab_tags) %in% lhs_tags_all)
+    if (any(keep_tag)) {
+      carry_labels <- c(carry_labels, orig_val_labels[keep_tag])
+    }
   }
-  carry_codes <- if (is.null(carry_labels)) numeric(0) else
-                   unname(carry_labels)
+  carry_codes <- if (is.null(carry_labels)) numeric(0) else {
+    cc <- suppressWarnings(as.numeric(carry_labels))
+    unname(cc[!is.na(cc)])
+  }
+
+  # Label keys (S319): a number by its value, a marker by its letter as
+  # stored -- the pair haven itself keeps distinct.
+  .lab_key <- function(x) {
+    tg <- .tags_of(x)
+    ifelse(is.na(tg), paste0("v", as.character(as.numeric(x))),
+           paste0("t", tg))
+  }
+  .lab_first <- function(x) {
+    if (is.null(x) || length(x) == 0) return(x)
+    x[!duplicated(.lab_key(x))]
+  }
+
+  # Where each value a rule names goes, markers included (S319). A later
+  # rule naming the same value wins, as it does in the recode loop.
+  num_rule <- list()
+  tag_rule <- list()
+  for (r in parsed_map$mappings) {
+    for (ov in r$old_vals) num_rule[[as.character(ov)]] <- r
+    for (tg in r$old_tags) tag_rule[[tg]] <- r
+  }
+  .rule_of <- function(code) {
+    tg <- .tags_of(code)
+    if (!is.na(tg)) tag_rule[[tolower(tg)]] else num_rule[[as.character(code)]]
+  }
+  .target_of <- function(r) {
+    if (!is.null(r$tagged)) return(haven::tagged_na(r$tagged))
+    if (is.na(r$new_val)) return(NULL)
+    r$new_val
+  }
+  # Labels moving onto a value the result holds as missing -- a declared
+  # code or a marker (S319): the new code a declared missing value takes
+  # (the S319 declaration), a re-lettered marker, a value recoded to a
+  # marker. They ride beside a labels string, as a kept code's label does.
+  # Different labels arriving at one value cancel: none of them names the
+  # merged category.
+  moved_missing <- NULL
+  if (!is.null(orig_val_labels) && length(orig_val_labels) > 0) {
+    for (i in seq_along(orig_val_labels)) {
+      r <- .rule_of(orig_val_labels[i])
+      if (is.null(r)) next
+      if (is.null(r$tagged) &&
+          !(!is.na(r$new_val) && (r$new_val %in% result_na_values ||
+                                  .in_band(r$new_val)))) next
+      tgt <- .target_of(r)
+      if (is.null(tgt)) next
+      names(tgt)    <- names(orig_val_labels)[i]
+      moved_missing <- c(moved_missing, tgt)
+    }
+    if (!is.null(moved_missing)) {
+      k   <- .lab_key(moved_missing)
+      amb <- unique(k[duplicated(k)])
+      amb <- amb[vapply(amb, function(a) {
+        length(unique(names(moved_missing)[k == a])) > 1L
+      }, logical(1))]
+      moved_missing <- .lab_first(moved_missing[!(k %in% amb)])
+      if (length(moved_missing) == 0) moved_missing <- NULL
+    }
+  }
 
   if (!is.null(parsed_labels)) {
     # User-supplied labels take precedence for the codes they name; the
-    # carried labels of kept declared values are added after them. The
-    # labels argument was validated and parsed at the top of jrecode() so
-    # the parsed vector is consumed directly here.
+    # carried labels of kept declared values are added after them, then
+    # the labels that moved onto a missing value (S319). The labels
+    # argument was validated and parsed at the top of jrecode() so the
+    # parsed vector is consumed directly here.
     merged <- parsed_labels
-    if (!is.null(carry_labels)) {
-      user_codes <- suppressWarnings(as.numeric(parsed_labels))
-      extra <- carry_labels[!(carry_codes %in% user_codes)]
+    extra  <- c(carry_labels, moved_missing)
+    if (!is.null(extra) && length(extra) > 0) {
+      extra <- .lab_first(extra)
+      extra <- extra[!(.lab_key(extra) %in% .lab_key(parsed_labels))]
       if (length(extra) > 0) merged <- c(merged, extra)
     }
     labelled::val_labels(result) <- merged
@@ -2357,16 +2815,32 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       # user explicitly asked for, not a side effect to flag. Without
       # this filter, the duplicate-detection branch fires on common
       # missing-conversion maps like "-99=NA; -98=NA; else=copy".
+      # A marker the rule names counts as an old value (S319).
       non_na_rules <- Filter(function(r) !is.na(r$new_val),
                               parsed_map$mappings)
 
       is_collapsing <- any(vapply(non_na_rules,
-                                  function(r) length(r$old_vals) > 1,
+                                  function(r) length(r$old_vals) +
+                                    length(r$old_tags) > 1,
                                   logical(1)))
       if (!is_collapsing) {
         non_na_new_vals <- vapply(non_na_rules,
                                    function(r) r$new_val, numeric(1))
         is_collapsing <- anyDuplicated(non_na_new_vals) > 0
+      }
+      # S319: recoding onto a value that else=copy also keeps as an
+      # ordinary category merges two categories as surely as "4,5=4" does
+      # -- "5=4; else=copy" is that collapse. Until S319 it stopped with
+      # "`labels` must be unique" (both labels landed on 4). A value the
+      # result holds as missing absorbs quietly instead, keeping its own
+      # label (below).
+      if (!is_collapsing && identical(parsed_map$else_action, "copy")) {
+        ord_kept <- lab_codes[!is.na(lab_codes) & !(lab_codes %in% lhs_all) &
+                                !(lab_codes %in% result_na_values) &
+                                !.in_band(lab_codes)]
+        is_collapsing <- any(vapply(non_na_rules, function(r) {
+          r$new_val %in% ord_kept
+        }, logical(1)))
       }
 
       if (is_collapsing) {
@@ -2375,43 +2849,75 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         # The collapse note covers the recoded categories only. Kept
         # declared values (codes and in-band values) are never part of a
         # collapse, so their labels ride here; otherwise a kept code would
-        # show as "(no label)" even though its declaration survived.
-        if (!is.null(carry_labels)) {
-          labelled::val_labels(result) <- carry_labels
+        # show as "(no label)" even though its declaration survived. The
+        # labels that moved onto a missing value ride with them (S319).
+        coll <- .lab_first(c(carry_labels, moved_missing))
+        if (!is.null(coll) && length(coll) > 0) {
+          labelled::val_labels(result) <- coll
         }
       } else {
         # One-to-one mapping — transfer labels to new codes
-        old_to_new <- list()
-        for (rule in parsed_map$mappings) {
-          old_to_new[[as.character(rule$old_vals)]] <- rule$new_val
-        }
-
-        new_val_labels <- c()
+        # S319: a marker the map names moves its label to its target as a
+        # number does; a label now moves onto a marker target too (a
+        # re-lettered marker, a number recoded to a marker), where before it
+        # was dropped; an NA target still drops it. Two labels landing on one value resolve
+        # instead of stopping: the value's own kept label wins (a code or
+        # marker absorbing another), and moved labels that differ cancel.
+        # Until S319 a rule with several old values and an NA or marker
+        # target ("-99,-98=NA; else=copy") stopped with "no such index at
+        # level 1", and "-99=-98; else=copy" with "`labels` must be
+        # unique".
+        new_val_labels <- NULL
+        label_kind     <- character(0)
         for (i in seq_along(orig_val_labels)) {
-          old_code   <- unname(orig_val_labels[i])
+          old_code   <- orig_val_labels[i]
           label_name <- names(orig_val_labels)[i]
-
-          if (as.character(old_code) %in% names(old_to_new)) {
+          r <- .rule_of(old_code)
+          if (!is.null(r)) {
             # Explicitly mapped — use the new code, but drop the label
             # if the target is NA (no value to anchor the label to).
-            entry <- old_to_new[[as.character(old_code)]]
-            if (is.na(entry)) next
-            names(entry)   <- label_name
-            new_val_labels <- c(new_val_labels, entry)
-          } else if (old_code %in% carry_codes) {
+            entry <- .target_of(r)
+            if (is.null(entry)) next
+            kind <- "moved"
+          } else if (!is.na(.tags_of(old_code))) {
+            # A marker the map does not name: kept with its cells (S319).
+            entry <- old_code
+            kind  <- "kept"
+          } else if (unname(old_code) %in% carry_codes) {
             # A kept declared value (discrete code or in-band, S302) --
             # keep its label at the same code value (so the kept code stays
             # labelled and the result reads as a proper declared missing).
-            entry        <- old_code
-            names(entry) <- label_name
-            new_val_labels <- c(new_val_labels, entry)
+            entry <- old_code
+            kind  <- "kept"
           } else if (parsed_map$else_action == "copy") {
             # Unmapped but carried across unchanged
-            entry        <- old_code
-            names(entry) <- label_name
-            new_val_labels <- c(new_val_labels, entry)
+            entry <- old_code
+            kind  <- "kept"
+          } else {
+            # else: value became NA via else_action, label is dropped
+            next
           }
-          # else: value became NA via else_action, label is dropped
+          entry          <- unname(entry)
+          names(entry)   <- label_name
+          new_val_labels <- c(new_val_labels, entry)
+          label_kind     <- c(label_kind, kind)
+        }
+
+        if (length(new_val_labels) > 0) {
+          k    <- .lab_key(new_val_labels)
+          drop <- rep(FALSE, length(k))
+          for (key in unique(k[duplicated(k)])) {
+            idx <- which(k == key)
+            if (any(label_kind[idx] == "kept")) {
+              drop[idx] <- TRUE
+              drop[idx[label_kind[idx] == "kept"][1]] <- FALSE
+            } else if (length(unique(names(new_val_labels)[idx])) > 1L) {
+              drop[idx] <- TRUE
+            } else {
+              drop[idx[-1]] <- TRUE
+            }
+          }
+          new_val_labels <- new_val_labels[!drop]
         }
 
         if (length(new_val_labels) > 0) {
@@ -2633,22 +3139,31 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
             collapse = ",")
     } else lhs_render(old_vals)
   }
+  # Marker old values (S319) follow the numbers, as the user typed them.
+  lhs_of <- function(r) {
+    if (length(r$old_tags_raw) == 0) return(fmt_lhs(r$old_vals))
+    paste(c(if (length(r$old_vals) > 0) fmt_lhs(r$old_vals),
+            paste0(".", r$old_tags_raw)), collapse = ",")
+  }
+  who_of <- function(r) {
+    c(if (length(r$old_vals) > 0 || length(r$old_tags_raw) == 0)
+        who(r$old_vals),
+      if (length(r$old_tags_raw) > 0) paste0(".", r$old_tags_raw))
+  }
   # The map's own use of the marker, as rules: "8=.a", "NA=.a", "else=.a".
   rule_txt <- c(
     vapply(parsed_map$mappings[hit_idx], function(r) {
-      paste0(fmt_lhs(r$old_vals), "=", marker)
+      paste0(lhs_of(r), "=", marker)
     }, character(1)),
     if (na_hit) paste0("NA=", marker),
     if (else_hit) paste0("else=", marker))
   # Who would share the marker: the map's own cases in map order, the
   # token's, and an else rule's remainder last.
   hit_who <- c(
-    unique(unlist(lapply(parsed_map$mappings[hit_idx],
-                         function(r) who(r$old_vals)))),
+    unique(unlist(lapply(parsed_map$mappings[hit_idx], who_of))),
     if (na_hit) "NA")
   tok_who <- c(
-    unique(unlist(lapply(parsed_map$mappings[tok_rule_idx],
-                         function(r) who(r$old_vals)))),
+    unique(unlist(lapply(parsed_map$mappings[tok_rule_idx], who_of))),
     if (tok_in_na) "NA")
   sharers <- c(hit_who, tok_who, if (else_hit) "every other value")
 
@@ -6507,10 +7022,17 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     through a value label, with no case carrying it yet, converts like
 #'     one that cases carry: its label moves to the code and the code is
 #'     declared missing. A column with more distinct tags than the setting
-#'     has codes (at most 3, SPSS's limit) is refused before any data is
-#'     touched; the message lists the column's tags and offers scoping the
-#'     call with \code{vars = c(...)} to leave such columns out, or
-#'     reducing their tags first. Because the SPSS-to-Stata direction
+#'     has codes is declared with a missing-value range instead, SPSS's
+#'     own form for more than three: the codes start at the first
+#'     \code{missing.convention.codes} value and run one per tag in the
+#'     direction the codes run, from the first toward the second -- with
+#'     the defaults, toward zero, so five tags take \code{-99} through
+#'     \code{-95}, declared as the range \code{[-99, -95]}, each tag's
+#'     label on its code. The first tags keep their usual codes whenever
+#'     the setting's codes are consecutive, and the notification shows the
+#'     range and says why it was used. A setting with a single code (which
+#'     gives no direction), or one whose range would reach zero, is refused
+#'     before any data is touched, with the fix. Because the SPSS-to-Stata direction
 #'     assigns letters by code order, a tag set other than the leading
 #'     letters comes back as the leading letters (\code{.d}, \code{.n},
 #'     \code{.r} return as \code{.a}, \code{.b}, \code{.c}) with the same
@@ -6560,7 +7082,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' Pre-flight checks for \code{to = "spss"} include a collision check:
 #' if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
 #' present as genuine data in the column, the call errors before any
-#' data is touched. The check covers a marker declared only through a
+#' data is touched; for a column declared with a range, any value inside
+#' the range counts. The check covers a marker declared only through a
 #' value label as well as one that cases carry. The error message lists
 #' every colliding column and the remedy: change the convention codes via
 #' \code{joptions(missing.convention.codes = ...)}. When the same call
@@ -6883,6 +7406,30 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
     over_vars      <- list()
     collision_vars <- list()
     spss_plan      <- list()
+    spss_band      <- list()   # S319: the range a column's markers take
+
+    # MORE MARKERS THAN CODES (S319; the S314 markers item, half 2, on the
+    # S318 ruling). Such a column is declared with a RANGE -- SPSS's own
+    # form for more than three missing values -- that starts at the FIRST
+    # convention code and runs one integer per marker in the direction the
+    # codes run, from the first toward the second: the defaults (-99, -98,
+    # -97) run toward zero, so five markers take -99 to -95, declared as
+    # the range [-99, -95]. Only the first code and the direction are read,
+    # so the first markers keep today's codes whenever the configured codes
+    # are consecutive; with c(-99, -88, -77) a fourth marker moves .b and .c
+    # to -98 and -97 (accepted at S318). The range is exactly as wide as
+    # the marker count and the collision check covers all of it. Refused
+    # instead: a single code, which gives no direction, and a range that
+    # would reach or cross zero, where real values are likeliest. The
+    # rejected alternative -- continuing past the LAST configured code --
+    # would span every real value with codes on both sides of the data
+    # (c(-99, -98, 100)). Until S319 more markers than codes was refused
+    # outright, and a Stata-style column with four or more markers had no
+    # route to SPSS form in the package.
+    n_conv   <- length(convention_codes)
+    band_dir <- if (n_conv >= 2L) {
+      sign(convention_codes[2] - convention_codes[1])
+    } else 0
 
     for (vname in names(info_list)) {
       info <- info_list[[vname]]
@@ -6892,25 +7439,42 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       mk   <- .jst_marker_tags(col)
       tags <- sort(unique(mk$all), method = "radix")
       plan <- .jst_tag_letters_to_codes(tags, convention_codes)
+      band <- NULL
       if (length(attr(plan, "unmapped")) > 0L) {
-        over_vars[[length(over_vars) + 1L]] <- list(
-          var = vname, tags = tags, label_only = mk$label_only,
-          sas = vname %in% sas_corrected_vars)
+        cand <- as.numeric(convention_codes[1]) +
+          band_dir * (seq_along(tags) - 1L)
+        if (band_dir != 0 && convention_codes[1] != 0 &&
+            all(sign(cand) == sign(convention_codes[1]))) {
+          plan <- stats::setNames(cand, tags)
+          band <- c(min(cand), max(cand))
+        } else {
+          over_vars[[length(over_vars) + 1L]] <- list(
+            var = vname, tags = tags, label_only = mk$label_only,
+            sas = vname %in% sas_corrected_vars)
+        }
       }
       attr(plan, "unmapped") <- NULL
       spss_plan[[vname]] <- plan
+      if (!is.null(band)) spss_band[[vname]] <- band
       if (length(plan) > 0L) {
         x_num         <- suppressWarnings(as.numeric(unclass(col)))
-        target_codes  <- unname(plan)
         real_values   <- x_num[!is.na(x_num)]
-        hits <- target_codes[
-          vapply(target_codes,
-                 function(tc) any(real_values == tc),
-                 logical(1))
-        ]
+        if (!is.null(band)) {
+          # The whole range, not only the codes the markers take: every
+          # value inside it becomes missing once the range is declared.
+          hits <- sort(unique(real_values[real_values >= band[1] &
+                                            real_values <= band[2]]))
+        } else {
+          target_codes <- unname(plan)
+          hits <- target_codes[
+            vapply(target_codes,
+                   function(tc) any(real_values == tc),
+                   logical(1))
+          ]
+        }
         if (length(hits) > 0L) {
           collision_vars[[length(collision_vars) + 1L]] <- list(
-            var = vname, codes = hits)
+            var = vname, codes = hits, band = band)
         }
       }
     }
@@ -6931,9 +7495,25 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         }, character(1))
         sprintf("  %s: %s", e$var, paste(shown, collapse = ", "))
       }, character(1)))
+      # A column declared with a range (S319) shows the range its values
+      # fell inside, since those values are not convention codes.
       coll_lines <- .jst_cap_var_lines(vapply(collision_vars,
-        function(e) sprintf("  %s: %s", e$var,
-                            paste(e$codes, collapse = ", ")), character(1)))
+        function(e) {
+          if (is.null(e$band)) {
+            sprintf("  %s: %s", e$var, paste(e$codes, collapse = ", "))
+          } else {
+            sprintf("  %s: %s (range %s to %s)", e$var,
+                    paste(e$codes, collapse = ", "),
+                    .jst_fmt_code(e$band[1]), .jst_fmt_code(e$band[2]))
+          }
+        }, character(1)))
+      coll_band <- any(vapply(collision_vars, function(e) !is.null(e$band),
+                              logical(1)))
+      coll_head <- if (coll_band) {
+        "the codes these lettered markers would take overlap with real data values."
+      } else {
+        "the missing.convention.codes values overlap with real data values."
+      }
 
       n_over <- length(over_vars)
       n_coll <- length(collision_vars)
@@ -6942,38 +7522,48 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       coll_lead <- if (n_coll == 1L) "This variable" else "These variables"
       coll_verb <- if (n_coll == 1L) "is" else "are"
 
-      # S281: the binding limit is the codes set (1 to 3 per joptions), not
-      # SPSS's 3 outright. At 3 codes the two coincide and the heading names
-      # SPSS's limit -- the family form (jsave, jdeclare_missing and jrecode
-      # all state it), and the reason a fourth code cannot be set (S314).
-      # Below 3 the heading names the setting; the "because" clause is Rule
-      # I's fix-pointing boundary, naming the setting the fix acts on.
-      # Widening the setting is offered only where it can succeed: no
-      # flagged variable above SPSS's own ceiling of 3. With markers mapped
-      # in letter order (0.9.189) the limit is a COUNT again, so this count
-      # test is exact; 0.9.188's letter framing lived one build.
-      n_codes  <- length(convention_codes)
-      max_tags <- if (has_over) {
-        max(vapply(over_vars, function(e) length(e$tags), integer(1)))
-      } else 0L
-      narrowed  <- n_codes < 3L
-      can_widen <- narrowed && max_tags <= 3L
-      over_head <- if (narrowed) {
+      # S319: more markers than codes now take a range, so a column is
+      # refused on count only where no range can form. Two cases remain,
+      # and they cannot meet in one call. A SINGLE code gives the range no
+      # direction: the S281 narrowed heading, whose "because" clause is
+      # Rule I's fix-pointing boundary, and the widen offer, now made for
+      # any count (two or three codes give any count a range). A range that
+      # would REACH ZERO (zero_reach, two or three codes running toward 0):
+      # widening cannot help and reordering the codes can. The S314 default
+      # heading ("SPSS allows at most 3 ... so at most 3 lettered markers
+      # can be converted") and the narrower-set offer on the over-only path
+      # went with the count refusal at three codes; SPSS's limit is now
+      # named in the range note of the conversion report.
+      n_codes    <- length(convention_codes)
+      zero_reach <- has_over && n_codes >= 2L
+      over_head  <- if (zero_reach) {
+        sprintf(paste0("with your missing.convention.codes setting (%s), ",
+                       "more lettered markers than codes would need codes ",
+                       "that reach 0."),
+                paste(vapply(convention_codes, .jst_fmt_code, character(1)),
+                      collapse = ", "))
+      } else {
         sprintf(paste0("at most %d lettered %s per variable can be ",
                        "converted because your missing.convention.codes ",
                        "setting currently has only %d %s."),
                 n_codes, if (n_codes == 1L) "marker" else "markers",
                 n_codes, if (n_codes == 1L) "code" else "codes")
-      } else {
-        paste0("SPSS allows at most 3 separate missing-value codes per ",
-               "variable, so at most 3 lettered markers can be converted.")
       }
-      widen_lines <- c(paste0("To allow more, set up to three codes, the ",
-                              "maximum SPSS allows:"),
-                       "  joptions(missing.convention.codes = c(...))")
       # Rule O: the remedy's object agrees with the flagged-variable count.
       reduce_obj <- if (n_over == 1L) "its markers" else
         "each variable's markers"
+      fix_lines <- if (zero_reach) {
+        c("To allow more, set codes that run away from 0:",
+          "  joptions(missing.convention.codes = c(...))",
+          sprintf("Or first reduce %s to %d or fewer.", reduce_obj, n_codes))
+      } else {
+        # S319: two codes give any number of markers a range, so the widen
+        # line no longer names SPSS's maximum -- "up to three codes, the
+        # maximum SPSS allows" read, beside five markers, as a limit the
+        # fix could not meet.
+        c("To allow any number, set two or three codes:",
+          "  joptions(missing.convention.codes = c(...))")
+      }
 
       # S267 redraft: Rule X (no method named for the many-ways reduction),
       # Rule L two-space remedies, and unnumbered alternatives so a wrapped
@@ -6985,15 +7575,10 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           sprintf("%s in %s %s more:", over_lead, data_name, over_verb),
           over_lines,
           "",
-          if (can_widen) widen_lines else c(
-            "To convert a narrower set, leaving out those above:",
-            sprintf("  jconvert(%s, to = \"spss\", vars = c(...), modify = TRUE)",
-                    data_name),
-            sprintf("Or first reduce %s to %d or fewer.", reduce_obj,
-                    n_codes)))
+          fix_lines)
       } else if (has_coll && !has_over) {
         msg_lines <- c(
-          "the missing.convention.codes values overlap with real data values.",
+          coll_head,
           "",
           sprintf("%s in %s %s affected:", coll_lead, data_name, coll_verb),
           coll_lines,
@@ -7001,27 +7586,27 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           "To change the codes:",
           "  joptions(missing.convention.codes = c(...))")
       } else {
-        # Mid-message paragraph, so the narrowed heading takes a capital
-        # (the default heading already opens with "SPSS"). Where widening
-        # can succeed, one joptions() call clears BOTH problems, so the two
-        # per-paragraph fixes fold into one.
-        both_head <- sub("^at most", "At most", over_head)
+        # Mid-message paragraphs, so each heading takes a capital. One
+        # joptions() call can clear BOTH problems -- widening, or codes that
+        # run away from 0 and do not overlap -- so the two per-paragraph
+        # fixes fold into one.
+        cap1 <- function(x) paste0(toupper(substring(x, 1L, 1L)),
+                                   substring(x, 2L))
         msg_lines <- c(
           sprintf("cannot convert %s to SPSS -- two problems:", data_name),
           "",
-          both_head,
+          cap1(over_head),
           sprintf("%s %s more:", over_lead, over_verb),
           over_lines,
-          if (!can_widen)
-            sprintf("To fix, reduce %s to %d or fewer.", reduce_obj, n_codes),
           "",
-          "The missing.convention.codes values overlap with real data values.",
+          cap1(coll_head),
           sprintf("%s %s affected:", coll_lead, coll_verb),
           coll_lines,
-          if (can_widen) {
-            c("", "To fix both, set up to three codes that do not overlap:")
+          "",
+          if (zero_reach) {
+            "To fix both, set codes that run away from 0 and do not overlap:"
           } else {
-            "To fix, change the codes:"
+            "To fix both, set two or three codes that do not overlap:"
           },
           "  joptions(missing.convention.codes = c(...))",
           "",
@@ -7144,6 +7729,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
   skipped_already  <- character(0)   # in target format already (user_specified only)
   banded_converted <- character(0)   # converted vars that carried an na_range
   reletter_notes   <- list()         # to = "spss": marker sets not .a, .b, ...
+  banded_spss      <- character(0)   # to = "spss": declared with a range (S319)
 
   for (vname in names(info_list)) {
     info <- info_list[[vname]]
@@ -7230,12 +7816,16 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       }
 
       # Declared in letter order, the order the plan and the report use
-      # (0.9.189; until 0.9.188 the cells' order of first appearance).
+      # (0.9.189; until 0.9.188 the cells' order of first appearance). A
+      # column with more markers than codes is declared by its range
+      # instead (S319); the codes inside it are its markers' codes.
       used_codes <- unname(plan)
+      band       <- spss_band[[vname]]
       data[[vname]] <- .jst_carry_col_attrs(col, haven::labelled_spss(
         x         = x_num,
         labels    = new_val_labs,
-        na_values = used_codes,
+        na_values = if (is.null(band)) used_codes else NULL,
+        na_range  = band,
         label     = attr(col, "label", exact = TRUE)
       ))
 
@@ -7264,6 +7854,15 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
                              sprintf("%s -> %s",
                                      source_disp_with_lbl,
                                      as.character(code)))
+      }
+      # The range the codes were declared as (S319), in the form the
+      # reverse direction reports a range it enumerates.
+      if (!is.null(band)) {
+        display_entries <- c(display_entries,
+                             sprintf("range [%s, %s]",
+                                     .jst_fmt_code(band[1]),
+                                     .jst_fmt_code(band[2])))
+        banded_spss <- c(banded_spss, vname)
       }
       converted_vars         <- c(converted_vars, vname)
       converted_info[[vname]] <- list(display = display_entries)
@@ -7498,6 +8097,33 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         msg_lines <- c(msg_lines, paste0(
           "  ", format(vname, width = max_name_len),
           "  (", paste(ci$display, collapse = ", "), ")"))
+      }
+
+      # Range note (S319): a column with more lettered markers than codes
+      # was declared with a range, which the report shows as its last entry.
+      # Consequential, like the return-trip note below: the call chose a
+      # form the user did not name. The reason is SPSS's limit at three
+      # codes (Rule I's platform-limit boundary) and the setting below
+      # three -- a narrowed setting is necessarily the user's own.
+      if (length(banded_spss) > 0L) {
+        band_reason <- if (length(convention_codes) >= 3L) {
+          "the 3 separate missing-value codes SPSS allows"
+        } else {
+          sprintf("the %d codes in your missing.convention.codes setting",
+                  length(convention_codes))
+        }
+        note <- if (length(banded_spss) == 1L) {
+          sprintf(paste0("Note: %s has %d lettered markers, more than %s, ",
+                         "so its codes were declared as a missing-value ",
+                         "range."),
+                  banded_spss, length(spss_plan[[banded_spss]]), band_reason)
+        } else {
+          sprintf(paste0("Note: %s have more lettered markers than %s, so ",
+                         "their codes were declared as missing-value ",
+                         "ranges."),
+                  .jst_and_list(banded_spss), band_reason)
+        }
+        msg_lines <- c(msg_lines, "", note)
       }
 
       # Return-trip note (S314): a column whose markers were not the

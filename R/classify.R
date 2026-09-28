@@ -1961,7 +1961,11 @@
 #' @return Invisibly, a list with components:
 #'   \describe{
 #'     \item{mappings}{List of lists; each inner list has \code{old_vals}
-#'       (numeric vector), \code{new_val} (single numeric; \code{NA_real_}
+#'       (numeric vector), \code{old_tags} (character: the lowercase letters
+#'       of any lettered markers named as old values, e.g. \code{"a"} for
+#'       \code{.a} or \code{.A}; \code{character(0)} when none, S319),
+#'       \code{old_tags_raw} (the same letters as typed), \code{new_val}
+#'       (single numeric; \code{NA_real_}
 #'       for system-NA and tagged-NA rules), and \code{tagged} (NULL for
 #'       numeric or system-NA rules; a single lowercase letter character
 #'       for tagged-NA rules).}
@@ -2085,13 +2089,26 @@
       if (length(old_strs) == 0) next
     }
 
+    # Lettered markers as OLD values (S319; the S314 markers item, half 1):
+    # ".a" (either case) names the source column's cells that carry the
+    # marker. Recorded lowercase in old_tags and as typed in old_tags_raw;
+    # the numbers stay in old_vals, so a consumer reading old_vals still
+    # sees numbers only. Before S319 a marker here was refused as an
+    # invalid old value.
+    is_marker    <- grepl("^\\.[a-zA-Z]$", old_strs)
+    old_tags     <- tolower(substr(old_strs[is_marker], 2L, 2L))
+    old_tags_raw <- substr(old_strs[is_marker], 2L, 2L)
+    old_tags_raw <- old_tags_raw[!duplicated(old_tags)]
+    old_tags     <- unique(old_tags)
+    old_strs     <- old_strs[!is_marker]
+
     old_vals <- suppressWarnings(as.numeric(old_strs))
 
     if (any(is.na(old_vals))) {
       stop(paste0(
         "Invalid old value(s) '", lhs, "' in map rule '", rule, "'. ",
-        "Old values must be numeric or a system-NA alias (NA, System, ",
-        "or SYSMIS)."
+        "Old values must be numeric, a system-NA alias (NA, System, ",
+        "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
       ), call. = FALSE)
     }
 
@@ -2126,11 +2143,13 @@
     }
 
     result$mappings[[length(result$mappings) + 1]] <- list(
-      old_vals   = old_vals,
-      new_val    = new_val,
-      tagged     = tagged,
-      tagged_raw = tagged_raw,
-      missing    = tok_missing
+      old_vals     = old_vals,
+      old_tags     = old_tags,
+      old_tags_raw = old_tags_raw,
+      new_val      = new_val,
+      tagged       = tagged,
+      tagged_raw   = tagged_raw,
+      missing      = tok_missing
     )
   }
 
@@ -2432,7 +2451,9 @@
 #' mint note swaps a flagged numeric target for the missing token.
 #' Token rules render as the word missing whether or not they have
 #' been substituted yet, so the same renderer serves pre- and
-#' post-resolution callers.
+#' post-resolution callers. Lettered markers named as old values
+#' (\code{old_tags_raw}, Session 319) render after a rule's numbers, as
+#' typed.
 #'
 #' @param parsed_map A parsed map from \code{.jst_parse_map()} or
 #'   \code{.jst_parse_text_map()}.
@@ -2475,7 +2496,12 @@
   }
   parts <- character(0)
   for (rule in parsed_map$mappings) {
-    parts <- c(parts, paste0(fmt_lhs(rule$old_vals), "=", fmt_rhs(rule)))
+    # Marker old values (S319) follow the numbers, as the user typed them.
+    lhs <- if (length(rule$old_tags_raw) > 0) {
+      paste(c(if (length(rule$old_vals) > 0) fmt_lhs(rule$old_vals),
+              paste0(".", rule$old_tags_raw)), collapse = ",")
+    } else fmt_lhs(rule$old_vals)
+    parts <- c(parts, paste0(lhs, "=", fmt_rhs(rule)))
   }
   if (!is.null(parsed_map$na_rule)) {
     parts <- c(parts, paste0("NA=", fmt_rhs(parsed_map$na_rule)))

@@ -38,6 +38,8 @@ swaps the missing target for a declared code, and the map-target
 mint note swaps a flagged numeric target for the missing token.
 Token rules render as the word missing whether or not they have
 been substituted yet, so the same renderer serves pre- and
-post-resolution callers.
+post-resolution callers. Lettered markers named as old values
+(\code{old_tags_raw}, Session 319) render after a rule's numbers, as
+typed.
 }
 \keyword{internal}

@@ -101,10 +101,17 @@ what was actually in the data on input. A marker declared only
 through a value label, with no case carrying it yet, converts like
 one that cases carry: its label moves to the code and the code is
 declared missing. A column with more distinct tags than the setting
-has codes (at most 3, SPSS's limit) is refused before any data is
-touched; the message lists the column's tags and offers scoping the
-call with \code{vars = c(...)} to leave such columns out, or
-reducing their tags first. Because the SPSS-to-Stata direction
+has codes is declared with a missing-value range instead, SPSS's
+own form for more than three: the codes start at the first
+\code{missing.convention.codes} value and run one per tag in the
+direction the codes run, from the first toward the second -- with
+the defaults, toward zero, so five tags take \code{-99} through
+\code{-95}, declared as the range \code{[-99, -95]}, each tag's
+label on its code. The first tags keep their usual codes whenever
+the setting's codes are consecutive, and the notification shows the
+range and says why it was used. A setting with a single code (which
+gives no direction), or one whose range would reach zero, is refused
+before any data is touched, with the fix. Because the SPSS-to-Stata direction
 assigns letters by code order, a tag set other than the leading
 letters comes back as the leading letters (\code{.d}, \code{.n},
 \code{.r} return as \code{.a}, \code{.b}, \code{.c}) with the same
@@ -154,7 +161,8 @@ supports lowercase letters.}
 Pre-flight checks for \code{to = "spss"} include a collision check:
 if a column's target numeric code (e.g. \code{-99} for \code{.a}) is
 present as genuine data in the column, the call errors before any
-data is touched. The check covers a marker declared only through a
+data is touched; for a column declared with a range, any value inside
+the range counts. The check covers a marker declared only through a
 value label as well as one that cases carry. The error message lists
 every colliding column and the remedy: change the convention codes via
 \code{joptions(missing.convention.codes = ...)}. When the same call

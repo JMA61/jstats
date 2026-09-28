@@ -14,7 +14,11 @@
 Invisibly, a list with components:
 \describe{
 \item{mappings}{List of lists; each inner list has \code{old_vals}
-(numeric vector), \code{new_val} (single numeric; \code{NA_real_}
+(numeric vector), \code{old_tags} (character: the lowercase letters
+of any lettered markers named as old values, e.g. \code{"a"} for
+\code{.a} or \code{.A}; \code{character(0)} when none, S319),
+\code{old_tags_raw} (the same letters as typed), \code{new_val}
+(single numeric; \code{NA_real_}
 for system-NA and tagged-NA rules), and \code{tagged} (NULL for
 numeric or system-NA rules; a single lowercase letter character
 for tagged-NA rules).}

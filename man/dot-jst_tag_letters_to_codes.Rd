@@ -27,8 +27,13 @@ letter count exceeded the convention code count.
 Translates a vector of lowercase letter tags (e.g.
 \code{c("a", "b")}) into the equivalent numeric UDM codes drawn
 from the \code{missing.convention.codes} setting in \code{\link{joptions}}.
-Mapping is positional: \code{.a} maps to the first code, \code{.b} to the
-second, etc.
+Mapping is by INPUT position: the first letter given takes the first
+code, the second letter the second, and so on, whatever the letters are.
+Since Session 314 \code{jconvert()} passes a column's markers sorted by
+letter, so the lowest letter takes the first code (\code{.d}, \code{.n},
+\code{.r} map as \code{.a}, \code{.b}, \code{.c} would). A column with
+more markers than codes is mapped onto a range by \code{jconvert()}
+itself (Session 319), not by this helper.
 }
 \details{
 When \code{length(letters_in) > length(convention_codes)}, the

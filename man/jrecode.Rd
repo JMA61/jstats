@@ -44,6 +44,15 @@ Stata or SAS convention the target may itself be a token: \code{"NA=.a"}.
 Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
 \code{"-99=.a; -98=.b"}.
 
+A lettered marker can also be an OLD value, recoding the cells that
+carry it (either case: \code{.a} also names a SAS-style \code{.A}):
+\code{".a=-99"} gives them a number, \code{".a=NA"} makes them plain
+\code{NA}, and \code{".e=.c"} re-letters them, merging them into
+\code{.c} if the variable already has it (a marker on the right needs
+Stata or SAS convention, as always). Markers and numbers may share a
+rule (\code{"9,.a=-99"}). A marker the map does not name is kept,
+with its label, whatever the \code{else} setting.
+
 The right-hand side may also be the word \code{missing}
 (case-insensitive): the value is converted to your working
 convention's own missing form -- a tagged marker under the Stata or
@@ -80,6 +89,8 @@ Examples:
 \item \code{"-5=System; else=copy"}
 \item \code{"NA=-98; else=copy"}
 \item \code{"3=1; 4=2; else=.a"} (Stata or SAS convention only)
+\item \code{".a=-99; .b=-98; else=copy"} (a Stata-style variable to
+numeric codes, declared on the result)
 \item \code{"8=missing; else=copy"} (any convention)
 }}
 
@@ -163,15 +174,28 @@ the mapping is one-to-one (no collapsing). For example, recoding 1/2 to
 1/0 will carry "Yes" and "No" across to the new codes automatically.
 \item If categories are collapsed (multiple old values map to one new
 value), automatic transfer is not possible and a note is printed
-directing you to supply labels manually.
+directing you to supply labels manually. Recoding onto a value that
+\code{else=copy} also carries across (\code{"5=4; else=copy"})
+collapses two categories the same way.
 }
+
+Labels move with lettered markers as they do with numbers: a marker
+recoded to a number or to another marker takes its label along, and a
+value recoded to a marker gives the marker its label. Where a label
+would land on a value that keeps a label of its own (\code{"-99=-98"},
+or \code{".b=.a"} on a variable with both markers), the value keeps
+its own; several different labels landing on one new value are all
+dropped. Labels that move onto a declared missing value or a marker
+also ride beside a supplied \code{labels} string, as the labels of
+kept declared values do.
 
 NA values in the original variable are carried across as NA unless the
 map names \code{NA} as an old value (for example \code{"NA=-98"}); the
 \code{else} setting never converts NA. An \code{NA} rule affects plain
 \code{NA} cells only --- tagged missing values (Stata-style or
 SAS-style) are declared missings and are preserved with their tags
-regardless of the map. Declared SPSS-style missing values on the
+unless the map names them as old values (\code{".a=-99"}). Declared
+SPSS-style missing values on the
 original variable are likewise preserved, whether declared as discrete
 codes or as a range: a declared code the map does not name, and every
 value inside a declared range, are carried onto the result with the
@@ -180,6 +204,22 @@ note names the values the data hold (map them to \code{NA} explicitly
 to convert them instead). A declared code the map names is recoded like
 any other value; a range always carries whole, so a value the map
 recodes into the range is missing on the result.
+
+A declared missing value the map moves onto a new code stays missing
+when the new code looks like a coded missing value (the check
+\code{\link{jload}} describes under \emph{Coded missing values}):
+\code{"-99=-88; else=copy"} on a variable declaring \code{-99} declares
+\code{-88} on the result, with the label of \code{-99} and a note
+saying so, and \code{-99} is no longer declared. A lettered marker
+recoded to a number works the same way (\code{".a=-99"}). A new code
+that does not pass the check becomes an ordinary value -- deliberately
+so for \code{"-99=6"}, which makes refusals a category, but also for a
+negative code on a variable with large values, such as incomes, where
+the check finds nothing unusual; declare such a code with
+\code{jdeclare_missing()}. So does a new code that also receives
+ordinary values. A result that would hold both such a declared code and
+a lettered marker, or more declared codes than SPSS allows, stops the
+call with a message.
 
 A variable holds one convention. When the original variable's
 SPSS-style declaration survives the map (a range always does; a discrete
@@ -233,6 +273,12 @@ The same two-step pattern serves data whose missingness arrived as
 plain \code{NA} (data born in R, or read from a CSV): \code{map =
 "NA=-98; else=copy"} converts the NA cells to the numeric code, and
 \code{jdeclare_missing()} declares it.
+
+Missingness that arrived as Stata-style or SAS-style markers takes one
+step: naming the markers moves them to codes that are declared on the
+result (\code{map = ".a=-99; .b=-98; else=copy"}), as described
+above. \code{jconvert(to = "spss")} does the same for every such
+variable in a data frame, taking the codes from your setting.
 
 Under \strong{Stata convention}, declared missing values are typed
 missing cells marked with Stata-style tags (\code{.a} through
