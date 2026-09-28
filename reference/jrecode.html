@@ -25,7 +25,7 @@ below for the canonical patterns under each convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.195</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.196</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -376,7 +376,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span></span>
 <span class="r-in"><span>                    map    <span class="op">=</span> <span class="st">"5=4; else=copy"</span>,</span></span>
 <span class="r-in"><span>                    labels <span class="op">=</span> <span class="st">"4=Bachelor's degree or higher"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ["Refused"], -98 ["Don't know"] are declared missing values and were</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> kept on the recoded variable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To convert them to plain NA instead, map them to NA (for example -99=NA).</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
@@ -389,7 +389,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR2</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span></span>
 <span class="r-in"><span>                     map    <span class="op">=</span> <span class="st">"4=1; 5=1; else=NA"</span>,</span></span>
 <span class="r-in"><span>                     labels <span class="op">=</span> <span class="st">"1=College degree"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -99 ["Refused"], -98 ["Don't know"] are declared missing values and were</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> kept on the recoded variable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To convert them to plain NA instead, map them to NA (for example -99=NA).</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
@@ -400,7 +400,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Convert a specific coded missing value to system NA</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR3</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>, map <span class="op">=</span> <span class="st">"-99=System; else=copy"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -98 ("Don't know") is a declared missing value and was kept on the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: -98 ["Don't know"] is a declared missing value and was kept on the</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> recoded variable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To convert it to a plain NA instead, add -98=NA to the map.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>

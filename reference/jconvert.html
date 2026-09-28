@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.195</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.196</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -106,7 +106,8 @@ the whole data frame.</p></dd>
 
 <dt id="arg-missing-notice">missing.notice<a class="anchor" aria-label="anchor" href="#arg-missing-notice"></a></dt>
 <dd><p>Logical; <code>TRUE</code> (default) prints a notification
-summarizing what was converted (and what was skipped) along with a
+summarizing what was converted – one row per missing value, with its
+label and what it became – and what was skipped, along with a
 reminder of how to keep the result. <code>FALSE</code> suppresses the
 message. The notification itself does not consult <code><a href="joutput.html">joutput()</a></code>,
 because the function reports an action it just performed rather than
@@ -162,7 +163,7 @@ the numeric mapping – for round-trip purposes the package treats
 columns collapse to a single lowercase marker (SPSS has no parallel
 uppercase convention). The notification's per-column display shows the
 original (pre-correction) tag for SAS-corrected columns – e.g.
-<code>.A "Refused" -&gt; -99</code> – so the user-visible mapping reflects
+<code>.A ["Refused"] -&gt; -99</code> – so the user-visible mapping reflects
 what was actually in the data on input. A marker declared only
 through a value label, with no case carrying it yet, converts like
 one that cases carry: its label moves to the code and the code is
@@ -172,7 +173,7 @@ own form for more than three: the codes start at the first
 <code>missing.convention.codes</code> value and run one per tag in the
 direction the codes run, from the first toward the second – with
 the defaults, toward zero, so five tags take <code>-99</code> through
-<code>-95</code>, declared as the range <code>[-99, -95]</code>, each tag's
+<code>-95</code>, declared as the range <code>-99</code> to <code>-95</code>, each tag's
 label on its code. The first tags keep their usual codes whenever
 the setting's codes are consecutive, and the notification shows the
 range and says why it was used. A setting with a single code (which
@@ -270,11 +271,15 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="va">community</span></span></span>
 <span class="r-in"><span><span class="fu">jconvert</span><span class="op">(</span><span class="va">df</span>, to <span class="op">=</span> <span class="st">"stata"</span>, modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to Stata-style missing values in 5 variables:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused" -&gt; .a)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]  -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(df, "df.rds")</span>
@@ -282,11 +287,15 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-in"><span><span class="co"># Equivalent without modify: assign the returned data frame back</span></span></span>
 <span class="r-in"><span><span class="va">df2</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to Stata-style missing values in 5 variables:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused" -&gt; .a)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused" -&gt; .a, -98 "Don't know" -&gt; .b)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]  -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
@@ -297,11 +306,15 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-in"><span><span class="co"># Convert to SAS-style missing values (uppercase .A, .B, ...):</span></span></span>
 <span class="r-in"><span><span class="va">df_sas</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"sas"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to SAS-style missing values in 5 variables:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused" -&gt; .A)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused" -&gt; .A, -98 "Don't know" -&gt; .B)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        -99 ["Refused"]     -&gt; .A</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .B</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     -99 ["Refused"]     -&gt; .A</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .B</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]  -&gt; .A</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  -99 ["Refused"]     -&gt; .A</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .B</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  -99 ["Refused"]     -&gt; .A</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .B</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
@@ -312,11 +325,15 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-in"><span><span class="co"># Strip the declarations from every applicable variable:</span></span></span>
 <span class="r-in"><span><span class="va">df3</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped the missing-value declarations from 5 variables:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        (-99 "Refused")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  (-99 "Refused", -98 "Don't know")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income        -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
@@ -327,8 +344,10 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-in"><span><span class="co"># Scope by unquoted names:</span></span></span>
 <span class="r-in"><span><span class="va">df4</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, <span class="va">Income</span>, <span class="va">Education</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped the missing-value declarations from 2 variables:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education  (-99 "Refused", -98 "Don't know")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>              -98 ["Don't know"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education  -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>              -98 ["Don't know"]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
@@ -339,8 +358,10 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-in"><span><span class="co"># Scope by character vector (alternative form):</span></span></span>
 <span class="r-in"><span><span class="va">df5</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Income"</span>, <span class="st">"Education"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped the missing-value declarations from 2 variables:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     (-99 "Refused", -98 "Don't know")</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education  (-99 "Refused", -98 "Don't know")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>              -98 ["Don't know"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Education  -99 ["Refused"]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>              -98 ["Don't know"]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>

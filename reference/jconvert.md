@@ -55,7 +55,8 @@ jconvert(
 - missing.notice:
 
   Logical; `TRUE` (default) prints a notification summarizing what was
-  converted (and what was skipped) along with a reminder of how to keep
+  converted – one row per missing value, with its label and what it
+  became – and what was skipped, along with a reminder of how to keep
   the result. `FALSE` suppresses the message. The notification itself
   does not consult
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md),
@@ -115,7 +116,7 @@ The four target formats:
   conceptual marker, and mixed-case columns collapse to a single
   lowercase marker (SPSS has no parallel uppercase convention). The
   notification's per-column display shows the original (pre-correction)
-  tag for SAS-corrected columns – e.g. `.A "Refused" -> -99` – so the
+  tag for SAS-corrected columns – e.g. `.A ["Refused"] -> -99` – so the
   user-visible mapping reflects what was actually in the data on input.
   A marker declared only through a value label, with no case carrying it
   yet, converts like one that cases carry: its label moves to the code
@@ -125,7 +126,7 @@ The four target formats:
   first `missing.convention.codes` value and run one per tag in the
   direction the codes run, from the first toward the second – with the
   defaults, toward zero, so five tags take `-99` through `-95`, declared
-  as the range `[-99, -95]`, each tag's label on its code. The first
+  as the range `-99` to `-95`, each tag's label on its code. The first
   tags keep their usual codes whenever the setting's codes are
   consecutive, and the notification shows the range and says why it was
   used. A setting with a single code (which gives no direction), or one
@@ -216,11 +217,15 @@ setting the default convention and convention codes session-wide.
 df <- community
 jconvert(df, to = "stata", modify = TRUE)
 #> Converted to Stata-style missing values in 5 variables:
-#>   Income        (-99 "Refused" -> .a, -98 "Don't know" -> .b)
-#>   Education     (-99 "Refused" -> .a, -98 "Don't know" -> .b)
-#>   Smoker        (-99 "Refused" -> .a)
-#>   Environment1  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
-#>   Environment3  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
+#>   Income        -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
+#>   Education     -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
+#>   Smoker        -99 ["Refused"]  -> .a
+#>   Environment1  -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
+#>   Environment3  -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
 #> 
 #> To keep it across sessions, save the data frame:
 #>   jsave(df, "df.rds")
@@ -228,11 +233,15 @@ jconvert(df, to = "stata", modify = TRUE)
 # Equivalent without modify: assign the returned data frame back
 df2 <- jconvert(community, to = "stata")
 #> Converted to Stata-style missing values in 5 variables:
-#>   Income        (-99 "Refused" -> .a, -98 "Don't know" -> .b)
-#>   Education     (-99 "Refused" -> .a, -98 "Don't know" -> .b)
-#>   Smoker        (-99 "Refused" -> .a)
-#>   Environment1  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
-#>   Environment3  (-99 "Refused" -> .a, -98 "Don't know" -> .b)
+#>   Income        -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
+#>   Education     -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
+#>   Smoker        -99 ["Refused"]  -> .a
+#>   Environment1  -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
+#>   Environment3  -99 ["Refused"]     -> .a
+#>                 -98 ["Don't know"]  -> .b
 #> 
 #> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)
@@ -243,11 +252,15 @@ df2 <- jconvert(community, to = "stata")
 # Convert to SAS-style missing values (uppercase .A, .B, ...):
 df_sas <- jconvert(community, to = "sas")
 #> Converted to SAS-style missing values in 5 variables:
-#>   Income        (-99 "Refused" -> .A, -98 "Don't know" -> .B)
-#>   Education     (-99 "Refused" -> .A, -98 "Don't know" -> .B)
-#>   Smoker        (-99 "Refused" -> .A)
-#>   Environment1  (-99 "Refused" -> .A, -98 "Don't know" -> .B)
-#>   Environment3  (-99 "Refused" -> .A, -98 "Don't know" -> .B)
+#>   Income        -99 ["Refused"]     -> .A
+#>                 -98 ["Don't know"]  -> .B
+#>   Education     -99 ["Refused"]     -> .A
+#>                 -98 ["Don't know"]  -> .B
+#>   Smoker        -99 ["Refused"]  -> .A
+#>   Environment1  -99 ["Refused"]     -> .A
+#>                 -98 ["Don't know"]  -> .B
+#>   Environment3  -99 ["Refused"]     -> .A
+#>                 -98 ["Don't know"]  -> .B
 #> 
 #> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)
@@ -258,11 +271,15 @@ df_sas <- jconvert(community, to = "sas")
 # Strip the declarations from every applicable variable:
 df3 <- jconvert(community, to = "baseR")
 #> Stripped the missing-value declarations from 5 variables:
-#>   Income        (-99 "Refused", -98 "Don't know")
-#>   Education     (-99 "Refused", -98 "Don't know")
-#>   Smoker        (-99 "Refused")
-#>   Environment1  (-99 "Refused", -98 "Don't know")
-#>   Environment3  (-99 "Refused", -98 "Don't know")
+#>   Income        -99 ["Refused"]
+#>                 -98 ["Don't know"]
+#>   Education     -99 ["Refused"]
+#>                 -98 ["Don't know"]
+#>   Smoker        -99 ["Refused"]
+#>   Environment1  -99 ["Refused"]
+#>                 -98 ["Don't know"]
+#>   Environment3  -99 ["Refused"]
+#>                 -98 ["Don't know"]
 #> 
 #> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)
@@ -273,8 +290,10 @@ df3 <- jconvert(community, to = "baseR")
 # Scope by unquoted names:
 df4 <- jconvert(community, to = "baseR", Income, Education)
 #> Stripped the missing-value declarations from 2 variables:
-#>   Income     (-99 "Refused", -98 "Don't know")
-#>   Education  (-99 "Refused", -98 "Don't know")
+#>   Income     -99 ["Refused"]
+#>              -98 ["Don't know"]
+#>   Education  -99 ["Refused"]
+#>              -98 ["Don't know"]
 #> 
 #> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)
@@ -285,8 +304,10 @@ df4 <- jconvert(community, to = "baseR", Income, Education)
 # Scope by character vector (alternative form):
 df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 #> Stripped the missing-value declarations from 2 variables:
-#>   Income     (-99 "Refused", -98 "Don't know")
-#>   Education  (-99 "Refused", -98 "Don't know")
+#>   Income     -99 ["Refused"]
+#>              -98 ["Don't know"]
+#>   Education  -99 ["Refused"]
+#>              -98 ["Don't know"]
 #> 
 #> This call changes community only if you assign the result:
 #>   community <- jconvert(community, ...)

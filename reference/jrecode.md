@@ -380,7 +380,7 @@ df$RegionR <- jrecode(df, Region,
 df$EducR <- jrecode(df, Education,
                     map    = "5=4; else=copy",
                     labels = "4=Bachelor's degree or higher")
-#> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were
+#> Note: -99 ["Refused"], -98 ["Don't know"] are declared missing values and were
 #> kept on the recoded variable.
 #> To convert them to plain NA instead, map them to NA (for example -99=NA).
 #> 
@@ -393,7 +393,7 @@ df$EducR <- jrecode(df, Education,
 df$EducR2 <- jrecode(df, Education,
                      map    = "4=1; 5=1; else=NA",
                      labels = "1=College degree")
-#> Note: -99 ("Refused"), -98 ("Don't know") are declared missing values and were
+#> Note: -99 ["Refused"], -98 ["Don't know"] are declared missing values and were
 #> kept on the recoded variable.
 #> To convert them to plain NA instead, map them to NA (for example -99=NA).
 #> 
@@ -404,7 +404,7 @@ df$EducR2 <- jrecode(df, Education,
 
 # Convert a specific coded missing value to system NA
 df$EducR3 <- jrecode(df, Education, map = "-99=System; else=copy")
-#> Note: -98 ("Don't know") is a declared missing value and was kept on the
+#> Note: -98 ["Don't know"] is a declared missing value and was kept on the
 #> recoded variable.
 #> To convert it to a plain NA instead, add -98=NA to the map.
 #> 
