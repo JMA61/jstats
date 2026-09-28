@@ -35,7 +35,8 @@ variable names. Mutually exclusive with \code{...}. When both
 the whole data frame.}
 
 \item{missing.notice}{Logical; \code{TRUE} (default) prints a notification
-summarizing what was converted (and what was skipped) along with a
+summarizing what was converted -- one row per missing value, with its
+label and what it became -- and what was skipped, along with a
 reminder of how to keep the result. \code{FALSE} suppresses the
 message. The notification itself does not consult \code{joutput()},
 because the function reports an action it just performed rather than
@@ -96,7 +97,7 @@ the numeric mapping -- for round-trip purposes the package treats
 columns collapse to a single lowercase marker (SPSS has no parallel
 uppercase convention). The notification's per-column display shows the
 original (pre-correction) tag for SAS-corrected columns -- e.g.
-\code{.A "Refused" -> -99} -- so the user-visible mapping reflects
+\code{.A ["Refused"] -> -99} -- so the user-visible mapping reflects
 what was actually in the data on input. A marker declared only
 through a value label, with no case carrying it yet, converts like
 one that cases carry: its label moves to the code and the code is
@@ -106,7 +107,7 @@ own form for more than three: the codes start at the first
 \code{missing.convention.codes} value and run one per tag in the
 direction the codes run, from the first toward the second -- with
 the defaults, toward zero, so five tags take \code{-99} through
-\code{-95}, declared as the range \code{[-99, -95]}, each tag's
+\code{-95}, declared as the range \code{-99} to \code{-95}, each tag's
 label on its code. The first tags keep their usual codes whenever
 the setting's codes are consecutive, and the notification shows the
 range and says why it was used. A setting with a single code (which

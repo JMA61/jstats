@@ -2221,13 +2221,15 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   orig_val_labels_for_note <-
     if (inherits(orig, "haven_labelled")) labelled::val_labels(orig) else NULL
 
+  # A code with its label in the house form jfreq's Missing section uses,
+  # -99 ["Refused"] (S319, 0.9.196; the notes had used -99 ("Refused")).
   .code_with_label <- function(code) {
     if (!is.null(orig_val_labels_for_note) &&
         length(orig_val_labels_for_note) > 0) {
       lab <- names(orig_val_labels_for_note)[
         as.numeric(orig_val_labels_for_note) == code]
       lab <- lab[!is.na(lab) & nzchar(lab)]
-      if (length(lab) >= 1L) return(paste0(code, " (\"", lab[1], "\")"))
+      if (length(lab) >= 1L) return(paste0(code, " [\"", lab[1], "\"]"))
     }
     as.character(code)
   }
@@ -2393,7 +2395,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       if (length(hit) >= 1L) lab <- names(orig_val_labels_for_note)[hit[1]]
     }
     if (!is.null(lab) && !is.na(lab) && nzchar(lab)) {
-      paste0(".", tag, " (\"", lab, "\")")
+      paste0(".", tag, " [\"", lab, "\"]")
     } else paste0(".", tag)
   }
   .srcs_of <- function(entries) {
@@ -6969,7 +6971,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'   \code{...} and \code{vars} are empty, \code{jconvert()} operates on
 #'   the whole data frame.
 #' @param missing.notice Logical; \code{TRUE} (default) prints a notification
-#'   summarizing what was converted (and what was skipped) along with a
+#'   summarizing what was converted -- one row per missing value, with its
+#'   label and what it became -- and what was skipped, along with a
 #'   reminder of how to keep the result. \code{FALSE} suppresses the
 #'   message. The notification itself does not consult \code{joutput()},
 #'   because the function reports an action it just performed rather than
@@ -7017,7 +7020,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     columns collapse to a single lowercase marker (SPSS has no parallel
 #'     uppercase convention). The notification's per-column display shows the
 #'     original (pre-correction) tag for SAS-corrected columns -- e.g.
-#'     \code{.A "Refused" -> -99} -- so the user-visible mapping reflects
+#'     \code{.A ["Refused"] -> -99} -- so the user-visible mapping reflects
 #'     what was actually in the data on input. A marker declared only
 #'     through a value label, with no case carrying it yet, converts like
 #'     one that cases carry: its label moves to the code and the code is
@@ -7027,7 +7030,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     \code{missing.convention.codes} value and run one per tag in the
 #'     direction the codes run, from the first toward the second -- with
 #'     the defaults, toward zero, so five tags take \code{-99} through
-#'     \code{-95}, declared as the range \code{[-99, -95]}, each tag's
+#'     \code{-95}, declared as the range \code{-99} to \code{-95}, each tag's
 #'     label on its code. The first tags keep their usual codes whenever
 #'     the setting's codes are consecutive, and the notification shows the
 #'     range and says why it was used. A setting with a single code (which
@@ -7414,7 +7417,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
     # convention code and runs one integer per marker in the direction the
     # codes run, from the first toward the second: the defaults (-99, -98,
     # -97) run toward zero, so five markers take -99 to -95, declared as
-    # the range [-99, -95]. Only the first code and the direction are read,
+    # the range -99 to -95. Only the first code and the direction are read,
     # so the first markers keep today's codes whenever the configured codes
     # are consecutive; with c(-99, -88, -77) a fourth marker moves .b and .c
     # to -98 and -97 (accepted at S318). The range is exactly as wide as
@@ -7724,6 +7727,18 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
   }
 
   # --- Perform conversions ---------------------------------------------------
+  # Report rows (S319, 0.9.196). Each converted column records one row per
+  # missing value: `src` is the value as it was, with its label in the
+  # house form jfreq's Missing section, jload's narrative and
+  # jdeclare_missing() use (-99 ["Refused"]); `dst` is what it became, or
+  # NA for a row with no arrow (a range, or a declaration stripped by
+  # to = "baseR"). The notification below prints them as one block per
+  # column. An unlabelled value prints bare.
+  .lab <- function(x, lbl) {
+    if (length(lbl) == 1L && !is.na(lbl) && nzchar(lbl)) {
+      sprintf('%s ["%s"]', x, lbl)
+    } else x
+  }
   converted_vars   <- character(0)
   converted_info   <- list()
   skipped_already  <- character(0)   # in target format already (user_specified only)
@@ -7760,26 +7775,24 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         data[[vname]] <- haven::zap_missing(col)
       }
 
-      # Build the display entries from the original info (pre-strip codes).
-      display_entries <- character(0)
+      # Report rows from the original info (pre-strip codes): what was
+      # declared, with no arrow -- every row became plain NA.
+      disp_src <- character(0)
       if (!is.null(info$codes) && nrow(info$codes) > 0L) {
         for (i in seq_len(nrow(info$codes))) {
-          code <- info$codes$code[i]
-          lbl  <- info$codes$label[i]
-          display_entries <- c(display_entries,
-                               if (!is.na(lbl)) {
-                                 sprintf('%s "%s"', code, lbl)
-                               } else code)
+          disp_src <- c(disp_src, .lab(info$codes$code[i],
+                                       info$codes$label[i]))
         }
       }
       if (!is.null(info$na_range) && length(info$na_range) == 2L) {
-        display_entries <- c(display_entries,
-                             sprintf("range [%s, %s]",
-                                     as.character(info$na_range[1]),
-                                     as.character(info$na_range[2])))
+        disp_src <- c(disp_src,
+                      sprintf("range %s to %s",
+                              as.character(info$na_range[1]),
+                              as.character(info$na_range[2])))
       }
       converted_vars         <- c(converted_vars, vname)
-      converted_info[[vname]] <- list(display = display_entries)
+      converted_info[[vname]] <- list(
+        src = disp_src, dst = rep(NA_character_, length(disp_src)))
 
     } else if (to == "spss") {
 
@@ -7829,14 +7842,14 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         label     = attr(col, "label", exact = TRUE)
       ))
 
-      # Build display entries — source tag -> destination code, with the
-      # label on the source side, in the plan's letter order (stable
-      # regardless of order-of-appearance in the data). SAS-corrected
-      # columns display the original uppercase tag, since post-correction
-      # `.a`/`.b` would obscure what the user actually had in their data
-      # on input.
+      # Report rows -- source tag -> destination code, with the label on
+      # the source side, in the plan's letter order (stable regardless of
+      # order-of-appearance in the data). SAS-corrected columns display
+      # the original uppercase tag, since post-correction `.a`/`.b` would
+      # obscure what the user actually had in their data on input.
       was_sas <- vname %in% sas_corrected_vars
-      display_entries <- character(0)
+      disp_src <- character(0)
+      disp_dst <- character(0)
       for (tg in names(plan)) {
         code <- plan[[tg]]
         display_tag <- if (was_sas) toupper(tg) else tg
@@ -7847,25 +7860,21 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           mm <- which(!is.na(vl_tags) & vl_tags == tg)
           if (length(mm) > 0L) lbl <- names(val_labs)[mm[1]]
         }
-        source_disp_with_lbl <- if (!is.na(lbl) && nzchar(lbl)) {
-          sprintf('%s "%s"', source_disp, lbl)
-        } else source_disp
-        display_entries <- c(display_entries,
-                             sprintf("%s -> %s",
-                                     source_disp_with_lbl,
-                                     as.character(code)))
+        disp_src <- c(disp_src, .lab(source_disp, lbl))
+        disp_dst <- c(disp_dst, as.character(code))
       }
-      # The range the codes were declared as (S319), in the form the
-      # reverse direction reports a range it enumerates.
+      # The range the codes were declared as (S319), in the form jfreq's
+      # Missing section and jdeclare_missing() show a declared range.
       if (!is.null(band)) {
-        display_entries <- c(display_entries,
-                             sprintf("range [%s, %s]",
-                                     .jst_fmt_code(band[1]),
-                                     .jst_fmt_code(band[2])))
+        disp_src <- c(disp_src,
+                      sprintf("range %s to %s",
+                              .jst_fmt_code(band[1]),
+                              .jst_fmt_code(band[2])))
+        disp_dst <- c(disp_dst, NA_character_)
         banded_spss <- c(banded_spss, vname)
       }
       converted_vars         <- c(converted_vars, vname)
-      converted_info[[vname]] <- list(display = display_entries)
+      converted_info[[vname]] <- list(src = disp_src, dst = disp_dst)
 
       # Return-trip note (S314, 0.9.189). A marker set other than the
       # leading letters comes back as the leading letters: the
@@ -7929,22 +7938,20 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         # rebuilds without the haven display format; restore it (S299).
         data[[vname]] <- .jst_carry_col_attrs(data[[vname]], col)
 
-        # Display: original tag (with its label, if any) -> flipped tag.
-        display_entries <- character(0)
+        # Report rows: original tag (with its label, if any) -> flipped tag.
+        disp_src <- character(0)
+        disp_dst <- character(0)
         for (tg in sort(off_case)) {
           lbl <- NA_character_
           if (!is.null(val_labs) && length(val_labs) > 0L) {
             mm <- which(!is.na(lab_tags) & lab_tags == tg)
             if (length(mm) > 0L) lbl <- names(val_labs)[mm[1]]
           }
-          source_disp <- if (!is.na(lbl) && nzchar(lbl)) {
-            sprintf('.%s "%s"', tg, lbl)
-          } else paste0(".", tg)
-          display_entries <- c(display_entries,
-                               sprintf("%s -> .%s", source_disp, flip(tg)))
+          disp_src <- c(disp_src, .lab(paste0(".", tg), lbl))
+          disp_dst <- c(disp_dst, paste0(".", flip(tg)))
         }
         converted_vars          <- c(converted_vars, vname)
-        converted_info[[vname]] <- list(display = display_entries)
+        converted_info[[vname]] <- list(src = disp_src, dst = disp_dst)
         next
       }
 
@@ -7986,14 +7993,15 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         label  = attr(col, "label", exact = TRUE)
       ))
 
-      # Build display entries — source value -> destination tag, with the
-      # label shown on the source side, emitted in sorted order (largest
-      # |value| first per Q6). A band contributes a trailing entry: either
-      # the enumeration fact, or -- when it supplied no values at all --
-      # the dropped-declaration report (Q1: the empty declaration is
-      # reported even at zero, since the loss is largest exactly when
-      # nothing was translated).
-      display_entries <- character(0)
+      # Report rows -- source value -> destination tag, with the label on
+      # the source side, in sorted order (largest |value| first per Q6). A
+      # band contributes a trailing row with no arrow: the enumeration
+      # fact, or -- when it supplied no values at all -- the
+      # dropped-declaration report (Q1: the empty declaration is reported
+      # even at zero, since the loss is largest exactly when nothing was
+      # translated).
+      disp_src <- character(0)
+      disp_dst <- character(0)
       for (i in seq_along(sorted_values)) {
         v   <- sorted_values[i]
         tg  <- plan_letters[i]
@@ -8002,28 +8010,21 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           mm <- which(unname(val_labs) == v & !is.na(unname(val_labs)))
           if (length(mm) > 0L) lbl <- names(val_labs)[mm[1]]
         }
-        source_disp <- if (!is.na(lbl) && nzchar(lbl)) {
-          sprintf('%s "%s"', as.character(v), lbl)
-        } else as.character(v)
-        display_entries <- c(display_entries,
-                             sprintf("%s -> .%s", source_disp, tg))
+        disp_src <- c(disp_src, .lab(as.character(v), lbl))
+        disp_dst <- c(disp_dst, paste0(".", tg))
       }
       if (!is.null(plan$band)) {
-        band_disp <- sprintf("range [%s, %s]",
+        band_disp <- sprintf("range %s to %s",
                              as.character(plan$band[1]),
                              as.character(plan$band[2]))
-        if (plan$band_n > 0L) {
-          display_entries <- c(display_entries,
-                               paste0(band_disp, " enumerated"))
-        } else {
-          display_entries <- c(display_entries,
-                               paste0(band_disp,
-                                      ": no values found; declaration dropped"))
-        }
+        disp_src <- c(disp_src, paste0(band_disp, if (plan$band_n > 0L) {
+          "  (enumerated)"
+        } else "  (no values found; declaration dropped)"))
+        disp_dst <- c(disp_dst, NA_character_)
         banded_converted <- c(banded_converted, vname)
       }
       converted_vars          <- c(converted_vars, vname)
-      converted_info[[vname]] <- list(display = display_entries)
+      converted_info[[vname]] <- list(src = disp_src, dst = disp_dst)
     }
   }
 
@@ -8091,12 +8092,30 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         header_verb, " ", n_converted, " variable",
         if (n_converted == 1L) "" else "s", ":"))
 
+      # Long form (S319, 0.9.196): one row per missing value, the column's
+      # name on its first row and the rest hanging beneath it, so a label
+      # and what it became read across one line. The arrow aligns within
+      # each column's block, not across the report, so one long label
+      # does not widen every block. Two spaces before the arrow at the
+      # widest source keep every arrow row a table row to the wrapper
+      # (.jst_seg_category()), so no row is word-filled mid-label. Blocks
+      # follow one another without a blank line: the name column marks
+      # each, and a blank per column would cost most on exactly the wide
+      # frames where the report is longest.
       max_name_len <- max(nchar(converted_vars))
+      hang         <- strrep(" ", 2L + max_name_len + 2L)
       for (vname in converted_vars) {
-        ci <- converted_info[[vname]]
-        msg_lines <- c(msg_lines, paste0(
-          "  ", format(vname, width = max_name_len),
-          "  (", paste(ci$display, collapse = ", "), ")"))
+        ci    <- converted_info[[vname]]
+        arrow <- !is.na(ci$dst)
+        src_w <- if (any(arrow)) max(nchar(ci$src[arrow])) else 0L
+        rows  <- ci$src
+        rows[arrow] <- paste0(ci$src[arrow],
+                              strrep(" ", src_w - nchar(ci$src[arrow])),
+                              "  -> ", ci$dst[arrow])
+        if (length(rows) == 0L) rows <- ""
+        lead <- c(paste0("  ", format(vname, width = max_name_len), "  "),
+                  rep(hang, length(rows) - 1L))
+        msg_lines <- c(msg_lines, sub(" +$", "", paste0(lead, rows)))
       }
 
       # Range note (S319): a column with more lettered markers than codes
