@@ -30,3 +30,12 @@ cases that have a group, so a case missing on the grouping variable is
 in no table. That exclusion is the layout's counterpart of the listwise
 layout's Auto-listwise row: eligible on per_var_desc only, shown when
 nonzero (rule 2), and an exclusion row for Table 1.
+
+Table 2's fifth layout, "screening" (Session 320), is jscreen(). It has
+no bottom (jscreen's own Missing Data table is its breakdown), the
+Remaining N endpoint, and neither an Auto-listwise nor a by = row, so
+only a pipeline row can give it an exclusion row. Its N-line family,
+"header", has the one form "none" (Table 4): in the N-line state the
+block prints nothing – not even its closing blank – because jscreen's
+header already opens with a Cases line, and the printer hands the
+excluded count back to the caller for that line instead.

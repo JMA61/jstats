@@ -32,8 +32,8 @@ pre-resolved.
 
 - analysis_type:
 
-  Layout key: `"listwise"`, `"pairwise"`, `"per_var_desc"`, or
-  `"per_var_freq"`.
+  Layout key: `"listwise"`, `"pairwise"`, `"per_var_desc"`,
+  `"per_var_freq"`, or `"screening"` (Session 320, jscreen).
 
 - detail:
 
@@ -47,6 +47,11 @@ pre-resolved.
 
 ## Value
 
+Invisibly, a list: `mode`, `render_top`, `render_n_line`, `n_line_form`,
+and `header_excluded` – the count a header-family caller (jscreen)
+appends to its own Cases line as "(k Excluded)", nonzero only when the
+block fell to the N-line state after cases were excluded (Session 320;
+`invisible(NULL)` until then). The empty-frame branch still returns
 `invisible(NULL)`.
 
 ## Details

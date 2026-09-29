@@ -25,7 +25,8 @@ its own. Errors loudly on a coordinate that matches no row.
 
 - layout:
 
-  One of `"listwise"`, `"pairwise"`, `"per_var_desc"`, `"per_var_freq"`.
+  One of `"listwise"`, `"pairwise"`, `"per_var_desc"`, `"per_var_freq"`,
+  `"screening"` (Session 320, jscreen).
 
 - pipeline_active:
 

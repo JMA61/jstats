@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.196</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.197</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -138,7 +138,8 @@ regression diagnostic output (jlm only).</p></dd>
 <dt id="arg-case-processing">case.processing<a class="anchor" aria-label="anchor" href="#arg-case-processing"></a></dt>
 <dd><p>Three-state toggle for the Case Processing
 table – the block at the top of every analysis function's output
-that accounts for the cases: the original N, each active filter
+(and of <code><a href="jscreen.html">jscreen()</a></code>'s) that accounts for the cases: the original
+N, each active filter
 (<code>jcomplete</code>, <code>jsubset</code>, per-call <code>subset</code>) with the
 cases it excluded, any cases dropped listwise by the analysis, and
 the N analyzed.</p>
@@ -148,7 +149,10 @@ the table does not print, a one-line N statement takes its place
 <code>jdesc</code>, <code>jfreq</code>, and <code>jcorr</code>, the number of cases
 in the variable pool, adding the count complete on every variable
 when the per-variable Ns differ, and adding the excluded count
-whenever cases were excluded before the analysis).</p><ul><li><p><code>NULL</code> (auto; the standard tier's default) prints the
+whenever cases were excluded before the analysis).
+<code><a href="jscreen.html">jscreen()</a></code> prints no separate line: its header's Cases line
+states the count, adding the excluded count the same way (for example
+<code>Cases: 53 (17 Excluded)</code>).</p><ul><li><p><code>NULL</code> (auto; the standard tier's default) prints the
 table only when it has an exclusion row to show: a filter is
 active (shown even when it excluded 0 cases, as the reminder
 that it is active) or listwise deletion dropped at least one

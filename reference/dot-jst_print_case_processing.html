@@ -21,7 +21,7 @@ own; all show/hide decisions and the N line's form arrive pre-resolved."></head>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.196</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.197</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,7 +80,8 @@ pipeline counts plus pre_pipeline_data / surviving_ids / analysis_vars).</p></dd
 
 <dt id="arg-analysis-type">analysis_type<a class="anchor" aria-label="anchor" href="#arg-analysis-type"></a></dt>
 <dd><p>Layout key: <code>"listwise"</code>, <code>"pairwise"</code>,
-<code>"per_var_desc"</code>, or <code>"per_var_freq"</code>.</p></dd>
+<code>"per_var_desc"</code>, <code>"per_var_freq"</code>, or <code>"screening"</code>
+(Session 320, jscreen).</p></dd>
 
 
 <dt id="arg-detail">detail<a class="anchor" aria-label="anchor" href="#arg-detail"></a></dt>
@@ -95,7 +96,13 @@ notification inputs (per-variable layouts only); see the closure below.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><code>invisible(NULL)</code>.</p>
+    <p>Invisibly, a list: <code>mode</code>, <code>render_top</code>,
+<code>render_n_line</code>, <code>n_line_form</code>, and <code>header_excluded</code>
+– the count a header-family caller (jscreen) appends to its own Cases
+line as "(k Excluded)", nonzero only when the block fell to the N-line
+state after cases were excluded (Session 320; <code>invisible(NULL)</code>
+until then). The empty-frame branch still returns
+<code>invisible(NULL)</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

@@ -1,10 +1,11 @@
 # Data screening overview
 
 Provides a quick overview of a data frame for screening. A red "Data
-Screening" title is printed first, then a short header block (case and
-variable counts, cases with missing data, variables with outliers),
-followed by up to three tables: a Variable Types table (Base R storage
-type, the jstats analysis-role class, an optional sub-class, an optional
+Screening" title is printed first (followed by a Case Processing table
+when a filter is active), then a short header block (case and variable
+counts, cases with missing data, variables with outliers), followed by
+up to three tables: a Variable Types table (Base R storage type, the
+jstats analysis-role class, an optional sub-class, an optional
 classification source, distinct-value counts, and optional central-
 tendency columns), a Missing Data & Outliers table, and – when variable
 labels are shown – a Variable Labels table last. Handles haven-labelled
@@ -48,8 +49,9 @@ jscreen(
 
   An optional unquoted logical expression (e.g. `Group == 1`) to subset
   cases for this call only. Applied after jcomplete and jsubset. Does
-  not affect other function calls. Written in R syntax and checked the
-  way [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
+  not affect other function calls. The cases it excludes are listed in
+  the Case Processing table. Written in R syntax and checked the way
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
   checks a filter: `subset = NOT(Age < 40)`, for example, is refused
   with the corrected `subset = !(Age < 40)` shown (see
   [`jsubset`](https://jma61.github.io/jstats/reference/jsubset.md) for a
@@ -158,6 +160,18 @@ stored with
 and a `subset` expression, apply to the whole data frame before the
 named variables are taken, so they may refer to variables that are not
 screened.
+
+Those filters are accounted for as in the analysis functions: a Case
+Processing table between the title and the header lists the original
+count, the cases each filter excluded, and the count remaining, which
+the header's Cases line repeats. With no filter active no table prints,
+and the Cases line states the count. The `case.processing` setting of
+[`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
+applies: at the minimal tier, or with `case.processing = FALSE`, the
+table is left out and the Cases line carries the excluded count instead
+(for example `Cases: 53 (17 Excluded)`); at the full tier, or with
+`case.processing = TRUE`, the table prints even when no filter is
+active.
 
 ## See also
 
@@ -419,6 +433,13 @@ jscreen(Income, Age, WellbeingScore)
 jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 #> Data Screening
 #> Using default data frame: community
+#> 
+#> Case Processing  Excluded  Remaining
+#>     Original           --        103
+#>     subset =           54         49  Volunteer == 1
+#>     Remaining N        --         49
+#> ----------------------------------------------------
+#> 
 #>   Cases: 49 
 #>   Variables: 3 
 #>   Cases with missing data: 4 

@@ -95,10 +95,12 @@ joutput(
 - case.processing:
 
   Three-state toggle for the Case Processing table – the block at the
-  top of every analysis function's output that accounts for the cases:
-  the original N, each active filter (`jcomplete`, `jsubset`, per-call
-  `subset`) with the cases it excluded, any cases dropped listwise by
-  the analysis, and the N analyzed.
+  top of every analysis function's output (and of
+  [`jscreen()`](https://jma61.github.io/jstats/reference/jscreen.md)'s)
+  that accounts for the cases: the original N, each active filter
+  (`jcomplete`, `jsubset`, per-call `subset`) with the cases it
+  excluded, any cases dropped listwise by the analysis, and the N
+  analyzed.
 
   Every call states its N. What the toggle decides is the FORM: when the
   table does not print, a one-line N statement takes its place
@@ -107,6 +109,10 @@ joutput(
   count complete on every variable when the per-variable Ns differ, and
   adding the excluded count whenever cases were excluded before the
   analysis).
+  [`jscreen()`](https://jma61.github.io/jstats/reference/jscreen.md)
+  prints no separate line: its header's Cases line states the count,
+  adding the excluded count the same way (for example
+  `Cases: 53 (17 Excluded)`).
 
   - `NULL` (auto; the standard tier's default) prints the table only
     when it has an exclusion row to show: a filter is active (shown even
