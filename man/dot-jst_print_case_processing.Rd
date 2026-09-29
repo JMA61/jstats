@@ -18,7 +18,8 @@
 pipeline counts plus pre_pipeline_data / surviving_ids / analysis_vars).}
 
 \item{analysis_type}{Layout key: \code{"listwise"}, \code{"pairwise"},
-\code{"per_var_desc"}, or \code{"per_var_freq"}.}
+\code{"per_var_desc"}, \code{"per_var_freq"}, or \code{"screening"}
+(Session 320, jscreen).}
 
 \item{detail}{Per-call case.processing.detail override (NULL, "none",
 "totals", "per_code"). NULL defers to the joutput tier default.}
@@ -27,6 +28,12 @@ pipeline counts plus pre_pipeline_data / surviving_ids / analysis_vars).}
 notification inputs (per-variable layouts only); see the closure below.}
 }
 \value{
+Invisibly, a list: \code{mode}, \code{render_top},
+\code{render_n_line}, \code{n_line_form}, and \code{header_excluded}
+-- the count a header-family caller (jscreen) appends to its own Cases
+line as "(k Excluded)", nonzero only when the block fell to the N-line
+state after cases were excluded (Session 320; \code{invisible(NULL)}
+until then). The empty-frame branch still returns
 \code{invisible(NULL)}.
 }
 \description{

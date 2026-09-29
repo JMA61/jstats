@@ -19,7 +19,8 @@
 }
 \arguments{
 \item{layout}{One of \code{"listwise"}, \code{"pairwise"},
-\code{"per_var_desc"}, \code{"per_var_freq"}.}
+\code{"per_var_desc"}, \code{"per_var_freq"}, \code{"screening"}
+(Session 320, jscreen).}
 
 \item{pipeline_active}{Logical. Any of jcomplete/jsubset/subset fired.}
 

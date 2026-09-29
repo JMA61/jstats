@@ -1273,7 +1273,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' Data screening overview
 #'
 #' Provides a quick overview of a data frame for screening. A red "Data
-#' Screening" title is printed first, then a short header block (case and
+#' Screening" title is printed first (followed by a Case Processing table
+#' when a filter is active), then a short header block (case and
 #' variable counts, cases with missing data, variables with outliers),
 #' followed by up to three tables: a Variable Types table (Base R storage
 #' type, the jstats analysis-role class, an optional sub-class, an optional
@@ -1310,6 +1311,18 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' expression, apply to the whole data frame before the named variables are
 #' taken, so they may refer to variables that are not screened.
 #'
+#' Those filters are accounted for as in the analysis functions: a Case
+#' Processing table between the title and the header lists the original
+#' count, the cases each filter excluded, and the count remaining, which the
+#' header's Cases line repeats. With no filter active no table prints, and
+#' the Cases line states the count. The \code{case.processing} setting of
+#' \code{joutput()} applies: at the minimal tier, or with
+#' \code{case.processing = FALSE}, the table is left out and the Cases line
+#' carries the excluded count instead (for example
+#' \code{Cases: 53 (17 Excluded)}); at the full tier, or with
+#' \code{case.processing = TRUE}, the table prints even when no filter is
+#' active.
+#'
 #' @param data A data frame.
 #' @param ... Optional unquoted variable names to screen. If omitted,
 #'   all variables in the data frame are screened.
@@ -1318,7 +1331,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'   is 3.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
-#'   jcomplete and jsubset. Does not affect other function calls.
+#'   jcomplete and jsubset. Does not affect other function calls. The
+#'   cases it excludes are listed in the Case Processing table.
 #'   Written in R syntax and checked the way \code{jsubset()} checks a
 #'   filter: \code{subset = NOT(Age < 40)}, for example, is refused with
 #'   the corrected \code{subset = !(Age < 40)} shown (see
@@ -1489,6 +1503,24 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     data <- data[, var_names, drop = FALSE]
   }
 
+  # Case Processing (Session 320): jscreen is the CPS framework's screening
+  # layout. An active filter -- a stored jcomplete() or jsubset() setting, or
+  # subset = -- prints the table in the block's slot, between the title and
+  # the header, as in every analysis function; joutput()'s case.processing
+  # setting governs it the same way. With no filter the block prints
+  # nothing: the header's Cases line is the N statement (Table 4's "header"
+  # family), and in never-mode (minimal, or case.processing = FALSE) the
+  # printer returns the excluded count for that line to carry. No data =
+  # here: the layout has no bottom and states no N line of its own, so the
+  # printer needs neither the frame nor per-variable Ns.
+  cps <- .jst_print_case_processing(
+    .jst_build_sample_info(pipeline_counts = pipeline$pipeline_counts,
+                           data            = data,
+                           analysis_vars   = names(data),
+                           n_analysis      = nrow(data)),
+    analysis_type = "screening")
+  cases_excluded <- if (is.list(cps)) cps$header_excluded else 0L
+
   # POSIXlt columns are list-backed; stats::complete.cases() and unique()
   # below either abort or misbehave on them. Capture each column's original
   # class BEFORE coercing, then coerce any POSIXlt column to atomic POSIXct
@@ -1640,7 +1672,13 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   n_cases_missing <- sum(!stats::complete.cases(data))
   n_vars_outliers <- sum(!is.na(screen_table$Outliers) & screen_table$Outliers > 0)
 
-  cat("  Cases:", n_cases, "\n")
+  # The never-mode rider (Session 320): the table's accounting in the form
+  # every other function's N line takes, "(17 Excluded)".
+  if (isTRUE(cases_excluded > 0L)) {
+    cat("  Cases:", paste0(n_cases, " (", cases_excluded, " Excluded)"), "\n")
+  } else {
+    cat("  Cases:", n_cases, "\n")
+  }
   cat("  Variables:", n_vars, "\n")
   cat("  Cases with missing data:", n_cases_missing, "\n")
   cat("  Variables with outliers:", n_vars_outliers, "\n")

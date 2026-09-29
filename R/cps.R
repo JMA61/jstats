@@ -28,7 +28,8 @@
 #' its own. Errors loudly on a coordinate that matches no row.
 #'
 #' @param layout One of \code{"listwise"}, \code{"pairwise"},
-#'   \code{"per_var_desc"}, \code{"per_var_freq"}.
+#'   \code{"per_var_desc"}, \code{"per_var_freq"}, \code{"screening"}
+#'   (Session 320, jscreen).
 #' @param pipeline_active Logical. Any of jcomplete/jsubset/subset fired.
 #' @param has_udms Logical. At least one analysis variable has a declared UDM.
 #' @param has_sysna Logical. At least one analysis variable has plain-NA
@@ -340,12 +341,19 @@
 #' @param sample_info List from \code{.jst_build_sample_info} (carries the
 #'   pipeline counts plus pre_pipeline_data / surviving_ids / analysis_vars).
 #' @param analysis_type Layout key: \code{"listwise"}, \code{"pairwise"},
-#'   \code{"per_var_desc"}, or \code{"per_var_freq"}.
+#'   \code{"per_var_desc"}, \code{"per_var_freq"}, or \code{"screening"}
+#'   (Session 320, jscreen).
 #' @param detail Per-call case.processing.detail override (NULL, "none",
 #'   "totals", "per_code"). NULL defers to the joutput tier default.
 #' @param notification_template,data,analysis_vars Listwise-discrepancy
 #'   notification inputs (per-variable layouts only); see the closure below.
-#' @return \code{invisible(NULL)}.
+#' @return Invisibly, a list: \code{mode}, \code{render_top},
+#'   \code{render_n_line}, \code{n_line_form}, and \code{header_excluded}
+#'   -- the count a header-family caller (jscreen) appends to its own Cases
+#'   line as "(k Excluded)", nonzero only when the block fell to the N-line
+#'   state after cases were excluded (Session 320; \code{invisible(NULL)}
+#'   until then). The empty-frame branch still returns
+#'   \code{invisible(NULL)}.
 #' @keywords internal
 .jst_print_case_processing <- function(sample_info,
                                        analysis_type        = "listwise",
@@ -354,7 +362,8 @@
                                        data                  = NULL,
                                        analysis_vars         = NULL) {
 
-  valid_layouts <- c("listwise", "pairwise", "per_var_desc", "per_var_freq")
+  valid_layouts <- c("listwise", "pairwise", "per_var_desc", "per_var_freq",
+                     "screening")
   if (!analysis_type %in% valid_layouts) {
     stop(".jst_print_case_processing(): analysis_type must be one of ",
          paste(sprintf("'%s'", valid_layouts), collapse = ", "), ".",
@@ -421,8 +430,19 @@
   }
 
   # ---- Resolve the render spec from the rule tables ------------------------
+  # A layout whose bottom is off (Table 2: per_var_freq, screening) never
+  # draws the breakdown, so the bottom's inputs are not built for it
+  # (Session 320): the pool copy here and the per-column missing-value scan
+  # below, which on a wide frame are the costly part of this function. The
+  # bottom lookup then meets that layout's "any" row, and n_pool falls back
+  # to sample_info$n_after_pipeline, the same count. Read off the layout
+  # frame rather than a list of names, so a layout added later inherits it.
+  # Nothing that prints changes.
+  bottom_can <- identical(
+    .jst_cps_layout_rules$bottom_default[
+      match(analysis_type, .jst_cps_layout_rules$layout)], "on")
   pre <- sample_info$pre_pipeline_data
-  if (!is.null(pre) && !is.null(sample_info$surviving_ids)) {
+  if (bottom_can && !is.null(pre) && !is.null(sample_info$surviving_ids)) {
     pool <- pre[sample_info$surviving_ids, , drop = FALSE]
   } else {
     pool <- NULL
@@ -455,7 +475,7 @@
   # jcomplete()-only variables (Session 312; they read the analysis
   # variables alone before, so a case missing only on a jcomplete()-only
   # variable left no trace when the analysis variables were clean).
-  all_vars <- c(cps_vars, filter_vars)
+  all_vars <- if (bottom_can) c(cps_vars, filter_vars) else character(0)
   mi_list  <- if (length(all_vars))
                 lapply(all_vars, function(v) .jst_missing_info(pre[[v]]))
               else list()
@@ -527,6 +547,10 @@
   # helpers are retired).
   dw <- function(x) nchar(as.character(x), type = "width")
 
+  # The rider's count for a header-family caller (Session 320); set in the
+  # N-line branch below, returned at the foot.
+  header_excluded <- 0L
+
   {
 
     # Width of the widest rendered table; sizes the closing rule (Session 52).
@@ -544,16 +568,24 @@
       n_line_n <- if (isTRUE(spec$show_by_row)) n_analysis else n_pool
       n_stated <- if (identical(spec$n_line_form, "analysis")) n_analysis
                   else n_line_n
-      n_line <- switch(spec$n_line_form,
-        analysis      = sprintf("Analysis N: %d", n_analysis),
-        pool          = sprintf("%d Cases in the %d Variable Pool", n_line_n, k),
-        pool_complete = sprintf("%d Cases in the %d Variable Pool; %d Complete on All",
-                                n_line_n, k, complete_n))
       n_exc <- n_original - n_stated
-      if (isTRUE(n_exc > 0L)) {
-        n_line <- sprintf("%s (%d Excluded)", n_line, n_exc)
+      if (identical(spec$n_line_form, "none")) {
+        # The header family (Session 320): the caller's own header line is
+        # the statement, so nothing prints here; the rider's count goes back
+        # to the caller, which appends it -- jscreen's "Cases: 53 (17
+        # Excluded)".
+        if (isTRUE(n_exc > 0L)) header_excluded <- as.integer(n_exc)
+      } else {
+        n_line <- switch(spec$n_line_form,
+          analysis      = sprintf("Analysis N: %d", n_analysis),
+          pool          = sprintf("%d Cases in the %d Variable Pool", n_line_n, k),
+          pool_complete = sprintf("%d Cases in the %d Variable Pool; %d Complete on All",
+                                  n_line_n, k, complete_n))
+        if (isTRUE(n_exc > 0L)) {
+          n_line <- sprintf("%s (%d Excluded)", n_line, n_exc)
+        }
+        cat("\n", n_line, "\n", sep = "")
       }
-      cat("\n", n_line, "\n", sep = "")
     }
 
     # ---- TOP TABLE: pipeline chain ----
@@ -879,11 +911,21 @@
       # the last table row (no blank before it); one blank after.
       cat(strrep("-", rule_w), "\n", sep = "")
     }
-    cat("\n")
+    # The one blank after the block (rule 8), in every state that printed
+    # something. The header family's N-line state prints nothing at all
+    # (Session 320), so it adds no blank either: jscreen's header follows
+    # its title directly, as it always has.
+    block_silent <- isTRUE(spec$render_n_line) &&
+                    identical(spec$n_line_form, "none") && rule_w == 0L
+    if (!block_silent) cat("\n")
   }
 
   # Notification fires on its own conditions, table or no table.
   if (notification_eligible()) fire_notification()
 
-  invisible(NULL)
+  invisible(list(mode            = spec$mode,
+                 render_top      = spec$render_top,
+                 render_n_line   = spec$render_n_line,
+                 n_line_form     = spec$n_line_form,
+                 header_excluded = header_excluded))
 }

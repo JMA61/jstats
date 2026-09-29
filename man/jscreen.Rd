@@ -30,7 +30,8 @@ is 3.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after
-jcomplete and jsubset. Does not affect other function calls.
+jcomplete and jsubset. Does not affect other function calls. The
+cases it excludes are listed in the Case Processing table.
 Written in R syntax and checked the way \code{jsubset()} checks a
 filter: \code{subset = NOT(Age < 40)}, for example, is refused with
 the corrected \code{subset = !(Age < 40)} shown (see
@@ -92,7 +93,8 @@ and omit clean rows.
 }
 \description{
 Provides a quick overview of a data frame for screening. A red "Data
-Screening" title is printed first, then a short header block (case and
+Screening" title is printed first (followed by a Case Processing table
+when a filter is active), then a short header block (case and
 variable counts, cases with missing data, variables with outliers),
 followed by up to three tables: a Variable Types table (Base R storage
 type, the jstats analysis-role class, an optional sub-class, an optional
@@ -129,6 +131,18 @@ omitted, all variables in the data frame are screened. Settings stored
 with \code{jsubset()} and \code{jcomplete()}, and a \code{subset}
 expression, apply to the whole data frame before the named variables are
 taken, so they may refer to variables that are not screened.
+
+Those filters are accounted for as in the analysis functions: a Case
+Processing table between the title and the header lists the original
+count, the cases each filter excluded, and the count remaining, which the
+header's Cases line repeats. With no filter active no table prints, and
+the Cases line states the count. The \code{case.processing} setting of
+\code{joutput()} applies: at the minimal tier, or with
+\code{case.processing = FALSE}, the table is left out and the Cases line
+carries the excluded count instead (for example
+\code{Cases: 53 (17 Excluded)}); at the full tier, or with
+\code{case.processing = TRUE}, the table prints even when no filter is
+active.
 }
 \examples{
 # With explicit data frame

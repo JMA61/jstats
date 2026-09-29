@@ -1524,6 +1524,15 @@
 #' listwise layout's Auto-listwise row: eligible on per_var_desc only,
 #' shown when nonzero (rule 2), and an exclusion row for Table 1.
 #'
+#' Table 2's fifth layout, "screening" (Session 320), is jscreen(). It has
+#' no bottom (jscreen's own Missing Data table is its breakdown), the
+#' Remaining N endpoint, and neither an Auto-listwise nor a by = row, so
+#' only a pipeline row can give it an exclusion row. Its N-line family,
+#' "header", has the one form "none" (Table 4): in the N-line state the
+#' block prints nothing -- not even its closing blank -- because jscreen's
+#' header already opens with a Cases line, and the printer hands the
+#' excluded count back to the caller for that line instead.
+#'
 #' @keywords internal
 .jst_cps_visibility_rules <- data.frame(
   mode          = c("never", "auto", "auto", "always"),
@@ -1535,38 +1544,49 @@
 
 #' @keywords internal
 .jst_cps_layout_rules <- data.frame(
-  layout         = c("listwise", "pairwise", "per_var_desc", "per_var_freq"),
-  bottom_default = c("on",       "on",       "on",           "off"),
-  endpoint_label = c("Analysis N", "Remaining N", "Remaining N", "Remaining N"),
-  auto_listwise  = c("eligible", "never",    "never",        "never"),
-  by_row         = c("never",    "never",    "eligible",     "never"),
-  n_line_family  = c("analysis", "pool",     "pool",         "pool"),
+  layout         = c("listwise", "pairwise", "per_var_desc", "per_var_freq",
+                     "screening"),
+  bottom_default = c("on",       "on",       "on",           "off",
+                     "off"),
+  endpoint_label = c("Analysis N", "Remaining N", "Remaining N", "Remaining N",
+                     "Remaining N"),
+  auto_listwise  = c("eligible", "never",    "never",        "never",
+                     "never"),
+  by_row         = c("never",    "never",    "eligible",     "never",
+                     "never"),
+  n_line_family  = c("analysis", "pool",     "pool",         "pool",
+                     "header"),
   stringsAsFactors = FALSE
 )
 
 #' @keywords internal
 .jst_cps_bottom_rules <- data.frame(
   layout    = c(rep("listwise", 7), rep("pairwise", 7),
-                rep("per_var_desc", 5), "per_var_freq"),
+                rep("per_var_desc", 5), "per_var_freq", "screening"),
   has_udms  = c("no","no","no","no","yes","yes","yes",
                 "no","no","no","no","yes","yes","yes",
                 "no","no","yes","yes","yes",
+                "any",
                 "any"),
   has_sysna = c("no","yes","yes","yes","any","any","any",
                 "no","yes","yes","yes","any","any","any",
                 "no","yes","any","any","any",
+                "any",
                 "any"),
   tier      = c("any","none","totals","per_code","none","totals","per_code",
                 "any","none","totals","per_code","none","totals","per_code",
                 "any","any","none","totals","per_code",
+                "any",
                 "any"),
   bottom        = c(FALSE,FALSE,TRUE,TRUE,FALSE,TRUE,TRUE,
                     FALSE,FALSE,TRUE,TRUE,FALSE,TRUE,TRUE,
                     FALSE,FALSE,FALSE,FALSE,TRUE,
+                    FALSE,
                     FALSE),
   resolved_tier = c(NA,NA,"totals","totals",NA,"totals","per_code",
                     NA,NA,"totals","totals",NA,"totals","per_code",
                     NA,NA,NA,NA,"per_code",
+                    NA,
                     NA),
   stringsAsFactors = FALSE
 )
@@ -1575,12 +1595,15 @@
 #' layout's n_line_family and, for the pool family, whether the analysis
 #' variables' per-variable Ns differ. The excluded-count rider (appended
 #' whenever cases were excluded before the analysis) is orthogonal to the
-#' form and is applied by the renderer, not encoded here.
+#' form and is applied by the renderer, not encoded here. The header family
+#' (Session 320, the screening layout) has the one form "none": the
+#' caller's own header states the N, so the renderer prints no line and
+#' returns the rider's count to the caller instead.
 #' @keywords internal
 .jst_cps_n_line_rules <- data.frame(
-  family     = c("analysis", "pool", "pool"),
-  unequal_ns = c("any",      "no",   "yes"),
-  form       = c("analysis", "pool", "pool_complete"),
+  family     = c("analysis", "pool", "pool",          "header"),
+  unequal_ns = c("any",      "no",   "yes",           "any"),
+  form       = c("analysis", "pool", "pool_complete", "none"),
   stringsAsFactors = FALSE
 )
 

@@ -71,7 +71,8 @@ regression diagnostic output (jlm only).}
 
 \item{case.processing}{Three-state toggle for the Case Processing
 table -- the block at the top of every analysis function's output
-that accounts for the cases: the original N, each active filter
+(and of \code{jscreen()}'s) that accounts for the cases: the original
+N, each active filter
 (\code{jcomplete}, \code{jsubset}, per-call \code{subset}) with the
 cases it excluded, any cases dropped listwise by the analysis, and
 the N analyzed.
@@ -83,6 +84,9 @@ the table does not print, a one-line N statement takes its place
 in the variable pool, adding the count complete on every variable
 when the per-variable Ns differ, and adding the excluded count
 whenever cases were excluded before the analysis).
+\code{jscreen()} prints no separate line: its header's Cases line
+states the count, adding the excluded count the same way (for example
+\code{Cases: 53 (17 Excluded)}).
 \itemize{
 \item \code{NULL} (auto; the standard tier's default) prints the
 table only when it has an exclusion row to show: a filter is
