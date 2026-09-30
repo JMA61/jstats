@@ -758,6 +758,21 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' (the intercept, continuous predictors, single-contrast dichotomies, factor
 #' terms) pass through unchanged and in place.
 #'
+#' Interaction rows (Session 320, AUDIT-035) are displayed with the parts
+#' joined by " * " in place of R's ":". A two-way interaction with exactly
+#' one multi-category part is grouped like a main-effect block: a header
+#' naming both variables in the term's order with the categorical one's
+#' reference folded in (\code{"SocialSupport * Condition (ref = 1: Control)"})
+#' and one indented category row per dummy (\code{"  2: CBT"}). A two-way
+#' interaction of two multi-category variables is grouped under a header
+#' naming both references, each row naming both categories
+#' (\code{"  2: CBT * 2: South"}). Any other interaction -- no multi-category
+#' part, or three or more parts -- prints as a single flat row, a
+#' multi-category part shown as its category label
+#' (\code{"SocialSupport * Stress * 2: CBT"}). Under
+#' \code{variable.id = "labels"} the variable names in a header or a flat
+#' row are swapped for their labels, as the main-effect rows are.
+#'
 #' The result carries the display label for each row in a leading
 #' \code{.rowlab} column rather than in the row names, so the caller prints it
 #' with \code{row.names = FALSE} and an \code{"ln"} (left, no-trim) alignment
@@ -788,19 +803,25 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 .jst_group_dummy_coefs <- function(disp_df, regs, value_mode, vlmode,
                                     lab_src, show_ref) {
   data_cols <- names(disp_df)
-  if (length(regs) == 0) {
-    out <- data.frame(.rowlab = rownames(disp_df),
-                      as.data.frame(as.matrix(disp_df), stringsAsFactors = FALSE,
-                                    check.names = FALSE),
-                      stringsAsFactors = FALSE, check.names = FALSE)
-    rownames(out) <- NULL
-    colnames(out) <- c(".rowlab", data_cols)
-    return(out)
+
+  # A variable name as it shows in a header or a flat interaction row: its
+  # label under variable.id = "labels", including the cleaned two-level form
+  # "SoughtHelp (1)" -> "Sought help (1)" (the main-effect rows were relabeled
+  # by the caller through the same helper; interaction rows arrive with
+  # their parts cleaned but not relabeled), else the name.
+  var_display <- function(v) {
+    if (identical(vlmode, "labels")) {
+      .jst_relabel_coef_names(v, lab_src, names(lab_src))
+    } else {
+      v
+    }
   }
 
   dummy_to_group <- list()   # dummy column name -> group key (var_name)
   cat_display    <- list()   # dummy column name -> indented category label
   header_display <- list()   # group key -> header label
+  cat_bare       <- list()   # dummy column name -> category label, no indent
+  ref_display    <- list()   # group key -> the reference, value.id form
 
   for (reg in regs) {
     gkey <- reg$var_name
@@ -816,19 +837,61 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     } else {
       gkey
     }
+    ref_display[[gkey]] <- .jst_format_value_labels(reg$codes[reg$ref_idx], vl,
+                                                    value_mode)
     if (isTRUE(show_ref)) {
-      ref_disp  <- .jst_format_value_labels(reg$codes[reg$ref_idx], vl, value_mode)
-      head_name <- paste0(head_name, " (ref = ", ref_disp, ")")
+      head_name <- paste0(head_name, " (ref = ", ref_display[[gkey]], ")")
     }
     header_display[[gkey]] <- head_name
 
     for (j in seq_along(reg$dummy_names)) {
       dn   <- reg$dummy_names[j]
       code <- reg$codes[reg$non_ref_idx[j]]
-      cat_display[[dn]]    <- paste0("  ",
-        .jst_format_value_labels(code, vl, value_mode))
+      cat_bare[[dn]]       <- .jst_format_value_labels(code, vl, value_mode)
+      cat_display[[dn]]    <- paste0("  ", cat_bare[[dn]])
       dummy_to_group[[dn]] <- gkey
     }
+  }
+
+  # An interaction row's display (Session 320): its header key and label,
+  # and its row label; header NULL for a flat row. Parts are split on ":"
+  # outside parentheses, so a computed term's own colon (rare) cannot break
+  # the row apart.
+  split_parts <- function(nm) {
+    chars <- strsplit(nm, "", fixed = TRUE)[[1L]]
+    depth <- 0L; parts <- character(0); cur <- ""
+    for (ch in chars) {
+      if (ch == "(") depth <- depth + 1L
+      if (ch == ")") depth <- depth - 1L
+      if (ch == ":" && depth == 0L) { parts <- c(parts, cur); cur <- "" }
+      else cur <- paste0(cur, ch)
+    }
+    c(parts, cur)
+  }
+  interaction_display <- function(nm) {
+    parts   <- split_parts(nm)
+    is_cat  <- vapply(parts, function(p) !is.null(dummy_to_group[[p]]), logical(1))
+    n_cat   <- sum(is_cat)
+    if (length(parts) == 2L && n_cat >= 1L) {
+      head_parts <- vapply(parts, function(p) {
+        if (!is.null(dummy_to_group[[p]])) var_display(dummy_to_group[[p]])
+        else var_display(p)
+      }, character(1))
+      gkeys <- vapply(parts[is_cat], function(p) dummy_to_group[[p]], character(1))
+      key   <- paste(c(head_parts, gkeys), collapse = "|")
+      head  <- paste(head_parts, collapse = " * ")
+      if (isTRUE(show_ref)) {
+        refs <- vapply(gkeys, function(g) ref_display[[g]], character(1))
+        head <- paste0(head, " (ref = ", paste(refs, collapse = " * "), ")")
+      }
+      row <- paste0("  ", paste(vapply(parts[is_cat], function(p) cat_bare[[p]],
+                                       character(1)), collapse = " * "))
+      return(list(key = key, header = head, row = row))
+    }
+    flat <- vapply(parts, function(p) {
+      if (!is.null(dummy_to_group[[p]])) cat_bare[[p]] else var_display(p)
+    }, character(1))
+    list(key = NULL, header = NULL, row = paste(flat, collapse = " * "))
   }
 
   disp_mat <- as.matrix(disp_df)
@@ -849,6 +912,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
         emitted <- c(emitted, g)
       }
       labels <- c(labels, cat_display[[nm]])
+      body[[length(body) + 1L]] <- disp_mat[i, ]
+    } else if (grepl(":", nm, fixed = TRUE)) {
+      idisp <- interaction_display(nm)
+      if (!is.null(idisp$key) && !(idisp$key %in% emitted)) {
+        labels <- c(labels, idisp$header)
+        body[[length(body) + 1L]] <- blank
+        emitted <- c(emitted, idisp$key)
+      }
+      labels <- c(labels, idisp$row)
       body[[length(body) + 1L]] <- disp_mat[i, ]
     } else {
       labels <- c(labels, nm)
@@ -929,44 +1001,69 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   Default character(0).
 #'
 #' @return Character vector of the same length as coef_names, with factor
-#'   coefficient names separated.
+#'   coefficient names separated. An interaction name (\code{"a:b"}) has
+#'   each part cleaned by the same rules and keeps its colon (Session 320),
+#'   so the row's parts match their main-effect rows -- \code{"SoughtHelp
+#'   (1)"} in both places -- and the grouped display can still split it.
 #'
 #' @keywords internal
 .jst_clean_coef_names <- function(coef_names, data, iv_names, sep = "-",
                                   skip = character(0)) {
-  cleaned <- coef_names
-  for (v in iv_names) {
-    if (v %in% skip) next
-    if (!v %in% names(data)) next
-    col <- data[[v]]
-    if (is.factor(col)) {
-      lvls <- levels(col)
-      if (length(lvls) < 2) next
-      for (lvl in lvls[-1]) {
-        old_name <- paste0(v, lvl)
-        new_name <- paste0(v, " (", lvl, ")")
-        cleaned[cleaned == old_name] <- new_name
-      }
-    } else if (is.numeric(col) || haven::is.labelled(col)) {
-      vals <- .jst_as_numeric(col)
-      u    <- sort(unique(vals[!is.na(vals)]))
-      # Annotate only a two-level predictor whose codes differ by exactly 1,
-      # where the numeric slope equals the higher-vs-lower category contrast.
-      # Wider-spaced codes carry a genuine per-unit slope, so the bare name
-      # (no category parenthetical) is the honest label in that case.
-      if (length(u) == 2L && (u[2L] - u[1L]) == 1) {
-        hi       <- u[2L]
-        hi_label <- as.character(hi)
-        if (haven::is.labelled(col)) {
-          vl <- labelled::val_labels(col)
-          m  <- which(vl == hi)
-          if (length(m) > 0L) hi_label <- names(vl)[m[1L]]
+  # The rules, applied to ONE name: the same exact-match replacements the
+  # whole-vector form made, so a name that is not a factor level or a
+  # two-level predictor comes back unchanged.
+  clean_one <- function(nm) {
+    for (v in iv_names) {
+      if (v %in% skip) next
+      if (!v %in% names(data)) next
+      col <- data[[v]]
+      if (is.factor(col)) {
+        lvls <- levels(col)
+        if (length(lvls) < 2) next
+        for (lvl in lvls[-1]) {
+          if (identical(nm, paste0(v, lvl))) return(paste0(v, " (", lvl, ")"))
         }
-        cleaned[cleaned == v] <- paste0(v, " (", hi_label, ")")
+      } else if (is.numeric(col) || haven::is.labelled(col)) {
+        vals <- .jst_as_numeric(col)
+        u    <- sort(unique(vals[!is.na(vals)]))
+        # Annotate only a two-level predictor whose codes differ by exactly 1,
+        # where the numeric slope equals the higher-vs-lower category contrast.
+        # Wider-spaced codes carry a genuine per-unit slope, so the bare name
+        # (no category parenthetical) is the honest label in that case.
+        if (length(u) == 2L && (u[2L] - u[1L]) == 1 && identical(nm, v)) {
+          hi       <- u[2L]
+          hi_label <- as.character(hi)
+          if (haven::is.labelled(col)) {
+            vl <- labelled::val_labels(col)
+            m  <- which(vl == hi)
+            if (length(m) > 0L) hi_label <- names(vl)[m[1L]]
+          }
+          return(paste0(v, " (", hi_label, ")"))
+        }
       }
     }
+    nm
   }
-  cleaned
+  # Split an interaction name on the colons OUTSIDE parentheses, so a
+  # computed term's own colon (rare) is not read as a product.
+  split_parts <- function(nm) {
+    chars <- strsplit(nm, "", fixed = TRUE)[[1L]]
+    depth <- 0L; parts <- character(0); cur <- ""
+    for (ch in chars) {
+      if (ch == "(") depth <- depth + 1L
+      if (ch == ")") depth <- depth - 1L
+      if (ch == ":" && depth == 0L) { parts <- c(parts, cur); cur <- "" }
+      else cur <- paste0(cur, ch)
+    }
+    c(parts, cur)
+  }
+  vapply(coef_names, function(nm) {
+    if (grepl(":", nm, fixed = TRUE)) {
+      paste(vapply(split_parts(nm), clean_one, character(1)), collapse = ":")
+    } else {
+      clean_one(nm)
+    }
+  }, character(1), USE.NAMES = FALSE)
 }
 
 #' Internal helper: relabel cleaned coefficient names with variable labels
@@ -1551,13 +1648,43 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{"regular"} (default) -- standardized betas with the prevalence-scaled
 #'   betas of dummy and dichotomous predictors suppressed, since a fully
 #'   standardized beta on a 0/1 indicator is not comparable to the continuous
-#'   betas; \code{"all"} -- the same standardized betas with nothing suppressed;
-#'   \code{"gelman"} -- Gelman (2008) scaling, where continuous predictors are
-#'   placed on a divide-by-two-standard-deviations scale and binary predictors
-#'   keep their raw 0/1 contrast (shown for all predictors, and headed
-#'   "Gelman beta"); or \code{"none"} -- omit the column. The returned object
-#'   always carries both the full regular betas (\code{beta}) and the full
-#'   Gelman betas (\code{beta_gelman}) regardless of this display choice.
+#'   betas (an interaction row built on such a predictor is suppressed with
+#'   it); \code{"all"} -- the same standardized betas with nothing suppressed;
+#'   \code{"gelman"} -- Gelman (2008) scaling (shown for all predictors, and
+#'   headed "Gelman beta"); or \code{"none"} -- omit the column. The returned
+#'   object always carries both the full regular betas (\code{beta}) and the
+#'   full Gelman betas (\code{beta_gelman}) regardless of this display choice.
+#'
+#'   The regular betas come from refitting the model on z-scored variables,
+#'   so in a model with an interaction the product is formed from the
+#'   standardized predictors (Aiken and West, 1991). Some software
+#'   standardizes the product column itself instead; see the section
+#'   Comparing with other software.
+#'
+#'   The Gelman betas come from refitting the model with every predictor
+#'   centered, a continuous predictor also divided by two standard
+#'   deviations and a binary predictor (a 0/1 variable, or a category's
+#'   dummy variable) left on its one-unit scale; the outcome keeps its own
+#'   units. A continuous predictor's Gelman beta is the change in the outcome
+#'   for a move from one standard deviation below its mean to one above; a
+#'   binary predictor's is the difference between its two groups; the two
+#'   are comparable, which is the point of the scaling. Every 0/1 column is
+#'   centered, including the dummy variables of a categorical predictor with
+#'   three or more categories, which \code{arm::standardize()} leaves at 0/1
+#'   (its rescaling reaches only the variables named in the formula), so on
+#'   such a model a main effect that interacts with that predictor is the
+#'   sample-average effect here and the reference-category effect there. A
+#'   computed term such as \code{I(x^2)} is standardized as its own column in
+#'   both regimes, where the paper would standardize \code{x} and recompute
+#'   the term; a known difference.
+#'
+#'   In a model with an interaction, both refits center the predictors, so a
+#'   main effect's standardized beta is its effect at the average of the
+#'   predictor it interacts with, while its b is the effect when that
+#'   predictor is 0; the two can differ in sign. A two-line note under the
+#'   coefficient table says so, and points to the section Comparing with
+#'   other software, whenever a model with an interaction shows a
+#'   standardized column.
 #' @param diagnostics Logical, character vector, or NULL. If TRUE, prints VIF
 #'   table and diagnostic plots. If a character vector, specifies which
 #'   diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
@@ -1600,6 +1727,45 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
 #'
+#' @section Comparing with other software:
+#'   Two conventions exist for the standardized coefficients of a model with
+#'   an interaction, and they give different numbers for the same model.
+#'
+#'   The first convention standardizes the inputs and forms the product from
+#'   them. Both standardized columns in jstats follow it:
+#'   \code{std = "regular"} refits the model on z-scored variables (Aiken and
+#'   West, 1991), and \code{std = "gelman"} refits it on centered, rescaled
+#'   predictors (Gelman, 2008). In R, \code{arm::standardize()} follows it
+#'   for the Gelman scaling, and the default refit of
+#'   \code{effectsize::standardize_parameters()} for the regular one; both
+#'   agree with jstats when every predictor is numeric. Both differ from
+#'   jstats on a categorical predictor of three or more categories. jstats
+#'   rescales its dummy variables (see \code{std}); those packages take the
+#'   predictor as an R factor (base R's form for a categorical variable,
+#'   where jstats uses a \code{jdummy()} registration) and leave its dummy
+#'   variables at 0/1. Some of their betas then differ, among them the beta
+#'   of a main effect that interacts with that predictor.
+#'
+#'   The second convention standardizes the product column itself, as though
+#'   the product were an ordinary predictor. SPSS REGRESSION reports this
+#'   beta, since there the product is computed as a new variable and entered
+#'   like any other, and
+#'   \code{effectsize::standardize_parameters(method = "basic")} gives it in
+#'   R. On this convention the betas of the product and of the main effects
+#'   differ from those in jstats.
+#'
+#'   Only the standardized columns differ: b, its standard error, t, p and
+#'   R-squared are the same under both. The same split appears within
+#'   jstats. A product computed by hand and entered as its own variable (a
+#'   column \code{xz} made from \code{x * z}, then \code{y ~ x + z + xz})
+#'   fits the same model as \code{y ~ x * z}, but jstats cannot see its
+#'   parts, so its standardized columns follow the second convention.
+#'
+#'   jstats follows the first convention and recommends it: enter an
+#'   interaction in the formula, as \code{x * z}. If you prefer the second
+#'   convention instead -- to match SPSS REGRESSION, say -- enter the product
+#'   as its own variable.
+#'
 #' @examples
 #' # With explicit data frame (named argument)
 #' jlm(WellbeingScore ~ Income + Age, data = community)
@@ -1639,6 +1805,19 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #'     numeric = c("Education", "Environment4"), categorical = "Smoker")
 #'
+#' # STANDARDIZED COEFFICIENTS
+#' #
+#' # The default (std = "regular") leaves the beta blank on the dummy rows.
+#' # std = "all" shows it there too; std = "gelman" puts continuous and
+#' # dummy predictors on one comparable scale; std = "none" drops the column.
+#' jlm(WellbeingScore ~ Region + Age, std = "all")
+#' jlm(WellbeingScore ~ Region + Age, std = "gelman")
+#' jlm(WellbeingScore ~ Region + Age, std = "none")
+#'
+#' # An interaction, entered in the formula so the standardized column is
+#' # built from the inputs (see the section Comparing with other software)
+#' jlm(Flourishing ~ SocialSupport * Stress, data = clinic)
+#'
 #' # jdummy(community, NULL) clears its registration -- not normally needed.
 #' # You'd clear a default or registration only to undo a mistake, or -- as
 #' # in this example -- to reset state for testing.
@@ -1668,6 +1847,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{ref.categories} setting. Applies to \code{jlm()} and
 #'   \code{jlogistic()} only, since they are the functions that produce
 #'   dummy-coded coefficient tables.
+#' @references
+#' Aiken, L. S., and West, S. G. (1991). \emph{Multiple Regression: Testing
+#' and Interpreting Interactions}. Sage.
+#'
+#' Gelman, A. (2008). Scaling regression inputs by dividing by two standard
+#' deviations. \emph{Statistics in Medicine}, 27(15), 2865-2873.
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL, count = NULL,
                 ci = NULL, std = "regular",
@@ -2347,28 +2532,45 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # in fact wrote the NA into the returned value.)
 
   # Gelman (2008) standardized betas, computed alongside the regular ones and
-  # carried on the return regardless of which regime is displayed. Continuous
-  # predictors are placed on a divide-by-2-SD scale; binary predictors (0/1
-  # indicators, including each factor dummy column) keep their raw 0/1 contrast;
-  # the outcome is left in its natural units (arm::standardize's standardize.y =
-  # FALSE default -- built here, not depended on). Because the outcome is
-  # unscaled, a Gelman beta is just the raw coefficient rescaled per predictor --
-  # b * 2 * SD(x) for a continuous column, b unchanged for a binary column -- so
-  # it is read off the fitted model with no refit. Centering shifts only the
-  # intercept, not the slopes, so it does not affect this column.
-  gelman_b        <- rep(NA_real_, nrow(coefs))
-  names(gelman_b) <- rownames(coefs)
-  b_named         <- stats::setNames(coefs$b, rownames(coefs))
-  mm              <- stats::model.matrix(model)
-  colnames(mm)    <- .jst_unbacktick(colnames(mm))
-  for (nm in rownames(coefs)) {
-    if (identical(nm, "(Intercept)")) next
-    if (!nm %in% colnames(mm)) next
-    col   <- mm[, nm]
-    n_uni <- length(unique(col))
-    gelman_b[nm] <- if (n_uni <= 2L) b_named[[nm]]
-                    else b_named[[nm]] * 2 * stats::sd(col)
+  # carried on the return regardless of which regime is displayed. The
+  # paper's procedure, as a REFIT (Session 320): every predictor column of
+  # the model frame is centered, and a continuous one is also divided by two
+  # standard deviations; a binary one -- a 0/1 variable or a category's
+  # dummy column, however it arose -- is centered and not rescaled ("the
+  # binary inputs are simply shifted to have mean zero and are not
+  # rescaled"); the outcome stays in its own units. The formula is then
+  # refit on that frame, so an interaction's product is formed from the
+  # rescaled inputs ("we standardize income and ideology, and interact
+  # these standardized inputs; we do not directly standardize the
+  # interaction"). Until v0.9.198 this column was read off the original fit
+  # as b * 2 * SD(x), which is the same number in a model without an
+  # interaction and a wrong one with: there the main effects were left at
+  # the other predictor's 0 instead of its average, and the product row was
+  # scaled by the SD of the product column. Every 0/1 column is centered,
+  # including the dummies of a three-or-more-category variable, which
+  # arm::standardize() leaves at 0/1 because it rescales the variables named
+  # in the formula and a factor's dummies do not exist until the fit; the
+  # paper's rule ("we also center each input variable to have a mean of
+  # zero so that interactions are more interpretable") is applied to all of
+  # them. A computed term (I(x^2)) is rescaled as its own column here, as
+  # the regular refit above treats it; the paper would rescale x and
+  # recompute the term -- logged as its own item at S320.
+  mf_gel <- mf
+  for (nm in names(mf_gel)[-1L]) {
+    col <- mf_gel[[nm]]
+    if (!is.numeric(col)) next
+    n_uni <- length(unique(col[!is.na(col)]))
+    ctr   <- col - mean(col, na.rm = TRUE)
+    mf_gel[[nm]] <- if (n_uni <= 2L) ctr
+                    else ctr / (2 * stats::sd(col, na.rm = TRUE))
   }
+  gelman_coefs        <- stats::coef(stats::lm(formula, data = mf_gel))
+  names(gelman_coefs) <- .jst_unbacktick(names(gelman_coefs))
+  gelman_b            <- rep(NA_real_, nrow(coefs))
+  names(gelman_b)     <- rownames(coefs)
+  common_g            <- intersect(names(gelman_coefs), names(gelman_b))
+  gelman_b[common_g]  <- gelman_coefs[common_g]
+  if ("(Intercept)" %in% names(gelman_b)) gelman_b["(Intercept)"] <- NA_real_
 
   # Display-suppression set for the default "regular" regime: every 0/1
   # indicator, whose fully-standardized beta is scaled by category prevalence
@@ -2393,6 +2595,17 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     col <- mf[[nm]]
     if (is.numeric(col) && length(unique(stats::na.omit(col))) == 2L &&
         nm %in% rownames(coefs)) {
+      regular_blank <- c(regular_blank, nm)
+    }
+  }
+  # An interaction row built on any of those columns (Age:Region_South,
+  # SocialSupport:SoughtHelp) is suppressed with them (Session 320,
+  # AUDIT-035): its beta is the product of the standardized inputs, so the
+  # dummy's prevalence-scaled SD is a factor of it. Shown under std = "all",
+  # and always in the Gelman column, where a 0/1 contrast is the benchmark.
+  for (nm in rownames(coefs)) {
+    if (!grepl(":", nm, fixed = TRUE)) next
+    if (any(strsplit(nm, ":", fixed = TRUE)[[1L]] %in% regular_blank)) {
       regular_blank <- c(regular_blank, nm)
     }
   }
@@ -2555,6 +2768,25 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                    col.names = c("", coef_col_names),
                    align     = c("ln", coef_align),
                    row.names = FALSE)
+
+  # A note under the table, one blank line below it, when the model has an
+  # interaction and a standardized column is shown (Session 320). Both
+  # standardized columns come from a refit on centered predictors, so a main
+  # effect's beta is its effect at the average of the predictor it interacts
+  # with, while its b is the effect at that predictor's 0 -- the same row can
+  # carry opposite signs, which reads as an error to anyone who does not know
+  # why -- and software that standardizes a computed product column reports
+  # different betas for the same model. The explanation does not fit a line,
+  # so the note points to ?jlm's "Comparing with other software" section. A
+  # column legend, printed with its table at every level (the jscreen star
+  # legend's precedent; voice reference, Rule M ruling S320).
+  if (show_beta_col && any(grepl(":", term_keys, fixed = TRUE))) {
+    cat("\n")
+    .jst_msg_out("In a model with an interaction, ", beta_header, " comes ",
+                 "from centered predictors, so it can differ in sign from b ",
+                 "and from some other software's ", beta_header, ".\n",
+                 "See ?jlm.")
+  }
 
   # Outcome named beneath the table, following variable.id; folds into the
   # legend under the legend modes (see .jst_print_outcome_line).

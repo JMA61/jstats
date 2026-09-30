@@ -77,13 +77,43 @@ b +/- t(.975, residual df) * SE.}
 \code{"regular"} (default) -- standardized betas with the prevalence-scaled
 betas of dummy and dichotomous predictors suppressed, since a fully
 standardized beta on a 0/1 indicator is not comparable to the continuous
-betas; \code{"all"} -- the same standardized betas with nothing suppressed;
-\code{"gelman"} -- Gelman (2008) scaling, where continuous predictors are
-placed on a divide-by-two-standard-deviations scale and binary predictors
-keep their raw 0/1 contrast (shown for all predictors, and headed
-"Gelman beta"); or \code{"none"} -- omit the column. The returned object
-always carries both the full regular betas (\code{beta}) and the full
-Gelman betas (\code{beta_gelman}) regardless of this display choice.}
+betas (an interaction row built on such a predictor is suppressed with
+it); \code{"all"} -- the same standardized betas with nothing suppressed;
+\code{"gelman"} -- Gelman (2008) scaling (shown for all predictors, and
+headed "Gelman beta"); or \code{"none"} -- omit the column. The returned
+object always carries both the full regular betas (\code{beta}) and the
+full Gelman betas (\code{beta_gelman}) regardless of this display choice.
+
+The regular betas come from refitting the model on z-scored variables,
+so in a model with an interaction the product is formed from the
+standardized predictors (Aiken and West, 1991). Some software
+standardizes the product column itself instead; see the section
+Comparing with other software.
+
+The Gelman betas come from refitting the model with every predictor
+centered, a continuous predictor also divided by two standard
+deviations and a binary predictor (a 0/1 variable, or a category's
+dummy variable) left on its one-unit scale; the outcome keeps its own
+units. A continuous predictor's Gelman beta is the change in the outcome
+for a move from one standard deviation below its mean to one above; a
+binary predictor's is the difference between its two groups; the two
+are comparable, which is the point of the scaling. Every 0/1 column is
+centered, including the dummy variables of a categorical predictor with
+three or more categories, which \code{arm::standardize()} leaves at 0/1
+(its rescaling reaches only the variables named in the formula), so on
+such a model a main effect that interacts with that predictor is the
+sample-average effect here and the reference-category effect there. A
+computed term such as \code{I(x^2)} is standardized as its own column in
+both regimes, where the paper would standardize \code{x} and recompute
+the term; a known difference.
+
+In a model with an interaction, both refits center the predictors, so a
+main effect's standardized beta is its effect at the average of the
+predictor it interacts with, while its b is the effect when that
+predictor is 0; the two can differ in sign. A two-line note under the
+coefficient table says so, and points to the section Comparing with
+other software, whenever a model with an interaction shows a
+standardized column.}
 
 \item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints VIF
 table and diagnostic plots. If a character vector, specifies which
@@ -226,6 +256,47 @@ columns (\code{poly(x, 2)}, spline bases) or a categorical result
 (\code{cut(x, 3)}) are not supported inline: create the derived variable
 as a column of the data first, then name that column in the formula.
 }
+\section{Comparing with other software}{
+
+Two conventions exist for the standardized coefficients of a model with
+an interaction, and they give different numbers for the same model.
+
+The first convention standardizes the inputs and forms the product from
+them. Both standardized columns in jstats follow it:
+\code{std = "regular"} refits the model on z-scored variables (Aiken and
+West, 1991), and \code{std = "gelman"} refits it on centered, rescaled
+predictors (Gelman, 2008). In R, \code{arm::standardize()} follows it
+for the Gelman scaling, and the default refit of
+\code{effectsize::standardize_parameters()} for the regular one; both
+agree with jstats when every predictor is numeric. Both differ from
+jstats on a categorical predictor of three or more categories. jstats
+rescales its dummy variables (see \code{std}); those packages take the
+predictor as an R factor (base R's form for a categorical variable,
+where jstats uses a \code{jdummy()} registration) and leave its dummy
+variables at 0/1. Some of their betas then differ, among them the beta
+of a main effect that interacts with that predictor.
+
+The second convention standardizes the product column itself, as though
+the product were an ordinary predictor. SPSS REGRESSION reports this
+beta, since there the product is computed as a new variable and entered
+like any other, and
+\code{effectsize::standardize_parameters(method = "basic")} gives it in
+R. On this convention the betas of the product and of the main effects
+differ from those in jstats.
+
+Only the standardized columns differ: b, its standard error, t, p and
+R-squared are the same under both. The same split appears within
+jstats. A product computed by hand and entered as its own variable (a
+column \code{xz} made from \code{x * z}, then \code{y ~ x + z + xz})
+fits the same model as \code{y ~ x * z}, but jstats cannot see its
+parts, so its standardized columns follow the second convention.
+
+jstats follows the first convention and recommends it: enter an
+interaction in the formula, as \code{x * z}. If you prefer the second
+convention instead -- to match SPSS REGRESSION, say -- enter the product
+as its own variable.
+}
+
 \examples{
 # With explicit data frame (named argument)
 jlm(WellbeingScore ~ Income + Age, data = community)
@@ -265,12 +336,32 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 jlm(WellbeingScore ~ Education + Environment4 + Smoker,
     numeric = c("Education", "Environment4"), categorical = "Smoker")
 
+# STANDARDIZED COEFFICIENTS
+#
+# The default (std = "regular") leaves the beta blank on the dummy rows.
+# std = "all" shows it there too; std = "gelman" puts continuous and
+# dummy predictors on one comparable scale; std = "none" drops the column.
+jlm(WellbeingScore ~ Region + Age, std = "all")
+jlm(WellbeingScore ~ Region + Age, std = "gelman")
+jlm(WellbeingScore ~ Region + Age, std = "none")
+
+# An interaction, entered in the formula so the standardized column is
+# built from the inputs (see the section Comparing with other software)
+jlm(Flourishing ~ SocialSupport * Stress, data = clinic)
+
 # jdummy(community, NULL) clears its registration -- not normally needed.
 # You'd clear a default or registration only to undo a mistake, or -- as
 # in this example -- to reset state for testing.
 jdummy(community, NULL)
 juse(NULL)
 
+}
+\references{
+Aiken, L. S., and West, S. G. (1991). \emph{Multiple Regression: Testing
+and Interpreting Interactions}. Sage.
+
+Gelman, A. (2008). Scaling regression inputs by dividing by two standard
+deviations. \emph{Statistics in Medicine}, 27(15), 2865-2873.
 }
 \seealso{
 \code{\link{jstats}} for the package overview,

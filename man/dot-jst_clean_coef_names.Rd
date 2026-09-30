@@ -28,7 +28,10 @@ Default character(0).}
 }
 \value{
 Character vector of the same length as coef_names, with factor
-coefficient names separated.
+coefficient names separated. An interaction name (\code{"a:b"}) has
+each part cleaned by the same rules and keeps its colon (Session 320),
+so the row's parts match their main-effect rows -- \code{"SoughtHelp
+  (1)"} in both places -- and the grouped display can still split it.
 }
 \description{
 By default, R concatenates factor variable names with level names when

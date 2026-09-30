@@ -24,7 +24,11 @@ absence, not by a "None" marker). Used by jlm and jlogistic in the
 "legend" and "legend.bottom" variable.id modes. Predictors are listed by
 their original formula names (e.g. "Program"), not expanded dummy columns;
 per-dummy-level value labelling is handled separately by the value.id
-coefficient work. Matches the flat legend's indented-lines + trailing-blank
-structure so co-located blocks space the same way.
+coefficient work. Every predictor is listed (Session 320, AUDIT-036): a
+computed term such as \code{I(ScreenTime > 4)} is not a column of the
+label source, so it shows as its bare text; until v0.9.198 it was left out
+and the block disagreed with the VIF table beneath it. Matches the flat
+legend's indented-lines + trailing-blank structure so co-located blocks
+space the same way.
 }
 \keyword{internal}

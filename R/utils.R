@@ -1571,8 +1571,12 @@ jai <- function(setup = NULL, path = NULL) {
 #' "legend" and "legend.bottom" variable.id modes. Predictors are listed by
 #' their original formula names (e.g. "Program"), not expanded dummy columns;
 #' per-dummy-level value labelling is handled separately by the value.id
-#' coefficient work. Matches the flat legend's indented-lines + trailing-blank
-#' structure so co-located blocks space the same way.
+#' coefficient work. Every predictor is listed (Session 320, AUDIT-036): a
+#' computed term such as \code{I(ScreenTime > 4)} is not a column of the
+#' label source, so it shows as its bare text; until v0.9.198 it was left out
+#' and the block disagreed with the VIF table beneath it. Matches the flat
+#' legend's indented-lines + trailing-blank structure so co-located blocks
+#' space the same way.
 #'
 #' @param data A data frame (or pre-conversion label source) whose columns may
 #'   carry variable labels.
@@ -1582,6 +1586,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' @keywords internal
 .print_model_var_labels <- function(data, dv_name, iv_names) {
   has_label <- function(v) {
+    if (!v %in% names(data)) return(FALSE)
     vl <- labelled::var_label(data[[v]])
     !is.null(vl) && length(vl) > 0 && !is.na(vl[1]) && nzchar(vl[1]) &&
       !identical(as.character(vl[1]), v)
@@ -1589,7 +1594,7 @@ jai <- function(setup = NULL, path = NULL) {
   # Width for the "=" column: the widest name that actually shows a label,
   # taken across BOTH roles so the outcome and predictors align as one column.
   shown   <- c(if (length(dv_name) == 1L && dv_name %in% names(data)) dv_name,
-               iv_names[iv_names %in% names(data)])
+               iv_names)
   labeled <- shown[vapply(shown, has_label, logical(1))]
   w <- if (length(labeled) > 0L) max(nchar(labeled)) else 0L
   fmt_line <- function(v) {
@@ -1607,10 +1612,9 @@ jai <- function(setup = NULL, path = NULL) {
   if (length(dv_name) == 1L && dv_name %in% names(data)) {
     block <- c(block, "Outcome:", fmt_line(dv_name))
   }
-  iv_present <- iv_names[iv_names %in% names(data)]
-  if (length(iv_present) > 0L) {
+  if (length(iv_names) > 0L) {
     block <- c(block, "Predictors:",
-               vapply(iv_present, fmt_line, character(1), USE.NAMES = FALSE))
+               vapply(iv_names, fmt_line, character(1), USE.NAMES = FALSE))
   }
   if (length(block) > 0L) {
     cat(paste(block, collapse = "\n"))
