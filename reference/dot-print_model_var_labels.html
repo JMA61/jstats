@@ -8,8 +8,12 @@ absence, not by a &quot;None&quot; marker). Used by jlm and jlogistic in the
 &quot;legend&quot; and &quot;legend.bottom&quot; variable.id modes. Predictors are listed by
 their original formula names (e.g. &quot;Program&quot;), not expanded dummy columns;
 per-dummy-level value labelling is handled separately by the value.id
-coefficient work. Matches the flat legend's indented-lines + trailing-blank
-structure so co-located blocks space the same way."><meta property="og:description" content="The regression layout's replacement for the flat .print_var_labels
+coefficient work. Every predictor is listed (Session 320, AUDIT-036): a
+computed term such as I(ScreenTime &amp;gt; 4) is not a column of the
+label source, so it shows as its bare text; until v0.9.198 it was left out
+and the block disagreed with the VIF table beneath it. Matches the flat
+legend's indented-lines + trailing-blank structure so co-located blocks
+space the same way."><meta property="og:description" content="The regression layout's replacement for the flat .print_var_labels
 list: lists a model's variables grouped by role – the outcome first, then
 the predictors. A variable with a label that differs from its name shows as
 &quot;name = label&quot;; a variable with no label (or a label equal to its name)
@@ -18,8 +22,12 @@ absence, not by a &quot;None&quot; marker). Used by jlm and jlogistic in the
 &quot;legend&quot; and &quot;legend.bottom&quot; variable.id modes. Predictors are listed by
 their original formula names (e.g. &quot;Program&quot;), not expanded dummy columns;
 per-dummy-level value labelling is handled separately by the value.id
-coefficient work. Matches the flat legend's indented-lines + trailing-blank
-structure so co-located blocks space the same way."></head><body>
+coefficient work. Every predictor is listed (Session 320, AUDIT-036): a
+computed term such as I(ScreenTime &amp;gt; 4) is not a column of the
+label source, so it shows as its bare text; until v0.9.198 it was left out
+and the block disagreed with the VIF table beneath it. Matches the flat
+legend's indented-lines + trailing-blank structure so co-located blocks
+space the same way."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -27,7 +35,7 @@ structure so co-located blocks space the same way."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.197</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.198</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,8 +70,12 @@ absence, not by a "None" marker). Used by jlm and jlogistic in the
 "legend" and "legend.bottom" variable.id modes. Predictors are listed by
 their original formula names (e.g. "Program"), not expanded dummy columns;
 per-dummy-level value labelling is handled separately by the value.id
-coefficient work. Matches the flat legend's indented-lines + trailing-blank
-structure so co-located blocks space the same way.</p>
+coefficient work. Every predictor is listed (Session 320, AUDIT-036): a
+computed term such as <code>I(ScreenTime &gt; 4)</code> is not a column of the
+label source, so it shows as its bare text; until v0.9.198 it was left out
+and the block disagreed with the VIF table beneath it. Matches the flat
+legend's indented-lines + trailing-blank structure so co-located blocks
+space the same way.</p>
     </div>
 
     <div class="section level2">

@@ -54,6 +54,21 @@ whose remaining columns are `disp_df`'s columns verbatim.
 
 ## Details
 
+Interaction rows (Session 320, AUDIT-035) are displayed with the parts
+joined by " \* " in place of R's ":". A two-way interaction with exactly
+one multi-category part is grouped like a main-effect block: a header
+naming both variables in the term's order with the categorical one's
+reference folded in (`"SocialSupport * Condition (ref = 1: Control)"`)
+and one indented category row per dummy (`" 2: CBT"`). A two-way
+interaction of two multi-category variables is grouped under a header
+naming both references, each row naming both categories
+(`" 2: CBT * 2: South"`). Any other interaction – no multi-category
+part, or three or more parts – prints as a single flat row, a
+multi-category part shown as its category label
+(`"SocialSupport * Stress * 2: CBT"`). Under `variable.id = "labels"`
+the variable names in a header or a flat row are swapped for their
+labels, as the main-effect rows are.
+
 The result carries the display label for each row in a leading `.rowlab`
 column rather than in the row names, so the caller prints it with
 `row.names = FALSE` and an `"ln"` (left, no-trim) alignment on that

@@ -21,7 +21,7 @@ terms) pass through unchanged and in place."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.197</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.198</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -103,7 +103,21 @@ labels and whose remaining columns are <code>disp_df</code>'s columns verbatim.<
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The result carries the display label for each row in a leading
+    <p>Interaction rows (Session 320, AUDIT-035) are displayed with the parts
+joined by " * " in place of R's ":". A two-way interaction with exactly
+one multi-category part is grouped like a main-effect block: a header
+naming both variables in the term's order with the categorical one's
+reference folded in (<code>"SocialSupport * Condition (ref = 1: Control)"</code>)
+and one indented category row per dummy (<code>"  2: CBT"</code>). A two-way
+interaction of two multi-category variables is grouped under a header
+naming both references, each row naming both categories
+(<code>"  2: CBT * 2: South"</code>). Any other interaction – no multi-category
+part, or three or more parts – prints as a single flat row, a
+multi-category part shown as its category label
+(<code>"SocialSupport * Stress * 2: CBT"</code>). Under
+<code>variable.id = "labels"</code> the variable names in a header or a flat
+row are swapped for their labels, as the main-effect rows are.</p>
+<p>The result carries the display label for each row in a leading
 <code>.rowlab</code> column rather than in the row names, so the caller prints it
 with <code>row.names = FALSE</code> and an <code>"ln"</code> (left, no-trim) alignment
 on that column to preserve the indent. Using a real column sidesteps the

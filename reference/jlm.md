@@ -108,14 +108,44 @@ jlm(
   `"regular"` (default) – standardized betas with the prevalence-scaled
   betas of dummy and dichotomous predictors suppressed, since a fully
   standardized beta on a 0/1 indicator is not comparable to the
-  continuous betas; `"all"` – the same standardized betas with nothing
-  suppressed; `"gelman"` – Gelman (2008) scaling, where continuous
-  predictors are placed on a divide-by-two-standard-deviations scale and
-  binary predictors keep their raw 0/1 contrast (shown for all
+  continuous betas (an interaction row built on such a predictor is
+  suppressed with it); `"all"` – the same standardized betas with
+  nothing suppressed; `"gelman"` – Gelman (2008) scaling (shown for all
   predictors, and headed "Gelman beta"); or `"none"` – omit the column.
   The returned object always carries both the full regular betas
   (`beta`) and the full Gelman betas (`beta_gelman`) regardless of this
   display choice.
+
+  The regular betas come from refitting the model on z-scored variables,
+  so in a model with an interaction the product is formed from the
+  standardized predictors (Aiken and West, 1991). Some software
+  standardizes the product column itself instead; see the section
+  Comparing with other software.
+
+  The Gelman betas come from refitting the model with every predictor
+  centered, a continuous predictor also divided by two standard
+  deviations and a binary predictor (a 0/1 variable, or a category's
+  dummy variable) left on its one-unit scale; the outcome keeps its own
+  units. A continuous predictor's Gelman beta is the change in the
+  outcome for a move from one standard deviation below its mean to one
+  above; a binary predictor's is the difference between its two groups;
+  the two are comparable, which is the point of the scaling. Every 0/1
+  column is centered, including the dummy variables of a categorical
+  predictor with three or more categories, which `arm::standardize()`
+  leaves at 0/1 (its rescaling reaches only the variables named in the
+  formula), so on such a model a main effect that interacts with that
+  predictor is the sample-average effect here and the reference-category
+  effect there. A computed term such as `I(x^2)` is standardized as its
+  own column in both regimes, where the paper would standardize `x` and
+  recompute the term; a known difference.
+
+  In a model with an interaction, both refits center the predictors, so
+  a main effect's standardized beta is its effect at the average of the
+  predictor it interacts with, while its b is the effect when that
+  predictor is 0; the two can differ in sign. A two-line note under the
+  coefficient table says so, and points to the section Comparing with
+  other software, whenever a model with an interaction shows a
+  standardized column.
 
 - diagnostics:
 
@@ -330,6 +360,55 @@ numeric or logical column. Terms that produce several columns
 (`poly(x, 2)`, spline bases) or a categorical result (`cut(x, 3)`) are
 not supported inline: create the derived variable as a column of the
 data first, then name that column in the formula.
+
+## Comparing with other software
+
+Two conventions exist for the standardized coefficients of a model with
+an interaction, and they give different numbers for the same model.
+
+The first convention standardizes the inputs and forms the product from
+them. Both standardized columns in jstats follow it: `std = "regular"`
+refits the model on z-scored variables (Aiken and West, 1991), and
+`std = "gelman"` refits it on centered, rescaled predictors (Gelman,
+2008). In R, `arm::standardize()` follows it for the Gelman scaling, and
+the default refit of `effectsize::standardize_parameters()` for the
+regular one; both agree with jstats when every predictor is numeric.
+Both differ from jstats on a categorical predictor of three or more
+categories. jstats rescales its dummy variables (see `std`); those
+packages take the predictor as an R factor (base R's form for a
+categorical variable, where jstats uses a
+[`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md)
+registration) and leave its dummy variables at 0/1. Some of their betas
+then differ, among them the beta of a main effect that interacts with
+that predictor.
+
+The second convention standardizes the product column itself, as though
+the product were an ordinary predictor. SPSS REGRESSION reports this
+beta, since there the product is computed as a new variable and entered
+like any other, and
+`effectsize::standardize_parameters(method = "basic")` gives it in R. On
+this convention the betas of the product and of the main effects differ
+from those in jstats.
+
+Only the standardized columns differ: b, its standard error, t, p and
+R-squared are the same under both. The same split appears within jstats.
+A product computed by hand and entered as its own variable (a column
+`xz` made from `x * z`, then `y ~ x + z + xz`) fits the same model as
+`y ~ x * z`, but jstats cannot see its parts, so its standardized
+columns follow the second convention.
+
+jstats follows the first convention and recommends it: enter an
+interaction in the formula, as `x * z`. If you prefer the second
+convention instead – to match SPSS REGRESSION, say – enter the product
+as its own variable.
+
+## References
+
+Aiken, L. S., and West, S. G. (1991). *Multiple Regression: Testing and
+Interpreting Interactions*. Sage.
+
+Gelman, A. (2008). Scaling regression inputs by dividing by two standard
+deviations. *Statistics in Medicine*, 27(15), 2865-2873.
 
 ## See also
 
@@ -635,6 +714,132 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #>   Regression: 3656.493
 #>   Residual:   8683.365
 #>   Total:      12339.859
+#> 
+
+# STANDARDIZED COEFFICIENTS
+#
+# The default (std = "regular") leaves the beta blank on the dummy rows.
+# std = "all" shows it there too; std = "gelman" puts continuous and
+# dummy predictors on one comparable scale; std = "none" drops the column.
+jlm(WellbeingScore ~ Region + Age, std = "all")
+#> Linear Regression
+#> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
+#> Coefficients
+#>                           b      SE      t       β       p  
+#> ----------------------  ------  -----  ------  ------  -----
+#> (Intercept)             35.223  4.617   7.630          <.001
+#> Region (ref = 4: West)                                      
+#>   1: North               3.687  3.029   1.217   0.142   .226
+#>   2: South              -1.815  3.253  -0.558  -0.063   .578
+#>   3: East                1.815  2.941   0.617   0.073   .539
+#> Age                      0.357  0.093   3.820   0.361  <.001
+#> 
+#> Outcome: WellbeingScore
+#> 
+#> R-squared: 0.147    Adjusted R-squared: 0.112
+#> Residual Standard Error: 10.819
+#> 
+#> F-statistic: 4.216 on 4 and 98 DF, p-value: .003
+#> Sum of Squares:
+#>   Regression: 1974.261
+#>   Residual:   11471.564
+#>   Total:      13445.825
+#> 
+jlm(WellbeingScore ~ Region + Age, std = "gelman")
+#> Linear Regression
+#> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
+#> Coefficients
+#>                           b      SE      t     Gelman β    p  
+#> ----------------------  ------  -----  ------  --------  -----
+#> (Intercept)             35.223  4.617   7.630            <.001
+#> Region (ref = 4: West)                                        
+#>   1: North               3.687  3.029   1.217     3.687   .226
+#>   2: South              -1.815  3.253  -0.558    -1.815   .578
+#>   3: East                1.815  2.941   0.617     1.815   .539
+#> Age                      0.357  0.093   3.820     8.295  <.001
+#> 
+#> Outcome: WellbeingScore
+#> 
+#> R-squared: 0.147    Adjusted R-squared: 0.112
+#> Residual Standard Error: 10.819
+#> 
+#> F-statistic: 4.216 on 4 and 98 DF, p-value: .003
+#> Sum of Squares:
+#>   Regression: 1974.261
+#>   Residual:   11471.564
+#>   Total:      13445.825
+#> 
+jlm(WellbeingScore ~ Region + Age, std = "none")
+#> Linear Regression
+#> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
+#> Coefficients
+#>                           b      SE      t       p  
+#> ----------------------  ------  -----  ------  -----
+#> (Intercept)             35.223  4.617   7.630  <.001
+#> Region (ref = 4: West)                              
+#>   1: North               3.687  3.029   1.217   .226
+#>   2: South              -1.815  3.253  -0.558   .578
+#>   3: East                1.815  2.941   0.617   .539
+#> Age                      0.357  0.093   3.820  <.001
+#> 
+#> Outcome: WellbeingScore
+#> 
+#> R-squared: 0.147    Adjusted R-squared: 0.112
+#> Residual Standard Error: 10.819
+#> 
+#> F-statistic: 4.216 on 4 and 98 DF, p-value: .003
+#> Sum of Squares:
+#>   Regression: 1974.261
+#>   Residual:   11471.564
+#>   Total:      13445.825
+#> 
+
+# An interaction, entered in the formula so the standardized column is
+# built from the inputs (see the section Comparing with other software)
+jlm(Flourishing ~ SocialSupport * Stress, data = clinic)
+#> Linear Regression
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --         70
+#>     Auto-listwise         4         66
+#>     Analysis N           --         66
+#> 
+#> Missing data   From 70   %
+#>     Stress
+#>       Missing     4     5.7
+#> --------------------------------------
+#> 
+#> Coefficients
+#>                           b       SE      t       β       p  
+#> ----------------------  ------  ------  ------  ------  -----
+#> (Intercept)             78.089  11.164   6.995          <.001
+#> SocialSupport           -1.573   0.740  -2.126   0.285   .037
+#> Stress                  -2.576   0.588  -4.385  -0.176  <.001
+#> SocialSupport * Stress   0.159   0.041   3.873   0.400  <.001
+#> 
+#> In a model with an interaction, β comes from centered predictors, so it can
+#> differ in sign from b and from some other software's β.
+#> See ?jlm.
+#> 
+#> Outcome: Flourishing
+#> 
+#> R-squared: 0.366    Adjusted R-squared: 0.335
+#> Residual Standard Error: 11.635
+#> 
+#> F-statistic: 11.911 on 3 and 62 DF, p-value: <.001
+#> Sum of Squares:
+#>   Regression: 4837.188
+#>   Residual:   8393.297
+#>   Total:      13230.485
 #> 
 
 # jdummy(community, NULL) clears its registration -- not normally needed.

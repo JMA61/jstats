@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.197</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.198</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -141,13 +141,40 @@ b +/- t(.975, residual df) * SE.</p></dd>
 <code>"regular"</code> (default) – standardized betas with the prevalence-scaled
 betas of dummy and dichotomous predictors suppressed, since a fully
 standardized beta on a 0/1 indicator is not comparable to the continuous
-betas; <code>"all"</code> – the same standardized betas with nothing suppressed;
-<code>"gelman"</code> – Gelman (2008) scaling, where continuous predictors are
-placed on a divide-by-two-standard-deviations scale and binary predictors
-keep their raw 0/1 contrast (shown for all predictors, and headed
-"Gelman beta"); or <code>"none"</code> – omit the column. The returned object
-always carries both the full regular betas (<code>beta</code>) and the full
-Gelman betas (<code>beta_gelman</code>) regardless of this display choice.</p></dd>
+betas (an interaction row built on such a predictor is suppressed with
+it); <code>"all"</code> – the same standardized betas with nothing suppressed;
+<code>"gelman"</code> – Gelman (2008) scaling (shown for all predictors, and
+headed "Gelman beta"); or <code>"none"</code> – omit the column. The returned
+object always carries both the full regular betas (<code>beta</code>) and the
+full Gelman betas (<code>beta_gelman</code>) regardless of this display choice.</p>
+<p>The regular betas come from refitting the model on z-scored variables,
+so in a model with an interaction the product is formed from the
+standardized predictors (Aiken and West, 1991). Some software
+standardizes the product column itself instead; see the section
+Comparing with other software.</p>
+<p>The Gelman betas come from refitting the model with every predictor
+centered, a continuous predictor also divided by two standard
+deviations and a binary predictor (a 0/1 variable, or a category's
+dummy variable) left on its one-unit scale; the outcome keeps its own
+units. A continuous predictor's Gelman beta is the change in the outcome
+for a move from one standard deviation below its mean to one above; a
+binary predictor's is the difference between its two groups; the two
+are comparable, which is the point of the scaling. Every 0/1 column is
+centered, including the dummy variables of a categorical predictor with
+three or more categories, which <code>arm::standardize()</code> leaves at 0/1
+(its rescaling reaches only the variables named in the formula), so on
+such a model a main effect that interacts with that predictor is the
+sample-average effect here and the reference-category effect there. A
+computed term such as <code>I(x^2)</code> is standardized as its own column in
+both regimes, where the paper would standardize <code>x</code> and recompute
+the term; a known difference.</p>
+<p>In a model with an interaction, both refits center the predictors, so a
+main effect's standardized beta is its effect at the average of the
+predictor it interacts with, while its b is the effect when that
+predictor is 0; the two can differ in sign. A two-line note under the
+coefficient table says so, and points to the section Comparing with
+other software, whenever a model with an interaction shows a
+standardized column.</p></dd>
 
 
 <dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
@@ -326,6 +353,51 @@ evaluate to one numeric or logical column. Terms that produce several
 columns (<code>poly(x, 2)</code>, spline bases) or a categorical result
 (<code>cut(x, 3)</code>) are not supported inline: create the derived variable
 as a column of the data first, then name that column in the formula.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="comparing-with-other-software">Comparing with other software<a class="anchor" aria-label="anchor" href="#comparing-with-other-software"></a></h2>
+
+
+<p>Two conventions exist for the standardized coefficients of a model with
+an interaction, and they give different numbers for the same model.</p>
+<p>The first convention standardizes the inputs and forms the product from
+them. Both standardized columns in jstats follow it:
+<code>std = "regular"</code> refits the model on z-scored variables (Aiken and
+West, 1991), and <code>std = "gelman"</code> refits it on centered, rescaled
+predictors (Gelman, 2008). In R, <code>arm::standardize()</code> follows it
+for the Gelman scaling, and the default refit of
+<code>effectsize::standardize_parameters()</code> for the regular one; both
+agree with jstats when every predictor is numeric. Both differ from
+jstats on a categorical predictor of three or more categories. jstats
+rescales its dummy variables (see <code>std</code>); those packages take the
+predictor as an R factor (base R's form for a categorical variable,
+where jstats uses a <code><a href="jdummy.html">jdummy()</a></code> registration) and leave its dummy
+variables at 0/1. Some of their betas then differ, among them the beta
+of a main effect that interacts with that predictor.</p>
+<p>The second convention standardizes the product column itself, as though
+the product were an ordinary predictor. SPSS REGRESSION reports this
+beta, since there the product is computed as a new variable and entered
+like any other, and
+<code>effectsize::standardize_parameters(method = "basic")</code> gives it in
+R. On this convention the betas of the product and of the main effects
+differ from those in jstats.</p>
+<p>Only the standardized columns differ: b, its standard error, t, p and
+R-squared are the same under both. The same split appears within
+jstats. A product computed by hand and entered as its own variable (a
+column <code>xz</code> made from <code>x * z</code>, then <code>y ~ x + z + xz</code>)
+fits the same model as <code>y ~ x * z</code>, but jstats cannot see its
+parts, so its standardized columns follow the second convention.</p>
+<p>jstats follows the first convention and recommends it: enter an
+interaction in the formula, as <code>x * z</code>. If you prefer the second
+convention instead – to match SPSS REGRESSION, say – enter the product
+as its own variable.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Aiken, L. S., and West, S. G. (1991). <em>Multiple Regression: Testing
+and Interpreting Interactions</em>. Sage.</p>
+<p>Gelman, A. (2008). Scaling regression inputs by dividing by two standard
+deviations. <em>Statistics in Medicine</em>, 27(15), 2865-2873.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -630,6 +702,132 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 3656.493</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   8683.365</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      12339.859</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># STANDARDIZED COEFFICIENTS</span></span></span>
+<span class="r-in"><span><span class="co">#</span></span></span>
+<span class="r-in"><span><span class="co"># The default (std = "regular") leaves the beta blank on the dummy rows.</span></span></span>
+<span class="r-in"><span><span class="co"># std = "all" shows it there too; std = "gelman" puts continuous and</span></span></span>
+<span class="r-in"><span><span class="co"># dummy predictors on one comparable scale; std = "none" drops the column.</span></span></span>
+<span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span>, std <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                           b      SE      t       β       p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------  ------  -----  ------  ------  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)             35.223  4.617   7.630          &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region (ref = 4: West)                                      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1: North               3.687  3.029   1.217   0.142   .226</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2: South              -1.815  3.253  -0.558  -0.063   .578</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3: East                1.815  2.941   0.617   0.073   .539</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                      0.357  0.093   3.820   0.361  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.147    Adjusted R-squared: 0.112</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 10.819</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 4.216 on 4 and 98 DF, p-value: .003</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Sum of Squares:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 1974.261</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   11471.564</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13445.825</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span>, std <span class="op">=</span> <span class="st">"gelman"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                           b      SE      t     Gelman β    p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------  ------  -----  ------  --------  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)             35.223  4.617   7.630            &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region (ref = 4: West)                                        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1: North               3.687  3.029   1.217     3.687   .226</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2: South              -1.815  3.253  -0.558    -1.815   .578</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3: East                1.815  2.941   0.617     1.815   .539</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                      0.357  0.093   3.820     8.295  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.147    Adjusted R-squared: 0.112</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 10.819</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 4.216 on 4 and 98 DF, p-value: .003</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Sum of Squares:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 1974.261</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   11471.564</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13445.825</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span>, std <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                           b      SE      t       p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------  ------  -----  ------  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)             35.223  4.617   7.630  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region (ref = 4: West)                              </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1: North               3.687  3.029   1.217   .226</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2: South              -1.815  3.253  -0.558   .578</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3: East                1.815  2.941   0.617   .539</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age                      0.357  0.093   3.820  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: WellbeingScore</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.147    Adjusted R-squared: 0.112</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 10.819</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 4.216 on 4 and 98 DF, p-value: .003</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Sum of Squares:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 1974.261</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   11471.564</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13445.825</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># An interaction, entered in the formula so the standardized column is</span></span></span>
+<span class="r-in"><span><span class="co"># built from the inputs (see the section Comparing with other software)</span></span></span>
+<span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">Flourishing</span> <span class="op">~</span> <span class="va">SocialSupport</span> <span class="op">*</span> <span class="va">Stress</span>, data <span class="op">=</span> <span class="va">clinic</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --         70</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         4         66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N           --         66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 70   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Stress</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing     4     5.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                           b       SE      t       β       p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------  ------  ------  ------  ------  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)             78.089  11.164   6.995          &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SocialSupport           -1.573   0.740  -2.126   0.285   .037</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Stress                  -2.576   0.588  -4.385  -0.176  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SocialSupport * Stress   0.159   0.041   3.873   0.400  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> In a model with an interaction, β comes from centered predictors, so it can</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> differ in sign from b and from some other software's β.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> See ?jlm.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Flourishing</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.366    Adjusted R-squared: 0.335</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 11.635</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 11.911 on 3 and 62 DF, p-value: &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Sum of Squares:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 4837.188</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   8393.297</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13230.485</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># jdummy(community, NULL) clears its registration -- not normally needed.</span></span></span>

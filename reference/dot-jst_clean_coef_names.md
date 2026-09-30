@@ -56,4 +56,7 @@ them silently defeats the grouped layout (Session 176).
 ## Value
 
 Character vector of the same length as coef_names, with factor
-coefficient names separated.
+coefficient names separated. An interaction name (`"a:b"`) has each part
+cleaned by the same rules and keeps its colon (Session 320), so the
+row's parts match their main-effect rows – `"SoughtHelp (1)"` in both
+places – and the grouped display can still split it.
