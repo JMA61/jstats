@@ -1527,6 +1527,333 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 }
 
 
+#' Internal helper: find a single term raised to a power outside I()
+#'
+#' In a model formula, \code{^} is the operator for interactions up to that
+#' order, not arithmetic: \code{(a + b + c)^2} is the three main effects and
+#' their two-way interactions. Applied to a single term the operator
+#' expands to the term itself, so \code{y ~ x + x^2} fits x alone and R
+#' says nothing. This walks the right-hand side through the formula
+#' operators only (a function call such as \code{I()} or \code{log()} is
+#' arithmetic, so the walk stops there) and collects every single term -- a
+#' variable, or a call that is not itself a formula operator, parentheses
+#' stripped -- raised to a whole-number power of 2 or more. A power of a
+#' sum, \code{(a + b)^2}, and \code{.^2} are legitimate formula R and are
+#' not collected. (Session 321.)
+#'
+#' @param formula The analysis formula as typed, before the transform
+#'   resolver rewrites it.
+#' @return A list with one element per term found, each a list of
+#'   \code{typed} (the term as written, e.g. \code{"x^2"}), \code{base}
+#'   (the single term, parentheses stripped) and \code{power} (an integer);
+#'   an empty list when there is none or the formula is not two-sided.
+#' @keywords internal
+.jst_formula_bare_powers <- function(formula) {
+  if (!inherits(formula, "formula") || length(formula) != 3L) return(list())
+  ops   <- c("+", "-", "*", ":", "/", "%in%", "^", "(")
+  found <- list()
+  strip <- function(e) {
+    while (is.call(e) && identical(e[[1L]], as.name("(")) && length(e) == 2L) {
+      e <- e[[2L]]
+    }
+    e
+  }
+  single <- function(e) {
+    if (is.symbol(e)) return(!identical(e, as.name(".")))
+    is.call(e) && !(as.character(e[[1L]])[1L] %in% ops)
+  }
+  walk <- function(e) {
+    if (!is.call(e) || !is.symbol(e[[1L]])) return(invisible(NULL))
+    op <- as.character(e[[1L]])
+    if (!(op %in% ops)) return(invisible(NULL))
+    if (op == "^" && length(e) == 3L) {
+      base <- strip(e[[2L]])
+      pw   <- e[[3L]]
+      if (single(base) && is.numeric(pw) && length(pw) == 1L &&
+          !is.na(pw) && pw >= 2 && pw == round(pw)) {
+        found[[length(found) + 1L]] <<- list(typed = .jst_term_text(e),
+                                              base  = .jst_term_text(base),
+                                              power = as.integer(pw))
+        return(invisible(NULL))
+      }
+    }
+    for (k in seq_along(e)[-1L]) walk(e[[k]])
+    invisible(NULL)
+  }
+  walk(formula[[3L]])
+  found
+}
+
+#' Internal helper: warn about each single term raised to a power outside I()
+#'
+#' Emits one warning per term \code{.jst_formula_bare_powers()} found,
+#' called once the model has been fitted: the model ran, but the term
+#' entered as the single term alone. The first line names the term as
+#' typed and what it entered the model as (Rule AD); the second gives the
+#' rewrite, built from the term. (Session 321; wording approved by Jeff.)
+#'
+#' @param powers The list \code{.jst_formula_bare_powers()} returned.
+#' @return Invisibly NULL.
+#' @keywords internal
+.jst_warn_bare_powers <- function(powers) {
+  for (p in powers) {
+    what <- if (p$power == 2L) {
+      "squared"
+    } else if (p$power == 3L) {
+      "cubed"
+    } else {
+      paste0("to the power ", p$power)
+    }
+    .jst_warn(p$typed, " entered the model as ", p$base, ", not as ",
+              p$base, " ", what, ".\n",
+              "To include ", p$base, " ", what, ", write I(", p$base, "^",
+              p$power, ") in the formula.")
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: read a computed term as a power or product of inputs
+#'
+#' Gelman (2008, section 3.1) rescales the input variables and recomputes
+#' each term from them, so a squared input is the square of the rescaled
+#' input, not the rescaled square. That applies to a term that is a power
+#' or a product of inputs -- \code{I(x^2)}, \code{I(x^3)},
+#' \code{I(x * z)} -- and not to a term that makes a new input of its own:
+#' \code{log(x)}, \code{sqrt(x)}, a ratio, a sum, a rescaling, a condition
+#' such as \code{I(x > 10)}, where recomputing from a rescaled input is
+#' undefined (the logarithm of a negative z-score) or only rescales the
+#' column again. This reads a computed term's text and, when it is an
+#' \code{I()} call whose argument is a product of whole-number powers of
+#' inputs with total degree 2 or more, returns the inputs. An input is a
+#' variable, or any other sub-expression that contains a variable
+#' (\code{log(x)} in \code{I(log(x)^2)}); a number, or a symbol that is
+#' not a column of the data, is a constant and stays in the term as
+#' written. Parentheses, unary minus and division by a constant are read
+#' through. (Session 321.)
+#'
+#' @param term_txt The computed column's name: the term's text.
+#' @param data_names Column names of the analysis frame.
+#' @return NULL when the term is not a power or product of inputs;
+#'   otherwise a list of \code{expr} (the parsed term), \code{inputs}
+#'   (named list of the input expressions, keyed by their text),
+#'   \code{kind} (\code{"interaction"} for two or more distinct inputs,
+#'   \code{"power"} for one) and \code{power} (the highest exponent).
+#' @keywords internal
+.jst_poly_term <- function(term_txt, data_names) {
+  e <- tryCatch(str2lang(term_txt), error = function(err) NULL)
+  if (!is.call(e) || !identical(e[[1L]], as.name("I")) || length(e) != 2L) {
+    return(NULL)
+  }
+  none <- list(inputs = list(), exps = numeric(0))
+  join <- function(a, b) {
+    ex  <- a$exps
+    inp <- a$inputs
+    for (nm in names(b$exps)) {
+      ex[nm] <- (if (nm %in% names(ex)) ex[[nm]] else 0) + b$exps[[nm]]
+      if (!(nm %in% names(inp))) inp[[nm]] <- b$inputs[[nm]]
+    }
+    list(inputs = inp, exps = ex)
+  }
+  mono <- function(x) {
+    if (is.numeric(x) && length(x) == 1L) return(none)
+    if (is.symbol(x) && !(as.character(x) %in% data_names)) return(none)
+    if (is.call(x) && is.symbol(x[[1L]])) {
+      op <- as.character(x[[1L]])
+      if (op %in% c("(", "-") && length(x) == 2L) return(mono(x[[2L]]))
+      if (op == "*" && length(x) == 3L) return(join(mono(x[[2L]]), mono(x[[3L]])))
+      if (op == "/" && length(x) == 3L &&
+          length(mono(x[[3L]])$inputs) == 0L) {
+        return(mono(x[[2L]]))
+      }
+      if (op == "^" && length(x) == 3L) {
+        pw <- x[[3L]]
+        if (is.numeric(pw) && length(pw) == 1L && !is.na(pw) && pw >= 1 &&
+            pw == round(pw)) {
+          a <- mono(x[[2L]])
+          a$exps <- a$exps * pw
+          return(a)
+        }
+      }
+    }
+    # Any other expression: an input of its own when it contains a
+    # variable, a constant otherwise.
+    if (length(intersect(all.vars(x), data_names)) == 0L) return(none)
+    txt <- .jst_term_text(x)
+    list(inputs = stats::setNames(list(x), txt), exps = stats::setNames(1, txt))
+  }
+  m <- mono(e[[2L]])
+  if (length(m$inputs) == 0L || sum(m$exps) < 2) return(NULL)
+  list(expr   = e,
+       inputs = m$inputs,
+       kind   = if (length(m$inputs) >= 2L) "interaction" else "power",
+       power  = max(m$exps))
+}
+
+#' Internal helper: recompute power and product terms from rescaled inputs
+#'
+#' jlm()'s two standardized refits rescale each column of the model frame.
+#' A computed term that is a power or a product of inputs
+#' (\code{.jst_poly_term()}) is then replaced by the term recomputed from
+#' its rescaled inputs -- the square of the z-score, not the z-score of the
+#' square -- as Gelman (2008, section 3.1) and the Aiken and West (1991)
+#' standardized solution do, and as the refit already does for an
+#' interaction written \code{x * z}. Each input is evaluated on the
+#' analysis rows and rescaled by the refit's own rule, the rule the refit
+#' applies to the same variable where it is also a column of the model, so
+#' a main effect and its square are rescaled alike. A term whose input
+#' cannot be evaluated, or has no spread in the analysis sample, keeps the
+#' column the refit gave it. (Session 321.)
+#'
+#' @param mf_scaled The refit's model frame, every column already
+#'   rescaled.
+#' @param mf The listwise-complete model frame (its row names locate the
+#'   analysis rows in \code{data}).
+#' @param data The analysis frame the model frame was built from.
+#' @param computed Names of the resolver-computed columns.
+#' @param rescale Function of one numeric vector returning it rescaled.
+#' @param enclos Environment for constants inside a term (the formula's).
+#' @return \code{mf_scaled}, each power or product term's column replaced.
+#' @keywords internal
+.jst_rescale_poly_terms <- function(mf_scaled, mf, data, computed, rescale,
+                                    enclos) {
+  preds <- intersect(computed, names(mf)[-1L])
+  infos <- lapply(preds, .jst_poly_term, data_names = names(data))
+  names(infos) <- preds
+  infos <- infos[!vapply(infos, is.null, logical(1))]
+  if (length(infos) == 0L) return(mf_scaled)
+  rows <- match(rownames(mf), rownames(data))
+  if (anyNA(rows)) return(mf_scaled)
+  for (nm in names(infos)) {
+    info <- infos[[nm]]
+    # Only the columns the term names, on the analysis rows.
+    need    <- intersect(all.vars(info$expr), names(data))
+    at_rows <- data[rows, need, drop = FALSE]
+    for (v in need) {
+      if (haven::is.labelled(at_rows[[v]])) {
+        at_rows[[v]] <- .jst_as_numeric(at_rows[[v]])
+      }
+    }
+    vals <- list()
+    keys <- character(0)
+    ok   <- TRUE
+    for (i in seq_along(info$inputs)) {
+      v <- tryCatch(as.numeric(eval(info$inputs[[i]], at_rows, enclos)),
+                    error = function(err) NULL)
+      if (is.null(v) || length(v) != nrow(mf) || anyNA(v) ||
+          !is.finite(stats::sd(v)) || stats::sd(v) == 0) {
+        ok <- FALSE
+        break
+      }
+      key <- paste0(".jst_input_", i)
+      vals[[key]] <- rescale(v)
+      keys[[names(info$inputs)[i]]] <- key
+    }
+    if (!ok) next
+    swap <- function(x) {
+      if (is.symbol(x) || is.call(x)) {
+        txt <- .jst_term_text(x)
+        if (txt %in% names(keys)) return(as.name(keys[[txt]]))
+      }
+      if (is.call(x)) {
+        for (k in seq_along(x)[-1L]) {
+          if (identical(as.list(x)[[k]], substitute())) next
+          x[[k]] <- swap(x[[k]])
+        }
+      }
+      x
+    }
+    res <- tryCatch(as.numeric(eval(swap(info$expr), vals, enclos)),
+                    error = function(err) NULL)
+    if (is.null(res) || length(res) != nrow(mf_scaled) ||
+        any(!is.finite(res))) next
+    mf_scaled[[nm]] <- res
+  }
+  mf_scaled
+}
+
+#' Internal helper: find predictor columns that are hand-made products
+#'
+#' A product entered as its own column -- xz made from x * z, then
+#' \code{y ~ x + z + xz} -- fits the same model as \code{y ~ x * z}, but
+#' jlm() cannot see its parts, so its standardized columns standardize it
+#' as it stands (the second convention in ?jlm's "Comparing with other
+#' software"); a square made by hand is the same case. This finds each
+#' numeric predictor column that equals the product of two other numeric
+#' predictor columns of the model, or the square of one, to floating-point
+#' tolerance, so the coefficient table can name it. A product rounded when
+#' it was saved (to two decimals, say) is not found. Each pair is tried on
+#' the first 20 analysis rows before the whole column is compared, so the
+#' search stays cheap on a large sample. The square of a 0/1 column is the
+#' column itself and is left to the collinearity warning. Columns in
+#' \code{skip} -- the resolver-computed terms, whose parts jlm() does see,
+#' and the dummy columns of a registered categorical, whose internal names
+#' are not what the user typed -- take part in neither role.
+#' (Session 321.)
+#'
+#' @param mf The listwise-complete model frame.
+#' @param skip Column names left out of the search.
+#' @return A list with one element per product found, in model order, each
+#'   a list of \code{col}, \code{a} and \code{b} (\code{a} equal to
+#'   \code{b} for a square); empty when there is none.
+#' @keywords internal
+.jst_hand_products <- function(mf, skip = character(0)) {
+  cols <- setdiff(names(mf)[-1L], skip)
+  cols <- cols[vapply(cols, function(cn) {
+    v <- mf[[cn]]
+    is.numeric(v) && is.null(dim(v))
+  }, logical(1))]
+  if (length(cols) < 2L) return(list())
+  tol  <- 1e-8
+  same <- function(x, p) all(abs(x - p) <= tol * pmax(1, abs(p)))
+  pre  <- seq_len(min(nrow(mf), 20L))
+  found <- list()
+  for (cn in cols) {
+    cv    <- mf[[cn]]
+    parts <- setdiff(cols, cn)
+    hit   <- NULL
+    for (i in seq_along(parts)) {
+      a <- mf[[parts[i]]]
+      for (j in i:length(parts)) {
+        b <- mf[[parts[j]]]
+        if (!same(cv[pre], a[pre] * b[pre])) next
+        if (i == j && all(a %in% c(0, 1))) next
+        if (same(cv, a * b)) {
+          hit <- c(parts[i], parts[j])
+          break
+        }
+      }
+      if (!is.null(hit)) break
+    }
+    if (!is.null(hit)) {
+      found[[length(found) + 1L]] <- list(col = cn, a = hit[1L], b = hit[2L])
+    }
+  }
+  found
+}
+
+#' Internal helper: name the kinds of term a coefficient-table note is about
+#'
+#' The standardized-column notes under jlm()'s coefficient table name only
+#' what the model contains (Session 321, Jeff): an interaction, a squared
+#' term ("power term" when a power above 2 is present), or both -- with
+#' articles ("an interaction and a squared term"), or after "each" for the
+#' std = "product" note ("each interaction and squared term").
+#'
+#' @param has_int,has_pow Logical: the model has an interaction; a power.
+#' @param pow_noun "squared term" or "power term".
+#' @param each Logical: the "each" form, without articles.
+#' @return Character scalar.
+#' @keywords internal
+.jst_term_kinds_phrase <- function(has_int, has_pow, pow_noun, each = FALSE) {
+  if (each) {
+    if (has_int && has_pow) return(paste0("each interaction and ", pow_noun))
+    return(if (has_int) "each interaction" else paste0("each ", pow_noun))
+  }
+  if (has_int && has_pow) return(paste0("an interaction and a ", pow_noun))
+  if (has_int) "an interaction" else paste0("a ", pow_noun)
+}
+
+
 # -- jlm ----------------------------------------------------------------------
 
 #' SPSS-like linear regression output with standardized coefficients
@@ -1586,6 +1913,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' columns (\code{poly(x, 2)}, spline bases) or a categorical result
 #' (\code{cut(x, 3)}) are not supported inline: create the derived variable
 #' as a column of the data first, then name that column in the formula.
+#'
+#' In a formula, \code{^} applied to a single variable is not arithmetic: it
+#' is R's operator for interactions up to that order, so \code{x^2} enters
+#' the model as \code{x} alone. Write \code{I(x^2)} for the square.
+#' \code{jlm()} fits the model as written and then warns when a formula
+#' does this.
 #'
 #' @param formula A model formula, e.g. \code{y ~ x1 + x2}. Transformed
 #'   terms such as \code{log(y)} or \code{I(x1^2)} are computed
@@ -1651,15 +1984,21 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   betas (an interaction row built on such a predictor is suppressed with
 #'   it); \code{"all"} -- the same standardized betas with nothing suppressed;
 #'   \code{"gelman"} -- Gelman (2008) scaling (shown for all predictors, and
-#'   headed "Gelman beta"); or \code{"none"} -- omit the column. The returned
-#'   object always carries both the full regular betas (\code{beta}) and the
-#'   full Gelman betas (\code{beta_gelman}) regardless of this display choice.
+#'   headed "Gelman beta"); \code{"product"} -- each predictor standardized
+#'   as it stands, the product of an interaction and a squared term
+#'   included, as some other software does (shown for all predictors, and
+#'   headed "Product beta"); or
+#'   \code{"none"} -- omit the column. The returned object always carries the
+#'   full regular betas (\code{beta}), the full Gelman betas
+#'   (\code{beta_gelman}) and the full product betas (\code{beta_product})
+#'   regardless of this display choice.
 #'
 #'   The regular betas come from refitting the model on z-scored variables,
 #'   so in a model with an interaction the product is formed from the
 #'   standardized predictors (Aiken and West, 1991). Some software
-#'   standardizes the product column itself instead; see the section
-#'   Comparing with other software.
+#'   standardizes the product column itself instead, which is what
+#'   \code{std = "product"} does; see the section Comparing with other
+#'   software.
 #'
 #'   The Gelman betas come from refitting the model with every predictor
 #'   centered, a continuous predictor also divided by two standard
@@ -1673,18 +2012,25 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   three or more categories, which \code{arm::standardize()} leaves at 0/1
 #'   (its rescaling reaches only the variables named in the formula), so on
 #'   such a model a main effect that interacts with that predictor is the
-#'   sample-average effect here and the reference-category effect there. A
-#'   computed term such as \code{I(x^2)} is standardized as its own column in
-#'   both regimes, where the paper would standardize \code{x} and recompute
-#'   the term; a known difference.
+#'   sample-average effect here and the reference-category effect there.
 #'
-#'   In a model with an interaction, both refits center the predictors, so a
-#'   main effect's standardized beta is its effect at the average of the
-#'   predictor it interacts with, while its b is the effect when that
-#'   predictor is 0; the two can differ in sign. A two-line note under the
-#'   coefficient table says so, and points to the section Comparing with
-#'   other software, whenever a model with an interaction shows a
-#'   standardized column.
+#'   A computed term that is a power or a product of variables, such as
+#'   \code{I(x^2)} or \code{I(x * z)}, is recomputed from the rescaled
+#'   variables in both refits, as Gelman (2008, section 3.1) does: the square
+#'   of the rescaled \code{x}, not the rescaled square. Any other computed
+#'   term -- \code{log(x)}, a ratio, a condition such as \code{I(x > 10)} --
+#'   is an input of its own and is rescaled as a column.
+#'
+#'   In a model with an interaction or a squared term, both refits center the
+#'   predictors, so a main effect's standardized beta is its effect at the
+#'   average of the predictor it interacts with (a squared term's variable,
+#'   at its own average), while its b is the effect when that predictor is 0;
+#'   the two can differ in sign. A note under the coefficient table says so,
+#'   and points to the section Comparing with other software, whenever such
+#'   a model shows a standardized column. A variable that equals the
+#'   product of two other predictors in the model, or the square of one, is
+#'   named in a note of its own, and under \code{std = "product"} a note
+#'   says which convention the column follows.
 #' @param diagnostics Logical, character vector, or NULL. If TRUE, prints VIF
 #'   table and diagnostic plots. If a character vector, specifies which
 #'   diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
@@ -1707,9 +2053,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     \item{coefficients_raw}{Flat data frame of raw, full-precision
 #'       coefficient statistics (one row per coefficient): \code{term} (machine
 #'       key), \code{b}, \code{SE}, \code{t}, \code{df}, \code{p}, \code{beta},
-#'       and \code{ci_lower} / \code{ci_upper} bounds (present regardless of the
-#'       \code{ci} display toggle). Carries \code{beta_standardization} and
-#'       \code{outcome} attributes.}
+#'       \code{beta_gelman}, \code{beta_product}, and \code{ci_lower} /
+#'       \code{ci_upper} bounds (present regardless of the \code{ci} display
+#'       toggle). Carries \code{beta_standardization} and \code{outcome}
+#'       attributes.}
 #'     \item{fit_raw}{List of raw, full-precision fit statistics (R-squared,
 #'       adjusted R-squared, residual SE, F with its dfs and p-value, residual
 #'       df, and N).}
@@ -1729,10 +2076,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'
 #' @section Comparing with other software:
 #'   Two conventions exist for the standardized coefficients of a model with
-#'   an interaction, and they give different numbers for the same model.
+#'   an interaction or a squared term, and they give different numbers for
+#'   the same model.
 #'
-#'   The first convention standardizes the inputs and forms the product from
-#'   them. Both standardized columns in jstats follow it:
+#'   The first convention standardizes the inputs and forms the product, or
+#'   the square, from them. The default column and the Gelman column follow
+#'   it:
 #'   \code{std = "regular"} refits the model on z-scored variables (Aiken and
 #'   West, 1991), and \code{std = "gelman"} refits it on centered, rescaled
 #'   predictors (Gelman, 2008). In R, \code{arm::standardize()} follows it
@@ -1747,24 +2096,29 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   of a main effect that interacts with that predictor.
 #'
 #'   The second convention standardizes the product column itself, as though
-#'   the product were an ordinary predictor. SPSS REGRESSION reports this
-#'   beta, since there the product is computed as a new variable and entered
-#'   like any other, and
+#'   the product were an ordinary predictor, and a squared term's column the
+#'   same way. SPSS REGRESSION reports this beta, since there the product is
+#'   computed as a new variable and entered like any other, and
 #'   \code{effectsize::standardize_parameters(method = "basic")} gives it in
-#'   R. On this convention the betas of the product and of the main effects
-#'   differ from those in jstats.
+#'   R. In jstats, \code{std = "product"} gives it. On this convention the
+#'   betas of the product and of the main effects differ from those of the
+#'   first, and they depend on where each variable's zero falls: adding a
+#'   constant to one of the variables fits the same model but changes them,
+#'   while the first convention's betas stay the same.
 #'
 #'   Only the standardized columns differ: b, its standard error, t, p and
 #'   R-squared are the same under both. The same split appears within
 #'   jstats. A product computed by hand and entered as its own variable (a
 #'   column \code{xz} made from \code{x * z}, then \code{y ~ x + z + xz})
 #'   fits the same model as \code{y ~ x * z}, but jstats cannot see its
-#'   parts, so its standardized columns follow the second convention.
+#'   parts, so its standardized columns follow the second convention; a note
+#'   under the table names the variable when it equals the product of two
+#'   other predictors in the model, or the square of one.
 #'
 #'   jstats follows the first convention and recommends it: enter an
-#'   interaction in the formula, as \code{x * z}. If you prefer the second
-#'   convention instead -- to match SPSS REGRESSION, say -- enter the product
-#'   as its own variable.
+#'   interaction in the formula, as \code{x * z}, and a squared term as
+#'   \code{I(x^2)}. If you prefer the second convention instead -- to match
+#'   SPSS REGRESSION, say -- use \code{std = "product"}.
 #'
 #' @examples
 #' # With explicit data frame (named argument)
@@ -1817,6 +2171,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' # An interaction, entered in the formula so the standardized column is
 #' # built from the inputs (see the section Comparing with other software)
 #' jlm(Flourishing ~ SocialSupport * Stress, data = clinic)
+#'
+#' # A squared term, written with I(); its standardized value is built from
+#' # the standardized Stress
+#' jlm(Flourishing ~ Stress + I(Stress^2), data = clinic)
+#'
+#' # The second convention: each predictor standardized as it stands, the
+#' # beta SPSS REGRESSION reports for a product computed as a new variable
+#' jlm(Flourishing ~ SocialSupport * Stress, data = clinic, std = "product")
 #'
 #' # jdummy(community, NULL) clears its registration -- not normally needed.
 #' # You'd clear a default or registration only to undo a mistake, or -- as
@@ -1880,8 +2242,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     fn_name = "jlm"
   )
 
-  if (!std %in% c("regular", "all", "gelman", "none")) {
-    .jst_stop_arg(arg = "std", choices = c("regular", "all", "gelman", "none"))
+  if (!std %in% c("regular", "all", "gelman", "product", "none")) {
+    .jst_stop_arg(arg = "std",
+                  choices = c("regular", "all", "gelman", "product", "none"))
   }
 
   # value.id is validated before any output, so an unsupported value fails
@@ -1986,6 +2349,16 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   raw_vars <- all.vars(formula)
   .jst_check_vars(data, raw_vars, .jst_data_name,
                   default_used = .jst_default_used)
+
+  # A single term raised to a power outside I() -- x^2 -- is R's formula
+  # operator for interactions, not arithmetic, and enters the model as the
+  # term alone (Session 321). Found on the formula as typed, before the
+  # resolver rewrites it; the warning is emitted once the model is fitted.
+  # The formula's own environment is kept for the constants a computed
+  # term may name, which the standardized refits re-evaluate below.
+  bare_powers <- .jst_formula_bare_powers(formula)
+  term_enclos <- environment(formula)
+  if (is.null(term_enclos)) term_enclos <- parent.frame()
 
   # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
   # refusal): compute log(x), I(x^2), and the like once on the analysis
@@ -2480,6 +2853,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
   model         <- stats::lm(formula, data = mf)
   model_summary <- summary(model)
+  .jst_warn_bare_powers(bare_powers)
 
   coefs <- as.data.frame(model_summary$coefficients, stringsAsFactors = FALSE)
   colnames(coefs)[1:4] <- c("b", "StdErr", "t", "P")
@@ -2512,6 +2886,16 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   mf_std   <- mf
   num_cols <- vapply(mf_std, is.numeric, logical(1))
   mf_std[, num_cols] <- lapply(mf_std[, num_cols, drop = FALSE], scale)
+  # A computed power or product -- I(x^2), I(x * z) -- is then recomputed
+  # from the z-scored inputs, not z-scored as a column of its own (Session
+  # 321; the Aiken and West, 1991, standardized solution, and Gelman, 2008,
+  # section 3.1), the way this refit already forms the product of an
+  # interaction written x * z. Any other computed term -- log(x), a ratio,
+  # a condition -- is an input of its own and keeps its z-scored column.
+  mf_std <- .jst_rescale_poly_terms(
+    mf_std, mf, data, resolved$computed,
+    rescale = function(v) (v - mean(v)) / stats::sd(v),
+    enclos  = term_enclos)
 
   std_model        <- stats::lm(formula, data = mf_std)
   std_coefs        <- stats::coef(std_model)
@@ -2552,9 +2936,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # in the formula and a factor's dummies do not exist until the fit; the
   # paper's rule ("we also center each input variable to have a mean of
   # zero so that interactions are more interpretable") is applied to all of
-  # them. A computed term (I(x^2)) is rescaled as its own column here, as
-  # the regular refit above treats it; the paper would rescale x and
-  # recompute the term -- logged as its own item at S320.
+  # them. A computed power or product (I(x^2), I(x * z)) is recomputed from
+  # the rescaled inputs, as the paper does -- it rescales x and squares it,
+  # never the square itself (Session 321; until then the term was rescaled
+  # as its own column here, as in the regular refit above). Any other
+  # computed term (log(x), a condition) is an input of its own.
   mf_gel <- mf
   for (nm in names(mf_gel)[-1L]) {
     col <- mf_gel[[nm]]
@@ -2564,6 +2950,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     mf_gel[[nm]] <- if (n_uni <= 2L) ctr
                     else ctr / (2 * stats::sd(col, na.rm = TRUE))
   }
+  mf_gel <- .jst_rescale_poly_terms(
+    mf_gel, mf, data, resolved$computed,
+    rescale = function(v) {
+      ctr <- v - mean(v)
+      if (length(unique(v)) <= 2L) ctr else ctr / (2 * stats::sd(v))
+    },
+    enclos  = term_enclos)
   gelman_coefs        <- stats::coef(stats::lm(formula, data = mf_gel))
   names(gelman_coefs) <- .jst_unbacktick(names(gelman_coefs))
   gelman_b            <- rep(NA_real_, nrow(coefs))
@@ -2571,6 +2964,23 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   common_g            <- intersect(names(gelman_coefs), names(gelman_b))
   gelman_b[common_g]  <- gelman_coefs[common_g]
   if ("(Intercept)" %in% names(gelman_b)) gelman_b["(Intercept)"] <- NA_real_
+
+  # Product-first betas (std = "product", Session 321): every column of the
+  # design matrix standardized as it stands -- a product, a computed power
+  # and a dummy column each as its own column -- which is the beta SPSS
+  # REGRESSION reports when the product is computed as a new variable, and
+  # effectsize's method = "basic": b times the column's SD over the
+  # outcome's, on the analysis sample. Carried on the return like the other
+  # two; shown only under std = "product".
+  mm_cols           <- stats::model.matrix(model)
+  colnames(mm_cols) <- .jst_unbacktick(colnames(mm_cols))
+  y_sd              <- stats::sd(stats::model.response(mf))
+  product_b         <- rep(NA_real_, nrow(coefs))
+  names(product_b)  <- rownames(coefs)
+  for (nm in intersect(colnames(mm_cols), names(product_b))) {
+    if (identical(nm, "(Intercept)")) next
+    product_b[nm] <- coefs[nm, "b"] * stats::sd(mm_cols[, nm]) / y_sd
+  }
 
   # Display-suppression set for the default "regular" regime: every 0/1
   # indicator, whose fully-standardized beta is scaled by category prevalence
@@ -2615,8 +3025,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   #   "regular" (default) -- regular betas, every 0/1 indicator suppressed
   #   "all"               -- regular betas, nothing suppressed
   #   "gelman"            -- Gelman betas (all shown; not prevalence-distorted)
+  #   "product"           -- product-first betas, nothing suppressed
   #   "none"              -- the column is omitted entirely (handled at render)
-  disp_beta <- if (identical(std, "gelman")) gelman_b else std_b
+  disp_beta <- switch(std, gelman = gelman_b, product = product_b, std_b)
   if (identical(std, "regular")) {
     disp_beta[names(disp_beta) %in% regular_blank] <- NA_real_
   }
@@ -2746,13 +3157,15 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                                       show_ref_categories)
   # The standardized-beta header carries the regime: bare "\u03b2" for the
   # regular betas (default and "all"), "Gelman \u03b2" for the Gelman regime so
-  # the value is not misread as a classic beta. Under std = "none" the column is
+  # the value is not misread as a classic beta, "Product \u03b2" for the
+  # product-first betas (Session 321). Under std = "none" the column is
   # absent (out_coefs$Beta was dropped above), so it is left out of both the name
   # and alignment vectors. .jst_print_table sizes each column to the wider of
   # header and contents, so the longer Gelman header simply widens that one
   # column while keeping the header centered and the numbers decimal-aligned.
   if (show_beta_col) {
-    beta_header    <- if (identical(std, "gelman")) "Gelman \u03b2" else "\u03b2"
+    beta_header    <- switch(std, gelman  = "Gelman \u03b2",
+                             product = "Product \u03b2", "\u03b2")
     coef_col_names <- c("b", "SE", "t", beta_header, "p")
     coef_align     <- c("d", "d", "d", "d", "d")
   } else {
@@ -2769,23 +3182,93 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                    align     = c("ln", coef_align),
                    row.names = FALSE)
 
-  # A note under the table, one blank line below it, when the model has an
-  # interaction and a standardized column is shown (Session 320). Both
-  # standardized columns come from a refit on centered predictors, so a main
-  # effect's beta is its effect at the average of the predictor it interacts
-  # with, while its b is the effect at that predictor's 0 -- the same row can
-  # carry opposite signs, which reads as an error to anyone who does not know
-  # why -- and software that standardizes a computed product column reports
-  # different betas for the same model. The explanation does not fit a line,
-  # so the note points to ?jlm's "Comparing with other software" section. A
-  # column legend, printed with its table at every level (the jscreen star
-  # legend's precedent; voice reference, Rule M ruling S320).
-  if (show_beta_col && any(grepl(":", term_keys, fixed = TRUE))) {
-    cat("\n")
-    .jst_msg_out("In a model with an interaction, ", beta_header, " comes ",
-                 "from centered predictors, so it can differ in sign from b ",
-                 "and from some other software's ", beta_header, ".\n",
-                 "See ?jlm.")
+  # Notes under the table, each one blank line below what precedes it, when
+  # a standardized column is shown -- column legends, printed with their
+  # table at every level (the jscreen star legend's precedent; voice
+  # reference, Rule M ruling S320), each ending in the bare "See ?jlm."
+  # (Rule D's S320 carve-out), which leads to the "Comparing with other
+  # software" section. Each names only the kinds of term the model has
+  # (Session 321, Jeff): an interaction (x * z, or I(x * z)), a squared or
+  # other power term (I(x^2)), or both.
+  #   - std = "regular", "all" or "gelman", a model with an interaction or
+  #     a power (Session 320; power terms and the wording Session 321): both
+  #     refits center the predictors, so a main effect's beta is its effect
+  #     at the average of the predictor it interacts with (a squared term's
+  #     variable, at its own average), while its b is the effect at that
+  #     predictor's 0 -- the same row can carry opposite signs, which reads as
+  #     an error to anyone who does not know why -- and software that
+  #     standardizes the product itself reports different values for the
+  #     same model.
+  #   - the same three, a predictor variable that equals the product of two
+  #     others, or the square of one (Session 321): jlm cannot see its parts,
+  #     so its beta treats it as an ordinary predictor.
+  #   - std = "product", a model with any of these: the column treats each
+  #     interaction and power as an ordinary predictor, as some other
+  #     software does.
+  if (show_beta_col) {
+    poly_info  <- lapply(intersect(resolved$computed, names(mf)[-1L]),
+                         .jst_poly_term, data_names = names(data))
+    poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
+    poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
+    pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
+                                  `[[`, numeric(1), "power")))
+    has_int  <- any(grepl(":", term_keys, fixed = TRUE)) ||
+                any(poly_kinds == "interaction")
+    has_pow  <- any(poly_kinds == "power")
+    pow_noun <- if (pow_max > 2) "power term" else "squared term"
+    hand     <- .jst_hand_products(mf, skip = c(resolved$computed,
+                                                dummy_coef_names))
+    # One the fit dropped as aliased (the same product also entered as an
+    # interaction) has no row to explain; the collinearity warning covers it.
+    fit_b    <- stats::coef(model)
+    names(fit_b) <- .jst_unbacktick(names(fit_b))
+    hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
+                            logical(1))]
+    hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
+
+    legends <- character(0)
+    if (identical(std, "product")) {
+      p_int <- has_int || any(!hand_sq)
+      p_pow <- has_pow || any(hand_sq)
+      if (p_int || p_pow) {
+        legends <- c(legends, paste0(
+          beta_header, " treats ",
+          .jst_term_kinds_phrase(p_int, p_pow, pow_noun, each = TRUE),
+          " as an ordinary predictor, as some other software does.\n",
+          "See ?jlm."))
+      }
+    } else {
+      if (has_int || has_pow) {
+        legends <- c(legends, paste0(
+          "In a model with ",
+          .jst_term_kinds_phrase(has_int, has_pow, pow_noun), ", ",
+          beta_header, " comes from centered predictors: a ", beta_header,
+          " can have the opposite sign from its b, and other software may ",
+          "report different ", beta_header, " values.\n",
+          "See ?jlm."))
+      }
+      if (length(hand) > 0L) {
+        what <- vapply(hand, function(h) {
+          if (identical(h$a, h$b)) paste0(h$col, " is ", h$a, " squared")
+          else paste0(h$col, " is ", h$a, " * ", h$b)
+        }, character(1))
+        one <- length(hand) == 1L
+        legends <- c(legends, paste0(
+          .jst_format_var_list(what, and = TRUE),
+          if (one) " entered as its own variable, so "
+          else ", each entered as its own variable, so ",
+          beta_header,
+          if (one) " treats it as an ordinary predictor, not as "
+          else " treats them as ordinary predictors, not as ",
+          .jst_term_kinds_phrase(any(!hand_sq), any(hand_sq), "squared term"),
+          ".\n",
+          "See ?jlm."))
+      }
+    }
+    for (lg in legends) {
+      cat("\n")
+      .jst_msg_out(lg)
+    }
   }
 
   # Outcome named beneath the table, following variable.id; folds into the
@@ -2890,7 +3373,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # blanked -- the console suppresses prevalence-scaled dummy/dichotomy betas at
   # print time only, so a later collector receives full values and applies its
   # own policy); `beta_gelman` is the full Gelman-scaled coefficient (Session
-  # 128); the CI bounds are present regardless of the `ci` display toggle. First
+  # 128); `beta_product` the full product-first one (Session 321); the CI
+  # bounds are present regardless of the `ci` display toggle. First
   # down-payment on the cross-function return-shape audit -- the accessor
   # contract and final key form remain that item's keystones. (Session 69)
   coefficients_raw <- data.frame(
@@ -2900,16 +3384,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     t        = unname(coefs$t),
     df       = res_df,
     p        = suppressWarnings(as.numeric(coefs$P)),
-    beta        = unname(std_b[term_keys]),
-    beta_gelman = unname(gelman_b[term_keys]),
+    beta         = unname(std_b[term_keys]),
+    beta_gelman  = unname(gelman_b[term_keys]),
+    beta_product = unname(product_b[term_keys]),
     ci_lower = unname(ci_lower_raw),
     ci_upper = unname(ci_upper_raw),
     stringsAsFactors = FALSE,
     row.names = NULL
   )
   # `beta` holds regular standardization; `beta_gelman` holds the Gelman regime;
-  # both are always present. `std_displayed` records which regime the console
-  # showed -- a display choice, not a property of the stored values.
+  # `beta_product` the product-first one; all three are always present.
+  # `std_displayed` records which regime the console showed -- a display
+  # choice, not a property of the stored values.
   attr(coefficients_raw, "beta_standardization") <- "regular"
   attr(coefficients_raw, "std_displayed") <- std
   attr(coefficients_raw, "outcome") <- c(
@@ -3002,6 +3488,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' variable as a column of the data first, then name that column in the
 #' formula. (The dependent variable must be a plain 0/1 dichotomy, so a
 #' transform applies to predictors, not the response.)
+#'
+#' In a formula, \code{^} applied to a single variable is not arithmetic: it
+#' is R's operator for interactions up to that order, so \code{x^2} enters
+#' the model as \code{x} alone. Write \code{I(x^2)} for the square.
+#' \code{jlogistic()} fits the model as written and then warns when a
+#' formula does this.
 #'
 #' @param formula A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
 #'   must be a binary variable coded 0/1. Transformed predictor terms such
@@ -3278,6 +3770,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   raw_vars <- all.vars(formula)
   .jst_check_vars(data, raw_vars, .jst_data_name,
                   default_used = .jst_default_used)
+
+  # A single term raised to a power outside I() enters as the term alone;
+  # found here on the formula as typed, warned once the model is fitted.
+  # See the matching block in jlm (Session 321).
+  bare_powers <- .jst_formula_bare_powers(formula)
 
   # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
   # refusal): compute log(x), I(x^2), and the like once on the analysis
@@ -3749,6 +4246,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                        na.action = stats::na.omit)
   model_summary <- summary(model)
   n_obs         <- stats::nobs(model)
+  .jst_warn_bare_powers(bare_powers)
 
   # A predictor the fit dropped as an exact linear combination of the
   # others has no coefficient row; say so, as jlm does (Session 305).

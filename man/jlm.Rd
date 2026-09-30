@@ -80,15 +80,21 @@ standardized beta on a 0/1 indicator is not comparable to the continuous
 betas (an interaction row built on such a predictor is suppressed with
 it); \code{"all"} -- the same standardized betas with nothing suppressed;
 \code{"gelman"} -- Gelman (2008) scaling (shown for all predictors, and
-headed "Gelman beta"); or \code{"none"} -- omit the column. The returned
-object always carries both the full regular betas (\code{beta}) and the
-full Gelman betas (\code{beta_gelman}) regardless of this display choice.
+headed "Gelman beta"); \code{"product"} -- each predictor standardized
+as it stands, the product of an interaction and a squared term
+included, as some other software does (shown for all predictors, and
+headed "Product beta"); or
+\code{"none"} -- omit the column. The returned object always carries the
+full regular betas (\code{beta}), the full Gelman betas
+(\code{beta_gelman}) and the full product betas (\code{beta_product})
+regardless of this display choice.
 
 The regular betas come from refitting the model on z-scored variables,
 so in a model with an interaction the product is formed from the
 standardized predictors (Aiken and West, 1991). Some software
-standardizes the product column itself instead; see the section
-Comparing with other software.
+standardizes the product column itself instead, which is what
+\code{std = "product"} does; see the section Comparing with other
+software.
 
 The Gelman betas come from refitting the model with every predictor
 centered, a continuous predictor also divided by two standard
@@ -102,18 +108,25 @@ centered, including the dummy variables of a categorical predictor with
 three or more categories, which \code{arm::standardize()} leaves at 0/1
 (its rescaling reaches only the variables named in the formula), so on
 such a model a main effect that interacts with that predictor is the
-sample-average effect here and the reference-category effect there. A
-computed term such as \code{I(x^2)} is standardized as its own column in
-both regimes, where the paper would standardize \code{x} and recompute
-the term; a known difference.
+sample-average effect here and the reference-category effect there.
 
-In a model with an interaction, both refits center the predictors, so a
-main effect's standardized beta is its effect at the average of the
-predictor it interacts with, while its b is the effect when that
-predictor is 0; the two can differ in sign. A two-line note under the
-coefficient table says so, and points to the section Comparing with
-other software, whenever a model with an interaction shows a
-standardized column.}
+A computed term that is a power or a product of variables, such as
+\code{I(x^2)} or \code{I(x * z)}, is recomputed from the rescaled
+variables in both refits, as Gelman (2008, section 3.1) does: the square
+of the rescaled \code{x}, not the rescaled square. Any other computed
+term -- \code{log(x)}, a ratio, a condition such as \code{I(x > 10)} --
+is an input of its own and is rescaled as a column.
+
+In a model with an interaction or a squared term, both refits center the
+predictors, so a main effect's standardized beta is its effect at the
+average of the predictor it interacts with (a squared term's variable,
+at its own average), while its b is the effect when that predictor is 0;
+the two can differ in sign. A note under the coefficient table says so,
+and points to the section Comparing with other software, whenever such
+a model shows a standardized column. A variable that equals the
+product of two other predictors in the model, or the square of one, is
+named in a note of its own, and under \code{std = "product"} a note
+says which convention the column follows.}
 
 \item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints VIF
 table and diagnostic plots. If a character vector, specifies which
@@ -179,9 +192,10 @@ Invisibly returns a list of class \code{jst_lm} containing:
 \item{coefficients_raw}{Flat data frame of raw, full-precision
 coefficient statistics (one row per coefficient): \code{term} (machine
 key), \code{b}, \code{SE}, \code{t}, \code{df}, \code{p}, \code{beta},
-and \code{ci_lower} / \code{ci_upper} bounds (present regardless of the
-\code{ci} display toggle). Carries \code{beta_standardization} and
-\code{outcome} attributes.}
+\code{beta_gelman}, \code{beta_product}, and \code{ci_lower} /
+\code{ci_upper} bounds (present regardless of the \code{ci} display
+toggle). Carries \code{beta_standardization} and \code{outcome}
+attributes.}
 \item{fit_raw}{List of raw, full-precision fit statistics (R-squared,
 adjusted R-squared, residual SE, F with its dfs and p-value, residual
 df, and N).}
@@ -255,14 +269,22 @@ evaluate to one numeric or logical column. Terms that produce several
 columns (\code{poly(x, 2)}, spline bases) or a categorical result
 (\code{cut(x, 3)}) are not supported inline: create the derived variable
 as a column of the data first, then name that column in the formula.
+
+In a formula, \code{^} applied to a single variable is not arithmetic: it
+is R's operator for interactions up to that order, so \code{x^2} enters
+the model as \code{x} alone. Write \code{I(x^2)} for the square.
+\code{jlm()} fits the model as written and then warns when a formula
+does this.
 }
 \section{Comparing with other software}{
 
 Two conventions exist for the standardized coefficients of a model with
-an interaction, and they give different numbers for the same model.
+an interaction or a squared term, and they give different numbers for
+the same model.
 
-The first convention standardizes the inputs and forms the product from
-them. Both standardized columns in jstats follow it:
+The first convention standardizes the inputs and forms the product, or
+the square, from them. The default column and the Gelman column follow
+it:
 \code{std = "regular"} refits the model on z-scored variables (Aiken and
 West, 1991), and \code{std = "gelman"} refits it on centered, rescaled
 predictors (Gelman, 2008). In R, \code{arm::standardize()} follows it
@@ -277,24 +299,29 @@ variables at 0/1. Some of their betas then differ, among them the beta
 of a main effect that interacts with that predictor.
 
 The second convention standardizes the product column itself, as though
-the product were an ordinary predictor. SPSS REGRESSION reports this
-beta, since there the product is computed as a new variable and entered
-like any other, and
+the product were an ordinary predictor, and a squared term's column the
+same way. SPSS REGRESSION reports this beta, since there the product is
+computed as a new variable and entered like any other, and
 \code{effectsize::standardize_parameters(method = "basic")} gives it in
-R. On this convention the betas of the product and of the main effects
-differ from those in jstats.
+R. In jstats, \code{std = "product"} gives it. On this convention the
+betas of the product and of the main effects differ from those of the
+first, and they depend on where each variable's zero falls: adding a
+constant to one of the variables fits the same model but changes them,
+while the first convention's betas stay the same.
 
 Only the standardized columns differ: b, its standard error, t, p and
 R-squared are the same under both. The same split appears within
 jstats. A product computed by hand and entered as its own variable (a
 column \code{xz} made from \code{x * z}, then \code{y ~ x + z + xz})
 fits the same model as \code{y ~ x * z}, but jstats cannot see its
-parts, so its standardized columns follow the second convention.
+parts, so its standardized columns follow the second convention; a note
+under the table names the variable when it equals the product of two
+other predictors in the model, or the square of one.
 
 jstats follows the first convention and recommends it: enter an
-interaction in the formula, as \code{x * z}. If you prefer the second
-convention instead -- to match SPSS REGRESSION, say -- enter the product
-as its own variable.
+interaction in the formula, as \code{x * z}, and a squared term as
+\code{I(x^2)}. If you prefer the second convention instead -- to match
+SPSS REGRESSION, say -- use \code{std = "product"}.
 }
 
 \examples{
@@ -348,6 +375,14 @@ jlm(WellbeingScore ~ Region + Age, std = "none")
 # An interaction, entered in the formula so the standardized column is
 # built from the inputs (see the section Comparing with other software)
 jlm(Flourishing ~ SocialSupport * Stress, data = clinic)
+
+# A squared term, written with I(); its standardized value is built from
+# the standardized Stress
+jlm(Flourishing ~ Stress + I(Stress^2), data = clinic)
+
+# The second convention: each predictor standardized as it stands, the
+# beta SPSS REGRESSION reports for a product computed as a new variable
+jlm(Flourishing ~ SocialSupport * Stress, data = clinic, std = "product")
 
 # jdummy(community, NULL) clears its registration -- not normally needed.
 # You'd clear a default or registration only to undo a mistake, or -- as
