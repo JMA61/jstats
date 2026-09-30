@@ -13,7 +13,7 @@ odds ratios (Exp(B))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.198</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.199</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -287,6 +287,11 @@ result (<code>cut(x, 3)</code>) are not supported inline: create the derived
 variable as a column of the data first, then name that column in the
 formula. (The dependent variable must be a plain 0/1 dichotomy, so a
 transform applies to predictors, not the response.)</p>
+<p>In a formula, <code>^</code> applied to a single variable is not arithmetic: it
+is R's operator for interactions up to that order, so <code>x^2</code> enters
+the model as <code>x</code> alone. Write <code>I(x^2)</code> for the square.
+<code>jlogistic()</code> fits the model as written and then warns when a
+formula does this.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

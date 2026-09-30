@@ -111,16 +111,19 @@ jlm(
   continuous betas (an interaction row built on such a predictor is
   suppressed with it); `"all"` – the same standardized betas with
   nothing suppressed; `"gelman"` – Gelman (2008) scaling (shown for all
-  predictors, and headed "Gelman beta"); or `"none"` – omit the column.
-  The returned object always carries both the full regular betas
-  (`beta`) and the full Gelman betas (`beta_gelman`) regardless of this
-  display choice.
+  predictors, and headed "Gelman beta"); `"product"` – each predictor
+  standardized as it stands, the product of an interaction and a squared
+  term included, as some other software does (shown for all predictors,
+  and headed "Product beta"); or `"none"` – omit the column. The
+  returned object always carries the full regular betas (`beta`), the
+  full Gelman betas (`beta_gelman`) and the full product betas
+  (`beta_product`) regardless of this display choice.
 
   The regular betas come from refitting the model on z-scored variables,
   so in a model with an interaction the product is formed from the
   standardized predictors (Aiken and West, 1991). Some software
-  standardizes the product column itself instead; see the section
-  Comparing with other software.
+  standardizes the product column itself instead, which is what
+  `std = "product"` does; see the section Comparing with other software.
 
   The Gelman betas come from refitting the model with every predictor
   centered, a continuous predictor also divided by two standard
@@ -135,17 +138,25 @@ jlm(
   leaves at 0/1 (its rescaling reaches only the variables named in the
   formula), so on such a model a main effect that interacts with that
   predictor is the sample-average effect here and the reference-category
-  effect there. A computed term such as `I(x^2)` is standardized as its
-  own column in both regimes, where the paper would standardize `x` and
-  recompute the term; a known difference.
+  effect there.
 
-  In a model with an interaction, both refits center the predictors, so
-  a main effect's standardized beta is its effect at the average of the
-  predictor it interacts with, while its b is the effect when that
-  predictor is 0; the two can differ in sign. A two-line note under the
+  A computed term that is a power or a product of variables, such as
+  `I(x^2)` or `I(x * z)`, is recomputed from the rescaled variables in
+  both refits, as Gelman (2008, section 3.1) does: the square of the
+  rescaled `x`, not the rescaled square. Any other computed term –
+  `log(x)`, a ratio, a condition such as `I(x > 10)` – is an input of
+  its own and is rescaled as a column.
+
+  In a model with an interaction or a squared term, both refits center
+  the predictors, so a main effect's standardized beta is its effect at
+  the average of the predictor it interacts with (a squared term's
+  variable, at its own average), while its b is the effect when that
+  predictor is 0; the two can differ in sign. A note under the
   coefficient table says so, and points to the section Comparing with
-  other software, whenever a model with an interaction shows a
-  standardized column.
+  other software, whenever such a model shows a standardized column. A
+  variable that equals the product of two other predictors in the model,
+  or the square of one, is named in a note of its own, and under
+  `std = "product"` a note says which convention the column follows.
 
 - diagnostics:
 
@@ -249,9 +260,9 @@ Invisibly returns a list of class `jst_lm` containing:
 
   Flat data frame of raw, full-precision coefficient statistics (one row
   per coefficient): `term` (machine key), `b`, `SE`, `t`, `df`, `p`,
-  `beta`, and `ci_lower` / `ci_upper` bounds (present regardless of the
-  `ci` display toggle). Carries `beta_standardization` and `outcome`
-  attributes.
+  `beta`, `beta_gelman`, `beta_product`, and `ci_lower` / `ci_upper`
+  bounds (present regardless of the `ci` display toggle). Carries
+  `beta_standardization` and `outcome` attributes.
 
 - fit_raw:
 
@@ -361,46 +372,57 @@ numeric or logical column. Terms that produce several columns
 not supported inline: create the derived variable as a column of the
 data first, then name that column in the formula.
 
+In a formula, `^` applied to a single variable is not arithmetic: it is
+R's operator for interactions up to that order, so `x^2` enters the
+model as `x` alone. Write `I(x^2)` for the square. `jlm()` fits the
+model as written and then warns when a formula does this.
+
 ## Comparing with other software
 
 Two conventions exist for the standardized coefficients of a model with
-an interaction, and they give different numbers for the same model.
+an interaction or a squared term, and they give different numbers for
+the same model.
 
-The first convention standardizes the inputs and forms the product from
-them. Both standardized columns in jstats follow it: `std = "regular"`
-refits the model on z-scored variables (Aiken and West, 1991), and
-`std = "gelman"` refits it on centered, rescaled predictors (Gelman,
-2008). In R, `arm::standardize()` follows it for the Gelman scaling, and
-the default refit of `effectsize::standardize_parameters()` for the
-regular one; both agree with jstats when every predictor is numeric.
-Both differ from jstats on a categorical predictor of three or more
-categories. jstats rescales its dummy variables (see `std`); those
-packages take the predictor as an R factor (base R's form for a
-categorical variable, where jstats uses a
+The first convention standardizes the inputs and forms the product, or
+the square, from them. The default column and the Gelman column follow
+it: `std = "regular"` refits the model on z-scored variables (Aiken and
+West, 1991), and `std = "gelman"` refits it on centered, rescaled
+predictors (Gelman, 2008). In R, `arm::standardize()` follows it for the
+Gelman scaling, and the default refit of
+`effectsize::standardize_parameters()` for the regular one; both agree
+with jstats when every predictor is numeric. Both differ from jstats on
+a categorical predictor of three or more categories. jstats rescales its
+dummy variables (see `std`); those packages take the predictor as an R
+factor (base R's form for a categorical variable, where jstats uses a
 [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md)
 registration) and leave its dummy variables at 0/1. Some of their betas
 then differ, among them the beta of a main effect that interacts with
 that predictor.
 
 The second convention standardizes the product column itself, as though
-the product were an ordinary predictor. SPSS REGRESSION reports this
-beta, since there the product is computed as a new variable and entered
-like any other, and
-`effectsize::standardize_parameters(method = "basic")` gives it in R. On
-this convention the betas of the product and of the main effects differ
-from those in jstats.
+the product were an ordinary predictor, and a squared term's column the
+same way. SPSS REGRESSION reports this beta, since there the product is
+computed as a new variable and entered like any other, and
+`effectsize::standardize_parameters(method = "basic")` gives it in R. In
+jstats, `std = "product"` gives it. On this convention the betas of the
+product and of the main effects differ from those of the first, and they
+depend on where each variable's zero falls: adding a constant to one of
+the variables fits the same model but changes them, while the first
+convention's betas stay the same.
 
 Only the standardized columns differ: b, its standard error, t, p and
 R-squared are the same under both. The same split appears within jstats.
 A product computed by hand and entered as its own variable (a column
 `xz` made from `x * z`, then `y ~ x + z + xz`) fits the same model as
 `y ~ x * z`, but jstats cannot see its parts, so its standardized
-columns follow the second convention.
+columns follow the second convention; a note under the table names the
+variable when it equals the product of two other predictors in the
+model, or the square of one.
 
 jstats follows the first convention and recommends it: enter an
-interaction in the formula, as `x * z`. If you prefer the second
-convention instead – to match SPSS REGRESSION, say – enter the product
-as its own variable.
+interaction in the formula, as `x * z`, and a squared term as `I(x^2)`.
+If you prefer the second convention instead – to match SPSS REGRESSION,
+say – use `std = "product"`.
 
 ## References
 
@@ -826,8 +848,85 @@ jlm(Flourishing ~ SocialSupport * Stress, data = clinic)
 #> Stress                  -2.576   0.588  -4.385  -0.176  <.001
 #> SocialSupport * Stress   0.159   0.041   3.873   0.400  <.001
 #> 
-#> In a model with an interaction, β comes from centered predictors, so it can
-#> differ in sign from b and from some other software's β.
+#> In a model with an interaction, β comes from centered predictors: a β can have
+#> the opposite sign from its b, and other software may report different β values.
+#> See ?jlm.
+#> 
+#> Outcome: Flourishing
+#> 
+#> R-squared: 0.366    Adjusted R-squared: 0.335
+#> Residual Standard Error: 11.635
+#> 
+#> F-statistic: 11.911 on 3 and 62 DF, p-value: <.001
+#> Sum of Squares:
+#>   Regression: 4837.188
+#>   Residual:   8393.297
+#>   Total:      13230.485
+#> 
+
+# A squared term, written with I(); its standardized value is built from
+# the standardized Stress
+jlm(Flourishing ~ Stress + I(Stress^2), data = clinic)
+#> Linear Regression
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --         70
+#>     Auto-listwise         4         66
+#>     Analysis N           --         66
+#> 
+#> Missing data   From 70   %
+#>     Stress
+#>       Missing     4     5.7
+#> --------------------------------------
+#> 
+#> Coefficients
+#>                b      SE      t       β       p  
+#> -----------  ------  -----  ------  ------  -----
+#> (Intercept)  50.111  5.210   9.618          <.001
+#> Stress        0.711  0.607   1.171  -0.262   .246
+#> I(Stress^2)  -0.040  0.017  -2.296  -0.154   .025
+#> 
+#> In a model with a squared term, β comes from centered predictors: a β can have
+#> the opposite sign from its b, and other software may report different β values.
+#> See ?jlm.
+#> 
+#> Outcome: Flourishing
+#> 
+#> R-squared: 0.163    Adjusted R-squared: 0.136
+#> Residual Standard Error: 13.260
+#> 
+#> F-statistic: 6.125 on 2 and 63 DF, p-value: .004
+#> Sum of Squares:
+#>   Regression: 2153.689
+#>   Residual:   11076.796
+#>   Total:      13230.485
+#> 
+
+# The second convention: each predictor standardized as it stands, the
+# beta SPSS REGRESSION reports for a product computed as a new variable
+jlm(Flourishing ~ SocialSupport * Stress, data = clinic, std = "product")
+#> Linear Regression
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --         70
+#>     Auto-listwise         4         66
+#>     Analysis N           --         66
+#> 
+#> Missing data   From 70   %
+#>     Stress
+#>       Missing     4     5.7
+#> --------------------------------------
+#> 
+#> Coefficients
+#>                           b       SE      t     Product β    p  
+#> ----------------------  ------  ------  ------  ---------  -----
+#> (Intercept)             78.089  11.164   6.995             <.001
+#> SocialSupport           -1.573   0.740  -2.126     -0.536   .037
+#> Stress                  -2.576   0.588  -4.385     -1.337  <.001
+#> SocialSupport * Stress   0.159   0.041   3.873      1.320  <.001
+#> 
+#> Product β treats each interaction as an ordinary predictor, as some other
+#> software does.
 #> See ?jlm.
 #> 
 #> Outcome: Flourishing

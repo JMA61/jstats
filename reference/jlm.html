@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.198</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.199</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -144,14 +144,20 @@ standardized beta on a 0/1 indicator is not comparable to the continuous
 betas (an interaction row built on such a predictor is suppressed with
 it); <code>"all"</code> – the same standardized betas with nothing suppressed;
 <code>"gelman"</code> – Gelman (2008) scaling (shown for all predictors, and
-headed "Gelman beta"); or <code>"none"</code> – omit the column. The returned
-object always carries both the full regular betas (<code>beta</code>) and the
-full Gelman betas (<code>beta_gelman</code>) regardless of this display choice.</p>
+headed "Gelman beta"); <code>"product"</code> – each predictor standardized
+as it stands, the product of an interaction and a squared term
+included, as some other software does (shown for all predictors, and
+headed "Product beta"); or
+<code>"none"</code> – omit the column. The returned object always carries the
+full regular betas (<code>beta</code>), the full Gelman betas
+(<code>beta_gelman</code>) and the full product betas (<code>beta_product</code>)
+regardless of this display choice.</p>
 <p>The regular betas come from refitting the model on z-scored variables,
 so in a model with an interaction the product is formed from the
 standardized predictors (Aiken and West, 1991). Some software
-standardizes the product column itself instead; see the section
-Comparing with other software.</p>
+standardizes the product column itself instead, which is what
+<code>std = "product"</code> does; see the section Comparing with other
+software.</p>
 <p>The Gelman betas come from refitting the model with every predictor
 centered, a continuous predictor also divided by two standard
 deviations and a binary predictor (a 0/1 variable, or a category's
@@ -164,17 +170,23 @@ centered, including the dummy variables of a categorical predictor with
 three or more categories, which <code>arm::standardize()</code> leaves at 0/1
 (its rescaling reaches only the variables named in the formula), so on
 such a model a main effect that interacts with that predictor is the
-sample-average effect here and the reference-category effect there. A
-computed term such as <code>I(x^2)</code> is standardized as its own column in
-both regimes, where the paper would standardize <code>x</code> and recompute
-the term; a known difference.</p>
-<p>In a model with an interaction, both refits center the predictors, so a
-main effect's standardized beta is its effect at the average of the
-predictor it interacts with, while its b is the effect when that
-predictor is 0; the two can differ in sign. A two-line note under the
-coefficient table says so, and points to the section Comparing with
-other software, whenever a model with an interaction shows a
-standardized column.</p></dd>
+sample-average effect here and the reference-category effect there.</p>
+<p>A computed term that is a power or a product of variables, such as
+<code>I(x^2)</code> or <code>I(x * z)</code>, is recomputed from the rescaled
+variables in both refits, as Gelman (2008, section 3.1) does: the square
+of the rescaled <code>x</code>, not the rescaled square. Any other computed
+term – <code>log(x)</code>, a ratio, a condition such as <code>I(x &gt; 10)</code> –
+is an input of its own and is rescaled as a column.</p>
+<p>In a model with an interaction or a squared term, both refits center the
+predictors, so a main effect's standardized beta is its effect at the
+average of the predictor it interacts with (a squared term's variable,
+at its own average), while its b is the effect when that predictor is 0;
+the two can differ in sign. A note under the coefficient table says so,
+and points to the section Comparing with other software, whenever such
+a model shows a standardized column. A variable that equals the
+product of two other predictors in the model, or the square of one, is
+named in a note of its own, and under <code>std = "product"</code> a note
+says which convention the column follows.</p></dd>
 
 
 <dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
@@ -265,9 +277,10 @@ are unaffected. Not a logical.</p></dd>
 <dd><p>Flat data frame of raw, full-precision
 coefficient statistics (one row per coefficient): <code>term</code> (machine
 key), <code>b</code>, <code>SE</code>, <code>t</code>, <code>df</code>, <code>p</code>, <code>beta</code>,
-and <code>ci_lower</code> / <code>ci_upper</code> bounds (present regardless of the
-<code>ci</code> display toggle). Carries <code>beta_standardization</code> and
-<code>outcome</code> attributes.</p></dd>
+<code>beta_gelman</code>, <code>beta_product</code>, and <code>ci_lower</code> /
+<code>ci_upper</code> bounds (present regardless of the <code>ci</code> display
+toggle). Carries <code>beta_standardization</code> and <code>outcome</code>
+attributes.</p></dd>
 
 <dt>fit_raw</dt>
 <dd><p>List of raw, full-precision fit statistics (R-squared,
@@ -353,15 +366,22 @@ evaluate to one numeric or logical column. Terms that produce several
 columns (<code>poly(x, 2)</code>, spline bases) or a categorical result
 (<code>cut(x, 3)</code>) are not supported inline: create the derived variable
 as a column of the data first, then name that column in the formula.</p>
+<p>In a formula, <code>^</code> applied to a single variable is not arithmetic: it
+is R's operator for interactions up to that order, so <code>x^2</code> enters
+the model as <code>x</code> alone. Write <code>I(x^2)</code> for the square.
+<code>jlm()</code> fits the model as written and then warns when a formula
+does this.</p>
     </div>
     <div class="section level2">
     <h2 id="comparing-with-other-software">Comparing with other software<a class="anchor" aria-label="anchor" href="#comparing-with-other-software"></a></h2>
 
 
 <p>Two conventions exist for the standardized coefficients of a model with
-an interaction, and they give different numbers for the same model.</p>
-<p>The first convention standardizes the inputs and forms the product from
-them. Both standardized columns in jstats follow it:
+an interaction or a squared term, and they give different numbers for
+the same model.</p>
+<p>The first convention standardizes the inputs and forms the product, or
+the square, from them. The default column and the Gelman column follow
+it:
 <code>std = "regular"</code> refits the model on z-scored variables (Aiken and
 West, 1991), and <code>std = "gelman"</code> refits it on centered, rescaled
 predictors (Gelman, 2008). In R, <code>arm::standardize()</code> follows it
@@ -375,22 +395,27 @@ where jstats uses a <code><a href="jdummy.html">jdummy()</a></code> registration
 variables at 0/1. Some of their betas then differ, among them the beta
 of a main effect that interacts with that predictor.</p>
 <p>The second convention standardizes the product column itself, as though
-the product were an ordinary predictor. SPSS REGRESSION reports this
-beta, since there the product is computed as a new variable and entered
-like any other, and
+the product were an ordinary predictor, and a squared term's column the
+same way. SPSS REGRESSION reports this beta, since there the product is
+computed as a new variable and entered like any other, and
 <code>effectsize::standardize_parameters(method = "basic")</code> gives it in
-R. On this convention the betas of the product and of the main effects
-differ from those in jstats.</p>
+R. In jstats, <code>std = "product"</code> gives it. On this convention the
+betas of the product and of the main effects differ from those of the
+first, and they depend on where each variable's zero falls: adding a
+constant to one of the variables fits the same model but changes them,
+while the first convention's betas stay the same.</p>
 <p>Only the standardized columns differ: b, its standard error, t, p and
 R-squared are the same under both. The same split appears within
 jstats. A product computed by hand and entered as its own variable (a
 column <code>xz</code> made from <code>x * z</code>, then <code>y ~ x + z + xz</code>)
 fits the same model as <code>y ~ x * z</code>, but jstats cannot see its
-parts, so its standardized columns follow the second convention.</p>
+parts, so its standardized columns follow the second convention; a note
+under the table names the variable when it equals the product of two
+other predictors in the model, or the square of one.</p>
 <p>jstats follows the first convention and recommends it: enter an
-interaction in the formula, as <code>x * z</code>. If you prefer the second
-convention instead – to match SPSS REGRESSION, say – enter the product
-as its own variable.</p>
+interaction in the formula, as <code>x * z</code>, and a squared term as
+<code>I(x^2)</code>. If you prefer the second convention instead – to match
+SPSS REGRESSION, say – use <code>std = "product"</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -814,8 +839,85 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Stress                  -2.576   0.588  -4.385  -0.176  &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> SocialSupport * Stress   0.159   0.041   3.873   0.400  &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> In a model with an interaction, β comes from centered predictors, so it can</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> differ in sign from b and from some other software's β.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> In a model with an interaction, β comes from centered predictors: a β can have</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> the opposite sign from its b, and other software may report different β values.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> See ?jlm.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Flourishing</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.366    Adjusted R-squared: 0.335</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 11.635</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 11.911 on 3 and 62 DF, p-value: &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Sum of Squares:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 4837.188</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   8393.297</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13230.485</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A squared term, written with I(); its standardized value is built from</span></span></span>
+<span class="r-in"><span><span class="co"># the standardized Stress</span></span></span>
+<span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">Flourishing</span> <span class="op">~</span> <span class="va">Stress</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="va">Stress</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">clinic</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --         70</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         4         66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N           --         66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 70   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Stress</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing     4     5.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                b      SE      t       β       p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------  ------  -----  ------  ------  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  50.111  5.210   9.618          &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Stress        0.711  0.607   1.171  -0.262   .246</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> I(Stress^2)  -0.040  0.017  -2.296  -0.154   .025</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> In a model with a squared term, β comes from centered predictors: a β can have</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> the opposite sign from its b, and other software may report different β values.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> See ?jlm.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Flourishing</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> R-squared: 0.163    Adjusted R-squared: 0.136</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual Standard Error: 13.260</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 6.125 on 2 and 63 DF, p-value: .004</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Sum of Squares:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regression: 2153.689</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Residual:   11076.796</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13230.485</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The second convention: each predictor standardized as it stands, the</span></span></span>
+<span class="r-in"><span><span class="co"># beta SPSS REGRESSION reports for a product computed as a new variable</span></span></span>
+<span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">Flourishing</span> <span class="op">~</span> <span class="va">SocialSupport</span> <span class="op">*</span> <span class="va">Stress</span>, data <span class="op">=</span> <span class="va">clinic</span>, std <span class="op">=</span> <span class="st">"product"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --         70</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         4         66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N           --         66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 70   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Stress</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing     4     5.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                           b       SE      t     Product β    p  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------  ------  ------  ------  ---------  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)             78.089  11.164   6.995             &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SocialSupport           -1.573   0.740  -2.126     -0.536   .037</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Stress                  -2.576   0.588  -4.385     -1.337  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SocialSupport * Stress   0.159   0.041   3.873      1.320  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Product β treats each interaction as an ordinary predictor, as some other</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> software does.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> See ?jlm.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Flourishing</span>

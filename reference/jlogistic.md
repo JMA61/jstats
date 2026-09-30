@@ -276,6 +276,11 @@ the derived variable as a column of the data first, then name that
 column in the formula. (The dependent variable must be a plain 0/1
 dichotomy, so a transform applies to predictors, not the response.)
 
+In a formula, `^` applied to a single variable is not arithmetic: it is
+R's operator for interactions up to that order, so `x^2` enters the
+model as `x` alone. Write `I(x^2)` for the square. `jlogistic()` fits
+the model as written and then warns when a formula does this.
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)

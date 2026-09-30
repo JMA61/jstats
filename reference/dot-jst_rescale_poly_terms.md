@@ -1,0 +1,51 @@
+# Internal helper: recompute power and product terms from rescaled inputs
+
+jlm()'s two standardized refits rescale each column of the model frame.
+A computed term that is a power or a product of inputs
+([`.jst_poly_term()`](https://jma61.github.io/jstats/reference/dot-jst_poly_term.md))
+is then replaced by the term recomputed from its rescaled inputs – the
+square of the z-score, not the z-score of the square – as Gelman (2008,
+section 3.1) and the Aiken and West (1991) standardized solution do, and
+as the refit already does for an interaction written `x * z`. Each input
+is evaluated on the analysis rows and rescaled by the refit's own rule,
+the rule the refit applies to the same variable where it is also a
+column of the model, so a main effect and its square are rescaled alike.
+A term whose input cannot be evaluated, or has no spread in the analysis
+sample, keeps the column the refit gave it. (Session 321.)
+
+## Usage
+
+``` r
+.jst_rescale_poly_terms(mf_scaled, mf, data, computed, rescale, enclos)
+```
+
+## Arguments
+
+- mf_scaled:
+
+  The refit's model frame, every column already rescaled.
+
+- mf:
+
+  The listwise-complete model frame (its row names locate the analysis
+  rows in `data`).
+
+- data:
+
+  The analysis frame the model frame was built from.
+
+- computed:
+
+  Names of the resolver-computed columns.
+
+- rescale:
+
+  Function of one numeric vector returning it rescaled.
+
+- enclos:
+
+  Environment for constants inside a term (the formula's).
+
+## Value
+
+`mf_scaled`, each power or product term's column replaced.
