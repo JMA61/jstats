@@ -28,7 +28,13 @@ for any other reason falls back to
 ## Usage
 
 ``` r
-.jst_check_formula_vars(formula, data, data_name, default_used = FALSE)
+.jst_check_formula_vars(
+  formula,
+  data,
+  data_name,
+  default_used = FALSE,
+  n_frame = NULL
+)
 ```
 
 ## Arguments
@@ -50,9 +56,30 @@ for any other reason falls back to
   Logical; passed to
   [`.jst_check_vars()`](https://jma61.github.io/jstats/reference/dot-jst_check_vars.md).
 
+- n_frame:
+
+  Integer or NULL; the frame's row count before the pipeline's filters
+  (`pipeline_counts$n_original`), which tells the recycling stop's two
+  forms apart. NULL is read as `nrow(data)`.
+
 ## Value
 
 The data variables the formula names, constants left out, in order of
 first appearance – the list the Case Processing Summary receives as
 `analysis_vars`. Stops instead when a name is found nowhere, a data
-frame is named inside a term, or a power is refused.
+frame is named inside a term, a power is refused, or a workspace vector
+would be recycled.
+
+## Details
+
+A third refusal follows them (Session 324, the second deliberate
+departure from [`lm()`](https://rdrr.io/r/stats/lm.html) parity): a
+workspace vector with more than one value but not one per row of `data`
+– the frame after its filters, before cases with missing values are set
+aside, the rows the resolver computes the term on – used value by value
+inside a computed term
+([`.jst_formula_recycled()`](https://jma61.github.io/jstats/reference/dot-jst_formula_recycled.md)).
+[`lm()`](https://rdrr.io/r/stats/lm.html) recycles it. A vector with one
+value per row of the frame as given, which a filter has since cut down,
+gets the fix of adding it to the frame, where the filter reaches it; any
+other length gets the requirement.

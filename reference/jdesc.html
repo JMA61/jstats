@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,11 +64,13 @@ invisibly returns the underlying results as a data frame.</p>
 
 
 <dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
-<dd><p>A data frame, or a numeric vector.</p></dd>
+<dd><p>A data frame, or a single variable: a column of a data frame
+or a numeric vector.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Unquoted variable names within <code>data</code> (ignored if data is a vector).</p></dd>
+<dd><p>Unquoted variable names within <code>data</code>. None when
+<code>data</code> is a single variable.</p></dd>
 
 
 <dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
@@ -184,6 +186,14 @@ are skipped with a warning directing the user to <code><a href="jfreq.html">jfre
 variables are not supported here). When every requested variable is
 unsummarizable, jdesc() stops with an error. Also accepts a simple numeric
 vector. Supports grouped descriptives via the <code>by</code> parameter.</p>
+<p>Given a single variable instead of a data frame, as in
+<code>jdesc(community$Age)</code>, jdesc() describes that variable. A column of
+a data frame is described in its frame, exactly as
+<code>jdesc(community, Age)</code> describes it: the frame's <code><a href="jsubset.html">jsubset()</a></code>
+and <code><a href="jcomplete.html">jcomplete()</a></code> settings and its registrations apply. Any other
+vector is described on its own. A second variable, <code>by</code>, and a
+<code>subset</code> condition naming another variable need the data frame, and
+each stops with that form of the call.</p>
 <p>Haven-labelled variables are reported as <code>haven_labelled (Categorical)</code>
 in the type line; the uninformative <code>vctrs_vctr</code> class is suppressed.</p>
     </div>

@@ -26,11 +26,13 @@ jdesc(
 
 - data:
 
-  A data frame, or a numeric vector.
+  A data frame, or a single variable: a column of a data frame or a
+  numeric vector.
 
 - ...:
 
-  Unquoted variable names within `data` (ignored if data is a vector).
+  Unquoted variable names within `data`. None when `data` is a single
+  variable.
 
 - by:
 
@@ -154,6 +156,17 @@ skipped with a warning directing the user to
 variable is unsummarizable, jdesc() stops with an error. Also accepts a
 simple numeric vector. Supports grouped descriptives via the `by`
 parameter.
+
+Given a single variable instead of a data frame, as in
+`jdesc(community$Age)`, jdesc() describes that variable. A column of a
+data frame is described in its frame, exactly as `jdesc(community, Age)`
+describes it: the frame's
+[`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) and
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+settings and its registrations apply. Any other vector is described on
+its own. A second variable, `by`, and a `subset` condition naming
+another variable need the data frame, and each stops with that form of
+the call.
 
 Haven-labelled variables are reported as `haven_labelled (Categorical)`
 in the type line; the uninformative `vctrs_vctr` class is suppressed.

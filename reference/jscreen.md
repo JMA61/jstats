@@ -33,12 +33,13 @@ jscreen(
 
 - data:
 
-  A data frame.
+  A data frame, or a single variable: a column of a data frame or a
+  vector.
 
 - ...:
 
   Optional unquoted variable names to screen. If omitted, all variables
-  in the data frame are screened.
+  in the data frame are screened. None when `data` is a single variable.
 
 - outlier.sd:
 
@@ -160,6 +161,17 @@ stored with
 and a `subset` expression, apply to the whole data frame before the
 named variables are taken, so they may refer to variables that are not
 screened.
+
+Given a single variable instead of a data frame, as in
+`jscreen(community$Income)`, jscreen() screens that variable. A column
+of a data frame is screened in its frame, exactly as
+`jscreen(community, Income)` screens it: the frame's
+[`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) and
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+settings and its registrations apply. Any other vector is screened on
+its own. A second variable, and a `subset` condition naming another
+variable, need the data frame, and each stops with that form of the
+call.
 
 Those filters are accounted for as in the analysis functions: a Case
 Processing table between the title and the header lists the original
@@ -360,6 +372,28 @@ jscreen(community, types = FALSE, issues = FALSE)
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
+#> 
+
+# A single variable
+jscreen(community$Income)
+#> Data Screening
+#>   Cases: 103 
+#>   Variables: 1 
+#>   Cases with missing data: 6 
+#>   Variables with outliers: 0 
+#> 
+#> Variable Types
+#> Variable  jstats Class  Unique Values
+#> --------  ------------  -------------
+#> Income    Numeric                  49
+#> 
+#> Missing Data & Outliers (outliers > 3 SD from mean)
+#> Variable  Missing  % Missing
+#> --------  -------  ---------
+#> Income       6        5.8   
+#> 
+#> Note: SPSS-style declared missing values on: Income.
 #> jstats treats these as missing; base R functions do not.
 #> 
 

@@ -1,4 +1,4 @@
-# Internal helper: re-call jdesc() or jfreq() on a wrapped bare column
+# Internal helper: re-call jdesc(), jfreq() or jscreen() on a bare column
 
 The vector-input path's re-call. Every argument the caller received is
 forwarded (AUDIT-008: the re-call once passed only some of them, so
@@ -72,3 +72,17 @@ S322 ruling the data-frame form's `subset =` follows.
 ## Value
 
 The re-call's value.
+
+## Details
+
+A column of a data frame (`wrapped$in_frame`, Session 324) is re-called
+in that frame – `jdesc(d$Age)` as `jdesc(d, Age)` – so the frame's
+stored
+[`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) and
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+settings and its registrations, all kept by the frame's name, apply as
+they do in the data-frame form. Until then the re-call ran on a
+one-column copy under an internal name: a stored filter was skipped, and
+the yellow line said it was "not active for this dataset". Any other
+value (`c(...)`, a computed vector) is still wrapped. The refusals above
+apply to both.

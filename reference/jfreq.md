@@ -22,12 +22,13 @@ jfreq(
 
 - data:
 
-  A data frame, or a vector.
+  A data frame, or a single variable: a column of a data frame or a
+  vector.
 
 - ...:
 
-  Unquoted variable name(s) within `data` (ignored if `data` is a
-  vector).
+  Unquoted variable name(s) within `data`. None when `data` is a single
+  variable.
 
 - subset:
 
@@ -117,6 +118,17 @@ For haven-labelled variables, value labels and numeric codes are
 combined in the frequency table rows (e.g. `1: Strongly Oppose`) at the
 default `value.id` setting. Where variable labels are shown, they are
 shown for all variable types, not only haven-labelled ones.
+
+Given a single variable instead of a data frame, as in
+`jfreq(community$Region)`, jfreq() tabulates that variable. A column of
+a data frame is tabulated in its frame, exactly as
+`jfreq(community, Region)` tabulates it: the frame's
+[`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) and
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+settings and its registrations apply. Any other vector is tabulated on
+its own. A second variable, and a `subset` condition naming another
+variable, need the data frame, and each stops with that form of the
+call.
 
 ## See also
 

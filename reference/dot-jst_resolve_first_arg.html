@@ -17,7 +17,7 @@ argument)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -140,6 +140,12 @@ modes <code>null</code> and <code>vector_input</code>).</p></dd>
 argument, set only for mode <code>vector_input</code>; <code>NULL</code>
 otherwise.</p></dd>
 
+<dt><code>first_arg_frame</code></dt>
+<dd><p>For mode <code>vector_input</code>, the
+<code><a href="dot-jst_frame_column.html">.jst_frame_column()</a></code> result when the argument was typed as a
+data frame's column, otherwise <code>NULL</code>; absent in the other
+modes.</p></dd>
+
 
 </dl></div>
     <div class="section level2">
@@ -176,6 +182,16 @@ as an additional content argument.</p></dd>
 </dl><p>Errors with a tailored message when the user passed something that
 cannot be resolved (e.g., bare symbol with no juse default set, or
 literal <code>NULL</code> when <code>allow_null = FALSE</code>).</p>
+<p>A first argument typed as a data frame's column – <code>d$Stress</code> or
+<code>d[["Stress"]]</code>, with <code>d</code> a data frame (<code><a href="dot-jst_frame_column.html">.jst_frame_column()</a></code>)
+– is read before it is evaluated (Session 324). A name the frame does not
+have stops with the not-found check, as <code>jdesc(d, Strss)</code> would,
+instead of evaluating to NULL and meeting the empty-object guard. When
+<code>accept_vector = FALSE</code> the column stops there too, with
+<code><a href="dot-jst_frame_column_stop.html">.jst_frame_column_stop()</a></code>: it was found, but it is not a data frame,
+where Case 5 used to call it not found. When <code>accept_vector = TRUE</code>
+it is evaluated and returned in mode <code>vector_input</code> with the frame
+recorded, so the caller's re-call can run in that frame.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

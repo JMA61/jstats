@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,12 +60,13 @@ also accepts a plain vector.</p>
 
 
 <dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
-<dd><p>A data frame, or a vector.</p></dd>
+<dd><p>A data frame, or a single variable: a column of a data frame
+or a vector.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Unquoted variable name(s) within <code>data</code> (ignored if
-<code>data</code> is a vector).</p></dd>
+<dd><p>Unquoted variable name(s) within <code>data</code>. None when
+<code>data</code> is a single variable.</p></dd>
 
 
 <dt id="arg-subset">subset<a class="anchor" aria-label="anchor" href="#arg-subset"></a></dt>
@@ -157,6 +158,14 @@ frequency table ends with a Total row showing the post-pipeline N.</p>
 in the frequency table rows (e.g. <code>1: Strongly Oppose</code>) at the
 default <code>value.id</code> setting. Where variable labels are shown, they
 are shown for all variable types, not only haven-labelled ones.</p>
+<p>Given a single variable instead of a data frame, as in
+<code>jfreq(community$Region)</code>, jfreq() tabulates that variable. A column
+of a data frame is tabulated in its frame, exactly as
+<code>jfreq(community, Region)</code> tabulates it: the frame's
+<code><a href="jsubset.html">jsubset()</a></code> and <code><a href="jcomplete.html">jcomplete()</a></code> settings and its registrations
+apply. Any other vector is tabulated on its own. A second variable, and a
+<code>subset</code> condition naming another variable, need the data frame, and
+each stops with that form of the call.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

@@ -98,6 +98,13 @@ A list with components:
   The evaluated value of the first argument, set only for mode
   `vector_input`; `NULL` otherwise.
 
+- `first_arg_frame`:
+
+  For mode `vector_input`, the
+  [`.jst_frame_column()`](https://jma61.github.io/jstats/reference/dot-jst_frame_column.md)
+  result when the argument was typed as a data frame's column, otherwise
+  `NULL`; absent in the other modes.
+
 ## Details
 
 Distinguishes five outcomes via the `mode` field:
@@ -135,3 +142,16 @@ Distinguishes five outcomes via the `mode` field:
 Errors with a tailored message when the user passed something that
 cannot be resolved (e.g., bare symbol with no juse default set, or
 literal `NULL` when `allow_null = FALSE`).
+
+A first argument typed as a data frame's column – `d$Stress` or
+`d[["Stress"]]`, with `d` a data frame
+([`.jst_frame_column()`](https://jma61.github.io/jstats/reference/dot-jst_frame_column.md))
+– is read before it is evaluated (Session 324). A name the frame does
+not have stops with the not-found check, as `jdesc(d, Strss)` would,
+instead of evaluating to NULL and meeting the empty-object guard. When
+`accept_vector = FALSE` the column stops there too, with
+[`.jst_frame_column_stop()`](https://jma61.github.io/jstats/reference/dot-jst_frame_column_stop.md):
+it was found, but it is not a data frame, where Case 5 used to call it
+not found. When `accept_vector = TRUE` it is evaluated and returned in
+mode `vector_input` with the frame recorded, so the caller's re-call can
+run in that frame.

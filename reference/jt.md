@@ -158,7 +158,11 @@ first, are as documented for
 vector from your workspace may be named inside a computed term, as in
 [`lm()`](https://rdrr.io/r/stats/lm.html): `I(x > cutoff)` with
 `cutoff <- 10`. A data frame may not: write `y ~ x` with
-`data = MyData`, not `MyData$y ~ MyData$x`.
+`data = MyData`, not `MyData$y ~ MyData$x`. A vector used value by value
+with the data, as in `I(x * w)`, must hold one value for each case –
+each row of `data` left after filtering – where
+[`lm()`](https://rdrr.io/r/stats/lm.html) would recycle a shorter one; a
+set used with `%in%` may have any length.
 
 ## See also
 

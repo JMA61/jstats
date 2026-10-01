@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -199,7 +199,11 @@ column first, are as documented for <code><a href="jlm.html">jlm</a></code>.
 A value or vector from your workspace may be named inside a computed
 term, as in <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>: <code>I(x &gt; cutoff)</code> with <code>cutoff &lt;- 10</code>.
 A data frame may not: write <code>y ~ x</code> with <code>data = MyData</code>,
-not <code>MyData$y ~ MyData$x</code>.</p>
+not <code>MyData$y ~ MyData$x</code>.
+A vector used value by value with the data, as in <code>I(x * w)</code>,
+must hold one value for each case – each row of <code>data</code> left
+after filtering – where <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would recycle a shorter one; a
+set used with <code>%in%</code> may have any length.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

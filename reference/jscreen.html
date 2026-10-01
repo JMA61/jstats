@@ -25,7 +25,7 @@ and date/time variables gracefully.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,12 +85,14 @@ and date/time variables gracefully.</p>
 
 
 <dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
-<dd><p>A data frame.</p></dd>
+<dd><p>A data frame, or a single variable: a column of a data frame
+or a vector.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Optional unquoted variable names to screen. If omitted,
-all variables in the data frame are screened.</p></dd>
+all variables in the data frame are screened. None when <code>data</code> is
+a single variable.</p></dd>
 
 
 <dt id="arg-outlier-sd">outlier.sd<a class="anchor" aria-label="anchor" href="#arg-outlier-sd"></a></dt>
@@ -206,6 +208,14 @@ omitted, all variables in the data frame are screened. Settings stored
 with <code><a href="jsubset.html">jsubset()</a></code> and <code><a href="jcomplete.html">jcomplete()</a></code>, and a <code>subset</code>
 expression, apply to the whole data frame before the named variables are
 taken, so they may refer to variables that are not screened.</p>
+<p>Given a single variable instead of a data frame, as in
+<code>jscreen(community$Income)</code>, jscreen() screens that variable. A
+column of a data frame is screened in its frame, exactly as
+<code>jscreen(community, Income)</code> screens it: the frame's
+<code><a href="jsubset.html">jsubset()</a></code> and <code><a href="jcomplete.html">jcomplete()</a></code> settings and its registrations
+apply. Any other vector is screened on its own. A second variable, and a
+<code>subset</code> condition naming another variable, need the data frame, and
+each stops with that form of the call.</p>
 <p>Those filters are accounted for as in the analysis functions: a Case
 Processing table between the title and the header lists the original
 count, the cases each filter excluded, and the count remaining, which the
@@ -404,6 +414,28 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income, Education, Smoker,</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Environment1, Environment3.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A single variable</span></span></span>
+<span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span><span class="op">$</span><span class="va">Income</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 6 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variables with outliers: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable Types</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  jstats Class  Unique Values</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ------------  -------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income    Numeric                  49</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing Data &amp; Outliers (outliers &gt; 3 SD from mean)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Missing  % Missing</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -------  ---------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income       6        5.8   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: SPSS-style declared missing values on: Income.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>

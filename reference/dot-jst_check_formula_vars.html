@@ -39,7 +39,7 @@ process for any other reason falls back to all.vars(), unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,7 +86,13 @@ process for any other reason falls back to <code><a href="https://rdrr.io/r/base
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_formula_vars</span><span class="op">(</span><span class="va">formula</span>, <span class="va">data</span>, <span class="va">data_name</span>, default_used <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_formula_vars</span><span class="op">(</span></span>
+<span>  <span class="va">formula</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  <span class="va">data_name</span>,</span>
+<span>  default_used <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  n_frame <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -108,13 +114,32 @@ process for any other reason falls back to <code><a href="https://rdrr.io/r/base
 <dt id="arg-default-used">default_used<a class="anchor" aria-label="anchor" href="#arg-default-used"></a></dt>
 <dd><p>Logical; passed to <code><a href="dot-jst_check_vars.html">.jst_check_vars()</a></code>.</p></dd>
 
+
+<dt id="arg-n-frame">n_frame<a class="anchor" aria-label="anchor" href="#arg-n-frame"></a></dt>
+<dd><p>Integer or NULL; the frame's row count before the
+pipeline's filters (<code>pipeline_counts$n_original</code>), which tells the
+recycling stop's two forms apart. NULL is read as <code>nrow(data)</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The data variables the formula names, constants left out, in
 order of first appearance – the list the Case Processing Summary
 receives as <code>analysis_vars</code>. Stops instead when a name is found
-nowhere, a data frame is named inside a term, or a power is refused.</p>
+nowhere, a data frame is named inside a term, a power is refused, or a
+workspace vector would be recycled.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>A third refusal follows them (Session 324, the second deliberate
+departure from <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> parity): a workspace vector with more than one
+value but not one per row of <code>data</code> – the frame after its filters,
+before cases with missing values are set aside, the rows the resolver
+computes the term on – used value by value inside a computed term
+(<code><a href="dot-jst_formula_recycled.html">.jst_formula_recycled()</a></code>). <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> recycles it. A vector with
+one value per row of the frame as given, which a filter has since cut
+down, gets the fix of adding it to the frame, where the filter reaches
+it; any other length gets the requirement.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
