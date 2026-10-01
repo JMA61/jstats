@@ -274,12 +274,18 @@ column. Terms that produce several columns (`poly(x, 2)`, spline bases)
 or a categorical result (`cut(x, 3)`) are not supported inline: create
 the derived variable as a column of the data first, then name that
 column in the formula. (The dependent variable must be a plain 0/1
-dichotomy, so a transform applies to predictors, not the response.)
+dichotomy, so a transform applies to predictors, not the response.) A
+value or vector from your workspace may be named inside a computed term,
+as in [`lm()`](https://rdrr.io/r/stats/lm.html): `I(x > cutoff)` with
+`cutoff <- 10`. A data frame may not: write `y ~ x` with
+`data = MyData`, not `MyData$y ~ MyData$x`.
 
 In a formula, `^` applied to a single variable is not arithmetic: it is
 R's operator for interactions up to that order, so `x^2` enters the
 model as `x` alone. Write `I(x^2)` for the square. `jlogistic()` fits
-the model as written and then warns when a formula does this.
+the model as written and then warns when a formula does this. A power
+that is not a number, `x^k`, stops with an error, as in
+[`lm()`](https://rdrr.io/r/stats/lm.html); write `I(x^k)`.
 
 ## See also
 

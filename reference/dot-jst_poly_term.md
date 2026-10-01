@@ -14,12 +14,16 @@ argument is a product of whole-number powers of inputs with total degree
 sub-expression that contains a variable (`log(x)` in `I(log(x)^2)`); a
 number, or a symbol that is not a column of the data, is a constant and
 stays in the term as written. Parentheses, unary minus and division by a
-constant are read through. (Session 321.)
+constant are read through. (Session 321.) A power may also be a name
+that is not a column of the data and holds a single whole number in
+`enclos`, the formula's environment, so `I(x^k)` with `k <- 2` is read
+as `I(x^2)` is (Session 323); the term's text, and so its row label,
+stays as typed.
 
 ## Usage
 
 ``` r
-.jst_poly_term(term_txt, data_names)
+.jst_poly_term(term_txt, data_names, enclos = NULL)
 ```
 
 ## Arguments
@@ -31,6 +35,11 @@ constant are read through. (Session 321.)
 - data_names:
 
   Column names of the analysis frame.
+
+- enclos:
+
+  Environment a power's name is looked up in; NULL reads number powers
+  only.
 
 ## Value
 

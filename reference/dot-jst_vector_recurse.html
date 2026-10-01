@@ -6,18 +6,26 @@ call is evaluated in a child of the caller's environment, so a subset
 condition finds the same objects it would in the data-frame form. What a
 single column cannot serve is refused, each time with the data-frame form
 as the fix: further variables, a by grouping, and a subset condition
-naming another variable. A condition may name the wrapped variable, an
-object in the caller's environment, or a column reached through a frame
-with the dollar sign."><meta property="og:description" content="The vector-input path's re-call. Every argument the caller received is
+naming another variable. A condition may name the wrapped variable or an
+object in the caller's environment. A column reached through a data frame
+with the dollar sign (subset = d$Keep01 == 1) was served until
+Session 323; it is refused now, with the data-frame form as the fix,
+because the re-call would read it from the user's raw frame, past its
+declared missing values – the S322 ruling the data-frame form's
+subset = follows."><meta property="og:description" content="The vector-input path's re-call. Every argument the caller received is
 forwarded (AUDIT-008: the re-call once passed only some of them, so
 digits, subset and case.processing.detail were silently ignored), and the
 call is evaluated in a child of the caller's environment, so a subset
 condition finds the same objects it would in the data-frame form. What a
 single column cannot serve is refused, each time with the data-frame form
 as the fix: further variables, a by grouping, and a subset condition
-naming another variable. A condition may name the wrapped variable, an
-object in the caller's environment, or a column reached through a frame
-with the dollar sign."></head><body>
+naming another variable. A condition may name the wrapped variable or an
+object in the caller's environment. A column reached through a data frame
+with the dollar sign (subset = d$Keep01 == 1) was served until
+Session 323; it is refused now, with the data-frame form as the fix,
+because the re-call would read it from the user's raw frame, past its
+declared missing values – the S322 ruling the data-frame form's
+subset = follows."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -25,7 +33,7 @@ with the dollar sign."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.199</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,9 +66,13 @@ call is evaluated in a child of the caller's environment, so a subset
 condition finds the same objects it would in the data-frame form. What a
 single column cannot serve is refused, each time with the data-frame form
 as the fix: further variables, a by grouping, and a subset condition
-naming another variable. A condition may name the wrapped variable, an
-object in the caller's environment, or a column reached through a frame
-with the dollar sign.</p>
+naming another variable. A condition may name the wrapped variable or an
+object in the caller's environment. A column reached through a data frame
+with the dollar sign (<code>subset = d$Keep01 == 1</code>) was served until
+Session 323; it is refused now, with the data-frame form as the fix,
+because the re-call would read it from the user's raw frame, past its
+declared missing values – the S322 ruling the data-frame form's
+<code>subset =</code> follows.</p>
     </div>
 
     <div class="section level2">

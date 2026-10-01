@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.199</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -231,7 +231,10 @@ for scatterplots and boxplots, consistent with the formula syntax of
 <code><a href="jlm.html">jlm()</a></code>, <code><a href="jaov.html">jaov()</a></code>, and <code><a href="jt.html">jt()</a></code>. The DV on the left of
 <code>~</code> goes on the y-axis; the IV on the right goes on the x-axis. Only
 single-IV formulas are supported here; for multi-IV models, fit with
-<code><a href="jlm.html">jlm()</a></code> and pass the result to <code>jplot()</code>.</p>
+<code><a href="jlm.html">jlm()</a></code> and pass the result to <code>jplot()</code>. Each side names a
+variable as it stands: a computed term such as <code>log(Income)</code> or
+<code>I(Age &gt; 40)</code> is refused, so create it as a variable of the data
+first.</p>
 <p><strong>Variable-list form</strong> (for distributions and counts): Pass a data
 frame followed by one or two unquoted variable names. The data frame is
 given either positionally or as <code>data = </code>:

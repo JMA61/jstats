@@ -13,7 +13,7 @@ to the scatter or box builder depending on the IV's type."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.199</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,10 @@ to the scatter or box builder depending on the IV's type.</p>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Only single-IV formulas are supported (<code>DV ~ IV</code>). Multi-IV formulas
-produce a helpful error pointing to the jlm() + jplot(m) workflow.</p>
+produce a helpful error pointing to the jlm() + jplot(m) workflow. A data
+frame named inside a term, and a computed term, are refused before the
+variables are counted, once the frame is resolved (Session 323): the path
+pulls each variable by name, so a computed term plotted the raw variable.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

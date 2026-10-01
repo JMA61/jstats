@@ -154,7 +154,11 @@ like – is computed once on the analysis data and used by both the t-test
 and the group descriptives, so the two describe the same values. The
 transforms supported inline, and those that must be created as a column
 first, are as documented for
-[`jlm`](https://jma61.github.io/jstats/reference/jlm.md).
+[`jlm`](https://jma61.github.io/jstats/reference/jlm.md). A value or
+vector from your workspace may be named inside a computed term, as in
+[`lm()`](https://rdrr.io/r/stats/lm.html): `I(x > cutoff)` with
+`cutoff <- 10`. A data frame may not: write `y ~ x` with
+`data = MyData`, not `MyData$y ~ MyData$x`.
 
 ## See also
 

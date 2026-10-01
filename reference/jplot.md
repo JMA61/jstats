@@ -198,7 +198,9 @@ boxplots, consistent with the formula syntax of
 left of `~` goes on the y-axis; the IV on the right goes on the x-axis.
 Only single-IV formulas are supported here; for multi-IV models, fit
 with [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) and pass
-the result to `jplot()`.
+the result to `jplot()`. Each side names a variable as it stands: a
+computed term such as `log(Income)` or `I(Age > 40)` is refused, so
+create it as a variable of the data first.
 
 **Variable-list form** (for distributions and counts): Pass a data frame
 followed by one or two unquoted variable names. The data frame is given

@@ -14,7 +14,11 @@ variable, or any other sub-expression that contains a variable
 (log(x) in I(log(x)^2)); a number, or a symbol that is
 not a column of the data, is a constant and stays in the term as
 written. Parentheses, unary minus and division by a constant are read
-through. (Session 321.)"><meta property="og:description" content="Gelman (2008, section 3.1) rescales the input variables and recomputes
+through. (Session 321.) A power may also be a name that is not a column
+of the data and holds a single whole number in enclos, the
+formula's environment, so I(x^k) with k &amp;lt;- 2 is read as
+I(x^2) is (Session 323); the term's text, and so its row label,
+stays as typed."><meta property="og:description" content="Gelman (2008, section 3.1) rescales the input variables and recomputes
 each term from them, so a squared input is the square of the rescaled
 input, not the rescaled square. That applies to a term that is a power
 or a product of inputs – I(x^2), I(x^3),
@@ -29,7 +33,11 @@ variable, or any other sub-expression that contains a variable
 (log(x) in I(log(x)^2)); a number, or a symbol that is
 not a column of the data, is a constant and stays in the term as
 written. Parentheses, unary minus and division by a constant are read
-through. (Session 321.)"></head><body>
+through. (Session 321.) A power may also be a name that is not a column
+of the data and holds a single whole number in enclos, the
+formula's environment, so I(x^k) with k &amp;lt;- 2 is read as
+I(x^2) is (Session 323); the term's text, and so its row label,
+stays as typed."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -37,7 +45,7 @@ through. (Session 321.)"></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.199</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.200</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -78,12 +86,16 @@ variable, or any other sub-expression that contains a variable
 (<code>log(x)</code> in <code>I(log(x)^2)</code>); a number, or a symbol that is
 not a column of the data, is a constant and stays in the term as
 written. Parentheses, unary minus and division by a constant are read
-through. (Session 321.)</p>
+through. (Session 321.) A power may also be a name that is not a column
+of the data and holds a single whole number in <code>enclos</code>, the
+formula's environment, so <code>I(x^k)</code> with <code>k &lt;- 2</code> is read as
+<code>I(x^2)</code> is (Session 323); the term's text, and so its row label,
+stays as typed.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_poly_term</span><span class="op">(</span><span class="va">term_txt</span>, <span class="va">data_names</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_poly_term</span><span class="op">(</span><span class="va">term_txt</span>, <span class="va">data_names</span>, enclos <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -96,6 +108,11 @@ through. (Session 321.)</p>
 
 <dt id="arg-data-names">data_names<a class="anchor" aria-label="anchor" href="#arg-data-names"></a></dt>
 <dd><p>Column names of the analysis frame.</p></dd>
+
+
+<dt id="arg-enclos">enclos<a class="anchor" aria-label="anchor" href="#arg-enclos"></a></dt>
+<dd><p>Environment a power's name is looked up in; NULL reads
+number powers only.</p></dd>
 
 </dl></div>
     <div class="section level2">
