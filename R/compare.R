@@ -384,7 +384,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     .jst_print_table(levene_table,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = c(F_value = digits_n))
 
     # Interpretive note (only when significant and not already using Welch)
     if (!is.na(levene_p) && levene_p < 0.05 && !welch) {
@@ -427,7 +428,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   .jst_print_table(desc_table,
                    caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
-                   row.names = FALSE)
+                   row.names = FALSE,
+                   digits = c(Mean = digits_n, SD = digits_n))
   cat("\n")
 
   # Run t-test
@@ -462,9 +464,16 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     row.names = NULL
   )
 
+  # Decimal places by column (Session 326): the statistics at digits, with
+  # trailing zeros kept; Welch's df keeps its one-place convention (57.0).
+  # Student's and the paired df are whole numbers and print as such.
+  test_digits <- c(t = digits_n, Mean_Difference = digits_n)
+  if (welch && !paired) test_digits <- c(test_digits, df = 1L)
+
   if (ci) {
     test_table$CI_Lower <- round(result$conf.int[1], digits_n)
     test_table$CI_Upper <- round(result$conf.int[2], digits_n)
+    test_digits <- c(test_digits, CI_Lower = digits_n, CI_Upper = digits_n)
   }
 
   if (paired) {
@@ -480,12 +489,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      caption = test_label,
                      col.names = c("t", "df", "p", "Mean Difference",
                                    "95% CI Lower", "95% CI Upper"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = test_digits)
   } else {
     .jst_print_table(test_table,
                      caption = test_label,
                      col.names = c("t", "df", "p", "Mean Difference"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = test_digits)
   }
 
   # Effect size (Cohen's d) -- always computed, displayed only when requested
@@ -506,8 +517,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     d_label  <- "Cohen's d"
   }
 
+  # The value to digits places, trailing zeros kept (0.230, not 0.23).
+  # (Session 326)
   if (effect.size) {
-    cat(paste0("\n", d_label, ": ", round(cohens_d, digits_n), "\n"))
+    cat(paste0("\n", d_label, ": ", .jst_fmt_stat(cohens_d, digits_n), "\n"))
   }
 
   .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
@@ -887,7 +900,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     .jst_print_table(levene_table,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = c(F_value = digits_n))
 
     # Interpretive note (only when significant and not already using Welch)
     if (!is.na(levene_p) && levene_p < 0.05 && !welch) {
@@ -944,16 +958,20 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   })
   desc_table <- do.call(rbind, desc_rows)
 
+  # Every statistic to digits places, trailing zeros kept (Session 326).
   if (ci) {
     .jst_print_table(desc_table,
                      caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                      col.names = c("Group", "N", "Mean", "SD",
                                    "95% CI Lower", "95% CI Upper"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = c(Mean = digits_n, SD = digits_n,
+                                CI_Lower = digits_n, CI_Upper = digits_n))
   } else {
     .jst_print_table(desc_table,
                      caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = c(Mean = digits_n, SD = digits_n))
   }
   cat("\n")
 
@@ -972,10 +990,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       row.names = NULL
     )
 
+    # F to digits places; Welch's df2 keeps its one-place convention (50.3,
+    # 57.0); df1 is a whole number. (Session 326)
     .jst_print_table(welch_table,
                      caption = paste("Welch's ANOVA:", dv_disp, "by", group_disp),
                      col.names = c("F", "df1", "df2", "p"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = c(F_value = digits_n, df2 = 1L))
 
     cat("\nNote: Sum of Squares and Mean Squares are not available for Welch's ANOVA.\n",
         "To obtain these, run jaov() without welch = TRUE.\n", sep = "")
@@ -990,8 +1011,10 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     temp_result <- summary(temp_model)[[1]]
     eta_sq      <- temp_result$`Sum Sq`[1] / sum(temp_result$`Sum Sq`)
 
+    # The value to digits places, trailing zeros kept (0.100, not 0.1), and
+    # no space before the line end. (Session 326)
     if (effect.size) {
-      cat("\nEta-squared:", round(eta_sq, digits_n), "\n")
+      cat("\nEta-squared: ", .jst_fmt_stat(eta_sq, digits_n), "\n", sep = "")
       cat("(Note: Eta-squared is calculated from the traditional SS decomposition.)\n")
     }
 
@@ -1021,17 +1044,25 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       stringsAsFactors = FALSE
     )
 
+    # One precision per kind of statistic (Session 326): Sum of Squares,
+    # Mean Square and F all at digits places, so the between-groups SS and
+    # MS of a one-df effect -- the same number -- read alike (682.770 and
+    # 682.770, where per-column detection printed 682.770 beside 682.77).
     .jst_print_table(anova_table,
                      caption = paste("ANOVA:", dv_disp, "by", group_disp),
                      col.names = c("Source", "df", "Sum of Squares",
                                    "Mean Square", "F", "p"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = c(Sum_of_Squares = digits_n,
+                                Mean_Square = digits_n, F_value = digits_n))
 
     # Always compute eta-squared
     eta_sq <- result$`Sum Sq`[1] / sum(result$`Sum Sq`)
 
+    # The value to digits places, trailing zeros kept, and no space before
+    # the line end. (Session 326)
     if (effect.size) {
-      cat("\nEta-squared:", round(eta_sq, digits_n), "\n")
+      cat("\nEta-squared: ", .jst_fmt_stat(eta_sq, digits_n), "\n", sep = "")
     }
 
     if (posthoc) {
@@ -1057,7 +1088,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                        col.names = c("Comparison", "Mean Difference",
                                      "95% CI Lower", "95% CI Upper",
                                      "p (adjusted)"),
-                       row.names = FALSE)
+                       row.names = FALSE,
+                       digits = c(Difference = digits_n, CI_Lower = digits_n,
+                                  CI_Upper = digits_n))
     }
 
     # Store F, df, p for the return object

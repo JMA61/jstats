@@ -12,7 +12,8 @@
   caption = NULL,
   indent = 0,
   header.indent = 0,
-  trim = FALSE
+  trim = FALSE,
+  digits = NULL
 )
 }
 \arguments{
@@ -55,6 +56,21 @@ the column's width, so without the trim those lines end in spaces --
 invisible on screen but carried into anything copied or captured.
 Default FALSE. jdesc's two tables pass TRUE (Session 316); making it
 the default for every table is a separate, package-wide decision.}
+
+\item{digits}{Optional named vector that fixes the decimal places of
+numeric columns, keyed by the data frame's own column names (not the
+display headers), e.g. \code{c(Mean = 3, SD = 3)}. A named column
+prints every value to exactly that many places, trailing zeros kept
+(0.100, 16.000), through \code{.jst_make_fmt()}, so a value that rounds
+to zero from below prints unsigned and NA stays a blank cell. A numeric
+column the vector does not name keeps the detected decimals described
+in the body, so a caller that passes nothing prints exactly as before;
+an NA entry also keeps the detection, and an entry naming a non-numeric
+column is ignored. A name that matches no column is an error, so a
+misspelled name cannot fall back to the detection unnoticed. NULL (the
+default) fixes no column. Added Session 326: a column's decimal places
+come from what it holds -- a statistic at the digits setting, a fixed
+convention at its own -- never from the values that happen to be in it.}
 }
 \description{
 Purpose-built table printer that replaces knitr::kable() for console output.

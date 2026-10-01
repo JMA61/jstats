@@ -1903,18 +1903,55 @@ jai <- function(setup = NULL, path = NULL) {
 #'   invisible on screen but carried into anything copied or captured.
 #'   Default FALSE. jdesc's two tables pass TRUE (Session 316); making it
 #'   the default for every table is a separate, package-wide decision.
+#' @param digits Optional named vector that fixes the decimal places of
+#'   numeric columns, keyed by the data frame's own column names (not the
+#'   display headers), e.g. \code{c(Mean = 3, SD = 3)}. A named column
+#'   prints every value to exactly that many places, trailing zeros kept
+#'   (0.100, 16.000), through \code{.jst_make_fmt()}, so a value that rounds
+#'   to zero from below prints unsigned and NA stays a blank cell. A numeric
+#'   column the vector does not name keeps the detected decimals described
+#'   in the body, so a caller that passes nothing prints exactly as before;
+#'   an NA entry also keeps the detection, and an entry naming a non-numeric
+#'   column is ignored. A name that matches no column is an error, so a
+#'   misspelled name cannot fall back to the detection unnoticed. NULL (the
+#'   default) fixes no column. Added Session 326: a column's decimal places
+#'   come from what it holds -- a statistic at the digits setting, a fixed
+#'   convention at its own -- never from the values that happen to be in it.
 #'
 #' @keywords internal
 .jst_print_table <- function(df, col.names = NULL, row.names = TRUE,
                              align = NULL, caption = NULL, indent = 0,
-                             header.indent = 0, trim = FALSE) {
+                             header.indent = 0, trim = FALSE, digits = NULL) {
 
   headers <- if (!is.null(col.names)) col.names else names(df)
+
+  # Fixed decimal places by column name (Session 326). Validated first: a
+  # name that matches no column is a caller's slip, and quietly falling back
+  # to the detection below would hide exactly the trailing-zero defect the
+  # argument exists to fix.
+  if (!is.null(digits)) {
+    dn <- names(digits)
+    if (is.null(dn) || anyNA(dn) || any(!nzchar(dn)) ||
+        any(!dn %in% names(df))) {
+      stop(".jst_print_table(): every digits entry must name a column of ",
+           "df; not found: ", paste(setdiff(dn, names(df)), collapse = ", "),
+           call. = FALSE)
+    }
+  }
 
   # Build display matrix
   display_cols <- lapply(seq_len(ncol(df)), function(j) {
     col <- df[[j]]
     if (is.numeric(col)) {
+      # A column the caller fixed (Session 326): exactly that many places,
+      # trailing zeros kept -- 0.100, not 0.1; 682.770 beside 682.770, not
+      # 682.77 -- a negative zero unsigned, NA blank.
+      fixed <- if (!is.null(digits) && names(df)[j] %in% names(digits)) {
+        digits[[names(df)[j]]]
+      } else {
+        NA
+      }
+      if (!is.na(fixed)) return(.jst_make_fmt(fixed)(col))
       # Values reaching the renderer are already rounded at their source
       # (round(x, digits_n)). format()'s default is getOption("digits") = 7
       # SIGNIFICANT figures, which silently drops decimals once a value's

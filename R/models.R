@@ -3368,9 +3368,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
           stringsAsFactors = FALSE,
           row.names = NULL
         )
+        # VIF keeps its fixed three places, trailing zeros included (1.250,
+        # not 1.25). (Session 326)
         .jst_print_table(vif_df,
                          caption = "VIF (Variance Inflation Factors)",
-                         row.names = FALSE)
+                         row.names = FALSE,
+                         digits = c(VIF = 3L))
 
         # Targeted notes for VIF > 10
         high_vif <- vif_values[vif_values > 10]
@@ -4500,16 +4503,23 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   } else {
     cat("\n")
   }
+  # The fit statistics to digits places, trailing zeros kept, as in the
+  # coefficient table above. Each of these one-row tables took its decimals
+  # from its single value, so -2 Log Likelihood could read 141.17 beside a
+  # three-place R-squared. (Session 326)
   .jst_print_table(omnibus_table,
                    caption = "Omnibus Test of Model Coefficients",
                    col.names = c("Chi-Square", "df", "p"),
-                   row.names = FALSE)
+                   row.names = FALSE,
+                   digits = c(Chi_Square = digits_n))
   cat("\n")
   .jst_print_table(summary_table,
                    caption = "Model Summary",
                    col.names = c("-2 Log Likelihood", "Cox & Snell R\u00b2",
                                  "Nagelkerke R\u00b2", "AIC"),
-                   row.names = FALSE)
+                   row.names = FALSE,
+                   digits = c(neg2LL = digits_n, CoxSnellR2 = digits_n,
+                              NagelkerkeR2 = digits_n, AIC = digits_n))
 
   # -- Classification table (optional) ---------------------------------------
   if (classification) {
@@ -4536,11 +4546,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     )
 
     cat("\n")
+    # % Correct keeps its one-place percentage convention (50.0, not 50).
+    # (Session 326)
     .jst_print_table(class_table,
                      caption = "Classification Table (cutoff = 0.50)",
                      col.names = c("Observed", "Predicted 0", "Predicted 1",
                                    "% Correct"),
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits = c(Pct_Correct = 1L))
   }
 
   # -- Diagnostics (VIF) -----------------------------------------------------
@@ -4567,9 +4580,12 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
           stringsAsFactors = FALSE,
           row.names = NULL
         )
+        # VIF keeps its fixed three places, trailing zeros included.
+        # (Session 326)
         .jst_print_table(vif_df,
                          caption = "VIF (Variance Inflation Factors)",
-                         row.names = FALSE)
+                         row.names = FALSE,
+                         digits = c(VIF = 3L))
 
         # Targeted notes for VIF > 10
         high_vif <- vif_values[vif_values > 10]
@@ -4898,10 +4914,13 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     stringsAsFactors = FALSE
   )
 
+  # Alpha to digits places, trailing zeros kept (0.570, not 0.57).
+  # (Session 326)
   .jst_print_table(alpha_table,
                    caption = "Reliability Statistics",
                    col.names = c("Cronbach's Alpha", "N of Items"),
-                   row.names = FALSE)
+                   row.names = FALSE,
+                   digits = c(Alpha = digits_n))
   cat("\n")
 
   # Variable label display mode. jalpha is a collapse layout: under "labels"
@@ -4933,7 +4952,8 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   item_stats_disp$Item <- item_disp
   .jst_print_table(item_stats_disp,
                    caption = "Item Statistics",
-                   row.names = FALSE)
+                   row.names = FALSE,
+                   digits = c(Mean = digits_n, SD = digits_n))
   cat("\n")
 
   # Item-Total Statistics
@@ -4999,7 +5019,9 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    caption = "Item-Total Statistics",
                    col.names = c("Item", "Corrected Item-Total r",
                                  "Alpha if Item Deleted"),
-                   row.names = FALSE)
+                   row.names = FALSE,
+                   digits = c(Corrected_Item_Total_r = digits_n,
+                              Alpha_If_Deleted = digits_n))
 
   cat("\n")
 

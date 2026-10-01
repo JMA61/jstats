@@ -807,20 +807,54 @@
 #' places via \code{sprintf("%.<digits>f")}, preserving base R's half-to-even
 #' rounding (the option only changes the number of places, never the rounding
 #' rule). \code{digits = 0} yields whole numbers with no trailing decimal
-#' point. NA formats to the empty string so it renders as a blank cell.
+#' point. NA formats to the empty string so it renders as a blank cell. A
+#' value that rounds to zero from below prints unsigned ("0.000", not
+#' "-0.000"), the rule the jlm and jlogistic coefficient formatters and
+#' jcorr's r cells already follow.
+#'
+#' Since Session 326 this is the formatter behind the \code{digits} argument
+#' of \code{.jst_print_table()} (every column a caller fixes) and behind
+#' \code{.jst_fmt_stat()} (the effect-size result lines).
 #'
 #' @param digits Integer number of decimal places (0-7).
 #'
 #' @return A function of one argument (coerced via as.numeric) returning a
-#'   character string.
+#'   character vector the same length as its input.
 #'
 #' @keywords internal
 .jst_make_fmt <- function(digits) {
   spec <- paste0("%.", digits, "f")
   function(x) {
     x <- suppressWarnings(as.numeric(x))
-    ifelse(is.na(x), "", sprintf(spec, x))
+    if (length(x) == 0L) return(character(0))
+    s <- sprintf(spec, x)
+    # A value that rounds to zero from below prints unsigned: "-0.000" reads
+    # as an error. (Session 326)
+    s <- ifelse(startsWith(s, "-") & !grepl("[1-9]", s), sub("^-", "", s), s)
+    ifelse(is.na(x), "", s)
   }
+}
+
+#' Internal helper: format one statistic for a result line
+#'
+#' Formats a single statistic printed on a line of its own rather than in a
+#' table -- jaov's "Eta-squared:" line and jt's "Cohen's d:" line -- to
+#' exactly \code{digits} decimal places, trailing zeros kept (0.100, not
+#' 0.1). The value is rounded with \code{round()} first, so the number shown
+#' is the one those lines showed before Session 326, now padded. A value
+#' that rounds to zero from below prints unsigned. A non-finite value (NaN
+#' from a zero total sum of squares, say) prints as R prints it, never as a
+#' blank.
+#'
+#' @param x A single numeric value.
+#' @param digits Integer number of decimal places (0-7).
+#'
+#' @return A character string.
+#'
+#' @keywords internal
+.jst_fmt_stat <- function(x, digits) {
+  if (length(x) != 1L || !is.finite(x)) return(as.character(x))
+  .jst_make_fmt(digits)(round(x, digits))
 }
 
 #' Internal helper: format a p-value for display

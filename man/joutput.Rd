@@ -190,9 +190,12 @@ print it; the minimal level suppresses it.}
 \item{digits}{Integer or NULL. Number of decimal places shown for
 continuous statistics in the analysis-function output tables
 (range 0-7; \code{digits = 0} prints whole numbers with no
-trailing decimal point). Does not affect p-values, percentages,
-or integer quantities (counts, N, degrees of freedom), which keep
-their own fixed conventions. All three preset levels default to 3.}
+trailing decimal point). Every such statistic shows exactly this
+many places, trailing zeros included (0.100, not 0.1). Does not
+affect p-values, percentages, or integer quantities (counts, N,
+degrees of freedom), which keep their own fixed conventions, or the
+Min and Max columns of \code{jdesc()}, which show the values as the
+data carry them. All three preset levels default to 3.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, joutput() applies the
 level/toggle change silently (the status panel is not printed). A bare

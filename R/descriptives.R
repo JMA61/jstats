@@ -124,8 +124,10 @@
 #'   statistics in the output tables (range 0-7; \code{digits = 0} prints
 #'   whole numbers with no trailing decimal point). Does not affect p-values,
 #'   percentages, or integer quantities (counts, N, degrees of freedom),
-#'   which keep their own fixed conventions. NULL (default) defers to
-#'   \code{joutput()}'s \code{digits} setting (default 3).
+#'   which keep their own fixed conventions. The Min and Max columns are
+#'   values of the variables rather than statistics: they show as many
+#'   decimal places as the data carry, up to this many. NULL (default)
+#'   defers to \code{joutput()}'s \code{digits} setting (default 3).
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
@@ -447,9 +449,13 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       # Total and Non_missing on their ones digit, the statistics keep their
       # decimal alignment, and no line ends in padding. The ungrouped table
       # below takes the same form, so the two read alike.
+      # Mean and SD to digits places, trailing zeros kept; Min and Max are
+      # values of the variable and keep the precision the data carry.
+      # (Session 326)
       .jst_print_table(group_table, row.names = FALSE,
                        align = c("l", rep("bc", ncol(group_table) - 1L)),
-                       trim = TRUE)
+                       trim = TRUE,
+                       digits = c(Mean = digits_n, SD = digits_n))
       cat("\n")
     }
 
@@ -598,9 +604,13 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # (Session 287; the S284 N line made the doubling visible everywhere.)
     # Block-centered numeric columns and trimmed lines, as the grouped
     # table (Session 316).
+    # Mean and SD to digits places, trailing zeros kept (49.600, not
+    # 49.6); Min and Max are values of the variables and keep the
+    # precision the data carry. (Session 326)
     .jst_print_table(descriptives_disp,
                      align = c("l", rep("bc", ncol(descriptives_disp) - 1L)),
-                     trim = TRUE)
+                     trim = TRUE,
+                     digits = c(Mean = digits_n, SD = digits_n))
     cat("\n")
   }
 
@@ -1821,10 +1831,16 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
                             character(1))
     }
     cat("\n")
+    # The opt-in Mean and Median columns to digits places, trailing zeros
+    # kept (Session 326). Named only when shown: the renderer refuses a name
+    # that matches no column.
     .jst_print_table(t1,
                      caption   = "Variable Types",
                      col.names = heads,
-                     row.names = FALSE)
+                     row.names = FALSE,
+                     digits    = c(Mean = digits_n,
+                                   Median = digits_n)[intersect(
+                                     c("Mean", "Median"), cols)])
 
     # Conditional one-line legend, printed only when a "*" actually appeared.
     if (show_star) {

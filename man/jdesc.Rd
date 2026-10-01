@@ -96,8 +96,10 @@ place. See \code{?joutput} (\code{case.processing}).}
 statistics in the output tables (range 0-7; \code{digits = 0} prints
 whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
-which keep their own fixed conventions. NULL (default) defers to
-\code{joutput()}'s \code{digits} setting (default 3).}
+which keep their own fixed conventions. The Min and Max columns are
+values of the variables rather than statistics: they show as many
+decimal places as the data carry, up to this many. NULL (default)
+defers to \code{joutput()}'s \code{digits} setting (default 3).}
 }
 \value{
 Invisibly returns a list of class \code{jst_desc} containing:
