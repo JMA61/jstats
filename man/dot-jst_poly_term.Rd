@@ -4,12 +4,15 @@
 \alias{.jst_poly_term}
 \title{Internal helper: read a computed term as a power or product of inputs}
 \usage{
-.jst_poly_term(term_txt, data_names)
+.jst_poly_term(term_txt, data_names, enclos = NULL)
 }
 \arguments{
 \item{term_txt}{The computed column's name: the term's text.}
 
 \item{data_names}{Column names of the analysis frame.}
+
+\item{enclos}{Environment a power's name is looked up in; NULL reads
+number powers only.}
 }
 \value{
 NULL when the term is not a power or product of inputs;
@@ -34,6 +37,10 @@ variable, or any other sub-expression that contains a variable
 (\code{log(x)} in \code{I(log(x)^2)}); a number, or a symbol that is
 not a column of the data, is a constant and stays in the term as
 written. Parentheses, unary minus and division by a constant are read
-through. (Session 321.)
+through. (Session 321.) A power may also be a name that is not a column
+of the data and holds a single whole number in \code{enclos}, the
+formula's environment, so \code{I(x^k)} with \code{k <- 2} is read as
+\code{I(x^2)} is (Session 323); the term's text, and so its row label,
+stays as typed.
 }
 \keyword{internal}

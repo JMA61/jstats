@@ -24,7 +24,10 @@
 #' \code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
 #' \code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only
 #' single-IV formulas are supported here; for multi-IV models, fit with
-#' \code{jlm()} and pass the result to \code{jplot()}.
+#' \code{jlm()} and pass the result to \code{jplot()}. Each side names a
+#' variable as it stands: a computed term such as \code{log(Income)} or
+#' \code{I(Age > 40)} is refused, so create it as a variable of the data
+#' first.
 #'
 #' \strong{Variable-list form} (for distributions and counts): Pass a data
 #' frame followed by one or two unquoted variable names. The data frame is
@@ -595,7 +598,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' to the scatter or box builder depending on the IV's type.
 #'
 #' Only single-IV formulas are supported (\code{DV ~ IV}). Multi-IV formulas
-#' produce a helpful error pointing to the jlm() + jplot(m) workflow.
+#' produce a helpful error pointing to the jlm() + jplot(m) workflow. A data
+#' frame named inside a term, and a computed term, are refused before the
+#' variables are counted, once the frame is resolved (Session 323): the path
+#' pulls each variable by name, so a computed term plotted the raw variable.
 #'
 #' @keywords internal
 .jst_jplot_formula <- function(formula, jplot_call, ..., by_expr, type, line,
@@ -609,21 +615,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     .jst_stop("A two-sided formula is required: DV ~ IV.\n",
          "  Example: jplot(WellbeingScore ~ Income, community)")
   }
-
-  y_name <- all.vars(formula[[2]])
-  x_vars <- all.vars(formula[[3]])
-
-  if (length(y_name) != 1) {
-    .jst_stop("Only one variable is supported on the left side of ~.\n",
-         "  Example: jplot(WellbeingScore ~ Income, community)")
-  }
-  if (length(x_vars) > 1) {
-    .jst_stop("Only one independent variable is supported in the formula.\n",
-         "For multi-variable regression, fit with jlm() and plot the result:\n",
-         "  m <- jlm(", deparse(formula), ", <data>)\n",
-         "  jplot(m)")
-  }
-  x_name <- x_vars[1]
 
   # -- Resolve data frame ----------------------------------------------------
   # The first UNNAMED argument in ..., or a data = argument, or the juse
@@ -692,6 +683,34 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     .jst_stop("the data argument after the formula must be a data frame.",
               fn = "jplot")
   }
+
+  # -- Terms the plot cannot take (Session 323) ------------------------------
+  # Read before the variables are counted, with the frame now known. A data
+  # frame named inside a term (d$Flourishing ~ d$Income) is refused with the
+  # variables-on-their-own form, as jlm() refuses it. A computed term
+  # (I(ScreenTime > 4), log(Income)) is refused as jcrosstab() refuses it:
+  # the path pulls the column by name, so it plotted the raw variable under
+  # the term's title, and with a constant (I(ScreenTime > cutoff)) the count
+  # below stopped for the wrong reason. The variable count moved below the
+  # frame's resolution to make room; neither step prints anything.
+  .jst_check_formula_frames(formula, data, .jst_data_name)
+  .jst_check_formula_transforms(formula, .jst_data_name)
+
+  y_name <- all.vars(formula[[2]])
+  x_vars <- all.vars(formula[[3]])
+
+  if (length(y_name) != 1) {
+    .jst_stop("Only one variable is supported on the left side of ~.\n",
+         "  Example: jplot(WellbeingScore ~ Income, community)")
+  }
+  if (length(x_vars) > 1) {
+    .jst_stop("Only one independent variable is supported in the formula.\n",
+         "For multi-variable regression, fit with jlm() and plot the result:\n",
+         "  m <- jlm(", deparse(formula), ", <data>)\n",
+         "  jplot(m)")
+  }
+  x_name <- x_vars[1]
+
 
   # -- Handle by argument ----------------------------------------------------
   # by_expr is the result of substitute(by) from the caller — either NULL

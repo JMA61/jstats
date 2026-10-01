@@ -269,12 +269,17 @@ evaluate to one numeric or logical column. Terms that produce several
 columns (\code{poly(x, 2)}, spline bases) or a categorical result
 (\code{cut(x, 3)}) are not supported inline: create the derived variable
 as a column of the data first, then name that column in the formula.
+A value or vector from your workspace may be named inside a computed
+term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
+A data frame may not: write \code{y ~ x} with \code{data = MyData},
+not \code{MyData$y ~ MyData$x}.
 
 In a formula, \code{^} applied to a single variable is not arithmetic: it
 is R's operator for interactions up to that order, so \code{x^2} enters
 the model as \code{x} alone. Write \code{I(x^2)} for the square.
 \code{jlm()} fits the model as written and then warns when a formula
-does this.
+does this. A power that is not a number, \code{x^k}, stops with an
+error, as in \code{lm()}; write \code{I(x^k)}.
 }
 \section{Comparing with other software}{
 

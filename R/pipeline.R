@@ -435,6 +435,17 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   expr_str_for_check <- deparse(filter_raw, width.cutoff = 500)
   .jst_check_filter_syntax(filter_raw, expr_str_for_check, origin = "set")
 
+  # -- A data frame named in the condition (Session 323) --------------------
+  # jsubset(d, d$Income < 45) would read Income from the raw frame at every
+  # analysis, where a declared -99 is a number below 45. Refused before the
+  # dry run, with the variables on their own; an earlier filter is kept.
+  caller_env <- parent.frame()
+  .jst_check_condition_frames(filter_raw, expr_str_for_check, arg1$data,
+                              caller_env, origin = "set",
+                              data_name   = target_name,
+                              named_frame = identical(arg1$mode, "explicit"),
+                              prior       = !is.null(.jst_get_filter(target_name)))
+
   # -- Dry run: refuse a filter that cannot select rows ---------------------
   # Run the expression once against the resolved frame (S288 decision 3).
   # STRICT on shape, SILENT on evaluation failure: an expression may

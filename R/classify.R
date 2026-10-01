@@ -946,6 +946,407 @@
   invisible(NULL)
 }
 
+#' Internal helper: the names an expression reads as values
+#'
+#' Walks a formula term or a filter condition and returns, in order of first
+#' appearance, each name it reads as a value -- the names \code{eval()} would
+#' look up. A call's function position is not walked. The name after
+#' \code{$} or \code{@} is a component name, not a lookup, so only the
+#' object before it is collected: \code{d$Income} reads \code{d}, and
+#' \code{params$cutoff} reads \code{params}. A namespaced reference
+#' (\code{pkg::name}) and an inline function definition are opaque.
+#' \code{all.vars()} also lists the component after \code{$}, which is why
+#' the constant and data-frame lookups use this instead. (Session 323.)
+#'
+#' @param e A language object.
+#' @return Character vector of names, unique, in walk order.
+#' @keywords internal
+.jst_expr_symbols <- function(e) {
+  out  <- character(0)
+  walk <- function(x) {
+    if (is.symbol(x)) {
+      nm <- as.character(x)
+      if (nzchar(nm)) out <<- c(out, nm)
+      return(invisible(NULL))
+    }
+    if (!is.call(x)) return(invisible(NULL))
+    head <- x[[1L]]
+    if (is.symbol(head)) {
+      h <- as.character(head)
+      if (h %in% c("::", ":::", "function")) return(invisible(NULL))
+      if (h %in% c("$", "@")) {
+        if (length(x) >= 2L) walk(x[[2L]])
+        return(invisible(NULL))
+      }
+    } else {
+      walk(head)
+    }
+    for (k in seq_along(x)[-1L]) {
+      if (identical(as.list(x)[[k]], substitute())) next
+      walk(x[[k]])
+    }
+    invisible(NULL)
+  }
+  walk(e)
+  unique(out)
+}
+
+#' Internal helper: the data frames an expression names outside the data
+#'
+#' Every name in \code{e} (\code{.jst_expr_symbols()}) that is not a variable
+#' of the data and that resolves in \code{enclos} -- the formula's
+#' environment, or the caller's frame for a condition -- to a data frame.
+#' Such a name is read from the RAW frame when the expression is evaluated:
+#' the transform resolver and the filter both evaluate with the analysis copy
+#' as data and \code{enclos} as enclosure, so \code{d$Income} reaches the
+#' user's own \code{d}, where declared missing values are still numbers and
+#' no stored filter has run. (Session 323; the S322 data-frame exception.)
+#'
+#' @param e A language object (a formula term or a condition).
+#' @param data_names Character vector: the analysis data's variable names.
+#' @param enclos The environment the expression's other names resolve in.
+#' @return Character vector of data frame names, possibly empty.
+#' @keywords internal
+.jst_frame_refs <- function(e, data_names, enclos) {
+  nms <- setdiff(.jst_expr_symbols(e), data_names)
+  nms[vapply(nms, function(nm) {
+    exists(nm, envir = enclos) && is.data.frame(get(nm, envir = enclos))
+  }, logical(1), USE.NAMES = FALSE)]
+}
+
+#' Internal helper: rewrite frame$column references as bare variable names
+#'
+#' Builds the corrected form for the data-frame refusals. Each
+#' \code{frame$column}, or \code{frame[["column"]]} with a quoted name, on a
+#' frame in \code{frames} becomes the bare name \code{column}; nothing else
+#' moves. \code{clean} is TRUE when at least one reference was rewritten and
+#' no other reference to those frames remains -- \code{d[, 2]} or
+#' \code{nrow(d)} cannot be rewritten as a variable name -- so a caller
+#' prints a fix line only when the rewrite is complete. \code{summary} is
+#' TRUE when a reference sits inside a summary function
+#' (\code{mean(d$Income)}): that is a value computed from the frame, not a
+#' variable, and rewritten it would be computed on the analysis copy, where
+#' declared missing values are NA, so the caller gives the save-it-first
+#' form instead. (Session 323.)
+#'
+#' @param e A language object (a formula, a term, or a condition).
+#' @param frames Character vector of data frame names.
+#' @return A list of \code{expr} (the rewritten expression), \code{cols} (the
+#'   variable names now used in place of the references, unique),
+#'   \code{clean} (logical) and \code{summary} (logical).
+#' @keywords internal
+.jst_strip_frame_refs <- function(e, frames) {
+  summary_fns <- c("mean", "median", "sd", "var", "min", "max", "sum",
+                   "prod", "range", "quantile", "IQR", "mad", "length",
+                   "any", "all", "unique", "sort", "table")
+  cols <- character(0)
+  summ <- FALSE
+  rew  <- function(x, inside) {
+    head <- x[[1L]]
+    if (length(x) == 3L && is.symbol(head) && is.symbol(x[[2L]]) &&
+        as.character(x[[2L]]) %in% frames) {
+      h   <- as.character(head)
+      col <- NULL
+      if (h == "$" && (is.symbol(x[[3L]]) || is.character(x[[3L]]))) {
+        col <- as.character(x[[3L]])
+      } else if (h == "[[" && is.character(x[[3L]]) && length(x[[3L]]) == 1L) {
+        col <- x[[3L]]
+      }
+      if (!is.null(col) && nzchar(col)) {
+        cols <<- c(cols, col)
+        if (inside) summ <<- TRUE
+        return(as.name(col))
+      }
+    }
+    inside <- inside || (is.symbol(head) && as.character(head) %in% summary_fns)
+    for (k in seq_along(x)[-1L]) {
+      if (identical(as.list(x)[[k]], substitute())) next
+      if (is.call(x[[k]])) x[[k]] <- rew(x[[k]], inside)
+    }
+    x
+  }
+  out  <- if (is.call(e)) rew(e, FALSE) else e
+  cols <- unique(cols)
+  list(expr    = out,
+       cols    = cols,
+       clean   = length(cols) > 0L && !any(frames %in% .jst_expr_symbols(out)),
+       summary = summ)
+}
+
+#' Internal helper: refuse a data frame named inside a formula term
+#'
+#' The one exception to \code{lm()} parity (the S322 ruling, built in Session
+#' 323). \code{lm()} accepts \code{d$Flourishing ~ d$Income}; jstats does
+#' not, because the transform resolver evaluates each term with the analysis
+#' copy as data and the formula's environment as enclosure, so
+#' \code{d$Income} would be read from the user's RAW frame -- declared
+#' missing values back as numbers, stored filters bypassed. A list or vector
+#' of constants (\code{params$cutoff}) is not a data frame and passes. Each
+#' call term is scanned with \code{.jst_frame_refs()}; a bare name is left
+#' to the not-found check. The message names the first term that names a
+#' frame. When every reference is a plain \code{frame$column} it gives the
+#' corrected call -- the variables on their own, the data frame as
+#' \code{data =}: the analyzed frame when the formula named it, otherwise
+#' the named frame when it holds every variable the formula uses. A frame
+#' that is neither (a lookup table) gets the save-it-first form instead.
+#' Called by \code{.jst_check_formula_vars()} and, ahead of their
+#' computed-term refusal, by jcrosstab() and jplot()'s formula path.
+#'
+#' @param formula The analysis formula as typed.
+#' @param data The data frame the analysis uses.
+#' @param data_name Character; its name.
+#' @param enclos Environment the formula's other names resolve in; NULL
+#'   gives \code{environment(formula)}, with the \code{parent.frame()}
+#'   fallback the resolver uses.
+#' @return Invisibly NULL; stops when a data frame is named.
+#' @keywords internal
+.jst_check_formula_frames <- function(formula, data, data_name,
+                                      enclos = NULL) {
+  if (!is.data.frame(data)) return(invisible(NULL))
+  vars <- tryCatch(attr(stats::terms(formula), "variables"),
+                   error = function(e) NULL)
+  if (is.null(vars)) return(invisible(NULL))
+  if (is.null(enclos)) {
+    enclos <- environment(formula)
+    if (is.null(enclos)) enclos <- parent.frame()
+  }
+  frames <- character(0)
+  first  <- NULL
+  for (v in as.list(vars)[-1L]) {
+    if (!is.call(v)) next
+    f <- .jst_frame_refs(v, names(data), enclos)
+    if (length(f) == 0L) next
+    frames <- union(frames, f)
+    if (is.null(first)) first <- v
+  }
+  if (length(frames) == 0L) return(invisible(NULL))
+
+  fr <- if (!is.null(data_name) && data_name %in% frames) data_name else frames[1L]
+  lead <- paste0(.jst_term_text(first), " names the ", fr,
+                 " data frame inside the formula.\n")
+  s    <- .jst_strip_frame_refs(formula, frames)
+  what <- if (length(s$cols) == 1L) "the variable" else "each variable"
+  used <- intersect(.jst_expr_symbols(formula), names(data))
+  target <- NULL
+  if (s$clean && !s$summary) {
+    if (identical(fr, data_name) && all(s$cols %in% names(data))) {
+      target <- data_name
+    } else if (all(c(s$cols, used) %in% names(get(fr, envir = enclos)))) {
+      target <- fr
+    }
+  }
+  fn <- tryCatch(.jst_caller_fn(), error = function(e) NULL)
+  if (!is.null(target) && !is.null(fn)) {
+    .jst_stop(lead, "Name ", what, " on its own, and the data frame after ",
+              "the formula:\n",
+              "  ", fn, "(", .jst_term_text(s$expr), ", data = ", target, ")")
+  }
+  if (!s$summary && (!is.null(target) || identical(fr, data_name))) {
+    .jst_stop(lead, "Name ", what, " on its own, and the data frame after ",
+              "the formula.")
+  }
+  .jst_stop(lead, "Save what you need from the ", fr, " data frame under a ",
+            "new name, and use that name in the formula.")
+}
+
+#' Internal helper: refuse a data frame named in a filter condition
+#'
+#' The condition sibling of \code{.jst_check_formula_frames()} (the S322
+#' subset item, built in Session 323). A filter is evaluated with the data as
+#' data and the caller's frame as enclosure, so \code{subset = d$Income < 45}
+#' reads Income from the user's RAW frame: a declared -99 is a number below
+#' 45 there, and the case is kept, where \code{subset = Income < 45} sets it
+#' aside as missing. Called at \code{jsubset()}'s set time (origin
+#' \code{"set"}, after the syntax check, before the dry run) and on a
+#' per-call \code{subset =} at apply time (origin \code{"call"}, in the
+#' pipeline's Step 3); the vector path refuses its own form in
+#' \code{.jst_vector_recurse()}. The fix line, the condition with the
+#' variables on their own, is printed when the frame is the one being
+#' analyzed and every reference rewrites; a frame that is not (a lookup
+#' table) gets the save-it-first form. At set time an earlier filter for the
+#' frame is reported unchanged, as the shape refusal does.
+#'
+#' @param expr The unevaluated condition.
+#' @param expr_str Character; the condition as typed.
+#' @param data The data frame the condition will be evaluated against.
+#' @param envir The environment the condition's other names resolve in.
+#' @param origin \code{"set"} (\code{jsubset()}) or \code{"call"}
+#'   (\code{subset =}).
+#' @param data_name Character; the data frame's name.
+#' @param named_frame Logical. For \code{"set"}: the user named the frame in
+#'   the call, so the fix line echoes that form.
+#' @param prior Logical. For \code{"set"}: an earlier filter exists for the
+#'   frame.
+#' @return Invisibly NULL; stops when a data frame is named.
+#' @keywords internal
+.jst_check_condition_frames <- function(expr, expr_str, data, envir,
+                                        origin = c("set", "call"),
+                                        data_name = NULL, named_frame = FALSE,
+                                        prior = FALSE) {
+  origin <- match.arg(origin)
+  if (!is.data.frame(data)) return(invisible(NULL))
+  frames <- .jst_frame_refs(expr, names(data), envir)
+  if (length(frames) == 0L) return(invisible(NULL))
+
+  fr <- if (!is.null(data_name) && data_name %in% frames) data_name else frames[1L]
+  lead <- if (origin == "call") paste0("subset = ", expr_str) else expr_str
+  head <- paste0(lead, " names the ", fr, " data frame.\n")
+  s    <- .jst_strip_frame_refs(expr, frames)
+  what <- if (length(s$cols) == 1L) "the variable" else "each variable"
+  unchanged <- if (origin == "set" && isTRUE(prior) && !is.null(data_name)) {
+    paste0("\nYour earlier filter for the ", data_name,
+           " data frame is unchanged.")
+  } else {
+    ""
+  }
+  if (s$clean && !s$summary && identical(fr, data_name) &&
+      all(s$cols %in% names(data))) {
+    fixed <- .jst_term_text(s$expr)
+    line  <- if (origin == "call") {
+      paste0("  subset = ", fixed)
+    } else {
+      paste0("  jsubset(", if (isTRUE(named_frame)) paste0(data_name, ", ") else "",
+             fixed, ")")
+    }
+    .jst_stop(head, "Name ", what, " on its own:\n", line, unchanged)
+  }
+  if (!s$summary && identical(fr, data_name)) {
+    .jst_stop(head, "Name ", what, " on its own.", unchanged)
+  }
+  .jst_stop(head, "Save what you need from the ", fr, " data frame under a ",
+            "new name, and use that name in the condition.", unchanged)
+}
+
+#' Internal helper: find a power in a formula that terms() refuses
+#'
+#' Outside \code{I()}, \code{^} in a formula is the interaction operator, and
+#' \code{terms()} accepts only a number of 1 or more after it, stopping with
+#' "invalid power in formula" on anything else: \code{x^k} with \code{k} a
+#' name, \code{x^-1}, \code{x^(2)}. This walks the right-hand side through
+#' the formula operators, as \code{.jst_formula_bare_powers()} does, and
+#' returns the first \code{^} whose power \code{terms()} would refuse, so the
+#' caller can stop in house voice instead (Session 323). Reading \code{k}
+#' and fitting the power would exceed \code{lm()}, which refuses the same
+#' formula.
+#'
+#' @param formula The analysis formula as typed.
+#' @return NULL when there is none; otherwise a list of \code{typed} (the
+#'   term as written), \code{base} (the term raised, parentheses stripped),
+#'   \code{base_typed} (the same as written), \code{power} (the power as
+#'   written) and \code{single} (TRUE when the base is a single term, not a
+#'   sum or product of terms).
+#' @keywords internal
+.jst_formula_bad_power <- function(formula) {
+  if (!inherits(formula, "formula") || length(formula) != 3L) return(NULL)
+  ops   <- c("+", "-", "*", ":", "/", "%in%", "^", "(")
+  found <- NULL
+  strip <- function(e) {
+    while (is.call(e) && identical(e[[1L]], as.name("(")) && length(e) == 2L) {
+      e <- e[[2L]]
+    }
+    e
+  }
+  single <- function(e) {
+    if (is.symbol(e)) return(!identical(e, as.name(".")))
+    is.call(e) && !(as.character(e[[1L]])[1L] %in% ops)
+  }
+  walk <- function(e) {
+    if (!is.null(found)) return(invisible(NULL))
+    if (!is.call(e) || !is.symbol(e[[1L]])) return(invisible(NULL))
+    op <- as.character(e[[1L]])
+    if (!(op %in% ops)) return(invisible(NULL))
+    if (op == "^" && length(e) == 3L) {
+      pw <- e[[3L]]
+      if (!(is.numeric(pw) && length(pw) == 1L && !is.na(pw) && pw >= 1)) {
+        base  <- strip(e[[2L]])
+        found <<- list(typed      = .jst_term_text(e),
+                       base       = .jst_term_text(base),
+                       base_typed = .jst_term_text(e[[2L]]),
+                       power      = .jst_term_text(pw),
+                       single     = single(base))
+        return(invisible(NULL))
+      }
+    }
+    for (k in seq_along(e)[-1L]) walk(e[[k]])
+    invisible(NULL)
+  }
+  walk(formula[[3L]])
+  found
+}
+
+#' Internal helper: check a model formula's names as lm() reads them
+#'
+#' The front door of jt(), jaov(), jlm() and jlogistic() (Session 323; the
+#' S322 rulings), replacing \code{all.vars(formula)} at their
+#' \code{.jst_check_vars()} site. A name inside a computed term resolves the
+#' way \code{lm()} resolves it: in the data first, then in the formula's
+#' environment (\code{environment(formula)}, with \code{model.frame()}'s
+#' \code{parent.frame()} fallback -- the transform resolver's own
+#' enclosure), whatever the object's shape: a single value
+#' (\code{I(x > cutoff)}), a set of codes (\code{I(Education \%in\% codes)}),
+#' a power (\code{I(x^k)}). Such a name is a constant; the resolver's
+#' one-value-per-case checks judge what the term gives. A BARE name stays a
+#' data variable, the one place jstats stays narrower than \code{lm()},
+#' which needs no data frame. A name found in neither place goes on to
+#' \code{.jst_check_vars()}, so a typo keeps the not-found stop. Two
+#' refusals come first: a power \code{terms()} cannot read (\code{y ~ x^k};
+#' \code{.jst_formula_bad_power()}), and a data frame named inside a term
+#' (\code{.jst_check_formula_frames()}). A formula \code{terms()} cannot
+#' process for any other reason falls back to \code{all.vars()}, unchanged.
+#'
+#' @param formula The analysis formula as typed.
+#' @param data The analysis data frame (the post-pipeline copy).
+#' @param data_name Character; the data frame's name, for messages.
+#' @param default_used Logical; passed to \code{.jst_check_vars()}.
+#' @return The data variables the formula names, constants left out, in
+#'   order of first appearance -- the list the Case Processing Summary
+#'   receives as \code{analysis_vars}. Stops instead when a name is found
+#'   nowhere, a data frame is named inside a term, or a power is refused.
+#' @keywords internal
+.jst_check_formula_vars <- function(formula, data, data_name,
+                                    default_used = FALSE) {
+  if (!is.data.frame(data)) {
+    .jst_check_vars(data, all.vars(formula), data_name,
+                    default_used = default_used)
+  }
+  vars <- tryCatch(attr(stats::terms(formula), "variables"),
+                   error = function(e) NULL)
+  if (is.null(vars)) {
+    bad <- .jst_formula_bad_power(formula)
+    if (!is.null(bad)) {
+      if (isTRUE(bad$single)) {
+        .jst_stop(bad$typed, " is not a valid power in a formula.\n",
+                  "To include ", bad$base, " to the power ", bad$power,
+                  ", write I(", bad$base, "^", bad$power, ") in the formula.")
+      }
+      .jst_stop(bad$typed, " is not a valid power in a formula.\n",
+                "Use a whole number after ^, as in ", bad$base_typed, "^2.")
+    }
+    raw <- all.vars(formula)
+    .jst_check_vars(data, raw, data_name, default_used = default_used)
+    return(raw)
+  }
+  enclos <- environment(formula)
+  if (is.null(enclos)) enclos <- parent.frame()
+  .jst_check_formula_frames(formula, data, data_name, enclos = enclos)
+
+  keep <- character(0)
+  for (v in as.list(vars)[-1L]) {
+    if (is.symbol(v)) {
+      keep <- c(keep, as.character(v))
+    } else if (is.call(v)) {
+      for (nm in .jst_expr_symbols(v)) {
+        if (nm %in% names(data) || !exists(nm, envir = enclos)) {
+          keep <- c(keep, nm)
+        }
+      }
+    }
+  }
+  keep <- unique(keep)
+  .jst_check_vars(data, keep, data_name, default_used = default_used)
+  keep
+}
+
 #' Internal helper: strip backticks from design-matrix term names
 #'
 #' A resolved transformed term is a column whose name is non-syntactic

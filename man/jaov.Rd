@@ -119,6 +119,10 @@ test, Levene's test, the post hoc comparisons, and the descriptives, so
 they all describe the same values. The transforms supported inline, and
 those that must be created as a column first, are as documented for
 \code{\link{jlm}}.
+A value or vector from your workspace may be named inside a computed
+term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
+A data frame may not: write \code{y ~ x} with \code{data = MyData},
+not \code{MyData$y ~ MyData$x}.
 }
 \examples{
 # With explicit data frame

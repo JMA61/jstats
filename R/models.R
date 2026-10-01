@@ -1121,6 +1121,32 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   out
 }
 
+#' Internal helper: show interaction names with " * " in place of ":"
+#'
+#' For display: splits each name on the colons OUTSIDE parentheses (so a
+#' computed term's own colon is not read as a product) and joins the parts
+#' with \code{" * "}, the form the coefficient table's interaction rows use
+#' (AUDIT-035). Used for the VIF table's Variable column and its VIF > 10
+#' notes (Session 323); the returned VIF vector keeps R's \code{":"} names.
+#'
+#' @param x Character vector of term names.
+#' @return Character vector the same length as \code{x}.
+#' @keywords internal
+.jst_interaction_label <- function(x) {
+  vapply(x, function(nm) {
+    if (!grepl(":", nm, fixed = TRUE)) return(nm)
+    chars <- strsplit(nm, "", fixed = TRUE)[[1L]]
+    depth <- 0L; parts <- character(0); cur <- ""
+    for (ch in chars) {
+      if (ch == "(") depth <- depth + 1L
+      if (ch == ")") depth <- depth - 1L
+      if (ch == ":" && depth == 0L) { parts <- c(parts, cur); cur <- "" }
+      else cur <- paste0(cur, ch)
+    }
+    paste(c(parts, cur), collapse = " * ")
+  }, character(1), USE.NAMES = FALSE)
+}
+
 #' Internal helper: compute VIF for a fitted linear model
 #'
 #' Computes Variance Inflation Factors from the model matrix correlation
@@ -1629,17 +1655,23 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' (\code{log(x)} in \code{I(log(x)^2)}); a number, or a symbol that is
 #' not a column of the data, is a constant and stays in the term as
 #' written. Parentheses, unary minus and division by a constant are read
-#' through. (Session 321.)
+#' through. (Session 321.) A power may also be a name that is not a column
+#' of the data and holds a single whole number in \code{enclos}, the
+#' formula's environment, so \code{I(x^k)} with \code{k <- 2} is read as
+#' \code{I(x^2)} is (Session 323); the term's text, and so its row label,
+#' stays as typed.
 #'
 #' @param term_txt The computed column's name: the term's text.
 #' @param data_names Column names of the analysis frame.
+#' @param enclos Environment a power's name is looked up in; NULL reads
+#'   number powers only.
 #' @return NULL when the term is not a power or product of inputs;
 #'   otherwise a list of \code{expr} (the parsed term), \code{inputs}
 #'   (named list of the input expressions, keyed by their text),
 #'   \code{kind} (\code{"interaction"} for two or more distinct inputs,
 #'   \code{"power"} for one) and \code{power} (the highest exponent).
 #' @keywords internal
-.jst_poly_term <- function(term_txt, data_names) {
+.jst_poly_term <- function(term_txt, data_names, enclos = NULL) {
   e <- tryCatch(str2lang(term_txt), error = function(err) NULL)
   if (!is.call(e) || !identical(e[[1L]], as.name("I")) || length(e) != 2L) {
     return(NULL)
@@ -1667,6 +1699,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       }
       if (op == "^" && length(x) == 3L) {
         pw <- x[[3L]]
+        # A power named rather than typed (I(x^k), Session 323): read from
+        # the formula's environment when the name is not a variable.
+        if (is.symbol(pw) && !is.null(enclos) &&
+            !(as.character(pw) %in% data_names)) {
+          pw <- tryCatch(unname(get(as.character(pw), envir = enclos)),
+                         error = function(err) NULL)
+        }
         if (is.numeric(pw) && length(pw) == 1L && !is.na(pw) && pw >= 1 &&
             pw == round(pw)) {
           a <- mono(x[[2L]])
@@ -1717,7 +1756,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 .jst_rescale_poly_terms <- function(mf_scaled, mf, data, computed, rescale,
                                     enclos) {
   preds <- intersect(computed, names(mf)[-1L])
-  infos <- lapply(preds, .jst_poly_term, data_names = names(data))
+  infos <- lapply(preds, .jst_poly_term, data_names = names(data),
+                  enclos = enclos)
   names(infos) <- preds
   infos <- infos[!vapply(infos, is.null, logical(1))]
   if (length(infos) == 0L) return(mf_scaled)
@@ -1913,12 +1953,17 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' columns (\code{poly(x, 2)}, spline bases) or a categorical result
 #' (\code{cut(x, 3)}) are not supported inline: create the derived variable
 #' as a column of the data first, then name that column in the formula.
+#' A value or vector from your workspace may be named inside a computed
+#' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
+#' A data frame may not: write \code{y ~ x} with \code{data = MyData},
+#' not \code{MyData$y ~ MyData$x}.
 #'
 #' In a formula, \code{^} applied to a single variable is not arithmetic: it
 #' is R's operator for interactions up to that order, so \code{x^2} enters
 #' the model as \code{x} alone. Write \code{I(x^2)} for the square.
 #' \code{jlm()} fits the model as written and then warns when a formula
-#' does this.
+#' does this. A power that is not a number, \code{x^k}, stops with an
+#' error, as in \code{lm()}; write \code{I(x^k)}.
 #'
 #' @param formula A model formula, e.g. \code{y ~ x1 + x2}. Transformed
 #'   terms such as \code{log(y)} or \code{I(x1^2)} are computed
@@ -2345,10 +2390,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # Underlying variable names (pre-transform). Drives the existence check
   # and, below, the case-processing breakdown -- so a transformed term is
   # reported against its source column, which the pre-pipeline snapshot
-  # contains (the computed column is not in that snapshot).
-  raw_vars <- all.vars(formula)
-  .jst_check_vars(data, raw_vars, .jst_data_name,
-                  default_used = .jst_default_used)
+  # contains (the computed column is not in that snapshot). Since Session
+  # 323 the names are read as lm() reads them: a constant named inside a
+  # computed term (I(x > cutoff)) resolves in the formula's environment and
+  # is left out of the list; a bare name is still a variable, and a name
+  # found nowhere still stops. A data frame named inside a term, and a power
+  # terms() cannot read (y ~ x^k), are refused here.
+  raw_vars <- .jst_check_formula_vars(formula, data, .jst_data_name,
+                                      default_used = .jst_default_used)
 
   # A single term raised to a power outside I() -- x^2 -- is R's formula
   # operator for interactions, not arithmetic, and enters the model as the
@@ -3207,7 +3256,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   #     software does.
   if (show_beta_col) {
     poly_info  <- lapply(intersect(resolved$computed, names(mf)[-1L]),
-                         .jst_poly_term, data_names = names(data))
+                         .jst_poly_term, data_names = names(data),
+                         enclos = term_enclos)
     poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
     poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
     pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
@@ -3308,7 +3358,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       if (!is.null(vif_values)) {
         cat("\n")
         vif_df <- data.frame(
-          Variable = names(vif_values),
+          Variable = .jst_interaction_label(names(vif_values)),
           VIF      = round(vif_values, 3),
           stringsAsFactors = FALSE,
           row.names = NULL
@@ -3323,7 +3373,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
           cat("\n")
           for (nm in names(high_vif)) {
             inflation <- round(sqrt(high_vif[nm]), 1)
-            .jst_msg_out(nm, " (VIF = ", round(high_vif[nm], 1),
+            .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
+                         round(high_vif[nm], 1),
                          "): standard error inflated by a factor of ",
                          inflation, ".\n",
                          "  If you need to interpret this coefficient ",
@@ -3488,12 +3539,17 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' variable as a column of the data first, then name that column in the
 #' formula. (The dependent variable must be a plain 0/1 dichotomy, so a
 #' transform applies to predictors, not the response.)
+#' A value or vector from your workspace may be named inside a computed
+#' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
+#' A data frame may not: write \code{y ~ x} with \code{data = MyData},
+#' not \code{MyData$y ~ MyData$x}.
 #'
 #' In a formula, \code{^} applied to a single variable is not arithmetic: it
 #' is R's operator for interactions up to that order, so \code{x^2} enters
 #' the model as \code{x} alone. Write \code{I(x^2)} for the square.
 #' \code{jlogistic()} fits the model as written and then warns when a
-#' formula does this.
+#' formula does this. A power that is not a number, \code{x^k}, stops with
+#' an error, as in \code{lm()}; write \code{I(x^k)}.
 #'
 #' @param formula A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
 #'   must be a binary variable coded 0/1. Transformed predictor terms such
@@ -3766,10 +3822,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # Underlying variable names (pre-transform). Drives the existence check
   # and, below, the case-processing breakdown -- so a transformed term is
   # reported against its source column, which the pre-pipeline snapshot
-  # contains (the computed column is not in that snapshot).
-  raw_vars <- all.vars(formula)
-  .jst_check_vars(data, raw_vars, .jst_data_name,
-                  default_used = .jst_default_used)
+  # contains (the computed column is not in that snapshot). Since Session
+  # 323 the names are read as lm() reads them: a constant named inside a
+  # computed term (I(x > cutoff)) resolves in the formula's environment and
+  # is left out of the list; a bare name is still a variable, and a name
+  # found nowhere still stops. A data frame named inside a term, and a power
+  # terms() cannot read (y ~ x^k), are refused here.
+  raw_vars <- .jst_check_formula_vars(formula, data, .jst_data_name,
+                                      default_used = .jst_default_used)
 
   # A single term raised to a power outside I() enters as the term alone;
   # found here on the formula as typed, warned once the model is fitted.
@@ -4492,7 +4552,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       if (!is.null(vif_values)) {
         cat("\n")
         vif_df <- data.frame(
-          Variable = names(vif_values),
+          Variable = .jst_interaction_label(names(vif_values)),
           VIF      = round(vif_values, 3),
           stringsAsFactors = FALSE,
           row.names = NULL
@@ -4507,7 +4567,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
           cat("\n")
           for (nm in names(high_vif)) {
             inflation <- round(sqrt(high_vif[nm]), 1)
-            .jst_msg_out(nm, " (VIF = ", round(high_vif[nm], 1),
+            .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
+                         round(high_vif[nm], 1),
                          "): standard error inflated by a factor of ",
                          inflation, ".\n",
                          "  If you need to interpret this coefficient ",

@@ -552,9 +552,13 @@
 #' condition finds the same objects it would in the data-frame form. What a
 #' single column cannot serve is refused, each time with the data-frame form
 #' as the fix: further variables, a by grouping, and a subset condition
-#' naming another variable. A condition may name the wrapped variable, an
-#' object in the caller's environment, or a column reached through a frame
-#' with the dollar sign.
+#' naming another variable. A condition may name the wrapped variable or an
+#' object in the caller's environment. A column reached through a data frame
+#' with the dollar sign (\code{subset = d$Keep01 == 1}) was served until
+#' Session 323; it is refused now, with the data-frame form as the fix,
+#' because the re-call would read it from the user's raw frame, past its
+#' declared missing values -- the S322 ruling the data-frame form's
+#' \code{subset =} follows.
 #'
 #' @param fn The calling function, called again.
 #' @param fn_name Character: its name, for messages and the re-call.
@@ -591,6 +595,29 @@
               fix(paste0("by = ", no_frame(by_typed))), fn = fn_name)
   }
   if (!is.null(subset_sub)) {
+    # A data frame named in the condition (Session 323): the re-call would
+    # read d$Keep01 from the raw frame, as subset = does in the data-frame
+    # form, which refuses it. Refused here first, with that form as the fix;
+    # the scan below reads d$Keep01 as the object d and would pass it.
+    frames <- .jst_frame_refs(subset_sub, var, user_env)
+    if (length(frames) > 0L) {
+      sub_typed <- paste(deparse(subset_sub), collapse = " ")
+      fr <- if (wrapped$frame_nm %in% frames) wrapped$frame_nm else frames[1L]
+      s  <- .jst_strip_frame_refs(subset_sub, frames)
+      head <- paste0("subset = ", sub_typed, " names the ", fr,
+                     " data frame.\n")
+      if (identical(fr, wrapped$frame_nm) && s$clean && !s$summary) {
+        .jst_stop(head, first, fix(paste0("subset = ", .jst_term_text(s$expr))),
+                  fn = fn_name)
+      }
+      if (identical(fr, wrapped$frame_nm) && !s$summary) {
+        .jst_stop(head, "Name the data frame first, and each variable on ",
+                  "its own.", fn = fn_name)
+      }
+      .jst_stop(head, "Save what you need from the ", fr, " data frame ",
+                "under a new name, and use that name in the condition.",
+                fn = fn_name)
+    }
     # Names the condition uses as values: the right side of frame$column is
     # not a free name, and a call's function position is not walked.
     syms <- function(e) {

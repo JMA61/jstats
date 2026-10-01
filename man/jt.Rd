@@ -122,6 +122,10 @@ and the like -- is computed once on the analysis data and used by both the
 t-test and the group descriptives, so the two describe the same values.
 The transforms supported inline, and those that must be created as a
 column first, are as documented for \code{\link{jlm}}.
+A value or vector from your workspace may be named inside a computed
+term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
+A data frame may not: write \code{y ~ x} with \code{data = MyData},
+not \code{MyData$y ~ MyData$x}.
 }
 \examples{
 # With explicit data frame

@@ -26,6 +26,10 @@
 #' t-test and the group descriptives, so the two describe the same values.
 #' The transforms supported inline, and those that must be created as a
 #' column first, are as documented for \code{\link{jlm}}.
+#' A value or vector from your workspace may be named inside a computed
+#' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
+#' A data frame may not: write \code{y ~ x} with \code{data = MyData},
+#' not \code{MyData$y ~ MyData$x}.
 #'
 #' @param formula A formula of the form \code{DV ~ Group}. A transformed
 #'   term such as \code{log(DV)} is computed automatically: the test and
@@ -186,10 +190,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # Underlying variable names (pre-transform). Drives the existence check
   # and, below, the case-processing breakdown -- so a transformed term is
   # reported against its source column, which the pre-pipeline snapshot
-  # contains (the computed column is not in that snapshot).
-  raw_vars <- all.vars(formula)
-  .jst_check_vars(data, raw_vars, .jst_data_name,
-                  default_used = .jst_default_used)
+  # contains (the computed column is not in that snapshot). Since Session
+  # 323 the names are read as lm() reads them: a constant named inside a
+  # computed term (I(x > cutoff)) resolves in the formula's environment and
+  # is left out of the list; a bare name is still a variable, and a name
+  # found nowhere still stops. A data frame named inside a term, and a power
+  # terms() cannot read (y ~ x^k), are refused here.
+  raw_vars <- .jst_check_formula_vars(formula, data, .jst_data_name,
+                                      default_used = .jst_default_used)
 
   # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
   # the like once on the analysis copy and rewrite the formula to reference
@@ -547,6 +555,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' they all describe the same values. The transforms supported inline, and
 #' those that must be created as a column first, are as documented for
 #' \code{\link{jlm}}.
+#' A value or vector from your workspace may be named inside a computed
+#' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
+#' A data frame may not: write \code{y ~ x} with \code{data = MyData},
+#' not \code{MyData$y ~ MyData$x}.
 #'
 #' @param formula A formula of the form \code{DV ~ Group}. A transformed
 #'   term such as \code{log(DV)} is computed automatically: the tests and
@@ -702,10 +714,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # Underlying variable names (pre-transform). Drives the existence check
   # and, below, the case-processing breakdown -- so a transformed term is
   # reported against its source column, which the pre-pipeline snapshot
-  # contains (the computed column is not in that snapshot).
-  raw_vars <- all.vars(formula)
-  .jst_check_vars(data, raw_vars, .jst_data_name,
-                  default_used = .jst_default_used)
+  # contains (the computed column is not in that snapshot). Since Session
+  # 323 the names are read as lm() reads them: a constant named inside a
+  # computed term (I(x > cutoff)) resolves in the formula's environment and
+  # is left out of the list; a bare name is still a variable, and a name
+  # found nowhere still stops. A data frame named inside a term, and a power
+  # terms() cannot read (y ~ x^k), are refused here.
+  raw_vars <- .jst_check_formula_vars(formula, data, .jst_data_name,
+                                      default_used = .jst_default_used)
 
   # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
   # the like once on the analysis copy and rewrite the formula to reference
@@ -1228,6 +1244,24 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     .jst_data_name <- deparse(substitute(data))
   }
 
+  # A data frame named inside a term (d$Region ~ d$Condition) is refused
+  # first, with the variables-on-their-own form (Session 323): the
+  # computed-term refusal below would call d$Region a function applied to a
+  # variable, and the two-sides check would name d as the shared variable.
+  .jst_check_formula_frames(formula, data, .jst_data_name)
+  # Transformed-term front door (AUDIT-021): a cross-tabulation needs plain
+  # variables. Pre-check, a term like log(x) was silently ignored -- table()
+  # pulls columns by name, so the raw column was tabulated as if the
+  # transform had not been written. Refuse it clearly instead. (The analysis
+  # functions with a numeric response resolve such terms via
+  # .jst_resolve_formula_transforms; here a numeric transform of a
+  # categorical variable has no cross-tabulation meaning.) Since Session 323
+  # it runs AHEAD of the two-sides and existence checks: a constant in a
+  # computed term (I(Age > cutoff)) reaches this refusal instead of a
+  # not-found stop naming cutoff, and I(x > cutoff) ~ I(z > cutoff) is
+  # refused for its terms, not for "cutoff" on both sides.
+  .jst_check_formula_transforms(formula, .jst_data_name)
+
   terms    <- all.vars(formula)
   row_name <- terms[1]
   col_name <- terms[2]
@@ -1239,14 +1273,6 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   }
 
   .jst_check_vars(data, terms, .jst_data_name, default_used = .jst_default_used)
-  # Transformed-term front door (AUDIT-021): a cross-tabulation needs plain
-  # variables. Pre-check, a term like log(x) was silently ignored -- table()
-  # pulls columns by name, so the raw column was tabulated as if the
-  # transform had not been written. Refuse it clearly instead. (The analysis
-  # functions with a numeric response resolve such terms via
-  # .jst_resolve_formula_transforms; here a numeric transform of a
-  # categorical variable has no cross-tabulation meaning.)
-  .jst_check_formula_transforms(formula, .jst_data_name)
   # Type gate (Session 46): both variables are categorical; refuse date/time
   # and complex/list/raw. See .jst_check_analysis_var.
   for (.gv in terms) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a cross-tabulation")

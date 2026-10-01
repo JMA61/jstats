@@ -45,8 +45,12 @@ call is evaluated in a child of the caller's environment, so a subset
 condition finds the same objects it would in the data-frame form. What a
 single column cannot serve is refused, each time with the data-frame form
 as the fix: further variables, a by grouping, and a subset condition
-naming another variable. A condition may name the wrapped variable, an
-object in the caller's environment, or a column reached through a frame
-with the dollar sign.
+naming another variable. A condition may name the wrapped variable or an
+object in the caller's environment. A column reached through a data frame
+with the dollar sign (\code{subset = d$Keep01 == 1}) was served until
+Session 323; it is refused now, with the data-frame form as the fix,
+because the re-call would read it from the user's raw frame, past its
+declared missing values -- the S322 ruling the data-frame form's
+\code{subset =} follows.
 }
 \keyword{internal}

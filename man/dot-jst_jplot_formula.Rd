@@ -30,6 +30,9 @@ to the scatter or box builder depending on the IV's type.
 }
 \details{
 Only single-IV formulas are supported (\code{DV ~ IV}). Multi-IV formulas
-produce a helpful error pointing to the jlm() + jplot(m) workflow.
+produce a helpful error pointing to the jlm() + jplot(m) workflow. A data
+frame named inside a term, and a computed term, are refused before the
+variables are counted, once the frame is resolved (Session 323): the path
+pulls each variable by name, so a computed term plotted the raw variable.
 }
 \keyword{internal}

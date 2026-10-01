@@ -469,6 +469,11 @@
     # 1 & (Age < 40), with the Gender test silently dropped. The shape of
     # what the expression produces is the mask helper's job, below.
     .jst_check_filter_syntax(subset_expr, subset_expr_str, origin = "call")
+    # A data frame named in the condition (subset = d$Income < 45) would be
+    # read from the user's raw frame, where declared missing values are
+    # numbers: refused, with the variables on their own (Session 323).
+    .jst_check_condition_frames(subset_expr, subset_expr_str, data, envir,
+                                origin = "call", data_name = data_name)
     data           <- .jst_apply_mask(data, subset_expr, envir,
                                       on_error    = "stop",
                                       stage_label = "Subset",

@@ -163,7 +163,10 @@ for scatterplots and boxplots, consistent with the formula syntax of
 \code{jlm()}, \code{jaov()}, and \code{jt()}. The DV on the left of
 \code{~} goes on the y-axis; the IV on the right goes on the x-axis. Only
 single-IV formulas are supported here; for multi-IV models, fit with
-\code{jlm()} and pass the result to \code{jplot()}.
+\code{jlm()} and pass the result to \code{jplot()}. Each side names a
+variable as it stands: a computed term such as \code{log(Income)} or
+\code{I(Age > 40)} is refused, so create it as a variable of the data
+first.
 
 \strong{Variable-list form} (for distributions and counts): Pass a data
 frame followed by one or two unquoted variable names. The data frame is
