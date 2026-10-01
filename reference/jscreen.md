@@ -329,23 +329,23 @@ jscreen(community, stats = TRUE)
 #>   Variables with outliers: 0 
 #> 
 #> Variable Types
-#> Variable        jstats Class  Sub-class   Unique Values       Mean  Median
-#> --------------  ------------  ----------  -------------  ---------  ------
-#> RespondentID    Categorical   identifier            103                   
-#> Income          Numeric                              49  49855.670   49000
-#> Education       Categorical   5-category              5                   
-#> Age             Numeric                              41     40.650      40
-#> WellbeingScore  Numeric                              41     50.893      50
-#> Volunteer       Categorical   dichotomy               2      0.476        
-#> OwnsHome        Categorical   dichotomy*              2      1.534        
-#> Smoker          Categorical   dichotomy               2      0.337        
-#> CommuteTime     Numeric                              42     30.738      30
-#> Region          Categorical   4-category              4                   
-#> Environment1    Categorical   Likert                  5                   
-#> Environment2    Categorical   Likert                  5                   
-#> Environment3    Categorical   Likert                  5                   
-#> Environment4    Categorical   Likert                  5                   
-#> Environment5    Categorical   Likert                  5                   
+#> Variable        jstats Class  Sub-class   Unique Values       Mean     Median
+#> --------------  ------------  ----------  -------------  ---------  ---------
+#> RespondentID    Categorical   identifier            103                      
+#> Income          Numeric                              49  49855.670  49000.000
+#> Education       Categorical   5-category              5                      
+#> Age             Numeric                              41     40.650     40.000
+#> WellbeingScore  Numeric                              41     50.893     50.000
+#> Volunteer       Categorical   dichotomy               2      0.476           
+#> OwnsHome        Categorical   dichotomy*              2      1.534           
+#> Smoker          Categorical   dichotomy               2      0.337           
+#> CommuteTime     Numeric                              42     30.738     30.000
+#> Region          Categorical   4-category              4                      
+#> Environment1    Categorical   Likert                  5                      
+#> Environment2    Categorical   Likert                  5                      
+#> Environment3    Categorical   Likert                  5                      
+#> Environment4    Categorical   Likert                  5                      
+#> Environment5    Categorical   Likert                  5                      
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)

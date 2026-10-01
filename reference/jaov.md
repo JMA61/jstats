@@ -192,7 +192,7 @@ jaov(WellbeingScore ~ Region, data = community)
 #> Residual   99       13179.384      133.125             
 #> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.02 
+#> Eta-squared: 0.020
 #> 
 jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
 #> Welch's One-Way ANOVA
@@ -215,7 +215,7 @@ jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
 #> Note: Sum of Squares and Mean Squares are not available for Welch's ANOVA.
 #> To obtain these, run jaov() without welch = TRUE.
 #> 
-#> Eta-squared: 0.02 
+#> Eta-squared: 0.020
 #> (Note: Eta-squared is calculated from the traditional SS decomposition.)
 #> 
 jaov(WellbeingScore ~ Region, data = community, full = TRUE)
@@ -243,7 +243,7 @@ jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> Residual   99       13179.384      133.125             
 #> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.02 
+#> Eta-squared: 0.020
 #> 
 #> Tukey HSD Post-Hoc Comparisons
 #> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)
@@ -280,7 +280,7 @@ jaov(WellbeingScore ~ Region)
 #> Residual   99       13179.384      133.125             
 #> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.02 
+#> Eta-squared: 0.020
 #> 
 jaov(WellbeingScore ~ Region, full = TRUE)
 #> One-Way ANOVA
@@ -308,7 +308,7 @@ jaov(WellbeingScore ~ Region, full = TRUE)
 #> Residual   99       13179.384      133.125             
 #> Total     102       13445.825                          
 #> 
-#> Eta-squared: 0.02 
+#> Eta-squared: 0.020
 #> 
 #> Tukey HSD Post-Hoc Comparisons
 #> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)

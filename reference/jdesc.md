@@ -127,7 +127,9 @@ jdesc(
   the output tables (range 0-7; `digits = 0` prints whole numbers with
   no trailing decimal point). Does not affect p-values, percentages, or
   integer quantities (counts, N, degrees of freedom), which keep their
-  own fixed conventions. NULL (default) defers to
+  own fixed conventions. The Min and Max columns are values of the
+  variables rather than statistics: they show as many decimal places as
+  the data carry, up to this many. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `digits` setting (default 3).
 
@@ -186,9 +188,9 @@ jdesc(community, Age)
 #> 
 #> 103 Cases in the 1 Variable Pool
 #> 
-#> Variable  Total  Non_missing  Min  Max  Mean    SD
-#> --------  -----  -----------  ---  ---  -----  -----
-#> Age        103       103      18   71   40.65  11.62
+#> Variable  Total  Non_missing  Min  Max   Mean     SD
+#> --------  -----  -----------  ---  ---  ------  ------
+#> Age        103       103      18   71   40.650  11.620
 #> 
 jdesc(community, Income, Age, WellbeingScore)
 #> Descriptive Statistics
@@ -223,9 +225,9 @@ jdesc(Age)
 #> 
 #> 103 Cases in the 1 Variable Pool
 #> 
-#> Variable  Total  Non_missing  Min  Max  Mean    SD
-#> --------  -----  -----------  ---  ---  -----  -----
-#> Age        103       103      18   71   40.65  11.62
+#> Variable  Total  Non_missing  Min  Max   Mean     SD
+#> --------  -----  -----------  ---  ---  ------  ------
+#> Age        103       103      18   71   40.650  11.620
 #> 
 jdesc(Income, Age, WellbeingScore)
 #> Descriptive Statistics
@@ -259,8 +261,8 @@ jdesc(community$Age)
 #> 
 #> 103 Cases in the 1 Variable Pool
 #> 
-#> Variable  Total  Non_missing  Min  Max  Mean    SD
-#> --------  -----  -----------  ---  ---  -----  -----
-#> Age        103       103      18   71   40.65  11.62
+#> Variable  Total  Non_missing  Min  Max   Mean     SD
+#> --------  -----  -----------  ---  ---  ------  ------
+#> Age        103       103      18   71   40.650  11.620
 #> 
 ```

@@ -231,9 +231,13 @@ joutput(
   Integer or NULL. Number of decimal places shown for continuous
   statistics in the analysis-function output tables (range 0-7;
   `digits = 0` prints whole numbers with no trailing decimal point).
-  Does not affect p-values, percentages, or integer quantities (counts,
-  N, degrees of freedom), which keep their own fixed conventions. All
-  three preset levels default to 3.
+  Every such statistic shows exactly this many places, trailing zeros
+  included (0.100, not 0.1). Does not affect p-values, percentages, or
+  integer quantities (counts, N, degrees of freedom), which keep their
+  own fixed conventions, or the Min and Max columns of
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md), which
+  show the values as the data carry them. All three preset levels
+  default to 3.
 
 - quiet:
 

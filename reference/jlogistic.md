@@ -329,9 +329,9 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #>     16.705   2  <.001
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²     AIC
-#> -----------------  --------------  -------------  ------
-#>            117.26           0.158          0.211  123.26
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -----------------  --------------  -------------  -------
+#>           117.260           0.158          0.211  123.260
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
@@ -414,9 +414,9 @@ jlogistic(Volunteer ~ Income + Age)
 #>     16.705   2  <.001
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²     AIC
-#> -----------------  --------------  -------------  ------
-#>            117.26           0.158          0.211  123.26
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -----------------  --------------  -------------  -------
+#>           117.260           0.158          0.211  123.260
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes

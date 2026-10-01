@@ -317,9 +317,9 @@ jdesc(df, MoodRating)        # codes now excluded as missing
 #> 
 #> 70 Cases in the 1 Variable Pool
 #> 
-#> Variable    Total  Non_missing  Min  Max  Mean   SD
-#> ----------  -----  -----------  ---  ---  ----  -----
-#> MoodRating   70        63        1    9   5.46  1.702
+#> Variable    Total  Non_missing  Min  Max  Mean    SD
+#> ----------  -----  -----------  ---  ---  -----  -----
+#> MoodRating   70        63        1    9   5.460  1.702
 #> 
 
 # Equivalent without modify: assign the returned data frame back

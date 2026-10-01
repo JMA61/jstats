@@ -3,11 +3,17 @@
 places via sprintf(&quot;%.\if{html}{\out{&amp;lt;digits&amp;gt;}}f&quot;), preserving base R's half-to-even
 rounding (the option only changes the number of places, never the rounding
 rule). digits = 0 yields whole numbers with no trailing decimal
-point. NA formats to the empty string so it renders as a blank cell."><meta property="og:description" content="Returns a function that formats a numeric value to digits decimal
+point. NA formats to the empty string so it renders as a blank cell. A
+value that rounds to zero from below prints unsigned (&quot;0.000&quot;, not
+&quot;-0.000&quot;), the rule the jlm and jlogistic coefficient formatters and
+jcorr's r cells already follow."><meta property="og:description" content="Returns a function that formats a numeric value to digits decimal
 places via sprintf(&quot;%.\if{html}{\out{&amp;lt;digits&amp;gt;}}f&quot;), preserving base R's half-to-even
 rounding (the option only changes the number of places, never the rounding
 rule). digits = 0 yields whole numbers with no trailing decimal
-point. NA formats to the empty string so it renders as a blank cell."></head><body>
+point. NA formats to the empty string so it renders as a blank cell. A
+value that rounds to zero from below prints unsigned (&quot;0.000&quot;, not
+&quot;-0.000&quot;), the rule the jlm and jlogistic coefficient formatters and
+jcorr's r cells already follow."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -15,7 +21,7 @@ point. NA formats to the empty string so it renders as a blank cell."></head><bo
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.202</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -45,7 +51,10 @@ point. NA formats to the empty string so it renders as a blank cell."></head><bo
 places via <code>sprintf("%.\if{html}{\out{&lt;digits&gt;}}f")</code>, preserving base R's half-to-even
 rounding (the option only changes the number of places, never the rounding
 rule). <code>digits = 0</code> yields whole numbers with no trailing decimal
-point. NA formats to the empty string so it renders as a blank cell.</p>
+point. NA formats to the empty string so it renders as a blank cell. A
+value that rounds to zero from below prints unsigned ("0.000", not
+"-0.000"), the rule the jlm and jlogistic coefficient formatters and
+jcorr's r cells already follow.</p>
     </div>
 
     <div class="section level2">
@@ -64,7 +73,13 @@ point. NA formats to the empty string so it renders as a blank cell.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A function of one argument (coerced via as.numeric) returning a
-character string.</p>
+character vector the same length as its input.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Since Session 326 this is the formatter behind the <code>digits</code> argument
+of <code><a href="dot-jst_print_table.html">.jst_print_table()</a></code> (every column a caller fixes) and behind
+<code><a href="dot-jst_fmt_stat.html">.jst_fmt_stat()</a></code> (the effect-size result lines).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

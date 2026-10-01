@@ -11,7 +11,7 @@ and consistent indentation. No external dependencies — pure base R."></head><b
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.202</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,8 @@ and consistent indentation. No external dependencies — pure base R.</p>
 <span>  caption <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  indent <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  header.indent <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  trim <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  trim <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  digits <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -114,6 +115,23 @@ the column's width, so without the trim those lines end in spaces –
 invisible on screen but carried into anything copied or captured.
 Default FALSE. jdesc's two tables pass TRUE (Session 316); making it
 the default for every table is a separate, package-wide decision.</p></dd>
+
+
+<dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
+<dd><p>Optional named vector that fixes the decimal places of
+numeric columns, keyed by the data frame's own column names (not the
+display headers), e.g. <code>c(Mean = 3, SD = 3)</code>. A named column
+prints every value to exactly that many places, trailing zeros kept
+(0.100, 16.000), through <code><a href="dot-jst_make_fmt.html">.jst_make_fmt()</a></code>, so a value that rounds
+to zero from below prints unsigned and NA stays a blank cell. A numeric
+column the vector does not name keeps the detected decimals described
+in the body, so a caller that passes nothing prints exactly as before;
+an NA entry also keeps the detection, and an entry naming a non-numeric
+column is ignored. A name that matches no column is an error, so a
+misspelled name cannot fall back to the detection unnoticed. NULL (the
+default) fixes no column. Added Session 326: a column's decimal places
+come from what it holds – a statistic at the digits setting, a fixed
+convention at its own – never from the values that happen to be in it.</p></dd>
 
 </dl></div>
 

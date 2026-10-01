@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.201</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.202</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -161,8 +161,10 @@ place. See <code><a href="joutput.html">?joutput</a></code> (<code>case.processi
 statistics in the output tables (range 0-7; <code>digits = 0</code> prints
 whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
-which keep their own fixed conventions. NULL (default) defers to
-<code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
+which keep their own fixed conventions. The Min and Max columns are
+values of the variables rather than statistics: they show as many
+decimal places as the data carry, up to this many. NULL (default)
+defers to <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -211,9 +213,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max  Mean    SD</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.65  11.62</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  ------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.650  11.620</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
@@ -248,9 +250,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max  Mean    SD</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.65  11.62</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  ------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.650  11.620</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
@@ -284,9 +286,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max  Mean    SD</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  -----  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.65  11.62</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  ------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.650  11.620</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
