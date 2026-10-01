@@ -11,14 +11,17 @@
 \code{vector_input}.}
 }
 \value{
-A list with \code{frame}, \code{typed}, \code{var} and
-\code{frame_nm}.
+A list with \code{frame}, \code{typed}, \code{var},
+\code{frame_nm} and \code{in_frame}.
 }
 \description{
-Builds the one-column data frame that jdesc() and jfreq() analyze when
-given a bare column, as in \code{jdesc(community$Age)}, plus the names
-their messages use: the column as typed, the variable name (the part
-after the last dollar sign), and the frame it came from when typed as
-frame dollar column -- MyData, the placeholder frame, otherwise.
+Builds the one-column data frame that jdesc(), jfreq() and jscreen()
+analyze when given a bare column, as in \code{jdesc(community$Age)}, plus
+the names their messages use: the column as typed, the variable name (the
+part after the last dollar sign), and the frame it came from when typed as
+frame dollar column -- MyData, the placeholder frame, otherwise. A column
+of a data frame (the resolver's \code{first_arg_frame}, Session 324) takes
+both names from that frame, so \code{d[["Age"]]} reads as Age from d, and
+is marked \code{in_frame} for \code{.jst_vector_recurse()}.
 }
 \keyword{internal}

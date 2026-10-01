@@ -126,6 +126,10 @@ A value or vector from your workspace may be named inside a computed
 term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 A data frame may not: write \code{y ~ x} with \code{data = MyData},
 not \code{MyData$y ~ MyData$x}.
+A vector used value by value with the data, as in \code{I(x * w)},
+must hold one value for each case -- each row of \code{data} left
+after filtering -- where \code{lm()} would recycle a shorter one; a
+set used with \code{\%in\%} may have any length.
 }
 \examples{
 # With explicit data frame

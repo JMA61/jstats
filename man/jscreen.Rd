@@ -19,10 +19,12 @@ jscreen(
 )
 }
 \arguments{
-\item{data}{A data frame.}
+\item{data}{A data frame, or a single variable: a column of a data frame
+or a vector.}
 
 \item{...}{Optional unquoted variable names to screen. If omitted,
-all variables in the data frame are screened.}
+all variables in the data frame are screened. None when \code{data} is
+a single variable.}
 
 \item{outlier.sd}{Numeric. Number of standard deviations from the mean
 to flag as potential outliers (Numeric-class variables only). Default
@@ -132,6 +134,15 @@ with \code{jsubset()} and \code{jcomplete()}, and a \code{subset}
 expression, apply to the whole data frame before the named variables are
 taken, so they may refer to variables that are not screened.
 
+Given a single variable instead of a data frame, as in
+\code{jscreen(community$Income)}, jscreen() screens that variable. A
+column of a data frame is screened in its frame, exactly as
+\code{jscreen(community, Income)} screens it: the frame's
+\code{jsubset()} and \code{jcomplete()} settings and its registrations
+apply. Any other vector is screened on its own. A second variable, and a
+\code{subset} condition naming another variable, need the data frame, and
+each stops with that form of the call.
+
 Those filters are accounted for as in the analysis functions: a Case
 Processing table between the title and the header lists the original
 count, the cases each filter excluded, and the count remaining, which the
@@ -157,6 +168,9 @@ jscreen(community, stats = TRUE)
 
 # Suppress tables (header block only)
 jscreen(community, types = FALSE, issues = FALSE)
+
+# A single variable
+jscreen(community$Income)
 
 # Using juse() default
 juse(community)

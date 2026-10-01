@@ -64,6 +64,10 @@ modes \code{null} and \code{vector_input}).}
 \item{\code{first_arg_value}}{The evaluated value of the first
 argument, set only for mode \code{vector_input}; \code{NULL}
 otherwise.}
+\item{\code{first_arg_frame}}{For mode \code{vector_input}, the
+\code{.jst_frame_column()} result when the argument was typed as a
+data frame's column, otherwise \code{NULL}; absent in the other
+modes.}
 }
 }
 \description{
@@ -100,5 +104,16 @@ as an additional content argument.}
 Errors with a tailored message when the user passed something that
 cannot be resolved (e.g., bare symbol with no juse default set, or
 literal \code{NULL} when \code{allow_null = FALSE}).
+
+A first argument typed as a data frame's column -- \code{d$Stress} or
+\code{d[["Stress"]]}, with \code{d} a data frame (\code{.jst_frame_column()})
+-- is read before it is evaluated (Session 324). A name the frame does not
+have stops with the not-found check, as \code{jdesc(d, Strss)} would,
+instead of evaluating to NULL and meeting the empty-object guard. When
+\code{accept_vector = FALSE} the column stops there too, with
+\code{.jst_frame_column_stop()}: it was found, but it is not a data frame,
+where Case 5 used to call it not found. When \code{accept_vector = TRUE}
+it is evaluated and returned in mode \code{vector_input} with the frame
+recorded, so the caller's re-call can run in that frame.
 }
 \keyword{internal}

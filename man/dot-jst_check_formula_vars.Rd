@@ -4,7 +4,13 @@
 \alias{.jst_check_formula_vars}
 \title{Internal helper: check a model formula's names as lm() reads them}
 \usage{
-.jst_check_formula_vars(formula, data, data_name, default_used = FALSE)
+.jst_check_formula_vars(
+  formula,
+  data,
+  data_name,
+  default_used = FALSE,
+  n_frame = NULL
+)
 }
 \arguments{
 \item{formula}{The analysis formula as typed.}
@@ -14,12 +20,17 @@
 \item{data_name}{Character; the data frame's name, for messages.}
 
 \item{default_used}{Logical; passed to \code{.jst_check_vars()}.}
+
+\item{n_frame}{Integer or NULL; the frame's row count before the
+pipeline's filters (\code{pipeline_counts$n_original}), which tells the
+recycling stop's two forms apart. NULL is read as \code{nrow(data)}.}
 }
 \value{
 The data variables the formula names, constants left out, in
 order of first appearance -- the list the Case Processing Summary
 receives as \code{analysis_vars}. Stops instead when a name is found
-nowhere, a data frame is named inside a term, or a power is refused.
+nowhere, a data frame is named inside a term, a power is refused, or a
+workspace vector would be recycled.
 }
 \description{
 The front door of jt(), jaov(), jlm() and jlogistic() (Session 323; the
@@ -39,5 +50,16 @@ refusals come first: a power \code{terms()} cannot read (\code{y ~ x^k};
 \code{.jst_formula_bad_power()}), and a data frame named inside a term
 (\code{.jst_check_formula_frames()}). A formula \code{terms()} cannot
 process for any other reason falls back to \code{all.vars()}, unchanged.
+}
+\details{
+A third refusal follows them (Session 324, the second deliberate
+departure from \code{lm()} parity): a workspace vector with more than one
+value but not one per row of \code{data} -- the frame after its filters,
+before cases with missing values are set aside, the rows the resolver
+computes the term on -- used value by value inside a computed term
+(\code{.jst_formula_recycled()}). \code{lm()} recycles it. A vector with
+one value per row of the frame as given, which a filter has since cut
+down, gets the fix of adding it to the frame, where the filter reaches
+it; any other length gets the requirement.
 }
 \keyword{internal}

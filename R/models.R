@@ -1957,6 +1957,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 #' A data frame may not: write \code{y ~ x} with \code{data = MyData},
 #' not \code{MyData$y ~ MyData$x}.
+#' A vector used value by value with the data, as in \code{I(x * w)},
+#' must hold one value for each case -- each row of \code{data} left
+#' after filtering -- where \code{lm()} would recycle a shorter one; a
+#' set used with \code{\%in\%} may have any length.
 #'
 #' In a formula, \code{^} applied to a single variable is not arithmetic: it
 #' is R's operator for interactions up to that order, so \code{x^2} enters
@@ -2396,8 +2400,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # is left out of the list; a bare name is still a variable, and a name
   # found nowhere still stops. A data frame named inside a term, and a power
   # terms() cannot read (y ~ x^k), are refused here.
-  raw_vars <- .jst_check_formula_vars(formula, data, .jst_data_name,
-                                      default_used = .jst_default_used)
+  raw_vars <- .jst_check_formula_vars(
+    formula, data, .jst_data_name, default_used = .jst_default_used,
+    n_frame = pipeline$pipeline_counts$n_original)
 
   # A single term raised to a power outside I() -- x^2 -- is R's formula
   # operator for interactions, not arithmetic, and enters the model as the
@@ -3543,6 +3548,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 #' A data frame may not: write \code{y ~ x} with \code{data = MyData},
 #' not \code{MyData$y ~ MyData$x}.
+#' A vector used value by value with the data, as in \code{I(x * w)},
+#' must hold one value for each case -- each row of \code{data} left
+#' after filtering -- where \code{lm()} would recycle a shorter one; a
+#' set used with \code{\%in\%} may have any length.
 #'
 #' In a formula, \code{^} applied to a single variable is not arithmetic: it
 #' is R's operator for interactions up to that order, so \code{x^2} enters
@@ -3828,8 +3837,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # is left out of the list; a bare name is still a variable, and a name
   # found nowhere still stops. A data frame named inside a term, and a power
   # terms() cannot read (y ~ x^k), are refused here.
-  raw_vars <- .jst_check_formula_vars(formula, data, .jst_data_name,
-                                      default_used = .jst_default_used)
+  raw_vars <- .jst_check_formula_vars(
+    formula, data, .jst_data_name, default_used = .jst_default_used,
+    n_frame = pipeline$pipeline_counts$n_original)
 
   # A single term raised to a power outside I() enters as the term alone;
   # found here on the formula as typed, warned once the model is fitted.

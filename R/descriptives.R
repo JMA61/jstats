@@ -27,11 +27,22 @@
 #' unsummarizable, jdesc() stops with an error. Also accepts a simple numeric
 #' vector. Supports grouped descriptives via the \code{by} parameter.
 #'
+#' Given a single variable instead of a data frame, as in
+#' \code{jdesc(community$Age)}, jdesc() describes that variable. A column of
+#' a data frame is described in its frame, exactly as
+#' \code{jdesc(community, Age)} describes it: the frame's \code{jsubset()}
+#' and \code{jcomplete()} settings and its registrations apply. Any other
+#' vector is described on its own. A second variable, \code{by}, and a
+#' \code{subset} condition naming another variable need the data frame, and
+#' each stops with that form of the call.
+#'
 #' Haven-labelled variables are reported as \code{haven_labelled (Categorical)}
 #' in the type line; the uninformative \code{vctrs_vctr} class is suppressed.
 #'
-#' @param data A data frame, or a numeric vector.
-#' @param ... Unquoted variable names within \code{data} (ignored if data is a vector).
+#' @param data A data frame, or a single variable: a column of a data frame
+#'   or a numeric vector.
+#' @param ... Unquoted variable names within \code{data}. None when
+#'   \code{data} is a single variable.
 #' @param by An optional unquoted grouping variable name. When provided,
 #'   descriptives are computed separately for each group, with a separate
 #'   titled table per dependent variable. Each table's \code{Total} is the
@@ -649,9 +660,19 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' default \code{value.id} setting. Where variable labels are shown, they
 #' are shown for all variable types, not only haven-labelled ones.
 #'
-#' @param data A data frame, or a vector.
-#' @param ... Unquoted variable name(s) within \code{data} (ignored if
-#'   \code{data} is a vector).
+#' Given a single variable instead of a data frame, as in
+#' \code{jfreq(community$Region)}, jfreq() tabulates that variable. A column
+#' of a data frame is tabulated in its frame, exactly as
+#' \code{jfreq(community, Region)} tabulates it: the frame's
+#' \code{jsubset()} and \code{jcomplete()} settings and its registrations
+#' apply. Any other vector is tabulated on its own. A second variable, and a
+#' \code{subset} condition naming another variable, need the data frame, and
+#' each stops with that form of the call.
+#'
+#' @param data A data frame, or a single variable: a column of a data frame
+#'   or a vector.
+#' @param ... Unquoted variable name(s) within \code{data}. None when
+#'   \code{data} is a single variable.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
@@ -1311,6 +1332,15 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' expression, apply to the whole data frame before the named variables are
 #' taken, so they may refer to variables that are not screened.
 #'
+#' Given a single variable instead of a data frame, as in
+#' \code{jscreen(community$Income)}, jscreen() screens that variable. A
+#' column of a data frame is screened in its frame, exactly as
+#' \code{jscreen(community, Income)} screens it: the frame's
+#' \code{jsubset()} and \code{jcomplete()} settings and its registrations
+#' apply. Any other vector is screened on its own. A second variable, and a
+#' \code{subset} condition naming another variable, need the data frame, and
+#' each stops with that form of the call.
+#'
 #' Those filters are accounted for as in the analysis functions: a Case
 #' Processing table between the title and the header lists the original
 #' count, the cases each filter excluded, and the count remaining, which the
@@ -1323,9 +1353,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' \code{case.processing = TRUE}, the table prints even when no filter is
 #' active.
 #'
-#' @param data A data frame.
+#' @param data A data frame, or a single variable: a column of a data frame
+#'   or a vector.
 #' @param ... Optional unquoted variable names to screen. If omitted,
-#'   all variables in the data frame are screened.
+#'   all variables in the data frame are screened. None when \code{data} is
+#'   a single variable.
 #' @param outlier.sd Numeric. Number of standard deviations from the mean
 #'   to flag as potential outliers (Numeric-class variables only). Default
 #'   is 3.
@@ -1398,6 +1430,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' # Suppress tables (header block only)
 #' jscreen(community, types = FALSE, issues = FALSE)
 #'
+#' # A single variable
+#' jscreen(community$Income)
+#'
 #' # Using juse() default
 #' juse(community)
 #' jscreen()
@@ -1448,15 +1483,33 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   )
   digits_n   <- .jst_resolve_digits(digits)
 
-  # Resolve the first argument: explicit data frame, juse default,
-  # or bare-symbol-as-variable-name (leading comma omitted).
+  # Resolve the first argument: explicit data frame, juse default, vector
+  # input, or bare-symbol-as-variable-name (leading comma omitted).
   arg1 <- .jst_resolve_first_arg(
     data_sub      = substitute(data),
     data_missing  = missing(data),
     fn_name       = "jscreen",
     envir         = parent.frame(),
-    accept_vector = FALSE
+    accept_vector = TRUE
   )
+
+  # Vector-input path (Session 324; jscreen(community$Age)) -- the one
+  # jdesc() and jfreq() take: a column of a data frame is screened in that
+  # frame, any other value wrapped, every argument forwarded, and what a
+  # single column cannot serve refused with the data-frame form as the fix.
+  # value.id has already stopped above, and stats is passed resolved.
+  if (arg1$mode == "vector_input") {
+    wrapped    <- .jst_vector_frame(arg1)
+    dots       <- rlang::enquos(...)
+    .jst_check_named_variables(dots, wrapped$frame, "jscreen")
+    subset_sub <- substitute(subset)
+    return(.jst_vector_recurse(
+      jscreen, "jscreen", wrapped, parent.frame(), dots = dots,
+      subset_sub = subset_sub,
+      args = list(outlier.sd = outlier.sd, variable.id = variable.id,
+                  types = types, issues = issues, r.type = r.type,
+                  stats = stats, digits = digits)))
+  }
 
   data              <- arg1$data
   .jst_data_name    <- arg1$name

@@ -2,7 +2,7 @@
 % Please edit documentation in R/checks.R
 \name{.jst_vector_recurse}
 \alias{.jst_vector_recurse}
-\title{Internal helper: re-call jdesc() or jfreq() on a wrapped bare column}
+\title{Internal helper: re-call jdesc(), jfreq() or jscreen() on a bare column}
 \usage{
 .jst_vector_recurse(
   fn,
@@ -52,5 +52,15 @@ Session 323; it is refused now, with the data-frame form as the fix,
 because the re-call would read it from the user's raw frame, past its
 declared missing values -- the S322 ruling the data-frame form's
 \code{subset =} follows.
+}
+\details{
+A column of a data frame (\code{wrapped$in_frame}, Session 324) is
+re-called in that frame -- \code{jdesc(d$Age)} as \code{jdesc(d, Age)} --
+so the frame's stored \code{jsubset()} and \code{jcomplete()} settings and
+its registrations, all kept by the frame's name, apply as they do in the
+data-frame form. Until then the re-call ran on a one-column copy under an
+internal name: a stored filter was skipped, and the yellow line said it
+was "not active for this dataset". Any other value (\code{c(...)}, a
+computed vector) is still wrapped. The refusals above apply to both.
 }
 \keyword{internal}

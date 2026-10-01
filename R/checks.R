@@ -389,6 +389,17 @@
 #' cannot be resolved (e.g., bare symbol with no juse default set, or
 #' literal \code{NULL} when \code{allow_null = FALSE}).
 #'
+#' A first argument typed as a data frame's column -- \code{d$Stress} or
+#' \code{d[["Stress"]]}, with \code{d} a data frame (\code{.jst_frame_column()})
+#' -- is read before it is evaluated (Session 324). A name the frame does not
+#' have stops with the not-found check, as \code{jdesc(d, Strss)} would,
+#' instead of evaluating to NULL and meeting the empty-object guard. When
+#' \code{accept_vector = FALSE} the column stops there too, with
+#' \code{.jst_frame_column_stop()}: it was found, but it is not a data frame,
+#' where Case 5 used to call it not found. When \code{accept_vector = TRUE}
+#' it is evaluated and returned in mode \code{vector_input} with the frame
+#' recorded, so the caller's re-call can run in that frame.
+#'
 #' @param data_sub The substituted first argument, captured by the
 #'   caller via \code{substitute(data)}.
 #' @param data_missing Logical. The result of \code{missing(data)} in
@@ -431,6 +442,10 @@
 #'     \item{\code{first_arg_value}}{The evaluated value of the first
 #'       argument, set only for mode \code{vector_input}; \code{NULL}
 #'       otherwise.}
+#'     \item{\code{first_arg_frame}}{For mode \code{vector_input}, the
+#'       \code{.jst_frame_column()} result when the argument was typed as a
+#'       data frame's column, otherwise \code{NULL}; absent in the other
+#'       modes.}
 #'   }
 #'
 #' @keywords internal
@@ -458,6 +473,33 @@
     .jst_stop("NULL is not a valid data argument. ",
               "Provide a data frame, or set a default first with juse().",
               fn = fn_name)
+  }
+
+  # -- A data frame's column, read before evaluation (Session 324) ----------
+  # d$Stress or d[["Stress"]] with d a data frame. A name the frame does not
+  # have stops with the not-found check, as jdesc(d, Strss) does: evaluated,
+  # it gives NULL (a tibble warns as well), which the guard below would call
+  # an object that exists but holds nothing, and data.frame's $ would
+  # partial-match d$Str to Stress where the data-frame form finds no Str. A
+  # function that does not take a single column refuses the column
+  # truthfully -- it was found, but it is not a data frame -- where Case 5
+  # called it not found and suggested a call that would not run (the S322
+  # jscreen/jcorr item, part B). The call and function are the caller's, read
+  # here for the fix line. The single-column functions evaluate it as before,
+  # and Case 4 passes the frame on, so their re-call runs in it (part A).
+  frame_col <- .jst_frame_column(data_sub, envir)
+  if (!is.null(frame_col)) {
+    if (!frame_col$present) {
+      .jst_check_vars(get(frame_col$frame, envir = envir), frame_col$var,
+                      frame_col$frame)
+    }
+    if (!accept_vector) {
+      caller_call <- sys.call(sys.parent())
+      caller_fun  <- sys.function(sys.parent())
+      .jst_frame_column_stop(data_sub, frame_col, fn_name,
+                             cl = caller_call, fun = caller_fun,
+                             envir = envir)
+    }
   }
 
   # -- Try to evaluate the substituted first argument -----------------------
@@ -501,8 +543,9 @@
   if (accept_vector && !eval_result$failed) {
     return(list(mode = "vector_input",
                 data = NULL, name = NULL,
-                first_arg_sub  = data_sub,
-                first_arg_value = eval_result$value))
+                first_arg_sub   = data_sub,
+                first_arg_value = eval_result$value,
+                first_arg_frame = frame_col))
   }
 
   # -- Case 5: bare symbol that didn't evaluate (or non-data-frame value
@@ -520,30 +563,148 @@
        data = resolved$data, name = resolved$name,
        first_arg_sub = data_sub, first_arg_value = NULL)
 }
+
+#' Internal helper: a first argument typed as a data frame's column
+#'
+#' Recognizes \code{d$Stress}, and \code{d[["Stress"]]} with a single quoted
+#' name, where \code{d} is a name for a data frame in \code{envir} (Session
+#' 324). The resolver reads it before evaluating the argument: a misspelled
+#' column evaluates to NULL, which its empty-object guard would describe as
+#' an object holding nothing, and data.frame's dollar sign partial-matches
+#' \code{d$Str} to \code{Stress} where \code{jdesc(d, Str)} finds no such
+#' variable. Anything else -- a frame reached through a list, \code{d[, 2]},
+#' a computed vector -- gives NULL and is evaluated as before.
+#'
+#' @param e The substituted first argument.
+#' @param envir The environment the argument would be evaluated in.
+#' @return NULL, or a list of \code{frame} (the data frame's name),
+#'   \code{var} (the column named) and \code{present} (TRUE when the frame
+#'   has a column of exactly that name).
+#' @keywords internal
+.jst_frame_column <- function(e, envir) {
+  if (!is.call(e) || length(e) != 3L || !is.symbol(e[[1L]]) ||
+      !is.symbol(e[[2L]])) {
+    return(NULL)
+  }
+  h   <- as.character(e[[1L]])
+  col <- NULL
+  if (h == "$" && (is.symbol(e[[3L]]) || is.character(e[[3L]]))) {
+    col <- as.character(e[[3L]])
+  } else if (h == "[[" && is.character(e[[3L]]) && length(e[[3L]]) == 1L) {
+    col <- e[[3L]]
+  }
+  if (length(col) != 1L || is.na(col) || !nzchar(col)) return(NULL)
+  fr <- as.character(e[[2L]])
+  if (!nzchar(fr) || !exists(fr, envir = envir)) return(NULL)
+  obj <- get(fr, envir = envir)
+  if (!is.data.frame(obj)) return(NULL)
+  list(frame = fr, var = col, present = col %in% names(obj))
+}
+
+#' Internal helper: refuse a data frame's column where the frame goes
+#'
+#' The resolver's stop for a function that does not take a single column,
+#' given one as its first argument: \code{jcorr(d$Income, d$Age)} (Session
+#' 324, the S322 jscreen/jcorr item, part B). Case 5 said "'d$Income' not
+#' found" and suggested \code{jcorr(MyData, d$Income)}; the column was found,
+#' it is not a data frame, and that call would not run either. The fix line
+#' is the user's own call with the frame first and its columns on their own
+#' (\code{.jst_frame_column_fix()}); when that rebuild cannot be complete the
+#' sentence is given without a call.
+#'
+#' @param data_sub The substituted first argument.
+#' @param fcol Its \code{.jst_frame_column()} result.
+#' @param fn_name Character; the user-facing function's name.
+#' @param cl The caller's call, as typed.
+#' @param fun The caller's function, for its formals.
+#' @param envir The caller's environment.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_frame_column_stop <- function(data_sub, fcol, fn_name, cl, fun, envir) {
+  typed <- paste(deparse(data_sub), collapse = "")
+  head  <- paste0(typed, " is a single variable, not a data frame.\n")
+  fix   <- tryCatch(.jst_frame_column_fix(data_sub, fcol, fn_name, cl, fun,
+                                          envir),
+                    error = function(e) NULL)
+  if (!is.null(fix)) {
+    .jst_stop(head, "Name the data frame first:\n  ", fix, fn = fn_name)
+  }
+  .jst_stop(head, "Name the data frame first, and each variable on its own.",
+            fn = fn_name)
+}
+
+#' Internal helper: the call a data frame's column should have been
+#'
+#' Rebuilds the caller's call with the frame first and the column after it
+#' -- \code{jcorr(d$Income, d$Age, method = "spearman")} becomes
+#' \code{jcorr(d, Income, Age, method = "spearman")} -- for
+#' \code{.jst_frame_column_stop()}. The frame's other columns become bare
+#' names through \code{.jst_strip_frame_refs()}, a named argument keeps its
+#' name, and the column goes where the function takes variables: straight
+#' after the frame when its second formal is \code{...}, \code{var},
+#' \code{orig.var} or \code{expr}, or when nothing positional follows
+#' (\code{jconvert(d$Stress, to = "stata")}). Gives NULL -- the sentence
+#' without a call -- when the rebuild cannot be complete: the argument is not
+#' found in the call, a positional argument would land in the wrong slot,
+#' a summary of the frame is used (\code{mean(d$Age)}), or a data frame is
+#' still named after the rewrite (another frame's column, \code{d[, 2]}).
+#'
+#' @inheritParams .jst_frame_column_stop
+#' @return Character; the rebuilt call on one line, or NULL.
+#' @keywords internal
+.jst_frame_column_fix <- function(data_sub, fcol, fn_name, cl, fun, envir) {
+  if (!is.call(cl) || !is.function(fun)) return(NULL)
+  args <- as.list(cl)[-1L]
+  hit  <- which(vapply(args, function(a) identical(a, data_sub), logical(1)))
+  if (length(hit) != 1L) return(NULL)
+  nms  <- names(args)
+  if (is.null(nms)) nms <- rep("", length(args))
+  rest <- args[-hit]
+  fmls <- names(formals(fun))
+  if (length(fmls) < 2L) return(NULL)
+  if (!(fmls[2L] %in% c("...", "var", "orig.var", "expr")) &&
+      any(!nzchar(nms[-hit]))) {
+    return(NULL)
+  }
+  s <- .jst_strip_frame_refs(as.call(c(list(as.name(fn_name)), rest)),
+                             fcol$frame)
+  if (isTRUE(s$summary)) return(NULL)
+  if (length(.jst_frame_refs(s$expr, character(0), envir)) > 0L) return(NULL)
+  out <- as.call(c(list(as.name(fn_name), as.name(fcol$frame),
+                        as.name(fcol$var)), as.list(s$expr)[-1L]))
+  .jst_term_text(out)
+}
+
 #' Internal helper: wrap a bare column for the vector-input path
 #'
-#' Builds the one-column data frame that jdesc() and jfreq() analyze when
-#' given a bare column, as in \code{jdesc(community$Age)}, plus the names
-#' their messages use: the column as typed, the variable name (the part
-#' after the last dollar sign), and the frame it came from when typed as
-#' frame dollar column -- MyData, the placeholder frame, otherwise.
+#' Builds the one-column data frame that jdesc(), jfreq() and jscreen()
+#' analyze when given a bare column, as in \code{jdesc(community$Age)}, plus
+#' the names their messages use: the column as typed, the variable name (the
+#' part after the last dollar sign), and the frame it came from when typed as
+#' frame dollar column -- MyData, the placeholder frame, otherwise. A column
+#' of a data frame (the resolver's \code{first_arg_frame}, Session 324) takes
+#' both names from that frame, so \code{d[["Age"]]} reads as Age from d, and
+#' is marked \code{in_frame} for \code{.jst_vector_recurse()}.
 #'
 #' @param arg1 The \code{.jst_resolve_first_arg()} result, mode
 #'   \code{vector_input}.
-#' @return A list with \code{frame}, \code{typed}, \code{var} and
-#'   \code{frame_nm}.
+#' @return A list with \code{frame}, \code{typed}, \code{var},
+#'   \code{frame_nm} and \code{in_frame}.
 #' @keywords internal
 .jst_vector_frame <- function(arg1) {
   typed <- paste(deparse(arg1$first_arg_sub), collapse = "")
-  var   <- sub("^.*\\$", "", typed)
+  fc    <- arg1$first_arg_frame
+  var   <- if (!is.null(fc)) fc$var else sub("^.*\\$", "", typed)
   frame <- data.frame(x = arg1$first_arg_value)
   names(frame) <- var
   list(frame = frame, typed = typed, var = var,
-       frame_nm = if (grepl("\\$", typed)) sub("\\$[^$]*$", "", typed)
-                  else "MyData")
+       frame_nm = if (!is.null(fc)) fc$frame
+                  else if (grepl("\\$", typed)) sub("\\$[^$]*$", "", typed)
+                  else "MyData",
+       in_frame = !is.null(fc))
 }
 
-#' Internal helper: re-call jdesc() or jfreq() on a wrapped bare column
+#' Internal helper: re-call jdesc(), jfreq() or jscreen() on a bare column
 #'
 #' The vector-input path's re-call. Every argument the caller received is
 #' forwarded (AUDIT-008: the re-call once passed only some of them, so
@@ -559,6 +720,15 @@
 #' because the re-call would read it from the user's raw frame, past its
 #' declared missing values -- the S322 ruling the data-frame form's
 #' \code{subset =} follows.
+#'
+#' A column of a data frame (\code{wrapped$in_frame}, Session 324) is
+#' re-called in that frame -- \code{jdesc(d$Age)} as \code{jdesc(d, Age)} --
+#' so the frame's stored \code{jsubset()} and \code{jcomplete()} settings and
+#' its registrations, all kept by the frame's name, apply as they do in the
+#' data-frame form. Until then the re-call ran on a one-column copy under an
+#' internal name: a stored filter was skipped, and the yellow line said it
+#' was "not active for this dataset". Any other value (\code{c(...)}, a
+#' computed vector) is still wrapped. The refusals above apply to both.
 #'
 #' @param fn The calling function, called again.
 #' @param fn_name Character: its name, for messages and the re-call.
@@ -640,8 +810,19 @@
   }
 
   env <- new.env(parent = user_env)
-  assign("temp_df", wrapped$frame, envir = env)
   assign(fn_name, fn, envir = env)
+  # A column of a data frame is analyzed in that frame (Session 324), so its
+  # stored settings and registrations apply. The frame is reached by name
+  # from the caller's environment, as in the data-frame form; a frame named
+  # like the function itself would be hidden by the binding above, so it is
+  # wrapped instead.
+  if (isTRUE(wrapped$in_frame) && !identical(wrapped$frame_nm, fn_name)) {
+    cl <- as.call(c(list(as.symbol(fn_name), as.symbol(wrapped$frame_nm),
+                         as.symbol(var)),
+                    args, list(subset = subset_sub)))
+    return(eval(cl, env))
+  }
+  assign("temp_df", wrapped$frame, envir = env)
   cl <- as.call(c(list(as.symbol(fn_name), as.symbol("temp_df"), as.symbol(var)),
                   args, list(subset = subset_sub)))
   eval(cl, env)

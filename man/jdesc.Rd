@@ -19,9 +19,11 @@ jdesc(
 )
 }
 \arguments{
-\item{data}{A data frame, or a numeric vector.}
+\item{data}{A data frame, or a single variable: a column of a data frame
+or a numeric vector.}
 
-\item{...}{Unquoted variable names within \code{data} (ignored if data is a vector).}
+\item{...}{Unquoted variable names within \code{data}. None when
+\code{data} is a single variable.}
 
 \item{by}{An optional unquoted grouping variable name. When provided,
 descriptives are computed separately for each group, with a separate
@@ -122,6 +124,15 @@ are skipped with a warning directing the user to \code{jfreq()} (date/time
 variables are not supported here). When every requested variable is
 unsummarizable, jdesc() stops with an error. Also accepts a simple numeric
 vector. Supports grouped descriptives via the \code{by} parameter.
+
+Given a single variable instead of a data frame, as in
+\code{jdesc(community$Age)}, jdesc() describes that variable. A column of
+a data frame is described in its frame, exactly as
+\code{jdesc(community, Age)} describes it: the frame's \code{jsubset()}
+and \code{jcomplete()} settings and its registrations apply. Any other
+vector is described on its own. A second variable, \code{by}, and a
+\code{subset} condition naming another variable need the data frame, and
+each stops with that form of the call.
 
 Haven-labelled variables are reported as \code{haven_labelled (Categorical)}
 in the type line; the uninformative \code{vctrs_vctr} class is suppressed.

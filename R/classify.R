@@ -1274,6 +1274,105 @@
   found
 }
 
+#' Internal helper: find a workspace vector that a computed term recycles
+#'
+#' A name inside a computed term that is not a variable resolves in the
+#' formula's environment (the S322 constant rule), and nothing checked its
+#' length: with \code{v <- c(1, 2, 3)}, \code{I(Stress * v)} fitted on R's
+#' recycled \code{1, 2, 3, 1, 2, 3, ...} behind its "longer object length"
+#' warning -- with no warning at all when the row count divides by the
+#' length -- and \code{lm()} does the same (Session 324, the S323 item). This
+#' walks each computed term of the formula, both sides, and returns the first
+#' operand of an element-wise operation -- arithmetic, a comparison,
+#' \code{&}, \code{|} or \code{!}, or an argument of \code{ifelse()},
+#' \code{pmin()} or \code{pmax()} -- that reads no variable of the data and
+#' holds more than one value but not one per row of \code{data}. A single
+#' value passes (the constant rule), and so does anything not combined value
+#' by value: a set used with \code{\%in\%}, a lookup indexed by a variable
+#' (\code{w[Group]}), a summary (\code{max(w)}).
+#'
+#' An operand is looked up, never run: a name, an element reached with
+#' \code{$}, \code{[[} or \code{@}, and \code{c()} or \code{:} over names and
+#' numbers are evaluated, because doing so has no side effect; any other call
+#' (\code{rnorm(70)}, \code{rev(w)}) is left to the resolver's own checks, so
+#' the check never draws a random number or runs the user's code twice.
+#'
+#' @param formula The analysis formula as typed.
+#' @param data The analysis data frame, after the pipeline's filters.
+#' @param enclos The environment the formula's other names resolve in.
+#' @return NULL when there is none; otherwise a list of \code{term} (the
+#'   computed term) and \code{operand} (the operand as written), both
+#'   language objects, and \code{n} (the operand's number of values).
+#' @keywords internal
+.jst_formula_recycled <- function(formula, data, enclos) {
+  vars <- tryCatch(attr(stats::terms(formula), "variables"),
+                   error = function(e) NULL)
+  if (is.null(vars)) return(NULL)
+  n_rows <- nrow(data)
+  ops    <- c("+", "-", "*", "/", "^", "%%", "%/%", "==", "!=", "<", ">",
+              "<=", ">=", "&", "|", "!", "ifelse", "pmin", "pmax")
+  found  <- NULL
+  strip  <- function(e) {
+    while (is.call(e) && identical(e[[1L]], as.name("(")) && length(e) == 2L) {
+      e <- e[[2L]]
+    }
+    e
+  }
+  # An operand safe to evaluate: a name; a name's element by $, [[ or @;
+  # c() or `:` over names and numbers.
+  pure <- function(e) {
+    if (is.symbol(e)) return(TRUE)
+    if (!is.call(e) || !is.symbol(e[[1L]])) return(FALSE)
+    h <- as.character(e[[1L]])
+    if (h %in% c("$", "@") && length(e) == 3L) return(pure(e[[2L]]))
+    if (h == "[[" && length(e) == 3L) {
+      return(pure(e[[2L]]) && (is.character(e[[3L]]) || is.numeric(e[[3L]])))
+    }
+    if (h %in% c("c", ":")) {
+      return(all(vapply(as.list(e)[-1L], function(a) {
+        is.symbol(a) || (is.atomic(a) && length(a) == 1L)
+      }, logical(1))))
+    }
+    FALSE
+  }
+  check_operand <- function(term, op) {
+    if (!is.null(found)) return(invisible(NULL))
+    op <- strip(op)
+    if (!pure(op)) return(invisible(NULL))
+    if (any(.jst_expr_symbols(op) %in% names(data))) return(invisible(NULL))
+    val <- tryCatch(eval(op, envir = enclos), error = function(e) NULL)
+    if (is.null(val) || !is.atomic(val)) return(invisible(NULL))
+    if (length(val) > 1L && length(val) != n_rows) {
+      found <<- list(term = term, operand = op, n = length(val))
+    }
+    invisible(NULL)
+  }
+  walk <- function(e, term) {
+    if (!is.null(found) || !is.call(e)) return(invisible(NULL))
+    head <- e[[1L]]
+    if (is.symbol(head)) {
+      h <- as.character(head)
+      if (h %in% c("::", ":::", "function")) return(invisible(NULL))
+      if (h %in% ops) {
+        for (k in seq_along(e)[-1L]) {
+          if (identical(as.list(e)[[k]], substitute())) next
+          check_operand(term, e[[k]])
+        }
+      }
+    }
+    for (k in seq_along(e)[-1L]) {
+      if (identical(as.list(e)[[k]], substitute())) next
+      walk(e[[k]], term)
+    }
+    invisible(NULL)
+  }
+  for (v in as.list(vars)[-1L]) {
+    if (is.call(v)) walk(v, v)
+    if (!is.null(found)) break
+  }
+  found
+}
+
 #' Internal helper: check a model formula's names as lm() reads them
 #'
 #' The front door of jt(), jaov(), jlm() and jlogistic() (Session 323; the
@@ -1294,17 +1393,31 @@
 #' (\code{.jst_check_formula_frames()}). A formula \code{terms()} cannot
 #' process for any other reason falls back to \code{all.vars()}, unchanged.
 #'
+#' A third refusal follows them (Session 324, the second deliberate
+#' departure from \code{lm()} parity): a workspace vector with more than one
+#' value but not one per row of \code{data} -- the frame after its filters,
+#' before cases with missing values are set aside, the rows the resolver
+#' computes the term on -- used value by value inside a computed term
+#' (\code{.jst_formula_recycled()}). \code{lm()} recycles it. A vector with
+#' one value per row of the frame as given, which a filter has since cut
+#' down, gets the fix of adding it to the frame, where the filter reaches
+#' it; any other length gets the requirement.
+#'
 #' @param formula The analysis formula as typed.
 #' @param data The analysis data frame (the post-pipeline copy).
 #' @param data_name Character; the data frame's name, for messages.
 #' @param default_used Logical; passed to \code{.jst_check_vars()}.
+#' @param n_frame Integer or NULL; the frame's row count before the
+#'   pipeline's filters (\code{pipeline_counts$n_original}), which tells the
+#'   recycling stop's two forms apart. NULL is read as \code{nrow(data)}.
 #' @return The data variables the formula names, constants left out, in
 #'   order of first appearance -- the list the Case Processing Summary
 #'   receives as \code{analysis_vars}. Stops instead when a name is found
-#'   nowhere, a data frame is named inside a term, or a power is refused.
+#'   nowhere, a data frame is named inside a term, a power is refused, or a
+#'   workspace vector would be recycled.
 #' @keywords internal
 .jst_check_formula_vars <- function(formula, data, data_name,
-                                    default_used = FALSE) {
+                                    default_used = FALSE, n_frame = NULL) {
   if (!is.data.frame(data)) {
     .jst_check_vars(data, all.vars(formula), data_name,
                     default_used = default_used)
@@ -1329,6 +1442,40 @@
   enclos <- environment(formula)
   if (is.null(enclos)) enclos <- parent.frame()
   .jst_check_formula_frames(formula, data, data_name, enclos = enclos)
+
+  # A workspace vector recycled inside a computed term (Session 324).
+  rec <- .jst_formula_recycled(formula, data, enclos)
+  if (!is.null(rec)) {
+    n_rows <- nrow(data)
+    if (is.null(n_frame)) n_frame <- n_rows
+    op   <- .jst_term_text(rec$operand)
+    lead <- paste0("In ", .jst_term_text(rec$term), ", ", op, " has ", rec$n,
+                   " values")
+    cases <- function(k) paste0(k, if (k == 1L) " case" else " cases")
+    frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
+      paste0("the ", data_name, " data frame")
+    } else {
+      "the data frame"
+    }
+    if (rec$n == n_frame && n_frame != n_rows) {
+      fix <- if (is.symbol(rec$operand) && !is.null(data_name) &&
+                 identical(make.names(data_name), data_name)) {
+        paste0(":\n  ", data_name, "$", op, " <- ", op)
+      } else {
+        "."
+      }
+      .jst_stop(lead, ", one for each case in ", frame_ref,
+                ", but filtering leaves ", n_rows, ".\n",
+                "Add ", op, " to ", frame_ref, " as a variable", fix)
+    }
+    where <- if (n_frame != n_rows) {
+      paste0("the ", cases(n_rows), " left after filtering")
+    } else {
+      paste0("the ", cases(n_rows), " in ", frame_ref)
+    }
+    .jst_stop(lead, " for ", where, ".\n",
+              "Use a single value, or one value for each case.")
+  }
 
   keep <- character(0)
   for (v in as.list(vars)[-1L]) {

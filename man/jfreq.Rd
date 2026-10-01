@@ -15,10 +15,11 @@ jfreq(
 )
 }
 \arguments{
-\item{data}{A data frame, or a vector.}
+\item{data}{A data frame, or a single variable: a column of a data frame
+or a vector.}
 
-\item{...}{Unquoted variable name(s) within \code{data} (ignored if
-\code{data} is a vector).}
+\item{...}{Unquoted variable name(s) within \code{data}. None when
+\code{data} is a single variable.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after
@@ -103,6 +104,15 @@ For haven-labelled variables, value labels and numeric codes are combined
 in the frequency table rows (e.g. \code{1: Strongly Oppose}) at the
 default \code{value.id} setting. Where variable labels are shown, they
 are shown for all variable types, not only haven-labelled ones.
+
+Given a single variable instead of a data frame, as in
+\code{jfreq(community$Region)}, jfreq() tabulates that variable. A column
+of a data frame is tabulated in its frame, exactly as
+\code{jfreq(community, Region)} tabulates it: the frame's
+\code{jsubset()} and \code{jcomplete()} settings and its registrations
+apply. Any other vector is tabulated on its own. A second variable, and a
+\code{subset} condition naming another variable, need the data frame, and
+each stops with that form of the call.
 }
 \examples{
 # With explicit data frame
