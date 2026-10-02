@@ -128,8 +128,10 @@ jdesc(
   no trailing decimal point). Does not affect p-values, percentages, or
   integer quantities (counts, N, degrees of freedom), which keep their
   own fixed conventions. The Min and Max columns are values of the
-  variables rather than statistics: they show as many decimal places as
-  the data carry, up to this many. NULL (default) defers to
+  variables rather than statistics: each variable shows as many decimal
+  places as its own data carry, up to this many, so a variable measured
+  in whole numbers prints 0 and 75 beside another's 4.8 and 9.7, and the
+  two columns are aligned on the decimal point. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `digits` setting (default 3).
 
@@ -190,14 +192,14 @@ jdesc(community, Age)
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  ------  ------
-#> Age        103       103      18   71   40.650  11.620
+#> Age        103       103       18   71  40.650  11.620
 #> 
 jdesc(community, Income, Age, WellbeingScore)
 #> Descriptive Statistics
 #> 
 #> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
-#> Variable        Total  Non_missing   Min    Max     Mean        SD
+#> Variable        Total  Non_missing   Min    Max      Mean        SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
 #> Income           103        97      14000  93000  49855.670  17427.223
 #> Age              103       103         18     71     40.650     11.620
@@ -212,8 +214,8 @@ jdesc(community, WellbeingScore, by = Volunteer)
 #> 
 #> Volunteer  Total  Non_missing  Min  Max   Mean     SD
 #> ---------  -----  -----------  ---  ---  ------  ------
-#> 0: No       54        54       25   76   47.463  11.699
-#> 1: Yes      49        49       29   81   54.673  10.059
+#> 0: No        54        54       25   76  47.463  11.699
+#> 1: Yes       49        49       29   81  54.673  10.059
 #> 
 
 # Using juse() default
@@ -227,7 +229,7 @@ jdesc(Age)
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  ------  ------
-#> Age        103       103      18   71   40.650  11.620
+#> Age        103       103       18   71  40.650  11.620
 #> 
 jdesc(Income, Age, WellbeingScore)
 #> Descriptive Statistics
@@ -235,7 +237,7 @@ jdesc(Income, Age, WellbeingScore)
 #> 
 #> 103 Cases in the 3 Variable Pool; 97 Complete on All
 #> 
-#> Variable        Total  Non_missing   Min    Max     Mean        SD
+#> Variable        Total  Non_missing   Min    Max      Mean        SD
 #> --------------  -----  -----------  -----  -----  ---------  ---------
 #> Income           103        97      14000  93000  49855.670  17427.223
 #> Age              103       103         18     71     40.650     11.620
@@ -251,8 +253,8 @@ jdesc(WellbeingScore, by = Volunteer)
 #> 
 #> Volunteer  Total  Non_missing  Min  Max   Mean     SD
 #> ---------  -----  -----------  ---  ---  ------  ------
-#> 0: No       54        54       25   76   47.463  11.699
-#> 1: Yes      49        49       29   81   54.673  10.059
+#> 0: No        54        54       25   76  47.463  11.699
+#> 1: Yes       49        49       29   81  54.673  10.059
 #> 
 
 # With a vector directly
@@ -263,6 +265,6 @@ jdesc(community$Age)
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  ------  ------
-#> Age        103       103      18   71   40.650  11.620
+#> Age        103       103       18   71  40.650  11.620
 #> 
 ```

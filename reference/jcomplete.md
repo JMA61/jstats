@@ -116,9 +116,9 @@ jcomplete(Income, Education, Age)
 #> 
 #> Variable    N   Missing  % Missing
 #> ---------  ---  -------  ---------
-#> Income     103     6       5.8%   
-#> Education  103     6       5.8%   
-#> Age        103     0       0.0%   
+#> Income     103     6        5.8%
+#> Education  103     6        5.8%
+#> Age        103     0        0.0%
 #> 
 #>   Complete cases: 91 of 103 (88.3%)
 #>   Listwise filter activated -- 12 cases will be excluded from
@@ -135,7 +135,7 @@ jdesc(Age)                     # Uses only complete cases on those 3 vars
 #> 
 #> Variable  Total  Non_missing  Min  Max   Mean     SD
 #> --------  -----  -----------  ---  ---  ------  ------
-#> Age        91        91       18   71   40.484  11.933
+#> Age         91        91       18   71  40.484  11.933
 #> 
 jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #> Listwise Case Filter
@@ -143,9 +143,9 @@ jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #> 
 #> Variable    N   Missing  % Missing
 #> ---------  ---  -------  ---------
-#> Income     103     6       5.8%   
-#> Education  103     6       5.8%   
-#> Age        103     0       0.0%   
+#> Income     103     6        5.8%
+#> Education  103     6        5.8%
+#> Age        103     0        0.0%
 #> 
 #>   Complete cases: 91 of 103 (88.3%)
 #>   Listwise filter activated -- 12 cases will be excluded from

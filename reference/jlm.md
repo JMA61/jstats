@@ -462,11 +462,11 @@ jlm(WellbeingScore ~ Income + Age, data = community)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE      t      β      p  
+#>                 b      SE     t      β      p
 #> -----------  ------  -----  -----  -----  -----
 #> (Intercept)  24.815  3.749  6.620         <.001
 #> Income        0.000  0.000  6.813  0.564  <.001
@@ -495,11 +495,11 @@ jlm(WellbeingScore ~ Income + Age, community)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE      t      β      p  
+#>                 b      SE     t      β      p
 #> -----------  ------  -----  -----  -----  -----
 #> (Intercept)  24.815  3.749  6.620         <.001
 #> Income        0.000  0.000  6.813  0.564  <.001
@@ -531,11 +531,11 @@ jlm(WellbeingScore ~ Income + Age)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE      t      β      p  
+#>                 b      SE     t      β      p
 #> -----------  ------  -----  -----  -----  -----
 #> (Intercept)  24.815  3.749  6.620         <.001
 #> Income        0.000  0.000  6.813  0.564  <.001
@@ -564,10 +564,10 @@ jlm(WellbeingScore ~ Region + Age, categorical = "Region")
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                            b      SE      t       β      p  
+#>                             b      SE      t      β      p
 #> -----------------------  ------  -----  ------  -----  -----
 #> (Intercept)              38.910  4.227   9.204         <.001
-#> Region (ref = 1: North)                                     
+#> Region (ref = 1: North)
 #>   2: South               -5.502  3.197  -1.721          .088
 #>   3: East                -1.872  2.848  -0.657          .513
 #>   4: West                -3.687  3.029  -1.217          .226
@@ -609,10 +609,10 @@ jlm(WellbeingScore ~ Region + Age)
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                            b      SE      t       β      p  
+#>                             b      SE      t      β      p
 #> -----------------------  ------  -----  ------  -----  -----
 #> (Intercept)              38.910  4.227   9.204         <.001
-#> Region (ref = 1: North)                                     
+#> Region (ref = 1: North)
 #>   2: South               -5.502  3.197  -1.721          .088
 #>   3: East                -1.872  2.848  -0.657          .513
 #>   4: West                -3.687  3.029  -1.217          .226
@@ -651,10 +651,10 @@ jlm(WellbeingScore ~ Region + Age)
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                           b      SE      t       β      p  
+#>                            b      SE      t      β      p
 #> ----------------------  ------  -----  ------  -----  -----
 #> (Intercept)             35.223  4.617   7.630         <.001
-#> Region (ref = 4: West)                                     
+#> Region (ref = 4: West)
 #>   1: North               3.687  3.029   1.217          .226
 #>   2: South              -1.815  3.253  -0.558          .578
 #>   3: East                1.815  2.941   0.617          .539
@@ -688,11 +688,11 @@ jlm(WellbeingScore ~ Age + Education, numeric = "Education")
 #> 
 #> Missing data   From 103   %
 #>     Education
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE      t      β      p  
+#>                 b      SE     t      β      p
 #> -----------  ------  -----  -----  -----  -----
 #> (Intercept)  25.688  3.789  6.780         <.001
 #> Age           0.343  0.078  4.376  0.354  <.001
@@ -723,13 +723,13 @@ jlm(WellbeingScore ~ Education + Environment4 + Smoker,
 #> 
 #> Missing data   From 103   %
 #>     Education
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #>     Smoker
-#>       Missing     5      4.9
+#>       Missing      5     4.9
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                 b      SE      t       β       p  
+#>                  b      SE      t       β      p
 #> ------------  ------  -----  ------  ------  -----
 #> (Intercept)   37.934  3.455  10.979          <.001
 #> Education      4.637  0.791   5.860   0.560  <.001
@@ -760,10 +760,10 @@ jlm(WellbeingScore ~ Region + Age, std = "all")
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                           b      SE      t       β       p  
+#>                            b      SE      t       β      p
 #> ----------------------  ------  -----  ------  ------  -----
 #> (Intercept)             35.223  4.617   7.630          <.001
-#> Region (ref = 4: West)                                      
+#> Region (ref = 4: West)
 #>   1: North               3.687  3.029   1.217   0.142   .226
 #>   2: South              -1.815  3.253  -0.558  -0.063   .578
 #>   3: East                1.815  2.941   0.617   0.073   .539
@@ -787,14 +787,14 @@ jlm(WellbeingScore ~ Region + Age, std = "gelman")
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                           b      SE      t     Gelman β    p  
+#>                            b      SE      t    Gelman β    p
 #> ----------------------  ------  -----  ------  --------  -----
 #> (Intercept)             35.223  4.617   7.630            <.001
-#> Region (ref = 4: West)                                        
-#>   1: North               3.687  3.029   1.217     3.687   .226
-#>   2: South              -1.815  3.253  -0.558    -1.815   .578
-#>   3: East                1.815  2.941   0.617     1.815   .539
-#> Age                      0.357  0.093   3.820     8.295  <.001
+#> Region (ref = 4: West)
+#>   1: North               3.687  3.029   1.217    3.687    .226
+#>   2: South              -1.815  3.253  -0.558   -1.815    .578
+#>   3: East                1.815  2.941   0.617    1.815    .539
+#> Age                      0.357  0.093   3.820    8.295   <.001
 #> 
 #> Outcome: WellbeingScore
 #> 
@@ -814,10 +814,10 @@ jlm(WellbeingScore ~ Region + Age, std = "none")
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                           b      SE      t       p  
+#>                            b      SE      t      p
 #> ----------------------  ------  -----  ------  -----
 #> (Intercept)             35.223  4.617   7.630  <.001
-#> Region (ref = 4: West)                              
+#> Region (ref = 4: West)
 #>   1: North               3.687  3.029   1.217   .226
 #>   2: South              -1.815  3.253  -0.558   .578
 #>   3: East                1.815  2.941   0.617   .539
@@ -851,7 +851,7 @@ jlm(Flourishing ~ SocialSupport * Stress, data = clinic)
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                           b       SE      t       β       p  
+#>                            b      SE       t       β      p
 #> ----------------------  ------  ------  ------  ------  -----
 #> (Intercept)             78.089  11.164   6.995          <.001
 #> SocialSupport           -1.573   0.740  -2.126   0.285   .037
@@ -890,7 +890,7 @@ jlm(Flourishing ~ Stress + I(Stress^2), data = clinic)
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE      t       β       p  
+#>                 b      SE      t       β      p
 #> -----------  ------  -----  ------  ------  -----
 #> (Intercept)  50.111  5.210   9.618          <.001
 #> Stress        0.711  0.607   1.171  -0.262   .246
@@ -928,12 +928,12 @@ jlm(Flourishing ~ SocialSupport * Stress, data = clinic, std = "product")
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                           b       SE      t     Product β    p  
+#>                            b      SE       t    Product β    p
 #> ----------------------  ------  ------  ------  ---------  -----
 #> (Intercept)             78.089  11.164   6.995             <.001
-#> SocialSupport           -1.573   0.740  -2.126     -0.536   .037
-#> Stress                  -2.576   0.588  -4.385     -1.337  <.001
-#> SocialSupport * Stress   0.159   0.041   3.873      1.320  <.001
+#> SocialSupport           -1.573   0.740  -2.126    -0.536    .037
+#> Stress                  -2.576   0.588  -4.385    -1.337   <.001
+#> SocialSupport * Stress   0.159   0.041   3.873     1.320   <.001
 #> 
 #> Product β treats each interaction as an ordinary predictor, as some other
 #> software does.

@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.203</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.204</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -162,9 +162,12 @@ statistics in the output tables (range 0-7; <code>digits = 0</code> prints
 whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
 which keep their own fixed conventions. The Min and Max columns are
-values of the variables rather than statistics: they show as many
-decimal places as the data carry, up to this many. NULL (default)
-defers to <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
+values of the variables rather than statistics: each variable shows
+as many decimal places as its own data carry, up to this many, so a
+variable measured in whole numbers prints 0 and 75 beside another's
+4.8 and 9.7, and the two columns are aligned on the decimal point.
+NULL (default) defers to <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting
+(default 3).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -215,14 +218,14 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.650  11.620</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103       18   71  40.650  11.620</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 3 Variable Pool; 97 Complete on All</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Total  Non_missing   Min    Max     Mean        SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Total  Non_missing   Min    Max      Mean        SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  -----  -----------  -----  -----  ---------  ---------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Income           103        97      14000  93000  49855.670  17427.223</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age              103       103         18     71     40.650     11.620</span>
@@ -237,8 +240,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------  -----  -----------  ---  ---  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No       54        54       25   76   47.463  11.699</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes      49        49       29   81   54.673  10.059</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No        54        54       25   76  47.463  11.699</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes       49        49       29   81  54.673  10.059</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
@@ -252,7 +255,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.650  11.620</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103       18   71  40.650  11.620</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Descriptive Statistics</span></span>
@@ -260,7 +263,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 3 Variable Pool; 97 Complete on All</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Total  Non_missing   Min    Max     Mean        SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable        Total  Non_missing   Min    Max      Mean        SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------  -----  -----------  -----  -----  ---------  ---------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Income           103        97      14000  93000  49855.670  17427.223</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Age              103       103         18     71     40.650     11.620</span>
@@ -276,8 +279,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Volunteer  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------  -----  -----------  ---  ---  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No       54        54       25   76   47.463  11.699</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes      49        49       29   81   54.673  10.059</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No        54        54       25   76  47.463  11.699</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes       49        49       29   81  54.673  10.059</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With a vector directly</span></span></span>
@@ -288,7 +291,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103      18   71   40.650  11.620</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103       18   71  40.650  11.620</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

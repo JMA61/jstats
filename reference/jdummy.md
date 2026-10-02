@@ -193,10 +193,10 @@ jdummy(Region, show = TRUE)          # Show coding scheme
 #> 
 #>                      Region_North  Region_South  Region_East*  Region_West
 #>     ---------------  ------------  ------------  ------------  -----------
-#>     1: Region_North             1             0             0            0
-#>     2: Region_South             0             1             0            0
-#>     3: Region_East*             0             0             1            0
-#>     4: Region_West              0             0             0            1
+#>     1: Region_North        1             0             0            0
+#>     2: Region_South        0             1             0            0
+#>     3: Region_East*        0             0             1            0
+#>     4: Region_West         0             0             0            1
 #> 
 #>     * Reference category
 #> 
@@ -213,10 +213,10 @@ jdummy(Region, show = "all")         # Full scheme (for many categories)
 #> 
 #>                      Region_North  Region_South  Region_East*  Region_West
 #>     ---------------  ------------  ------------  ------------  -----------
-#>     1: Region_North             1             0             0            0
-#>     2: Region_South             0             1             0            0
-#>     3: Region_East*             0             0             1            0
-#>     4: Region_West              0             0             0            1
+#>     1: Region_North        1             0             0            0
+#>     2: Region_South        0             1             0            0
+#>     3: Region_East*        0             0             1            0
+#>     4: Region_West         0             0             0            1
 #> 
 #>     * Reference category
 #> 

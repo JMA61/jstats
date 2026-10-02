@@ -16,7 +16,7 @@ pure base R.
   caption = NULL,
   indent = 0,
   header.indent = 0,
-  trim = FALSE,
+  trim = TRUE,
   digits = NULL
 )
 ```
@@ -39,18 +39,37 @@ pure base R.
 - align:
 
   Optional character vector of alignment codes ("l", "r", "c", "d",
-  "ln", or "bc"), one per displayed column. If NULL, auto-detects:
-  numeric = right, character/other = left. Code "d" is a decimal-tab:
-  data cells are right-justified (so a uniform decimal-places column
-  aligns on the decimal point) while the header stays centered over the
-  column. Code "ln" is left, no-trim (a caller-supplied leading space
-  survives). Code "bc" is block-centered: each value is right-justified
-  in a block the width of the column's widest value, and that block is
-  centered under the header, so counts align on their ones digit down
-  the column while the column reads centered rather than right-heavy
-  (the Case Processing bottom table's Session 52 rule, available to any
-  table since Session 313). The header is centered over the column, as
-  for "d".
+  "ln", "bc", or "bd"), one per displayed column. If NULL, auto-detects:
+  numeric = right, character/other = left – the form a listing of data
+  rows wants, and jcomplete()'s preview is the one caller that passes
+  none. Every statistics table names its columns, because only the
+  caller knows that a text column holds p-values or labels (a default
+  keyed to the column's type would leave every p header flush left;
+  Session 328). Code "d" is a decimal-tab: data cells are
+  right-justified (so a uniform decimal-places column aligns on the
+  decimal point) while the header stays centered over the column. Code
+  "ln" is left, no-trim (a caller-supplied leading space survives). Code
+  "bc" is block-centered: each value is right-justified in a block the
+  width of the column's widest value, and that block is centered under
+  the header, so counts align on their ones digit down the column while
+  the column reads centered rather than right-heavy (the Case Processing
+  bottom table's Session 52 rule, available to any table since Session
+  313). The header is centered over the column, as for "d". Code "bd" is
+  block-centered on the decimal point (Session 328): each cell is split
+  where its whole-number part ends, the whole-number parts are
+  right-justified and what follows them (a decimal fraction, a percent
+  sign, a significance marker) is left-justified, so the cells of a
+  column line up on the decimal point whatever each one carries – a
+  count over an expected count over a percentage in jcrosstab's cells, a
+  whole number over a one-decimal value in jdesc's Min and Max. The two
+  widths together are the block, centered under the header as a "bc"
+  block is. A cell that does not start with a number sits with the
+  whole-number parts. Where a header or a block cannot be centered
+  exactly, the odd space goes on the LEFT, so the text sits one place
+  right of center: a one-digit df under "df" reads as right-justified,
+  where a number conventionally sits. One rule for every table, the Case
+  Processing block included (Session 328); the odd space went on the
+  right through Session 327.
 
 - caption:
 
@@ -72,17 +91,14 @@ pure base R.
 
 - trim:
 
-  Logical. When TRUE, trailing spaces are removed from the header row
-  and every data row before printing. A centered header or a
-  left-aligned or block-centered cell in the LAST column is padded to
-  the column's width, so without the trim those lines end in spaces –
-  invisible on screen but carried into anything copied or captured.
-  Default FALSE. jdesc's two tables pass TRUE (Session 316), and since
-  Session 327 so do the statistics tables of jt, jaov and jalpha,
-  jlogistic's Omnibus, Model Summary and Classification tables, both VIF
-  tables and jscreen's Variable Types, each with its numeric columns
-  block-centered ("bc"). Making the two the default for every table is a
-  separate, package-wide decision.
+  Logical. When TRUE (the default since Session 328), trailing spaces
+  are removed from the header row and every data row before printing. A
+  centered header or a left-aligned or block-centered cell in the LAST
+  column is padded to the column's width, so without the trim those
+  lines end in spaces – invisible on screen but carried into anything
+  copied or captured. It was opt-in from Session 316 (jdesc's two
+  tables) through Session 327 (the statistics tables); no table wants
+  the padding, so no caller passes FALSE.
 
 - digits:
 

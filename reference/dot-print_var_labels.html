@@ -13,7 +13,7 @@ line). If no variable has a meaningful label, nothing is printed.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.203</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.204</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,11 +47,42 @@ line). If no variable has a meaningful label, nothing is printed.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.print_var_labels</span><span class="op">(</span><span class="va">data</span>, <span class="va">var_names</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.print_var_labels</span><span class="op">(</span><span class="va">data</span>, <span class="va">var_names</span>, lead <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
-  </main></div>
+
+<dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
+<dd><p>A data frame (or label source) whose columns may carry
+variable labels.</p></dd>
+
+
+<dt id="arg-var-names">var_names<a class="anchor" aria-label="anchor" href="#arg-var-names"></a></dt>
+<dd><p>Character vector of variable names to list, in order.</p></dd>
+
+
+<dt id="arg-lead">lead<a class="anchor" aria-label="anchor" href="#arg-lead"></a></dt>
+<dd><p>Logical. Print a blank line before the block. Default FALSE:
+most callers' preceding output already ends on one.</p></dd>
+
+</dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>Invisibly, TRUE when the block printed (the output now ends on a
+blank line) and FALSE when there was nothing to print.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>The block ends on a blank line of its own. So that a caller can end its
+output on exactly ONE blank line (Session 328), the helper reports
+whether it printed, and can put the blank line that separates it from
+what precedes in front of itself – only when it prints.</p>
+    </div>
+
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

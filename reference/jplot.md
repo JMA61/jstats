@@ -304,11 +304,11 @@ m <- jlm(WellbeingScore ~ Income + Age, community)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE      t      β      p  
+#>                 b      SE     t      β      p
 #> -----------  ------  -----  -----  -----  -----
 #> (Intercept)  24.815  3.749  6.620         <.001
 #> Income        0.000  0.000  6.813  0.564  <.001

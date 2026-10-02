@@ -12,7 +12,7 @@ nothing is printed.
 ## Usage
 
 ``` r
-.print_value_labels(data, var_names)
+.print_value_labels(data, var_names, lead = FALSE)
 ```
 
 ## Arguments
@@ -26,3 +26,13 @@ nothing is printed.
 - var_names:
 
   Character vector of variable names to document, in order.
+
+- lead:
+
+  Logical. Print a blank line before the block, only when the block
+  prints. Default FALSE. (Session 328)
+
+## Value
+
+Invisibly, TRUE when the block printed (the output now ends on a blank
+line) and FALSE when there was nothing to print.

@@ -19,7 +19,7 @@ structure so co-located blocks space the same way.
 ## Usage
 
 ``` r
-.print_model_var_labels(data, dv_name, iv_names)
+.print_model_var_labels(data, dv_name, iv_names, lead = FALSE)
 ```
 
 ## Arguments
@@ -36,3 +36,13 @@ structure so co-located blocks space the same way.
 - iv_names:
 
   Character vector. The predictor variable names, in order.
+
+- lead:
+
+  Logical. Print a blank line before the block, only when the block
+  prints. Default FALSE. (Session 328)
+
+## Value
+
+Invisibly, TRUE when the block printed (the output now ends on a blank
+line) and FALSE when there was nothing to print.

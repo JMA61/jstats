@@ -236,8 +236,8 @@ joutput(
   integer quantities (counts, N, degrees of freedom), which keep their
   own fixed conventions, or the Min and Max columns of
   [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md), which
-  show the values as the data carry them. All three preset levels
-  default to 3.
+  show each variable's values to the decimal places its own data carry.
+  All three preset levels default to 3.
 
 - quiet:
 

@@ -159,19 +159,19 @@ jcorr(community, Income, Age, WellbeingScore)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> ----------------------------
 #> 
 #> Bivariate Correlations (Pearson)
 #>                 Income          Age             WellbeingScore
 #> --------------  --------------  --------------  --------------
-#> Income           1                                            
-#>                                                               
-#> Age              .289 (p=.004)   1                            
-#>                 N=97                                          
-#>                                                               
-#> WellbeingScore   .616 (p<.001)   .343 (p<.001)   1            
-#>                 N=97            N=103                         
+#> Income           1
+#> 
+#> Age              .289 (p=.004)   1
+#>                 N=97
+#> 
+#> WellbeingScore   .616 (p<.001)   .343 (p<.001)   1
+#>                 N=97            N=103
 #> 
 jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #> Spearman Bivariate Correlations
@@ -180,19 +180,19 @@ jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> ----------------------------
 #> 
 #> Bivariate Correlations (Spearman)
 #>                 Income          Age             WellbeingScore
 #> --------------  --------------  --------------  --------------
-#> Income           1                                            
-#>                                                               
-#> Age              .305 (p=.002)   1                            
-#>                 N=97                                          
-#>                                                               
-#> WellbeingScore   .606 (p<.001)   .378 (p<.001)   1            
-#>                 N=97            N=103                         
+#> Income           1
+#> 
+#> Age              .305 (p=.002)   1
+#>                 N=97
+#> 
+#> WellbeingScore   .606 (p<.001)   .378 (p<.001)   1
+#>                 N=97            N=103
 #> 
 #> Note: Spearman p-values are approximate due to tied values in the data.
 #> 
@@ -208,18 +208,18 @@ jcorr(Income, Age, WellbeingScore)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> ----------------------------
 #> 
 #> Bivariate Correlations (Pearson)
 #>                 Income          Age             WellbeingScore
 #> --------------  --------------  --------------  --------------
-#> Income           1                                            
-#>                                                               
-#> Age              .289 (p=.004)   1                            
-#>                 N=97                                          
-#>                                                               
-#> WellbeingScore   .616 (p<.001)   .343 (p<.001)   1            
-#>                 N=97            N=103                         
+#> Income           1
+#> 
+#> Age              .289 (p=.004)   1
+#>                 N=97
+#> 
+#> WellbeingScore   .616 (p<.001)   .343 (p<.001)   1
+#>                 N=97            N=103
 #> 
 ```

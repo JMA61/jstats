@@ -39,3 +39,8 @@ line separates co-located blocks.
 - position:
 
   Either `"legend"` or `"legend.bottom"`.
+
+## Value
+
+Invisibly, TRUE when at least one block printed and FALSE when nothing
+printed. (Session 328)

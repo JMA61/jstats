@@ -311,11 +311,11 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE     Wald   df    p    Exp(B)
+#>                 b      SE    Wald   df    p    Exp(B)
 #> -----------  ------  -----  ------  --  -----  ------
 #> (Intercept)  -3.824  1.049  13.287   1  <.001   0.022
 #> Income        0.000  0.000   6.683   1   .010   1.000
@@ -326,12 +326,12 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #> Omnibus Test of Model Coefficients
 #> Chi-Square  df    p
 #> ----------  --  -----
-#>   16.705    2   <.001
+#>   16.705     2  <.001
 #> 
 #> Model Summary
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>      117.260           0.158           0.211      123.260
+#>      117.260            0.158          0.211      123.260
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
@@ -357,11 +357,11 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE     Wald   df    p    Exp(B)
+#>                 b      SE    Wald   df    p    Exp(B)
 #> -----------  ------  -----  ------  --  -----  ------
 #> (Intercept)  -4.788  1.168  16.800   1  <.001   0.008
 #> Income        0.000  0.000  12.214   1  <.001   1.000
@@ -372,12 +372,12 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #> Omnibus Test of Model Coefficients
 #> Chi-Square  df    p
 #> ----------  --  -----
-#>   25.108    2   <.001
+#>   25.108     2  <.001
 #> 
 #> Model Summary
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>      108.857           0.228           0.305      114.857
+#>      108.857            0.228          0.305      114.857
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
@@ -398,11 +398,11 @@ jlogistic(Volunteer ~ Income + Age)
 #> 
 #> Missing data   From 103   %
 #>     Income
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE     Wald   df    p    Exp(B)
+#>                 b      SE    Wald   df    p    Exp(B)
 #> -----------  ------  -----  ------  --  -----  ------
 #> (Intercept)  -3.824  1.049  13.287   1  <.001   0.022
 #> Income        0.000  0.000   6.683   1   .010   1.000
@@ -413,12 +413,12 @@ jlogistic(Volunteer ~ Income + Age)
 #> Omnibus Test of Model Coefficients
 #> Chi-Square  df    p
 #> ----------  --  -----
-#>   16.705    2   <.001
+#>   16.705     2  <.001
 #> 
 #> Model Summary
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>      117.260           0.158           0.211      123.260
+#>      117.260            0.158          0.211      123.260
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
@@ -436,10 +436,10 @@ jlogistic(Volunteer ~ Region + Age, categorical = "Region")
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                            b      SE    Wald   df   p    Exp(B)
+#>                             b      SE    Wald  df    p   Exp(B)
 #> -----------------------  ------  -----  -----  --  ----  ------
 #> (Intercept)              -2.240  0.864  6.716   1  .010   0.106
-#> Region (ref = 1: North)                                        
+#> Region (ref = 1: North)
 #>   2: South               -0.712  0.635  1.258   1  .262   0.490
 #>   3: East                -0.117  0.550  0.045   1  .831   0.889
 #>   4: West                 0.271  0.585  0.215   1  .643   1.312
@@ -448,14 +448,14 @@ jlogistic(Volunteer ~ Region + Age, categorical = "Region")
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df   p
+#> Chi-Square  df    p
 #> ----------  --  ----
-#>   11.745    4   .019
+#>   11.745     4  .019
 #> 
 #> Model Summary
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>      130.801           0.108           0.144      140.801
+#>      130.801            0.108          0.144      140.801
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
@@ -485,10 +485,10 @@ jlogistic(Volunteer ~ Region + Age)
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                            b      SE    Wald   df   p    Exp(B)
+#>                             b      SE    Wald  df    p   Exp(B)
 #> -----------------------  ------  -----  -----  --  ----  ------
 #> (Intercept)              -2.240  0.864  6.716   1  .010   0.106
-#> Region (ref = 1: North)                                        
+#> Region (ref = 1: North)
 #>   2: South               -0.712  0.635  1.258   1  .262   0.490
 #>   3: East                -0.117  0.550  0.045   1  .831   0.889
 #>   4: West                 0.271  0.585  0.215   1  .643   1.312
@@ -497,14 +497,14 @@ jlogistic(Volunteer ~ Region + Age)
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df   p
+#> Chi-Square  df    p
 #> ----------  --  ----
-#>   11.745    4   .019
+#>   11.745     4  .019
 #> 
 #> Model Summary
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>      130.801           0.108           0.144      140.801
+#>      130.801            0.108          0.144      140.801
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
@@ -532,10 +532,10 @@ jlogistic(Volunteer ~ Region + Age)
 #> Analysis N: 103
 #> 
 #> Coefficients
-#>                           b      SE    Wald   df   p    Exp(B)
+#>                            b      SE    Wald  df    p   Exp(B)
 #> ----------------------  ------  -----  -----  --  ----  ------
 #> (Intercept)             -1.969  0.940  4.384   1  .036   0.140
-#> Region (ref = 4: West)                                        
+#> Region (ref = 4: West)
 #>   1: North              -0.271  0.585  0.215   1  .643   0.762
 #>   2: South              -0.984  0.650  2.290   1  .130   0.374
 #>   3: East               -0.389  0.576  0.455   1  .500   0.678
@@ -544,14 +544,14 @@ jlogistic(Volunteer ~ Region + Age)
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df   p
+#> Chi-Square  df    p
 #> ----------  --  ----
-#>   11.745    4   .019
+#>   11.745     4  .019
 #> 
 #> Model Summary
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>      130.801           0.108           0.144      140.801
+#>      130.801            0.108          0.144      140.801
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
@@ -572,11 +572,11 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #> 
 #> Missing data   From 103   %
 #>     Education
-#>       Missing     6      5.8
+#>       Missing      6     5.8
 #> --------------------------------------
 #> 
 #> Coefficients
-#>                b      SE     Wald   df    p    Exp(B)
+#>                 b      SE    Wald   df    p    Exp(B)
 #> -----------  ------  -----  ------  --  -----  ------
 #> (Intercept)  -4.074  1.088  14.012   1  <.001   0.017
 #> Age           0.058  0.021   7.597   1   .006   1.060
@@ -587,12 +587,12 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #> Omnibus Test of Model Coefficients
 #> Chi-Square  df    p
 #> ----------  --  -----
-#>   21.547    2   <.001
+#>   21.547     2  <.001
 #> 
 #> Model Summary
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>      112.913           0.199           0.266      118.913
+#>      112.913            0.199          0.266      118.913
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes

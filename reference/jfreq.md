@@ -149,13 +149,12 @@ jfreq(community, Region)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    27    26.21    26.21   26.21
-#> 2: South    20    19.42    19.42   45.63
-#> 3: East     31    30.10    30.10   75.73
-#> 4: West     25    24.27    24.27  100.00
-#>                                         
-#> Total      103   100.00                 
+#> 1: North    27    26.21   26.21    26.21
+#> 2: South    20    19.42   19.42    45.63
+#> 3: East     31    30.10   30.10    75.73
+#> 4: West     25    24.27   24.27   100.00
 #> 
+#> Total      103   100.00
 #> 
 jfreq(community, Region, Education)
 #> Frequencies
@@ -166,30 +165,29 @@ jfreq(community, Region, Education)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    27    26.21    26.21   26.21
-#> 2: South    20    19.42    19.42   45.63
-#> 3: East     31    30.10    30.10   75.73
-#> 4: West     25    24.27    24.27  100.00
-#>                                         
-#> Total      103   100.00                 
+#> 1: North    27    26.21   26.21    26.21
+#> 2: South    20    19.42   19.42    45.63
+#> 3: East     31    30.10   30.10    75.73
+#> 4: West     25    24.27   24.27   100.00
+#> 
+#> Total      103   100.00
 #> 
 #> Education
 #> 
 #>                          Freq  Total %  Valid %  Cum. %
 #> -----------------------  ----  -------  -------  ------
-#> Valid                                                  
-#> 1: Some high school        23    22.33    23.71   23.71
-#> 2: High school graduate    18    17.48    18.56   42.27
-#> 3: Some college            25    24.27    25.77   68.04
-#> 4: Bachelor's degree       13    12.62    13.40   81.44
-#> 5: Graduate degree         18    17.48    18.56  100.00
-#>                                                        
-#> Missing                                                
-#> -99 ["Refused"]             3     2.91       --      --
-#> -98 ["Don't know"]          3     2.91       --      --
-#>                                                        
-#> Total                     103   100.00                 
+#> Valid
+#> 1: Some high school        23    22.33   23.71    23.71
+#> 2: High school graduate    18    17.48   18.56    42.27
+#> 3: Some college            25    24.27   25.77    68.04
+#> 4: Bachelor's degree       13    12.62   13.40    81.44
+#> 5: Graduate degree         18    17.48   18.56   100.00
 #> 
+#> Missing
+#> -99 ["Refused"]             3     2.91      --       --
+#> -98 ["Don't know"]          3     2.91      --       --
+#> 
+#> Total                     103   100.00
 #> 
 
 # Using juse() default
@@ -205,13 +203,12 @@ jfreq(Region)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    27    26.21    26.21   26.21
-#> 2: South    20    19.42    19.42   45.63
-#> 3: East     31    30.10    30.10   75.73
-#> 4: West     25    24.27    24.27  100.00
-#>                                         
-#> Total      103   100.00                 
+#> 1: North    27    26.21   26.21    26.21
+#> 2: South    20    19.42   19.42    45.63
+#> 3: East     31    30.10   30.10    75.73
+#> 4: West     25    24.27   24.27   100.00
 #> 
+#> Total      103   100.00
 #> 
 jfreq(Region, Education)
 #> Frequencies
@@ -223,30 +220,29 @@ jfreq(Region, Education)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    27    26.21    26.21   26.21
-#> 2: South    20    19.42    19.42   45.63
-#> 3: East     31    30.10    30.10   75.73
-#> 4: West     25    24.27    24.27  100.00
-#>                                         
-#> Total      103   100.00                 
+#> 1: North    27    26.21   26.21    26.21
+#> 2: South    20    19.42   19.42    45.63
+#> 3: East     31    30.10   30.10    75.73
+#> 4: West     25    24.27   24.27   100.00
+#> 
+#> Total      103   100.00
 #> 
 #> Education
 #> 
 #>                          Freq  Total %  Valid %  Cum. %
 #> -----------------------  ----  -------  -------  ------
-#> Valid                                                  
-#> 1: Some high school        23    22.33    23.71   23.71
-#> 2: High school graduate    18    17.48    18.56   42.27
-#> 3: Some college            25    24.27    25.77   68.04
-#> 4: Bachelor's degree       13    12.62    13.40   81.44
-#> 5: Graduate degree         18    17.48    18.56  100.00
-#>                                                        
-#> Missing                                                
-#> -99 ["Refused"]             3     2.91       --      --
-#> -98 ["Don't know"]          3     2.91       --      --
-#>                                                        
-#> Total                     103   100.00                 
+#> Valid
+#> 1: Some high school        23    22.33   23.71    23.71
+#> 2: High school graduate    18    17.48   18.56    42.27
+#> 3: Some college            25    24.27   25.77    68.04
+#> 4: Bachelor's degree       13    12.62   13.40    81.44
+#> 5: Graduate degree         18    17.48   18.56   100.00
 #> 
+#> Missing
+#> -99 ["Refused"]             3     2.91      --       --
+#> -98 ["Don't know"]          3     2.91      --       --
+#> 
+#> Total                     103   100.00
 #> 
 
 # With a vector directly
@@ -259,12 +255,11 @@ jfreq(community$Region)
 #> 
 #>           Freq  Total %  Valid %  Cum. %
 #> --------  ----  -------  -------  ------
-#> 1: North    27    26.21    26.21   26.21
-#> 2: South    20    19.42    19.42   45.63
-#> 3: East     31    30.10    30.10   75.73
-#> 4: West     25    24.27    24.27  100.00
-#>                                         
-#> Total      103   100.00                 
+#> 1: North    27    26.21   26.21    26.21
+#> 2: South    20    19.42   19.42    45.63
+#> 3: East     31    30.10   30.10    75.73
+#> 4: West     25    24.27   24.27   100.00
 #> 
+#> Total      103   100.00
 #> 
 ```

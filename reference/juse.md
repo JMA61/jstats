@@ -58,8 +58,8 @@ jdesc(Age, WellbeingScore)   # Uses community automatically
 #> 
 #> Variable        Total  Non_missing  Min  Max   Mean     SD
 #> --------------  -----  -----------  ---  ---  ------  ------
-#> Age              103       103      18   71   40.650  11.620
-#> WellbeingScore   103       103      25   81   50.893  11.481
+#> Age              103       103       18   71  40.650  11.620
+#> WellbeingScore   103       103       25   81  50.893  11.481
 #> 
 juse(NULL)                   # Clear the default
 #> Default data frame cleared.
