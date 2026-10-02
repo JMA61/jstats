@@ -54,8 +54,12 @@ header row and every data row before printing. A centered header or a
 left-aligned or block-centered cell in the LAST column is padded to
 the column's width, so without the trim those lines end in spaces --
 invisible on screen but carried into anything copied or captured.
-Default FALSE. jdesc's two tables pass TRUE (Session 316); making it
-the default for every table is a separate, package-wide decision.}
+Default FALSE. jdesc's two tables pass TRUE (Session 316), and since
+Session 327 so do the statistics tables of jt, jaov and jalpha,
+jlogistic's Omnibus, Model Summary and Classification tables, both VIF
+tables and jscreen's Variable Types, each with its numeric columns
+block-centered ("bc"). Making the two the default for every table is a
+separate, package-wide decision.}
 
 \item{digits}{Optional named vector that fixes the decimal places of
 numeric columns, keyed by the data frame's own column names (not the

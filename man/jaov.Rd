@@ -28,11 +28,14 @@ the descriptive output all use the transformed values.}
 \item{data}{A data frame containing variables referenced in \code{formula}.}
 
 \item{welch}{Logical. If FALSE (default), runs traditional ANOVA.
-If TRUE, runs Welch's ANOVA (does not assume equal variances).}
+If TRUE, runs Welch's ANOVA (does not assume equal variances). Welch's
+F is not a ratio of two mean squares, so its table shows F, df1, df2
+and p: Sum of Squares and Mean Square belong to the traditional ANOVA
+table and are not applicable to Welch's test.}
 
 \item{posthoc}{Logical or NULL. If TRUE, prints Tukey HSD pairwise comparisons.
-Not available when welch = TRUE. If NULL (default), defers to
-\code{joutput()}.}
+Not applicable when welch = TRUE: Tukey HSD assumes equal variances.
+If NULL (default), defers to \code{joutput()}.}
 
 \item{effect.size}{Logical or NULL. If TRUE, prints eta-squared. If NULL
 (default), defers to \code{joutput()}.}

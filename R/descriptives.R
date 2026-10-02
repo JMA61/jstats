@@ -1737,14 +1737,17 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
   # The never-mode rider (Session 320): the table's accounting in the form
   # every other function's N line takes, "(17 Excluded)".
+  # sep = "" on every line (Session 327): cat()'s default separator put a
+  # space between the value and the line end, so each of these lines ended
+  # in an invisible trailing space.
   if (isTRUE(cases_excluded > 0L)) {
-    cat("  Cases:", paste0(n_cases, " (", cases_excluded, " Excluded)"), "\n")
+    cat("  Cases: ", n_cases, " (", cases_excluded, " Excluded)\n", sep = "")
   } else {
-    cat("  Cases:", n_cases, "\n")
+    cat("  Cases: ", n_cases, "\n", sep = "")
   }
-  cat("  Variables:", n_vars, "\n")
-  cat("  Cases with missing data:", n_cases_missing, "\n")
-  cat("  Variables with outliers:", n_vars_outliers, "\n")
+  cat("  Variables: ", n_vars, "\n", sep = "")
+  cat("  Cases with missing data: ", n_cases_missing, "\n", sep = "")
+  cat("  Variables with outliers: ", n_vars_outliers, "\n", sep = "")
 
   any_missing  <- any(screen_table$Missing > 0)
   any_outliers <- n_vars_outliers > 0
@@ -1834,10 +1837,16 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     # The opt-in Mean and Median columns to digits places, trailing zeros
     # kept (Session 326). Named only when shown: the renderer refuses a name
     # that matches no column.
+    # The three numeric columns -- Unique Values and, when shown, Mean and
+    # Median -- block-centered; the text columns flush left, as before; no
+    # line ending in padding. (Session 327)
     .jst_print_table(t1,
                      caption   = "Variable Types",
                      col.names = heads,
                      row.names = FALSE,
+                     align     = ifelse(cols %in% c("Unique", "Mean", "Median"),
+                                        "bc", "l"),
+                     trim      = TRUE,
                      digits    = c(Mean = digits_n,
                                    Median = digits_n)[intersect(
                                      c("Mean", "Median"), cols)])

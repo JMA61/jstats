@@ -3369,22 +3369,26 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
           row.names = NULL
         )
         # VIF keeps its fixed three places, trailing zeros included (1.250,
-        # not 1.25). (Session 326)
+        # not 1.25). (Session 326) The VIF column block-centered, the lines
+        # trimmed. (Session 327)
         .jst_print_table(vif_df,
                          caption = "VIF (Variance Inflation Factors)",
                          row.names = FALSE,
+                         align = c("l", "bc"), trim = TRUE,
                          digits = c(VIF = 3L))
 
         # Targeted notes for VIF > 10
         high_vif <- vif_values[vif_values > 10]
         if (length(high_vif) > 0) {
           cat("\n")
+          # Both numbers to one place, padded (Session 327): through
+          # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
+          # table showing 16.000.
           for (nm in names(high_vif)) {
-            inflation <- round(sqrt(high_vif[nm]), 1)
             .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
-                         round(high_vif[nm], 1),
+                         .jst_fmt_stat(high_vif[[nm]], 1L),
                          "): standard error inflated by a factor of ",
-                         inflation, ".\n",
+                         .jst_fmt_stat(sqrt(high_vif[[nm]]), 1L), ".\n",
                          "  If you need to interpret this coefficient ",
                          "specifically, consider whether the collinearity ",
                          "is a concern for your research question.")
@@ -4506,11 +4510,15 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # The fit statistics to digits places, trailing zeros kept, as in the
   # coefficient table above. Each of these one-row tables took its decimals
   # from its single value, so -2 Log Likelihood could read 141.17 beside a
-  # three-place R-squared. (Session 326)
+  # three-place R-squared. (Session 326) Both tables block-centered and
+  # trimmed (Session 327): each value sits under the middle of its header,
+  # where the default alignment put it at the header's right edge and
+  # left-justified p.
   .jst_print_table(omnibus_table,
                    caption = "Omnibus Test of Model Coefficients",
                    col.names = c("Chi-Square", "df", "p"),
                    row.names = FALSE,
+                   align = rep("bc", 3L), trim = TRUE,
                    digits = c(Chi_Square = digits_n))
   cat("\n")
   .jst_print_table(summary_table,
@@ -4518,6 +4526,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                    col.names = c("-2 Log Likelihood", "Cox & Snell R\u00b2",
                                  "Nagelkerke R\u00b2", "AIC"),
                    row.names = FALSE,
+                   align = rep("bc", 4L), trim = TRUE,
                    digits = c(neg2LL = digits_n, CoxSnellR2 = digits_n,
                               NagelkerkeR2 = digits_n, AIC = digits_n))
 
@@ -4547,12 +4556,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     cat("\n")
     # % Correct keeps its one-place percentage convention (50.0, not 50).
-    # (Session 326)
+    # (Session 326) Observed flush left, the counts and percentages
+    # block-centered, the lines trimmed. (Session 327)
     .jst_print_table(class_table,
                      caption = "Classification Table (cutoff = 0.50)",
                      col.names = c("Observed", "Predicted 0", "Predicted 1",
                                    "% Correct"),
                      row.names = FALSE,
+                     align = c("l", rep("bc", 3L)), trim = TRUE,
                      digits = c(Pct_Correct = 1L))
   }
 
@@ -4581,22 +4592,26 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
           row.names = NULL
         )
         # VIF keeps its fixed three places, trailing zeros included.
-        # (Session 326)
+        # (Session 326) The VIF column block-centered, the lines trimmed.
+        # (Session 327)
         .jst_print_table(vif_df,
                          caption = "VIF (Variance Inflation Factors)",
                          row.names = FALSE,
+                         align = c("l", "bc"), trim = TRUE,
                          digits = c(VIF = 3L))
 
         # Targeted notes for VIF > 10
         high_vif <- vif_values[vif_values > 10]
         if (length(high_vif) > 0) {
           cat("\n")
+          # Both numbers to one place, padded (Session 327): through
+          # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
+          # table showing 16.000.
           for (nm in names(high_vif)) {
-            inflation <- round(sqrt(high_vif[nm]), 1)
             .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
-                         round(high_vif[nm], 1),
+                         .jst_fmt_stat(high_vif[[nm]], 1L),
                          "): standard error inflated by a factor of ",
-                         inflation, ".\n",
+                         .jst_fmt_stat(sqrt(high_vif[[nm]]), 1L), ".\n",
                          "  If you need to interpret this coefficient ",
                          "specifically, consider whether the collinearity ",
                          "is a concern for your research question.")
@@ -4632,6 +4647,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   cat("Dependent Variable Encoding\n")
   cat("  Modeled (1):   ", dv_event_disp, "\n", sep = "")
   cat("  Reference (0): ", dv_ref_disp,   "\n", sep = "")
+  # The closing blank line every other analysis function ends on (Session
+  # 327): this block was the one output that ended without it, so the next
+  # call's title sat directly under "Reference (0)".
+  cat("\n")
 
   # japa-ready coefficient frame: one flat row per coefficient at full
   # precision (the printed `coefficients` frame rounds for the eye; this keeps
@@ -4915,11 +4934,14 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   )
 
   # Alpha to digits places, trailing zeros kept (0.570, not 0.57).
-  # (Session 326)
+  # (Session 326) Both columns block-centered under their headers, the
+  # lines trimmed; jalpha's two tables below the same, with the item
+  # names flush left. (Session 327)
   .jst_print_table(alpha_table,
                    caption = "Reliability Statistics",
                    col.names = c("Cronbach's Alpha", "N of Items"),
                    row.names = FALSE,
+                   align = rep("bc", 2L), trim = TRUE,
                    digits = c(Alpha = digits_n))
   cat("\n")
 
@@ -4953,6 +4975,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   .jst_print_table(item_stats_disp,
                    caption = "Item Statistics",
                    row.names = FALSE,
+                   align = c("l", rep("bc", 3L)), trim = TRUE,
                    digits = c(Mean = digits_n, SD = digits_n))
   cat("\n")
 
@@ -5020,6 +5043,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    col.names = c("Item", "Corrected Item-Total r",
                                  "Alpha if Item Deleted"),
                    row.names = FALSE,
+                   align = c("l", rep("bc", 2L)), trim = TRUE,
                    digits = c(Corrected_Item_Total_r = digits_n,
                               Alpha_If_Deleted = digits_n))
 

@@ -381,10 +381,15 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
       row.names = NULL
     )
 
+    # Block-centered columns and trimmed lines (Session 327): each header
+    # centered over its column, each value right-justified in a block
+    # centered under it. On the default alignment F (numeric) sat flush
+    # right and p (text) flush left.
     .jst_print_table(levene_table,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
+                     align = rep("bc", 4L), trim = TRUE,
                      digits = c(F_value = digits_n))
 
     # Interpretive note (only when significant and not already using Welch)
@@ -426,9 +431,12 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     stringsAsFactors = FALSE
   )
 
+  # The group labels flush left, the numeric columns block-centered, no
+  # line ending in padding (Session 327).
   .jst_print_table(desc_table,
                    caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                    row.names = FALSE,
+                   align = c("l", rep("bc", 3L)), trim = TRUE,
                    digits = c(Mean = digits_n, SD = digits_n))
   cat("\n")
 
@@ -484,18 +492,23 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     test_label <- "Independent Samples T-Test Results (equal variances assumed)"
   }
 
+  # Every column block-centered, the lines trimmed (Session 327): p is
+  # text, so the default alignment left-justified it beside right-justified
+  # statistics.
   if (ci) {
     .jst_print_table(test_table,
                      caption = test_label,
                      col.names = c("t", "df", "p", "Mean Difference",
                                    "95% CI Lower", "95% CI Upper"),
                      row.names = FALSE,
+                     align = rep("bc", 6L), trim = TRUE,
                      digits = test_digits)
   } else {
     .jst_print_table(test_table,
                      caption = test_label,
                      col.names = c("t", "df", "p", "Mean Difference"),
                      row.names = FALSE,
+                     align = rep("bc", 4L), trim = TRUE,
                      digits = test_digits)
   }
 
@@ -587,10 +600,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   the descriptive output all use the transformed values.
 #' @param data A data frame containing variables referenced in \code{formula}.
 #' @param welch Logical. If FALSE (default), runs traditional ANOVA.
-#'   If TRUE, runs Welch's ANOVA (does not assume equal variances).
+#'   If TRUE, runs Welch's ANOVA (does not assume equal variances). Welch's
+#'   F is not a ratio of two mean squares, so its table shows F, df1, df2
+#'   and p: Sum of Squares and Mean Square belong to the traditional ANOVA
+#'   table and are not applicable to Welch's test.
 #' @param posthoc Logical or NULL. If TRUE, prints Tukey HSD pairwise comparisons.
-#'   Not available when welch = TRUE. If NULL (default), defers to
-#'   \code{joutput()}.
+#'   Not applicable when welch = TRUE: Tukey HSD assumes equal variances.
+#'   If NULL (default), defers to \code{joutput()}.
 #' @param effect.size Logical or NULL. If TRUE, prints eta-squared. If NULL
 #'   (default), defers to \code{joutput()}.
 #' @param levene Logical or NULL. If TRUE, prints Levene's test for homogeneity
@@ -897,10 +913,15 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       row.names = NULL
     )
 
+    # Block-centered columns and trimmed lines (Session 327): each header
+    # centered over its column, each value right-justified in a block
+    # centered under it. On the default alignment F (numeric) sat flush
+    # right and p (text) flush left.
     .jst_print_table(levene_table,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
+                     align = rep("bc", 4L), trim = TRUE,
                      digits = c(F_value = digits_n))
 
     # Interpretive note (only when significant and not already using Welch)
@@ -959,18 +980,22 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   desc_table <- do.call(rbind, desc_rows)
 
   # Every statistic to digits places, trailing zeros kept (Session 326).
+  # The group labels flush left, the numeric columns block-centered, no
+  # line ending in padding (Session 327).
   if (ci) {
     .jst_print_table(desc_table,
                      caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                      col.names = c("Group", "N", "Mean", "SD",
                                    "95% CI Lower", "95% CI Upper"),
                      row.names = FALSE,
+                     align = c("l", rep("bc", 5L)), trim = TRUE,
                      digits = c(Mean = digits_n, SD = digits_n,
                                 CI_Lower = digits_n, CI_Upper = digits_n))
   } else {
     .jst_print_table(desc_table,
                      caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                      row.names = FALSE,
+                     align = c("l", rep("bc", 3L)), trim = TRUE,
                      digits = c(Mean = digits_n, SD = digits_n))
   }
   cat("\n")
@@ -991,19 +1016,33 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     )
 
     # F to digits places; Welch's df2 keeps its one-place convention (50.3,
-    # 57.0); df1 is a whole number. (Session 326)
+    # 57.0); df1 is a whole number. (Session 326) Every column
+    # block-centered, the lines trimmed. (Session 327)
     .jst_print_table(welch_table,
                      caption = paste("Welch's ANOVA:", dv_disp, "by", group_disp),
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
+                     align = rep("bc", 4L), trim = TRUE,
                      digits = c(F_value = digits_n, df2 = 1L))
 
-    cat("\nNote: Sum of Squares and Mean Squares are not available for Welch's ANOVA.\n",
-        "To obtain these, run jaov() without welch = TRUE.\n", sep = "")
+    # "Not applicable", not "not available" (Session 327; wording approved
+    # by Jeff): Welch's F is a variance-weighted between-groups term over a
+    # correction factor, not a ratio of two mean squares, so the test has no
+    # Sum of Squares or Mean Square -- "not available" read as a gap in
+    # jstats. Both notes now go through the stdout emitter, so they wrap by
+    # width like the Levene notes above.
+    .jst_msg_out("\nNote: Sum of Squares and Mean Square are not applicable ",
+                 "to Welch's ANOVA.\n",
+                 "For the standard ANOVA table, run jaov() without ",
+                 "welch = TRUE.")
 
+    # Tukey HSD rests on the pooled error term, which Welch's test sets
+    # aside.
     if (posthoc) {
-      cat("\nNote: Tukey HSD post-hoc tests are not available with Welch's ANOVA.\n",
-          "Run without welch = TRUE for post-hoc comparisons.\n", sep = "")
+      .jst_msg_out("\nNote: Tukey HSD post-hoc tests are not applicable to ",
+                   "Welch's ANOVA.\n",
+                   "For Tukey HSD comparisons, run jaov() without ",
+                   "welch = TRUE.")
     }
 
     # Always compute eta-squared (from traditional SS decomposition)
@@ -1048,11 +1087,16 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     # Mean Square and F all at digits places, so the between-groups SS and
     # MS of a one-df effect -- the same number -- read alike (682.770 and
     # 682.770, where per-column detection printed 682.770 beside 682.77).
+    # Source flush left; df, the statistics and p block-centered, so F and
+    # p sit under centered headers and a wide header (Sum of Squares) sits
+    # over its values; the Residual and Total rows end at their last value,
+    # with no padding after it. (Session 327)
     .jst_print_table(anova_table,
                      caption = paste("ANOVA:", dv_disp, "by", group_disp),
                      col.names = c("Source", "df", "Sum of Squares",
                                    "Mean Square", "F", "p"),
                      row.names = FALSE,
+                     align = c("l", rep("bc", 5L)), trim = TRUE,
                      digits = c(Sum_of_Squares = digits_n,
                                 Mean_Square = digits_n, F_value = digits_n))
 
@@ -1083,12 +1127,16 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       )
 
       cat("\n")
+      # Comparison flush left, the rest block-centered and the lines
+      # trimmed (Session 327): the adjusted p-values are right-justified in
+      # their block, so 1.000 lines up on the decimal point with .976.
       .jst_print_table(tukey_table,
                        caption = "Tukey HSD Post-Hoc Comparisons",
                        col.names = c("Comparison", "Mean Difference",
                                      "95% CI Lower", "95% CI Upper",
                                      "p (adjusted)"),
                        row.names = FALSE,
+                       align = c("l", rep("bc", 4L)), trim = TRUE,
                        digits = c(Difference = digits_n, CI_Lower = digits_n,
                                   CI_Upper = digits_n))
     }
@@ -1554,11 +1602,19 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     min_expected <- min(exp_table)
     n_below_5    <- sum(exp_table < 5)
     if (n_below_5 > 0) {
+      # The minimum to two places, padded (Session 327; wording approved by
+      # Jeff). It printed through round(x, 1), so a minimum of 4.96 read
+      # "less than 5 (minimum expected = 5)" and exactly 3 read "3". Two
+      # places leave one window open -- a minimum in [4.995, 5) rounds up to
+      # 5.00, the threshold the note says it is below -- so that prints
+      # 4.99. "(minimum = ...)" keeps the sentence on one line at the
+      # default width, where "(minimum expected = ...)" wrapped.
+      min_shown <- if (round(min_expected, 2) >= 5) 4.99 else min_expected
       .jst_msg_out("\nNote: ", n_below_5,
                    if (n_below_5 == 1L) " cell has an expected frequency"
                    else " cells have expected frequencies",
-                   " less than 5 (minimum expected = ",
-                   round(min_expected, 1), ").\n",
+                   " less than 5 (minimum = ",
+                   .jst_fmt_stat(min_shown, 2L), ").\n",
                    "Chi-square results may not be reliable.")
     }
   }
