@@ -4,7 +4,7 @@
 \alias{.print_model_var_labels}
 \title{Internal helper: print a role-grouped model variable-label legend}
 \usage{
-.print_model_var_labels(data, dv_name, iv_names)
+.print_model_var_labels(data, dv_name, iv_names, lead = FALSE)
 }
 \arguments{
 \item{data}{A data frame (or pre-conversion label source) whose columns may
@@ -13,6 +13,13 @@ carry variable labels.}
 \item{dv_name}{Character. The outcome (response) variable name.}
 
 \item{iv_names}{Character vector. The predictor variable names, in order.}
+
+\item{lead}{Logical. Print a blank line before the block, only when the
+block prints. Default FALSE. (Session 328)}
+}
+\value{
+Invisibly, TRUE when the block printed (the output now ends on a
+blank line) and FALSE when there was nothing to print.
 }
 \description{
 The regression layout's replacement for the flat \code{.print_var_labels}

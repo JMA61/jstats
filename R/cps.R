@@ -848,11 +848,15 @@
         g <- "  "
 
         # Centre a count under its header: right-justify within the value
-        # block, then centre that block within the column width.
+        # block, then centre that block within the column width. Where the
+        # spare space is odd the larger half goes on the LEFT (Session 328),
+        # the one lean every table in the package now shares -- see
+        # fmt_cell() in .jst_print_table(); it went on the right from
+        # Session 52 through Session 327.
         ctr_count <- function(x, block_w, col_w) {
           s     <- formatC(x, width = block_w)
           extra <- max(0L, col_w - block_w)
-          left  <- extra %/% 2L
+          left  <- extra - extra %/% 2L
           paste0(strrep(" ", left), s, strrep(" ", extra - left))
         }
 

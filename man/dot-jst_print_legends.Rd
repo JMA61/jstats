@@ -21,14 +21,24 @@
 when the caller's preceding output already supplies a trailing blank line
 (e.g. grouped jdesc, where the last group table emits one).}
 }
+\value{
+Invisibly, TRUE when at least one block printed (the output now
+ends on a blank line) and FALSE when nothing printed.
+}
 \description{
 For single-table functions (jt, jaov, jcrosstab) and grouped jdesc, where
 both \code{"legend"} and \code{"legend.bottom"} resolve to the same place --
-after the table. Emits one lead-in blank line if either block will print,
-then the variable-label block first and the value-label block second (the
+after the table. Emits one lead-in blank line when a block prints, then
+the variable-label block first and the value-label block second (the
 Session 60 ordering lock). Each block supplies its own trailing blank line,
 so co-located blocks are separated by exactly one blank line. The two blocks
 can document different variable sets (e.g. jt's variable legend covers DV +
 group, but only the group carries the value.id legend).
+}
+\details{
+Since Session 328 the lead-in blank line prints only when a block does (a
+legend mode with no labelled variable printed a lone blank line), and the
+helper reports whether anything printed, so the caller can end its output
+on exactly one blank line: a printed block already ends on one.
 }
 \keyword{internal}

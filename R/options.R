@@ -166,8 +166,9 @@
 #'   many places, trailing zeros included (0.100, not 0.1). Does not
 #'   affect p-values, percentages, or integer quantities (counts, N,
 #'   degrees of freedom), which keep their own fixed conventions, or the
-#'   Min and Max columns of \code{jdesc()}, which show the values as the
-#'   data carry them. All three preset levels default to 3.
+#'   Min and Max columns of \code{jdesc()}, which show each variable's
+#'   values to the decimal places its own data carry. All three preset
+#'   levels default to 3.
 #'
 #' @section Session options:
 #' \code{joutput()} stores its settings through R's standard

@@ -403,16 +403,23 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                    align     = c("l", rep("ln", n_vars)),
                    caption   = paste0("Bivariate Correlations (", method_label, ")"))
 
+  # One blank line between blocks and one closing the output (Session 328).
+  # The legend block ends on a blank line of its own, so the note that may
+  # follow it needs no lead-in, and the closing blank line prints only when
+  # the last thing printed did not end on one.
+  leg <- FALSE
   if (vlmode %in% c("legend", "legend.bottom")) {
-    cat("\n")
-    .print_var_labels(data, variable_names)
+    leg <- .print_var_labels(data, variable_names, lead = TRUE)
   }
 
   if (has_ties) {
-    cat("\nNote: Spearman p-values are approximate due to tied values in the data.\n")
+    cat(if (leg) "" else "\n",
+        "Note: Spearman p-values are approximate due to tied values in the data.\n",
+        sep = "")
+    leg <- FALSE
   }
 
-  cat("\n")
+  if (!leg) cat("\n")
 
   # Build analysis-level data frame for jplot() (2-variable scatter option)
   mf <- data[, variable_names, drop = FALSE]
@@ -3217,18 +3224,21 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # and alignment vectors. .jst_print_table sizes each column to the wider of
   # header and contents, so the longer Gelman header simply widens that one
   # column while keeping the header centered and the numbers decimal-aligned.
+  # Block-centered ("bc") since Session 328; the columns were decimal-tabbed
+  # ("d": header centered, values at the column's right edge), which left a
+  # wide header such as "95% CI Lower" off its values.
   if (show_beta_col) {
     beta_header    <- switch(std, gelman  = "Gelman \u03b2",
                              product = "Product \u03b2", "\u03b2")
     coef_col_names <- c("b", "SE", "t", beta_header, "p")
-    coef_align     <- c("d", "d", "d", "d", "d")
+    coef_align     <- c("bc", "bc", "bc", "bc", "bc")
   } else {
     coef_col_names <- c("b", "SE", "t", "p")
-    coef_align     <- c("d", "d", "d", "d")
+    coef_align     <- c("bc", "bc", "bc", "bc")
   }
   if (ci) {
     coef_col_names <- c(coef_col_names, "95% CI Lower", "95% CI Upper")
-    coef_align     <- c(coef_align, "d", "d")
+    coef_align     <- c(coef_align, "bc", "bc")
   }
   .jst_print_table(coef_disp,
                    caption   = "Coefficients",
@@ -3345,8 +3355,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   cat("R-squared: ", sprintf(paste0("%.", digits_n, "f"), r_squared),
       "    Adjusted R-squared: ", sprintf(paste0("%.", digits_n, "f"), adj_r_squared), "\n", sep = "")
   cat("Residual Standard Error: ", sprintf(paste0("%.", digits_n, "f"), residual_se), "\n", sep = "")
+  # The two df are whole numbers and print whole (Session 328): cat()
+  # abbreviates a double of exactly 100000, so a model with 100,000 residual
+  # degrees of freedom read "on 1 and 1e+05 DF".
   cat("\nF-statistic: ", sprintf(paste0("%.", digits_n, "f"), f_value),
-      " on ", df1, " and ", df2,
+      " on ", format(df1, scientific = FALSE),
+      " and ", format(df2, scientific = FALSE),
       " DF, p-value: ", f_p_fmt, "\n", sep = "")
   cat("Sum of Squares:\n")
   cat("  Regression: ", sprintf(paste0("%.", digits_n, "f"), ss_regression), "\n", sep = "")
@@ -3374,7 +3388,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         .jst_print_table(vif_df,
                          caption = "VIF (Variance Inflation Factors)",
                          row.names = FALSE,
-                         align = c("l", "bc"), trim = TRUE,
+                         align = c("l", "bc"),
                          digits = c(VIF = 3L))
 
         # Targeted notes for VIF > 10
@@ -3423,9 +3437,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   }
 
   # "legend.bottom": one consolidated legend at the very end of the output.
+  # The block ends on a blank line of its own, so the closing blank line at
+  # the foot of this function prints only when no legend did. (Session 328)
+  leg_bottom <- FALSE
   if (identical(vlmode, "legend.bottom")) {
-    cat("\n")
-    .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
+    leg_bottom <- .print_model_var_labels(lab_src, original_formula_vars[1],
+                                          original_formula_vars[-1],
+                                          lead = TRUE)
   }
 
   # japa-ready coefficient frame: one flat row per coefficient carrying RAW,
@@ -3514,7 +3532,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     sample_info     = sample_info
   )
   class(ret) <- "jst_lm"
-  cat("\n")
+  if (!leg_bottom) cat("\n")
   invisible(ret)
 }
 
@@ -4486,10 +4504,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
                                       value_mode_coef, vlmode, lab_src,
                                       show_ref_categories)
+  # Block-centered ("bc") since Session 328, as jlm's: the df column then
+  # follows the same rule as the Omnibus table's below it (the two
+  # disagreed, " 1" above "2 ", while this table was decimal-tabbed).
   .jst_print_table(coef_disp,
                    caption   = "Coefficients",
                    col.names = c("", col_names),
-                   align     = c("ln", rep("d", length(col_names))),
+                   align     = c("ln", rep("bc", length(col_names))),
                    row.names = FALSE)
 
   # Outcome named beneath the table, following variable.id; folds into the
@@ -4518,7 +4539,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                    caption = "Omnibus Test of Model Coefficients",
                    col.names = c("Chi-Square", "df", "p"),
                    row.names = FALSE,
-                   align = rep("bc", 3L), trim = TRUE,
+                   align = rep("bc", 3L),
                    digits = c(Chi_Square = digits_n))
   cat("\n")
   .jst_print_table(summary_table,
@@ -4526,7 +4547,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                    col.names = c("-2 Log Likelihood", "Cox & Snell R\u00b2",
                                  "Nagelkerke R\u00b2", "AIC"),
                    row.names = FALSE,
-                   align = rep("bc", 4L), trim = TRUE,
+                   align = rep("bc", 4L),
                    digits = c(neg2LL = digits_n, CoxSnellR2 = digits_n,
                               NagelkerkeR2 = digits_n, AIC = digits_n))
 
@@ -4563,7 +4584,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                      col.names = c("Observed", "Predicted 0", "Predicted 1",
                                    "% Correct"),
                      row.names = FALSE,
-                     align = c("l", rep("bc", 3L)), trim = TRUE,
+                     align = c("l", rep("bc", 3L)),
                      digits = c(Pct_Correct = 1L))
   }
 
@@ -4597,7 +4618,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         .jst_print_table(vif_df,
                          caption = "VIF (Variance Inflation Factors)",
                          row.names = FALSE,
-                         align = c("l", "bc"), trim = TRUE,
+                         align = c("l", "bc"),
                          digits = c(VIF = 3L))
 
         # Targeted notes for VIF > 10
@@ -4941,7 +4962,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    caption = "Reliability Statistics",
                    col.names = c("Cronbach's Alpha", "N of Items"),
                    row.names = FALSE,
-                   align = rep("bc", 2L), trim = TRUE,
+                   align = rep("bc", 2L),
                    digits = c(Alpha = digits_n))
   cat("\n")
 
@@ -4975,7 +4996,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   .jst_print_table(item_stats_disp,
                    caption = "Item Statistics",
                    row.names = FALSE,
-                   align = c("l", rep("bc", 3L)), trim = TRUE,
+                   align = c("l", rep("bc", 3L)),
                    digits = c(Mean = digits_n, SD = digits_n))
   cat("\n")
 
@@ -5033,7 +5054,12 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
         "correlated while most aren't: ",
         paste(pos_items, collapse = ", ")))
     }
-    cat("\n")
+    # The blank line that spaces the warning off the table below belongs to
+    # the warning, so it prints only when the warning prints HERE -- under
+    # options(warn = 1). With warnings deferred (R's default) nothing
+    # prints at this point, and the blank line doubled the one that already
+    # follows Item Statistics. (Session 328)
+    if (isTRUE(getOption("warn") >= 1)) cat("\n")
   }
 
   item_total_disp      <- item_total_table
@@ -5043,7 +5069,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    col.names = c("Item", "Corrected Item-Total r",
                                  "Alpha if Item Deleted"),
                    row.names = FALSE,
-                   align = c("l", rep("bc", 2L)), trim = TRUE,
+                   align = c("l", rep("bc", 2L)),
                    digits = c(Corrected_Item_Total_r = digits_n,
                               Alpha_If_Deleted = digits_n))
 

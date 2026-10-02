@@ -4,13 +4,20 @@
 \alias{.print_value_labels}
 \title{Internal helper: print a value-label legend block}
 \usage{
-.print_value_labels(data, var_names)
+.print_value_labels(data, var_names, lead = FALSE)
 }
 \arguments{
 \item{data}{A data frame (or pre-conversion label source) whose columns may
 carry value labels (\code{labelled::val_labels}).}
 
 \item{var_names}{Character vector of variable names to document, in order.}
+
+\item{lead}{Logical. Print a blank line before the block, only when the
+block prints. Default FALSE. (Session 328)}
+}
+\value{
+Invisibly, TRUE when the block printed (the output now ends on a
+blank line) and FALSE when there was nothing to print.
 }
 \description{
 Companion to \code{.print_var_labels} for the \code{value.id} legend modes.

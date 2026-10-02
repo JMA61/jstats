@@ -389,7 +389,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
-                     align = rep("bc", 4L), trim = TRUE,
+                     align = rep("bc", 4L),
                      digits = c(F_value = digits_n))
 
     # Interpretive note (only when significant and not already using Welch)
@@ -436,7 +436,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   .jst_print_table(desc_table,
                    caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                    row.names = FALSE,
-                   align = c("l", rep("bc", 3L)), trim = TRUE,
+                   align = c("l", rep("bc", 3L)),
                    digits = c(Mean = digits_n, SD = digits_n))
   cat("\n")
 
@@ -501,14 +501,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      col.names = c("t", "df", "p", "Mean Difference",
                                    "95% CI Lower", "95% CI Upper"),
                      row.names = FALSE,
-                     align = rep("bc", 6L), trim = TRUE,
+                     align = rep("bc", 6L),
                      digits = test_digits)
   } else {
     .jst_print_table(test_table,
                      caption = test_label,
                      col.names = c("t", "df", "p", "Mean Difference"),
                      row.names = FALSE,
-                     align = rep("bc", 4L), trim = TRUE,
+                     align = rep("bc", 4L),
                      digits = test_digits)
   }
 
@@ -536,12 +536,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     cat(paste0("\n", d_label, ": ", .jst_fmt_stat(cohens_d, digits_n), "\n"))
   }
 
-  .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
-                     vlmode, value_mode)
+  leg <- .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
+                            vlmode, value_mode)
 
   n_analysis <- nrow(mf)
 
-  cat("\n")
+  # One closing blank line (Session 328): a legend block ends on its own.
+  if (!leg) cat("\n")
   ret <- list(
     model           = result,
     model_frame     = mf,
@@ -921,7 +922,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      caption = "Levene's Test for Homogeneity of Variance",
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
-                     align = rep("bc", 4L), trim = TRUE,
+                     align = rep("bc", 4L),
                      digits = c(F_value = digits_n))
 
     # Interpretive note (only when significant and not already using Welch)
@@ -988,14 +989,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      col.names = c("Group", "N", "Mean", "SD",
                                    "95% CI Lower", "95% CI Upper"),
                      row.names = FALSE,
-                     align = c("l", rep("bc", 5L)), trim = TRUE,
+                     align = c("l", rep("bc", 5L)),
                      digits = c(Mean = digits_n, SD = digits_n,
                                 CI_Lower = digits_n, CI_Upper = digits_n))
   } else {
     .jst_print_table(desc_table,
                      caption = paste("Group Descriptives:", dv_disp, "by", group_disp),
                      row.names = FALSE,
-                     align = c("l", rep("bc", 3L)), trim = TRUE,
+                     align = c("l", rep("bc", 3L)),
                      digits = c(Mean = digits_n, SD = digits_n))
   }
   cat("\n")
@@ -1022,7 +1023,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      caption = paste("Welch's ANOVA:", dv_disp, "by", group_disp),
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
-                     align = rep("bc", 4L), trim = TRUE,
+                     align = rep("bc", 4L),
                      digits = c(F_value = digits_n, df2 = 1L))
 
     # "Not applicable", not "not available" (Session 327; wording approved
@@ -1096,7 +1097,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      col.names = c("Source", "df", "Sum of Squares",
                                    "Mean Square", "F", "p"),
                      row.names = FALSE,
-                     align = c("l", rep("bc", 5L)), trim = TRUE,
+                     align = c("l", rep("bc", 5L)),
                      digits = c(Sum_of_Squares = digits_n,
                                 Mean_Square = digits_n, F_value = digits_n))
 
@@ -1136,7 +1137,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                                      "95% CI Lower", "95% CI Upper",
                                      "p (adjusted)"),
                        row.names = FALSE,
-                       align = c("l", rep("bc", 4L)), trim = TRUE,
+                       align = c("l", rep("bc", 4L)),
                        digits = c(Difference = digits_n, CI_Lower = digits_n,
                                   CI_Upper = digits_n))
     }
@@ -1148,12 +1149,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     p_value <- result$`Pr(>F)`[1]
   }
 
-  .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
-                     vlmode, value_mode)
+  leg <- .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
+                            vlmode, value_mode)
 
   n_analysis <- nrow(mf)
 
-  cat("\n")
+  # One closing blank line (Session 328): a legend block ends on its own.
+  if (!leg) cat("\n")
   ret <- list(
     model        = model,
     model_frame  = mf,
@@ -1495,14 +1497,20 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   header <- c(.jst_truncate_ellipsis(row_disp), col_labels, "Total")
 
+  # Counts print whole, never in scientific notation (Session 328):
+  # as.character() turned a count or a total of exactly 100000 into "1e+05"
+  # -- the margins of a 200,000-case table split evenly, for one.
+  fmt_count <- function(x) format(as.numeric(x), scientific = FALSE,
+                                  trim = TRUE)
+
   display_rows <- list()
 
   for (i in seq_len(n_rows)) {
     obs_vals  <- as.numeric(obs_table[i, ])
     row_total <- sum(obs_vals)
     display_rows <- c(display_rows,
-                      list(c(row_labels[i], as.character(obs_vals),
-                             as.character(row_total))))
+                      list(c(row_labels[i], fmt_count(obs_vals),
+                             fmt_count(row_total))))
 
     if (expected) {
       exp_vals     <- round(exp_table[i, ], 1)
@@ -1544,8 +1552,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   col_totals  <- colSums(obs_table)
   grand_total <- sum(obs_table)
   display_rows <- c(display_rows,
-                    list(c("Total", as.character(col_totals),
-                           as.character(grand_total))))
+                    list(c("Total", fmt_count(col_totals),
+                           fmt_count(grand_total))))
 
   if (col.pct) {
     display_rows <- c(display_rows,
@@ -1556,13 +1564,28 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                                         stringsAsFactors = FALSE)
   colnames(display_df) <- header
 
+  # The cells line up on the decimal point (Session 328, Jeff): every cell
+  # is text -- a count, an expected count, a percentage, a residual with its
+  # markers -- so the default alignment left-justified them all, and 13 sat
+  # over the 1 of 12.6 only by accident of width. "bd" puts the count's
+  # ones digit over the expected count's and the percentage's, and centers
+  # the block under the column's header. The label column is "ln", so the
+  # two-space indent the sub-row labels are built with ("  (Row %)")
+  # survives: the default "l" trimmed it.
   .jst_print_table(display_df,
                    caption   = paste("Crosstab:", row_disp, "by", col_disp),
-                   row.names = FALSE)
+                   row.names = FALSE,
+                   align     = c("ln", rep("bd", ncol(display_df) - 1L)))
+  # One blank line closes the crosstab. What follows -- the chi-square
+  # table, the notes, the legend -- separates itself from what precedes it,
+  # and the output ends on exactly ONE blank line (Session 328). ends_blank
+  # tracks whether the last thing printed was a blank line.
   cat("\n")
+  ends_blank <- TRUE
 
   # Chi-square test (only if requested)
   if (chisq) {
+    ends_blank <- FALSE
     if (is_2x2) {
       # 2x2: two rows, SPSS-style -- Pearson is the headline, the Yates
       # continuity-corrected value beneath it.
@@ -1577,10 +1600,13 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
         row.names  = NULL
       )
 
+      # Block-centered (Session 328): each cell was centered on its own
+      # ("c"), so the two rows fell out of line whenever their values
+      # differed in width -- "<.001" over ".001", 11.605 over 9.870.
       .jst_print_table(chi_table,
                        caption   = "Chi-Square Test of Independence",
                        col.names = c("Test", "Chi-Square", "df", "p", "N"),
-                       align     = c("l", "c", "c", "c", "c"),
+                       align     = c("l", "bc", "bc", "bc", "bc"),
                        row.names = FALSE)
     } else {
       chi_table <- data.frame(
@@ -1595,7 +1621,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
       .jst_print_table(chi_table,
                        caption   = "Chi-Square Test of Independence",
                        col.names = c("Chi-Square", "df", "p", "N"),
-                       align     = c("c", "c", "c", "c"),
+                       align     = c("bc", "bc", "bc", "bc"),
                        row.names = FALSE)
     }
 
@@ -1630,12 +1656,18 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
       "With ", n_cells, " cells, a Bonferroni-adjusted cutoff is +/-",
       sprintf("%.2f", bonf), " (marked **)."
     )
+    # The note prints at joutput("full") only -- exactly when the cells are
+    # marked.
+    if (mark_adj_res) ends_blank <- FALSE
   }
 
-  .jst_print_legends(lab_src, c(row_name, col_name), c(row_name, col_name),
-                     vlmode, value_mode)
-
-  cat("\n")
+  # The legend's lead-in blank line prints only when the output does not
+  # already end on one, and the closing blank line only when no legend
+  # block (which ends on its own) printed. (Session 328)
+  leg <- .jst_print_legends(lab_src, c(row_name, col_name), c(row_name, col_name),
+                            vlmode, value_mode, lead = !ends_blank)
+  if (leg) ends_blank <- TRUE
+  if (!ends_blank) cat("\n")
 
   ret <- list(
     observed           = obs_table,

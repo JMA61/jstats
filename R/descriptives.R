@@ -125,9 +125,12 @@
 #'   whole numbers with no trailing decimal point). Does not affect p-values,
 #'   percentages, or integer quantities (counts, N, degrees of freedom),
 #'   which keep their own fixed conventions. The Min and Max columns are
-#'   values of the variables rather than statistics: they show as many
-#'   decimal places as the data carry, up to this many. NULL (default)
-#'   defers to \code{joutput()}'s \code{digits} setting (default 3).
+#'   values of the variables rather than statistics: each variable shows
+#'   as many decimal places as its own data carry, up to this many, so a
+#'   variable measured in whole numbers prints 0 and 75 beside another's
+#'   4.8 and 9.7, and the two columns are aligned on the decimal point.
+#'   NULL (default) defers to \code{joutput()}'s \code{digits} setting
+#'   (default 3).
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
 #'   \code{"totals"}, or \code{"per_code"}. \code{NULL} (default)
@@ -452,27 +455,47 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
       # Mean and SD to digits places, trailing zeros kept; Min and Max are
       # values of the variable and keep the precision the data carry.
       # (Session 326)
-      .jst_print_table(group_table, row.names = FALSE,
-                       align = c("l", rep("bc", ncol(group_table) - 1L)),
-                       trim = TRUE,
+      # THE VARIABLE'S precision, not the precision of the group minimums
+      # and maximums that happen to print (Session 328): a variable measured
+      # to a tenth shows 4.0 where a group's minimum is a whole number. The
+      # places come from the described cases -- those with a group. One
+      # variable, so one precision down each column, and "bc" already lines
+      # the values up on the decimal point (the ungrouped table, where rows
+      # differ in precision, needs "bd").
+      mm_dp <- .jst_data_dp(dv_data[!is.na(group_var_chr)], digits_n)
+      group_disp <- group_table
+      group_disp$Min <- .jst_make_fmt(mm_dp)(group_table$Min)
+      group_disp$Max <- .jst_make_fmt(mm_dp)(group_table$Max)
+      .jst_print_table(group_disp, row.names = FALSE,
+                       align = c("l", rep("bc", ncol(group_disp) - 1L)),
                        digits = c(Mean = digits_n, SD = digits_n))
       cat("\n")
     }
 
-    # Mixed case: warn for any variables that could not be summarized.
+    # Mixed case: one note per variable that could not be summarized. The
+    # notes are text after the last table's closing blank line, so what
+    # follows them -- a legend, or the end of the output -- needs a blank
+    # line of its own: the output ended on the note, and a legend sat
+    # directly under it (Session 328). ends_blank tracks whether the last
+    # thing printed was a blank line.
     .emit_bad_refusals()
+    ends_blank <- length(bad_vars) == 0L
 
     # Variable- and value-label legends at the single consolidated position.
     # The grouping column in `data` has been factor-converted (value labels
     # stripped), so the value-label block reads from `by_var`, which retains
-    # the original labelling. No lead-in blank: the last group table emits one.
+    # the original labelling. No lead-in blank when the last group table's
+    # own closing blank line is still the last thing printed.
     leg_modes <- c("legend", "legend.bottom")
     if (vlmode %in% leg_modes) {
-      .print_var_labels(data, c(good_vars, by_name))
+      if (.print_var_labels(data, c(good_vars, by_name),
+                            lead = !ends_blank)) ends_blank <- TRUE
     }
     if (value_mode %in% leg_modes) {
-      .print_value_labels(stats::setNames(list(by_var), by_name), by_name)
+      if (.print_value_labels(stats::setNames(list(by_var), by_name), by_name,
+                              lead = !ends_blank)) ends_blank <- TRUE
     }
+    if (!ends_blank) cat("\n")
 
     # No closing blank (Session 316): the last group table and each legend
     # already end with one, so the grouped output closes on one blank line
@@ -607,19 +630,40 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # Mean and SD to digits places, trailing zeros kept (49.600, not
     # 49.6); Min and Max are values of the variables and keep the
     # precision the data carry. (Session 326)
+    # EACH VARIABLE'S OWN precision (Session 328, Jeff): the two columns
+    # took one precision from the values in them, so a whole-number
+    # variable printed 0.0 and 75.0 beside another's 4.8 and 9.7 -- places
+    # its data do not have. Each row is now formatted to the places its
+    # variable's data carry (up to digits), and the two columns line up on
+    # the decimal point ("bd"), so 0 sits over the 4 of 4.8.
+    mm_dp <- vapply(good_vars, function(v) {
+      .jst_data_dp(.jst_classify_desc_var(data[[v]], v)$num, digits_n)
+    }, integer(1))
+    fmt_mm <- function(x) {
+      vapply(seq_along(x), function(i) .jst_make_fmt(mm_dp[[i]])(x[i]),
+             character(1))
+    }
+    descriptives_disp$Min <- fmt_mm(descriptives$Min)
+    descriptives_disp$Max <- fmt_mm(descriptives$Max)
     .jst_print_table(descriptives_disp,
-                     align = c("l", rep("bc", ncol(descriptives_disp) - 1L)),
-                     trim = TRUE,
+                     align = c("l", ifelse(names(descriptives_disp)[-1L] %in%
+                                             c("Min", "Max"), "bd", "bc")),
                      digits = c(Mean = digits_n, SD = digits_n))
     cat("\n")
   }
 
-  # Mixed case: warn for any variables that could not be summarized.
+  # Mixed case: one note per variable that could not be summarized. As in
+  # the grouped path above, the notes are text after the table's closing
+  # blank line, so a legend or the end of the output needs a blank line of
+  # its own after them. (Session 328)
   .emit_bad_refusals()
+  ends_blank <- length(bad_vars) == 0L
 
   if (vlmode %in% c("legend", "legend.bottom")) {
-    .print_var_labels(data, good_vars)
+    if (.print_var_labels(data, good_vars,
+                          lead = !ends_blank)) ends_blank <- TRUE
   }
+  if (!ends_blank) cat("\n")
 
   ret <- list(
     descriptives = descriptives,
@@ -1275,10 +1319,15 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       CumPct   = "",
       stringsAsFactors = FALSE))
 
+    # The four numeric columns block-centered (Session 328; they were
+    # right-justified): each header over the middle of its column, the
+    # counts on their ones digit and the percentages on their decimal
+    # point, "--" at the right of its block. The section rows ("Valid",
+    # "Missing") and the spacer rows end where their text ends.
     .jst_print_table(display_df,
                      col.names = c("", "Freq", "Total %", "Valid %", "Cum. %"),
                      row.names = FALSE,
-                     align     = c("l", "r", "r", "r", "r"))
+                     align     = c("l", "bc", "bc", "bc", "bc"))
     cat("\n")
 
     # value.id / variable.id legends under this variable's own table.
@@ -1290,7 +1339,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   .jst_print_legends_at(data, var_names_check, var_names_check,
                         vlmode, value_mode, "legend.bottom")
 
-  cat("\n")
+  # No closing cat("\n") here (Session 328): every table above, and every
+  # legend block, already ends on a blank line, so one more made jfreq the
+  # one function whose output always ended on two.
 
   ret <- list(
     frequencies = results,
@@ -1846,7 +1897,6 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
                      row.names = FALSE,
                      align     = ifelse(cols %in% c("Unique", "Mean", "Median"),
                                         "bc", "l"),
-                     trim      = TRUE,
                      digits    = c(Mean = digits_n,
                                    Median = digits_n)[intersect(
                                      c("Mean", "Median"), cols)])
@@ -1948,12 +1998,13 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   }
 
   # -- Variable label legend (last; only under "legend"/"legend.bottom") -----
+  # One closing blank line (Session 328): the legend block ends on its own,
+  # so the closing one prints only when no legend did.
+  leg <- FALSE
   if (vlmode %in% c("legend", "legend.bottom")) {
-    cat("\n")
-    .print_var_labels(data, var_names)
+    leg <- .print_var_labels(data, var_names, lead = TRUE)
   }
-
-  cat("\n")
+  if (!leg) cat("\n")
   # Star and Plausibility are internal display flags (the "*" recode marker and
   # the "!" implausible-declaration marker); they are not part of the returned
   # screening results.

@@ -19,6 +19,10 @@
 
 \item{position}{Either \code{"legend"} or \code{"legend.bottom"}.}
 }
+\value{
+Invisibly, TRUE when at least one block printed and FALSE when
+nothing printed. (Session 328)
+}
 \description{
 For multi-variable functions (jfreq) where \code{"legend"} prints under each
 variable's own table and \code{"legend.bottom"} prints once after all

@@ -97,9 +97,12 @@ statistics in the output tables (range 0-7; \code{digits = 0} prints
 whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
 which keep their own fixed conventions. The Min and Max columns are
-values of the variables rather than statistics: they show as many
-decimal places as the data carry, up to this many. NULL (default)
-defers to \code{joutput()}'s \code{digits} setting (default 3).}
+values of the variables rather than statistics: each variable shows
+as many decimal places as its own data carry, up to this many, so a
+variable measured in whole numbers prints 0 and 75 beside another's
+4.8 and 9.7, and the two columns are aligned on the decimal point.
+NULL (default) defers to \code{joutput()}'s \code{digits} setting
+(default 3).}
 }
 \value{
 Invisibly returns a list of class \code{jst_desc} containing:

@@ -1533,8 +1533,22 @@ jai <- function(setup = NULL, path = NULL) {
 #' label equal to its own name, is omitted (avoiding a redundant "X = X"
 #' line). If no variable has a meaningful label, nothing is printed.
 #'
+#' The block ends on a blank line of its own. So that a caller can end its
+#' output on exactly ONE blank line (Session 328), the helper reports
+#' whether it printed, and can put the blank line that separates it from
+#' what precedes in front of itself -- only when it prints.
+#'
+#' @param data A data frame (or label source) whose columns may carry
+#'   variable labels.
+#' @param var_names Character vector of variable names to list, in order.
+#' @param lead Logical. Print a blank line before the block. Default FALSE:
+#'   most callers' preceding output already ends on one.
+#'
+#' @return Invisibly, TRUE when the block printed (the output now ends on a
+#'   blank line) and FALSE when there was nothing to print.
+#'
 #' @keywords internal
-.print_var_labels <- function(data, var_names) {
+.print_var_labels <- function(data, var_names, lead = FALSE) {
   shown_names  <- character(0)
   shown_labels <- character(0)
   for (v in var_names) {
@@ -1554,10 +1568,13 @@ jai <- function(setup = NULL, path = NULL) {
     w <- max(nchar(shown_names))
     label_lines <- paste0("  ", formatC(shown_names, width = w, flag = "-"),
                           " = ", shown_labels)
+    if (isTRUE(lead)) cat("\n")
     cat("Variable Labels:\n")
     cat(paste(label_lines, collapse = "\n"))
     cat("\n\n")
+    return(invisible(TRUE))
   }
+  invisible(FALSE)
 }
 
 #' Internal helper: print a role-grouped model variable-label legend
@@ -1582,9 +1599,14 @@ jai <- function(setup = NULL, path = NULL) {
 #'   carry variable labels.
 #' @param dv_name Character. The outcome (response) variable name.
 #' @param iv_names Character vector. The predictor variable names, in order.
+#' @param lead Logical. Print a blank line before the block, only when the
+#'   block prints. Default FALSE. (Session 328)
+#'
+#' @return Invisibly, TRUE when the block printed (the output now ends on a
+#'   blank line) and FALSE when there was nothing to print.
 #'
 #' @keywords internal
-.print_model_var_labels <- function(data, dv_name, iv_names) {
+.print_model_var_labels <- function(data, dv_name, iv_names, lead = FALSE) {
   has_label <- function(v) {
     if (!v %in% names(data)) return(FALSE)
     vl <- labelled::var_label(data[[v]])
@@ -1617,9 +1639,12 @@ jai <- function(setup = NULL, path = NULL) {
                vapply(iv_names, fmt_line, character(1), USE.NAMES = FALSE))
   }
   if (length(block) > 0L) {
+    if (isTRUE(lead)) cat("\n")
     cat(paste(block, collapse = "\n"))
     cat("\n\n")
+    return(invisible(TRUE))
   }
+  invisible(FALSE)
 }
 
 #' Internal helper: print a value-label legend block
@@ -1635,9 +1660,14 @@ jai <- function(setup = NULL, path = NULL) {
 #' @param data A data frame (or pre-conversion label source) whose columns may
 #'   carry value labels (\code{labelled::val_labels}).
 #' @param var_names Character vector of variable names to document, in order.
+#' @param lead Logical. Print a blank line before the block, only when the
+#'   block prints. Default FALSE. (Session 328)
+#'
+#' @return Invisibly, TRUE when the block printed (the output now ends on a
+#'   blank line) and FALSE when there was nothing to print.
 #'
 #' @keywords internal
-.print_value_labels <- function(data, var_names) {
+.print_value_labels <- function(data, var_names, lead = FALSE) {
   label_lines <- c()
   for (v in var_names) {
     if (v %in% names(data)) {
@@ -1650,22 +1680,30 @@ jai <- function(setup = NULL, path = NULL) {
     }
   }
   if (length(label_lines) > 0) {
+    if (isTRUE(lead)) cat("\n")
     cat("Value Labels:\n")
     cat(paste(label_lines, collapse = "\n"))
     cat("\n\n")
+    return(invisible(TRUE))
   }
+  invisible(FALSE)
 }
 
 #' Internal helper: print variable- and value-label legends (single position)
 #'
 #' For single-table functions (jt, jaov, jcrosstab) and grouped jdesc, where
 #' both \code{"legend"} and \code{"legend.bottom"} resolve to the same place --
-#' after the table. Emits one lead-in blank line if either block will print,
-#' then the variable-label block first and the value-label block second (the
+#' after the table. Emits one lead-in blank line when a block prints, then
+#' the variable-label block first and the value-label block second (the
 #' Session 60 ordering lock). Each block supplies its own trailing blank line,
 #' so co-located blocks are separated by exactly one blank line. The two blocks
 #' can document different variable sets (e.g. jt's variable legend covers DV +
 #' group, but only the group carries the value.id legend).
+#'
+#' Since Session 328 the lead-in blank line prints only when a block does (a
+#' legend mode with no labelled variable printed a lone blank line), and the
+#' helper reports whether anything printed, so the caller can end its output
+#' on exactly one blank line: a printed block already ends on one.
 #'
 #' @param data Data frame / label source.
 #' @param vars_var Variable names for the variable-label block.
@@ -1676,15 +1714,24 @@ jai <- function(setup = NULL, path = NULL) {
 #'   when the caller's preceding output already supplies a trailing blank line
 #'   (e.g. grouped jdesc, where the last group table emits one).
 #'
+#' @return Invisibly, TRUE when at least one block printed (the output now
+#'   ends on a blank line) and FALSE when nothing printed.
+#'
 #' @keywords internal
 .jst_print_legends <- function(data, vars_var, vars_val, vlmode, value_mode,
                                lead = TRUE) {
   leg <- c("legend", "legend.bottom")
-  vmode_leg   <- vlmode %in% leg
-  valmode_leg <- value_mode %in% leg
-  if (lead && (vmode_leg || valmode_leg)) cat("\n")
-  if (vmode_leg)   .print_var_labels(data, vars_var)
-  if (valmode_leg) .print_value_labels(data, vars_val)
+  printed <- FALSE
+  if (vlmode %in% leg) {
+    printed <- .print_var_labels(data, vars_var, lead = lead)
+  }
+  if (value_mode %in% leg) {
+    # The second block needs no lead-in when the first printed: the first
+    # block's own trailing blank line separates the two.
+    printed <- .print_value_labels(data, vars_val,
+                                   lead = lead && !printed) || printed
+  }
+  invisible(printed)
 }
 
 #' Internal helper: print legends at a specific position (per-table / bottom)
@@ -1704,11 +1751,20 @@ jai <- function(setup = NULL, path = NULL) {
 #' @param value_mode Resolved value.id mode.
 #' @param position Either \code{"legend"} or \code{"legend.bottom"}.
 #'
+#' @return Invisibly, TRUE when at least one block printed and FALSE when
+#'   nothing printed. (Session 328)
+#'
 #' @keywords internal
 .jst_print_legends_at <- function(data, vars_var, vars_val, vlmode, value_mode,
                                   position) {
-  if (identical(vlmode, position))     .print_var_labels(data, vars_var)
-  if (identical(value_mode, position)) .print_value_labels(data, vars_val)
+  printed <- FALSE
+  if (identical(vlmode, position)) {
+    printed <- .print_var_labels(data, vars_var)
+  }
+  if (identical(value_mode, position)) {
+    printed <- .print_value_labels(data, vars_val) || printed
+  }
+  invisible(printed)
 }
 
 #' Internal helper: combine a variable's name and label per variable.id mode
@@ -1816,6 +1872,45 @@ jai <- function(setup = NULL, path = NULL) {
   max(dec)
 }
 
+#' Internal helper: the decimal places a variable's data carry
+#'
+#' Returns the number of decimal places needed to show every value of a
+#' variable faithfully, capped at \code{cap} -- the precision the DATA
+#' carry, as opposed to the precision of the few values a table happens to
+#' print. jdesc() uses it for Min and Max (Session 328): a variable measured
+#' in whole numbers shows 0 and 75, one measured to a tenth shows 4.8 and
+#' 10.0, and each variable keeps its own places when several share a table.
+#' Before, both columns took one precision from the minimums and maximums
+#' in them, so a whole-number variable printed 0.0 and 75.0 beside another
+#' variable's 4.8 and 9.7.
+#'
+#' The work is \code{.jst_col_dp()}'s, on the distinct values: a vector of
+#' whole numbers returns 0 without formatting anything, and the scan stops
+#' as soon as the cap is reached, so a full-precision variable with a
+#' million distinct values costs one small batch.
+#'
+#' @param x A numeric vector (a variable's values; missing values ignored).
+#' @param cap Integer. Maximum number of decimal places to report (the
+#'   digits setting in force).
+#'
+#' @return Integer scalar between 0 and \code{cap}. Returns 0 for an
+#'   all-missing vector.
+#'
+#' @keywords internal
+.jst_data_dp <- function(x, cap = 7L) {
+  x <- x[is.finite(x)]
+  if (length(x) == 0L || cap <= 0L) return(0L)
+  if (all(x == round(x))) return(0L)
+  ux <- unique(x)
+  dp <- 0L
+  for (first in seq(1L, length(ux), by = 5000L)) {
+    last <- min(first + 4999L, length(ux))
+    dp   <- max(dp, .jst_col_dp(ux[first:last], cap = cap))
+    if (dp >= cap) break
+  }
+  as.integer(dp)
+}
+
 #' Internal helper: carry passenger attributes through a column rebuild
 #'
 #' A haven-imported column carries attributes beyond its labels and its
@@ -1876,8 +1971,13 @@ jai <- function(setup = NULL, path = NULL) {
 #'   uses \code{names(df)}.
 #' @param row.names Logical. If TRUE, includes row names as the first column.
 #' @param align Optional character vector of alignment codes ("l", "r", "c",
-#'   "d", "ln", or "bc"), one per displayed column. If NULL, auto-detects:
-#'   numeric = right, character/other = left. Code "d" is a decimal-tab: data
+#'   "d", "ln", "bc", or "bd"), one per displayed column. If NULL,
+#'   auto-detects: numeric = right, character/other = left -- the form a
+#'   listing of data rows wants, and jcomplete()'s preview is the one caller
+#'   that passes none. Every statistics table names its columns, because
+#'   only the caller knows that a text column holds p-values or labels (a
+#'   default keyed to the column's type would leave every p header flush
+#'   left; Session 328). Code "d" is a decimal-tab: data
 #'   cells are right-justified (so a uniform decimal-places column aligns on
 #'   the decimal point) while the header stays centered over the column.
 #'   Code "ln" is left, no-trim (a caller-supplied leading space survives).
@@ -1887,6 +1987,22 @@ jai <- function(setup = NULL, path = NULL) {
 #'   while the column reads centered rather than right-heavy (the Case
 #'   Processing bottom table's Session 52 rule, available to any table since
 #'   Session 313). The header is centered over the column, as for "d".
+#'   Code "bd" is block-centered on the decimal point (Session 328): each
+#'   cell is split where its whole-number part ends, the whole-number parts
+#'   are right-justified and what follows them (a decimal fraction, a
+#'   percent sign, a significance marker) is left-justified, so the cells of
+#'   a column line up on the decimal point whatever each one carries -- a
+#'   count over an expected count over a percentage in jcrosstab's cells, a
+#'   whole number over a one-decimal value in jdesc's Min and Max. The two
+#'   widths together are the block, centered under the header as a "bc"
+#'   block is. A cell that does not start with a number sits with the
+#'   whole-number parts.
+#'   Where a header or a block cannot be centered exactly, the odd space
+#'   goes on the LEFT, so the text sits one place right of center: a
+#'   one-digit df under "df" reads as right-justified, where a number
+#'   conventionally sits. One rule for every table, the Case Processing
+#'   block included (Session 328); the odd space went on the right through
+#'   Session 327.
 #' @param caption Optional title string printed above the table.
 #' @param indent Number of leading spaces for each data row. Default 0,
 #'   so data rows sit flush at column 1, aligned with the caption, header,
@@ -1896,17 +2012,14 @@ jai <- function(setup = NULL, path = NULL) {
 #'   header row, and separator row. Defaults to 0. With the default
 #'   \code{indent}, header and data share the same left edge; raise one
 #'   relative to the other only for special layouts.
-#' @param trim Logical. When TRUE, trailing spaces are removed from the
-#'   header row and every data row before printing. A centered header or a
-#'   left-aligned or block-centered cell in the LAST column is padded to
-#'   the column's width, so without the trim those lines end in spaces --
-#'   invisible on screen but carried into anything copied or captured.
-#'   Default FALSE. jdesc's two tables pass TRUE (Session 316), and since
-#'   Session 327 so do the statistics tables of jt, jaov and jalpha,
-#'   jlogistic's Omnibus, Model Summary and Classification tables, both VIF
-#'   tables and jscreen's Variable Types, each with its numeric columns
-#'   block-centered ("bc"). Making the two the default for every table is a
-#'   separate, package-wide decision.
+#' @param trim Logical. When TRUE (the default since Session 328),
+#'   trailing spaces are removed from the header row and every data row
+#'   before printing. A centered header or a left-aligned or block-centered
+#'   cell in the LAST column is padded to the column's width, so without
+#'   the trim those lines end in spaces -- invisible on screen but carried
+#'   into anything copied or captured. It was opt-in from Session 316
+#'   (jdesc's two tables) through Session 327 (the statistics tables); no
+#'   table wants the padding, so no caller passes FALSE.
 #' @param digits Optional named vector that fixes the decimal places of
 #'   numeric columns, keyed by the data frame's own column names (not the
 #'   display headers), e.g. \code{c(Mean = 3, SD = 3)}. A named column
@@ -1925,7 +2038,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' @keywords internal
 .jst_print_table <- function(df, col.names = NULL, row.names = TRUE,
                              align = NULL, caption = NULL, indent = 0,
-                             header.indent = 0, trim = FALSE, digits = NULL) {
+                             header.indent = 0, trim = TRUE, digits = NULL) {
 
   headers <- if (!is.null(col.names)) col.names else names(df)
 
@@ -2036,6 +2149,29 @@ jai <- function(setup = NULL, path = NULL) {
     max(nchar(trimws(display[, j])), 0L, na.rm = TRUE)
   }, integer(1))
 
+  # Decimal-aligned blocks ("bd", Session 328). Each cell is split where its
+  # whole-number part ends: the whole-number parts are right-justified and
+  # the tails (a decimal fraction, a percent sign, a marker) left-justified,
+  # so every cell of the column lines up on the decimal point -- 13 over
+  # 12.6 over 26.5% in a crosstab cell, 0 over 4.8 in jdesc's Min. The two
+  # widths together are the block. A cell that does not start with a number
+  # ("--") is all head, so it sits with the whole-number parts; a blank
+  # cell stays blank. The cells are built here, whole, and reach fmt_cell()
+  # already at block width.
+  bd_cells <- vector("list", n_cols)
+  for (j in which(align == "bd")) {
+    tx     <- trimws(display[, j])
+    is_num <- grepl("^[-+]?[0-9]*[.]?[0-9]", tx)
+    head   <- ifelse(is_num, sub("^([-+]?[0-9]*)(.*)$", "\\1", tx), tx)
+    tail   <- ifelse(is_num, sub("^([-+]?[0-9]*)(.*)$", "\\2", tx), "")
+    head_w <- max(nchar(head), 0L)
+    tail_w <- max(nchar(tail), 0L)
+    bd_cells[[j]]   <- paste0(strrep(" ", head_w - nchar(head)), head,
+                              tail, strrep(" ", tail_w - nchar(tail)))
+    block_widths[j] <- head_w + tail_w
+    col_widths[j]   <- max(nchar(headers[j]), block_widths[j])
+  }
+
   gap    <- "  "
   prefix <- paste(rep(" ", indent), collapse = "")
   header_prefix <- paste(rep(" ", header.indent), collapse = "")
@@ -2047,12 +2183,25 @@ jai <- function(setup = NULL, path = NULL) {
     if (identical(alignment, "ln")) {
       return(formatC(text, width = -width, flag = "-"))
     }
+    # "bd" (block-centered on the decimal point): the cell arrives built to
+    # the block's width (bd_cells above) and must NOT be trimmed -- its
+    # leading spaces are the alignment. Center the block as "bc" does.
+    if (identical(alignment, "bd")) {
+      extra <- max(0L, width - nchar(text))
+      left  <- extra - extra %/% 2
+      return(paste0(strrep(" ", left), text, strrep(" ", extra - left)))
+    }
     text <- trimws(text)
+    # THE LEAN (Session 328, Jeff): where the spare space is odd, the larger
+    # half goes on the LEFT, so a header or a block sits one place right of
+    # center -- a one-digit df under "df" reads as right-justified. The same
+    # rule in "c", "bc", "bd" and the Case Processing block's ctr_count();
+    # through Session 327 the larger half went on the right.
     switch(alignment,
            "r" = formatC(text, width = width, flag = " "),
            "c" = {
              pad   <- max(0L, width - nchar(text))
-             left  <- pad %/% 2
+             left  <- pad - pad %/% 2
              right <- pad - left
              paste0(strrep(" ", left), text, strrep(" ", right))
            },
@@ -2065,7 +2214,7 @@ jai <- function(setup = NULL, path = NULL) {
            "bc" = {
              s     <- formatC(text, width = block, flag = " ")
              extra <- max(0L, width - block)
-             left  <- extra %/% 2
+             left  <- extra - extra %/% 2
              paste0(strrep(" ", left), s, strrep(" ", extra - left))
            },
            formatC(text, width = -width, flag = "-")
@@ -2082,14 +2231,15 @@ jai <- function(setup = NULL, path = NULL) {
   # columns ("bc") center their header the same way (Session 313; a header
   # narrower than its values, "N" over 103, sits over the middle digit);
   # their data cells reach fmt_cell as "bc" with the column's block width.
+  # Decimal-aligned columns ("bd", Session 328) center their header too.
   header_align <- ifelse(align == "d", "c",
                   ifelse(align == "ln", "l",
-                  ifelse(align == "bc", "c", align)))
+                  ifelse(align %in% c("bc", "bd"), "c", align)))
   data_align   <- ifelse(align == "d", "r", align)
 
   # emit(): one table line, its trailing spaces removed when trim = TRUE
-  # (Session 316). The separator row never ends in a space, so it is
-  # printed as before.
+  # (Session 316; the default since Session 328). The separator row never
+  # ends in a space, so it is printed as before.
   emit <- function(line) {
     if (isTRUE(trim)) line <- sub("[ ]+$", "", line)
     cat(line, "\n", sep = "")
@@ -2110,7 +2260,9 @@ jai <- function(setup = NULL, path = NULL) {
   # Data rows
   for (i in seq_len(n_rows)) {
     row_cells <- vapply(seq_len(n_cols), function(j) {
-      fmt_cell(display[i, j], col_widths[j], data_align[j], block_widths[j])
+      cell <- if (identical(data_align[j], "bd")) bd_cells[[j]][i]
+              else display[i, j]
+      fmt_cell(cell, col_widths[j], data_align[j], block_widths[j])
     }, character(1))
     emit(paste0(prefix, paste(row_cells, collapse = gap)))
   }

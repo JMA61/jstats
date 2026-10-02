@@ -1286,9 +1286,14 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   names(scheme_df)    <- all_col_names
   rownames(scheme_df) <- row_labels
 
+  # Every 0/1 column block-centered under its category name (Session 328):
+  # on the default alignment the digits sat at the right edge of headers
+  # twenty characters wide. The row-name column is flush left (the printer
+  # adds its "l").
   .jst_print_table(scheme_df,
                    col.names     = all_col_names,
                    row.names     = TRUE,
+                   align         = rep("bc", ncol(scheme_df)),
                    indent        = 4,
                    header.indent = 4)
 
