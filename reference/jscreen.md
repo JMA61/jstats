@@ -197,29 +197,29 @@ listing.
 # With explicit data frame
 jscreen(community)
 #> Data Screening
-#>   Cases: 103 
-#>   Variables: 15 
-#>   Cases with missing data: 34 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
 #> Variable        jstats Class  Sub-class   Unique Values
 #> --------------  ------------  ----------  -------------
-#> RespondentID    Categorical   identifier            103
-#> Income          Numeric                              49
-#> Education       Categorical   5-category              5
-#> Age             Numeric                              41
-#> WellbeingScore  Numeric                              41
-#> Volunteer       Categorical   dichotomy               2
-#> OwnsHome        Categorical   dichotomy*              2
-#> Smoker          Categorical   dichotomy               2
-#> CommuteTime     Numeric                              42
-#> Region          Categorical   4-category              4
-#> Environment1    Categorical   Likert                  5
-#> Environment2    Categorical   Likert                  5
-#> Environment3    Categorical   Likert                  5
-#> Environment4    Categorical   Likert                  5
-#> Environment5    Categorical   Likert                  5
+#> RespondentID    Categorical   identifier       103
+#> Income          Numeric                         49
+#> Education       Categorical   5-category         5
+#> Age             Numeric                         41
+#> WellbeingScore  Numeric                         41
+#> Volunteer       Categorical   dichotomy          2
+#> OwnsHome        Categorical   dichotomy*         2
+#> Smoker          Categorical   dichotomy          2
+#> CommuteTime     Numeric                         42
+#> Region          Categorical   4-category         4
+#> Environment1    Categorical   Likert             5
+#> Environment2    Categorical   Likert             5
+#> Environment3    Categorical   Likert             5
+#> Environment4    Categorical   Likert             5
+#> Environment5    Categorical   Likert             5
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
@@ -237,29 +237,29 @@ jscreen(community)
 #> 
 jscreen(community, outlier.sd = 2.5)
 #> Data Screening
-#>   Cases: 103 
-#>   Variables: 15 
-#>   Cases with missing data: 34 
-#>   Variables with outliers: 2 
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 2
 #> 
 #> Variable Types
 #> Variable        jstats Class  Sub-class   Unique Values
 #> --------------  ------------  ----------  -------------
-#> RespondentID    Categorical   identifier            103
-#> Income          Numeric                              49
-#> Education       Categorical   5-category              5
-#> Age             Numeric                              41
-#> WellbeingScore  Numeric                              41
-#> Volunteer       Categorical   dichotomy               2
-#> OwnsHome        Categorical   dichotomy*              2
-#> Smoker          Categorical   dichotomy               2
-#> CommuteTime     Numeric                              42
-#> Region          Categorical   4-category              4
-#> Environment1    Categorical   Likert                  5
-#> Environment2    Categorical   Likert                  5
-#> Environment3    Categorical   Likert                  5
-#> Environment4    Categorical   Likert                  5
-#> Environment5    Categorical   Likert                  5
+#> RespondentID    Categorical   identifier       103
+#> Income          Numeric                         49
+#> Education       Categorical   5-category         5
+#> Age             Numeric                         41
+#> WellbeingScore  Numeric                         41
+#> Volunteer       Categorical   dichotomy          2
+#> OwnsHome        Categorical   dichotomy*         2
+#> Smoker          Categorical   dichotomy          2
+#> CommuteTime     Numeric                         42
+#> Region          Categorical   4-category         4
+#> Environment1    Categorical   Likert             5
+#> Environment2    Categorical   Likert             5
+#> Environment3    Categorical   Likert             5
+#> Environment4    Categorical   Likert             5
+#> Environment5    Categorical   Likert             5
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 2.5 SD from mean)
@@ -281,29 +281,29 @@ jscreen(community, outlier.sd = 2.5)
 # Show the Base R storage type column
 jscreen(community, r.type = TRUE)
 #> Data Screening
-#>   Cases: 103 
-#>   Variables: 15 
-#>   Cases with missing data: 34 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
 #> Variable        Base R Type     jstats Class  Sub-class   Unique Values
 #> --------------  --------------  ------------  ----------  -------------
-#> RespondentID    character       Categorical   identifier            103
-#> Income          haven_labelled  Numeric                              49
-#> Education       haven_labelled  Categorical   5-category              5
-#> Age             numeric         Numeric                              41
-#> WellbeingScore  numeric         Numeric                              41
-#> Volunteer       haven_labelled  Categorical   dichotomy               2
-#> OwnsHome        haven_labelled  Categorical   dichotomy*              2
-#> Smoker          haven_labelled  Categorical   dichotomy               2
-#> CommuteTime     numeric         Numeric                              42
-#> Region          haven_labelled  Categorical   4-category              4
-#> Environment1    haven_labelled  Categorical   Likert                  5
-#> Environment2    haven_labelled  Categorical   Likert                  5
-#> Environment3    haven_labelled  Categorical   Likert                  5
-#> Environment4    haven_labelled  Categorical   Likert                  5
-#> Environment5    haven_labelled  Categorical   Likert                  5
+#> RespondentID    character       Categorical   identifier       103
+#> Income          haven_labelled  Numeric                         49
+#> Education       haven_labelled  Categorical   5-category         5
+#> Age             numeric         Numeric                         41
+#> WellbeingScore  numeric         Numeric                         41
+#> Volunteer       haven_labelled  Categorical   dichotomy          2
+#> OwnsHome        haven_labelled  Categorical   dichotomy*         2
+#> Smoker          haven_labelled  Categorical   dichotomy          2
+#> CommuteTime     numeric         Numeric                         42
+#> Region          haven_labelled  Categorical   4-category         4
+#> Environment1    haven_labelled  Categorical   Likert             5
+#> Environment2    haven_labelled  Categorical   Likert             5
+#> Environment3    haven_labelled  Categorical   Likert             5
+#> Environment4    haven_labelled  Categorical   Likert             5
+#> Environment5    haven_labelled  Categorical   Likert             5
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
@@ -323,29 +323,29 @@ jscreen(community, r.type = TRUE)
 # Add Mean and Median columns for numeric-like variables
 jscreen(community, stats = TRUE)
 #> Data Screening
-#>   Cases: 103 
-#>   Variables: 15 
-#>   Cases with missing data: 34 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
-#> Variable        jstats Class  Sub-class   Unique Values       Mean     Median
+#> Variable        jstats Class  Sub-class   Unique Values    Mean      Median
 #> --------------  ------------  ----------  -------------  ---------  ---------
-#> RespondentID    Categorical   identifier            103                      
-#> Income          Numeric                              49  49855.670  49000.000
-#> Education       Categorical   5-category              5                      
-#> Age             Numeric                              41     40.650     40.000
-#> WellbeingScore  Numeric                              41     50.893     50.000
-#> Volunteer       Categorical   dichotomy               2      0.476           
-#> OwnsHome        Categorical   dichotomy*              2      1.534           
-#> Smoker          Categorical   dichotomy               2      0.337           
-#> CommuteTime     Numeric                              42     30.738     30.000
-#> Region          Categorical   4-category              4                      
-#> Environment1    Categorical   Likert                  5                      
-#> Environment2    Categorical   Likert                  5                      
-#> Environment3    Categorical   Likert                  5                      
-#> Environment4    Categorical   Likert                  5                      
-#> Environment5    Categorical   Likert                  5                      
+#> RespondentID    Categorical   identifier       103
+#> Income          Numeric                         49       49855.670  49000.000
+#> Education       Categorical   5-category         5
+#> Age             Numeric                         41          40.650     40.000
+#> WellbeingScore  Numeric                         41          50.893     50.000
+#> Volunteer       Categorical   dichotomy          2           0.476
+#> OwnsHome        Categorical   dichotomy*         2           1.534
+#> Smoker          Categorical   dichotomy          2           0.337
+#> CommuteTime     Numeric                         42          30.738     30.000
+#> Region          Categorical   4-category         4
+#> Environment1    Categorical   Likert             5
+#> Environment2    Categorical   Likert             5
+#> Environment3    Categorical   Likert             5
+#> Environment4    Categorical   Likert             5
+#> Environment5    Categorical   Likert             5
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
@@ -365,10 +365,10 @@ jscreen(community, stats = TRUE)
 # Suppress tables (header block only)
 jscreen(community, types = FALSE, issues = FALSE)
 #> Data Screening
-#>   Cases: 103 
-#>   Variables: 15 
-#>   Cases with missing data: 34 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 0
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.
@@ -378,15 +378,15 @@ jscreen(community, types = FALSE, issues = FALSE)
 # A single variable
 jscreen(community$Income)
 #> Data Screening
-#>   Cases: 103 
-#>   Variables: 1 
-#>   Cases with missing data: 6 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 1
+#>   Cases with missing data: 6
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
 #> Variable  jstats Class  Unique Values
 #> --------  ------------  -------------
-#> Income    Numeric                  49
+#> Income    Numeric            49
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable  Missing  % Missing
@@ -403,29 +403,29 @@ juse(community)
 jscreen()
 #> Data Screening
 #> Using default data frame: community
-#>   Cases: 103 
-#>   Variables: 15 
-#>   Cases with missing data: 34 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
 #> Variable        jstats Class  Sub-class   Unique Values
 #> --------------  ------------  ----------  -------------
-#> RespondentID    Categorical   identifier            103
-#> Income          Numeric                              49
-#> Education       Categorical   5-category              5
-#> Age             Numeric                              41
-#> WellbeingScore  Numeric                              41
-#> Volunteer       Categorical   dichotomy               2
-#> OwnsHome        Categorical   dichotomy*              2
-#> Smoker          Categorical   dichotomy               2
-#> CommuteTime     Numeric                              42
-#> Region          Categorical   4-category              4
-#> Environment1    Categorical   Likert                  5
-#> Environment2    Categorical   Likert                  5
-#> Environment3    Categorical   Likert                  5
-#> Environment4    Categorical   Likert                  5
-#> Environment5    Categorical   Likert                  5
+#> RespondentID    Categorical   identifier       103
+#> Income          Numeric                         49
+#> Education       Categorical   5-category         5
+#> Age             Numeric                         41
+#> WellbeingScore  Numeric                         41
+#> Volunteer       Categorical   dichotomy          2
+#> OwnsHome        Categorical   dichotomy*         2
+#> Smoker          Categorical   dichotomy          2
+#> CommuteTime     Numeric                         42
+#> Region          Categorical   4-category         4
+#> Environment1    Categorical   Likert             5
+#> Environment2    Categorical   Likert             5
+#> Environment3    Categorical   Likert             5
+#> Environment4    Categorical   Likert             5
+#> Environment5    Categorical   Likert             5
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
@@ -444,17 +444,17 @@ jscreen()
 jscreen(Income, Age, WellbeingScore)
 #> Data Screening
 #> Using default data frame: community
-#>   Cases: 103 
-#>   Variables: 3 
-#>   Cases with missing data: 6 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 3
+#>   Cases with missing data: 6
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
 #> Variable        jstats Class  Unique Values
 #> --------------  ------------  -------------
-#> Income          Numeric                  49
-#> Age             Numeric                  41
-#> WellbeingScore  Numeric                  41
+#> Income          Numeric            49
+#> Age             Numeric            41
+#> WellbeingScore  Numeric            41
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable  Missing  % Missing
@@ -474,17 +474,17 @@ jscreen(Income, Age, WellbeingScore, subset = Volunteer == 1)
 #>     Remaining N        --         49
 #> ----------------------------------------------------
 #> 
-#>   Cases: 49 
-#>   Variables: 3 
-#>   Cases with missing data: 4 
-#>   Variables with outliers: 0 
+#>   Cases: 49
+#>   Variables: 3
+#>   Cases with missing data: 4
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
 #> Variable        jstats Class  Unique Values
 #> --------------  ------------  -------------
-#> Income          Numeric                  30
-#> Age             Numeric                  31
-#> WellbeingScore  Numeric                  25
+#> Income          Numeric            30
+#> Age             Numeric            31
+#> WellbeingScore  Numeric            25
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)
 #> Variable  Missing  % Missing

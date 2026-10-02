@@ -96,29 +96,29 @@ Clearing mirrors the other registration verbs:
 #>   jload("community.rds")
   jscreen(community)                              # Sub-class shows "Likert"
 #> Data Screening
-#>   Cases: 103 
-#>   Variables: 15 
-#>   Cases with missing data: 34 
-#>   Variables with outliers: 0 
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 0
 #> 
 #> Variable Types
 #> Variable        jstats Class  Sub-class   Source         Unique Values
 #> --------------  ------------  ----------  -------------  -------------
-#> RespondentID    Categorical   identifier                           103
-#> Income          Numeric                                             49
-#> Education       Categorical   5-category                             5
-#> Age             Numeric                                             41
-#> WellbeingScore  Numeric                                             41
-#> Volunteer       Categorical   dichotomy                              2
-#> OwnsHome        Categorical   dichotomy*                             2
-#> Smoker          Categorical   dichotomy                              2
-#> CommuteTime     Numeric                                             42
-#> Region          Categorical   4-category                             4
-#> Environment1    Categorical   Likert      User-declared              5
-#> Environment2    Categorical   Likert      User-declared              5
-#> Environment3    Categorical   Likert                                 5
-#> Environment4    Categorical   Likert                                 5
-#> Environment5    Categorical   Likert                                 5
+#> RespondentID    Categorical   identifier                      103
+#> Income          Numeric                                        49
+#> Education       Categorical   5-category                        5
+#> Age             Numeric                                        41
+#> WellbeingScore  Numeric                                        41
+#> Volunteer       Categorical   dichotomy                         2
+#> OwnsHome        Categorical   dichotomy*                        2
+#> Smoker          Categorical   dichotomy                         2
+#> CommuteTime     Numeric                                        42
+#> Region          Categorical   4-category                        4
+#> Environment1    Categorical   Likert      User-declared         5
+#> Environment2    Categorical   Likert      User-declared         5
+#> Environment3    Categorical   Likert                            5
+#> Environment4    Categorical   Likert                            5
+#> Environment5    Categorical   Likert                            5
 #> * coded other than 0/1; mean is not a proportion
 #> 
 #> Missing Data & Outliers (outliers > 3 SD from mean)

@@ -13,7 +13,7 @@ odds ratios (Exp(B))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.202</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.203</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -334,18 +334,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df  p    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     16.705   2  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   16.705    2   &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²      AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           117.260           0.158          0.211  123.260</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      117.260           0.158           0.211      123.260</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A 1/2-coded dichotomy (Yes = 1, No = 2) must be recoded to 0/1 first</span></span></span>
 <span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="va">community</span></span></span>
@@ -379,18 +380,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: OwnsHome01</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df  p    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     25.108   2  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   25.108    2   &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²      AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           108.857           0.228          0.305  114.857</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      108.857           0.228           0.305      114.857</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
@@ -419,18 +421,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df  p    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     16.705   2  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   16.705    2   &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²      AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           117.260           0.158          0.211  123.260</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      117.260           0.158           0.211      123.260</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># CATEGORICAL PREDICTORS</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -455,18 +458,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df  p   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df   p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     11.745   4  .019</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   11.745    4   .019</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²      AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           130.801           0.108          0.144  140.801</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      130.801           0.108           0.144      140.801</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The recommended approach for repeated analyses: register the variable</span></span></span>
 <span class="r-in"><span><span class="co"># with jdummy() before running jlogistic(). This sets categorical</span></span></span>
@@ -503,18 +507,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df  p   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df   p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     11.745   4  .019</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   11.745    4   .019</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²      AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           130.801           0.108          0.144  140.801</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      130.801           0.108           0.144      140.801</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># To choose a non-default reference category:</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="jdummy.html">jdummy</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, ref <span class="op">=</span> <span class="st">"West"</span><span class="op">)</span></span></span>
@@ -549,18 +554,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df  p   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df   p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     11.745   4  .019</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   11.745    4   .019</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²      AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           130.801           0.108          0.144  140.801</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      130.801           0.108           0.144      140.801</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># FORCING NUMERIC TREATMENT</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -589,18 +595,19 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df  p    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  -----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     21.547   2  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   21.547    2   &lt;.001</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²      AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           112.913           0.199          0.266  118.913</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      112.913           0.199           0.266      118.913</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># jdummy(community, NULL) clears its registration -- not normally needed.</span></span></span>
 <span class="r-in"><span><span class="co"># You'd clear a default or registration only to undo a mistake, or -- as</span></span></span>

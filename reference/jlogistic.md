@@ -324,18 +324,19 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df  p    
+#> Chi-Square  df    p
 #> ----------  --  -----
-#>     16.705   2  <.001
+#>   16.705    2   <.001
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>           117.260           0.158          0.211  123.260
+#>      117.260           0.158           0.211      123.260
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
+#> 
 
 # A 1/2-coded dichotomy (Yes = 1, No = 2) must be recoded to 0/1 first
 df <- community
@@ -369,18 +370,19 @@ jlogistic(OwnsHome01 ~ Income + Age, data = df)
 #> Outcome: OwnsHome01
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df  p    
+#> Chi-Square  df    p
 #> ----------  --  -----
-#>     25.108   2  <.001
+#>   25.108    2   <.001
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>           108.857           0.228          0.305  114.857
+#>      108.857           0.228           0.305      114.857
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
+#> 
 
 # Using juse() default
 juse(community)
@@ -409,18 +411,19 @@ jlogistic(Volunteer ~ Income + Age)
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df  p    
+#> Chi-Square  df    p
 #> ----------  --  -----
-#>     16.705   2  <.001
+#>   16.705    2   <.001
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>           117.260           0.158          0.211  123.260
+#>      117.260           0.158           0.211      123.260
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
+#> 
 
 # CATEGORICAL PREDICTORS
 #
@@ -445,18 +448,19 @@ jlogistic(Volunteer ~ Region + Age, categorical = "Region")
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df  p   
+#> Chi-Square  df   p
 #> ----------  --  ----
-#>     11.745   4  .019
+#>   11.745    4   .019
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>           130.801           0.108          0.144  140.801
+#>      130.801           0.108           0.144      140.801
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
+#> 
 
 # The recommended approach for repeated analyses: register the variable
 # with jdummy() before running jlogistic(). This sets categorical
@@ -493,18 +497,19 @@ jlogistic(Volunteer ~ Region + Age)
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df  p   
+#> Chi-Square  df   p
 #> ----------  --  ----
-#>     11.745   4  .019
+#>   11.745    4   .019
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>           130.801           0.108          0.144  140.801
+#>      130.801           0.108           0.144      140.801
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
+#> 
 
 # To choose a non-default reference category:
 jdummy(community, Region, ref = "West")
@@ -539,18 +544,19 @@ jlogistic(Volunteer ~ Region + Age)
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df  p   
+#> Chi-Square  df   p
 #> ----------  --  ----
-#>     11.745   4  .019
+#>   11.745    4   .019
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>           130.801           0.108          0.144  140.801
+#>      130.801           0.108           0.144      140.801
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
+#> 
 
 # FORCING NUMERIC TREATMENT
 #
@@ -579,18 +585,19 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 #> Outcome: Volunteer
 #> 
 #> Omnibus Test of Model Coefficients
-#> Chi-Square  df  p    
+#> Chi-Square  df    p
 #> ----------  --  -----
-#>     21.547   2  <.001
+#>   21.547    2   <.001
 #> 
 #> Model Summary
-#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²      AIC
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
-#>           112.913           0.199          0.266  118.913
+#>      112.913           0.199           0.266      118.913
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes
 #>   Reference (0): No
+#> 
 
 # jdummy(community, NULL) clears its registration -- not normally needed.
 # You'd clear a default or registration only to undo a mistake, or -- as
