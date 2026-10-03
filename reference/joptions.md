@@ -118,14 +118,16 @@ query, or as an echo of the slots a setting call touched.
   [`jload`](https://jma61.github.io/jstats/reference/jload.md) searches
   the working directory. When set, names a folder (relative to the
   working directory) used as both the save target for bare-filename
-  saves and as the first directory searched on bare-filename loads. The
-  folder is auto-created on first save if it doesn't already exist
-  (nested paths are created in full). To clear a previously-set folder
-  back to this default, pass `data.dir = ""` (an empty string); passing
-  `data.dir = NULL` leaves the current setting unchanged (see Call
-  patterns). Filenames containing a directory separator (a forward
-  slash, or a backslash on Windows) bypass this setting and are taken
-  literally.
+  saves and as the first directory searched on bare-filename loads. If
+  the folder does not exist it is created when the setting is made, with
+  a note saying so (nested paths are created in full); a folder that
+  cannot be created stops the call and leaves every setting as it was.
+  [`jsave`](https://jma61.github.io/jstats/reference/jsave.md) creates
+  the folder again if it has been removed since. To clear a
+  previously-set folder back to this default, pass `data.dir = NULL` or
+  `data.dir = ""` (an empty string; see Call patterns). Filenames
+  containing a directory separator (a forward slash, or a backslash on
+  Windows) bypass this setting and are taken literally.
 
 - corr.layout:
 
@@ -213,9 +215,10 @@ query, or as an echo of the slots a setting call touched.
   value – useful for setting one slot without touching another – and
   echoes that unchanged value back. To reset a single slot to its
   default, pass the default value explicitly (e.g.
-  `joptions(missing.convention = "none")`). Because `data.dir`'s default
-  is `NULL` – which already means "leave alone" – it is cleared instead
-  with `data.dir = ""`.
+  `joptions(missing.convention = "none")`). `data.dir` is the one slot
+  whose default is itself `NULL`, so for it a named `NULL` is that
+  default: `joptions(data.dir = NULL)` clears the folder back to the
+  working directory, as `data.dir = ""` does.
 
 ## Environment-scan notice
 
@@ -282,9 +285,17 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> SPSS-style missing value codes: -99, -98
 #> Run joptions() to see all settings.
 #> 
-joptions(data.dir = "Data")                       # set save/load folder
+joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: Data (will be created on first save)
+#> Data folder: /tmp/RtmpC4MZl7/Data
+#> Run joptions() to see all settings.
+#> 
+#> Created the data folder:
+#>   /tmp/RtmpC4MZl7/Data
+                                                  # (created if absent)
+joptions(data.dir = NULL)                         # back to the working directory
+#> Options Settings
+#> Data folder: Working directory
 #> Run joptions() to see all settings.
 #> 
 joptions(message.width = 60)                      # wrap message prose at 60

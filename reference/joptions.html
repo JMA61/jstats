@@ -27,7 +27,7 @@ explicit transform path for data already in the workspace."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.208</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.209</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -169,12 +169,14 @@ bare-filename saves to the working directory and <code><a href="jload.html">jloa
 searches the working directory. When set, names a folder (relative
 to the working directory) used as both the save target for
 bare-filename saves and as the first directory searched on
-bare-filename loads. The folder is auto-created on first save if
-it doesn't already exist (nested paths are created in full).
+bare-filename loads. If the folder does not exist it is created
+when the setting is made, with a note saying so (nested paths are
+created in full); a folder that cannot be created stops the call
+and leaves every setting as it was. <code><a href="jsave.html">jsave</a></code> creates
+the folder again if it has been removed since.
 To clear a previously-set folder back to this default, pass
-<code>data.dir = ""</code> (an empty string); passing
-<code>data.dir = NULL</code> leaves the current setting unchanged
-(see Call patterns). Filenames containing a directory
+<code>data.dir = NULL</code> or <code>data.dir = ""</code> (an empty string;
+see Call patterns). Filenames containing a directory
 separator (a forward slash, or a backslash on Windows) bypass this
 setting and are taken literally.</p></dd>
 
@@ -263,9 +265,11 @@ argument leaves that slot at its current value – useful for
 setting one slot without touching another – and echoes that
 unchanged value back. To reset a single
 slot to its default, pass the default value explicitly (e.g.
-<code>joptions(missing.convention = "none")</code>). Because
-<code>data.dir</code>'s default is <code>NULL</code> – which already means
-"leave alone" – it is cleared instead with <code>data.dir = ""</code>.</p></dd>
+<code>joptions(missing.convention = "none")</code>). <code>data.dir</code>
+is the one slot whose default is itself <code>NULL</code>, so for it a
+named <code>NULL</code> is that default:
+<code>joptions(data.dir = NULL)</code> clears the folder back to the
+working directory, as <code>data.dir = ""</code> does.</p></dd>
 
 
 </dl></div>
@@ -333,9 +337,17 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> SPSS-style missing value codes: -99, -98</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="st">"Data"</span><span class="op">)</span>                       <span class="co"># set save/load folder</span></span></span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Data"</span><span class="op">)</span><span class="op">)</span> <span class="co"># set save/load folder</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Data (will be created on first save)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: /tmp/RtmpC4MZl7/Data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Created the data folder:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpC4MZl7/Data</span>
+<span class="r-in"><span>                                                  <span class="co"># (created if absent)</span></span></span>
+<span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>                         <span class="co"># back to the working directory</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Options Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: Working directory</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>message.width <span class="op">=</span> <span class="fl">60</span><span class="op">)</span>                      <span class="co"># wrap message prose at 60</span></span></span>

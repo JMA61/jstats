@@ -82,8 +82,10 @@ slashes. R does not accept single backslashes in file paths.
 
 - If the path is a bare filename and the `data.dir` setting in
   [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) is
-  set, the file is saved to that folder (auto-created if it doesn't yet
-  exist).
+  set, the file is saved to that folder
+  ([`joptions()`](https://jma61.github.io/jstats/reference/joptions.md)
+  creates it when the setting is made; it is created again here if it
+  has been removed since).
 
 - If the path is a bare filename and the `data.dir` setting in
   [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) is
@@ -133,7 +135,7 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpEt1hbE/community.sav
+#> Saved community to /tmp/RtmpC4MZl7/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
