@@ -71,7 +71,8 @@ R does not accept single backslashes in file paths.
 to that exact location; the folder must already exist.
 \item If the path is a bare filename and the \code{data.dir} setting in
 \code{\link{joptions}} is set, the file is saved to that folder
-(auto-created if it doesn't yet exist).
+(\code{joptions()} creates it when the setting is made; it is
+created again here if it has been removed since).
 \item If the path is a bare filename and the \code{data.dir} setting in
 \code{\link{joptions}} is unset (the default), the file is saved to the
 working directory.

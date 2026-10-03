@@ -2845,7 +2845,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     to that exact location; the folder must already exist.
 #'   \item If the path is a bare filename and the \code{data.dir} setting in
 #'     \code{\link{joptions}} is set, the file is saved to that folder
-#'     (auto-created if it doesn't yet exist).
+#'     (\code{joptions()} creates it when the setting is made; it is
+#'     created again here if it has been removed since).
 #'   \item If the path is a bare filename and the \code{data.dir} setting in
 #'     \code{\link{joptions}} is unset (the default), the file is saved to the
 #'     working directory.
@@ -3108,10 +3109,11 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       # data.dir unset; write to the working directory.
       out_path <- file
     } else {
-      # Explicit data.dir — write to that folder, creating it if needed.
-      if (!dir.exists(data_dir)) {
-        dir.create(data_dir, recursive = TRUE)
-        .jst_msg("Created '", data_dir, "' folder in working directory.")
+      # Explicit data.dir — write to that folder. joptions() created it
+      # when the setting was made (S332); it is created again here if it
+      # has been removed since, or if the setting came through options().
+      if (.jst_create_data_dir(data_dir, fn = "jsave")) {
+        .jst_msg(.jst_data_dir_created_note(data_dir))
       }
       out_path <- file.path(data_dir, file)
     }

@@ -609,11 +609,13 @@ joutput <- function(level, effect.size = NULL,
 
   # data.dir: NULL displays as "Working directory" for parallelism with
   # the "None selected" reading of missing.convention. A set value
-  # displays as-is; if that folder does not exist yet, annotate that it
-  # will be created on first save. joptions() never creates the folder --
-  # creation stays deferred to jsave's first write (Option C decision) --
-  # so this note makes the pending side effect visible whenever the status
-  # panel displays while the folder is still absent.
+  # displays as-is; if that folder does not exist, annotate that it will
+  # be created on first save. Since S332 joptions() creates the folder
+  # when the setting is made (reversing the earlier Option C decision,
+  # which deferred creation to jsave's first write), so the annotation
+  # now shows only for a folder removed after it was set, or for a
+  # setting written through options() directly; jsave still creates it
+  # in either case.
   dd_label <- if (is.null(dd)) {
     "Working directory"
   } else if (!dir.exists(dd)) {
@@ -858,12 +860,14 @@ joutput <- function(level, effect.size = NULL,
 #'     searches the working directory. When set, names a folder (relative
 #'     to the working directory) used as both the save target for
 #'     bare-filename saves and as the first directory searched on
-#'     bare-filename loads. The folder is auto-created on first save if
-#'     it doesn't already exist (nested paths are created in full).
+#'     bare-filename loads. If the folder does not exist it is created
+#'     when the setting is made, with a note saying so (nested paths are
+#'     created in full); a folder that cannot be created stops the call
+#'     and leaves every setting as it was. \code{\link{jsave}} creates
+#'     the folder again if it has been removed since.
 #'     To clear a previously-set folder back to this default, pass
-#'     \code{data.dir = ""} (an empty string); passing
-#'     \code{data.dir = NULL} leaves the current setting unchanged
-#'     (see Call patterns). Filenames containing a directory
+#'     \code{data.dir = NULL} or \code{data.dir = ""} (an empty string;
+#'     see Call patterns). Filenames containing a directory
 #'     separator (a forward slash, or a backslash on Windows) bypass this
 #'     setting and are taken literally.}
 #'   \item{corr.layout}{Character, length 1. One of \code{"wide"} or
@@ -936,9 +940,11 @@ joutput <- function(level, effect.size = NULL,
 #'     setting one slot without touching another -- and echoes that
 #'     unchanged value back. To reset a single
 #'     slot to its default, pass the default value explicitly (e.g.
-#'     \code{joptions(missing.convention = "none")}). Because
-#'     \code{data.dir}'s default is \code{NULL} -- which already means
-#'     "leave alone" -- it is cleared instead with \code{data.dir = ""}.}
+#'     \code{joptions(missing.convention = "none")}). \code{data.dir}
+#'     is the one slot whose default is itself \code{NULL}, so for it a
+#'     named \code{NULL} is that default:
+#'     \code{joptions(data.dir = NULL)} clears the folder back to the
+#'     working directory, as \code{data.dir = ""} does.}
 #' }
 #'
 #' @section Environment-scan notice:
@@ -984,7 +990,9 @@ joutput <- function(level, effect.size = NULL,
 #' joptions(missing.convention = "spss")             # set, echo, scan notice
 #' joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
 #' joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
-#' joptions(data.dir = "Data")                       # set save/load folder
+#' joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
+#'                                                   # (created if absent)
+#' joptions(data.dir = NULL)                         # back to the working directory
 #' joptions(message.width = 60)                      # wrap message prose at 60
 #' joptions(message.width = "narrow")                # preset width (50 columns)
 #' joptions(message.width = "auto")                  # follow the console pane
@@ -1148,15 +1156,15 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
         length(data.dir) != 1L ||
         is.na(data.dir)) {
       .jst_stop('data.dir must be a single character string, NULL, or "". ',
-           '(Use "" to clear the folder, NULL to leave it unchanged.)')
+           '(NULL or "" clears the folder.)')
     }
     # Guard the literal "NULL" string -- almost always a typo for one of
     # the two real tokens. Case-sensitive, so a genuine folder named
     # "null" (lowercase) is still permitted.
     if (identical(trimws(data.dir), "NULL")) {
       .jst_stop('data.dir = "NULL" looks like a typo. To clear the data folder ',
-           'back to the working directory, use data.dir = "" (empty quotes); ',
-           'to leave it unchanged, use data.dir = NULL (no quotes).')
+           'back to the working directory, use data.dir = NULL (no quotes) ',
+           'or data.dir = "" (empty quotes).')
     }
   }
   if (cl_supplied && !is.null(corr.layout)) {
@@ -1183,7 +1191,28 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                                  arg = "message.width", fn = "joptions"))
   }
 
-  # Write -- only supplied non-NULL args; NULL means "leave alone"
+  # data.dir (S332). Two things set it apart from the other slots.
+  # (1) Its default is itself NULL, so an EXPLICIT data.dir = NULL is the
+  # default being passed and clears the folder, as "" does (Session 181:
+  # it was the one slot that could not be reset by passing its default).
+  # dd_supplied is !missing(), so an omitted data.dir is still left alone.
+  # (2) A folder that does not exist is created NOW, not at the first
+  # jsave() (Session 178) -- here, after every validation and before any
+  # options() write, so a folder that cannot be created stops the call
+  # with nothing changed. The case-collision check runs first: it reads
+  # whether the folder already resolves on disk, which creating it would
+  # make true.
+  dd_clear   <- dd_supplied &&
+                (is.null(data.dir) || nchar(trimws(data.dir)) == 0L)
+  dd_created <- FALSE
+  if (dd_supplied && !dd_clear) {
+    .jst_data_dir_case_warning(data.dir)
+    dd_created <- .jst_create_data_dir(
+      data.dir, fn = "joptions", tail = "\nNo setting was changed.")
+  }
+
+  # Write -- only supplied non-NULL args; NULL means "leave alone" (except
+  # data.dir, above)
   trigger_nudge <- FALSE
   # Slots actually SET, accumulated as they are written rather than
   # re-derived afterwards: the echo's map pull keys off this, and a
@@ -1198,15 +1227,14 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     options(.jst_options_missing_convention_codes = missing.convention.codes)
     written <- c(written, "missing.convention.codes")
   }
-  if (dd_supplied && !is.null(data.dir)) {
-    # "" (empty or whitespace-only) clears the slot back to its NULL
-    # default (working directory); any other string sets the folder.
-    # NULL never reaches here -- the !is.null gate above leaves it alone.
-    if (nchar(trimws(data.dir)) == 0L) {
+  if (dd_supplied) {
+    # NULL or "" (empty or whitespace-only) clears the slot back to its
+    # NULL default (working directory); any other string sets the folder,
+    # which exists by now.
+    if (dd_clear) {
       options(.jst_options_data_dir = NULL)
     } else {
       options(.jst_options_data_dir = data.dir)
-      .jst_data_dir_case_warning(data.dir)
     }
     written <- c(written, "data.dir")
   }
@@ -1259,8 +1287,12 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
       echo_slots <- setdiff(echo_slots, "missing.convention.codes")
     }
     .jst_options_status(echo_slots)
-    if (trigger_nudge) .jst_options_nudge(missing.convention)
   }
+  # The folder note follows the echo it explains and precedes the nudge,
+  # which is about another slot. It reports a change on disk, so quiet
+  # does not silence it.
+  if (dd_created) .jst_msg(.jst_data_dir_created_note(data.dir))
+  if (!quiet && trigger_nudge) .jst_options_nudge(missing.convention)
 
   invisible(NULL)
 }
@@ -1297,6 +1329,76 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
 jdata_dir <- function(default = ".") {
   dir <- getOption(".jst_options_data_dir", .jst_options_defaults$data.dir)
   if (is.null(dir)) default else dir
+}
+
+#' Internal: create the configured data folder, or stop
+#'
+#' The one place the data folder is created: \code{joptions(data.dir = ...)}
+#' calls it when the setting is made (S332) and \code{jsave()} when a
+#' bare-filename save finds the folder gone. Nested paths are created in
+#' full. A folder that cannot be created stops in the Rule AH form -- what
+#' could not be done, the path on a line of its own (a path with spaces
+#' must not be word-filled apart), then R's own message relayed.
+#'
+#' @param dir Character(1). The folder to create.
+#' @param fn Character(1). The public function named in the error prefix.
+#' @param tail Character(1). A closing sentence for the error, with its
+#'   leading newline; \code{""} for none.
+#'
+#' @return \code{TRUE} if the folder was created, \code{FALSE} if it was
+#'   already there. The caller emits the note
+#'   (\code{.jst_data_dir_created_note()}) where it belongs in its output.
+#'
+#' @keywords internal
+.jst_create_data_dir <- function(dir, fn, tail = "") {
+  # Some platforms do not resolve a folder name written with a trailing
+  # separator ("Data/"), so existence is read on the bare name as well.
+  bare    <- sub("[/\\\\]+$", "", dir)
+  present <- function() isTRUE(dir.exists(dir)) ||
+                        (nzchar(bare) && isTRUE(dir.exists(bare)))
+  if (present()) return(FALSE)
+
+  reason <- NULL
+  made <- withCallingHandlers(
+    tryCatch(dir.create(dir, recursive = TRUE),
+             error = function(e) {
+               reason <<- conditionMessage(e)
+               FALSE
+             }),
+    warning = function(w) {
+      reason <<- conditionMessage(w)
+      invokeRestart("muffleWarning")
+    }
+  )
+  if (!present()) {
+    r_msg <- if (is.null(reason)) NULL else
+      gsub("[[:space:]]+", " ",
+           trimws(gsub("\033\\[[0-9;]*[A-Za-z]", "", reason)))
+    .jst_stop("the data folder could not be created:\n",
+              "  ", dir,
+              if (!is.null(r_msg) && nzchar(r_msg))
+                paste0("\nR reported:\n  ", r_msg),
+              tail, fn = fn)
+  }
+  isTRUE(made)
+}
+
+#' Internal: the note for a data folder just created
+#'
+#' A folder named relative to the working directory keeps the sentence
+#' \code{jsave()} has always printed. An absolute path (a drive letter, a
+#' leading separator, or a leading tilde) is not "in working directory",
+#' and goes on a line of its own so that no wrap can break it.
+#'
+#' @param dir Character(1). The folder just created.
+#' @return Character(1), the note text.
+#' @keywords internal
+.jst_data_dir_created_note <- function(dir) {
+  if (grepl("^([A-Za-z]:|[/\\\\~])", dir)) {
+    paste0("Created the data folder:\n  ", dir)
+  } else {
+    paste0("Created '", dir, "' folder in working directory.")
+  }
 }
 
 #' Internal: warn on a case-only collision between data.dir and an existing

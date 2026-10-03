@@ -93,12 +93,14 @@ bare-filename saves to the working directory and \code{\link{jload}}
 searches the working directory. When set, names a folder (relative
 to the working directory) used as both the save target for
 bare-filename saves and as the first directory searched on
-bare-filename loads. The folder is auto-created on first save if
-it doesn't already exist (nested paths are created in full).
+bare-filename loads. If the folder does not exist it is created
+when the setting is made, with a note saying so (nested paths are
+created in full); a folder that cannot be created stops the call
+and leaves every setting as it was. \code{\link{jsave}} creates
+the folder again if it has been removed since.
 To clear a previously-set folder back to this default, pass
-\code{data.dir = ""} (an empty string); passing
-\code{data.dir = NULL} leaves the current setting unchanged
-(see Call patterns). Filenames containing a directory
+\code{data.dir = NULL} or \code{data.dir = ""} (an empty string;
+see Call patterns). Filenames containing a directory
 separator (a forward slash, or a backslash on Windows) bypass this
 setting and are taken literally.}
 \item{corr.layout}{Character, length 1. One of \code{"wide"} or
@@ -173,9 +175,11 @@ argument leaves that slot at its current value -- useful for
 setting one slot without touching another -- and echoes that
 unchanged value back. To reset a single
 slot to its default, pass the default value explicitly (e.g.
-\code{joptions(missing.convention = "none")}). Because
-\code{data.dir}'s default is \code{NULL} -- which already means
-"leave alone" -- it is cleared instead with \code{data.dir = ""}.}
+\code{joptions(missing.convention = "none")}). \code{data.dir}
+is the one slot whose default is itself \code{NULL}, so for it a
+named \code{NULL} is that default:
+\code{joptions(data.dir = NULL)} clears the folder back to the
+working directory, as \code{data.dir = ""} does.}
 }
 }
 
@@ -204,7 +208,9 @@ joptions(c("data.dir", "corr.layout"))            # show two
 joptions(missing.convention = "spss")             # set, echo, scan notice
 joptions(missing.convention = "sas")              # SAS-style: .A, .B, ...
 joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
-joptions(data.dir = "Data")                       # set save/load folder
+joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
+                                                  # (created if absent)
+joptions(data.dir = NULL)                         # back to the working directory
 joptions(message.width = 60)                      # wrap message prose at 60
 joptions(message.width = "narrow")                # preset width (50 columns)
 joptions(message.width = "auto")                  # follow the console pane
