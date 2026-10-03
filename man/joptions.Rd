@@ -35,8 +35,9 @@ read instead as a status query on that slot (see Call patterns).}
 or \code{NULL}. See Slots.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, joptions() applies the
-change silently, suppressing the settings echo, its pointer, and the
-convention nudge alike. It has no effect on a status query, which
+change silently, suppressing the settings echo, its pointer, the
+convention nudge, and the note that a data folder was created (the
+folder is created all the same). It has no effect on a status query, which
 makes no change to silence: the bare joptions() panel and a
 joptions("slot") query both print regardless.}
 }
@@ -94,7 +95,8 @@ searches the working directory. When set, names a folder (relative
 to the working directory) used as both the save target for
 bare-filename saves and as the first directory searched on
 bare-filename loads. If the folder does not exist it is created
-when the setting is made, with a note saying so (nested paths are
+when the setting is made, with a note saying so unless
+\code{quiet = TRUE} (nested paths are
 created in full); a folder that cannot be created stops the call
 and leaves every setting as it was. \code{\link{jsave}} creates
 the folder again if it has been removed since.
@@ -143,9 +145,11 @@ matrix mid-row would destroy the alignment that makes it readable.}
 \section{Call patterns}{
 
 \describe{
-\item{\code{joptions()}}{Print the full settings panel. The
-\code{missing.convention.codes} row is SPSS-convention detail and
-appears only while \code{missing.convention} is \code{"spss"}.}
+\item{\code{joptions()}}{Print the full settings panel: all six
+slots, whatever the convention. The
+\code{missing.convention.codes} row is labeled as SPSS-style;
+\code{\link{jconvert}} to SPSS-style missing values uses those
+codes under any setting.}
 \item{\code{joptions("slot")}}{Print one slot and nothing else --
 \code{joptions("data.dir")}, or several at once with
 \code{joptions(c("data.dir", "corr.layout"))} -- closed by a

@@ -659,15 +659,13 @@ joutput <- function(level, effect.size = NULL,
     message.width        = paste0("Message width: ", mw_label, "\n")
   )
 
-  # S267: the codes row is SPSS-convention detail; the FULL panel shows
-  # it only when the setting is "spss" (bare-call and per-call spss users
-  # both see the number in the mint note itself). A setting call that
-  # supplied the codes itself always echoes them -- suppressing a slot the
-  # user just set by name would read as the option not existing.
-  if (is.null(slots) && !identical(mc, "spss")) {
-    panel_lines <- panel_lines[names(panel_lines) !=
-                                 "missing.convention.codes"]
-  }
+  # The FULL panel shows all six slots under every convention (S332,
+  # reversing S267, which hid the codes row unless the setting was
+  # "spss"). The codes are not dormant off "spss": jconvert(to = "spss")
+  # and a per-call convention = "spss" use them whatever the setting, and
+  # the pointer under every partial panel promises "all settings". The
+  # S267 suppression survives only in a setting call's ECHO, where the
+  # codes ride along as a related slot (see joptions()'s tail).
 
   partial <- !is.null(slots)
   if (partial) {
@@ -861,7 +859,8 @@ joutput <- function(level, effect.size = NULL,
 #'     to the working directory) used as both the save target for
 #'     bare-filename saves and as the first directory searched on
 #'     bare-filename loads. If the folder does not exist it is created
-#'     when the setting is made, with a note saying so (nested paths are
+#'     when the setting is made, with a note saying so unless
+#'     \code{quiet = TRUE} (nested paths are
 #'     created in full); a folder that cannot be created stops the call
 #'     and leaves every setting as it was. \code{\link{jsave}} creates
 #'     the folder again if it has been removed since.
@@ -908,9 +907,11 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @section Call patterns:
 #' \describe{
-#'   \item{\code{joptions()}}{Print the full settings panel. The
-#'     \code{missing.convention.codes} row is SPSS-convention detail and
-#'     appears only while \code{missing.convention} is \code{"spss"}.}
+#'   \item{\code{joptions()}}{Print the full settings panel: all six
+#'     slots, whatever the convention. The
+#'     \code{missing.convention.codes} row is labeled as SPSS-style;
+#'     \code{\link{jconvert}} to SPSS-style missing values uses those
+#'     codes under any setting.}
 #'   \item{\code{joptions("slot")}}{Print one slot and nothing else --
 #'     \code{joptions("data.dir")}, or several at once with
 #'     \code{joptions(c("data.dir", "corr.layout"))} -- closed by a
@@ -1007,8 +1008,9 @@ joutput <- function(level, effect.size = NULL,
 #'
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, joptions() applies the
-#'   change silently, suppressing the settings echo, its pointer, and the
-#'   convention nudge alike. It has no effect on a status query, which
+#'   change silently, suppressing the settings echo, its pointer, the
+#'   convention nudge, and the note that a data folder was created (the
+#'   folder is created all the same). It has no effect on a status query, which
 #'   makes no change to silence: the bare joptions() panel and a
 #'   joptions("slot") query both print regardless.
 joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
@@ -1289,9 +1291,10 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     .jst_options_status(echo_slots)
   }
   # The folder note follows the echo it explains and precedes the nudge,
-  # which is about another slot. It reports a change on disk, so quiet
-  # does not silence it.
-  if (dd_created) .jst_msg(.jst_data_dir_created_note(data.dir))
+  # which is about another slot. quiet silences it with the rest (Jeff,
+  # S332: a quiet call is fully quiet); the folder is created all the
+  # same, and one that cannot be created still stops.
+  if (dd_created && !quiet) .jst_msg(.jst_data_dir_created_note(data.dir))
   if (!quiet && trigger_nudge) .jst_options_nudge(missing.convention)
 
   invisible(NULL)
