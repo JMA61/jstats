@@ -199,12 +199,16 @@ values to the decimal places its own data carry. All three preset
 levels default to 3.}
 
 \item{quiet}{Logical; default FALSE. When TRUE, joutput() applies the
-level/toggle change silently (the status panel is not printed). A bare
-joutput() status query always prints regardless of quiet.}
+level/toggle change silently (nothing is printed). A bare joutput()
+status query, and a \code{joutput("setting")} query, always print
+regardless of quiet.}
 }
 \value{
 Invisibly returns NULL. Called for its side effect of setting
-session options.
+session options and printing the settings panel -- in full for a bare
+status query, a level change or a reset, as the named settings alone
+for a \code{joutput("setting")} query, or as an echo of the settings
+a setting call touched.
 }
 \description{
 Controls what analysis functions display by default. Three preset levels
@@ -212,6 +216,41 @@ are available, and individual toggles can override specific settings
 within any level. Per-call arguments on analysis functions always take
 precedence over joutput() settings.
 }
+\section{Call patterns}{
+
+\describe{
+\item{\code{joutput()}}{Print the full settings panel: the level and
+every setting, each marked \code{(override)} where its value
+differs from the level's default.}
+\item{\code{joutput("setting")}}{Print one setting and nothing else --
+\code{joutput("digits")}, or several at once with
+\code{joutput(c("levene", "posthoc"))} -- closed by a pointer to
+\code{joutput()} for the full panel. A setting name given WITHOUT
+an argument name is read as a query rather than as a level; the
+three level names and the setting names share no string, so the
+two readings cannot collide. Only the settings named are shown,
+and like the full panel a query prints regardless of
+\code{quiet}.}
+\item{\code{joutput("level")}}{Set the level, clearing any earlier
+overrides, then print the full panel -- a level moves most
+settings at once. Settings given in the same call are applied as
+overrides on the new level.}
+\item{\code{joutput(setting = value, ...)}}{Set one or more settings
+within the current level, then echo only what the call touched,
+closed by a pointer to \code{joutput()} for the full panel. The
+three Case Processing settings (\code{case.processing},
+\code{case.processing.detail}, \code{case.processing.filter}) are
+echoed together whenever one of them is set, because each is read
+in light of the others: \code{case.processing = FALSE} silences
+the other two, and \code{case.processing.detail = "none"} silences
+\code{case.processing.filter}. Passing \code{setting = NULL} as a
+named argument leaves that setting as it is and echoes its current
+value.}
+\item{\code{joutput(NULL)}}{Reset to the standard level with no
+overrides.}
+}
+}
+
 \section{Session options}{
 
 \code{joutput()} stores its settings through R's standard
@@ -230,6 +269,8 @@ interface, adding validation and the settings display.
 joutput("standard")                       # effect sizes + means/diff CIs (jt, jaov)
 joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
 joutput("full")                         # everything
+joutput(digits = 2)                     # set one setting; echoes only that one
+joutput("digits")                       # show one setting
 joutput()                               # show current settings
 getOption(".jst_output_level")          # the raw option behind the level
 joutput(NULL)                           # reset to defaults

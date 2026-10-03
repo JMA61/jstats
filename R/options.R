@@ -170,6 +170,39 @@
 #'   values to the decimal places its own data carry. All three preset
 #'   levels default to 3.
 #'
+#' @section Call patterns:
+#' \describe{
+#'   \item{\code{joutput()}}{Print the full settings panel: the level and
+#'     every setting, each marked \code{(override)} where its value
+#'     differs from the level's default.}
+#'   \item{\code{joutput("setting")}}{Print one setting and nothing else --
+#'     \code{joutput("digits")}, or several at once with
+#'     \code{joutput(c("levene", "posthoc"))} -- closed by a pointer to
+#'     \code{joutput()} for the full panel. A setting name given WITHOUT
+#'     an argument name is read as a query rather than as a level; the
+#'     three level names and the setting names share no string, so the
+#'     two readings cannot collide. Only the settings named are shown,
+#'     and like the full panel a query prints regardless of
+#'     \code{quiet}.}
+#'   \item{\code{joutput("level")}}{Set the level, clearing any earlier
+#'     overrides, then print the full panel -- a level moves most
+#'     settings at once. Settings given in the same call are applied as
+#'     overrides on the new level.}
+#'   \item{\code{joutput(setting = value, ...)}}{Set one or more settings
+#'     within the current level, then echo only what the call touched,
+#'     closed by a pointer to \code{joutput()} for the full panel. The
+#'     three Case Processing settings (\code{case.processing},
+#'     \code{case.processing.detail}, \code{case.processing.filter}) are
+#'     echoed together whenever one of them is set, because each is read
+#'     in light of the others: \code{case.processing = FALSE} silences
+#'     the other two, and \code{case.processing.detail = "none"} silences
+#'     \code{case.processing.filter}. Passing \code{setting = NULL} as a
+#'     named argument leaves that setting as it is and echoes its current
+#'     value.}
+#'   \item{\code{joutput(NULL)}}{Reset to the standard level with no
+#'     overrides.}
+#' }
+#'
 #' @section Session options:
 #' \code{joutput()} stores its settings through R's standard
 #' \code{options()} / \code{getOption()} mechanism, under two keys:
@@ -183,12 +216,17 @@
 #' interface, adding validation and the settings display.
 #'
 #' @return Invisibly returns NULL. Called for its side effect of setting
-#'   session options.
+#'   session options and printing the settings panel -- in full for a bare
+#'   status query, a level change or a reset, as the named settings alone
+#'   for a \code{joutput("setting")} query, or as an echo of the settings
+#'   a setting call touched.
 #'
 #' @examples
 #' joutput("standard")                       # effect sizes + means/diff CIs (jt, jaov)
 #' joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
 #' joutput("full")                         # everything
+#' joutput(digits = 2)                     # set one setting; echoes only that one
+#' joutput("digits")                       # show one setting
 #' joutput()                               # show current settings
 #' getOption(".jst_output_level")          # the raw option behind the level
 #' joutput(NULL)                           # reset to defaults
@@ -198,8 +236,9 @@
 #'
 #' @export
 #' @param quiet Logical; default FALSE. When TRUE, joutput() applies the
-#'   level/toggle change silently (the status panel is not printed). A bare
-#'   joutput() status query always prints regardless of quiet.
+#'   level/toggle change silently (nothing is printed). A bare joutput()
+#'   status query, and a \code{joutput("setting")} query, always print
+#'   regardless of quiet.
 joutput <- function(level, effect.size = NULL,
                     regression.ci = NULL, means.ci = NULL, levene = NULL,
                     posthoc = NULL, diagnostics = NULL,
@@ -222,6 +261,25 @@ joutput <- function(level, effect.size = NULL,
   .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
 
   valid_levels <- c("minimal", "standard", "full")
+
+  # Which settings did the call NAME? Every setting argument defaults to
+  # NULL, so the values alone cannot tell joutput(digits = NULL) from a
+  # bare joutput(); match.call() keeps the name. A named NULL leaves the
+  # setting alone and echoes its current value, as joptions(slot = NULL)
+  # does.
+  supplied <- intersect(names(as.list(match.call())[-1L]),
+                        .jst_output_toggle_names)
+
+  # A lone argument written WITHOUT a name, which match.call() would have
+  # erased (it rewrites joutput("digits") to joutput(level = "digits")),
+  # so sys.call() is inspected directly -- joptions()'s test. A named
+  # quiet = is ignored when detecting the shape.
+  call_args <- as.list(sys.call())[-1L]
+  arg_names <- names(call_args)
+  if (!is.null(arg_names)) call_args <- call_args[arg_names != "quiet"]
+  lone_positional <- length(call_args) == 1L &&
+                     (is.null(names(call_args)) ||
+                      names(call_args) == "")
 
   # joutput(NULL) -- reset to defaults
   if (!missing(level) && is.null(level)) {
@@ -287,18 +345,67 @@ joutput <- function(level, effect.size = NULL,
 
   # joutput() with no level argument -- show status or apply toggles only
   if (missing(level)) {
-    if (length(toggle_args) > 0) {
-      # Apply toggle overrides to current settings
-      current_toggles <- getOption(".jst_output_toggles", list())
-      for (nm in names(toggle_args)) current_toggles[[nm]] <- toggle_args[[nm]]
-      options(.jst_output_toggles = current_toggles)
-      # A toggle change respects quiet.
-      if (!quiet) .jst_output_status()
+    if (length(supplied) > 0L) {
+      if (length(toggle_args) > 0L) {
+        # Apply toggle overrides to current settings
+        current_toggles <- getOption(".jst_output_toggles", list())
+        for (nm in names(toggle_args)) current_toggles[[nm]] <- toggle_args[[nm]]
+        options(.jst_output_toggles = current_toggles)
+      }
+      # A setting call echoes what it touched, not the standing state
+      # (S332, as joptions() has since S233): every setting the call NAMED
+      # -- a named NULL included, which echoes its current value -- plus
+      # the map partners of every setting actually WRITTEN.
+      # .jst_output_status() imposes panel order and drops duplicates, so
+      # this set may be unordered. A setting call respects quiet.
+      if (!quiet) {
+        .jst_output_status(
+          c(supplied,
+            unlist(.jst_output_related[names(toggle_args)],
+                   use.names = FALSE)))
+      }
     } else {
       # A bare joutput() query always prints, regardless of quiet.
       .jst_output_status()
     }
     return(invisible(NULL))
+  }
+
+  # joutput("digits") -- partial status query
+  #
+  # A setting NAME in the first position, written without an argument
+  # name, asks to SEE that setting. Safe because the three level names
+  # and the setting names are disjoint sets: no string can be read both
+  # ways. A vector is accepted. quiet is not consulted and no related
+  # setting is pulled in, for joptions("slot")'s reasons: a query makes
+  # no change to silence or to put in context.
+  if (lone_positional && is.character(level) && length(level) >= 1L &&
+      !anyNA(level) && all(level %in% .jst_output_toggle_names)) {
+    .jst_output_status(level)
+    return(invisible(NULL))
+  }
+
+  # A lone positional string that is neither a level nor a setting name
+  # is most likely a mistyped query when it sits near a setting name
+  # (Levenshtein distance, case-insensitive, at most 2 -- joptions()'s
+  # test). A case-only variant gets the suggestion rather than resolving:
+  # setting names are argument identifiers, which R treats as
+  # case-sensitive. The error quotes what the user typed (Rule AB).
+  # Anything else falls through to the level error unchanged. No string
+  # can be near a setting and a level at once: the closest setting and
+  # level names (digits, minimal) are 5 edits apart, so a string within 2
+  # of a setting is at least 3 from every level.
+  if (lone_positional && is.character(level) && length(level) == 1L &&
+      !is.na(level) && !(level %in% valid_levels)) {
+    slot_dist  <- as.integer(utils::adist(tolower(level),
+                                          .jst_output_toggle_names))
+    if (min(slot_dist) <= 2L) {
+      near <- .jst_output_toggle_names[slot_dist == min(slot_dist)]
+      .jst_stop("no setting named \"", level,
+                "\". Did you mean ", paste(near, collapse = " or "), "?",
+                paste0("\n  joutput(\"", near, "\")", collapse = ""),
+                fn = "joutput")
+    }
   }
 
   # Validate level
@@ -318,33 +425,88 @@ joutput <- function(level, effect.size = NULL,
   invisible(NULL)
 }
 
+# -- Internal: joutput setting names, in panel order --------------------------
+#
+# The one canonical vector: the status panel prints in this order, a
+# setting call's echo is selected by it, and a joutput("setting") query is
+# recognized against it.
+
+#' @keywords internal
+.jst_output_toggle_names <- c("effect.size", "regression.ci", "means.ci",
+                              "levene", "posthoc", "diagnostics",
+                              "case.processing", "case.processing.detail",
+                              "case.processing.filter",
+                              "variable.id", "value.id", "ref.categories",
+                              "missing.notice", "digits")
+
+# -- Internal: joutput setting relatedness map --------------------------------
+#
+# Which OTHER settings a setting call pulls into its echo, on joptions()'s
+# strict test (S233; see .jst_options_related): B is related to A only if
+# setting A changes how B behaves or how B's value should be read. One
+# group qualifies -- the three Case Processing settings, a gating chain:
+# case.processing = FALSE prints neither the table nor its missing-data
+# breakdown, so case.processing.detail and case.processing.filter go
+# dormant; and case.processing.detail = "none" prints no breakdown, so
+# case.processing.filter, which sets the form of rows inside it, goes
+# dormant too. Setting any one of them therefore echoes all three (S332).
+# The other eleven settings are independent and absent from the map.
+#
+# Only a setting actually WRITTEN pulls its partners; a named-NULL
+# leave-alone call and a joutput("setting") query pull nothing.
+
+#' @keywords internal
+.jst_output_related <- list(
+  case.processing        = c("case.processing.detail",
+                             "case.processing.filter"),
+  case.processing.detail = c("case.processing",
+                             "case.processing.filter"),
+  case.processing.filter = c("case.processing",
+                             "case.processing.detail")
+)
+
 #' Internal helper: print current joutput() status
 #'
+#' slots = NULL (the default) prints the FULL panel: the Level line and
+#' every setting -- the shape a bare joutput() status query wants, and the
+#' shape a level change wants because a level moves most settings at once.
+#' A character vector of setting names instead prints a PARTIAL panel:
+#' the same red title, only the named lines (no Level line), then one
+#' trailing pointer at the full panel (S332: a setting call echoes what it
+#' touched, not the standing state). Panel order and de-duplication are
+#' enforced here, so callers may pass an unordered set with repeats;
+#' unrecognized names are ignored.
+#'
 #' @keywords internal
-.jst_output_status <- function() {
+.jst_output_status <- function(slots = NULL) {
   level   <- getOption(".jst_output_level", "standard")
   toggles <- getOption(".jst_output_toggles", list())
+  partial <- !is.null(slots)
 
   .cat_red("Output Settings\n")
-  cat("Level: ", level, "\n", sep = "")
+  if (!partial) cat("Level: ", level, "\n", sep = "")
 
   # Show effective value for each toggle
-  toggle_names <- c("effect.size", "regression.ci", "means.ci", "levene",
-                    "posthoc", "diagnostics",
-                    "case.processing", "case.processing.detail",
-                    "case.processing.filter",
-                    "variable.id", "value.id", "ref.categories",
-                    "missing.notice", "digits")
   defaults     <- .jst_output_defaults[[level]]
 
-  for (nm in toggle_names) {
+  for (nm in .jst_output_toggle_names) {
+    # One loop serves both shapes, so a partial panel cannot word a line
+    # differently from the full one.
+    if (partial && !(nm %in% slots)) next
     default_val  <- defaults[[nm]]
     effective    <- if (nm %in% names(toggles)) toggles[[nm]] else default_val
     # (override) marks settings whose effective value differs from the tier
     # default -- i.e. an override with a visible effect. Setting a toggle back
     # to its tier default (even explicitly) is not flagged, since nothing is
-    # actually overridden. identical() handles the NULL (AUTO) states cleanly.
-    override_str <- if (!identical(effective, default_val)) " (override)" else ""
+    # actually overridden. identical() handles the NULL (AUTO) states cleanly;
+    # the numeric comparison is for digits, which joutput() stores as an
+    # integer while the tier defaults hold a double -- identical(3L, 3) is
+    # FALSE, which flagged joutput(digits = 3) as an override (Session 181).
+    same_value   <- identical(effective, default_val) ||
+                    (is.numeric(effective) && is.numeric(default_val) &&
+                     length(effective) == 1L && length(default_val) == 1L &&
+                     effective == default_val)
+    override_str <- if (!same_value) " (override)" else ""
 
     # case.processing.detail carries a string tier (none/totals/per_code);
     # case.processing.filter a string mode (auto/list/collapse);
@@ -369,6 +531,9 @@ joutput <- function(level, effect.size = NULL,
 
     cat("  ", nm, ": ", label, override_str, "\n", sep = "")
   }
+  # The pointer emits from here rather than from joutput()'s tail so the
+  # truncation and its explanation cannot drift apart.
+  if (partial) .jst_msg_out("Run joutput() to see all settings.")
   cat("\n")
 }
 
