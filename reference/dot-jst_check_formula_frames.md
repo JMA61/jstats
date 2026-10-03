@@ -1,7 +1,9 @@
 # Internal helper: refuse a data frame named inside a formula term
 
-The one exception to [`lm()`](https://rdrr.io/r/stats/lm.html) parity
-(the S322 ruling, built in Session 323).
+One of the two exceptions to [`lm()`](https://rdrr.io/r/stats/lm.html)
+parity (the S322 ruling, built in Session 323; the other is the
+recycling stop of Session 324,
+[`.jst_formula_recycled()`](https://jma61.github.io/jstats/reference/dot-jst_formula_recycled.md)).
 [`lm()`](https://rdrr.io/r/stats/lm.html) accepts
 `d$Flourishing ~ d$Income`; jstats does not, because the transform
 resolver evaluates each term with the analysis copy as data and the

@@ -5,17 +5,18 @@ of the data frame it is applied to. Anything else – a single value,
 numbers, text, an empty result, or the wrong number of values – cannot
 select rows and is refused with a guided error. ALWAYS stops: a
 wrong-shaped result is deterministic (it fails identically on every
-call), so there is no warn-and-continue variant, whatever the caller's
-`on_error` says (Session 288, decision 1). Refusing a single value is
-deliberate: TRUE / FALSE / T / F would mean "keep every row", but a
-single value is also the shape of `mean(Score) > 5`, `any(...)` and
-`nrow(...)` inside a filter – a likely error reaching for a per-row
-comparison – and allowing scalars would make that whole family silently
-keep every row (decision 2). A numeric result is refused for the same
-reason in the other direction: base R reads a numeric mask as ROW
-POSITIONS, so `subset = Keep01` on a 0/1 column analyzed row 1 once per
-1 and reported it with a case-processing table that added up (the
-Session 289 workstation reproduction).
+call), so there is no warn-and-continue variant (Session 288, decision
+1; since Session 330 an evaluation failure stops as well, in
+[`.jst_filter_mask()`](https://jma61.github.io/jstats/reference/dot-jst_filter_mask.md)).
+Refusing a single value is deliberate: TRUE / FALSE / T / F would mean
+"keep every row", but a single value is also the shape of
+`mean(Score) > 5`, `any(...)` and `nrow(...)` inside a filter – a likely
+error reaching for a per-row comparison – and allowing scalars would
+make that whole family silently keep every row (decision 2). A numeric
+result is refused for the same reason in the other direction: base R
+reads a numeric mask as ROW POSITIONS, so `subset = Keep01` on a 0/1
+column analyzed row 1 once per 1 and reported it with a case-processing
+table that added up (the Session 289 workstation reproduction).
 
 ## Usage
 

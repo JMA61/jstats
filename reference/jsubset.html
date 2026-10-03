@@ -28,17 +28,26 @@ The expression must give one TRUE or FALSE for every row of the
 dataset. jsubset() runs it once when set and refuses anything
 else – a single value (TRUE, or an aggregate such as
 mean(Score) &amp;gt; 5), numbers, text, or the wrong number of values –
-with an error that shows a corrected form. The same check runs when the
-filter is applied, so a filter that was valid when set but has since
-stopped matching the dataset stops the analysis rather than running on
-the wrong rows; that error names both ways out.
+with an error that shows a corrected form. A filter that cannot be run
+at all is refused in the same way, and nothing is stored: one that names
+a variable or an object that is not found (a misspelled variable is the
+usual cause), and one that stops with an error of R's own, which is
+reported. Everything the filter names must therefore exist when
+jsubset() is called. The same checks run when the filter is
+applied, so a filter that was valid when set but can no longer be
+applied – a variable or an object it names has been removed, or it has
+stopped matching the dataset – stops the analysis rather than running
+on the wrong rows; that error names both ways out,
+jsubset(d, off) and jsubset(d, NULL).
 A filter normally names only columns of the data frame, and such a
 filter can never fall out of step with the data. A filter may also
 refer to an object in your workspace, such as a cutoff
 (Age &amp;lt; cutoff) or a set of codes (Region %in% keep_regions).
-If you compute a keep/drop indicator separately, add it to the data
-frame as a column and filter on that column
-(clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
+An object compared with a variable value by value must hold a single
+value or one value for every row; any other length is refused, where R
+would repeat the shorter one. If you compute a keep/drop indicator
+separately, add it to the data frame as a column and filter on that
+column (clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
 jsubset(clinic, Keep == TRUE)). A separate object holding one
 value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
@@ -71,17 +80,26 @@ The expression must give one TRUE or FALSE for every row of the
 dataset. jsubset() runs it once when set and refuses anything
 else – a single value (TRUE, or an aggregate such as
 mean(Score) &amp;gt; 5), numbers, text, or the wrong number of values –
-with an error that shows a corrected form. The same check runs when the
-filter is applied, so a filter that was valid when set but has since
-stopped matching the dataset stops the analysis rather than running on
-the wrong rows; that error names both ways out.
+with an error that shows a corrected form. A filter that cannot be run
+at all is refused in the same way, and nothing is stored: one that names
+a variable or an object that is not found (a misspelled variable is the
+usual cause), and one that stops with an error of R's own, which is
+reported. Everything the filter names must therefore exist when
+jsubset() is called. The same checks run when the filter is
+applied, so a filter that was valid when set but can no longer be
+applied – a variable or an object it names has been removed, or it has
+stopped matching the dataset – stops the analysis rather than running
+on the wrong rows; that error names both ways out,
+jsubset(d, off) and jsubset(d, NULL).
 A filter normally names only columns of the data frame, and such a
 filter can never fall out of step with the data. A filter may also
 refer to an object in your workspace, such as a cutoff
 (Age &amp;lt; cutoff) or a set of codes (Region %in% keep_regions).
-If you compute a keep/drop indicator separately, add it to the data
-frame as a column and filter on that column
-(clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
+An object compared with a variable value by value must hold a single
+value or one value for every row; any other length is refused, where R
+would repeat the shorter one. If you compute a keep/drop indicator
+separately, add it to the data frame as a column and filter on that
+column (clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
 jsubset(clinic, Keep == TRUE)). A separate object holding one
 value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
@@ -93,7 +111,7 @@ filter is set aside."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.205</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.206</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -148,17 +166,26 @@ input of the analysis functions. See the translation table below.</p>
 dataset. <code>jsubset()</code> runs it once when set and refuses anything
 else – a single value (<code>TRUE</code>, or an aggregate such as
 <code>mean(Score) &gt; 5</code>), numbers, text, or the wrong number of values –
-with an error that shows a corrected form. The same check runs when the
-filter is applied, so a filter that was valid when set but has since
-stopped matching the dataset stops the analysis rather than running on
-the wrong rows; that error names both ways out.</p>
+with an error that shows a corrected form. A filter that cannot be run
+at all is refused in the same way, and nothing is stored: one that names
+a variable or an object that is not found (a misspelled variable is the
+usual cause), and one that stops with an error of R's own, which is
+reported. Everything the filter names must therefore exist when
+<code>jsubset()</code> is called. The same checks run when the filter is
+applied, so a filter that was valid when set but can no longer be
+applied – a variable or an object it names has been removed, or it has
+stopped matching the dataset – stops the analysis rather than running
+on the wrong rows; that error names both ways out,
+<code>jsubset(d, off)</code> and <code>jsubset(d, NULL)</code>.</p>
 <p>A filter normally names only columns of the data frame, and such a
 filter can never fall out of step with the data. A filter may also
 refer to an object in your workspace, such as a cutoff
 (<code>Age &lt; cutoff</code>) or a set of codes (<code>Region %in% keep_regions</code>).
-If you compute a keep/drop indicator separately, add it to the data
-frame as a column and filter on that column
-(<code>clinic$Keep &lt;- clinic$Stress &gt; 3</code>, then
+An object compared with a variable value by value must hold a single
+value or one value for every row; any other length is refused, where R
+would repeat the shorter one. If you compute a keep/drop indicator
+separately, add it to the data frame as a column and filter on that
+column (<code>clinic$Keep &lt;- clinic$Stress &gt; 3</code>, then
 <code>jsubset(clinic, Keep == TRUE)</code>). A separate object holding one
 value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the

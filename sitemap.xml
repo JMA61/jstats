@@ -88,6 +88,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_dummies.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_one_dummy.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expr_symbols.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_mask.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_unbound.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_find_file.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_fmt_code.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_fmt_n.html</loc></url>
@@ -106,6 +108,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_column.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_column_fix.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_column_stop.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_first_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_refs.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frames_with_registrations.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_gate_inband_counts.html</loc></url>
@@ -206,6 +209,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_table.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_prune_absent_categories.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_quote_words.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_recycled_operand.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_recycled_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_refresh_registrations.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_reg_value_labels.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_register_intent.html</loc></url>

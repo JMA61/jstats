@@ -35,17 +35,26 @@ The expression must give one TRUE or FALSE for every row of the dataset.
 `jsubset()` runs it once when set and refuses anything else – a single
 value (`TRUE`, or an aggregate such as `mean(Score) > 5`), numbers,
 text, or the wrong number of values – with an error that shows a
-corrected form. The same check runs when the filter is applied, so a
-filter that was valid when set but has since stopped matching the
-dataset stops the analysis rather than running on the wrong rows; that
-error names both ways out.
+corrected form. A filter that cannot be run at all is refused in the
+same way, and nothing is stored: one that names a variable or an object
+that is not found (a misspelled variable is the usual cause), and one
+that stops with an error of R's own, which is reported. Everything the
+filter names must therefore exist when `jsubset()` is called. The same
+checks run when the filter is applied, so a filter that was valid when
+set but can no longer be applied – a variable or an object it names has
+been removed, or it has stopped matching the dataset – stops the
+analysis rather than running on the wrong rows; that error names both
+ways out, `jsubset(d, off)` and `jsubset(d, NULL)`.
 
 A filter normally names only columns of the data frame, and such a
 filter can never fall out of step with the data. A filter may also refer
 to an object in your workspace, such as a cutoff (`Age < cutoff`) or a
-set of codes (`Region %in% keep_regions`). If you compute a keep/drop
-indicator separately, add it to the data frame as a column and filter on
-that column (`clinic$Keep <- clinic$Stress > 3`, then
+set of codes (`Region %in% keep_regions`). An object compared with a
+variable value by value must hold a single value or one value for every
+row; any other length is refused, where R would repeat the shorter one.
+If you compute a keep/drop indicator separately, add it to the data
+frame as a column and filter on that column
+(`clinic$Keep <- clinic$Stress > 3`, then
 `jsubset(clinic, Keep == TRUE)`). A separate object holding one value
 per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the

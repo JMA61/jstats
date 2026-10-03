@@ -5,27 +5,15 @@ length: with v &amp;lt;- c(1, 2, 3), I(Stress * v) fitted on R's
 recycled 1, 2, 3, 1, 2, 3, ... behind its &quot;longer object length&quot;
 warning – with no warning at all when the row count divides by the
 length – and lm() does the same (Session 324, the S323 item). This
-walks each computed term of the formula, both sides, and returns the first
-operand of an element-wise operation – arithmetic, a comparison,
-&amp;amp;, | or !, or an argument of ifelse(),
-pmin() or pmax() – that reads no variable of the data and
-holds more than one value but not one per row of data. A single
-value passes (the constant rule), and so does anything not combined value
-by value: a set used with %in%, a lookup indexed by a variable
-(w[Group]), a summary (max(w))."><meta property="og:description" content="A name inside a computed term that is not a variable resolves in the
+hands each computed term of the formula, both sides, to
+.jst_recycled_operand(), which says what counts as recycled."><meta property="og:description" content="A name inside a computed term that is not a variable resolves in the
 formula's environment (the S322 constant rule), and nothing checked its
 length: with v &amp;lt;- c(1, 2, 3), I(Stress * v) fitted on R's
 recycled 1, 2, 3, 1, 2, 3, ... behind its &quot;longer object length&quot;
 warning – with no warning at all when the row count divides by the
 length – and lm() does the same (Session 324, the S323 item). This
-walks each computed term of the formula, both sides, and returns the first
-operand of an element-wise operation – arithmetic, a comparison,
-&amp;amp;, | or !, or an argument of ifelse(),
-pmin() or pmax() – that reads no variable of the data and
-holds more than one value but not one per row of data. A single
-value passes (the constant rule), and so does anything not combined value
-by value: a set used with %in%, a lookup indexed by a variable
-(w[Group]), a summary (max(w))."></head><body>
+hands each computed term of the formula, both sides, to
+.jst_recycled_operand(), which says what counts as recycled."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -33,7 +21,7 @@ by value: a set used with %in%, a lookup indexed by a variable
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.205</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.206</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,14 +53,8 @@ length: with <code>v &lt;- c(1, 2, 3)</code>, <code>I(Stress * v)</code> fitted 
 recycled <code>1, 2, 3, 1, 2, 3, ...</code> behind its "longer object length"
 warning – with no warning at all when the row count divides by the
 length – and <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> does the same (Session 324, the S323 item). This
-walks each computed term of the formula, both sides, and returns the first
-operand of an element-wise operation – arithmetic, a comparison,
-<code>&amp;</code>, <code>|</code> or <code>!</code>, or an argument of <code><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse()</a></code>,
-<code><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmin()</a></code> or <code><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmax()</a></code> – that reads no variable of the data and
-holds more than one value but not one per row of <code>data</code>. A single
-value passes (the constant rule), and so does anything not combined value
-by value: a set used with <code>%in%</code>, a lookup indexed by a variable
-(<code>w[Group]</code>), a summary (<code>max(w)</code>).</p>
+hands each computed term of the formula, both sides, to
+<code><a href="dot-jst_recycled_operand.html">.jst_recycled_operand()</a></code>, which says what counts as recycled.</p>
     </div>
 
     <div class="section level2">
@@ -98,17 +80,8 @@ by value: a set used with <code>%in%</code>, a lookup indexed by a variable
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>NULL when there is none; otherwise a list of <code>term</code> (the
-computed term) and <code>operand</code> (the operand as written), both
-language objects, and <code>n</code> (the operand's number of values).</p>
-    </div>
-    <div class="section level2">
-    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>An operand is looked up, never run: a name, an element reached with
-<code>$</code>, <code>[[</code> or <code>@</code>, and <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> or <code>:</code> over names and
-numbers are evaluated, because doing so has no side effect; any other call
-(<code>rnorm(70)</code>, <code>rev(w)</code>) is left to the resolver's own checks, so
-the check never draws a random number or runs the user's code twice.</p>
+    <p>NULL when there is none; otherwise the
+<code><a href="dot-jst_recycled_operand.html">.jst_recycled_operand()</a></code> result.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
