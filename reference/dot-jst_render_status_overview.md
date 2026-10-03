@@ -21,7 +21,8 @@ rather than "settings".
   dnames,
   payloads,
   active,
-  default_name = NULL
+  default_name = NULL,
+  unusable = NULL
 )
 ```
 
@@ -50,6 +51,12 @@ rather than "settings".
   Character name of the current
   [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default,
   or `NULL`. The matching frame is tagged `, default`.
+
+- unusable:
+
+  Logical vector parallel to `dnames`, or NULL. TRUE tags the frame
+  `, cannot be applied`: its stored setting would stop an analysis as
+  things stand (Session 331).
 
 ## Value
 

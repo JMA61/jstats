@@ -58,7 +58,12 @@ frame as a column and filter on that column
 `jsubset(clinic, Keep == TRUE)`). A separate object holding one value
 per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
-filter is set aside.
+filter is set aside. Nor can it be used beside a
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+setting that drops cases, since the filter is applied to the cases
+[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+keeps: the filter is refused, with the line that adds the object to the
+data frame.
 
 ## Usage
 
@@ -85,7 +90,9 @@ jsubset(data, expr, clear.all = FALSE, ...)
 
   `on`
 
-  :   Reactivate a previously deactivated setting.
+  :   Reactivate a previously deactivated setting. The filter is run
+      once first, as it was when set; one that can no longer be applied
+      is refused, and stays off.
 
   `NULL`
 
@@ -99,7 +106,8 @@ jsubset(data, expr, clear.all = FALSE, ...)
   one dataset that carries a setting, and asks you to name one when
   several do. To clear every dataset's setting at once, use
   `clear.all = TRUE`. If `expr` and `data` are both omitted, prints the
-  current jsubset status.
+  current jsubset status, which says so when a stored filter can no
+  longer be applied.
 
 - clear.all:
 

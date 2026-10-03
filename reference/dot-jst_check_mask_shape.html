@@ -122,12 +122,14 @@ sourced script, where <code>call. = FALSE</code> shows no call).</p></dd>
 
 
 <dt id="arg-origin">origin<a class="anchor" aria-label="anchor" href="#arg-origin"></a></dt>
-<dd><p>One of <code>"set"</code>, <code>"call"</code>, <code>"stored"</code>.</p></dd>
+<dd><p>One of <code>"set"</code>, <code>"call"</code>, <code>"stored"</code>,
+<code>"reactivate"</code>, <code>"status"</code>.</p></dd>
 
 
 <dt id="arg-data-name">data_name<a class="anchor" aria-label="anchor" href="#arg-data-name"></a></dt>
 <dd><p>Character. The data frame's name. Required for
-<code>"stored"</code> (the exits are built from it); used by <code>"set"</code> to
+<code>"stored"</code> and <code>"reactivate"</code> (the exits are built from it);
+used by <code>"set"</code> to
 name the frame in the unchanged-filter line and the quoted-keyword fix.</p></dd>
 
 
@@ -167,6 +169,20 @@ matching the data (an object it depends on changed, or the frame
 gained or lost rows), and it re-runs on every analysis of that frame
 until dealt with – so the fix is BOTH exits, each naming the frame:
 set aside (off, which keeps the text) first, delete (NULL) second.</p></dd>
+
+<dt><code>"reactivate"</code></dt>
+<dd><p>the same stored filter checked by
+<code>jsubset(d, on)</code> before it is turned back on (Session 331). The
+stored wording, ending on <code><a href="dot-jst_filter_exits.html">.jst_filter_exits()</a></code>'s reactivation
+form: the filter is off already, so the message says it stays off and
+gives the delete exit alone.</p></dd>
+
+<dt><code>"status"</code></dt>
+<dd><p>the same stored filter checked for the status
+display (<code><a href="jsubset.html">jsubset()</a></code> with no arguments, Session 331). Nothing
+stops: the finding is handed back through
+<code><a href="dot-jst_filter_status_signal.html">.jst_filter_status_signal()</a></code> as the status line "It cannot be
+applied: it has 12 values for 11 rows."</p></dd>
 
 
 </dl></div>

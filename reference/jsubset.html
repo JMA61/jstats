@@ -51,7 +51,10 @@ column (clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
 jsubset(clinic, Keep == TRUE)). A separate object holding one
 value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
-filter is set aside."><meta property="og:description" content="jsubset() sets a persistent case-selection expression that is
+filter is set aside. Nor can it be used beside a jcomplete()
+setting that drops cases, since the filter is applied to the cases
+jcomplete() keeps: the filter is refused, with the line that adds
+the object to the data frame."><meta property="og:description" content="jsubset() sets a persistent case-selection expression that is
 applied automatically by jstats analysis functions when the
 default data frame (set by juse()) is in use. This is analogous
 to the SPSS FILTER command.
@@ -103,7 +106,10 @@ column (clinic$Keep &amp;lt;- clinic$Stress &amp;gt; 3, then
 jsubset(clinic, Keep == TRUE)). A separate object holding one
 value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
-filter is set aside."></head><body>
+filter is set aside. Nor can it be used beside a jcomplete()
+setting that drops cases, since the filter is applied to the cases
+jcomplete() keeps: the filter is refused, with the line that adds
+the object to the data frame."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -189,7 +195,10 @@ column (<code>clinic$Keep &lt;- clinic$Stress &gt; 3</code>, then
 <code>jsubset(clinic, Keep == TRUE)</code>). A separate object holding one
 value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
-filter is set aside.</p>
+filter is set aside. Nor can it be used beside a <code><a href="jcomplete.html">jcomplete()</a></code>
+setting that drops cases, since the filter is applied to the cases
+<code><a href="jcomplete.html">jcomplete()</a></code> keeps: the filter is refused, with the line that adds
+the object to the data frame.</p>
     </div>
 
     <div class="section level2">
@@ -213,7 +222,9 @@ or one of the following special values:</p><dl><dt><code>off</code></dt>
 <dd><p>Deactivate the setting but remember the expression.</p></dd>
 
 <dt><code>on</code></dt>
-<dd><p>Reactivate a previously deactivated setting.</p></dd>
+<dd><p>Reactivate a previously deactivated setting. The
+filter is run once first, as it was when set; one that can no
+longer be applied is refused, and stays off.</p></dd>
 
 <dt><code>NULL</code></dt>
 <dd><p>Clear the setting entirely (forget the expression).</p></dd>
@@ -226,7 +237,8 @@ dataset when it is given (<code>jsubset(d, off)</code>,
 clears the one dataset that carries a setting, and asks you to name
 one when several do. To clear every dataset's setting at once, use
 <code>clear.all = TRUE</code>. If <code>expr</code> and <code>data</code> are both
-omitted, prints the current jsubset status.</p></dd>
+omitted, prints the current jsubset status, which says so when a
+stored filter can no longer be applied.</p></dd>
 
 
 <dt id="arg-clear-all">clear.all<a class="anchor" aria-label="anchor" href="#arg-clear-all"></a></dt>

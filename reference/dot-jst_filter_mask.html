@@ -147,11 +147,13 @@ true. The per-call evaluation message is the one it has always been.</p>
 <span>  <span class="va">expr_str</span>,</span>
 <span>  <span class="va">data</span>,</span>
 <span>  <span class="va">envir</span>,</span>
-<span>  origin <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"set"</span>, <span class="st">"call"</span>, <span class="st">"stored"</span><span class="op">)</span>,</span>
+<span>  origin <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"set"</span>, <span class="st">"call"</span>, <span class="st">"stored"</span>, <span class="st">"reactivate"</span>, <span class="st">"status"</span><span class="op">)</span>,</span>
 <span>  data_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  named_frame <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  prior <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  n_frame <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  n_frame <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  data_kept <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  quiet <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -176,7 +178,8 @@ true. The per-call evaluation message is the one it has always been.</p>
 
 
 <dt id="arg-origin">origin<a class="anchor" aria-label="anchor" href="#arg-origin"></a></dt>
-<dd><p>One of <code>"set"</code>, <code>"call"</code>, <code>"stored"</code>.</p></dd>
+<dd><p>One of <code>"set"</code>, <code>"call"</code>, <code>"stored"</code>,
+<code>"reactivate"</code>, <code>"status"</code>.</p></dd>
 
 
 <dt id="arg-data-name">data_name<a class="anchor" aria-label="anchor" href="#arg-data-name"></a></dt>
@@ -195,14 +198,50 @@ frame; the message says it is unchanged.</p></dd>
 
 
 <dt id="arg-n-frame">n_frame<a class="anchor" aria-label="anchor" href="#arg-n-frame"></a></dt>
-<dd><p>Integer or NULL. For <code>"call"</code>: the frame's row count
-before the pipeline's filters, which tells the recycling stop's two
-forms apart.</p></dd>
+<dd><p>Integer or NULL. The frame's row count before the
+pipeline's filters: it tells the recycling stop's two forms apart
+(<code>"call"</code>), and lets a vector holding one value per case of the
+frame as given be recognized when <code>data</code> has fewer cases
+(<code><a href="dot-jst_frame_vector.html">.jst_frame_vector()</a></code>; every origin but <code>"set"</code>).</p></dd>
+
+
+<dt id="arg-data-kept">data_kept<a class="anchor" aria-label="anchor" href="#arg-data-kept"></a></dt>
+<dd><p>Data frame or NULL. For <code>"set"</code>: the frame as an
+active <code><a href="jcomplete.html">jcomplete()</a></code> will hand it to the filter
+(<code><a href="dot-jst_complete_kept.html">.jst_complete_kept()</a></code>); the same test, made once the filter has
+passed on the frame as given.</p></dd>
+
+
+<dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
+<dd><p>Logical or NULL. Whether the filter's own warnings and
+messages are dropped; NULL drops them at set time and for the status
+display. <code>jsubset(d, on)</code> passes TRUE, for a filter that was off
+(<code>"reactivate"</code>) and for one that was never off
+(<code>"stored"</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The evaluated filter: one TRUE, FALSE or NA for every row.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>A fourth origin, <code>"reactivate"</code> (Session 331), is the stored filter
+checked by <code>jsubset(d, on)</code> before it is turned back on. Until then
+<code>on</code> set the filter active unchecked: "jsubset reactivated" printed
+for a filter that could no longer run, and the next analysis stopped. It
+takes the stored wording with <code><a href="dot-jst_filter_exits.html">.jst_filter_exits()</a></code>'s reactivation
+close ("The filter stays off." and the delete exit), and, as at set time,
+nothing is analyzed, so warnings and messages from the filter are dropped
+(<code>quiet = TRUE</code>).
+A fifth, <code>"status"</code>, is the same check made for the status display:
+it never stops, and hands the reason back as the line "It cannot be
+applied: ..." (<code><a href="dot-jst_filter_status_signal.html">.jst_filter_status_signal()</a></code>).</p>
+<p>Ahead of the evaluation, for every origin but <code>"set"</code>: a workspace
+vector holding one value per case of the frame as given, where the
+condition is about to run on fewer cases (<code><a href="dot-jst_frame_vector.html">.jst_frame_vector()</a></code>,
+Session 331) – the add-it-to-the-frame fix. At set time the same test
+runs last, against <code>data_kept</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

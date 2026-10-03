@@ -62,7 +62,8 @@ its own form, in <code><a href="dot-jst_filter_mask.html">.jst_filter_mask()</a>
 <span>  <span class="va">n_rows</span>,</span>
 <span>  data_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  n_frame <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  tail <span class="op">=</span> <span class="st">""</span></span>
+<span>  tail <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  cut_by <span class="op">=</span> <span class="st">"filtering"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -95,6 +96,13 @@ pipeline's filters. NULL is read as <code>n_rows</code>.</p></dd>
 <dt id="arg-tail">tail<a class="anchor" aria-label="anchor" href="#arg-tail"></a></dt>
 <dd><p>Character; appended after the fix line (the set-time
 "earlier filter is unchanged" line).</p></dd>
+
+
+<dt id="arg-cut-by">cut_by<a class="anchor" aria-label="anchor" href="#arg-cut-by"></a></dt>
+<dd><p>Character; what cut the frame, for the add-it-to-the-frame
+form: <code>"filtering"</code> (a per-call condition behind the stored
+settings) or <code>"jcomplete()"</code> (a <code><a href="jsubset.html">jsubset()</a></code> filter behind an
+active <code><a href="jcomplete.html">jcomplete()</a></code>, Session 331).</p></dd>
 
 </dl></div>
     <div class="section level2">

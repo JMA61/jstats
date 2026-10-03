@@ -59,8 +59,9 @@ every row. Both origins stop now, so both arguments are gone.
 
 - n_frame:
 
-  Integer or NULL. The frame's row count before the pipeline's filters,
-  for the per-call recycling stop.
+  Integer or NULL. The frame's row count before the pipeline's filters:
+  for the per-call recycling stop, and (both origins, Session 331) for a
+  vector holding one value per case of the frame as given.
 
 ## Value
 

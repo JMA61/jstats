@@ -56,13 +56,13 @@ table that added up (the Session 289 workstation reproduction).
 
 - origin:
 
-  One of `"set"`, `"call"`, `"stored"`.
+  One of `"set"`, `"call"`, `"stored"`, `"reactivate"`, `"status"`.
 
 - data_name:
 
-  Character. The data frame's name. Required for `"stored"` (the exits
-  are built from it); used by `"set"` to name the frame in the
-  unchanged-filter line and the quoted-keyword fix.
+  Character. The data frame's name. Required for `"stored"` and
+  `"reactivate"` (the exits are built from it); used by `"set"` to name
+  the frame in the unchanged-filter line and the quoted-keyword fix.
 
 - named_frame:
 
@@ -108,3 +108,21 @@ Three origins share the check and differ only in wording:
   that frame until dealt with – so the fix is BOTH exits, each naming
   the frame: set aside (off, which keeps the text) first, delete (NULL)
   second.
+
+- `"reactivate"`:
+
+  the same stored filter checked by `jsubset(d, on)` before it is turned
+  back on (Session 331). The stored wording, ending on
+  [`.jst_filter_exits()`](https://jma61.github.io/jstats/reference/dot-jst_filter_exits.md)'s
+  reactivation form: the filter is off already, so the message says it
+  stays off and gives the delete exit alone.
+
+- `"status"`:
+
+  the same stored filter checked for the status display
+  ([`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
+  with no arguments, Session 331). Nothing stops: the finding is handed
+  back through
+  [`.jst_filter_status_signal()`](https://jma61.github.io/jstats/reference/dot-jst_filter_status_signal.md)
+  as the status line "It cannot be applied: it has 12 values for 11
+  rows."

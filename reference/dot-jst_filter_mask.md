@@ -56,11 +56,13 @@ true. The per-call evaluation message is the one it has always been.
   expr_str,
   data,
   envir,
-  origin = c("set", "call", "stored"),
+  origin = c("set", "call", "stored", "reactivate", "status"),
   data_name = NULL,
   named_frame = FALSE,
   prior = FALSE,
-  n_frame = NULL
+  n_frame = NULL,
+  data_kept = NULL,
+  quiet = NULL
 )
 ```
 
@@ -84,7 +86,7 @@ true. The per-call evaluation message is the one it has always been.
 
 - origin:
 
-  One of `"set"`, `"call"`, `"stored"`.
+  One of `"set"`, `"call"`, `"stored"`, `"reactivate"`, `"status"`.
 
 - data_name:
 
@@ -104,9 +106,50 @@ true. The per-call evaluation message is the one it has always been.
 
 - n_frame:
 
-  Integer or NULL. For `"call"`: the frame's row count before the
-  pipeline's filters, which tells the recycling stop's two forms apart.
+  Integer or NULL. The frame's row count before the pipeline's filters:
+  it tells the recycling stop's two forms apart (`"call"`), and lets a
+  vector holding one value per case of the frame as given be recognized
+  when `data` has fewer cases
+  ([`.jst_frame_vector()`](https://jma61.github.io/jstats/reference/dot-jst_frame_vector.md);
+  every origin but `"set"`).
+
+- data_kept:
+
+  Data frame or NULL. For `"set"`: the frame as an active
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
+  will hand it to the filter
+  ([`.jst_complete_kept()`](https://jma61.github.io/jstats/reference/dot-jst_complete_kept.md));
+  the same test, made once the filter has passed on the frame as given.
+
+- quiet:
+
+  Logical or NULL. Whether the filter's own warnings and messages are
+  dropped; NULL drops them at set time and for the status display.
+  `jsubset(d, on)` passes TRUE, for a filter that was off
+  (`"reactivate"`) and for one that was never off (`"stored"`).
 
 ## Value
 
 The evaluated filter: one TRUE, FALSE or NA for every row.
+
+## Details
+
+A fourth origin, `"reactivate"` (Session 331), is the stored filter
+checked by `jsubset(d, on)` before it is turned back on. Until then `on`
+set the filter active unchecked: "jsubset reactivated" printed for a
+filter that could no longer run, and the next analysis stopped. It takes
+the stored wording with
+[`.jst_filter_exits()`](https://jma61.github.io/jstats/reference/dot-jst_filter_exits.md)'s
+reactivation close ("The filter stays off." and the delete exit), and,
+as at set time, nothing is analyzed, so warnings and messages from the
+filter are dropped (`quiet = TRUE`). A fifth, `"status"`, is the same
+check made for the status display: it never stops, and hands the reason
+back as the line "It cannot be applied: ..."
+([`.jst_filter_status_signal()`](https://jma61.github.io/jstats/reference/dot-jst_filter_status_signal.md)).
+
+Ahead of the evaluation, for every origin but `"set"`: a workspace
+vector holding one value per case of the frame as given, where the
+condition is about to run on fewer cases
+([`.jst_frame_vector()`](https://jma61.github.io/jstats/reference/dot-jst_frame_vector.md),
+Session 331) – the add-it-to-the-frame fix. At set time the same test
+runs last, against `data_kept`.

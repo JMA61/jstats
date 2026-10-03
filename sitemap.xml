@@ -63,6 +63,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_col_dp.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_collect_multicat_regs.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_combine_id.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_complete_gone_stop.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_complete_kept.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_compute_band.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_compute_vif.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_confirm.html</loc></url>
@@ -88,7 +90,9 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_dummies.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_one_dummy.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expr_symbols.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_exits.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_mask.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_status_signal.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_unbound.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_find_file.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_fmt_code.html</loc></url>
@@ -110,6 +114,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_column_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_first_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_refs.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_vector.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_vector_parts.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frames_with_registrations.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_gate_inband_counts.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_get_complete.html</loc></url>

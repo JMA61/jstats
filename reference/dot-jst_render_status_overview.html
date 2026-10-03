@@ -67,7 +67,8 @@ overview header reads "registrations" rather than "settings".</p>
 <span>  <span class="va">dnames</span>,</span>
 <span>  <span class="va">payloads</span>,</span>
 <span>  <span class="va">active</span>,</span>
-<span>  default_name <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  default_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  unusable <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,6 +98,12 @@ setting is active.</p></dd>
 <dt id="arg-default-name">default_name<a class="anchor" aria-label="anchor" href="#arg-default-name"></a></dt>
 <dd><p>Character name of the current <code><a href="juse.html">juse()</a></code> default,
 or <code>NULL</code>. The matching frame is tagged <code>, default</code>.</p></dd>
+
+
+<dt id="arg-unusable">unusable<a class="anchor" aria-label="anchor" href="#arg-unusable"></a></dt>
+<dd><p>Logical vector parallel to <code>dnames</code>, or NULL. TRUE
+tags the frame <code>, cannot be applied</code>: its stored setting would
+stop an analysis as things stand (Session 331).</p></dd>
 
 </dl></div>
     <div class="section level2">

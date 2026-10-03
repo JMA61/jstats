@@ -21,7 +21,9 @@ convention.
 If a variable in the setting is later dropped from the dataset or
 renamed, each analysis of that dataset stops, naming the variable, until
 `jcomplete()` is run again with the current names or the setting is
-cleared.
+cleared. `jcomplete(on)` and a preview of the set filter stop in the
+same way, and the status display (`jcomplete()`) names the variable in
+place of the complete-case count.
 
 ## Usage
 

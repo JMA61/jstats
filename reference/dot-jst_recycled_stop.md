@@ -20,7 +20,8 @@ gets the requirement. A stored filter has its own form, in
   n_rows,
   data_name = NULL,
   n_frame = NULL,
-  tail = ""
+  tail = "",
+  cut_by = "filtering"
 )
 ```
 
@@ -54,6 +55,16 @@ gets the requirement. A stored filter has its own form, in
 
   Character; appended after the fix line (the set-time "earlier filter
   is unchanged" line).
+
+- cut_by:
+
+  Character; what cut the frame, for the add-it-to-the-frame form:
+  `"filtering"` (a per-call condition behind the stored settings) or
+  `"jcomplete()"` (a
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
+  filter behind an active
+  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md),
+  Session 331).
 
 ## Value
 
