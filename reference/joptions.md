@@ -64,10 +64,11 @@ joptions(
 - quiet:
 
   Logical; default FALSE. When TRUE, joptions() applies the change
-  silently, suppressing the settings echo, its pointer, and the
-  convention nudge alike. It has no effect on a status query, which
-  makes no change to silence: the bare joptions() panel and a
-  joptions("slot") query both print regardless.
+  silently, suppressing the settings echo, its pointer, the convention
+  nudge, and the note that a data folder was created (the folder is
+  created all the same). It has no effect on a status query, which makes
+  no change to silence: the bare joptions() panel and a joptions("slot")
+  query both print regardless.
 
 ## Value
 
@@ -120,8 +121,9 @@ query, or as an echo of the slots a setting call touched.
   working directory) used as both the save target for bare-filename
   saves and as the first directory searched on bare-filename loads. If
   the folder does not exist it is created when the setting is made, with
-  a note saying so (nested paths are created in full); a folder that
-  cannot be created stops the call and leaves every setting as it was.
+  a note saying so unless `quiet = TRUE` (nested paths are created in
+  full); a folder that cannot be created stops the call and leaves every
+  setting as it was.
   [`jsave`](https://jma61.github.io/jstats/reference/jsave.md) creates
   the folder again if it has been removed since. To clear a
   previously-set folder back to this default, pass `data.dir = NULL` or
@@ -179,9 +181,10 @@ query, or as an echo of the slots a setting call touched.
 
 - `joptions()`:
 
-  Print the full settings panel. The `missing.convention.codes` row is
-  SPSS-convention detail and appears only while `missing.convention` is
-  `"spss"`.
+  Print the full settings panel: all six slots, whatever the convention.
+  The `missing.convention.codes` row is labeled as SPSS-style;
+  [`jconvert`](https://jma61.github.io/jstats/reference/jconvert.md) to
+  SPSS-style missing values uses those codes under any setting.
 
 - `joptions("slot")`:
 
@@ -287,11 +290,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpC4MZl7/Data
+#> Data folder: /tmp/RtmpTwVmww/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpC4MZl7/Data
+#>   /tmp/RtmpTwVmww/Data
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory
 #> Options Settings
@@ -330,6 +333,7 @@ joptions(missing.convention = "spss",
 joptions(NULL)                                    # reset all to defaults
 #> Options Settings
 #> Missing-value convention: None selected
+#> SPSS-style missing value codes: -99, -98, -97
 #> Data folder: Working directory
 #> Correlation layout: wide
 #> Missing-value detail: per_code
