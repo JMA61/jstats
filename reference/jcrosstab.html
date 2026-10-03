@@ -17,7 +17,7 @@ variables, numeric codes are displayed alongside labels."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.204</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.205</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,12 +91,16 @@ the Pearson chi-square and the Yates continuity-corrected chi-square –
 matching the rows commercial statistical software reports; the Pearson
 row is the headline result and is what the returned object carries.
 Larger tables show the single Pearson result (the correction applies
-only to 2x2 tables). Default is FALSE.</p></dd>
+only to 2x2 tables). When any cell's expected frequency is less than
+5, a note under the test gives the number of such cells and the
+smallest expected frequency. Default is FALSE.</p></dd>
 
 
 <dt id="arg-expected">expected<a class="anchor" aria-label="anchor" href="#arg-expected"></a></dt>
 <dd><p>Logical. If TRUE, prints expected frequencies alongside
-observed. Default is FALSE.</p></dd>
+observed, to two decimal places. An expected frequency just under 5
+that would round to 5.00 prints as 4.99, so a cell the chi-square
+note counts as less than 5 never reads as 5. Default is FALSE.</p></dd>
 
 
 <dt id="arg-row-pct">row.pct<a class="anchor" aria-label="anchor" href="#arg-row-pct"></a></dt>
@@ -171,8 +175,9 @@ place. See <code><a href="joutput.html">?joutput</a></code> (<code>case.processi
 <dd><p>Integer or NULL. Number of decimal places for continuous
 statistics in the output tables (range 0-7; <code>digits = 0</code> prints
 whole numbers with no trailing decimal point). Does not affect p-values,
-percentages, or integer quantities (counts, N, degrees of freedom),
-which keep their own fixed conventions. NULL (default) defers to
+percentages, expected frequencies (two places), or integer quantities
+(counts, N, degrees of freedom), which keep their own fixed
+conventions. NULL (default) defers to
 <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
 
 </dl></div>
@@ -193,6 +198,12 @@ continuity-corrected values).</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>A red "Cross-Tabulation" title is printed first, followed by
 variable labels (if present), then the table and optional test results.</p>
+<p>When the cells carry more than a count – row or column percentages,
+expected frequencies, residuals – a blank line separates each category's
+rows from the next, and the Total row from the last category. The
+columns are set four spaces apart when the table at that spacing fits
+the message width (<code><a href="joptions.html">joptions()</a></code>'s <code>message.width</code>), and two
+spaces apart when it does not.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -217,19 +228,24 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Volunteer</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education                0: No  1: Yes   Total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  -----  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school      19       4      23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                82.6%   17.4%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate   9       9      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                50.0%   50.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college          10      15      25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                40.0%   60.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree      7       6      13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                53.8%   46.2%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree        4      14      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                22.2%   77.8%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total                    49      48      97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                  0: No    1: Yes     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    -----    ------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        19         4        23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  82.6%     17.4%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate     9         9        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  50.0%     50.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            10        15        25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  40.0%     60.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree        7         6        13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  53.8%     46.2%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree          4        14        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  22.2%     77.8%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                      49        48        97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With chi-square test</span></span></span>
@@ -247,19 +263,24 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Volunteer</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education                0: No  1: Yes   Total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  -----  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school      19       4      23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                82.6%   17.4%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate   9       9      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                50.0%   50.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college          10      15      25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                40.0%   60.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree      7       6      13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                53.8%   46.2%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree        4      14      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                22.2%   77.8%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total                    49      48      97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                  0: No    1: Yes     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    -----    ------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        19         4        23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  82.6%     17.4%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate     9         9        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  50.0%     50.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            10        15        25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  40.0%     60.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree        7         6        13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  53.8%     46.2%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree          4        14        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  22.2%     77.8%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                      49        48        97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square Test of Independence</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p    N</span>
@@ -283,30 +304,35 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Volunteer</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education                 0: No  1: Yes   Total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  ------  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school       19       4      23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)              11.6    11.4    23.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                 82.6%   17.4%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                 38.8%    8.3%   23.7%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate    9       9      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)               9.1     8.9    18.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                 50.0%   50.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                 18.4%   18.8%   18.6%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college           10      15      25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)              12.6    12.4    25.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                 40.0%   60.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                 20.4%   31.2%   25.8%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree       7       6      13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)               6.6     6.4    13.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                 53.8%   46.2%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                 14.3%   12.5%   13.4%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree         4      14      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)               9.1     8.9    18.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                 22.2%   77.8%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                  8.2%   29.2%   18.6%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total                     49      48      97</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                100.0%  100.0%  100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                   0: No    1: Yes     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    ------    ------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school         19         4        23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)                11.62     11.38     23.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                   82.6%     17.4%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                   38.8%      8.3%     23.7%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate      9         9        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)                 9.09      8.91     18.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                   50.0%     50.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                   18.4%     18.8%     18.6%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college             10        15        25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)                12.63     12.37     25.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                   40.0%     60.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                   20.4%     31.2%     25.8%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree         7         6        13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)                 6.57      6.43     13.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                   53.8%     46.2%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                   14.3%     12.5%     13.4%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree           4        14        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Expected)                 9.09      8.91     18.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                   22.2%     77.8%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                    8.2%     29.2%     18.6%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                       49        48        97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Col %)                  100.0%    100.0%    100.0%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With adjusted standardized residuals (interpretation note at full output)</span></span></span>
@@ -324,24 +350,29 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Volunteer</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education                 0: No  1: Yes   Total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  ------  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school      19       4       23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                82.6%   17.4%   100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)              3.525  -3.525</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate   9       9       18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                50.0%   50.0%   100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)             -0.048   0.048</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college          10      15       25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                40.0%   60.0%   100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)             -1.221   1.221</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree      7       6       13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                53.8%   46.2%   100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)              0.258  -0.258</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree        4      14       18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                22.2%   77.8%   100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)             -2.660   2.660</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total                    49      48       97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                   0: No    1: Yes     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    ------    ------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        19         4         23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  82.6%     17.4%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)                3.525    -3.525</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate     9         9         18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  50.0%     50.0%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)               -0.048     0.048</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            10        15         25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  40.0%     60.0%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)               -1.221     1.221</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree        7         6         13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  53.8%     46.2%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)                0.258    -0.258</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree          4        14         18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  22.2%     77.8%     100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Adj.Res.)               -2.660     2.660</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                      49        48         97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
@@ -362,19 +393,24 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Volunteer</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education                0: No  1: Yes   Total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  -----  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school      19       4      23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                82.6%   17.4%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate   9       9      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                50.0%   50.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college          10      15      25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                40.0%   60.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree      7       6      13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                53.8%   46.2%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree        4      14      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                22.2%   77.8%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total                    49      48      97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                  0: No    1: Yes     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    -----    ------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        19         4        23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  82.6%     17.4%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate     9         9        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  50.0%     50.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            10        15        25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  40.0%     60.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree        7         6        13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  53.8%     46.2%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree          4        14        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  22.2%     77.8%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                      49        48        97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Volunteer</span>, chisq <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Cross-Tabulation</span></span>
@@ -391,19 +427,24 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Crosstab: Education by Volunteer</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Education                0: No  1: Yes   Total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  -----  ------  ------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school      19       4      23</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                82.6%   17.4%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate   9       9      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                50.0%   50.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college          10      15      25</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                40.0%   60.0%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree      7       6      13</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                53.8%   46.2%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree        4      14      18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                22.2%   77.8%  100.0%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Total                    49      48      97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education                  0: No    1: Yes     Total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------    -----    ------    ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        19         4        23</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  82.6%     17.4%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate     9         9        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  50.0%     50.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            10        15        25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  40.0%     60.0%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree        7         6        13</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  53.8%     46.2%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree          4        14        18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   (Row %)                  22.2%     77.8%    100.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total                      49        48        97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square Test of Independence</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p    N</span>

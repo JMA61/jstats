@@ -467,8 +467,8 @@ jlogistic(Volunteer ~ Region + Age, categorical = "Region")
 # treatment persistently across subsequent analyses.
 jdummy(community, Region)
 #> Dummy Variable Registration
-#>   Variable: Region (haven_labelled)
-#>   Reference category: Region_North
+#>   Variable: Region
+#>   Reference category: Region_North (default; change with ref =)
 #>   Dummy variables: Region_South, Region_East, Region_West
 #>   Cases: 103 (0 missing)
 #> 
@@ -514,7 +514,7 @@ jlogistic(Volunteer ~ Region + Age)
 # To choose a non-default reference category:
 jdummy(community, Region, ref = "West")
 #> Dummy Variable Registration
-#>   Variable: Region (haven_labelled)
+#>   Variable: Region
 #>   Reference category: Region_West
 #>   Dummy variables: Region_North, Region_South, Region_East
 #>   Cases: 103 (0 missing)

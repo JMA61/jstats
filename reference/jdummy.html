@@ -19,7 +19,7 @@ datasets preserves each dataset's registrations independently."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.204</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.205</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -102,7 +102,11 @@ same rule <code><a href="jlogistic.html">jlogistic()</a></code> uses to encode i
 if one of the two codes is 1, that category is modeled (so a
 1 = Yes / 2 = No variable models Yes, and a 0/1 variable models 1).
 Applied to every variable named in the call; to use different
-reference categories, register the variables in separate calls.</p></dd>
+reference categories, register the variables in separate calls.
+When the reference was chosen by <code>auto</code>, the printed
+"Reference category:" line ends with
+<code>(default; change with ref =)</code>; a reference you name carries
+no such tag.</p></dd>
 
 
 <dt id="arg-show">show<a class="anchor" aria-label="anchor" href="#arg-show"></a></dt>
@@ -144,8 +148,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North (default; change with ref =)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_South, Region_East, Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -159,13 +163,13 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North (default; change with ref =)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_South, Region_East, Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Education (haven_labelled)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Education_Some_high_school</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Education</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Education_Some_high_school (default; change with ref =)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Education_High_school_graduate, Education_Some_college, Education_Bachelor_s_degree, Education_Graduate_degree</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (6 missing)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -179,7 +183,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_East</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
@@ -194,7 +198,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_East</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
@@ -209,7 +213,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_East</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
@@ -224,7 +228,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_East</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
@@ -244,7 +248,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_East</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
@@ -264,13 +268,13 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registrations</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: 3: Region_East</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Education (haven_labelled)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: 1: Education_Some_high_school</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Education</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: 1: Education_Some_high_school (default; change with ref =)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Education_High_school_graduate, Education_Some_college, Education_Bachelor_s_degree, Education_Graduate_degree</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (6 missing)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

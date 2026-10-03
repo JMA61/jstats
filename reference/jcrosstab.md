@@ -47,12 +47,16 @@ jcrosstab(
   the rows commercial statistical software reports; the Pearson row is
   the headline result and is what the returned object carries. Larger
   tables show the single Pearson result (the correction applies only to
-  2x2 tables). Default is FALSE.
+  2x2 tables). When any cell's expected frequency is less than 5, a note
+  under the test gives the number of such cells and the smallest
+  expected frequency. Default is FALSE.
 
 - expected:
 
-  Logical. If TRUE, prints expected frequencies alongside observed.
-  Default is FALSE.
+  Logical. If TRUE, prints expected frequencies alongside observed, to
+  two decimal places. An expected frequency just under 5 that would
+  round to 5.00 prints as 4.99, so a cell the chi-square note counts as
+  less than 5 never reads as 5. Default is FALSE.
 
 - row.pct:
 
@@ -127,9 +131,10 @@ jcrosstab(
 
   Integer or NULL. Number of decimal places for continuous statistics in
   the output tables (range 0-7; `digits = 0` prints whole numbers with
-  no trailing decimal point). Does not affect p-values, percentages, or
-  integer quantities (counts, N, degrees of freedom), which keep their
-  own fixed conventions. NULL (default) defers to
+  no trailing decimal point). Does not affect p-values, percentages,
+  expected frequencies (two places), or integer quantities (counts, N,
+  degrees of freedom), which keep their own fixed conventions. NULL
+  (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `digits` setting (default 3).
 
@@ -148,6 +153,14 @@ test's method string), and for 2x2 tables `chi_square_corrected` and
 
 A red "Cross-Tabulation" title is printed first, followed by variable
 labels (if present), then the table and optional test results.
+
+When the cells carry more than a count – row or column percentages,
+expected frequencies, residuals – a blank line separates each category's
+rows from the next, and the Total row from the last category. The
+columns are set four spaces apart when the table at that spacing fits
+the message width
+([`joptions()`](https://jma61.github.io/jstats/reference/joptions.md)'s
+`message.width`), and two spaces apart when it does not.
 
 ## See also
 
@@ -173,19 +186,24 @@ jcrosstab(Education ~ Volunteer, data = community)
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
-#> Education                0: No  1: Yes   Total
-#> -----------------------  -----  ------  ------
-#> 1: Some high school      19       4      23
-#>   (Row %)                82.6%   17.4%  100.0%
-#> 2: High school graduate   9       9      18
-#>   (Row %)                50.0%   50.0%  100.0%
-#> 3: Some college          10      15      25
-#>   (Row %)                40.0%   60.0%  100.0%
-#> 4: Bachelor's degree      7       6      13
-#>   (Row %)                53.8%   46.2%  100.0%
-#> 5: Graduate degree        4      14      18
-#>   (Row %)                22.2%   77.8%  100.0%
-#> Total                    49      48      97
+#> Education                  0: No    1: Yes     Total
+#> -----------------------    -----    ------    ------
+#> 1: Some high school        19         4        23
+#>   (Row %)                  82.6%     17.4%    100.0%
+#> 
+#> 2: High school graduate     9         9        18
+#>   (Row %)                  50.0%     50.0%    100.0%
+#> 
+#> 3: Some college            10        15        25
+#>   (Row %)                  40.0%     60.0%    100.0%
+#> 
+#> 4: Bachelor's degree        7         6        13
+#>   (Row %)                  53.8%     46.2%    100.0%
+#> 
+#> 5: Graduate degree          4        14        18
+#>   (Row %)                  22.2%     77.8%    100.0%
+#> 
+#> Total                      49        48        97
 #> 
 
 # With chi-square test
@@ -203,19 +221,24 @@ jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
-#> Education                0: No  1: Yes   Total
-#> -----------------------  -----  ------  ------
-#> 1: Some high school      19       4      23
-#>   (Row %)                82.6%   17.4%  100.0%
-#> 2: High school graduate   9       9      18
-#>   (Row %)                50.0%   50.0%  100.0%
-#> 3: Some college          10      15      25
-#>   (Row %)                40.0%   60.0%  100.0%
-#> 4: Bachelor's degree      7       6      13
-#>   (Row %)                53.8%   46.2%  100.0%
-#> 5: Graduate degree        4      14      18
-#>   (Row %)                22.2%   77.8%  100.0%
-#> Total                    49      48      97
+#> Education                  0: No    1: Yes     Total
+#> -----------------------    -----    ------    ------
+#> 1: Some high school        19         4        23
+#>   (Row %)                  82.6%     17.4%    100.0%
+#> 
+#> 2: High school graduate     9         9        18
+#>   (Row %)                  50.0%     50.0%    100.0%
+#> 
+#> 3: Some college            10        15        25
+#>   (Row %)                  40.0%     60.0%    100.0%
+#> 
+#> 4: Bachelor's degree        7         6        13
+#>   (Row %)                  53.8%     46.2%    100.0%
+#> 
+#> 5: Graduate degree          4        14        18
+#>   (Row %)                  22.2%     77.8%    100.0%
+#> 
+#> Total                      49        48        97
 #> 
 #> Chi-Square Test of Independence
 #> Chi-Square  df    p    N
@@ -239,30 +262,35 @@ jcrosstab(Education ~ Volunteer, data = community,
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
-#> Education                 0: No  1: Yes   Total
-#> -----------------------  ------  ------  ------
-#> 1: Some high school       19       4      23
-#>   (Expected)              11.6    11.4    23.0
-#>   (Row %)                 82.6%   17.4%  100.0%
-#>   (Col %)                 38.8%    8.3%   23.7%
-#> 2: High school graduate    9       9      18
-#>   (Expected)               9.1     8.9    18.0
-#>   (Row %)                 50.0%   50.0%  100.0%
-#>   (Col %)                 18.4%   18.8%   18.6%
-#> 3: Some college           10      15      25
-#>   (Expected)              12.6    12.4    25.0
-#>   (Row %)                 40.0%   60.0%  100.0%
-#>   (Col %)                 20.4%   31.2%   25.8%
-#> 4: Bachelor's degree       7       6      13
-#>   (Expected)               6.6     6.4    13.0
-#>   (Row %)                 53.8%   46.2%  100.0%
-#>   (Col %)                 14.3%   12.5%   13.4%
-#> 5: Graduate degree         4      14      18
-#>   (Expected)               9.1     8.9    18.0
-#>   (Row %)                 22.2%   77.8%  100.0%
-#>   (Col %)                  8.2%   29.2%   18.6%
-#> Total                     49      48      97
-#>   (Col %)                100.0%  100.0%  100.0%
+#> Education                   0: No    1: Yes     Total
+#> -----------------------    ------    ------    ------
+#> 1: Some high school         19         4        23
+#>   (Expected)                11.62     11.38     23.00
+#>   (Row %)                   82.6%     17.4%    100.0%
+#>   (Col %)                   38.8%      8.3%     23.7%
+#> 
+#> 2: High school graduate      9         9        18
+#>   (Expected)                 9.09      8.91     18.00
+#>   (Row %)                   50.0%     50.0%    100.0%
+#>   (Col %)                   18.4%     18.8%     18.6%
+#> 
+#> 3: Some college             10        15        25
+#>   (Expected)                12.63     12.37     25.00
+#>   (Row %)                   40.0%     60.0%    100.0%
+#>   (Col %)                   20.4%     31.2%     25.8%
+#> 
+#> 4: Bachelor's degree         7         6        13
+#>   (Expected)                 6.57      6.43     13.00
+#>   (Row %)                   53.8%     46.2%    100.0%
+#>   (Col %)                   14.3%     12.5%     13.4%
+#> 
+#> 5: Graduate degree           4        14        18
+#>   (Expected)                 9.09      8.91     18.00
+#>   (Row %)                   22.2%     77.8%    100.0%
+#>   (Col %)                    8.2%     29.2%     18.6%
+#> 
+#> Total                       49        48        97
+#>   (Col %)                  100.0%    100.0%    100.0%
 #> 
 
 # With adjusted standardized residuals (interpretation note at full output)
@@ -280,24 +308,29 @@ jcrosstab(Education ~ Volunteer, data = community, residuals = "adjusted")
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
-#> Education                 0: No  1: Yes   Total
-#> -----------------------  ------  ------  ------
-#> 1: Some high school      19       4       23
-#>   (Row %)                82.6%   17.4%   100.0%
-#>   (Adj.Res.)              3.525  -3.525
-#> 2: High school graduate   9       9       18
-#>   (Row %)                50.0%   50.0%   100.0%
-#>   (Adj.Res.)             -0.048   0.048
-#> 3: Some college          10      15       25
-#>   (Row %)                40.0%   60.0%   100.0%
-#>   (Adj.Res.)             -1.221   1.221
-#> 4: Bachelor's degree      7       6       13
-#>   (Row %)                53.8%   46.2%   100.0%
-#>   (Adj.Res.)              0.258  -0.258
-#> 5: Graduate degree        4      14       18
-#>   (Row %)                22.2%   77.8%   100.0%
-#>   (Adj.Res.)             -2.660   2.660
-#> Total                    49      48       97
+#> Education                   0: No    1: Yes     Total
+#> -----------------------    ------    ------    ------
+#> 1: Some high school        19         4         23
+#>   (Row %)                  82.6%     17.4%     100.0%
+#>   (Adj.Res.)                3.525    -3.525
+#> 
+#> 2: High school graduate     9         9         18
+#>   (Row %)                  50.0%     50.0%     100.0%
+#>   (Adj.Res.)               -0.048     0.048
+#> 
+#> 3: Some college            10        15         25
+#>   (Row %)                  40.0%     60.0%     100.0%
+#>   (Adj.Res.)               -1.221     1.221
+#> 
+#> 4: Bachelor's degree        7         6         13
+#>   (Row %)                  53.8%     46.2%     100.0%
+#>   (Adj.Res.)                0.258    -0.258
+#> 
+#> 5: Graduate degree          4        14         18
+#>   (Row %)                  22.2%     77.8%     100.0%
+#>   (Adj.Res.)               -2.660     2.660
+#> 
+#> Total                      49        48         97
 #> 
 
 # Using juse() default
@@ -318,19 +351,24 @@ jcrosstab(Education ~ Volunteer)
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
-#> Education                0: No  1: Yes   Total
-#> -----------------------  -----  ------  ------
-#> 1: Some high school      19       4      23
-#>   (Row %)                82.6%   17.4%  100.0%
-#> 2: High school graduate   9       9      18
-#>   (Row %)                50.0%   50.0%  100.0%
-#> 3: Some college          10      15      25
-#>   (Row %)                40.0%   60.0%  100.0%
-#> 4: Bachelor's degree      7       6      13
-#>   (Row %)                53.8%   46.2%  100.0%
-#> 5: Graduate degree        4      14      18
-#>   (Row %)                22.2%   77.8%  100.0%
-#> Total                    49      48      97
+#> Education                  0: No    1: Yes     Total
+#> -----------------------    -----    ------    ------
+#> 1: Some high school        19         4        23
+#>   (Row %)                  82.6%     17.4%    100.0%
+#> 
+#> 2: High school graduate     9         9        18
+#>   (Row %)                  50.0%     50.0%    100.0%
+#> 
+#> 3: Some college            10        15        25
+#>   (Row %)                  40.0%     60.0%    100.0%
+#> 
+#> 4: Bachelor's degree        7         6        13
+#>   (Row %)                  53.8%     46.2%    100.0%
+#> 
+#> 5: Graduate degree          4        14        18
+#>   (Row %)                  22.2%     77.8%    100.0%
+#> 
+#> Total                      49        48        97
 #> 
 jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #> Cross-Tabulation
@@ -347,19 +385,24 @@ jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #> --------------------------------------
 #> 
 #> Crosstab: Education by Volunteer
-#> Education                0: No  1: Yes   Total
-#> -----------------------  -----  ------  ------
-#> 1: Some high school      19       4      23
-#>   (Row %)                82.6%   17.4%  100.0%
-#> 2: High school graduate   9       9      18
-#>   (Row %)                50.0%   50.0%  100.0%
-#> 3: Some college          10      15      25
-#>   (Row %)                40.0%   60.0%  100.0%
-#> 4: Bachelor's degree      7       6      13
-#>   (Row %)                53.8%   46.2%  100.0%
-#> 5: Graduate degree        4      14      18
-#>   (Row %)                22.2%   77.8%  100.0%
-#> Total                    49      48      97
+#> Education                  0: No    1: Yes     Total
+#> -----------------------    -----    ------    ------
+#> 1: Some high school        19         4        23
+#>   (Row %)                  82.6%     17.4%    100.0%
+#> 
+#> 2: High school graduate     9         9        18
+#>   (Row %)                  50.0%     50.0%    100.0%
+#> 
+#> 3: Some college            10        15        25
+#>   (Row %)                  40.0%     60.0%    100.0%
+#> 
+#> 4: Bachelor's degree        7         6        13
+#>   (Row %)                  53.8%     46.2%    100.0%
+#> 
+#> 5: Graduate degree          4        14        18
+#>   (Row %)                  22.2%     77.8%    100.0%
+#> 
+#> Total                      49        48        97
 #> 
 #> Chi-Square Test of Independence
 #> Chi-Square  df    p    N

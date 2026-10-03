@@ -11,7 +11,7 @@ and consistent indentation. No external dependencies — pure base R."></head><b
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.204</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.205</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,8 @@ and consistent indentation. No external dependencies — pure base R.</p>
 <span>  indent <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  header.indent <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  trim <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  digits <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  gap <span class="op">=</span> <span class="fl">2L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -154,6 +155,22 @@ misspelled name cannot fall back to the detection unnoticed. NULL (the
 default) fixes no column. Added Session 326: a column's decimal places
 come from what it holds – a statistic at the digits setting, a fixed
 convention at its own – never from the values that happen to be in it.</p></dd>
+
+
+<dt id="arg-gap">gap<a class="anchor" aria-label="anchor" href="#arg-gap"></a></dt>
+<dd><p>The number of spaces between columns: one whole number, used
+as given (the default, 2, is the gap every table has had), or several
+in order of preference. Given several, the table takes the first gap
+at which its full width – the indent, the columns and the gaps
+between them – still fits the message width (<code><a href="joptions.html">joptions()</a></code>'s
+<code>message.width</code>, 76 by default), and the last one when none
+fits. jcrosstab's crosstab passes <code>c(4, 2)</code>: its cell columns
+are narrow and crowd at two spaces, so a table with room takes four
+and a wide one keeps two (Session 329, Jeff). The width is the
+table's own; a caption longer than the table does not count. The
+message width is the ceiling because it is the one width the package
+already keeps, and it gives the same table on every screen where the
+console's width changes with the pane.</p></dd>
 
 </dl></div>
 

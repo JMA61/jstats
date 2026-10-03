@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.204</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.205</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -581,8 +581,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># analyses) use the same coding without re-specifying.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="jdummy.html">jdummy</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North (default; change with ref =)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_South, Region_East, Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -623,7 +623,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># To choose a non-default reference category:</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="jdummy.html">jdummy</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, ref <span class="op">=</span> <span class="st">"West"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region (haven_labelled)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_East</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>

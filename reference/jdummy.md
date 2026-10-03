@@ -62,7 +62,9 @@ jdummy(
   that category is modeled (so a 1 = Yes / 2 = No variable models Yes,
   and a 0/1 variable models 1). Applied to every variable named in the
   call; to use different reference categories, register the variables in
-  separate calls.
+  separate calls. When the reference was chosen by `auto`, the printed
+  "Reference category:" line ends with `(default; change with ref =)`; a
+  reference you name carries no such tag.
 
 - show:
 
@@ -104,8 +106,8 @@ jdummy(Region)                       # Register, first category as reference
 #> Dummy Variable Registration
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
-#>   Reference category: Region_North
+#>   Variable: Region
+#>   Reference category: Region_North (default; change with ref =)
 #>   Dummy variables: Region_South, Region_East, Region_West
 #>   Cases: 103 (0 missing)
 #> 
@@ -119,13 +121,13 @@ jdummy(Region, Education)            # Register several at once
 #> Dummy Variable Registration
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
-#>   Reference category: Region_North
+#>   Variable: Region
+#>   Reference category: Region_North (default; change with ref =)
 #>   Dummy variables: Region_South, Region_East, Region_West
 #>   Cases: 103 (0 missing)
 #> 
-#>   Variable: Education (haven_labelled)
-#>   Reference category: Education_Some_high_school
+#>   Variable: Education
+#>   Reference category: Education_Some_high_school (default; change with ref =)
 #>   Dummy variables: Education_High_school_graduate, Education_Some_college, Education_Bachelor_s_degree, Education_Graduate_degree
 #>   Cases: 103 (6 missing)
 #> 
@@ -139,7 +141,7 @@ jdummy(Region, ref = "last")         # Last category as reference
 #> Dummy Variable Registration
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
+#>   Variable: Region
 #>   Reference category: Region_West
 #>   Dummy variables: Region_North, Region_South, Region_East
 #>   Cases: 103 (0 missing)
@@ -154,7 +156,7 @@ jdummy(Region, ref = 4)              # Reference by numeric code
 #> Dummy Variable Registration
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
+#>   Variable: Region
 #>   Reference category: Region_West
 #>   Dummy variables: Region_North, Region_South, Region_East
 #>   Cases: 103 (0 missing)
@@ -169,7 +171,7 @@ jdummy(Region, ref = "East")         # Reference by value label
 #> Dummy Variable Registration
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
+#>   Variable: Region
 #>   Reference category: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
 #>   Cases: 103 (0 missing)
@@ -184,7 +186,7 @@ jdummy(Region, show = TRUE)          # Show coding scheme
 #> Dummy Variable Registration
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
+#>   Variable: Region
 #>   Reference category: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
 #>   Cases: 103 (0 missing)
@@ -204,7 +206,7 @@ jdummy(Region, show = "all")         # Full scheme (for many categories)
 #> Dummy Variable Registration
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
+#>   Variable: Region
 #>   Reference category: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
 #>   Cases: 103 (0 missing)
@@ -224,13 +226,13 @@ jdummy()                             # Show all registrations
 #> Dummy Variable Registrations
 #> Using default data frame: community
 #> 
-#>   Variable: Region (haven_labelled)
+#>   Variable: Region
 #>   Reference category: 3: Region_East
 #>   Dummy variables: Region_North, Region_South, Region_West
 #>   Cases: 103 (0 missing)
 #> 
-#>   Variable: Education (haven_labelled)
-#>   Reference category: 1: Education_Some_high_school
+#>   Variable: Education
+#>   Reference category: 1: Education_Some_high_school (default; change with ref =)
 #>   Dummy variables: Education_High_school_graduate, Education_Some_college, Education_Bachelor_s_degree, Education_Graduate_degree
 #>   Cases: 103 (6 missing)
 #> 
