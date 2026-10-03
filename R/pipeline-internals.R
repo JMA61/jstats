@@ -7,8 +7,9 @@
 #' numbers, text, an empty result, or the wrong number of values -- cannot
 #' select rows and is refused with a guided error. ALWAYS stops: a
 #' wrong-shaped result is deterministic (it fails identically on every
-#' call), so there is no warn-and-continue variant, whatever the caller's
-#' \code{on_error} says (Session 288, decision 1). Refusing a single value
+#' call), so there is no warn-and-continue variant (Session 288, decision
+#' 1; since Session 330 an evaluation failure stops as well, in
+#' \code{.jst_filter_mask()}). Refusing a single value
 #' is deliberate: TRUE / FALSE / T / F would mean "keep every row", but a
 #' single value is also the shape of \code{mean(Score) > 5}, \code{any(...)}
 #' and \code{nrow(...)} inside a filter -- a likely error reaching for a
@@ -176,70 +177,248 @@
   )
 }
 
+#' Internal helper: the names a filter reads that are found nowhere
+#'
+#' When a filter's evaluation stops, this says whether the reason is a name
+#' that is neither a variable of the data nor an object the caller can see:
+#' a misspelled variable when the filter is set, or a variable or workspace
+#' object removed since, when a stored filter is applied (Session 330). The
+#' names come from \code{.jst_expr_symbols()}, so a function's name, the
+#' component after a dollar sign and the body of an inline function are not
+#' candidates. R's own message is consulted for one thing only: at least one
+#' candidate must appear in it between quotation marks -- any character that
+#' is not a space and could not be part of a name. R names the first missing
+#' object that way in every language it is translated into, so the test does
+#' not depend on the wording, and it keeps the claim true when the
+#' evaluation stopped for another reason while a name that was never looked
+#' up (inside \code{with()}, say) happens to be unbound. Requiring the marks
+#' keeps a one-letter name from matching a word of the message.
+#'
+#' @param expr The unevaluated filter.
+#' @param data The data frame it was evaluated against.
+#' @param envir The environment its other names resolve in.
+#' @param r_msg Character; R's message from the failed evaluation.
+#' @return Character vector of the names found nowhere, in the order typed;
+#'   empty when the failure is not a missing name.
+#' @keywords internal
+.jst_filter_unbound <- function(expr, data, envir, r_msg) {
+  nms <- setdiff(.jst_expr_symbols(expr), names(data))
+  nms <- nms[!vapply(nms, exists, logical(1), envir = envir,
+                     USE.NAMES = FALSE)]
+  if (length(nms) == 0L) return(character(0))
+  mark   <- function(ch) nzchar(ch) && !grepl("[[:alnum:][:space:]._]", ch)
+  quoted <- function(nm) {
+    at <- gregexpr(nm, r_msg, fixed = TRUE)[[1L]]
+    if (at[1L] < 0L) return(FALSE)
+    any(vapply(at, function(p) {
+      mark(substr(r_msg, p - 1L, p - 1L)) &&
+        mark(substr(r_msg, p + nchar(nm), p + nchar(nm)))
+    }, logical(1)))
+  }
+  if (!any(vapply(nms, quoted, logical(1), USE.NAMES = FALSE))) {
+    return(character(0))
+  }
+  nms
+}
+
+#' Internal helper: evaluate a filter and refuse one that cannot select rows
+#'
+#' The one place a user's filter is run: \code{jsubset()}'s set-time dry run
+#' (origin \code{"set"}), a per-call \code{subset =} (\code{"call"}) and a
+#' stored \code{jsubset()} filter applied at analysis time (\code{"stored"}),
+#' the last two through \code{.jst_apply_mask()}. Every failure STOPS
+#' (Session 330). Until then an evaluation failure was swallowed at set time
+#' -- \code{jsubset(d, Agee > 30)} reported "activated" -- and warned at
+#' analysis time, after which the analysis ran on every row with a Case
+#' Processing row reading "jsubset()  0": ordinary-looking output for the
+#' wrong sample, identically on every call. In order:
+#' \enumerate{
+#'   \item The evaluation. On an error: a workspace vector the condition
+#'     would recycle (\code{.jst_recycled_operand()}; a labelled variable
+#'     refuses the comparison where a plain one recycles), then a name
+#'     found nowhere (\code{.jst_filter_unbound()}), then any other reason,
+#'     which relays R's message and claims nothing more. Warnings from the
+#'     evaluation are held rather than caught -- a handler that caught them
+#'     would abandon the evaluation and skip the checks below -- and are
+#'     given back only when the filter passes, so R's "longer object
+#'     length" warning never prints ahead of the stop that explains it. At
+#'     set time they are dropped, with any message, as they always were.
+#'   \item The shape of the result (\code{.jst_check_mask_shape()}). It
+#'     comes before the recycling check so that a filter built from a
+#'     workspace object alone (\code{keep3 == TRUE}, three values for
+#'     twelve rows) keeps the shape error and its fix.
+#'   \item A workspace vector recycled against the data, which leaves a
+#'     result of the right shape: silently when the row count divides by
+#'     its length.
+#' }
+#' The three origins differ in wording only. What was typed in this call is
+#' the subject of its message (Rule AD): the condition at set time, with the
+#' "earlier filter is unchanged" line when there is one; \code{subset = } and
+#' the condition per call. A stored filter was accepted when set, so its
+#' message names the frame and the filter, says it "cannot be applied", and
+#' ends on both exits -- set aside (\code{off}), delete (\code{NULL}) -- as
+#' the stored shape error does: it re-runs on every analysis of that frame
+#' until dealt with. A name found nowhere "was not found" at set time and
+#' "no longer exists" for a stored filter, which the set-time check makes
+#' true. The per-call evaluation message is the one it has always been.
+#'
+#' @param expr The unevaluated filter (a language object).
+#' @param expr_str Character. The filter as typed.
+#' @param data Data frame to evaluate it against.
+#' @param envir Environment the filter's other names resolve in.
+#' @param origin One of \code{"set"}, \code{"call"}, \code{"stored"}.
+#' @param data_name Character. The data frame's name.
+#' @param named_frame Logical. For \code{"set"}: the user named the frame in
+#'   the call; when FALSE the not-found message adds the juse() default
+#'   hint \code{.jst_check_vars()} gives.
+#' @param prior Logical. For \code{"set"}: an earlier filter exists for the
+#'   frame; the message says it is unchanged.
+#' @param n_frame Integer or NULL. For \code{"call"}: the frame's row count
+#'   before the pipeline's filters, which tells the recycling stop's two
+#'   forms apart.
+#'
+#' @return The evaluated filter: one TRUE, FALSE or NA for every row.
+#'
+#' @keywords internal
+.jst_filter_mask <- function(expr, expr_str, data, envir,
+                             origin = c("set", "call", "stored"),
+                             data_name = NULL, named_frame = FALSE,
+                             prior = FALSE, n_frame = NULL) {
+  origin <- match.arg(origin)
+  n_rows <- nrow(data)
+  unchanged <- if (origin == "set" && isTRUE(prior) && !is.null(data_name)) {
+    paste0("\nYour earlier filter for the ", data_name,
+           " data frame is unchanged.")
+  } else {
+    ""
+  }
+  stored_lead <- function() {
+    paste0("the jsubset filter for the ", data_name, " data frame, ",
+           expr_str, ", cannot be applied")
+  }
+  exits <- function() {
+    paste0("To set it aside, run:\n",
+           "  jsubset(", data_name, ", off)\n",
+           "To delete it, run:\n",
+           "  jsubset(", data_name, ", NULL)")
+  }
+  recycled <- function() {
+    rec <- .jst_recycled_operand(list(expr), data, envir)
+    if (is.null(rec)) return(invisible(NULL))
+    if (origin == "stored") {
+      # "cases" always: with one case left a longer vector gives a longer
+      # result, and the shape check answers before this is reached.
+      .jst_stop(stored_lead(), ": ", .jst_term_text(rec$operand), " has ",
+                rec$n, " values for ", n_rows, " cases.\n", exits())
+    }
+    .jst_recycled_stop(rec,
+                       if (origin == "call") paste0("subset = ", expr_str)
+                       else expr_str,
+                       n_rows, data_name,
+                       n_frame = if (origin == "call") n_frame else NULL,
+                       tail = unchanged)
+  }
+
+  held <- list()
+  mask <- tryCatch(
+    withCallingHandlers(
+      eval(expr, data, envir),
+      warning = function(w) {
+        held[[length(held) + 1L]] <<- w
+        invokeRestart("muffleWarning")
+      },
+      message = function(m) {
+        if (origin == "set") invokeRestart("muffleMessage")
+      }),
+    error = function(e) {
+      recycled()
+      if (origin == "call") {
+        .jst_stop("Subset expression could not be evaluated: ",
+                  conditionMessage(e))
+      }
+      # R's message on one line, without the color codes a package may add.
+      r_msg <- gsub("\033\\[[0-9;]*m", "", conditionMessage(e))
+      r_msg <- gsub("[[:space:]]+", " ", trimws(r_msg))
+      gone  <- .jst_filter_unbound(expr, data, envir, r_msg)
+      names_gone <- .jst_format_var_list(gone, and = TRUE)
+      if (origin == "stored") {
+        if (length(gone) > 0L) {
+          .jst_stop(stored_lead(), ": ", names_gone,
+                    if (length(gone) == 1L) " no longer exists.\n"
+                    else " no longer exist.\n",
+                    exits())
+        }
+        .jst_stop(stored_lead(), ".\n",
+                  "R reported:\n",
+                  "  ", r_msg, "\n",
+                  exits())
+      }
+      # origin == "set"
+      if (length(gone) > 0L) {
+        hint <- if (!isTRUE(named_frame) && !is.null(data_name)) {
+          paste0("\n", data_name, " is the juse() default -- if you meant ",
+                 "a different data frame, name it in the call.")
+        } else {
+          ""
+        }
+        .jst_stop(expr_str, " names ", names_gone,
+                  if (length(gone) == 1L) ", which was not found in the "
+                  else ", which were not found in the ",
+                  data_name, " data frame.\n",
+                  "Check the spelling.", hint, unchanged)
+      }
+      .jst_stop(expr_str, " cannot be applied to the ", data_name,
+                " data frame.\n",
+                "R reported:\n",
+                "  ", r_msg, unchanged)
+    }
+  )
+  .jst_check_mask_shape(mask, n_rows, expr, expr_str, origin,
+                        data_name   = data_name,
+                        named_frame = named_frame,
+                        prior       = prior)
+  recycled()
+  if (origin != "set") for (w in held) warning(w)
+  mask
+}
+
 #' Internal helper: apply a logical mask expression to a data frame
 #'
 #' Shared mechanic for Step 2 (persistent jsubset) and Step 3 (per-call
-#' \code{subset =} argument) of \code{.jst_apply_pipeline()}. Evaluates
-#' \code{expr} in the data + caller environment, refuses a result that is
-#' not one TRUE/FALSE per row (via \code{.jst_check_mask_shape()}, which
-#' always stops), coerces \code{NA}s in the mask to \code{FALSE}, and
-#' returns the filtered data frame. The two callers differ in upstream
-#' source (joptions state vs. argument) and downstream bookkeeping (which
-#' \code{sample_info} slot is populated); the masking step itself is
-#' identical. This is the package's single row-selection site for user
-#' filters (Session 288 scan), so the shape check here is the safety net
-#' for both a stored filter that has gone stale and a per-call argument.
+#' \code{subset =} argument) of \code{.jst_apply_pipeline()}. Runs
+#' \code{expr} through \code{.jst_filter_mask()} -- which evaluates it in
+#' the data + caller environment and stops on anything that cannot select
+#' rows -- coerces \code{NA}s in the mask to \code{FALSE}, and returns the
+#' filtered data frame. The two callers differ in upstream source (joptions
+#' state vs. argument) and downstream bookkeeping (which \code{sample_info}
+#' slot is populated); the masking step itself is identical. This is the
+#' package's single row-selection site for user filters (Session 288 scan).
+#' Until Session 330 it took \code{on_error} and \code{stage_label}: a
+#' stored filter whose evaluation failed warned and kept every row. Both
+#' origins stop now, so both arguments are gone.
 #'
 #' @param data Data frame to mask.
 #' @param expr Unevaluated logical expression (a language object).
 #' @param envir Environment to evaluate \code{expr} in. Data columns
 #'   take precedence; \code{envir} provides fallback bindings.
-#' @param on_error One of \code{"warn"} or \code{"stop"}. Governs an
-#'   EVALUATION failure only -- an error raised while running the
-#'   expression, which can be transient (an object not created yet).
-#'   \code{"warn"} emits a warning and returns the data unchanged -- used
-#'   for the persistent jsubset state. \code{"stop"} raises an error --
-#'   used for the per-call \code{subset =} argument, where a broken
-#'   expression is a user error at call time. A SHAPE failure ignores this
-#'   split and always stops (Session 288, decision 1).
-#' @param stage_label Character. Prefix used in the evaluation-failure
-#'   message (e.g. \code{"jsubset"} or \code{"Subset"}) so failures are
-#'   attributable to the right pipeline stage.
 #' @param origin One of \code{"stored"} or \code{"call"}; selects the
-#'   shape-error wording. Passed explicitly rather than inferred from
-#'   \code{on_error} or \code{stage_label}.
-#' @param expr_str Character. The deparsed expression, echoed in the shape
-#'   error.
+#'   wording of every refusal.
+#' @param expr_str Character. The deparsed expression, echoed in the
+#'   refusals.
 #' @param data_name Character. The data frame's name; the stored-filter
-#'   shape error builds its exits from it.
+#'   errors build their exits from it.
+#' @param n_frame Integer or NULL. The frame's row count before the
+#'   pipeline's filters, for the per-call recycling stop.
 #'
 #' @return The data frame filtered to rows where \code{expr} evaluates
 #'   to \code{TRUE} (\code{NA} treated as \code{FALSE}).
 #'
 #' @keywords internal
-.jst_apply_mask <- function(data, expr, envir, on_error, stage_label,
-                            origin, expr_str, data_name = NULL) {
-  on_error <- match.arg(on_error, c("warn", "stop"))
-  origin   <- match.arg(origin, c("stored", "call"))
-  mask <- tryCatch(
-    eval(expr, data, envir),
-    error = function(e) {
-      msg <- paste0(stage_label, " expression could not be evaluated: ",
-                    conditionMessage(e))
-      if (on_error == "warn") {
-        .jst_warn(msg)
-        rep(TRUE, nrow(data))
-      } else {
-        .jst_stop(msg)
-      }
-    }
-  )
-  # Shape check BEFORE the NA-to-FALSE line: on a non-logical result that
-  # line is where the cryptic haven/vctrs error used to surface (S284 face
-  # (b)), and on a numeric result the indexing below would have read row
-  # positions (S289). The check stops whatever on_error says.
-  .jst_check_mask_shape(mask, nrow(data), expr, expr_str, origin,
-                        data_name = data_name)
+.jst_apply_mask <- function(data, expr, envir, origin, expr_str,
+                            data_name = NULL, n_frame = NULL) {
+  origin <- match.arg(origin, c("stored", "call"))
+  mask <- .jst_filter_mask(expr, expr_str, data, envir, origin,
+                           data_name = data_name, n_frame = n_frame)
   # A case whose condition evaluates to NA is dropped, as R's subset() does.
   # The count is taken here, before the NA-to-FALSE line erases it, and
   # handed back on the result as the "jst_mask_na" attribute for the Case
@@ -396,27 +575,28 @@
   if (!is.null(cs)) {
     if (cs$active) {
       complete_active <- TRUE
-      valid_vars <- cs$vars[cs$vars %in% names(data)]
-      complete_vars <- valid_vars
-      # A stored setting can outlive its columns: one dropped or renamed
+      # A stored setting can outlive its variables: one dropped or renamed
       # after jcomplete() was set, or the name reassigned to a frame without
-      # it. Step 1 kept the names still present and skipped the rest without
-      # a word (the CPS row read 0 when none was left), where Step 2 warns
-      # for a stored jsubset() in the same state. Say so (S318).
-      gone_vars <- setdiff(cs$vars, valid_vars)
+      # it. Until S318 Step 1 kept the names still present and skipped the
+      # rest without a word; from S318 it warned, and applied the rest. It
+      # STOPS since S330 (Jeff's ruling, with the stored jsubset() below):
+      # the warning repeated identically on every call and was scrolled
+      # past, while the analysis ran on cases the setting was meant to
+      # remove.
+      gone_vars <- setdiff(cs$vars, names(data))
       if (length(gone_vars) > 0L) {
-        .jst_warn(
-          "The jcomplete setting for the ", data_name, " data frame names ",
+        .jst_stop(
+          "the jcomplete setting for the ", data_name, " data frame names ",
           .jst_format_var_list(gone_vars, and = TRUE),
-          ", which the data frame no longer has, so no cases were removed ",
-          "for ", if (length(gone_vars) == 1L) "it" else "them", ".\n",
+          ", which the data frame no longer has.\n",
           "Run jcomplete() again with the current variable names, or clear ",
           "the setting:\n",
           "  jcomplete(", data_name, ", NULL)"
         )
       }
-      if (length(valid_vars) > 0) {
-        complete_mask    <- stats::complete.cases(data[, valid_vars, drop = FALSE])
+      complete_vars <- cs$vars
+      if (length(complete_vars) > 0) {
+        complete_mask    <- stats::complete.cases(data[, complete_vars, drop = FALSE])
         data             <- data[complete_mask, , drop = FALSE]
         n_after_complete <- nrow(data)
       } else {
@@ -439,11 +619,9 @@
       filter_active   <- TRUE
       filter_expr_str <- fs$expr_str
       data            <- .jst_apply_mask(data, fs$expr, envir,
-                                         on_error    = "warn",
-                                         stage_label = "jsubset",
-                                         origin      = "stored",
-                                         expr_str    = fs$expr_str,
-                                         data_name   = data_name)
+                                         origin    = "stored",
+                                         expr_str  = fs$expr_str,
+                                         data_name = data_name)
       filter_na_n     <- attr(data, "jst_mask_na", exact = TRUE)
       attr(data, "jst_mask_na") <- NULL
       n_after_filter  <- nrow(data)
@@ -475,11 +653,10 @@
     .jst_check_condition_frames(subset_expr, subset_expr_str, data, envir,
                                 origin = "call", data_name = data_name)
     data           <- .jst_apply_mask(data, subset_expr, envir,
-                                      on_error    = "stop",
-                                      stage_label = "Subset",
-                                      origin      = "call",
-                                      expr_str    = subset_expr_str,
-                                      data_name   = data_name)
+                                      origin    = "call",
+                                      expr_str  = subset_expr_str,
+                                      data_name = data_name,
+                                      n_frame   = n_original)
     subset_na_n    <- attr(data, "jst_mask_na", exact = TRUE)
     attr(data, "jst_mask_na") <- NULL
     n_after_subset <- nrow(data)

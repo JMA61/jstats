@@ -551,6 +551,18 @@
   # -- Case 5: bare symbol that didn't evaluate (or non-data-frame value
   #            when accept_vector = FALSE). Treat as a variable name. -------
   if (is.null(default_name)) {
+    # A condition or computed value naming a data frame, typed where the
+    # frame goes (Session 330, the S324 item): jsubset(d$Age > 40) with no
+    # juse() default. It is not a name that was "not found", and the call
+    # this branch suggests, jsubset(MyData, d$Age > 40), would be refused
+    # for naming d. With a default set the same input reaches jsubset()'s
+    # own S323 refusal; this is that refusal with the frame first. A plain
+    # frame$column was dealt with above (.jst_frame_column()).
+    frames <- .jst_frame_refs(data_sub, character(0), envir)
+    if (length(frames) > 0L) {
+      .jst_frame_first_stop(data_sub, frames, fn_name,
+                            cl = sys.call(sys.parent()), envir = envir)
+    }
     data_str <- paste(deparse(data_sub), collapse = "")
     .jst_stop(
       "'", data_str, "' not found. Did you mean to use it as a variable name?\n",
@@ -562,6 +574,45 @@
   list(mode = "symbol_with_default",
        data = resolved$data, name = resolved$name,
        first_arg_sub = data_sub, first_arg_value = NULL)
+}
+
+#' Internal helper: refuse an expression naming a data frame where the frame goes
+#'
+#' The resolver's stop for a first argument that is neither a data frame nor
+#' a plain \code{frame$column} but names a data frame, with no
+#' \code{juse()} default to fall back on: \code{jsubset(d$Age > 40)}
+#' (Session 330; the S324 item). Case 5 called it "not found" and suggested
+#' a call that names the frame twice. When the function is \code{jsubset()},
+#' the expression is the call's only argument, one frame is named and every
+#' reference to it rewrites to a variable the frame has, the fix line is the
+#' call with the frame first and the variables on their own; otherwise the
+#' sentence is given without a call.
+#'
+#' @param data_sub The substituted first argument.
+#' @param frames Character; the data frames it names
+#'   (\code{.jst_frame_refs()}).
+#' @param fn_name Character; the user-facing function's name.
+#' @param cl The caller's call, as typed.
+#' @param envir The caller's environment.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_frame_first_stop <- function(data_sub, frames, fn_name, cl, envir) {
+  typed <- .jst_term_text(data_sub)
+  fr    <- frames[1L]
+  head  <- paste0(typed, " names the ", fr, " data frame.\n")
+  s     <- .jst_strip_frame_refs(data_sub, frames)
+  what  <- if (length(s$cols) == 1L) "the variable" else "each variable"
+  frame <- tryCatch(get(fr, envir = envir), error = function(e) NULL)
+  if (identical(fn_name, "jsubset") && is.call(cl) && length(cl) == 2L &&
+      length(frames) == 1L && s$clean && !s$summary &&
+      is.data.frame(frame) && all(s$cols %in% names(frame))) {
+    .jst_stop(head, "Name the data frame first, and ", what,
+              " on its own:\n",
+              "  jsubset(", fr, ", ", .jst_term_text(s$expr), ")",
+              fn = fn_name)
+  }
+  .jst_stop(head, "Name the data frame first, and each variable on its own.",
+            fn = fn_name)
 }
 
 #' Internal helper: a first argument typed as a data frame's column

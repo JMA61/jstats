@@ -21,8 +21,9 @@ fallback the resolver uses.}
 Invisibly NULL; stops when a data frame is named.
 }
 \description{
-The one exception to \code{lm()} parity (the S322 ruling, built in Session
-323). \code{lm()} accepts \code{d$Flourishing ~ d$Income}; jstats does
+One of the two exceptions to \code{lm()} parity (the S322 ruling, built in
+Session 323; the other is the recycling stop of Session 324,
+\code{.jst_formula_recycled()}). \code{lm()} accepts \code{d$Flourishing ~ d$Income}; jstats does
 not, because the transform resolver evaluates each term with the analysis
 copy as data and the formula's environment as enclosure, so
 \code{d$Income} would be read from the user's RAW frame -- declared

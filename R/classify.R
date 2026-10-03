@@ -1075,8 +1075,9 @@
 
 #' Internal helper: refuse a data frame named inside a formula term
 #'
-#' The one exception to \code{lm()} parity (the S322 ruling, built in Session
-#' 323). \code{lm()} accepts \code{d$Flourishing ~ d$Income}; jstats does
+#' One of the two exceptions to \code{lm()} parity (the S322 ruling, built in
+#' Session 323; the other is the recycling stop of Session 324,
+#' \code{.jst_formula_recycled()}). \code{lm()} accepts \code{d$Flourishing ~ d$Income}; jstats does
 #' not, because the transform resolver evaluates each term with the analysis
 #' copy as data and the formula's environment as enclosure, so
 #' \code{d$Income} would be read from the user's RAW frame -- declared
@@ -1274,16 +1275,12 @@
   found
 }
 
-#' Internal helper: find a workspace vector that a computed term recycles
+#' Internal helper: find a workspace vector that an expression recycles
 #'
-#' A name inside a computed term that is not a variable resolves in the
-#' formula's environment (the S322 constant rule), and nothing checked its
-#' length: with \code{v <- c(1, 2, 3)}, \code{I(Stress * v)} fitted on R's
-#' recycled \code{1, 2, 3, 1, 2, 3, ...} behind its "longer object length"
-#' warning -- with no warning at all when the row count divides by the
-#' length -- and \code{lm()} does the same (Session 324, the S323 item). This
-#' walks each computed term of the formula, both sides, and returns the first
-#' operand of an element-wise operation -- arithmetic, a comparison,
+#' The walker behind \code{.jst_formula_recycled()} (a formula's computed
+#' terms, Session 324) and \code{.jst_filter_mask()} (a filter condition,
+#' Session 330). It walks each expression in \code{terms} and returns the
+#' first operand of an element-wise operation -- arithmetic, a comparison,
 #' \code{&}, \code{|} or \code{!}, or an argument of \code{ifelse()},
 #' \code{pmin()} or \code{pmax()} -- that reads no variable of the data and
 #' holds more than one value but not one per row of \code{data}. A single
@@ -1294,20 +1291,18 @@
 #' An operand is looked up, never run: a name, an element reached with
 #' \code{$}, \code{[[} or \code{@}, and \code{c()} or \code{:} over names and
 #' numbers are evaluated, because doing so has no side effect; any other call
-#' (\code{rnorm(70)}, \code{rev(w)}) is left to the resolver's own checks, so
+#' (\code{rnorm(70)}, \code{rev(w)}) is left to the caller's own checks, so
 #' the check never draws a random number or runs the user's code twice.
 #'
-#' @param formula The analysis formula as typed.
-#' @param data The analysis data frame, after the pipeline's filters.
-#' @param enclos The environment the formula's other names resolve in.
+#' @param terms A list of language objects: a formula's variables, or a
+#'   single filter condition. Anything that is not a call is skipped.
+#' @param data The data frame the expressions are evaluated against.
+#' @param enclos The environment the expressions' other names resolve in.
 #' @return NULL when there is none; otherwise a list of \code{term} (the
-#'   computed term) and \code{operand} (the operand as written), both
-#'   language objects, and \code{n} (the operand's number of values).
+#'   expression holding it) and \code{operand} (the operand as written),
+#'   both language objects, and \code{n} (the operand's number of values).
 #' @keywords internal
-.jst_formula_recycled <- function(formula, data, enclos) {
-  vars <- tryCatch(attr(stats::terms(formula), "variables"),
-                   error = function(e) NULL)
-  if (is.null(vars)) return(NULL)
+.jst_recycled_operand <- function(terms, data, enclos) {
   n_rows <- nrow(data)
   ops    <- c("+", "-", "*", "/", "^", "%%", "%/%", "==", "!=", "<", ">",
               "<=", ">=", "&", "|", "!", "ifelse", "pmin", "pmax")
@@ -1366,11 +1361,87 @@
     }
     invisible(NULL)
   }
-  for (v in as.list(vars)[-1L]) {
+  for (v in terms) {
     if (is.call(v)) walk(v, v)
     if (!is.null(found)) break
   }
   found
+}
+
+#' Internal helper: find a workspace vector that a computed term recycles
+#'
+#' A name inside a computed term that is not a variable resolves in the
+#' formula's environment (the S322 constant rule), and nothing checked its
+#' length: with \code{v <- c(1, 2, 3)}, \code{I(Stress * v)} fitted on R's
+#' recycled \code{1, 2, 3, 1, 2, 3, ...} behind its "longer object length"
+#' warning -- with no warning at all when the row count divides by the
+#' length -- and \code{lm()} does the same (Session 324, the S323 item). This
+#' hands each computed term of the formula, both sides, to
+#' \code{.jst_recycled_operand()}, which says what counts as recycled.
+#'
+#' @param formula The analysis formula as typed.
+#' @param data The analysis data frame, after the pipeline's filters.
+#' @param enclos The environment the formula's other names resolve in.
+#' @return NULL when there is none; otherwise the
+#'   \code{.jst_recycled_operand()} result.
+#' @keywords internal
+.jst_formula_recycled <- function(formula, data, enclos) {
+  vars <- tryCatch(attr(stats::terms(formula), "variables"),
+                   error = function(e) NULL)
+  if (is.null(vars)) return(NULL)
+  .jst_recycled_operand(as.list(vars)[-1L], data, enclos)
+}
+
+#' Internal helper: stop for a workspace vector that would be recycled
+#'
+#' The message for a \code{.jst_recycled_operand()} finding, shared by the
+#' formula front door (Session 324) and a filter condition typed in this
+#' call -- \code{jsubset()} at set time and \code{subset =} (Session 330).
+#' A vector with one value per row of the frame as given, which a filter has
+#' since cut down, gets the fix of adding it to the frame, where the filter
+#' reaches it; any other length gets the requirement. A stored filter has
+#' its own form, in \code{.jst_filter_mask()}.
+#'
+#' @param rec The \code{.jst_recycled_operand()} result.
+#' @param typed Character; what the user typed that holds the operand: the
+#'   computed term, the condition, or \code{subset = } and the condition.
+#' @param n_rows Integer; rows of the data the expression is evaluated on.
+#' @param data_name Character or NULL; the data frame's name.
+#' @param n_frame Integer or NULL; the frame's row count before the
+#'   pipeline's filters. NULL is read as \code{n_rows}.
+#' @param tail Character; appended after the fix line (the set-time
+#'   "earlier filter is unchanged" line).
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_recycled_stop <- function(rec, typed, n_rows, data_name = NULL,
+                               n_frame = NULL, tail = "") {
+  if (is.null(n_frame)) n_frame <- n_rows
+  op   <- .jst_term_text(rec$operand)
+  lead <- paste0("In ", typed, ", ", op, " has ", rec$n, " values")
+  cases <- function(k) paste0(k, if (k == 1L) " case" else " cases")
+  frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
+    paste0("the ", data_name, " data frame")
+  } else {
+    "the data frame"
+  }
+  if (rec$n == n_frame && n_frame != n_rows) {
+    fix <- if (is.symbol(rec$operand) && !is.null(data_name) &&
+               identical(make.names(data_name), data_name)) {
+      paste0(":\n  ", data_name, "$", op, " <- ", op)
+    } else {
+      "."
+    }
+    .jst_stop(lead, ", one for each case in ", frame_ref,
+              ", but filtering leaves ", n_rows, ".\n",
+              "Add ", op, " to ", frame_ref, " as a variable", fix, tail)
+  }
+  where <- if (n_frame != n_rows) {
+    paste0("the ", cases(n_rows), " left after filtering")
+  } else {
+    paste0("the ", cases(n_rows), " in ", frame_ref)
+  }
+  .jst_stop(lead, " for ", where, ".\n",
+            "Use a single value, or one value for each case.", tail)
 }
 
 #' Internal helper: check a model formula's names as lm() reads them
@@ -1446,35 +1517,8 @@
   # A workspace vector recycled inside a computed term (Session 324).
   rec <- .jst_formula_recycled(formula, data, enclos)
   if (!is.null(rec)) {
-    n_rows <- nrow(data)
-    if (is.null(n_frame)) n_frame <- n_rows
-    op   <- .jst_term_text(rec$operand)
-    lead <- paste0("In ", .jst_term_text(rec$term), ", ", op, " has ", rec$n,
-                   " values")
-    cases <- function(k) paste0(k, if (k == 1L) " case" else " cases")
-    frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
-      paste0("the ", data_name, " data frame")
-    } else {
-      "the data frame"
-    }
-    if (rec$n == n_frame && n_frame != n_rows) {
-      fix <- if (is.symbol(rec$operand) && !is.null(data_name) &&
-                 identical(make.names(data_name), data_name)) {
-        paste0(":\n  ", data_name, "$", op, " <- ", op)
-      } else {
-        "."
-      }
-      .jst_stop(lead, ", one for each case in ", frame_ref,
-                ", but filtering leaves ", n_rows, ".\n",
-                "Add ", op, " to ", frame_ref, " as a variable", fix)
-    }
-    where <- if (n_frame != n_rows) {
-      paste0("the ", cases(n_rows), " left after filtering")
-    } else {
-      paste0("the ", cases(n_rows), " in ", frame_ref)
-    }
-    .jst_stop(lead, " for ", where, ".\n",
-              "Use a single value, or one value for each case.")
+    .jst_recycled_stop(rec, .jst_term_text(rec$term), nrow(data), data_name,
+                       n_frame = n_frame)
   }
 
   keep <- character(0)

@@ -14,9 +14,8 @@
 \item{enclos}{The environment the formula's other names resolve in.}
 }
 \value{
-NULL when there is none; otherwise a list of \code{term} (the
-computed term) and \code{operand} (the operand as written), both
-language objects, and \code{n} (the operand's number of values).
+NULL when there is none; otherwise the
+\code{.jst_recycled_operand()} result.
 }
 \description{
 A name inside a computed term that is not a variable resolves in the
@@ -25,20 +24,7 @@ length: with \code{v <- c(1, 2, 3)}, \code{I(Stress * v)} fitted on R's
 recycled \code{1, 2, 3, 1, 2, 3, ...} behind its "longer object length"
 warning -- with no warning at all when the row count divides by the
 length -- and \code{lm()} does the same (Session 324, the S323 item). This
-walks each computed term of the formula, both sides, and returns the first
-operand of an element-wise operation -- arithmetic, a comparison,
-\code{&}, \code{|} or \code{!}, or an argument of \code{ifelse()},
-\code{pmin()} or \code{pmax()} -- that reads no variable of the data and
-holds more than one value but not one per row of \code{data}. A single
-value passes (the constant rule), and so does anything not combined value
-by value: a set used with \code{\%in\%}, a lookup indexed by a variable
-(\code{w[Group]}), a summary (\code{max(w)}).
-}
-\details{
-An operand is looked up, never run: a name, an element reached with
-\code{$}, \code{[[} or \code{@}, and \code{c()} or \code{:} over names and
-numbers are evaluated, because doing so has no side effect; any other call
-(\code{rnorm(70)}, \code{rev(w)}) is left to the resolver's own checks, so
-the check never draws a random number or runs the user's code twice.
+hands each computed term of the formula, both sides, to
+\code{.jst_recycled_operand()}, which says what counts as recycled.
 }
 \keyword{internal}

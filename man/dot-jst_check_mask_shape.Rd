@@ -51,8 +51,9 @@ of the data frame it is applied to. Anything else -- a single value,
 numbers, text, an empty result, or the wrong number of values -- cannot
 select rows and is refused with a guided error. ALWAYS stops: a
 wrong-shaped result is deterministic (it fails identically on every
-call), so there is no warn-and-continue variant, whatever the caller's
-\code{on_error} says (Session 288, decision 1). Refusing a single value
+call), so there is no warn-and-continue variant (Session 288, decision
+1; since Session 330 an evaluation failure stops as well, in
+\code{.jst_filter_mask()}). Refusing a single value
 is deliberate: TRUE / FALSE / T / F would mean "keep every row", but a
 single value is also the shape of \code{mean(Score) > 5}, \code{any(...)}
 and \code{nrow(...)} inside a filter -- a likely error reaching for a

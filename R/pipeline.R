@@ -131,18 +131,27 @@ juse <- function(data) {
 #' dataset. \code{jsubset()} runs it once when set and refuses anything
 #' else -- a single value (\code{TRUE}, or an aggregate such as
 #' \code{mean(Score) > 5}), numbers, text, or the wrong number of values --
-#' with an error that shows a corrected form. The same check runs when the
-#' filter is applied, so a filter that was valid when set but has since
-#' stopped matching the dataset stops the analysis rather than running on
-#' the wrong rows; that error names both ways out.
+#' with an error that shows a corrected form. A filter that cannot be run
+#' at all is refused in the same way, and nothing is stored: one that names
+#' a variable or an object that is not found (a misspelled variable is the
+#' usual cause), and one that stops with an error of R's own, which is
+#' reported. Everything the filter names must therefore exist when
+#' \code{jsubset()} is called. The same checks run when the filter is
+#' applied, so a filter that was valid when set but can no longer be
+#' applied -- a variable or an object it names has been removed, or it has
+#' stopped matching the dataset -- stops the analysis rather than running
+#' on the wrong rows; that error names both ways out,
+#' \code{jsubset(d, off)} and \code{jsubset(d, NULL)}.
 #'
 #' A filter normally names only columns of the data frame, and such a
 #' filter can never fall out of step with the data. A filter may also
 #' refer to an object in your workspace, such as a cutoff
 #' (\code{Age < cutoff}) or a set of codes (\code{Region \%in\% keep_regions}).
-#' If you compute a keep/drop indicator separately, add it to the data
-#' frame as a column and filter on that column
-#' (\code{clinic$Keep <- clinic$Stress > 3}, then
+#' An object compared with a variable value by value must hold a single
+#' value or one value for every row; any other length is refused, where R
+#' would repeat the shorter one. If you compute a keep/drop indicator
+#' separately, add it to the data frame as a column and filter on that
+#' column (\code{clinic$Keep <- clinic$Stress > 3}, then
 #' \code{jsubset(clinic, Keep == TRUE)}). A separate object holding one
 #' value per row stops matching the data frame if rows are later added or
 #' removed, and every analysis of that data frame then stops until the
@@ -448,28 +457,20 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 
   # -- Dry run: refuse a filter that cannot select rows ---------------------
   # Run the expression once against the resolved frame (S288 decision 3).
-  # STRICT on shape, SILENT on evaluation failure: an expression may
-  # legitimately name an object that does not exist yet, so an error here
-  # stores the filter as before and leaves the apply-time check to catch it
-  # if it is still wrong when used. Warnings and messages raised by the
-  # evaluation are muffled rather than caught -- a handler that caught them
-  # would abandon the evaluation and skip the shape check.
+  # STRICT on shape and, since S330, on evaluation too. The S288 detail was
+  # "silent on evaluation failure" -- an expression may name an object that
+  # does not exist yet -- and it stored jsubset(d, Agee > 30) as
+  # "activated", after which every analysis warned and ran on every row.
+  # Jeff reversed it at S329: a filter is checked when set, as jcomplete()
+  # checks its variables. .jst_filter_mask() runs the filter and words each
+  # refusal; nothing is stored unless it returns.
   expr_str <- deparse(filter_raw, width.cutoff = 500)
   prior <- .jst_get_filter(target_name)
-  dry <- tryCatch(
-    list(ok = TRUE, mask = withCallingHandlers(
-      eval(filter_raw, arg1$data, parent.frame()),
-      warning = function(w) invokeRestart("muffleWarning"),
-      message = function(m) invokeRestart("muffleMessage"))),
-    error = function(e) list(ok = FALSE, mask = NULL)
-  )
-  if (isTRUE(dry$ok)) {
-    .jst_check_mask_shape(dry$mask, nrow(arg1$data), filter_raw, expr_str,
-                          origin      = "set",
-                          data_name   = target_name,
-                          named_frame = identical(arg1$mode, "explicit"),
-                          prior       = !is.null(prior))
-  }
+  .jst_filter_mask(filter_raw, expr_str, arg1$data, caller_env,
+                   origin      = "set",
+                   data_name   = target_name,
+                   named_frame = identical(arg1$mode, "explicit"),
+                   prior       = !is.null(prior))
 
   # -- Set and activate the expression --------------------------------------
   .jst_set_filter(target_name, list(
@@ -786,9 +787,9 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' FILTER convention.
 #'
 #' If a variable in the setting is later dropped from the dataset or
-#' renamed, each analysis warns and applies the setting to the variables
-#' that remain; run \code{jcomplete()} again with the current names, or
-#' clear the setting.
+#' renamed, each analysis of that dataset stops, naming the variable, until
+#' \code{jcomplete()} is run again with the current names or the setting is
+#' cleared.
 #'
 #' @param data A data frame. If omitted, uses the default set by
 #'   \code{juse()}. Instead of variable names, the call may carry one of
