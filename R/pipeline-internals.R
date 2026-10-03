@@ -34,6 +34,16 @@
 #'     gained or lost rows), and it re-runs on every analysis of that frame
 #'     until dealt with -- so the fix is BOTH exits, each naming the frame:
 #'     set aside (off, which keeps the text) first, delete (NULL) second.}
+#'   \item{\code{"reactivate"}}{the same stored filter checked by
+#'     \code{jsubset(d, on)} before it is turned back on (Session 331). The
+#'     stored wording, ending on \code{.jst_filter_exits()}'s reactivation
+#'     form: the filter is off already, so the message says it stays off and
+#'     gives the delete exit alone.}
+#'   \item{\code{"status"}}{the same stored filter checked for the status
+#'     display (\code{jsubset()} with no arguments, Session 331). Nothing
+#'     stops: the finding is handed back through
+#'     \code{.jst_filter_status_signal()} as the status line "It cannot be
+#'     applied: it has 12 values for 11 rows."}
 #' }
 #'
 #' @param mask The evaluated filter result.
@@ -43,9 +53,11 @@
 #' @param expr_str Character. The deparsed filter, echoed as the subject of
 #'   the message's first line (that echo is what locates the call in a
 #'   sourced script, where \code{call. = FALSE} shows no call).
-#' @param origin One of \code{"set"}, \code{"call"}, \code{"stored"}.
+#' @param origin One of \code{"set"}, \code{"call"}, \code{"stored"},
+#'   \code{"reactivate"}, \code{"status"}.
 #' @param data_name Character. The data frame's name. Required for
-#'   \code{"stored"} (the exits are built from it); used by \code{"set"} to
+#'   \code{"stored"} and \code{"reactivate"} (the exits are built from it);
+#'   used by \code{"set"} to
 #'   name the frame in the unchanged-filter line and the quoted-keyword fix.
 #' @param named_frame Logical. For \code{"set"}: whether the user named the
 #'   frame in the call, so the quoted-keyword fix echoes that form.
@@ -61,7 +73,8 @@
 .jst_check_mask_shape <- function(mask, n_rows, expr, expr_str, origin,
                                   data_name = NULL, named_frame = FALSE,
                                   prior = FALSE) {
-  origin <- match.arg(origin, c("set", "call", "stored"))
+  origin <- match.arg(origin, c("set", "call", "stored", "reactivate",
+                                "status"))
 
   # -- What did the filter give? --------------------------------------------
   # Order matters: an empty result first (any type), then kind, then count.
@@ -99,15 +112,15 @@
     NULL
   }
 
-  if (origin == "stored") {
+  if (origin == "status") {
+    .jst_filter_status_signal(paste0("It cannot be applied: it ", what, "."))
+  }
+  if (origin %in% c("stored", "reactivate")) {
     .jst_stop(
       "the jsubset filter for the ", data_name, " data frame, ", expr_str,
       ", ", what, ".\n",
       "A filter must give one TRUE or FALSE for every row.\n",
-      "To set it aside, run:\n",
-      "  jsubset(", data_name, ", off)\n",
-      "To delete it, run:\n",
-      "  jsubset(", data_name, ", NULL)"
+      .jst_filter_exits(data_name, origin)
     )
   }
 
@@ -175,6 +188,124 @@
     expr_str, " ", what, ", not one TRUE or FALSE for every row.\n",
     fix, unchanged
   )
+}
+
+#' Internal helper: the closing lines of a stored filter's stop
+#'
+#' One builder for the way out of every stop a stored \code{jsubset()}
+#' filter raises (\code{.jst_check_mask_shape()}, \code{.jst_filter_mask()}),
+#' so the forms cannot drift. At analysis time (\code{"stored"}) the filter
+#' is active and re-runs on every analysis of its frame, so both exits are
+#' given, set aside first. When \code{jsubset(d, on)} refuses to turn a
+#' filter back on (\code{"reactivate"}, Session 331) the filter is off
+#' already: "set it aside" would name the state it is in, so the message
+#' says the filter stays off and gives the delete exit alone.
+#'
+#' @param data_name Character. The data frame's name.
+#' @param origin \code{"stored"} or \code{"reactivate"}.
+#' @return A character string: the message's closing lines.
+#' @keywords internal
+.jst_filter_exits <- function(data_name, origin = c("stored", "reactivate")) {
+  origin <- match.arg(origin)
+  delete <- paste0("To delete it, run:\n",
+                   "  jsubset(", data_name, ", NULL)")
+  if (origin == "reactivate") {
+    return(paste0("The filter stays off.\n", delete))
+  }
+  paste0("To set it aside, run:\n",
+         "  jsubset(", data_name, ", off)\n",
+         delete)
+}
+
+#' Internal helper: hand a stored filter's fault back to the status display
+#'
+#' The status displays (\code{jsubset()} with no arguments) run each stored
+#' filter through \code{.jst_filter_mask(origin = "status")} to say whether
+#' it can still be applied. A status display must not stop, so where the
+#' analysis-time origin would call \code{.jst_stop()} this signals a
+#' condition of class \code{jst_filter_unusable} whose message is the status
+#' line -- "It cannot be applied: keep12 no longer exists." -- and the
+#' display catches exactly that class. Never reaches the user as an error.
+#'
+#' @param text Character. The status line.
+#' @return Does not return.
+#' @keywords internal
+.jst_filter_status_signal <- function(text) {
+  stop(structure(class = c("jst_filter_unusable", "error", "condition"),
+                 list(message = text, call = NULL)))
+}
+
+#' Internal helper: a workspace vector holding one value per case of the frame
+#'
+#' Finds, in a filter condition, a workspace vector that holds one value for
+#' each case of the data frame AS GIVEN when the condition is about to run
+#' on fewer cases: behind an active \code{jcomplete()} (a stored
+#' \code{jsubset()} filter), or behind either stored setting (a per-call
+#' \code{subset =}). Such a vector lines up with the frame the user sees and
+#' with nothing the condition is evaluated on, and until Session 331 only
+#' the comparison of one with a labelled variable said so (the Session 330
+#' add-it-to-the-frame form, reached when the evaluation fails): compared
+#' with a plain variable, or with a constant (\code{keep12 == TRUE}), the
+#' result is simply too long, and the shape check answered "has 12 values
+#' for 11 rows" for a frame the user had removed nothing from. Asked BEFORE
+#' the evaluation, so every such condition gets the one message. The
+#' operand is looked up, never run (\code{.jst_recycled_operand()}'s rule);
+#' a bare name as the whole condition, which that walker does not visit, is
+#' looked up here.
+#'
+#' @param expr The unevaluated filter.
+#' @param data The data the filter is about to be evaluated on.
+#' @param envir The environment its other names resolve in.
+#' @param n_frame Integer or NULL. The frame's row count as given.
+#' @return NULL when the data has not been cut or there is no such vector;
+#'   otherwise a \code{.jst_recycled_operand()}-shaped list.
+#' @keywords internal
+.jst_frame_vector <- function(expr, data, envir, n_frame) {
+  if (is.null(n_frame) || n_frame == nrow(data)) return(NULL)
+  rec <- if (is.symbol(expr)) {
+    if (as.character(expr) %in% names(data)) {
+      NULL
+    } else {
+      val <- tryCatch(eval(expr, envir), error = function(e) NULL)
+      if (!is.null(val) && is.atomic(val) && length(val) > 1L) {
+        list(term = expr, operand = expr, n = length(val))
+      } else {
+        NULL
+      }
+    }
+  } else {
+    .jst_recycled_operand(list(expr), data, envir)
+  }
+  if (is.null(rec) || rec$n != n_frame) return(NULL)
+  rec
+}
+
+#' Internal helper: rows of a frame an active jcomplete() setting keeps
+#'
+#' The cases Step 1 of \code{.jst_apply_pipeline()} hands to a stored
+#' \code{jsubset()} filter: those an ACTIVE \code{jcomplete()} setting
+#' keeps, a declared missing value counting as missing (the setting's
+#' variables are masked for the test, as \code{jcomplete()}'s own count
+#' masks them; the rows returned are the frame's own). Used where a stored
+#' filter is checked outside an analysis -- when set, at
+#' \code{jsubset(d, on)}, and for the status display (Session 331) -- so
+#' the check sees as many cases as the analysis will. Returns the frame
+#' untouched when there is no active setting, or when the setting names a
+#' variable the frame no longer has (the analysis stops on that first).
+#'
+#' @param data The data frame.
+#' @param data_name Character. Its name, the registry key.
+#' @return A data frame.
+#' @keywords internal
+.jst_complete_kept <- function(data, data_name) {
+  cs <- .jst_get_complete(data_name)
+  if (is.null(cs) || !isTRUE(cs$active) || length(cs$vars) == 0L ||
+      length(setdiff(cs$vars, names(data))) > 0L) {
+    return(data)
+  }
+  masked <- .jst_apply_declared_udms_as_na(
+    data[, cs$vars, drop = FALSE])$data
+  data[stats::complete.cases(masked), , drop = FALSE]
 }
 
 #' Internal helper: the names a filter reads that are found nowhere
@@ -262,30 +393,74 @@
 #' "no longer exists" for a stored filter, which the set-time check makes
 #' true. The per-call evaluation message is the one it has always been.
 #'
+#' A fourth origin, \code{"reactivate"} (Session 331), is the stored filter
+#' checked by \code{jsubset(d, on)} before it is turned back on. Until then
+#' \code{on} set the filter active unchecked: "jsubset reactivated" printed
+#' for a filter that could no longer run, and the next analysis stopped. It
+#' takes the stored wording with \code{.jst_filter_exits()}'s reactivation
+#' close ("The filter stays off." and the delete exit), and, as at set time,
+#' nothing is analyzed, so warnings and messages from the filter are dropped
+#' (\code{quiet = TRUE}).
+#' A fifth, \code{"status"}, is the same check made for the status display:
+#' it never stops, and hands the reason back as the line "It cannot be
+#' applied: ..." (\code{.jst_filter_status_signal()}).
+#'
+#' Ahead of the evaluation, for every origin but \code{"set"}: a workspace
+#' vector holding one value per case of the frame as given, where the
+#' condition is about to run on fewer cases (\code{.jst_frame_vector()},
+#' Session 331) -- the add-it-to-the-frame fix. At set time the same test
+#' runs last, against \code{data_kept}.
+#'
 #' @param expr The unevaluated filter (a language object).
 #' @param expr_str Character. The filter as typed.
 #' @param data Data frame to evaluate it against.
 #' @param envir Environment the filter's other names resolve in.
-#' @param origin One of \code{"set"}, \code{"call"}, \code{"stored"}.
+#' @param origin One of \code{"set"}, \code{"call"}, \code{"stored"},
+#'   \code{"reactivate"}, \code{"status"}.
 #' @param data_name Character. The data frame's name.
 #' @param named_frame Logical. For \code{"set"}: the user named the frame in
 #'   the call; when FALSE the not-found message adds the juse() default
 #'   hint \code{.jst_check_vars()} gives.
 #' @param prior Logical. For \code{"set"}: an earlier filter exists for the
 #'   frame; the message says it is unchanged.
-#' @param n_frame Integer or NULL. For \code{"call"}: the frame's row count
-#'   before the pipeline's filters, which tells the recycling stop's two
-#'   forms apart.
+#' @param n_frame Integer or NULL. The frame's row count before the
+#'   pipeline's filters: it tells the recycling stop's two forms apart
+#'   (\code{"call"}), and lets a vector holding one value per case of the
+#'   frame as given be recognized when \code{data} has fewer cases
+#'   (\code{.jst_frame_vector()}; every origin but \code{"set"}).
+#' @param data_kept Data frame or NULL. For \code{"set"}: the frame as an
+#'   active \code{jcomplete()} will hand it to the filter
+#'   (\code{.jst_complete_kept()}); the same test, made once the filter has
+#'   passed on the frame as given.
+#' @param quiet Logical or NULL. Whether the filter's own warnings and
+#'   messages are dropped; NULL drops them at set time and for the status
+#'   display. \code{jsubset(d, on)} passes TRUE, for a filter that was off
+#'   (\code{"reactivate"}) and for one that was never off
+#'   (\code{"stored"}).
 #'
 #' @return The evaluated filter: one TRUE, FALSE or NA for every row.
 #'
 #' @keywords internal
 .jst_filter_mask <- function(expr, expr_str, data, envir,
-                             origin = c("set", "call", "stored"),
+                             origin = c("set", "call", "stored",
+                                        "reactivate", "status"),
                              data_name = NULL, named_frame = FALSE,
-                             prior = FALSE, n_frame = NULL) {
+                             prior = FALSE, n_frame = NULL,
+                             data_kept = NULL, quiet = NULL) {
   origin <- match.arg(origin)
   n_rows <- nrow(data)
+  # A stored filter -- at analysis time, at jsubset(d, on), or for the
+  # status display -- has one wording and three closes: both exits, "stays
+  # off" and the delete exit (.jst_filter_exits), or none (the status line).
+  # Nothing is analyzed at set time or for the status display, so there
+  # the filter's own warnings and messages are dropped; jsubset(d, on)
+  # asks for the same (quiet = TRUE), whichever stored form it uses.
+  is_stored <- origin %in% c("stored", "reactivate", "status")
+  is_quiet  <- if (is.null(quiet)) {
+    origin %in% c("set", "status")
+  } else {
+    isTRUE(quiet)
+  }
   unchanged <- if (origin == "set" && isTRUE(prior) && !is.null(data_name)) {
     paste0("\nYour earlier filter for the ", data_name,
            " data frame is unchanged.")
@@ -296,29 +471,53 @@
     paste0("the jsubset filter for the ", data_name, " data frame, ",
            expr_str, ", cannot be applied")
   }
-  exits <- function() {
-    paste0("To set it aside, run:\n",
-           "  jsubset(", data_name, ", off)\n",
-           "To delete it, run:\n",
-           "  jsubset(", data_name, ", NULL)")
+  # The stored family's stop: the lead, the reason after a colon (or none),
+  # any further lines, and the close. For the status display the same
+  # reason is handed back as a line of text, with no lead and no close.
+  stored_stop <- function(reason = NULL, detail = NULL,
+                          close = .jst_filter_exits(data_name, origin)) {
+    body <- paste0(if (!is.null(reason)) paste0(": ", reason), ".",
+                   if (!is.null(detail)) paste0("\n", detail))
+    if (origin == "status") {
+      .jst_filter_status_signal(paste0("It cannot be applied", body))
+    }
+    .jst_stop(stored_lead(), body, "\n", close)
+  }
+  typed <- if (origin == "call") paste0("subset = ", expr_str) else expr_str
+  # A workspace vector with one value per case of the frame as given, where
+  # the condition runs on fewer cases (S331): the add-it-to-the-frame fix.
+  frame_vector <- function(cut_data = data, n_given = n_frame) {
+    rec <- .jst_frame_vector(expr, cut_data, envir, n_given)
+    if (is.null(rec)) return(invisible(NULL))
+    cut_by <- if (origin == "call") "filtering" else "jcomplete()"
+    if (is_stored) {
+      parts <- .jst_frame_vector_parts(rec, nrow(cut_data), data_name, cut_by)
+      if (origin == "status") {
+        .jst_filter_status_signal(paste0("It cannot be applied: ",
+                                         parts$reason, "."))
+      }
+      .jst_stop(stored_lead(), ": ", parts$reason, ".\n",
+                if (origin == "reactivate") "The filter stays off.\n",
+                parts$fix)
+    }
+    .jst_recycled_stop(rec, typed, nrow(cut_data), data_name,
+                       n_frame = n_given, tail = unchanged, cut_by = cut_by)
   }
   recycled <- function() {
     rec <- .jst_recycled_operand(list(expr), data, envir)
     if (is.null(rec)) return(invisible(NULL))
-    if (origin == "stored") {
+    if (is_stored) {
       # "cases" always: with one case left a longer vector gives a longer
       # result, and the shape check answers before this is reached.
-      .jst_stop(stored_lead(), ": ", .jst_term_text(rec$operand), " has ",
-                rec$n, " values for ", n_rows, " cases.\n", exits())
+      stored_stop(paste0(.jst_term_text(rec$operand), " has ", rec$n,
+                         " values for ", n_rows, " cases"))
     }
-    .jst_recycled_stop(rec,
-                       if (origin == "call") paste0("subset = ", expr_str)
-                       else expr_str,
-                       n_rows, data_name,
+    .jst_recycled_stop(rec, typed, n_rows, data_name,
                        n_frame = if (origin == "call") n_frame else NULL,
                        tail = unchanged)
   }
 
+  frame_vector()
   held <- list()
   mask <- tryCatch(
     withCallingHandlers(
@@ -328,7 +527,7 @@
         invokeRestart("muffleWarning")
       },
       message = function(m) {
-        if (origin == "set") invokeRestart("muffleMessage")
+        if (is_quiet) invokeRestart("muffleMessage")
       }),
     error = function(e) {
       recycled()
@@ -341,17 +540,13 @@
       r_msg <- gsub("[[:space:]]+", " ", trimws(r_msg))
       gone  <- .jst_filter_unbound(expr, data, envir, r_msg)
       names_gone <- .jst_format_var_list(gone, and = TRUE)
-      if (origin == "stored") {
+      if (is_stored) {
         if (length(gone) > 0L) {
-          .jst_stop(stored_lead(), ": ", names_gone,
-                    if (length(gone) == 1L) " no longer exists.\n"
-                    else " no longer exist.\n",
-                    exits())
+          stored_stop(paste0(names_gone,
+                             if (length(gone) == 1L) " no longer exists"
+                             else " no longer exist"))
         }
-        .jst_stop(stored_lead(), ".\n",
-                  "R reported:\n",
-                  "  ", r_msg, "\n",
-                  exits())
+        stored_stop(detail = paste0("R reported:\n  ", r_msg))
       }
       # origin == "set"
       if (length(gone) > 0L) {
@@ -378,8 +573,48 @@
                         named_frame = named_frame,
                         prior       = prior)
   recycled()
-  if (origin != "set") for (w in held) warning(w)
+  # When set, the filter passed on the frame as given; an active
+  # jcomplete() will hand it fewer cases at every analysis (S331).
+  if (origin == "set" && !is.null(data_kept)) {
+    frame_vector(data_kept, n_rows)
+  }
+  if (!is_quiet) for (w in held) warning(w)
   mask
+}
+
+#' Internal helper: stop for a jcomplete setting naming absent variables
+#'
+#' A stored \code{jcomplete()} setting can outlive its variables: one
+#' dropped or renamed after the setting was made, or the frame's name
+#' reassigned to a frame without it. This is the one stop for that
+#' condition, raised wherever the setting is about to be used: Step 1 of
+#' \code{.jst_apply_pipeline()} (every analysis of the frame, since
+#' Session 330), and since Session 331 \code{jcomplete(d, on)} and the
+#' preview of an already-set filter (\code{jcomplete(preview = TRUE)},
+#' \code{console =}), which until then reactivated the setting unchecked
+#' and previewed the rows the REMAINING variables would drop. Does nothing
+#' when no variable is absent. At reactivation the setting is off, and the
+#' message says it stays off.
+#'
+#' @param data_name Character. The data frame's name.
+#' @param gone_vars Character vector: the setting's variables the frame no
+#'   longer has (empty: return without stopping).
+#' @param reactivate Logical. TRUE from \code{jcomplete(d, on)}: adds
+#'   "The setting stays off." after the first line.
+#' @return \code{invisible(NULL)} when \code{gone_vars} is empty; otherwise
+#'   stops via \code{.jst_stop()}.
+#' @keywords internal
+.jst_complete_gone_stop <- function(data_name, gone_vars, reactivate = FALSE) {
+  if (length(gone_vars) == 0L) return(invisible(NULL))
+  .jst_stop(
+    "the jcomplete setting for the ", data_name, " data frame names ",
+    .jst_format_var_list(gone_vars, and = TRUE),
+    ", which the data frame no longer has.\n",
+    if (isTRUE(reactivate)) "The setting stays off.\n",
+    "Run jcomplete() again with the current variable names, or clear ",
+    "the setting:\n",
+    "  jcomplete(", data_name, ", NULL)"
+  )
 }
 
 #' Internal helper: apply a logical mask expression to a data frame
@@ -408,7 +643,9 @@
 #' @param data_name Character. The data frame's name; the stored-filter
 #'   errors build their exits from it.
 #' @param n_frame Integer or NULL. The frame's row count before the
-#'   pipeline's filters, for the per-call recycling stop.
+#'   pipeline's filters: for the per-call recycling stop, and (both
+#'   origins, Session 331) for a vector holding one value per case of the
+#'   frame as given.
 #'
 #' @return The data frame filtered to rows where \code{expr} evaluates
 #'   to \code{TRUE} (\code{NA} treated as \code{FALSE}).
@@ -583,17 +820,7 @@
       # the warning repeated identically on every call and was scrolled
       # past, while the analysis ran on cases the setting was meant to
       # remove.
-      gone_vars <- setdiff(cs$vars, names(data))
-      if (length(gone_vars) > 0L) {
-        .jst_stop(
-          "the jcomplete setting for the ", data_name, " data frame names ",
-          .jst_format_var_list(gone_vars, and = TRUE),
-          ", which the data frame no longer has.\n",
-          "Run jcomplete() again with the current variable names, or clear ",
-          "the setting:\n",
-          "  jcomplete(", data_name, ", NULL)"
-        )
-      }
+      .jst_complete_gone_stop(data_name, setdiff(cs$vars, names(data)))
       complete_vars <- cs$vars
       if (length(complete_vars) > 0) {
         complete_mask    <- stats::complete.cases(data[, complete_vars, drop = FALSE])
@@ -621,7 +848,8 @@
       data            <- .jst_apply_mask(data, fs$expr, envir,
                                          origin    = "stored",
                                          expr_str  = fs$expr_str,
-                                         data_name = data_name)
+                                         data_name = data_name,
+                                         n_frame   = n_original)
       filter_na_n     <- attr(data, "jst_mask_na", exact = TRUE)
       attr(data, "jst_mask_na") <- NULL
       n_after_filter  <- nrow(data)

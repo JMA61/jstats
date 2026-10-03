@@ -10,7 +10,8 @@
   n_rows,
   data_name = NULL,
   n_frame = NULL,
-  tail = ""
+  tail = "",
+  cut_by = "filtering"
 )
 }
 \arguments{
@@ -28,6 +29,11 @@ pipeline's filters. NULL is read as \code{n_rows}.}
 
 \item{tail}{Character; appended after the fix line (the set-time
 "earlier filter is unchanged" line).}
+
+\item{cut_by}{Character; what cut the frame, for the add-it-to-the-frame
+form: \code{"filtering"} (a per-call condition behind the stored
+settings) or \code{"jcomplete()"} (a \code{jsubset()} filter behind an
+active \code{jcomplete()}, Session 331).}
 }
 \value{
 Does not return; stops.

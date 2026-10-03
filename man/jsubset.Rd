@@ -15,7 +15,9 @@ on that dataset specifically. If omitted, the dataset set by
 or one of the following special values:
 \describe{
 \item{\code{off}}{Deactivate the setting but remember the expression.}
-\item{\code{on}}{Reactivate a previously deactivated setting.}
+\item{\code{on}}{Reactivate a previously deactivated setting. The
+filter is run once first, as it was when set; one that can no
+longer be applied is refused, and stays off.}
 \item{\code{NULL}}{Clear the setting entirely (forget the expression).}
 }
 Each acts on the \code{juse()} default dataset when \code{data} is
@@ -25,7 +27,8 @@ dataset when it is given (\code{jsubset(d, off)},
 clears the one dataset that carries a setting, and asks you to name
 one when several do. To clear every dataset's setting at once, use
 \code{clear.all = TRUE}. If \code{expr} and \code{data} are both
-omitted, prints the current jsubset status.}
+omitted, prints the current jsubset status, which says so when a
+stored filter can no longer be applied.}
 
 \item{clear.all}{Logical. If \code{TRUE}, clears the jsubset setting on
 every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This
@@ -99,7 +102,10 @@ column (\code{clinic$Keep <- clinic$Stress > 3}, then
 \code{jsubset(clinic, Keep == TRUE)}). A separate object holding one
 value per row stops matching the data frame if rows are later added or
 removed, and every analysis of that data frame then stops until the
-filter is set aside.
+filter is set aside. Nor can it be used beside a \code{jcomplete()}
+setting that drops cases, since the filter is applied to the cases
+\code{jcomplete()} keeps: the filter is refused, with the line that adds
+the object to the data frame.
 }
 \section{Writing a filter in R}{
 

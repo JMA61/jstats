@@ -27,10 +27,12 @@ gave numbers builds its own fix (\code{Keep01} -> \code{Keep01 == 1}).}
 the message's first line (that echo is what locates the call in a
 sourced script, where \code{call. = FALSE} shows no call).}
 
-\item{origin}{One of \code{"set"}, \code{"call"}, \code{"stored"}.}
+\item{origin}{One of \code{"set"}, \code{"call"}, \code{"stored"},
+\code{"reactivate"}, \code{"status"}.}
 
 \item{data_name}{Character. The data frame's name. Required for
-\code{"stored"} (the exits are built from it); used by \code{"set"} to
+\code{"stored"} and \code{"reactivate"} (the exits are built from it);
+used by \code{"set"} to
 name the frame in the unchanged-filter line and the quoted-keyword fix.}
 
 \item{named_frame}{Logical. For \code{"set"}: whether the user named the
@@ -79,6 +81,16 @@ matching the data (an object it depends on changed, or the frame
 gained or lost rows), and it re-runs on every analysis of that frame
 until dealt with -- so the fix is BOTH exits, each naming the frame:
 set aside (off, which keeps the text) first, delete (NULL) second.}
+\item{\code{"reactivate"}}{the same stored filter checked by
+\code{jsubset(d, on)} before it is turned back on (Session 331). The
+stored wording, ending on \code{.jst_filter_exits()}'s reactivation
+form: the filter is off already, so the message says it stays off and
+gives the delete exit alone.}
+\item{\code{"status"}}{the same stored filter checked for the status
+display (\code{jsubset()} with no arguments, Session 331). Nothing
+stops: the finding is handed back through
+\code{.jst_filter_status_signal()} as the status line "It cannot be
+applied: it has 12 values for 11 rows."}
 }
 }
 \keyword{internal}

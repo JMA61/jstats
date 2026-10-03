@@ -155,7 +155,10 @@ juse <- function(data) {
 #' \code{jsubset(clinic, Keep == TRUE)}). A separate object holding one
 #' value per row stops matching the data frame if rows are later added or
 #' removed, and every analysis of that data frame then stops until the
-#' filter is set aside.
+#' filter is set aside. Nor can it be used beside a \code{jcomplete()}
+#' setting that drops cases, since the filter is applied to the cases
+#' \code{jcomplete()} keeps: the filter is refused, with the line that adds
+#' the object to the data frame.
 #'
 #' @param data Optional data frame. If supplied, the expression is stored
 #'   on that dataset specifically. If omitted, the dataset set by
@@ -164,7 +167,9 @@ juse <- function(data) {
 #'   or one of the following special values:
 #'   \describe{
 #'     \item{\code{off}}{Deactivate the setting but remember the expression.}
-#'     \item{\code{on}}{Reactivate a previously deactivated setting.}
+#'     \item{\code{on}}{Reactivate a previously deactivated setting. The
+#'       filter is run once first, as it was when set; one that can no
+#'       longer be applied is refused, and stays off.}
 #'     \item{\code{NULL}}{Clear the setting entirely (forget the expression).}
 #'   }
 #'   Each acts on the \code{juse()} default dataset when \code{data} is
@@ -174,7 +179,8 @@ juse <- function(data) {
 #'   clears the one dataset that carries a setting, and asks you to name
 #'   one when several do. To clear every dataset's setting at once, use
 #'   \code{clear.all = TRUE}. If \code{expr} and \code{data} are both
-#'   omitted, prints the current jsubset status.
+#'   omitted, prints the current jsubset status, which says so when a
+#'   stored filter can no longer be applied.
 #' @param clear.all Logical. If \code{TRUE}, clears the jsubset setting on
 #'   every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This
 #'   is the same grammar as the registration functions (\code{jdummy()},
@@ -227,6 +233,10 @@ juse <- function(data) {
 #' @export
 jsubset <- function(data, expr, clear.all = FALSE, ...) {
 
+  # The caller's frame: where a filter's workspace names resolve, and where
+  # the juse() default frame is looked up by name.
+  caller_env <- parent.frame()
+
   # -- Shared branches, written once ----------------------------------------
   # Three operations reach the registry by name: clear every frame, clear
   # one frame, and toggle one frame. Each is reached from more than one
@@ -274,7 +284,9 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     }
     clear_one(target)
   }
-  toggle_one <- function(frame, which, set_example) {
+  # frame_data is a promise: forced only by "on" with a filter to check, so
+  # off, and on with nothing set, never need the frame to be reachable.
+  toggle_one <- function(frame, which, set_example, frame_data) {
     fs <- .jst_get_filter(frame)
     if (which == "off") {
       if (is.null(fs)) {
@@ -289,6 +301,23 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
         .jst_msg("No jsubset set for ", frame, ". Use ", set_example,
                  " to set one.")
       } else {
+        # The filter is run once before it is turned back on, as it was when
+        # set (S331): what it names may have gone, or the frame may have
+        # changed, while it was off. Until S331 "reactivated" printed
+        # unchecked and the next analysis stopped. A filter that is off
+        # stays off, and the refusal says so; one that was never off is the
+        # analysis-time stop exactly, both exits.
+        # It runs on the frame as the analysis will see it, behind an active
+        # jcomplete(), so what it refuses is what an analysis would refuse.
+        df <- frame_data
+        if (nrow(df) > 0L) {
+          .jst_filter_mask(fs$expr, fs$expr_str,
+                           .jst_complete_kept(df, frame), caller_env,
+                           origin    = if (isTRUE(fs$active)) "stored"
+                                       else "reactivate",
+                           data_name = frame, n_frame = nrow(df),
+                           quiet     = TRUE)
+        }
         fs$active <- TRUE
         .jst_set_filter(frame, fs)
         .jst_msg("jsubset reactivated for ", frame, ": ", fs$expr_str)
@@ -300,6 +329,23 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     if (!is.symbol(sym)) return(NULL)
     w <- tolower(as.character(sym))
     if (w %in% c("off", "on")) w else NULL
+  }
+  # The status display's check (S331): the line saying a stored filter
+  # cannot be applied as things stand, or "" -- also "" when the frame is
+  # not reachable from here, since then nothing can be checked. The filter
+  # is run as "on" runs it; a status display never stops.
+  status_fault <- function(frame, fs) {
+    if (!exists(frame, envir = caller_env)) return("")
+    df <- get(frame, envir = caller_env)
+    if (!is.data.frame(df) || nrow(df) == 0L) return("")
+    tryCatch({
+      .jst_filter_mask(fs$expr, fs$expr_str, .jst_complete_kept(df, frame),
+                       caller_env, origin = "status", data_name = frame,
+                       n_frame = nrow(df))
+      ""
+    },
+    jst_filter_unusable = function(e) conditionMessage(e),
+    error = function(e) "")
   }
 
   # -- jsubset(clear.all = TRUE) --------------------------------------------
@@ -343,17 +389,27 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     dnames <- names(reg)
     if (length(reg) == 1L) {
       fs <- reg[[1L]]
-      if (isTRUE(fs$active)) {
-        .jst_msg("jsubset active for ", dnames[1L], ": ", fs$expr_str)
-      } else {
-        .jst_msg("jsubset set but inactive for ", dnames[1L], ": ", fs$expr_str)
-      }
+      # A filter that cannot be applied says so, and an ACTIVE one says
+      # what follows: it stays active on purpose (the S329 ruling: jstats
+      # never widens the sample on its own), so every analysis stops.
+      fault <- status_fault(dnames[1L], fs)
+      .jst_msg(if (isTRUE(fs$active)) "jsubset active for "
+               else "jsubset set but inactive for ",
+               dnames[1L], ": ", fs$expr_str,
+               if (nzchar(fault)) paste0("\n", fault),
+               if (nzchar(fault) && isTRUE(fs$active)) {
+                 paste0("\nAnalyses of the ", dnames[1L], " data frame ",
+                        "will stop until it is turned off, deleted or fixed.")
+               })
       return(invisible(NULL))
     }
     payloads <- vapply(reg, function(fs) fs$expr_str, character(1))
     active   <- vapply(reg, function(fs) isTRUE(fs$active), logical(1))
+    unusable <- vapply(seq_along(reg), function(i) {
+      nzchar(status_fault(dnames[i], reg[[i]]))
+    }, logical(1))
     .jst_render_status_overview("jsubset", dnames, payloads, active,
-                                default_name)
+                                default_name, unusable = unusable)
     return(invisible(NULL))
   }
 
@@ -397,7 +453,8 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
       .jst_msg("No default data frame set.")
       return(invisible(NULL))
     }
-    return(toggle_one(default_name, default_word, "jsubset(expression)"))
+    return(toggle_one(default_name, default_word, "jsubset(expression)",
+                      .jst_resolve_data(caller_env)$data))
   }
 
   # -- Resolve which arg is the data and which is the expression ------------
@@ -427,7 +484,8 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     named_word <- toggle_word(raw_expr)
     if (!is.null(named_word)) {
       return(toggle_one(target_name, named_word,
-                        paste0("jsubset(", target_name, ", expression)")))
+                        paste0("jsubset(", target_name, ", expression)"),
+                        arg1$data))
     }
     filter_raw <- raw_expr
   } else if (arg1$mode == "default") {
@@ -448,7 +506,6 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   # jsubset(d, d$Income < 45) would read Income from the raw frame at every
   # analysis, where a declared -99 is a number below 45. Refused before the
   # dry run, with the variables on their own; an earlier filter is kept.
-  caller_env <- parent.frame()
   .jst_check_condition_frames(filter_raw, expr_str_for_check, arg1$data,
                               caller_env, origin = "set",
                               data_name   = target_name,
@@ -470,7 +527,8 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
                    origin      = "set",
                    data_name   = target_name,
                    named_frame = identical(arg1$mode, "explicit"),
-                   prior       = !is.null(prior))
+                   prior       = !is.null(prior),
+                   data_kept   = .jst_complete_kept(arg1$data, target_name))
 
   # -- Set and activate the expression --------------------------------------
   .jst_set_filter(target_name, list(
@@ -789,7 +847,9 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' If a variable in the setting is later dropped from the dataset or
 #' renamed, each analysis of that dataset stops, naming the variable, until
 #' \code{jcomplete()} is run again with the current names or the setting is
-#' cleared.
+#' cleared. \code{jcomplete(on)} and a preview of the set filter stop in the
+#' same way, and the status display (\code{jcomplete()}) names the variable
+#' in place of the complete-case count.
 #'
 #' @param data A data frame. If omitted, uses the default set by
 #'   \code{juse()}. Instead of variable names, the call may carry one of
@@ -919,7 +979,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     }
     clear_one(target)
   }
-  toggle_one <- function(frame, which, set_example) {
+  # frame_data is a promise: forced only by "on" with a setting to check.
+  toggle_one <- function(frame, which, set_example, frame_data) {
     cs <- .jst_get_complete(frame)
     if (which == "off") {
       if (is.null(cs)) {
@@ -934,6 +995,10 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
         .jst_msg("No jcomplete filter set for ", frame, ". Use ", set_example,
                  " to set one.")
       } else {
+        # Checked before it is turned back on (S331), as the analysis checks
+        # it: a variable dropped or renamed while the setting was off.
+        .jst_complete_gone_stop(frame, setdiff(cs$vars, names(frame_data)),
+                                reactivate = !isTRUE(cs$active))
         cs$active <- TRUE
         .jst_set_complete(frame, cs)
         .jst_msg("jcomplete reactivated for ", frame, ": ", vars_of(cs))
@@ -1007,18 +1072,18 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
       }
       cs          <- reg[[target]]
       calling_env <- parent.frame()
-      if (!exists(target, envir = calling_env)) {
+      if (!exists(target, envir = calling_env) ||
+          !is.data.frame(get(target, envir = calling_env))) {
         .jst_msg("Data frame ", target,
                  " is not reachable here to build the preview.")
         return(invisible(NULL))
       }
       df         <- get(target, envir = calling_env)
-      valid_vars <- cs$vars[cs$vars %in% names(df)]
-      if (length(valid_vars) == 0L) {
-        .jst_msg("None of the registered variables are present in ",
-                 target, ".")
-        return(invisible(NULL))
-      }
+      # A setting naming a variable the frame no longer has cannot be
+      # applied, so there is nothing truthful to preview (S331; until then
+      # the rows shown were those the REMAINING variables would drop).
+      .jst_complete_gone_stop(target, setdiff(cs$vars, names(df)))
+      valid_vars <- cs$vars
       masked <- .jst_apply_declared_udms_as_na(
         df[, valid_vars, drop = FALSE])$data
       return(.jst_jcomplete_preview(masked, valid_vars,
@@ -1038,11 +1103,21 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
       cs        <- reg[[1L]]
       vars_str  <- paste(cs$vars, collapse = ", ")
       count_str <- ""
+      gone_vars <- character(0)
       calling_env <- parent.frame()
       if (exists(dnames[1L], envir = calling_env)) {
         df         <- get(dnames[1L], envir = calling_env)
-        valid_vars <- cs$vars[cs$vars %in% names(df)]
-        if (length(valid_vars) > 0L) {
+        valid_vars <- cs$vars
+        if (is.data.frame(df)) gone_vars <- setdiff(cs$vars, names(df))
+        if (length(gone_vars) > 0L) {
+          # No count: the setting cannot be applied as it stands, and a
+          # count on the variables that remain is not its count (S331;
+          # until then "(11 of 12 complete cases)" was counted on them).
+          count_str <- paste0("\nIt cannot be applied: the ", dnames[1L],
+                              " data frame no longer has ",
+                              .jst_format_var_list(gone_vars, and = TRUE),
+                              ".")
+        } else if (is.data.frame(df) && length(valid_vars) > 0L) {
           n_total    <- nrow(df)
           # Mask declared UDMs first so the live count matches the analysis
           # pipeline (Cross-cutting 5); see the setup-summary note below.
@@ -1054,17 +1129,29 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
         }
       }
       if (isTRUE(cs$active)) {
-        .jst_msg("jcomplete active for ", dnames[1L], ": ", vars_str, count_str)
+        .jst_msg("jcomplete active for ", dnames[1L], ": ", vars_str, count_str,
+                 if (length(gone_vars) > 0L) {
+                   paste0("\nAnalyses of the ", dnames[1L], " data frame ",
+                          "will stop until it is turned off, cleared or ",
+                          "set again.")
+                 })
       } else {
-        .jst_msg("jcomplete set but inactive for ", dnames[1L], ": ", vars_str)
+        .jst_msg("jcomplete set but inactive for ", dnames[1L], ": ", vars_str,
+                 if (length(gone_vars) > 0L) count_str)
       }
       return(invisible(NULL))
     }
     payloads <- vapply(reg, function(cs) paste(cs$vars, collapse = ", "),
                        character(1))
     active   <- vapply(reg, function(cs) isTRUE(cs$active), logical(1))
+    calling_env <- parent.frame()
+    unusable <- vapply(seq_along(reg), function(i) {
+      if (!exists(dnames[i], envir = calling_env)) return(FALSE)
+      df <- get(dnames[i], envir = calling_env)
+      is.data.frame(df) && length(setdiff(reg[[i]]$vars, names(df))) > 0L
+    }, logical(1))
     .jst_render_status_overview("jcomplete", dnames, payloads, active,
-                                default_name)
+                                default_name, unusable = unusable)
     return(invisible(NULL))
   }
 
@@ -1111,7 +1198,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
       return(invisible(NULL))
     }
     return(toggle_one(default_name, default_word,
-                      "jcomplete(var1, var2, ...)"))
+                      "jcomplete(var1, var2, ...)",
+                      .jst_resolve_data(parent.frame())$data))
   }
 
   # -- Resolve the first argument via the standard helper -------------------
@@ -1142,7 +1230,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     if (!is.null(named_word)) {
       return(toggle_one(.jst_data_name, named_word,
                         paste0("jcomplete(", .jst_data_name,
-                               ", var1, var2, ...)")))
+                               ", var1, var2, ...)"),
+                        data))
     }
   }
 

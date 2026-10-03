@@ -9,7 +9,8 @@
   dnames,
   payloads,
   active,
-  default_name = NULL
+  default_name = NULL,
+  unusable = NULL
 )
 }
 \arguments{
@@ -26,6 +27,10 @@ setting is active.}
 
 \item{default_name}{Character name of the current \code{juse()} default,
 or \code{NULL}. The matching frame is tagged \code{, default}.}
+
+\item{unusable}{Logical vector parallel to \code{dnames}, or NULL. TRUE
+tags the frame \code{, cannot be applied}: its stored setting would
+stop an analysis as things stand (Session 331).}
 }
 \value{
 \code{invisible(NULL)}. Called for its message side effect.

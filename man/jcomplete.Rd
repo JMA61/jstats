@@ -79,7 +79,9 @@ FILTER convention.
 If a variable in the setting is later dropped from the dataset or
 renamed, each analysis of that dataset stops, naming the variable, until
 \code{jcomplete()} is run again with the current names or the setting is
-cleared.
+cleared. \code{jcomplete(on)} and a preview of the set filter stop in the
+same way, and the status display (\code{jcomplete()}) names the variable
+in place of the complete-case count.
 }
 \examples{
 juse(community)

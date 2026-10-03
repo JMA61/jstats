@@ -867,16 +867,23 @@
 #'   setting is active.
 #' @param default_name Character name of the current \code{juse()} default,
 #'   or \code{NULL}. The matching frame is tagged \code{, default}.
+#' @param unusable Logical vector parallel to \code{dnames}, or NULL. TRUE
+#'   tags the frame \code{, cannot be applied}: its stored setting would
+#'   stop an analysis as things stand (Session 331).
 #'
 #' @return \code{invisible(NULL)}. Called for its message side effect.
 #'
 #' @keywords internal
 .jst_render_status_overview <- function(fn_label, dnames, payloads, active,
-                                        default_name = NULL) {
+                                        default_name = NULL,
+                                        unusable = NULL) {
   tags   <- ifelse(active, "active", "inactive")
   is_def <- if (is.null(default_name)) rep(FALSE, length(dnames)) else
               dnames == default_name
   tags   <- ifelse(is_def, paste0(tags, ", default"), tags)
+  if (!is.null(unusable)) {
+    tags <- ifelse(unusable, paste0(tags, ", cannot be applied"), tags)
+  }
   lines  <- paste0("  - ", dnames, ": ", payloads, "  [", tags, "]")
   .jst_msg(fn_label, " settings (", length(dnames), " data frames):\n",
            paste(lines, collapse = "\n"))

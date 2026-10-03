@@ -1392,6 +1392,43 @@
   .jst_recycled_operand(as.list(vars)[-1L], data, enclos)
 }
 
+#' Internal helper: the two halves of the add-it-to-the-frame message
+#'
+#' One builder for what is said about a workspace vector that holds one
+#' value per case of the frame as given, where the condition runs on fewer
+#' cases: the reason ("keep12 has 12 values, one for each case in the d
+#' data frame, but jcomplete() leaves 11") and the fix ("Add keep12 to the
+#' d data frame as a variable:" and the assignment, when the operand is a
+#' plain name and the frame's name can be typed). Shared by
+#' \code{.jst_recycled_stop()} (a condition typed in this call) and the
+#' stored-filter forms in \code{.jst_filter_mask()}, so they cannot drift.
+#'
+#' @param rec A \code{.jst_recycled_operand()}-shaped list.
+#' @param n_rows Integer; the cases the condition runs on.
+#' @param data_name Character or NULL; the data frame's name.
+#' @param cut_by Character; what cut the frame.
+#' @return A list of two strings, \code{reason} (no closing period) and
+#'   \code{fix}.
+#' @keywords internal
+.jst_frame_vector_parts <- function(rec, n_rows, data_name = NULL,
+                                    cut_by = "filtering") {
+  op <- .jst_term_text(rec$operand)
+  frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
+    paste0("the ", data_name, " data frame")
+  } else {
+    "the data frame"
+  }
+  fix <- if (is.symbol(rec$operand) && !is.null(data_name) &&
+             identical(make.names(data_name), data_name)) {
+    paste0(":\n  ", data_name, "$", op, " <- ", op)
+  } else {
+    "."
+  }
+  list(reason = paste0(op, " has ", rec$n, " values, one for each case in ",
+                       frame_ref, ", but ", cut_by, " leaves ", n_rows),
+       fix    = paste0("Add ", op, " to ", frame_ref, " as a variable", fix))
+}
+
 #' Internal helper: stop for a workspace vector that would be recycled
 #'
 #' The message for a \code{.jst_recycled_operand()} finding, shared by the
@@ -1411,10 +1448,15 @@
 #'   pipeline's filters. NULL is read as \code{n_rows}.
 #' @param tail Character; appended after the fix line (the set-time
 #'   "earlier filter is unchanged" line).
+#' @param cut_by Character; what cut the frame, for the add-it-to-the-frame
+#'   form: \code{"filtering"} (a per-call condition behind the stored
+#'   settings) or \code{"jcomplete()"} (a \code{jsubset()} filter behind an
+#'   active \code{jcomplete()}, Session 331).
 #' @return Does not return; stops.
 #' @keywords internal
 .jst_recycled_stop <- function(rec, typed, n_rows, data_name = NULL,
-                               n_frame = NULL, tail = "") {
+                               n_frame = NULL, tail = "",
+                               cut_by = "filtering") {
   if (is.null(n_frame)) n_frame <- n_rows
   op   <- .jst_term_text(rec$operand)
   lead <- paste0("In ", typed, ", ", op, " has ", rec$n, " values")
@@ -1425,15 +1467,8 @@
     "the data frame"
   }
   if (rec$n == n_frame && n_frame != n_rows) {
-    fix <- if (is.symbol(rec$operand) && !is.null(data_name) &&
-               identical(make.names(data_name), data_name)) {
-      paste0(":\n  ", data_name, "$", op, " <- ", op)
-    } else {
-      "."
-    }
-    .jst_stop(lead, ", one for each case in ", frame_ref,
-              ", but filtering leaves ", n_rows, ".\n",
-              "Add ", op, " to ", frame_ref, " as a variable", fix, tail)
+    parts <- .jst_frame_vector_parts(rec, n_rows, data_name, cut_by)
+    .jst_stop("In ", typed, ", ", parts$reason, ".\n", parts$fix, tail)
   }
   where <- if (n_frame != n_rows) {
     paste0("the ", cases(n_rows), " left after filtering")

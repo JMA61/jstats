@@ -9,11 +9,13 @@
   expr_str,
   data,
   envir,
-  origin = c("set", "call", "stored"),
+  origin = c("set", "call", "stored", "reactivate", "status"),
   data_name = NULL,
   named_frame = FALSE,
   prior = FALSE,
-  n_frame = NULL
+  n_frame = NULL,
+  data_kept = NULL,
+  quiet = NULL
 )
 }
 \arguments{
@@ -25,7 +27,8 @@
 
 \item{envir}{Environment the filter's other names resolve in.}
 
-\item{origin}{One of \code{"set"}, \code{"call"}, \code{"stored"}.}
+\item{origin}{One of \code{"set"}, \code{"call"}, \code{"stored"},
+\code{"reactivate"}, \code{"status"}.}
 
 \item{data_name}{Character. The data frame's name.}
 
@@ -36,9 +39,22 @@ hint \code{.jst_check_vars()} gives.}
 \item{prior}{Logical. For \code{"set"}: an earlier filter exists for the
 frame; the message says it is unchanged.}
 
-\item{n_frame}{Integer or NULL. For \code{"call"}: the frame's row count
-before the pipeline's filters, which tells the recycling stop's two
-forms apart.}
+\item{n_frame}{Integer or NULL. The frame's row count before the
+pipeline's filters: it tells the recycling stop's two forms apart
+(\code{"call"}), and lets a vector holding one value per case of the
+frame as given be recognized when \code{data} has fewer cases
+(\code{.jst_frame_vector()}; every origin but \code{"set"}).}
+
+\item{data_kept}{Data frame or NULL. For \code{"set"}: the frame as an
+active \code{jcomplete()} will hand it to the filter
+(\code{.jst_complete_kept()}); the same test, made once the filter has
+passed on the frame as given.}
+
+\item{quiet}{Logical or NULL. Whether the filter's own warnings and
+messages are dropped; NULL drops them at set time and for the status
+display. \code{jsubset(d, on)} passes TRUE, for a filter that was off
+(\code{"reactivate"}) and for one that was never off
+(\code{"stored"}).}
 }
 \value{
 The evaluated filter: one TRUE, FALSE or NA for every row.
@@ -82,5 +98,24 @@ the stored shape error does: it re-runs on every analysis of that frame
 until dealt with. A name found nowhere "was not found" at set time and
 "no longer exists" for a stored filter, which the set-time check makes
 true. The per-call evaluation message is the one it has always been.
+}
+\details{
+A fourth origin, \code{"reactivate"} (Session 331), is the stored filter
+checked by \code{jsubset(d, on)} before it is turned back on. Until then
+\code{on} set the filter active unchecked: "jsubset reactivated" printed
+for a filter that could no longer run, and the next analysis stopped. It
+takes the stored wording with \code{.jst_filter_exits()}'s reactivation
+close ("The filter stays off." and the delete exit), and, as at set time,
+nothing is analyzed, so warnings and messages from the filter are dropped
+(\code{quiet = TRUE}).
+A fifth, \code{"status"}, is the same check made for the status display:
+it never stops, and hands the reason back as the line "It cannot be
+applied: ..." (\code{.jst_filter_status_signal()}).
+
+Ahead of the evaluation, for every origin but \code{"set"}: a workspace
+vector holding one value per case of the frame as given, where the
+condition is about to run on fewer cases (\code{.jst_frame_vector()},
+Session 331) -- the add-it-to-the-frame fix. At set time the same test
+runs last, against \code{data_kept}.
 }
 \keyword{internal}
