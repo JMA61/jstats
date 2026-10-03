@@ -1243,6 +1243,37 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 }
 
 
+#' Internal helper: the "Reference category:" line of a dummy registration
+#'
+#' One builder for the line the three displays of a registration print --
+#' on registration, when an existing registration is shown again, and in the
+#' no-argument overview -- so they cannot drift. When the reference was
+#' chosen by the default rule (\code{ref = "auto"}, typed or not), the line
+#' closes with \code{(default; change with ref =)}: the bare line read as if
+#' the starred category were the only one possible, and a reader coming
+#' from software whose default is the LAST category could take the wrong
+#' one for granted (Session 329, Jeff). A reference the user named carries
+#' no tag. The registration's \code{ref_default} field records which; a
+#' registration made before the field existed (restored from an older .rds
+#' file) has none and prints without the tag, since how its reference was
+#' chosen is not known.
+#'
+#' @param reg A registration object (uses \code{ref_label}, \code{ref_code}
+#'   and \code{ref_default}).
+#' @param with.code Logical. If TRUE the label is preceded by its code
+#'   (\code{1: Condition_Control}), the form the overview prints.
+#'
+#' @return A character string ending in a newline, for \code{cat()}.
+#'
+#' @keywords internal
+.jst_dummy_ref_line <- function(reg, with.code = FALSE) {
+  paste0("  Reference category: ",
+         if (isTRUE(with.code)) paste0(reg$ref_code, ": "),
+         reg$ref_label,
+         if (isTRUE(reg$ref_default)) " (default; change with ref =)",
+         "\n")
+}
+
 #' Internal helper: render a dummy coding-scheme table
 #'
 #' Single source of truth for the 0/1 dummy coding-scheme table shown by
@@ -1345,6 +1376,10 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'   1 = Yes / 2 = No variable models Yes, and a 0/1 variable models 1).
 #'   Applied to every variable named in the call; to use different
 #'   reference categories, register the variables in separate calls.
+#'   When the reference was chosen by \code{auto}, the printed
+#'   "Reference category:" line ends with
+#'   \code{(default; change with ref =)}; a reference you name carries
+#'   no such tag.
 #' @param show Logical. If \code{TRUE}, prints the dummy coding scheme
 #'   table showing the pattern of 0s and 1s. Default is \code{FALSE}.
 #' @param remove Logical. If \code{TRUE}, removes the registration for
@@ -1444,9 +1479,13 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
       cat("\n")
     }
     for (regn in ds) {
-      cat("  Variable: ", regn$var_name,
-          " (", regn$var_type, ")\n", sep = "")
-      cat("  Reference category: ", regn$ref_code, ": ", regn$ref_label, "\n", sep = "")
+      # The storage class no longer follows the name (Session 329, Jeff):
+      # "(haven_labelled)" is R's word for a variable with value labels,
+      # and nothing a user does next depends on it. The registration still
+      # records var_type; jscreen(r.type = TRUE) is where R's own type is
+      # shown, on request.
+      cat("  Variable: ", regn$var_name, "\n", sep = "")
+      cat(.jst_dummy_ref_line(regn, with.code = TRUE))
       cat("  Dummy variables: ", paste(regn$dummy_names, collapse = ", "), "\n", sep = "")
       cat("  Cases: ", regn$n_total,
           " (", regn$n_missing, " missing)\n", sep = "")
@@ -1547,8 +1586,8 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 
         .cat_red("Dummy Variable Registration\n")
         if (.jst_default_used) .jst_default_note(.jst_data_name, extra_newline = TRUE)
-        cat("  Variable: ", reg$var_name, " (", reg$var_type, ")\n", sep = "")
-        cat("  Reference category: ", reg$ref_label, "\n", sep = "")
+        cat("  Variable: ", reg$var_name, "\n", sep = "")
+        cat(.jst_dummy_ref_line(reg))
         cat("  Dummy variables: ", paste(reg$dummy_names, collapse = ", "),
             "\n", sep = "")
         cat("  Cases: ", reg$n_total, " (", reg$n_missing, " missing)\n",
@@ -1594,6 +1633,11 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   .cat_red("Dummy Variable Registration\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name, extra_newline = TRUE)
 
+  # Whether the reference is the default rule's choice, for the tag on the
+  # "Reference category:" line. ref applies to every variable in the call.
+  ref_default <- is.character(ref) && length(ref) == 1L &&
+                 identical(tolower(ref), "auto")
+
   deferred <- character(0)
   for (var_name in var_names) {
     col   <- data[[var_name]]
@@ -1615,6 +1659,10 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
       ref_idx     = built$ref_idx,
       ref_code    = built$ref_code,
       ref_label   = built$ref_label,
+      # TRUE when the default rule chose the reference (ref = "auto",
+      # typed or not); FALSE when the user named it. Read by
+      # .jst_dummy_ref_line(). (Session 329)
+      ref_default = ref_default,
       dummy_names = built$dummy_names,
       non_ref_idx = built$non_ref_idx,
       values      = built$values,
@@ -1641,8 +1689,8 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
                .jst_intent_label(.cleared_kind), " -> dummy).")
     }
 
-    cat("  Variable: ", var_name, " (", built$var_type, ")\n", sep = "")
-    cat("  Reference category: ", built$ref_label, "\n", sep = "")
+    cat("  Variable: ", var_name, "\n", sep = "")
+    cat(.jst_dummy_ref_line(reg))
     cat("  Dummy variables: ", paste(built$dummy_names, collapse = ", "),
         "\n", sep = "")
     cat("  Cases: ", n_total, " (", n_missing, " missing)\n", sep = "")

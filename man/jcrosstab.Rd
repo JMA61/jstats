@@ -33,10 +33,14 @@ the Pearson chi-square and the Yates continuity-corrected chi-square --
 matching the rows commercial statistical software reports; the Pearson
 row is the headline result and is what the returned object carries.
 Larger tables show the single Pearson result (the correction applies
-only to 2x2 tables). Default is FALSE.}
+only to 2x2 tables). When any cell's expected frequency is less than
+5, a note under the test gives the number of such cells and the
+smallest expected frequency. Default is FALSE.}
 
 \item{expected}{Logical. If TRUE, prints expected frequencies alongside
-observed. Default is FALSE.}
+observed, to two decimal places. An expected frequency just under 5
+that would round to 5.00 prints as 4.99, so a cell the chi-square
+note counts as less than 5 never reads as 5. Default is FALSE.}
 
 \item{row.pct}{Logical. If TRUE (default), shows row percentages.}
 
@@ -95,8 +99,9 @@ place. See \code{?joutput} (\code{case.processing}).}
 \item{digits}{Integer or NULL. Number of decimal places for continuous
 statistics in the output tables (range 0-7; \code{digits = 0} prints
 whole numbers with no trailing decimal point). Does not affect p-values,
-percentages, or integer quantities (counts, N, degrees of freedom),
-which keep their own fixed conventions. NULL (default) defers to
+percentages, expected frequencies (two places), or integer quantities
+(counts, N, degrees of freedom), which keep their own fixed
+conventions. NULL (default) defers to
 \code{joutput()}'s \code{digits} setting (default 3).}
 }
 \value{
@@ -122,6 +127,13 @@ variables, numeric codes are displayed alongside labels.
 \details{
 A red "Cross-Tabulation" title is printed first, followed by
 variable labels (if present), then the table and optional test results.
+
+When the cells carry more than a count -- row or column percentages,
+expected frequencies, residuals -- a blank line separates each category's
+rows from the next, and the Total row from the last category. The
+columns are set four spaces apart when the table at that spacing fits
+the message width (\code{joptions()}'s \code{message.width}), and two
+spaces apart when it does not.
 }
 \examples{
 # Cross-tabulation only

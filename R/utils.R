@@ -2034,11 +2034,25 @@ jai <- function(setup = NULL, path = NULL) {
 #'   default) fixes no column. Added Session 326: a column's decimal places
 #'   come from what it holds -- a statistic at the digits setting, a fixed
 #'   convention at its own -- never from the values that happen to be in it.
+#' @param gap The number of spaces between columns: one whole number, used
+#'   as given (the default, 2, is the gap every table has had), or several
+#'   in order of preference. Given several, the table takes the first gap
+#'   at which its full width -- the indent, the columns and the gaps
+#'   between them -- still fits the message width (\code{joptions()}'s
+#'   \code{message.width}, 76 by default), and the last one when none
+#'   fits. jcrosstab's crosstab passes \code{c(4, 2)}: its cell columns
+#'   are narrow and crowd at two spaces, so a table with room takes four
+#'   and a wide one keeps two (Session 329, Jeff). The width is the
+#'   table's own; a caption longer than the table does not count. The
+#'   message width is the ceiling because it is the one width the package
+#'   already keeps, and it gives the same table on every screen where the
+#'   console's width changes with the pane.
 #'
 #' @keywords internal
 .jst_print_table <- function(df, col.names = NULL, row.names = TRUE,
                              align = NULL, caption = NULL, indent = 0,
-                             header.indent = 0, trim = TRUE, digits = NULL) {
+                             header.indent = 0, trim = TRUE, digits = NULL,
+                             gap = 2L) {
 
   headers <- if (!is.null(col.names)) col.names else names(df)
 
@@ -2172,7 +2186,22 @@ jai <- function(setup = NULL, path = NULL) {
     col_widths[j]   <- max(nchar(headers[j]), block_widths[j])
   }
 
-  gap    <- "  "
+  # The column gap (Session 329). One number is used as given. Several are
+  # tried in order: the first at which the whole table fits the message
+  # width, else the last. Measured after the column widths are settled, so
+  # a "bd" column counts at the width of its block.
+  gap_n <- suppressWarnings(as.integer(gap))
+  if (length(gap_n) < 1L || anyNA(gap_n) || any(gap_n < 1L)) {
+    stop(".jst_print_table(): gap must be one or more whole numbers of ",
+         "spaces, each at least 1", call. = FALSE)
+  }
+  if (length(gap_n) > 1L) {
+    room  <- .jst_resolve_width() - max(indent, header.indent) -
+             sum(col_widths)
+    fits  <- gap_n * (n_cols - 1L) <= room
+    gap_n <- if (any(fits)) gap_n[which(fits)[1L]] else gap_n[length(gap_n)]
+  }
+  gap    <- strrep(" ", gap_n)
   prefix <- paste(rep(" ", indent), collapse = "")
   header_prefix <- paste(rep(" ", header.indent), collapse = "")
 

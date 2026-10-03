@@ -13,7 +13,8 @@
   indent = 0,
   header.indent = 0,
   trim = TRUE,
-  digits = NULL
+  digits = NULL,
+  gap = 2L
 )
 }
 \arguments{
@@ -93,6 +94,20 @@ misspelled name cannot fall back to the detection unnoticed. NULL (the
 default) fixes no column. Added Session 326: a column's decimal places
 come from what it holds -- a statistic at the digits setting, a fixed
 convention at its own -- never from the values that happen to be in it.}
+
+\item{gap}{The number of spaces between columns: one whole number, used
+as given (the default, 2, is the gap every table has had), or several
+in order of preference. Given several, the table takes the first gap
+at which its full width -- the indent, the columns and the gaps
+between them -- still fits the message width (\code{joptions()}'s
+\code{message.width}, 76 by default), and the last one when none
+fits. jcrosstab's crosstab passes \code{c(4, 2)}: its cell columns
+are narrow and crowd at two spaces, so a table with room takes four
+and a wide one keeps two (Session 329, Jeff). The width is the
+table's own; a caption longer than the table does not count. The
+message width is the ceiling because it is the one width the package
+already keeps, and it gives the same table on every screen where the
+console's width changes with the pane.}
 }
 \description{
 Purpose-built table printer that replaces knitr::kable() for console output.

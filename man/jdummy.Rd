@@ -41,7 +41,11 @@ same rule \code{jlogistic()} uses to encode its outcome. Otherwise,
 if one of the two codes is 1, that category is modeled (so a
 1 = Yes / 2 = No variable models Yes, and a 0/1 variable models 1).
 Applied to every variable named in the call; to use different
-reference categories, register the variables in separate calls.}
+reference categories, register the variables in separate calls.
+When the reference was chosen by \code{auto}, the printed
+"Reference category:" line ends with
+\code{(default; change with ref =)}; a reference you name carries
+no such tag.}
 
 \item{show}{Logical. If \code{TRUE}, prints the dummy coding scheme
 table showing the pattern of 0s and 1s. Default is \code{FALSE}.}

@@ -1187,6 +1187,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' A red "Cross-Tabulation" title is printed first, followed by
 #' variable labels (if present), then the table and optional test results.
 #'
+#' When the cells carry more than a count -- row or column percentages,
+#' expected frequencies, residuals -- a blank line separates each category's
+#' rows from the next, and the Total row from the last category. The
+#' columns are set four spaces apart when the table at that spacing fits
+#' the message width (\code{joptions()}'s \code{message.width}), and two
+#' spaces apart when it does not.
+#'
 #' @param formula A formula of the form \code{Row ~ Column}, naming plain
 #'   variables. Transformed terms such as \code{log(x)} are not supported
 #'   here -- create the variable first (e.g. with \code{cut()} for
@@ -1198,9 +1205,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   matching the rows commercial statistical software reports; the Pearson
 #'   row is the headline result and is what the returned object carries.
 #'   Larger tables show the single Pearson result (the correction applies
-#'   only to 2x2 tables). Default is FALSE.
+#'   only to 2x2 tables). When any cell's expected frequency is less than
+#'   5, a note under the test gives the number of such cells and the
+#'   smallest expected frequency. Default is FALSE.
 #' @param expected Logical. If TRUE, prints expected frequencies alongside
-#'   observed. Default is FALSE.
+#'   observed, to two decimal places. An expected frequency just under 5
+#'   that would round to 5.00 prints as 4.99, so a cell the chi-square
+#'   note counts as less than 5 never reads as 5. Default is FALSE.
 #' @param row.pct Logical. If TRUE (default), shows row percentages.
 #' @param col.pct Logical. If TRUE, shows column percentages. Default is FALSE.
 #' @param residuals Character. Cell residuals to display: \code{"none"}
@@ -1280,8 +1291,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param digits Integer or NULL. Number of decimal places for continuous
 #'   statistics in the output tables (range 0-7; \code{digits = 0} prints
 #'   whole numbers with no trailing decimal point). Does not affect p-values,
-#'   percentages, or integer quantities (counts, N, degrees of freedom),
-#'   which keep their own fixed conventions. NULL (default) defers to
+#'   percentages, expected frequencies (two places), or integer quantities
+#'   (counts, N, degrees of freedom), which keep their own fixed
+#'   conventions. NULL (default) defers to
 #'   \code{joutput()}'s \code{digits} setting (default 3).
 #' @param case.processing.detail Per-call override of the Case
 #'   Processing Summary detail tier: one of \code{"none"},
@@ -1503,20 +1515,48 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   fmt_count <- function(x) format(as.numeric(x), scientific = FALSE,
                                   trim = TRUE)
 
+  # Expected frequencies print to TWO places (Session 329, Jeff), in the
+  # cells and in the note below alike, so the two cannot disagree: at one
+  # place a cell read 5.0 beside a note saying "minimum = 4.96". Two places
+  # leave one window open -- a value in [4.995, 5) rounds up to 5.00, the
+  # threshold the note says the cell is below -- so that prints 4.99
+  # (Session 327, extended here from the note to the cells). A fixed
+  # convention, like a percentage's one place: the digits setting does not
+  # move it.
+  fmt_expected <- function(x) {
+    s <- .jst_make_fmt(2L)(round(x, 2))
+    s[x < 5 & round(x, 2) >= 5] <- "4.99"
+    s
+  }
+
+  # A blank line sets each row group off from the next -- before every
+  # category after the first, and before Total -- whenever the categories
+  # carry sub-rows (Session 329, Jeff): with them the groups ran together.
+  # When every category is a single line there is nothing to separate, and
+  # none is printed. A spacer is a row of empty cells, which the renderer's
+  # trim prints as an empty line (jfreq's spacer rows are the precedent).
+  has_sub_rows <- expected || row.pct || col.pct || show_adj_res
+  spacer_row   <- list(rep("", n_cols + 2L))
+
   display_rows <- list()
 
   for (i in seq_len(n_rows)) {
     obs_vals  <- as.numeric(obs_table[i, ])
     row_total <- sum(obs_vals)
+    if (has_sub_rows && i > 1L) display_rows <- c(display_rows, spacer_row)
     display_rows <- c(display_rows,
                       list(c(row_labels[i], fmt_count(obs_vals),
                              fmt_count(row_total))))
 
     if (expected) {
-      exp_vals     <- round(exp_table[i, ], 1)
+      # The Total cell is the sum of the UNROUNDED expected counts (Session
+      # 329): it summed the rounded cells, so three cells of 3.33 would
+      # have totalled 9.99 beside an observed 10. It takes no 4.99 guard --
+      # it is a row total, not a cell the note counts.
+      exp_vals     <- exp_table[i, ]
       display_rows <- c(display_rows,
-                        list(c("  (Expected)", sprintf("%.1f", exp_vals),
-                               sprintf("%.1f", sum(exp_vals)))))
+                        list(c("  (Expected)", fmt_expected(exp_vals),
+                               .jst_make_fmt(2L)(round(sum(exp_vals), 2)))))
     }
 
     if (row.pct) {
@@ -1551,6 +1591,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
 
   col_totals  <- colSums(obs_table)
   grand_total <- sum(obs_table)
+  if (has_sub_rows) display_rows <- c(display_rows, spacer_row)
   display_rows <- c(display_rows,
                     list(c("Total", fmt_count(col_totals),
                            fmt_count(grand_total))))
@@ -1572,10 +1613,16 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # the block under the column's header. The label column is "ln", so the
   # two-space indent the sub-row labels are built with ("  (Row %)")
   # survives: the default "l" trimmed it.
+  #   The columns stand four spaces apart where the table has room for it
+  # and two where it does not (Session 329, Jeff): the cell columns are
+  # narrow, and at two spaces a 2 x 2 read as crowded. gap = c(4, 2) is the
+  # renderer's width rule -- four if the table at four still fits the
+  # message width.
   .jst_print_table(display_df,
                    caption   = paste("Crosstab:", row_disp, "by", col_disp),
                    row.names = FALSE,
-                   align     = c("ln", rep("bd", ncol(display_df) - 1L)))
+                   align     = c("ln", rep("bd", ncol(display_df) - 1L)),
+                   gap       = c(4L, 2L))
   # One blank line closes the crosstab. What follows -- the chi-square
   # table, the notes, the legend -- separates itself from what precedes it,
   # and the output ends on exactly ONE blank line (Session 328). ends_blank
@@ -1635,13 +1682,19 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
       # 5.00, the threshold the note says it is below -- so that prints
       # 4.99. "(minimum = ...)" keeps the sentence on one line at the
       # default width, where "(minimum expected = ...)" wrapped.
-      min_shown <- if (round(min_expected, 2) >= 5) 4.99 else min_expected
+      #   Since Session 329 the cells print through the same fmt_expected()
+      # as this minimum, and the note closes with a pointer to expected =
+      # TRUE when the expected frequencies it speaks of are not in the
+      # table above it (Jeff: "The note speaks about expected frequencies
+      # but we're not showing the expected frequencies in this output").
       .jst_msg_out("\nNote: ", n_below_5,
                    if (n_below_5 == 1L) " cell has an expected frequency"
                    else " cells have expected frequencies",
                    " less than 5 (minimum = ",
-                   .jst_fmt_stat(min_shown, 2L), ").\n",
-                   "Chi-square results may not be reliable.")
+                   fmt_expected(min_expected), ").\n",
+                   "Chi-square results may not be reliable.",
+                   if (!expected)
+                     "\nTo see the expected frequencies, add expected = TRUE.")
     }
   }
 
@@ -1650,6 +1703,11 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # Bonferroni-adjusted cutoff -- the familywise correction SPSS CROSSTABS
   # omits. n_cells / bonf are computed once above.
   if (show_adj_res) {
+    # A blank line sets the note off from the chi-square table or the
+    # expected-frequency note above it (Session 329; voice Rule F). It is
+    # printed here, on stdout with the tables, and only when the note will
+    # print and the output does not already end on a blank line.
+    if (mark_adj_res && !ends_blank) cat("\n")
     .jst_advisory_note(
       "Note: Adjusted residuals are approximately normal under independence.\n",
       "A value beyond +/-1.96 (marked *) departs from expected at p < .05.\n",
