@@ -242,13 +242,55 @@ joutput(
 - quiet:
 
   Logical; default FALSE. When TRUE, joutput() applies the level/toggle
-  change silently (the status panel is not printed). A bare joutput()
-  status query always prints regardless of quiet.
+  change silently (nothing is printed). A bare joutput() status query,
+  and a `joutput("setting")` query, always print regardless of quiet.
 
 ## Value
 
 Invisibly returns NULL. Called for its side effect of setting session
-options.
+options and printing the settings panel – in full for a bare status
+query, a level change or a reset, as the named settings alone for a
+`joutput("setting")` query, or as an echo of the settings a setting call
+touched.
+
+## Call patterns
+
+- `joutput()`:
+
+  Print the full settings panel: the level and every setting, each
+  marked `(override)` where its value differs from the level's default.
+
+- `joutput("setting")`:
+
+  Print one setting and nothing else – `joutput("digits")`, or several
+  at once with `joutput(c("levene", "posthoc"))` – closed by a pointer
+  to `joutput()` for the full panel. A setting name given WITHOUT an
+  argument name is read as a query rather than as a level; the three
+  level names and the setting names share no string, so the two readings
+  cannot collide. Only the settings named are shown, and like the full
+  panel a query prints regardless of `quiet`.
+
+- `joutput("level")`:
+
+  Set the level, clearing any earlier overrides, then print the full
+  panel – a level moves most settings at once. Settings given in the
+  same call are applied as overrides on the new level.
+
+- `joutput(setting = value, ...)`:
+
+  Set one or more settings within the current level, then echo only what
+  the call touched, closed by a pointer to `joutput()` for the full
+  panel. The three Case Processing settings (`case.processing`,
+  `case.processing.detail`, `case.processing.filter`) are echoed
+  together whenever one of them is set, because each is read in light of
+  the others: `case.processing = FALSE` silences the other two, and
+  `case.processing.detail = "none"` silences `case.processing.filter`.
+  Passing `setting = NULL` as a named argument leaves that setting as it
+  is and echoes its current value.
+
+- `joutput(NULL)`:
+
+  Reset to the standard level with no overrides.
 
 ## Session options
 
@@ -327,6 +369,16 @@ joutput("full")                         # everything
 #>   missing.notice: ON
 #>   digits: 3
 #> 
+joutput(digits = 2)                     # set one setting; echoes only that one
+#> Output Settings
+#>   digits: 2 (override)
+#> Run joutput() to see all settings.
+#> 
+joutput("digits")                       # show one setting
+#> Output Settings
+#>   digits: 2 (override)
+#> Run joutput() to see all settings.
+#> 
 joutput()                               # show current settings
 #> Output Settings
 #> Level: full
@@ -343,7 +395,7 @@ joutput()                               # show current settings
 #>   value.id: BOTH
 #>   ref.categories: ON
 #>   missing.notice: ON
-#>   digits: 3
+#>   digits: 2 (override)
 #> 
 getOption(".jst_output_level")          # the raw option behind the level
 #> [1] "full"

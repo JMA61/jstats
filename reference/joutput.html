@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.206</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.208</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -278,15 +278,64 @@ levels default to 3.</p></dd>
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Logical; default FALSE. When TRUE, joutput() applies the
-level/toggle change silently (the status panel is not printed). A bare
-joutput() status query always prints regardless of quiet.</p></dd>
+level/toggle change silently (nothing is printed). A bare joutput()
+status query, and a <code>joutput("setting")</code> query, always print
+regardless of quiet.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Invisibly returns NULL. Called for its side effect of setting
-session options.</p>
+session options and printing the settings panel – in full for a bare
+status query, a level change or a reset, as the named settings alone
+for a <code>joutput("setting")</code> query, or as an echo of the settings
+a setting call touched.</p>
     </div>
+    <div class="section level2">
+    <h2 id="call-patterns">Call patterns<a class="anchor" aria-label="anchor" href="#call-patterns"></a></h2>
+
+
+<dl><dt><code>joutput()</code></dt>
+<dd><p>Print the full settings panel: the level and
+every setting, each marked <code>(override)</code> where its value
+differs from the level's default.</p></dd>
+
+<dt><code>joutput("setting")</code></dt>
+<dd><p>Print one setting and nothing else –
+<code>joutput("digits")</code>, or several at once with
+<code>joutput(c("levene", "posthoc"))</code> – closed by a pointer to
+<code>joutput()</code> for the full panel. A setting name given WITHOUT
+an argument name is read as a query rather than as a level; the
+three level names and the setting names share no string, so the
+two readings cannot collide. Only the settings named are shown,
+and like the full panel a query prints regardless of
+<code>quiet</code>.</p></dd>
+
+<dt><code>joutput("level")</code></dt>
+<dd><p>Set the level, clearing any earlier
+overrides, then print the full panel – a level moves most
+settings at once. Settings given in the same call are applied as
+overrides on the new level.</p></dd>
+
+<dt><code>joutput(setting = value, ...)</code></dt>
+<dd><p>Set one or more settings
+within the current level, then echo only what the call touched,
+closed by a pointer to <code>joutput()</code> for the full panel. The
+three Case Processing settings (<code>case.processing</code>,
+<code>case.processing.detail</code>, <code>case.processing.filter</code>) are
+echoed together whenever one of them is set, because each is read
+in light of the others: <code>case.processing = FALSE</code> silences
+the other two, and <code>case.processing.detail = "none"</code> silences
+<code>case.processing.filter</code>. Passing <code>setting = NULL</code> as a
+named argument leaves that setting as it is and echoes its current
+value.</p></dd>
+
+<dt><code>joutput(NULL)</code></dt>
+<dd><p>Reset to the standard level with no
+overrides.</p></dd>
+
+
+</dl></div>
     <div class="section level2">
     <h2 id="session-options">Session options<a class="anchor" aria-label="anchor" href="#session-options"></a></h2>
 
@@ -364,6 +413,16 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span>digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>                     <span class="co"># set one setting; echoes only that one</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Output Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 2 (override)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joutput() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="st">"digits"</span><span class="op">)</span>                       <span class="co"># show one setting</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Output Settings</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 2 (override)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joutput() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="op">)</span>                               <span class="co"># show current settings</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Output Settings</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Level: full</span>
@@ -380,7 +439,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 2 (override)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">".jst_output_level"</span><span class="op">)</span>          <span class="co"># the raw option behind the level</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "full"</span>
