@@ -7039,7 +7039,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     assigns letters by code order, a tag set other than the leading
 #'     letters comes back as the leading letters (\code{.d}, \code{.n},
 #'     \code{.r} return as \code{.a}, \code{.b}, \code{.c}) with the same
-#'     labels; the notification says so whenever it applies.}
+#'     labels, and codes that do not run from the largest absolute value
+#'     down -- a \code{missing.convention.codes} setting such as
+#'     \code{c(-1, -2, -3)} -- come back with their letters in another
+#'     order; the notification says so whenever a letter would change.}
 #'   \item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 #'     Stata-style missing values. Letter tags are assigned by ordering
 #'     rather than by convention: each column's own declared
@@ -7876,18 +7879,30 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       converted_vars         <- c(converted_vars, vname)
       converted_info[[vname]] <- list(src = disp_src, dst = disp_dst)
 
-      # Return-trip note (S314, 0.9.189). A marker set other than the
-      # leading letters comes back as the leading letters: the
-      # SPSS-to-Stata direction assigns .a, .b, .c by code order, and the
-      # labels travel. Recorded here, emitted with the report below.
-      lead_tags <- letters[seq_along(plan)]
-      if (!identical(names(plan), lead_tags)) {
+      # Return-trip note (S314, 0.9.189). The SPSS-to-Stata direction
+      # letters a column's codes by absolute value, largest first (ties:
+      # the more negative first), and the labels travel. So a marker set
+      # comes back under other letters whenever that order is not the
+      # order its letters went out in: a set other than the leading
+      # letters (the S314 case), and -- since 0.9.211 (S334) -- codes that
+      # do not run from the largest absolute value down, whether declared
+      # one by one or as a range (missing.convention.codes = c(-1, -2,
+      # -3) sends .a, .b, .c out and gets .c, .b, .a back). The trip is
+      # worked out here rather than inferred from the letters, so the
+      # note fires exactly when a letter would change. Recorded here,
+      # emitted with the report below.
+      plan_codes <- as.numeric(unlist(plan, use.names = FALSE))
+      back_tags  <- character(length(plan_codes))
+      back_tags[order(-abs(plan_codes), plan_codes)] <-
+        letters[seq_along(plan_codes)]
+      if (!identical(names(plan), back_tags)) {
         show_case <- function(t) paste0(".", if (was_sas) toupper(t) else t)
         reletter_notes[[vname]] <- list(
           var   = vname,
           n     = length(plan),
           from  = paste(show_case(names(plan)), collapse = ", "),
-          to    = paste(show_case(lead_tags), collapse = ", "),
+          to    = paste(show_case(back_tags), collapse = ", "),
+          lead  = identical(back_tags, letters[seq_along(plan)]),
           style = if (was_sas) "SAS-style" else "Stata-style")
       }
 
@@ -8094,23 +8109,39 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
 
       # Long form (S319, 0.9.196): one row per missing value, the column's
       # name on its first row and the rest hanging beneath it, so a label
-      # and what it became read across one line. The arrow aligns within
-      # each column's block, not across the report, so one long label
-      # does not widen every block. Two spaces before the arrow at the
-      # widest source keep every arrow row a table row to the wrapper
+      # and what it became read across one line. ONE arrow column for the
+      # whole report (S334, 0.9.211): until then the arrow aligned within
+      # each column's block, so a one-value column's arrow sat out of line
+      # with its neighbors'. The per-block form existed so that one long
+      # label would not widen every block, and that is kept another way: a
+      # row too long for the message width -- at the arrow column it would
+      # set, with the widest destination -- keeps its arrow directly after
+      # its own label and does not move the others. Two spaces before the
+      # arrow keep every arrow row a table row to the wrapper
       # (.jst_seg_category()), so no row is word-filled mid-label. Blocks
       # follow one another without a blank line: the name column marks
       # each, and a blank per column would cost most on exactly the wide
       # frames where the report is longest.
       max_name_len <- max(nchar(converted_vars))
       hang         <- strrep(" ", 2L + max_name_len + 2L)
+      arrow_src <- unlist(lapply(converted_info[converted_vars], function(ci) {
+        ci$src[!is.na(ci$dst)]
+      }), use.names = FALSE)
+      arrow_dst <- unlist(lapply(converted_info[converted_vars], function(ci) {
+        ci$dst[!is.na(ci$dst)]
+      }), use.names = FALSE)
+      src_w <- 0L
+      if (length(arrow_src) > 0L) {
+        fits <- nchar(hang) + nchar(arrow_src) + nchar("  -> ") +
+          max(nchar(arrow_dst)) <= .jst_resolve_width()
+        if (any(fits)) src_w <- max(nchar(arrow_src[fits]))
+      }
       for (vname in converted_vars) {
         ci    <- converted_info[[vname]]
         arrow <- !is.na(ci$dst)
-        src_w <- if (any(arrow)) max(nchar(ci$src[arrow])) else 0L
         rows  <- ci$src
         rows[arrow] <- paste0(ci$src[arrow],
-                              strrep(" ", src_w - nchar(ci$src[arrow])),
+                              strrep(" ", pmax(0L, src_w - nchar(ci$src[arrow]))),
                               "  -> ", ci$dst[arrow])
         if (length(rows) == 0L) rows <- ""
         lead <- c(paste0("  ", format(vname, width = max_name_len), "  "),
@@ -8164,12 +8195,26 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
                           if (rn$n == 1L) "marker" else "markers",
                           rn$to, rn$from)
         } else {
-          vnames <- vapply(reletter_notes, `[[`, character(1), "var")
-          note <- sprintf(paste0("Note: converting %s back to %s missing ",
-                                 "values would give their markers the ",
-                                 "leading letters (.a, .b, ...) with the ",
-                                 "same labels, not the letters above."),
-                          .jst_and_list(vnames), style_phrase)
+          # Several variables share one note. "The leading letters" is
+          # true only when every one of them comes back as .a, .b, ...;
+          # a set that comes back in another order (S334) has the
+          # leading letters already.
+          vnames   <- vapply(reletter_notes, `[[`, character(1), "var")
+          all_lead <- all(vapply(reletter_notes, function(rn) isTRUE(rn$lead),
+                                 logical(1)))
+          note <- if (all_lead) {
+            sprintf(paste0("Note: converting %s back to %s missing ",
+                           "values would give their markers the ",
+                           "leading letters (.a, .b, ...) with the ",
+                           "same labels, not the letters above."),
+                    .jst_and_list(vnames), style_phrase)
+          } else {
+            sprintf(paste0("Note: converting %s back to %s missing ",
+                           "values would give their markers different ",
+                           "letters from those above, with the same ",
+                           "labels."),
+                    .jst_and_list(vnames), style_phrase)
+          }
         }
         msg_lines <- c(msg_lines, "", note)
       }

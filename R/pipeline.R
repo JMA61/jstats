@@ -180,7 +180,15 @@ juse <- function(data) {
 #'   one when several do. To clear every dataset's setting at once, use
 #'   \code{clear.all = TRUE}. If \code{expr} and \code{data} are both
 #'   omitted, prints the current jsubset status, which says so when a
-#'   stored filter can no longer be applied.
+#'   stored filter can no longer be applied. A setting is stored under its
+#'   dataset's name, so the named \code{off} and \code{NULL} still work
+#'   after that dataset has been removed, or its name given to something
+#'   that is not a data frame; \code{on} is refused there, since the
+#'   filter cannot be checked without its dataset.
+#'
+#'   \code{jsubset()} takes one condition. Two conditions separated by a
+#'   comma (\code{jsubset(Age < 40, Gender == 1)}) are refused, with the
+#'   call that joins them: \code{jsubset(Age < 40 & Gender == 1)}.
 #' @param clear.all Logical. If \code{TRUE}, clears the jsubset setting on
 #'   every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This
 #'   is the same grammar as the registration functions (\code{jdummy()},
@@ -236,6 +244,16 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   # The caller's frame: where a filter's workspace names resolve, and where
   # the juse() default frame is looked up by name.
   caller_env <- parent.frame()
+
+  # -- A third positional input (S334) --------------------------------------
+  # Read from the call as typed, before clear.all -- where a third unnamed
+  # input lands -- is evaluated: jsubset(d, Age < 40, Sex == 1) is more
+  # than one condition, not a clear.all value.
+  cl_args  <- as.list(sys.call())[-1L]
+  cl_names <- names(cl_args)
+  if (is.null(cl_names)) cl_names <- rep("", length(cl_args))
+  cl_pos   <- cl_args[!nzchar(cl_names)]
+  if (length(cl_pos) > 2L) .jst_extra_conditions_stop(cl_pos, caller_env)
 
   # -- Shared branches, written once ----------------------------------------
   # Three operations reach the registry by name: clear every frame, clear
@@ -457,6 +475,31 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
                       .jst_resolve_data(caller_env)$data))
   }
 
+  # -- A named off / on / NULL whose name is not a data frame (S334) --------
+  # The registry is keyed by name, so off and NULL act on the stored filter
+  # without the frame: one that was removed, or whose name now holds
+  # something else, could not be turned off or cleared by name (the
+  # resolver below answered "'z' not found. Did you mean to use it as a
+  # variable name?"). on is refused -- the filter cannot be checked without
+  # its frame -- and so is a name that carries no filter. Read before the
+  # resolver, and whatever the juse() default: a name followed by off, on
+  # or NULL is never a condition.
+  if (is.symbol(raw_data) && !missing(expr) &&
+      (is.null(raw_expr) || !is.null(toggle_word(raw_expr)))) {
+    reg <- getOption(".jst_filter", default = list())
+    reg <- reg[!vapply(reg, is.null, logical(1))]
+    st  <- .jst_setting_name_state(raw_data, names(reg), NULL, caller_env)
+    if (!is.null(st)) {
+      if (st$stored && is.null(raw_expr)) return(clear_one(st$name))
+      if (st$stored && identical(toggle_word(raw_expr), "off")) {
+        return(toggle_one(st$name, "off", "", NULL))
+      }
+      fs <- if (st$stored) reg[[st$name]] else NULL
+      .jst_setting_name_stop("jsubset", st, payload = fs$expr_str,
+                             active = isTRUE(fs$active))
+    }
+  }
+
   # -- Resolve which arg is the data and which is the expression ------------
   # Uses the standard helper. For jsubset, the helper distinguishes:
   #   explicit            : raw_data is a data frame  -> raw_expr is the expr
@@ -494,7 +537,23 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     # filter here.
     filter_raw <- raw_expr
   } else {
-    # symbol_with_default — jsubset(<expr>) bare-expression form
+    # symbol_with_default — jsubset(<expr>) bare-expression form. A second
+    # input here is a second condition (S334): until 0.9.211 it was dropped
+    # without a word, and jsubset(Age < 40, Sex == 1) stored Age < 40. A
+    # second input of off, on or NULL is the named-frame form typed with
+    # something that is not a data frame's name in front (a bare name was
+    # dealt with above).
+    if (!missing(expr)) {
+      if (is.null(raw_expr) || !is.null(toggle_word(raw_expr))) {
+        word <- if (is.null(raw_expr)) "NULL" else toggle_word(raw_expr)
+        .jst_stop(word, " acts on a data frame's stored filter, and ",
+                  .jst_term_text(arg1$first_arg_sub),
+                  " is not a data frame.\n",
+                  "For the juse() default data frame, run:\n",
+                  "  jsubset(", word, ")")
+      }
+      .jst_one_condition_stop(list(arg1$first_arg_sub, raw_expr))
+    }
     filter_raw <- arg1$first_arg_sub
   }
 
@@ -860,8 +919,12 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #'   \code{jcomplete(NULL)}), or on the named dataset when it is given
 #'   (\code{jcomplete(d, off)}, \code{jcomplete(d, NULL)}). With no
 #'   default set, \code{jcomplete(NULL)} clears the one dataset that
-#'   carries a setting, and asks you to name one when several do. Call
-#'   with no arguments to check the current status.
+#'   carries a setting, and asks you to name one when several do. A
+#'   setting is stored under its dataset's name, so the named \code{off}
+#'   and \code{NULL} still work after that dataset has been removed, or
+#'   its name given to something that is not a data frame; \code{on} is
+#'   refused there, since the setting cannot be checked without its
+#'   dataset. Call with no arguments to check the current status.
 #' @param ... Unquoted variable names to include in the listwise check.
 #' @param clear.all Logical. If \code{TRUE}, clears the jcomplete setting
 #'   on every dataset; use on its own, \code{jcomplete(clear.all = TRUE)}.
@@ -1200,6 +1263,31 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     return(toggle_one(default_name, default_word,
                       "jcomplete(var1, var2, ...)",
                       .jst_resolve_data(parent.frame())$data))
+  }
+
+  # -- A named off / on / NULL whose name is not a data frame (S334) --------
+  # The jsubset() counterpart: the registry is keyed by name, so off and
+  # NULL act on the stored setting without the frame; on is refused, since
+  # the setting cannot be checked without it. With a juse() default and
+  # nothing stored under the name the call is left alone -- jcomplete(v1,
+  # on) may be two variables of the default data frame -- and with no
+  # default a name that carries no setting is refused as one.
+  if (is.symbol(raw_data) && length(dots_raw) == 1L &&
+      (is.null(dots_raw[[1L]]) || !is.null(toggle_word(dots_raw[[1L]])))) {
+    reg <- getOption(".jst_complete", default = list())
+    reg <- reg[!vapply(reg, is.null, logical(1))]
+    st  <- .jst_setting_name_state(raw_data, names(reg), default_name,
+                                   parent.frame())
+    if (!is.null(st)) {
+      if (st$stored && is.null(dots_raw[[1L]])) return(clear_one(st$name))
+      if (st$stored && identical(toggle_word(dots_raw[[1L]]), "off")) {
+        return(toggle_one(st$name, "off", "", NULL))
+      }
+      cs <- if (st$stored) reg[[st$name]] else NULL
+      .jst_setting_name_stop("jcomplete", st,
+                             payload = if (!is.null(cs)) vars_of(cs),
+                             active  = isTRUE(cs$active))
+    }
   }
 
   # -- Resolve the first argument via the standard helper -------------------

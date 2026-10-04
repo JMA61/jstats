@@ -563,9 +563,15 @@
       .jst_frame_first_stop(data_sub, frames, fn_name,
                             cl = sys.call(sys.parent()), envir = envir)
     }
+    # The first sentence says what was checked (S334): an input that did
+    # not evaluate was "not found"; one that evaluated to something other
+    # than a data frame was found, and until 0.9.211 was called "not
+    # found" too (z <- 1:3; jcorr(z)).
     data_str <- paste(deparse(data_sub), collapse = "")
     .jst_stop(
-      "'", data_str, "' not found. Did you mean to use it as a variable name?\n",
+      "'", data_str,
+      if (eval_result$failed) "' not found." else "' is not a data frame.",
+      " Did you mean to use it as a variable name?\n",
       "If so, provide the data frame: ", fn_name, "(MyData, ", data_str, ")\n",
       "Or set a default first with juse(MyData), then: ", fn_name, "(", data_str, ")",
     fn = fn_name)

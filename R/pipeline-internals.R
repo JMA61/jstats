@@ -97,7 +97,8 @@
     if (is.logical(expr)) "is a single value"
     else paste0("is a single value (", as.character(mask), ")")
   } else if (length(mask) != n_rows) {
-    paste0("has ", length(mask), " values for ", n_rows, " rows")
+    paste0("has ", length(mask), " values for ", n_rows,
+           if (n_rows == 1L) " row" else " rows")
   } else {
     NULL
   }
@@ -188,6 +189,164 @@
     expr_str, " ", what, ", not one TRUE or FALSE for every row.\n",
     fix, unchanged
   )
+}
+
+#' Internal helper: a named off / on / NULL whose name is not a data frame
+#'
+#' \code{jsubset(z, off)}, \code{jsubset(z, on)}, \code{jsubset(z, NULL)} and
+#' the \code{jcomplete()} forms name the data frame a stored setting belongs
+#' to. The settings are stored by NAME, so \code{off} and \code{NULL} need no
+#' data frame; until Session 334 the name was resolved as a data frame first,
+#' and one that had been removed, or now held something else, met the
+#' resolver's "not found. Did you mean to use it as a variable name?" -- so
+#' the named form could not turn off or clear the setting stored for it.
+#' This reads the name without resolving it and says which case it is.
+#'
+#' Returns \code{NULL} -- the caller carries on as before -- when the input
+#' is not a bare name, when it holds a data frame, or when nothing is stored
+#' under it and \code{default_name} is set. The last is \code{jcomplete()}'s
+#' case: with a \code{juse()} default, \code{jcomplete(v1, on)} may be two
+#' variables of the default data frame. \code{jsubset()} passes
+#' \code{default_name = NULL}, since a name followed by \code{off},
+#' \code{on} or \code{NULL} is never a condition.
+#'
+#' @param data_sub The substituted first argument.
+#' @param stored Character; the names that carry a setting.
+#' @param default_name Character(1) or \code{NULL}; the \code{juse()}
+#'   default (see above).
+#' @param envir The caller's environment.
+#' @return \code{NULL}, or a list: \code{name}; \code{state}, \code{"gone"}
+#'   (the name did not evaluate) or \code{"other"} (it holds something that
+#'   is not a data frame); \code{stored}, whether a setting is stored under
+#'   it.
+#' @keywords internal
+.jst_setting_name_state <- function(data_sub, stored, default_name, envir) {
+  if (!is.symbol(data_sub)) return(NULL)
+  nm  <- as.character(data_sub)
+  val <- tryCatch(list(value = eval(data_sub, envir = envir), failed = FALSE),
+                  error = function(e) list(value = NULL, failed = TRUE))
+  if (!val$failed && is.data.frame(val$value)) return(NULL)
+  if (!(nm %in% stored) && !is.null(default_name)) return(NULL)
+  list(name = nm, state = if (val$failed) "gone" else "other",
+       stored = nm %in% stored)
+}
+
+#' Internal helper: the stop for a named setting whose name is not a data frame
+#'
+#' Two messages (Session 334; Jeff approved both from rendered examples).
+#' With nothing stored under the name, the name is the subject (Rule AD) and
+#' the status call is the remedy. With a setting stored, the only call that
+#' reaches here is \code{on}: the setting cannot be checked without its data
+#' frame, so it is refused in the form the stale-setting stops use -- the
+#' cause as it was checked (Rule AH: "no longer exists" for a name that did
+#' not evaluate, "is no longer a data frame" for one that holds something
+#' else), "stays off" when the setting is off, and the way to remove it.
+#' The name takes no article and no "data frame": it is not one.
+#'
+#' @param fn \code{"jsubset"} or \code{"jcomplete"}.
+#' @param st The \code{.jst_setting_name_state()} result.
+#' @param payload Character(1); the stored filter, or the stored variables.
+#' @param active Logical; whether the stored setting is active.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_setting_name_stop <- function(fn, st, payload = NULL, active = FALSE) {
+  is_subset <- identical(fn, "jsubset")
+  what      <- if (is_subset) "filter" else "setting"
+  if (!st$stored) {
+    .jst_stop(
+      st$name,
+      if (identical(st$state, "gone")) " was not found" else
+        " is not a data frame",
+      ", and no ", fn, " ", what, " is stored under that name.\n",
+      if (is_subset) "To see the filters that are set, run:\n" else
+        "To see the settings that are stored, run:\n",
+      "  ", fn, "()",
+      fn = fn)
+  }
+  .jst_stop(
+    "the ", fn, " ", what, " for ", st$name, ", ", payload,
+    ", cannot be applied: ", st$name,
+    if (identical(st$state, "gone")) " no longer exists" else
+      " is no longer a data frame",
+    ".\n",
+    if (!isTRUE(active)) paste0("The ", what, " stays off.\n"),
+    if (is_subset) "To delete it, run:\n" else "To clear it, run:\n",
+    "  ", fn, "(", st$name, ", NULL)",
+    fn = fn)
+}
+
+#' Internal helper: refuse more than one condition in jsubset()
+#'
+#' \code{jsubset()} takes one condition. A second one after a comma -- the
+#' habit of a filter function that takes several -- was dropped without a
+#' word when the \code{juse()} default supplied the data frame:
+#' \code{jsubset(Age < 40, Sex == 1)} stored \code{Age < 40} and reported it
+#' "activated" (Session 334). The stop names the conditions and gives the
+#' joined call; a condition whose own top-level operator is \code{|} is
+#' parenthesized there, since \code{&} binds more tightly.
+#'
+#' @param conds A list of unevaluated conditions, two or more.
+#' @param frame Character(1) or \code{NULL}; the data frame as typed, when
+#'   the call named one.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_one_condition_stop <- function(conds, frame = NULL) {
+  txt  <- vapply(conds, .jst_term_text, character(1))
+  n    <- length(txt)
+  word <- if (n <= 4L) c("two", "three", "four")[n - 1L] else as.character(n)
+  part <- vapply(seq_along(conds), function(i) {
+    e <- conds[[i]]
+    if (is.call(e) && as.character(e[[1L]])[1L] %in% c("|", "||")) {
+      paste0("(", txt[i], ")")
+    } else {
+      txt[i]
+    }
+  }, character(1))
+  .jst_stop(
+    word, " conditions were given, ", .jst_and_list(txt),
+    ", and jsubset() takes one.\n",
+    "Join them with & (and) or | (or):\n",
+    "  jsubset(", if (!is.null(frame)) paste0(frame, ", "),
+    paste(part, collapse = " & "), ")",
+    fn = "jsubset")
+}
+
+#' Internal helper: jsubset()'s check on a third positional input
+#'
+#' \code{jsubset(d, Age < 40, Sex == 1)} puts its third input in
+#' \code{clear.all}, where evaluating it gave R's own "object 'Sex' not
+#' found". Read from the call as typed, before anything is evaluated, and
+#' refused as more than one condition (\code{.jst_one_condition_stop()}).
+#' The first input is evaluated here only to tell a data frame from a
+#' condition, and only on this path, which always stops unless one of the
+#' inputs is \code{off}, \code{on} or \code{NULL}; those calls are left to
+#' fail as they did.
+#'
+#' @param pos The call's unnamed inputs, unevaluated, three or more.
+#' @param envir The caller's environment.
+#' @return \code{invisible(NULL)}, or stops.
+#' @keywords internal
+.jst_extra_conditions_stop <- function(pos, envir) {
+  n       <- length(pos)
+  empty   <- vapply(seq_len(n), function(i) {
+    identical(pos[[i]], quote(expr = ))
+  }, logical(1))
+  is_word <- vapply(seq_len(n), function(i) {
+    !empty[i] && (is.null(pos[[i]]) ||
+      (is.symbol(pos[[i]]) &&
+         tolower(as.character(pos[[i]])) %in% c("off", "on")))
+  }, logical(1))
+  frame <- NULL
+  if (!empty[1L] && !is_word[1L] &&
+      isTRUE(tryCatch(is.data.frame(eval(pos[[1L]], envir = envir)),
+                      error = function(e) FALSE))) {
+    frame <- .jst_term_text(pos[[1L]])
+  }
+  keep <- if (!is.null(frame) || empty[1L]) seq_len(n)[-1L] else seq_len(n)
+  if (length(keep) < 2L || any(empty[keep]) || any(is_word[keep])) {
+    return(invisible(NULL))
+  }
+  .jst_one_condition_stop(pos[keep], frame)
 }
 
 #' Internal helper: the closing lines of a stored filter's stop

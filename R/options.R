@@ -806,9 +806,10 @@ joutput <- function(level, effect.size = NULL,
     # sentence at message.width and passes the runnable lines; the
     # builder no longer wraps its own prose.
     .jst_msg_out(paste(notes, collapse = "\n"))
+    return(invisible(TRUE))
   }
 
-  invisible(NULL)
+  invisible(FALSE)
 }
 
 
@@ -1294,8 +1295,20 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
   # which is about another slot. quiet silences it with the rest (Jeff,
   # S332: a quiet call is fully quiet); the folder is created all the
   # same, and one that cannot be created still stops.
-  if (dd_created && !quiet) .jst_msg(.jst_data_dir_created_note(data.dir))
-  if (!quiet && trigger_nudge) .jst_options_nudge(missing.convention)
+  #
+  # The call ends on ONE blank line whatever it printed last (S334,
+  # 0.9.211). The echo closes on its own blank line; the note and the
+  # nudge print after it and had none, so each sat against the next
+  # prompt, and against each other when both printed. The blank line is
+  # written to stdout, not put in the message: the RStudio console does
+  # not display a blank line on the message stream.
+  if (dd_created && !quiet) {
+    .jst_msg(.jst_data_dir_created_note(data.dir))
+    cat("\n")
+  }
+  if (!quiet && trigger_nudge && .jst_options_nudge(missing.convention)) {
+    cat("\n")
+  }
 
   invisible(NULL)
 }

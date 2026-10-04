@@ -23,8 +23,12 @@ default dataset when \code{data} is omitted (\code{jcomplete(off)},
 \code{jcomplete(NULL)}), or on the named dataset when it is given
 (\code{jcomplete(d, off)}, \code{jcomplete(d, NULL)}). With no
 default set, \code{jcomplete(NULL)} clears the one dataset that
-carries a setting, and asks you to name one when several do. Call
-with no arguments to check the current status.}
+carries a setting, and asks you to name one when several do. A
+setting is stored under its dataset's name, so the named \code{off}
+and \code{NULL} still work after that dataset has been removed, or
+its name given to something that is not a data frame; \code{on} is
+refused there, since the setting cannot be checked without its
+dataset. Call with no arguments to check the current status.}
 
 \item{...}{Unquoted variable names to include in the listwise check.}
 

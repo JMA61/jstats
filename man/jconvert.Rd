@@ -116,7 +116,10 @@ before any data is touched, with the fix. Because the SPSS-to-Stata direction
 assigns letters by code order, a tag set other than the leading
 letters comes back as the leading letters (\code{.d}, \code{.n},
 \code{.r} return as \code{.a}, \code{.b}, \code{.c}) with the same
-labels; the notification says so whenever it applies.}
+labels, and codes that do not run from the largest absolute value
+down -- a \code{missing.convention.codes} setting such as
+\code{c(-1, -2, -3)} -- come back with their letters in another
+order; the notification says so whenever a letter would change.}
 \item{\code{to = "stata"}}{Convert SPSS-style numeric codes to
 Stata-style missing values. Letter tags are assigned by ordering
 rather than by convention: each column's own declared

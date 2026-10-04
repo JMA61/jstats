@@ -28,7 +28,15 @@ clears the one dataset that carries a setting, and asks you to name
 one when several do. To clear every dataset's setting at once, use
 \code{clear.all = TRUE}. If \code{expr} and \code{data} are both
 omitted, prints the current jsubset status, which says so when a
-stored filter can no longer be applied.}
+stored filter can no longer be applied. A setting is stored under its
+dataset's name, so the named \code{off} and \code{NULL} still work
+after that dataset has been removed, or its name given to something
+that is not a data frame; \code{on} is refused there, since the
+filter cannot be checked without its dataset.
+
+\code{jsubset()} takes one condition. Two conditions separated by a
+comma (\code{jsubset(Age < 40, Gender == 1)}) are refused, with the
+call that joins them: \code{jsubset(Age < 40 & Gender == 1)}.}
 
 \item{clear.all}{Logical. If \code{TRUE}, clears the jsubset setting on
 every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This

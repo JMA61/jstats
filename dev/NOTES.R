@@ -77,6 +77,23 @@ devtools::install()
 ## Run before any release-candidate or CRAN submission; routine edits don't need this.
 devtools::check(remote = TRUE)
 
+
+### To Release ####
+Go to github.com/jma61/jstats/releases/new
+
+Click Choose a tag, type v0.9.210, and pick Create new tag: v0.9.210 on publish.
+
+Leave Target on main. This is what ties the release to 6a14c77.
+
+Set the release title to v0.9.210. The description is optional; Generate release notes will fill it from the commit messages.
+
+Leave Set as the latest release ticked and Set as a pre-release unticked. r-universe builds only the latest release, so a pre-release would not reach users.
+
+Click Publish release.
+
+
+
+
 ## Committing and pushing a new version
 
 ## When ready to commit, use the Git tab in the upper right pane.
