@@ -134,7 +134,10 @@ The four target formats:
   with the fix. Because the SPSS-to-Stata direction assigns letters by
   code order, a tag set other than the leading letters comes back as the
   leading letters (`.d`, `.n`, `.r` return as `.a`, `.b`, `.c`) with the
-  same labels; the notification says so whenever it applies.
+  same labels, and codes that do not run from the largest absolute value
+  down – a `missing.convention.codes` setting such as `c(-1, -2, -3)` –
+  come back with their letters in another order; the notification says
+  so whenever a letter would change.
 
 - `to = "stata"`:
 
@@ -221,7 +224,7 @@ jconvert(df, to = "stata", modify = TRUE)
 #>                 -98 ["Don't know"]  -> .b
 #>   Education     -99 ["Refused"]     -> .a
 #>                 -98 ["Don't know"]  -> .b
-#>   Smoker        -99 ["Refused"]  -> .a
+#>   Smoker        -99 ["Refused"]     -> .a
 #>   Environment1  -99 ["Refused"]     -> .a
 #>                 -98 ["Don't know"]  -> .b
 #>   Environment3  -99 ["Refused"]     -> .a
@@ -237,7 +240,7 @@ df2 <- jconvert(community, to = "stata")
 #>                 -98 ["Don't know"]  -> .b
 #>   Education     -99 ["Refused"]     -> .a
 #>                 -98 ["Don't know"]  -> .b
-#>   Smoker        -99 ["Refused"]  -> .a
+#>   Smoker        -99 ["Refused"]     -> .a
 #>   Environment1  -99 ["Refused"]     -> .a
 #>                 -98 ["Don't know"]  -> .b
 #>   Environment3  -99 ["Refused"]     -> .a
@@ -256,7 +259,7 @@ df_sas <- jconvert(community, to = "sas")
 #>                 -98 ["Don't know"]  -> .B
 #>   Education     -99 ["Refused"]     -> .A
 #>                 -98 ["Don't know"]  -> .B
-#>   Smoker        -99 ["Refused"]  -> .A
+#>   Smoker        -99 ["Refused"]     -> .A
 #>   Environment1  -99 ["Refused"]     -> .A
 #>                 -98 ["Don't know"]  -> .B
 #>   Environment3  -99 ["Refused"]     -> .A

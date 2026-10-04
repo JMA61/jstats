@@ -117,7 +117,7 @@ the object to the data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.210</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.211</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -138,7 +138,7 @@ the object to the data frame."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Set, activate, deactivate, or clear a per-dataset case-selection expression</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.210/R/pipeline.R" class="external-link"><code>R/pipeline.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/pipeline.R" class="external-link"><code>R/pipeline.R</code></a></small>
       <div class="d-none name"><code>jsubset.Rd</code></div>
     </div>
 
@@ -238,7 +238,14 @@ clears the one dataset that carries a setting, and asks you to name
 one when several do. To clear every dataset's setting at once, use
 <code>clear.all = TRUE</code>. If <code>expr</code> and <code>data</code> are both
 omitted, prints the current jsubset status, which says so when a
-stored filter can no longer be applied.</p></dd>
+stored filter can no longer be applied. A setting is stored under its
+dataset's name, so the named <code>off</code> and <code>NULL</code> still work
+after that dataset has been removed, or its name given to something
+that is not a data frame; <code>on</code> is refused there, since the
+filter cannot be checked without its dataset.</p>
+<p><code>jsubset()</code> takes one condition. Two conditions separated by a
+comma (<code>jsubset(Age &lt; 40, Gender == 1)</code>) are refused, with the
+call that joins them: <code>jsubset(Age &lt; 40 &amp; Gender == 1)</code>.</p></dd>
 
 
 <dt id="arg-clear-all">clear.all<a class="anchor" aria-label="anchor" href="#arg-clear-all"></a></dt>

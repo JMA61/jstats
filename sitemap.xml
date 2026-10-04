@@ -92,6 +92,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_dummies.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expand_one_dummy.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_expr_symbols.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_extra_conditions_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_exits.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_mask.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_status_signal.html</loc></url>
@@ -186,6 +187,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_msg_out.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_nonmissing_label_set.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_norm_path.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_one_condition_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_orientation_body.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_orientation_render_console.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_orientation_stamp.html</loc></url>
@@ -253,6 +255,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_set_dummy.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_set_filter.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_set_registry.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_setting_name_state.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_setting_name_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_short_label.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_skill_candidate_dirs.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_skill_default_dir.html</loc></url>

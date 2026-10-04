@@ -107,7 +107,15 @@ jsubset(data, expr, clear.all = FALSE, ...)
   several do. To clear every dataset's setting at once, use
   `clear.all = TRUE`. If `expr` and `data` are both omitted, prints the
   current jsubset status, which says so when a stored filter can no
-  longer be applied.
+  longer be applied. A setting is stored under its dataset's name, so
+  the named `off` and `NULL` still work after that dataset has been
+  removed, or its name given to something that is not a data frame; `on`
+  is refused there, since the filter cannot be checked without its
+  dataset.
+
+  `jsubset()` takes one condition. Two conditions separated by a comma
+  (`jsubset(Age < 40, Gender == 1)`) are refused, with the call that
+  joins them: `jsubset(Age < 40 & Gender == 1)`.
 
 - clear.all:
 

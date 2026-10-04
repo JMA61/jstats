@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.210</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.211</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,7 @@ missing values."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Convert missing-value declarations between formats</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.210/R/recode.R" class="external-link"><code>R/recode.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/recode.R" class="external-link"><code>R/recode.R</code></a></small>
       <div class="d-none name"><code>jconvert.Rd</code></div>
     </div>
 
@@ -182,7 +182,10 @@ before any data is touched, with the fix. Because the SPSS-to-Stata direction
 assigns letters by code order, a tag set other than the leading
 letters comes back as the leading letters (<code>.d</code>, <code>.n</code>,
 <code>.r</code> return as <code>.a</code>, <code>.b</code>, <code>.c</code>) with the same
-labels; the notification says so whenever it applies.</p></dd>
+labels, and codes that do not run from the largest absolute value
+down – a <code>missing.convention.codes</code> setting such as
+<code>c(-1, -2, -3)</code> – come back with their letters in another
+order; the notification says so whenever a letter would change.</p></dd>
 
 <dt><code>to = "stata"</code></dt>
 <dd><p>Convert SPSS-style numeric codes to
@@ -275,7 +278,7 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     -99 ["Refused"]     -&gt; .a</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]  -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]     -&gt; .a</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  -99 ["Refused"]     -&gt; .a</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  -99 ["Refused"]     -&gt; .a</span>
@@ -291,7 +294,7 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     -99 ["Refused"]     -&gt; .a</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]  -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]     -&gt; .a</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  -99 ["Refused"]     -&gt; .a</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .b</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  -99 ["Refused"]     -&gt; .a</span>
@@ -310,7 +313,7 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .B</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Education     -99 ["Refused"]     -&gt; .A</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .B</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]  -&gt; .A</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Smoker        -99 ["Refused"]     -&gt; .A</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment1  -99 ["Refused"]     -&gt; .A</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>                 -98 ["Don't know"]  -&gt; .B</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Environment3  -99 ["Refused"]     -&gt; .A</span>

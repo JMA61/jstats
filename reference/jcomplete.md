@@ -52,7 +52,11 @@ jcomplete(
   or on the named dataset when it is given (`jcomplete(d, off)`,
   `jcomplete(d, NULL)`). With no default set, `jcomplete(NULL)` clears
   the one dataset that carries a setting, and asks you to name one when
-  several do. Call with no arguments to check the current status.
+  several do. A setting is stored under its dataset's name, so the named
+  `off` and `NULL` still work after that dataset has been removed, or
+  its name given to something that is not a data frame; `on` is refused
+  there, since the setting cannot be checked without its dataset. Call
+  with no arguments to check the current status.
 
 - ...:
 
