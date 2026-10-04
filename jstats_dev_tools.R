@@ -20,7 +20,9 @@
 #        Takes an assembled master file received from Claude and installs it
 #        into R/. Steps: parse-check and anchor-check the inbound file ->
 #        structural gates (wrap call sites; overview links, S311) ->
-#        timestamped backup of R/ -> split on sentinels and write the R/
+#        timestamped backup of R/, written BESIDE the package folder since
+#        S337 (<package folder>_R_backups/, the last five kept; see
+#        .jdev_backup_R()) -> split on sentinels and write the R/
 #        files -> reassemble-and-diff self-check (restores the backup and
 #        aborts on any mismatch) -> devtools::load_all() -> document() ->
 #        check(), reporting the error/warning/note tally (the known benign
@@ -48,6 +50,7 @@
 .jdev_sentinel_regex <- "#<<<FILE: [^>]+>>>\n"
 .jdev_manifest_path  <- file.path("tools", "file_manifest.txt")
 .jdev_marker         <- ".jst_jstats_class"
+.jdev_backups_kept   <- 5L
 
 # ---- internal helpers --------------------------------------------------------
 
@@ -247,13 +250,39 @@
   fs[keep]
 }
 
+# Where the backups go (S337; the S289 item): a folder BESIDE the package
+# folder, named for it -- E:/00 R Projects/jstats_R_backups for a package in
+# E:/00 R Projects/jstats. R CMD build copies the whole package folder before
+# it applies .Rbuildignore, so a backup inside it is part of every build's
+# input (the S289 build failure), however well it is ignored afterwards.
+.jdev_backup_home <- function() {
+  root <- normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+  file.path(dirname(root), paste0(basename(root), "_R_backups"))
+}
+
+# Copies R/ to a timestamped folder under .jdev_backup_home() and keeps the
+# newest .jdev_backups_kept of them. Only folders this function names
+# (R_backup_<8 digits>_<6 digits>) are ever removed, and only there.
 .jdev_backup_R <- function() {
+  home <- .jdev_backup_home()
+  if (!dir.exists(home) && !dir.create(home)) {
+    stop("Backup of R/ failed: could not create ", home,
+         ". Aborting before any changes.", call. = FALSE)
+  }
   stamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  bdir  <- paste0("R_backup_", stamp)
-  dir.create(bdir)
+  bdir  <- file.path(home, paste0("R_backup_", stamp))
+  if (!dir.create(bdir)) {
+    stop("Backup of R/ failed: could not create ", bdir,
+         ". Aborting before any changes.", call. = FALSE)
+  }
   ok <- file.copy(list.files("R", full.names = TRUE), bdir)
   if (!all(ok)) stop("Backup of R/ failed. Aborting before any changes.",
                      call. = FALSE)
+  old <- sort(list.files(home, pattern = "^R_backup_[0-9]{8}_[0-9]{6}$"),
+              decreasing = TRUE)
+  old <- old[seq_along(old) > .jdev_backups_kept]
+  for (d in old) unlink(file.path(home, d), recursive = TRUE)
+  attr(bdir, "pruned") <- length(old)
   bdir
 }
 
@@ -344,6 +373,18 @@ receive_package <- function(file = "jstats_source.R") {
   managed_before <- .jdev_managed_files()
   bdir <- .jdev_backup_R()
   cat("Backup:             R/ copied to", bdir, "\n")
+  cat("                    ( beside the package folder; the newest",
+      .jdev_backups_kept, "are kept",
+      if (attr(bdir, "pruned") > 0L)
+        paste0("-- ", attr(bdir, "pruned"), " older removed"),
+      ")\n")
+  in_root <- list.files(".", pattern = "^R_backup_")
+  if (length(in_root)) {
+    cat("                    ", length(in_root), "older backup folder(s) are",
+        "still INSIDE the package folder\n",
+        "                    ( written before S337; nothing reads them, and",
+        "they can be deleted )\n")
+  }
 
   ## -- 5. split and write ------------------------------------------------------
   # delete sentinel-managed files not present in the inbound layout
@@ -378,11 +419,15 @@ receive_package <- function(file = "jstats_source.R") {
 
   ## -- 8. ensure .Rbuildignore covers dev-tool artifacts ------------------------
   # otherwise check() raises a "non-standard files at top level" NOTE for the
-  # backups, the inbound master, and the manifest on every run
+  # inbound master and the manifest on every run. "^R_backup_" stays for any
+  # backup folder left in the package folder from before S337. AGENTS.md
+  # (S337; the S207 item) is what jai("project") writes: non-standard at
+  # the top level, so it is ignored here whether or not one exists yet.
   want <- c("^R_backup_",
             paste0("^", gsub(".", "\\.", file, fixed = TRUE), "$"),
             "^tools/file_manifest\\.txt$",
-            "^jstats_dev_tools\\.R$")
+            "^jstats_dev_tools\\.R$",
+            "^AGENTS\\.md$")
   have <- if (file.exists(".Rbuildignore")) {
     readLines(".Rbuildignore", warn = FALSE)
   } else character(0)
