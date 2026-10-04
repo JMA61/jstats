@@ -7,7 +7,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/JMA61/jstats/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/JMA61/jstats/blob/v0.9.210/DESCRIPTION)
 
 Ackerman J (2026). *jstats: Simplified Statistical Analysis Tools for
 Social Science*. R package version 0.9.210,
