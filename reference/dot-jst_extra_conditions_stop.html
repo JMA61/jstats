@@ -4,16 +4,22 @@ clear.all, where evaluating it gave R's own &quot;object 'Sex' not
 found&quot;. Read from the call as typed, before anything is evaluated, and
 refused as more than one condition (.jst_one_condition_stop()).
 The first input is evaluated here only to tell a data frame from a
-condition, and only on this path, which always stops unless one of the
-inputs is off, on or NULL; those calls are left to
-fail as they did."><meta property="og:description" content="jsubset(d, Age &amp;lt; 40, Sex == 1) puts its third input in
+condition, and only on this path, which always stops unless an input is
+empty. When one of the inputs is off, on or NULL the
+joined call would be wrong (Age &amp;lt; 40 &amp;amp; on), and
+.jst_word_with_condition_stop() refuses the mix instead (Session
+338; until then those calls were left to fail on R's own &quot;object 'on'
+not found&quot;)."><meta property="og:description" content="jsubset(d, Age &amp;lt; 40, Sex == 1) puts its third input in
 clear.all, where evaluating it gave R's own &quot;object 'Sex' not
 found&quot;. Read from the call as typed, before anything is evaluated, and
 refused as more than one condition (.jst_one_condition_stop()).
 The first input is evaluated here only to tell a data frame from a
-condition, and only on this path, which always stops unless one of the
-inputs is off, on or NULL; those calls are left to
-fail as they did."></head><body>
+condition, and only on this path, which always stops unless an input is
+empty. When one of the inputs is off, on or NULL the
+joined call would be wrong (Age &amp;lt; 40 &amp;amp; on), and
+.jst_word_with_condition_stop() refuses the mix instead (Session
+338; until then those calls were left to fail on R's own &quot;object 'on'
+not found&quot;)."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -21,7 +27,7 @@ fail as they did."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.211</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.212</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,9 +58,12 @@ fail as they did."></head><body>
 found". Read from the call as typed, before anything is evaluated, and
 refused as more than one condition (<code><a href="dot-jst_one_condition_stop.html">.jst_one_condition_stop()</a></code>).
 The first input is evaluated here only to tell a data frame from a
-condition, and only on this path, which always stops unless one of the
-inputs is <code>off</code>, <code>on</code> or <code>NULL</code>; those calls are left to
-fail as they did.</p>
+condition, and only on this path, which always stops unless an input is
+empty. When one of the inputs is <code>off</code>, <code>on</code> or <code>NULL</code> the
+joined call would be wrong (<code>Age &lt; 40 &amp; on</code>), and
+<code><a href="dot-jst_word_with_condition_stop.html">.jst_word_with_condition_stop()</a></code> refuses the mix instead (Session
+338; until then those calls were left to fail on R's own "object 'on'
+not found").</p>
     </div>
 
     <div class="section level2">

@@ -33,7 +33,7 @@ subset = follows."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.211</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.212</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -141,6 +141,9 @@ data-frame form. Until then the re-call ran on a one-column copy under an
 internal name: a stored filter was skipped, and the yellow line said it
 was "not active for this dataset". Any other value (<code>c(...)</code>, a
 computed vector) is still wrapped. The refusals above apply to both.</p>
+<p>An empty vector that is not a data frame's column
+(<code>jdesc(numeric(0))</code>) is refused first, as typed (Session 338): the
+re-call's zero-row guard named the internal frame.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

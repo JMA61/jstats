@@ -12,7 +12,8 @@ and the name tells them apart (Session 290):
   `=`, `jdesc(community, Age, Gender = 1)`, where R's parser has already
   turned `Gender = 1` into an argument named Gender. Before Session 290
   the value was looked up as a variable ("Variable(s) not found in
-  community: 1."), and
+  community: 1."; the not-found message's wording until Session 338),
+  and
   [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md),
   which had no `...`, died inside R ("unused argument (Gender = 1)").
   The error now shows the fix in the form the caller can take:
@@ -26,16 +27,16 @@ and the name tells them apart (Session 290):
   partial-match (formals after `...` match exactly),
   `jdesc(community, Age, digit = 2)`. Routed to
   [`.jst_check_args()`](https://jma61.github.io/jstats/reference/dot-jst_check_args.md)
-  for its "unused input(s)" message. Unnamed items pass through
-  untouched. Called at every `rlang::enquos(...)` site directly after
-  the capture, and from
+  for its "unused input" message. Unnamed items pass through untouched.
+  Called at every `rlang::enquos(...)` site directly after the capture,
+  and from
   [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
   before its argument grammar runs.
 
 ## Usage
 
 ``` r
-.jst_check_named_variables(quos, data, fn_name)
+.jst_check_named_variables(quos, data, fn_name, frame = NULL)
 ```
 
 ## Arguments
@@ -56,3 +57,10 @@ and the name tells them apart (Session 290):
   Character. The calling function's name, for the message prefix and for
   the [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
   fix form.
+
+- frame:
+
+  Character(1) or `NULL`. For
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md):
+  the data frame as typed, when the call named one; the fix line keeps
+  it (`jsubset(d, Gender == 1)`; Session 338, the S290 item).

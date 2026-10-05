@@ -51,7 +51,7 @@ subset = NOT(Age &amp;lt; 40) ... subset = !(Age &amp;lt; 40) per call.
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.211</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.212</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -101,7 +101,12 @@ operator stands in. The lead and the fix line follow <code>origin</code>:
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_filter_syntax</span><span class="op">(</span><span class="va">raw_expr</span>, <span class="va">expr_str</span>, origin <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"set"</span>, <span class="st">"call"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_filter_syntax</span><span class="op">(</span></span>
+<span>  <span class="va">raw_expr</span>,</span>
+<span>  <span class="va">expr_str</span>,</span>
+<span>  origin <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"set"</span>, <span class="st">"call"</span><span class="op">)</span>,</span>
+<span>  frame <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -119,6 +124,12 @@ operator stands in. The lead and the fix line follow <code>origin</code>:
 <dt id="arg-origin">origin<a class="anchor" aria-label="anchor" href="#arg-origin"></a></dt>
 <dd><p><code>"set"</code> (<code><a href="jsubset.html">jsubset()</a></code>) or <code>"call"</code> (a
 per-call <code>subset =</code>); chooses the lead and the fix-line form.</p></dd>
+
+
+<dt id="arg-frame">frame<a class="anchor" aria-label="anchor" href="#arg-frame"></a></dt>
+<dd><p>Character(1) or <code>NULL</code>. For <code>"set"</code>: the data
+frame as typed, when the call named one; the fix line keeps it
+(<code>jsubset(d, !(Age &lt; 40))</code>; Session 338, the S290 item).</p></dd>
 
 </dl></div>
     <div class="section level2">

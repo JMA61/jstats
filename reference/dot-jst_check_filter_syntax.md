@@ -29,7 +29,12 @@ all). Two branches:
 ## Usage
 
 ``` r
-.jst_check_filter_syntax(raw_expr, expr_str, origin = c("set", "call"))
+.jst_check_filter_syntax(
+  raw_expr,
+  expr_str,
+  origin = c("set", "call"),
+  frame = NULL
+)
 ```
 
 ## Arguments
@@ -48,6 +53,12 @@ all). Two branches:
   ([`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md))
   or `"call"` (a per-call `subset =`); chooses the lead and the fix-line
   form.
+
+- frame:
+
+  Character(1) or `NULL`. For `"set"`: the data frame as typed, when the
+  call named one; the fix line keeps it (`jsubset(d, !(Age < 40))`;
+  Session 338, the S290 item).
 
 ## Details
 

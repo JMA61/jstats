@@ -86,3 +86,7 @@ one-column copy under an internal name: a stored filter was skipped, and
 the yellow line said it was "not active for this dataset". Any other
 value (`c(...)`, a computed vector) is still wrapped. The refusals above
 apply to both.
+
+An empty vector that is not a data frame's column (`jdesc(numeric(0))`)
+is refused first, as typed (Session 338): the re-call's zero-row guard
+named the internal frame.

@@ -7,7 +7,8 @@ the name is a column of the frame: a condition typed with a single
 =, jdesc(community, Age, Gender = 1), where R's parser
 has already turned Gender = 1 into an argument named Gender.
 Before Session 290 the value was looked up as a variable
-(&quot;Variable(s) not found in community: 1.&quot;), and jsubset(),
+(&quot;Variable(s) not found in community: 1.&quot;; the not-found message's
+wording until Session 338), and jsubset(),
 which had no ..., died inside R (&quot;unused argument
 (Gender = 1)&quot;). The error now shows the fix in the form the caller
 can take: jsubset(Gender == 1) for jsubset();
@@ -17,7 +18,7 @@ are never listed by hand); &quot;list the variable on its own&quot; otherwise.
 the name is not a column: a misspelled input that R could not
 partial-match (formals after ... match exactly),
 jdesc(community, Age, digit = 2). Routed to
-.jst_check_args() for its &quot;unused input(s)&quot; message.
+.jst_check_args() for its &quot;unused input&quot; message.
 Unnamed items pass through untouched. Called at every
 rlang::enquos(...) site directly after the capture, and from
 jsubset() before its argument grammar runs.
@@ -30,7 +31,8 @@ the name is a column of the frame: a condition typed with a single
 =, jdesc(community, Age, Gender = 1), where R's parser
 has already turned Gender = 1 into an argument named Gender.
 Before Session 290 the value was looked up as a variable
-(&quot;Variable(s) not found in community: 1.&quot;), and jsubset(),
+(&quot;Variable(s) not found in community: 1.&quot;; the not-found message's
+wording until Session 338), and jsubset(),
 which had no ..., died inside R (&quot;unused argument
 (Gender = 1)&quot;). The error now shows the fix in the form the caller
 can take: jsubset(Gender == 1) for jsubset();
@@ -40,7 +42,7 @@ are never listed by hand); &quot;list the variable on its own&quot; otherwise.
 the name is not a column: a misspelled input that R could not
 partial-match (formals after ... match exactly),
 jdesc(community, Age, digit = 2). Routed to
-.jst_check_args() for its &quot;unused input(s)&quot; message.
+.jst_check_args() for its &quot;unused input&quot; message.
 Unnamed items pass through untouched. Called at every
 rlang::enquos(...) site directly after the capture, and from
 jsubset() before its argument grammar runs.
@@ -53,7 +55,7 @@ jsubset() before its argument grammar runs.
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.211</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.212</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,7 +88,8 @@ mistakes arrive this way, and the name tells them apart (Session 290):</p><ul><l
 <code>=</code>, <code>jdesc(community, Age, Gender = 1)</code>, where R's parser
 has already turned <code>Gender = 1</code> into an argument named Gender.
 Before Session 290 the value was looked up as a variable
-("Variable(s) not found in community: 1."), and <code><a href="jsubset.html">jsubset()</a></code>,
+("Variable(s) not found in community: 1."; the not-found message's
+wording until Session 338), and <code><a href="jsubset.html">jsubset()</a></code>,
 which had no <code>...</code>, died inside R ("unused argument
 (Gender = 1)"). The error now shows the fix in the form the caller
 can take: <code>jsubset(Gender == 1)</code> for <code><a href="jsubset.html">jsubset()</a></code>;
@@ -96,7 +99,7 @@ are never listed by hand); "list the variable on its own" otherwise.</p></li>
 <li><p>the name is not a column: a misspelled input that R could not
 partial-match (formals after <code>...</code> match exactly),
 <code>jdesc(community, Age, digit = 2)</code>. Routed to
-<code><a href="dot-jst_check_args.html">.jst_check_args()</a></code> for its "unused input(s)" message.
+<code><a href="dot-jst_check_args.html">.jst_check_args()</a></code> for its "unused input" message.
 Unnamed items pass through untouched. Called at every
 <code>rlang::enquos(...)</code> site directly after the capture, and from
 <code><a href="jsubset.html">jsubset()</a></code> before its argument grammar runs.</p></li>
@@ -104,7 +107,7 @@ Unnamed items pass through untouched. Called at every
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_named_variables</span><span class="op">(</span><span class="va">quos</span>, <span class="va">data</span>, <span class="va">fn_name</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_named_variables</span><span class="op">(</span><span class="va">quos</span>, <span class="va">data</span>, <span class="va">fn_name</span>, frame <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -124,6 +127,12 @@ item is treated as a condition.</p></dd>
 <dt id="arg-fn-name">fn_name<a class="anchor" aria-label="anchor" href="#arg-fn-name"></a></dt>
 <dd><p>Character. The calling function's name, for the message
 prefix and for the <code><a href="jsubset.html">jsubset()</a></code> fix form.</p></dd>
+
+
+<dt id="arg-frame">frame<a class="anchor" aria-label="anchor" href="#arg-frame"></a></dt>
+<dd><p>Character(1) or <code>NULL</code>. For <code><a href="jsubset.html">jsubset()</a></code>: the data
+frame as typed, when the call named one; the fix line keeps it
+(<code>jsubset(d, Gender == 1)</code>; Session 338, the S290 item).</p></dd>
 
 </dl></div>
 

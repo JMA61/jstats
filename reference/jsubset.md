@@ -115,7 +115,10 @@ jsubset(data, expr, clear.all = FALSE, ...)
 
   `jsubset()` takes one condition. Two conditions separated by a comma
   (`jsubset(Age < 40, Gender == 1)`) are refused, with the call that
-  joins them: `jsubset(Age < 40 & Gender == 1)`.
+  joins them: `jsubset(Age < 40 & Gender == 1)`. `off`, `on` and `NULL`
+  are given alone, after the dataset when one is named. Given along with
+  a condition (`jsubset(d, Age < 40, on)`), they are refused, with the
+  call that sets the filter and the call that acts on the stored one.
 
 - clear.all:
 
