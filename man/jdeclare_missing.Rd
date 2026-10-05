@@ -116,7 +116,14 @@ column follows the resolved convention.}
 
 \item{missing.notice}{Logical. When \code{TRUE} (the default), the
 function prints a notification summarizing what was declared,
-plus a reminder of how to keep the result.
+plus a reminder of how to keep the result. Under SPSS convention
+the notification lists the variable's resulting declaration, not
+only what the call named: a range or code the variable keeps from
+an earlier call is marked "already declared", a code with no value
+label is marked "no label", and a code or range that no case holds
+is marked "not present in the data" (the mark a mistyped code gets,
+such as -77 for -99). In a call on several variables that last mark
+is given only when none of the listed variables holds the value.
 Set \code{FALSE} to suppress.}
 
 \item{modify}{Logical. When \code{TRUE}, the declaration is written

@@ -10,7 +10,8 @@
   count = NULL,
   verb = NULL,
   var_name = NULL,
-  modify = FALSE
+  modify = FALSE,
+  data_kind = "name"
 )
 }
 \arguments{
@@ -29,8 +30,26 @@ yields the plural form.}
 \item{verb}{Character string name of the calling verb ("frame" rung only),
 used to build the reassignment line.}
 
-\item{var_name}{Character string variable name ("frame" rung only), used to
-build the reassignment line.}
+\item{var_name}{Character string ("frame" rung only) placed where the
+call's variables go in the reassignment line: one variable name, or
+what \code{.jst_scaffold_vars()} returns for a call on several, which
+is \code{""} when the line's own \code{...} is to stand for them.}
+
+\item{modify}{Logical. \code{TRUE} when the call wrote its result back
+(\code{modify = TRUE}); the "frame" and "convert" rungs then give the
+save tip in place of the reassignment lines.}
+
+\item{data_kind}{What the call's data argument was, as
+\code{.jst_data_arg_kind()} reads it ("frame" and "convert" rungs).
+\code{"name"}, the default: a data frame's name or the \code{juse()}
+default, which gets both the reassignment line and the
+\code{modify = TRUE} line. \code{"place"}: somewhere a result can be
+assigned that is not a plain name (\code{lst$d}), which gets the
+reassignment line alone, because \code{modify = TRUE} needs a name.
+\code{"expression"}: anything else (\code{mk()}), which gets a line
+assigning the result to a new name. Until Session 339 the scaffold
+read \code{mk() <- jconvert(mk(), ...)}, which does not run (the
+S219 item, finding 2).}
 }
 \description{
 Returns the standardized "where does this state live, and how do you make

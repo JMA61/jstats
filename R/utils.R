@@ -1448,14 +1448,50 @@ jai <- function(setup = NULL, path = NULL) {
 #'   yields the plural form.
 #' @param verb Character string name of the calling verb ("frame" rung only),
 #'   used to build the reassignment line.
-#' @param var_name Character string variable name ("frame" rung only), used to
-#'   build the reassignment line.
+#' @param var_name Character string ("frame" rung only) placed where the
+#'   call's variables go in the reassignment line: one variable name, or
+#'   what \code{.jst_scaffold_vars()} returns for a call on several, which
+#'   is \code{""} when the line's own \code{...} is to stand for them.
+#' @param modify Logical. \code{TRUE} when the call wrote its result back
+#'   (\code{modify = TRUE}); the "frame" and "convert" rungs then give the
+#'   save tip in place of the reassignment lines.
+#' @param data_kind What the call's data argument was, as
+#'   \code{.jst_data_arg_kind()} reads it ("frame" and "convert" rungs).
+#'   \code{"name"}, the default: a data frame's name or the \code{juse()}
+#'   default, which gets both the reassignment line and the
+#'   \code{modify = TRUE} line. \code{"place"}: somewhere a result can be
+#'   assigned that is not a plain name (\code{lst$d}), which gets the
+#'   reassignment line alone, because \code{modify = TRUE} needs a name.
+#'   \code{"expression"}: anything else (\code{mk()}), which gets a line
+#'   assigning the result to a new name. Until Session 339 the scaffold
+#'   read \code{mk() <- jconvert(mk(), ...)}, which does not run (the
+#'   S219 item, finding 2).
 #' @keywords internal
 .jst_durability_note <- function(rung, data_name, count = NULL,
                                  verb = NULL, var_name = NULL,
-                                 modify = FALSE) {
+                                 modify = FALSE, data_kind = "name") {
   save_call <- paste0("jsave(", data_name, ", \"", data_name, ".rds\")")
   load_call <- paste0("jload(\"", data_name, ".rds\")")
+  # The reassignment block of the "frame" and "convert" rungs. call_open is
+  # the call up to, and not including, its closing parenthesis.
+  assign_or_modify <- function(call_open) {
+    if (identical(data_kind, "expression")) {
+      return(paste0(
+        "The result is kept only if you assign it to a name:\n",
+        "  mydata <- ", call_open, ")"))
+    }
+    out <- paste0(
+      "This call changes ", data_name, " only if you assign the result:\n",
+      "  ", data_name, " <- ", call_open, ")")
+    if (identical(data_kind, "name")) {
+      out <- paste0(
+        out, "\n",
+        "\n",
+        "To change ", data_name, " directly, rerun with modify = TRUE:\n",
+        "  ", call_open, ", modify = TRUE)")
+    }
+    out
+  }
   if (identical(rung, "session")) {
     if (isTRUE(count == 1L)) {
       paste0(
@@ -1483,13 +1519,12 @@ jai <- function(setup = NULL, path = NULL) {
         "  ", save_call
       )
     } else {
-      paste0(
-        "This call changes ", data_name, " only if you assign the result:\n",
-        "  ", data_name, " <- ", verb, "(", data_name, ", ", var_name, ", ...)\n",
-        "\n",
-        "To change ", data_name, " directly, rerun with modify = TRUE:\n",
-        "  ", verb, "(", data_name, ", ", var_name, ", ..., modify = TRUE)"
-      )
+      # An empty var_name (.jst_scaffold_vars()) leaves the variables to
+      # the template's "...".
+      assign_or_modify(paste0(
+        verb, "(", data_name,
+        if (!is.null(var_name) && nzchar(var_name)) paste0(", ", var_name),
+        ", ..."))
     }
   } else if (identical(rung, "convert")) {
     if (isTRUE(modify)) {
@@ -1498,18 +1533,72 @@ jai <- function(setup = NULL, path = NULL) {
         "  ", save_call
       )
     } else {
-      paste0(
-        "This call changes ", data_name, " only if you assign the result:\n",
-        "  ", data_name, " <- jconvert(", data_name, ", ...)\n",
-        "\n",
-        "To change ", data_name, " directly, rerun with modify = TRUE:\n",
-        "  jconvert(", data_name, ", ..., modify = TRUE)"
-      )
+      assign_or_modify(paste0("jconvert(", data_name, ", ..."))
     }
   } else {
     stop("Internal error: .jst_durability_note() rung must be ",
          "\"session\", \"frame\", or \"convert\".", call. = FALSE)
   }
+}
+
+#' Internal helper: what kind of thing a call gave as its data argument
+#'
+#' Reads the data argument as typed and says whether a result can be
+#' assigned back to it. A reassignment line built by pasting the argument on
+#' both sides of an arrow is only R when the argument is a name or a place:
+#' \code{mk() <- jconvert(mk(), ...)} is neither (the S219 item, findings 2
+#' and 5; Session 339).
+#'
+#' @param data_sub The substituted data argument, or \code{NULL} when the
+#'   call gave none and the \code{juse()} default was used.
+#' @return \code{"name"} for a plain name (or \code{NULL});
+#'   \code{"place"} for a \code{$}, double-bracket or slot access whose
+#'   left side is itself a name or a place (\code{lst$d}); otherwise
+#'   \code{"expression"}.
+#' @keywords internal
+.jst_data_arg_kind <- function(data_sub) {
+  if (is.null(data_sub) || is.symbol(data_sub)) return("name")
+  is_place <- function(e) {
+    if (is.symbol(e)) return(TRUE)
+    is.call(e) && length(e) >= 2L && is.symbol(e[[1L]]) &&
+      as.character(e[[1L]]) %in% c("$", "[[", "@") && is_place(e[[2L]])
+  }
+  if (is_place(data_sub)) "place" else "expression"
+}
+
+#' Internal helper: the variables shown in a reassignment line
+#'
+#' The text that stands for a call's variables in the durability note's two
+#' lines, each of which ends in the template's own \code{...} and is never
+#' wrapped (voice Rule L). A call on many variables once put every name on
+#' both lines: 52 names made two lines of some 1,300 characters (the S298
+#' item, with S292 site 1; Session 339). Three forms, the first that
+#' applies: \code{vars =} as the call typed it, when the call gave it and
+#' it fits the line; every name, when there are three or fewer and they fit;
+#' otherwise nothing, so the line reads \code{d <- jdeclare_missing(d, ...)}
+#' and the template's \code{...} stands for all of the call's arguments
+#' (voice Rule K). A list is never shown in part: a line naming the first
+#' few of fourteen variables, completed and run, would declare on those few
+#' (the concern modify_form_walk.R Section 10 has recorded since S282).
+#'
+#' @param var_names Character; the call's resolved variable names.
+#' @param vars_typed Character(1) or \code{NULL}; the \code{vars =}
+#'   argument as typed, when the call used it.
+#' @param fixed_chars Integer; the characters of the longer line apart from
+#'   the variables.
+#' @param width The message width in force.
+#' @return Character(1); \code{""} when the variables are left to the
+#'   template's \code{...}.
+#' @keywords internal
+.jst_scaffold_vars <- function(var_names, vars_typed = NULL, fixed_chars = 0L,
+                               width = .jst_resolve_width()) {
+  budget <- width - fixed_chars
+  if (!is.null(vars_typed) && length(vars_typed) == 1L) {
+    cand <- paste0("vars = ", vars_typed)
+    if (nchar(cand) <= budget) return(cand)
+  }
+  listed <- paste(var_names, collapse = ", ")
+  if (length(var_names) <= 3L && nchar(listed) <= budget) listed else ""
 }
 
 #' Internal helper: retrieve a variable label as a string

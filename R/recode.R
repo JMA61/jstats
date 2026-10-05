@@ -4820,7 +4820,14 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   column follows the resolved convention.
 #' @param missing.notice Logical. When \code{TRUE} (the default), the
 #'   function prints a notification summarizing what was declared,
-#'   plus a reminder of how to keep the result.
+#'   plus a reminder of how to keep the result. Under SPSS convention
+#'   the notification lists the variable's resulting declaration, not
+#'   only what the call named: a range or code the variable keeps from
+#'   an earlier call is marked "already declared", a code with no value
+#'   label is marked "no label", and a code or range that no case holds
+#'   is marked "not present in the data" (the mark a mistyped code gets,
+#'   such as -77 for -99). In a call on several variables that last mark
+#'   is given only when none of the listed variables holds the value.
 #'   Set \code{FALSE} to suppress.
 #' @param modify Logical. When \code{TRUE}, the declaration is written
 #'   back onto the data frame named in the call (or onto the
@@ -4995,6 +5002,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # Captured before `data` is reassigned below: substitute() on the
   # rebound variable would return the value, not the caller's expression.
   data_sub_expr <- substitute(data)
+  # vars = as typed, for the durability note's two lines (S339).
+  vars_sub_expr <- substitute(vars)
 
   # --- Resolve first argument -----------------------------------------------
   arg1 <- .jst_resolve_first_arg(
@@ -5007,6 +5016,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   data      <- arg1$data
   data_name <- arg1$name
+  # Whether a result can be assigned back to the data argument as typed
+  # (S339): the reassignment lines below are built from it.
+  data_kind <- if (arg1$mode == "explicit") .jst_data_arg_kind(data_sub_expr)
+               else "name"
 
   if (!is.data.frame(data)) {
     .jst_stop("The first argument must be a data frame.")
@@ -5052,11 +5065,18 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   } else if (!is.null(vars)) {
     target_vars <- vars
   } else {
+    # The example names MyData: its variables are placeholders, not the
+    # caller's (voice Rule AC). The names() line is built from the call and
+    # keeps the data frame it named -- unless that was an expression, which
+    # would be evaluated a second time to give a throwaway copy's names
+    # (S339; the S219 item, finding 5).
     .jst_stop("specify at least one variable to declare on: unquoted names ",
-         "(for example jdeclare_missing(", data_name, ", Age, Income, ",
+         "(for example jdeclare_missing(MyData, Age, Income, ",
          "codes = c(-99))) or quoted names via vars = c(...).\n",
          "To apply one declaration to every column, pass ",
-         "vars = names(", data_name, ") explicitly.",
+         "vars = names(",
+         if (identical(data_kind, "expression")) "MyData" else data_name,
+         ") explicitly.",
          fn = "jdeclare_missing")
   }
 
@@ -5770,7 +5790,16 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
            existing_info = existing_info,
            resolved_convention = resolved_convention,
            parsed_codes_used = pc,
-           marker_notes = marker_notes)
+           marker_notes = marker_notes,
+           # S339: what the notification says of this column, read from
+           # the column the call produced (NULL on the naming branch,
+           # which keeps its S246-S247 lines).
+           body = .jst_jdeclare_missing_body(
+             col = col, new_col = new_col, branch = branch,
+             range_supplied = !is.null(range),
+             codes_supplied = length(parsed_codes) > 0L,
+             inband_labels  = inband_labels,
+             conversion_info = conversion_info))
     }, error = function(e) {
       structure(list(msg = conditionMessage(e)), class = "jst_build_err")
     })
@@ -5948,6 +5977,13 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   }
 
   # --- Build and emit notification -----------------------------------------
+  # Both builders return the declaration block and, apart from it, the
+  # tail: the durability reminder (and at the full tier the equivalent
+  # call). What the call did to an earlier declaration comes between the
+  # two (S339, the S267 items): the drop notice and the mixed-marker note
+  # report a CONSEQUENCE of the call, and until 0.9.213 they trailed the
+  # reminder, which reads as the closer.
+  notif <- NULL
   if (isTRUE(missing.notice)) {
     if (n_targets == 1L) {
       notif <- .jst_jdeclare_missing_notification(
@@ -5955,30 +5991,55 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         var_name            = target_vars[1L],
         parsed_codes        = results[[1L]]$parsed_codes_used,
         branch              = results[[1L]]$branch,
+        body                = results[[1L]]$body,
         conversion_info     = if (results[[1L]]$branch == "stata_conversion")
                                 results[[1L]]$conversion_info else NULL,
         modify              = modify,
-        range               = range,
-        inband_labels       = if (has_residue) label_residue else NULL,
         resolved_convention = results[[1L]]$resolved_convention,
-        marker_notes        = results[[1L]]$marker_notes
+        marker_notes        = results[[1L]]$marker_notes,
+        data_kind           = data_kind
       )
     } else {
+      # The longer of the reminder's two lines, apart from the variables:
+      #   "  <d> <- jdeclare_missing(<d>, " + ", ...)"
+      #   "  jdeclare_missing(<d>, " + ", ..., modify = TRUE)"
+      # so that the variables are shown only when both lines stay within
+      # the message width.
+      nd <- nchar(data_name)
       notif <- .jst_jdeclare_missing_bulk_notification(
-        data_name     = data_name,
-        target_vars   = target_vars,
-        results       = results,
-        parsed_codes  = parsed_codes,
-        range         = range,
-        inband_labels = if (has_residue) label_residue else NULL,
-        modify        = modify
+        data_name    = data_name,
+        target_vars  = target_vars,
+        results      = results,
+        modify       = modify,
+        data_kind    = data_kind,
+        scaffold_var = .jst_scaffold_vars(
+          target_vars,
+          vars_typed  = if (!is.null(vars)) {
+            typed <- deparse(vars_sub_expr, width.cutoff = 500L)
+            if (length(typed) == 1L) typed
+          },
+          fixed_chars = max(2L * nd + 31L, nd + 42L))
       )
     }
     # S292: the stdout emitter wraps the block at message.width (header
     # prose, the indented variable echo) and passes the runnable lines;
-    # both builders return one trailing newline, which the emitter
-    # normalizes.
-    .jst_msg_out(notif)
+    # trailing newlines are the emitter's to normalize.
+    .jst_msg_out(notif$block)
+  }
+
+  # Sign-off 5's drop notices, then the mixed-marker notes (S240;
+  # consequential, so always shown when notices are on).
+  if (length(drop_notices) > 0L && isTRUE(missing.notice)) {
+    cat("\n")   # Rule F: a blank line off the block above (S267)
+    .jst_msg_out(paste(drop_notices, collapse = "\n"))
+  }
+  if (length(mixed_notes) > 0L && isTRUE(missing.notice)) {
+    cat("\n")   # Rule F: a blank line off the block above (S267)
+    .jst_msg_out(paste(mixed_notes, collapse = "\n"))   # S292: emitter wraps
+  }
+  if (!is.null(notif) && !is.null(notif$tail)) {
+    cat("\n")
+    .jst_msg_out(notif$tail)
   }
 
   # D2 override notes, grouped by the column form. The primary
@@ -6008,21 +6069,6 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         "  joptions(missing.convention = \"", cv, "\")"))
     }
     .jst_msg_out(paste(d2_msgs, collapse = "\n\n"))   # S292: emitter wraps
-  }
-
-  # Drop notices fire after the main notification (consistent with the
-  # established pattern of placing follow-on notes after the primary
-  # output block).
-  if (length(drop_notices) > 0L && isTRUE(missing.notice)) {
-    cat("\n")   # Rule F: a blank line off the block above (S267)
-    .jst_msg_out(paste(drop_notices, collapse = "\n"))
-  }
-
-  # Mixed-marker notes (S240): consequential level, so always shown when
-  # notices are on; column-level before the frame-level mismatch notice.
-  if (length(mixed_notes) > 0L && isTRUE(missing.notice)) {
-    cat("\n")   # Rule F: a blank line off the block above (S267)
-    .jst_msg_out(paste(mixed_notes, collapse = "\n"))   # S292: emitter wraps
   }
 
   # --- Post-declaration mismatch notice (Decision 11 closing rule) ---------
@@ -6514,20 +6560,25 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # for, and what it does (verified live, S248; the header claimed "above
 # minimal" until S249). No durability note follows: nothing changed, and
 # there is nothing to make durable.
+#
+# assign_name (S339) is the name the scaffold assigns to: the data frame as
+# typed, or "mydata" when the call's data argument was an expression, which
+# cannot stand on the left of an arrow.
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
 .jst_jdeclare_missing_no_naming_note <- function(data_name, var_phrase,
                                              parsed_codes, scaffold_var,
                                              modify = FALSE,
-                                             plural = FALSE) {
+                                             plural = FALSE,
+                                             assign_name = data_name) {
   tag1 <- haven::na_tag(parsed_codes)[1L]
   code_arg <- paste0("codes = c(Refused = \".", tag1, "\")")
   scaffold <- if (isTRUE(modify)) {
     paste0("  jdeclare_missing(", data_name, ", ", scaffold_var, ", ",
            code_arg, ", modify = TRUE)")
   } else {
-    paste0("  ", data_name, " <- jdeclare_missing(", data_name, ", ",
+    paste0("  ", assign_name, " <- jdeclare_missing(", data_name, ", ",
            scaffold_var, ", ", code_arg, ")")
   }
   paste0(
@@ -6543,32 +6594,190 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
 
 # -----------------------------------------------------------------------------
-# Notification builder
+# .jst_jdeclare_missing_body()
+#
+# What the notification says of ONE column on the two branches that declare
+# (S339): spss_canonical and stata_conversion. The naming branch
+# (stata_canonical) keeps its own S246-S247 lines and gets NULL here.
+#
+# Until 0.9.213 the SPSS-form lines were rendered from the call's ARGUMENTS,
+# and under the keep-what-is-omitted rule (Decision 12 part 3) the arguments
+# are not the declaration. Four items came from that one cause:
+#   - a code added to a column carrying a range printed the code alone, so
+#     the kept range read as replaced (the S298 item, field request 6);
+#   - a bare code printed bare whether or not the column held a label for
+#     it, so a label that survived a redeclaration went unreported (the S241
+#     item, part 3) and a code with none said nothing about labels (the
+#     Session 198 item);
+#   - a code no case holds declared without a word (the Session 114 item).
+# The lines are now read from the column the call PRODUCED.
+#
+# Returns a list of three parallel vectors, one element per line:
+#   text    the value: "range -99 to -51", "-99 [\"Refused\"]", "-98",
+#           ".a [\"Refused\"]"
+#   notes   a list of character vectors, the annotations that are facts of
+#           the declaration:
+#             "no label"          the code carries no value label
+#             "already declared"  the column keeps it and the call did not
+#                                 name it
+#             "in range"          a value label the call set inside the range
+#             "from -99"          the numeric code a marker was converted from
+#   absent  TRUE when no case holds the code (or falls in the range) -- kept
+#           apart from notes because a call on several variables marks it
+#           only when it is true of every variable in the block
+#           (.jst_jdeclare_missing_body_lines()). Never TRUE of an "in range"
+#           line: a label inside a range is not a declaration of its own.
+# text and notes together are the column's SIGNATURE: the bulk notification
+# puts two columns in one block only when they agree on both.
 # -----------------------------------------------------------------------------
 
 #' @keywords internal
+.jst_jdeclare_missing_body <- function(col, new_col, branch,
+                                       range_supplied = FALSE,
+                                       codes_supplied = FALSE,
+                                       inband_labels = NULL,
+                                       conversion_info = NULL) {
+  text   <- character(0)
+  notes  <- list()
+  absent <- logical(0)
+  add <- function(tx, nt, ab) {
+    text   <<- c(text, tx)
+    notes  <<- c(notes, list(nt))
+    absent <<- c(absent, ab)
+  }
+
+  if (identical(branch, "spss_canonical")) {
+    x    <- suppressWarnings(as.numeric(unclass(new_col)))
+    labs <- if (haven::is.labelled(new_col)) labelled::val_labels(new_col)
+            else NULL
+    rg <- attr(new_col, "na_range", exact = TRUE)
+    nv <- attr(new_col, "na_values", exact = TRUE)
+
+    # A declared range leads (mirroring jfreq's Missing-section "range lo
+    # to hi" row), then the discrete codes, then the labels this call set
+    # on values inside the range.
+    if (!is.null(rg) && length(rg) == 2L) {
+      rg <- sort(as.numeric(rg))
+      add(sprintf("range %s to %s", format(rg[1]), format(rg[2])),
+          if (!range_supplied) "already declared" else character(0),
+          !any(!is.na(x) & x >= rg[1] & x <= rg[2]))
+    }
+    for (v in as.numeric(nv)) {
+      hit <- if (is.null(labs) || length(labs) == 0L) integer(0)
+             else which(!is.na(unname(labs)) & unname(labs) == v)
+      lbl <- if (length(hit) > 0L) names(labs)[hit[1L]] else ""
+      add(if (nzchar(lbl)) sprintf("%s [\"%s\"]", format(v), lbl)
+          else format(v),
+          c(if (!nzchar(lbl)) "no label",
+            if (!codes_supplied) "already declared"),
+          !any(!is.na(x) & x == v))
+    }
+    if (!is.null(inband_labels) && length(inband_labels) > 0L) {
+      for (i in seq_along(inband_labels)) {
+        add(sprintf("%s [\"%s\"]",
+                    format(as.numeric(inband_labels[i]), trim = TRUE),
+                    names(inband_labels)[i]),
+            "in range", FALSE)
+      }
+    }
+
+  } else if (identical(branch, "stata_conversion")) {
+    # Lines reflect the post-conversion state (the marker, not the source
+    # code); presence is judged on the column as it ARRIVED, since after
+    # the conversion a marker's cells cannot be told from those the column
+    # already carried.
+    x <- suppressWarnings(as.numeric(unclass(col)))
+    for (i in seq_along(conversion_info$sorted_codes)) {
+      v   <- conversion_info$sorted_codes[i]
+      lbl <- conversion_info$sorted_labels[i]
+      if (is.na(lbl)) lbl <- ""
+      add(if (nzchar(lbl)) sprintf(".%s [\"%s\"]",
+                                   conversion_info$tag_letters[i], lbl)
+          else paste0(".", conversion_info$tag_letters[i]),
+          c(paste0("from ", format(v)), if (!nzchar(lbl)) "no label"),
+          !any(!is.na(x) & x == v))
+    }
+
+  } else {
+    return(NULL)
+  }
+
+  list(text = text, notes = notes, absent = absent)
+}
+
+
+#' Internal: the notification's body lines for one block
+#'
+#' @description
+#' Renders a \code{.jst_jdeclare_missing_body()} result: each value, two
+#' spaces in, with its annotations after one space in a single pair of
+#' parentheses, joined by "; " -- the form the naming branch's lines have had
+#' since S247 (\code{.a is now "Refused" (was "Old"; not present in the
+#' data)}). "not present in the data" comes last, as it does there.
+#'
+#' @param body A \code{.jst_jdeclare_missing_body()} result.
+#' @param absent Logical, one per line: whether to mark the line "not present
+#'   in the data". Defaults to the body's own; the bulk notification passes
+#'   the block's -- TRUE only where no variable in the block holds the value.
+#' @return Character vector of lines.
+#' @keywords internal
+.jst_jdeclare_missing_body_lines <- function(body, absent = body$absent) {
+  vapply(seq_along(body$text), function(i) {
+    parts <- c(body$notes[[i]],
+               if (isTRUE(absent[i])) "not present in the data")
+    paste0("  ", body$text[i],
+           if (length(parts) > 0L)
+             paste0(" (", paste(parts, collapse = "; "), ")")
+           else "")
+  }, character(1))
+}
+
+
+# -----------------------------------------------------------------------------
+# Notification builder
+# -----------------------------------------------------------------------------
+
+#' Internal: notification for a single-variable jdeclare_missing call
+#'
+#' @description
+#' Returns \code{list(block = , tail = )}. \code{block} is the header and
+#' the body lines (or, on the naming branch with every marker bare, the
+#' no-change note). \code{tail} is the durability reminder, with the
+#' equivalent call after it at the full tier on the conversion branch; it is
+#' \code{NULL} at the minimal tier and when nothing changed. The caller
+#' prints the two apart, with what the call did to an earlier declaration
+#' between them (S339).
+#'
+#' @keywords internal
 .jst_jdeclare_missing_notification <- function(data_name, var_name,
                                            parsed_codes, branch,
+                                           body = NULL,
                                            conversion_info = NULL,
                                            modify = FALSE,
-                                           range = NULL,
-                                           inband_labels = NULL,
                                            resolved_convention = "stata",
-                                           marker_notes = NULL) {
+                                           marker_notes = NULL,
+                                           data_kind = "name") {
 
   output_level <- getOption(".jst_output_level", "standard")
+  # The name a scaffold assigns to: an expression cannot stand on the left
+  # of an arrow (S339; the S219 item, finding 2).
+  assign_name <- if (identical(data_kind, "expression")) "mydata"
+                 else data_name
 
   # S247: an all-bare codes argument names nothing on the tagged branch, so
   # the naming header is replaced outright rather than annotated. Checked
   # before the header is built -- there is no header to build.
   if (identical(branch, "stata_canonical") &&
       !any(nzchar(names(parsed_codes)))) {
-    return(.jst_jdeclare_missing_no_naming_note(
-      data_name    = data_name,
-      var_phrase   = var_name,
-      parsed_codes = parsed_codes,
-      scaffold_var = var_name,
-      modify       = modify))
+    return(list(
+      block = .jst_jdeclare_missing_no_naming_note(
+        data_name    = data_name,
+        var_phrase   = var_name,
+        parsed_codes = parsed_codes,
+        scaffold_var = var_name,
+        modify       = modify,
+        assign_name  = assign_name),
+      tail = NULL))
   }
 
   # Two-branch header (assignment-accuracy rule): the frame name appears
@@ -6608,27 +6817,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     paste0(header, var_name, ":")
   }
 
-  # Build body lines: code [label] format per jfreq's v0.9.5 Missing-section
-  # display.
+  # Body lines. The two declaring branches render the column's resulting
+  # declaration (S339, .jst_jdeclare_missing_body()); the naming branch
+  # keeps the pairing form.
   body_lines <- character(0)
-  if (branch == "stata_conversion") {
-    # Lines reflect post-conversion state (tag letters, not source codes).
-    for (i in seq_along(conversion_info$sorted_codes)) {
-      tag <- conversion_info$tag_letters[i]
-      lbl <- conversion_info$sorted_labels[i]
-      if (nzchar(lbl)) {
-        body_lines <- c(body_lines,
-                        sprintf("  .%s [\"%s\"]  (from %s)",
-                                tag, lbl,
-                                format(conversion_info$sorted_codes[i])))
-      } else {
-        body_lines <- c(body_lines,
-                        sprintf("  .%s  (from %s)",
-                                tag,
-                                format(conversion_info$sorted_codes[i])))
-      }
-    }
-  } else if (branch == "stata_canonical") {
+  if (branch == "stata_canonical") {
     # S246: the pairing form. A bare marker (no label given) keeps its
     # existing label, so there is no renaming to report -- it renders as
     # the marker alone. S247: each line carries its truthfulness annotation
@@ -6649,37 +6842,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       }
     }
   } else {
-    # SPSS canonical. A declared range leads (mirroring jfreq's Missing-
-    # section "range lo to hi" row), then discrete codes, then labeled
-    # in-range values marked "(in range)" -- they carry value labels but
-    # are covered by the band rather than declared discretely.
-    if (!is.null(range)) {
-      body_lines <- c(body_lines,
-                      sprintf("  range %s to %s",
-                              format(range[1]), format(range[2])))
-    }
-    for (i in seq_along(parsed_codes)) {
-      v   <- format(as.numeric(parsed_codes[i]))
-      lbl <- names(parsed_codes)[i]
-      if (nzchar(lbl)) {
-        body_lines <- c(body_lines,
-                        sprintf("  %s [\"%s\"]", v, lbl))
-      } else {
-        body_lines <- c(body_lines, sprintf("  %s", v))
-      }
-    }
-    if (!is.null(inband_labels) && length(inband_labels) > 0L) {
-      for (i in seq_along(inband_labels)) {
-        body_lines <- c(body_lines,
-                        sprintf("  %s [\"%s\"]  (in range)",
-                                format(as.numeric(inband_labels[i]),
-                                       trim = TRUE),
-                                names(inband_labels)[i]))
-      }
-    }
+    body_lines <- .jst_jdeclare_missing_body_lines(body)
   }
 
-  msg <- paste0(
+  block <- paste0(
     header, "\n",
     paste(body_lines, collapse = "\n"), "\n"
   )
@@ -6692,13 +6858,14 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # Session-115 Option-B real-codes echo): the codes are already listed in
   # the block just above and the user has already run the call, so the
   # reminder only needs to show the corrective scaffold.
+  tail <- NULL
   if (!identical(output_level, "minimal")) {
-    msg <- paste0(msg, "\n",
-                  .jst_durability_note("frame", data_name,
-                                       verb = "jdeclare_missing",
-                                       var_name = var_name,
-                                       modify = modify),
-                  "\n")
+    tail <- paste0(.jst_durability_note("frame", data_name,
+                                        verb = "jdeclare_missing",
+                                        var_name = var_name,
+                                        modify = modify,
+                                        data_kind = data_kind),
+                   "\n")
   }
 
   # Full tier: conversion equivalent for the tagged-conversion branch.
@@ -6728,14 +6895,14 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     } else {
       paste0(
         "Equivalent ", eq_style, " call for future use:\n",
-        "  ", data_name, " <- jdeclare_missing(", data_name, ", ", var_name,
+        "  ", assign_name, " <- jdeclare_missing(", data_name, ", ", var_name,
         ", codes = c(", paste(tag_parts, collapse = ", "), "))\n"
       )
     }
-    msg <- paste0(msg, eq_call)
+    tail <- paste0(tail, eq_call)
   }
 
-  msg
+  list(block = block, tail = tail)
 }
 
 
@@ -6750,15 +6917,26 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' columns resolve to conversion while plain columns resolve to an
 #' SPSS-style declaration), each group gets one header plus one body block
 #' (the declaration is identical within a group by construction), and
-#' the durability note prints once at the end.
+#' the durability note is returned apart from the blocks.
+#'
+#' Returns \code{list(block = , tail = )}, as the single-variable builder
+#' does: \code{tail} is the durability reminder, \code{NULL} at the minimal
+#' tier and when no group changed anything.
+#'
+#' @param scaffold_var The text standing for the call's variables in the
+#'   reminder's two lines (\code{.jst_scaffold_vars()}; S339).
 #'
 #' @keywords internal
 .jst_jdeclare_missing_bulk_notification <- function(data_name, target_vars,
-                                                results, parsed_codes,
-                                                range = NULL,
-                                                inband_labels = NULL,
-                                                modify = FALSE) {
+                                                results,
+                                                modify = FALSE,
+                                                data_kind = "name",
+                                                scaffold_var =
+                                                  paste(target_vars,
+                                                        collapse = ", ")) {
   output_level <- getOption(".jst_output_level", "standard")
+  assign_name <- if (identical(data_kind, "expression")) "mydata"
+                 else data_name
 
   branches <- vapply(results, function(r) r$branch, character(1))
   # Group key includes the resolved convention (S240): resolution is per
@@ -6776,8 +6954,23 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # first result for both would state a falsehood about one of them. The
   # split is bounded: the signature ranges over the markers named in the
   # call, so a 52-column call naming one marker yields at most two blocks.
+  #
+  # S339: the two declaring branches sign with their body's text and notes
+  # (.jst_jdeclare_missing_body()) -- the column's resulting declaration,
+  # its labels, and what it kept from before -- for the same reason: one
+  # column may keep a range another never had. Whether a case HOLDS a code
+  # is deliberately not in their signature. A code present in some of the
+  # variables and not others would split one declaration into a block per
+  # pattern (three codes over fifty survey items, up to eight), so the block
+  # marks a code "not present in the data" only when none of its variables
+  # holds it -- the typing slip the mark is for.
   sigs <- vapply(results, function(r) {
-    if (is.null(r$marker_notes)) "" else paste(r$marker_notes, collapse = "\r")
+    if (!is.null(r$body)) {
+      paste(c(r$body$text,
+              vapply(r$body$notes, paste, character(1), collapse = "\002")),
+            collapse = "\r")
+    } else if (is.null(r$marker_notes)) "" else
+      paste(r$marker_notes, collapse = "\r")
   }, character(1))
   grp_keys <- paste(branches, convs, sigs, sep = "|")
   msg <- character(0)
@@ -6818,22 +7011,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     var_line <- paste0("  ", paste(vn_set, collapse = ", "))
 
     body_lines <- character(0)
-    if (br == "stata_conversion") {
-      ci <- results[[idx[1]]]$conversion_info
-      for (i in seq_along(ci$sorted_codes)) {
-        tag <- ci$tag_letters[i]
-        lbl <- ci$sorted_labels[i]
-        if (nzchar(lbl)) {
-          body_lines <- c(body_lines,
-                          sprintf("  .%s [\"%s\"]  (from %s)", tag, lbl,
-                                  format(ci$sorted_codes[i])))
-        } else {
-          body_lines <- c(body_lines,
-                          sprintf("  .%s  (from %s)", tag,
-                                  format(ci$sorted_codes[i])))
-        }
-      }
-    } else if (br == "stata_canonical") {
+    if (br == "stata_canonical") {
       # Subgroup-local canonicalized copy: carries the letter case this
       # subgroup's columns actually got (S240). Pairing form per S246, with
       # the S247 annotations -- the group key above guarantees every column
@@ -6852,7 +7030,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           parsed_codes = pc_grp,
           scaffold_var = vn_set[1L],
           modify       = modify,
-          plural       = length(vn_set) > 1L)
+          plural       = length(vn_set) > 1L,
+          assign_name  = assign_name)
         no_change_only <- c(no_change_only, TRUE)
         # Splice the variable echo under the first sentence: "no change to 3
         # variables" is not actionable without naming them.
@@ -6876,29 +7055,13 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         }
       }
     } else {
-      if (!is.null(range)) {
-        body_lines <- c(body_lines,
-                        sprintf("  range %s to %s",
-                                format(range[1]), format(range[2])))
-      }
-      for (i in seq_along(parsed_codes)) {
-        v   <- format(as.numeric(parsed_codes[i]))
-        lbl <- names(parsed_codes)[i]
-        if (nzchar(lbl)) {
-          body_lines <- c(body_lines, sprintf("  %s [\"%s\"]", v, lbl))
-        } else {
-          body_lines <- c(body_lines, sprintf("  %s", v))
-        }
-      }
-      if (!is.null(inband_labels) && length(inband_labels) > 0L) {
-        for (i in seq_along(inband_labels)) {
-          body_lines <- c(body_lines,
-                          sprintf("  %s [\"%s\"]  (in range)",
-                                  format(as.numeric(inband_labels[i]),
-                                         trim = TRUE),
-                                  names(inband_labels)[i]))
-        }
-      }
+      # The group shares one signature, so the first result's text and
+      # notes are true of every variable in it; a line is marked absent
+      # only when it is absent from all of them.
+      grp_absent <- Reduce(`&`, lapply(results[idx],
+                                       function(r) r$body$absent))
+      body_lines <- .jst_jdeclare_missing_body_lines(results[[idx[1]]]$body,
+                                                     absent = grp_absent)
     }
 
     msg <- c(msg, paste0(header, "\n", var_line, "\n",
@@ -6906,18 +7069,16 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     no_change_only <- c(no_change_only, FALSE)
   }
 
-  out <- paste(msg, collapse = "\n")
-
+  tail <- NULL
   if (!identical(output_level, "minimal") && !all(no_change_only)) {
-    out <- paste0(out, "\n",
-                  .jst_durability_note("frame", data_name,
-                                       verb = "jdeclare_missing",
-                                       var_name = paste(target_vars,
-                                                        collapse = ", "),
-                                       modify = modify),
-                  "\n")
+    tail <- paste0(.jst_durability_note("frame", data_name,
+                                        verb = "jdeclare_missing",
+                                        var_name = scaffold_var,
+                                        modify = modify,
+                                        data_kind = data_kind),
+                   "\n")
   }
-  out
+  list(block = paste(msg, collapse = "\n"), tail = tail)
 }
 
 
@@ -8291,8 +8452,13 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       if (out_level != "minimal") {
         if (length(msg_lines) > 0L) msg_lines <- c(msg_lines, "")
         msg_lines <- c(msg_lines,
-                       .jst_durability_note("convert", data_name,
-                                            modify = modify))
+                       .jst_durability_note(
+                         "convert", data_name, modify = modify,
+                         # S339: an expression given as the data cannot
+                         # stand on the left of an arrow (the S219 item,
+                         # finding 2).
+                         data_kind = if (arg1$mode == "explicit")
+                           .jst_data_arg_kind(data_sub_expr) else "name"))
       }
     }
 

@@ -8,11 +8,14 @@
   data_name,
   target_vars,
   results,
-  parsed_codes,
-  range = NULL,
-  inband_labels = NULL,
-  modify = FALSE
+  modify = FALSE,
+  data_kind = "name",
+  scaffold_var = paste(target_vars, collapse = ", ")
 )
+}
+\arguments{
+\item{scaffold_var}{The text standing for the call's variables in the
+reminder's two lines (\code{.jst_scaffold_vars()}; S339).}
 }
 \description{
 One summary block instead of one block per column: a bulk call on 52
@@ -23,6 +26,10 @@ where some columns already carry Stata-form markers: the marked
 columns resolve to conversion while plain columns resolve to an
 SPSS-style declaration), each group gets one header plus one body block
 (the declaration is identical within a group by construction), and
-the durability note prints once at the end.
+the durability note is returned apart from the blocks.
+
+Returns \code{list(block = , tail = )}, as the single-variable builder
+does: \code{tail} is the durability reminder, \code{NULL} at the minimal
+tier and when no group changed anything.
 }
 \keyword{internal}
