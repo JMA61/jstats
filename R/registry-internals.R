@@ -718,33 +718,22 @@
 #' @param default_used Logical; whether the \code{juse()} default frame was used.
 #' @param var_names Character vector of variable names to register.
 #' @param remove Logical; if TRUE, remove rather than write.
+#' @param file_stem Character(1); the file name in the durability note's
+#'   two lines (\code{.jst_data_file_stem()}). The data frame's name by
+#'   default.
 #' @return \code{invisible(NULL)}.
 #' @keywords internal
 .jst_register_intent <- function(kind, data, data_name, default_used,
-                                 var_names, remove) {
+                                 var_names, remove, file_stem = data_name) {
   .jst_check_vars(data, var_names, data_name)
 
   if (isTRUE(remove)) {
-    reg     <- .jst_get_registry(data_name)
-    removed <- character(0)
-    for (v in var_names) {
-      rec <- if (!is.null(reg)) reg[[v]] else NULL
-      if (!is.null(rec) && identical(rec$kind, kind)) {
-        reg[[v]] <- NULL
-        removed  <- c(removed, v)
-      }
-    }
-    if (!is.null(reg) && length(reg) == 0) reg <- NULL
-    .jst_set_registry(data_name, reg)
-    if (length(removed) > 0) {
-      .jst_msg(.jst_intent_label(kind, cap = TRUE), " registration removed for ",
-               paste0("'", removed, "'", collapse = ", "), " in ", data_name, ".")
-    } else {
-      .jst_msg("No ", .jst_intent_label(kind), " registration to remove for ",
-               paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
-    }
-    return(invisible(NULL))
+    return(.jst_remove_registrations(kind, data_name, var_names))
   }
+
+  # Every variable is checked before any is registered (Session 342), so a
+  # call that is refused has changed nothing.
+  for (v in var_names) .jst_check_registration_type(kind, data[[v]], v)
 
   reg <- .jst_get_registry(data_name)
   if (is.null(reg)) reg <- list()
@@ -770,7 +759,9 @@
     .jst_msg("  Reclassified: ", paste(reclass, collapse = "; "), ".")
   }
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    .jst_msg(.jst_durability_note("session", data_name, count = length(var_names)))
+    .jst_msg(.jst_durability_note("session", data_name,
+                                  count = length(var_names),
+                                  file_stem = file_stem))
   }
 
   # Non-blocking declaration-plausibility heads-up for the just-registered
@@ -778,6 +769,204 @@
   .jst_declaration_note(data, var_names, kind)
 
   invisible(NULL)
+}
+
+#' Internal helper: can a variable carry a numeric, count or Likert registration?
+#'
+#' TRUE for a numeric variable and for a haven-labelled variable whose
+#' stored values are numbers -- the two storage kinds \code{jnumeric()},
+#' \code{jcount()} and \code{jlikert()} document. Read from
+#' \code{.jst_var_kind()}, so a factor, a text variable (plain or
+#' value-labelled), a logical, a date or time and the unsupported types are
+#' all FALSE. One test for the three places that need it: the registration
+#' refusal (\code{.jst_check_registration_type()}) and the two readers of a
+#' stored registration (\code{.jst_jstats_class()}, \code{.jst_is_count()}),
+#' which pass over one that is stored on any other kind of variable.
+#'
+#' @param x A variable.
+#' @return \code{TRUE} or \code{FALSE}.
+#' @keywords internal
+.jst_takes_numeric_registration <- function(x) {
+  .jst_var_kind(x)$kind %in% c("numeric", "labelled")
+}
+
+#' Internal helper: refuse a registration the variable's type cannot carry
+#'
+#' \code{jnumeric()}, \code{jcount()} and \code{jlikert()} assert an analysis
+#' role for a variable that holds numbers. Until Session 342 they accepted
+#' any variable and confirmed the registration as if it had changed
+#' something: \code{jnumeric(d, Sev)} on a factor printed "Numeric
+#' registration set" while \code{jdesc()} went on refusing Sev, and
+#' \code{jscreen()} showed a text variable as "Numeric / User-declared"
+#' over R's "NAs introduced by coercion" (the S310 item). The Classification
+#' reference's registration scope boundary (Session 79) had always said the
+#' storage-determined kinds are refused with guidance to convert first;
+#' Jeff's Session 342 lean 2 extended the refusal to every kind but numeric
+#' and haven-labelled numeric, a logical included. The wording follows
+#' \code{jrelabel(labels = )} and \code{jdeclare_missing()}, which refuse
+#' the same kinds: a factor or text variable is pointed to
+#' \code{jencode()}; the other kinds have no conversion jstats performs,
+#' and get the fact alone. \code{jdummy()} is not gated here -- it registers
+#' a categorical role, which every one of these kinds but the dates and the
+#' unsupported types can take.
+#'
+#' @param kind \code{"numeric"}, \code{"count"} or \code{"likert"}.
+#' @param x The variable.
+#' @param var_name Its name.
+#' @return Invisibly \code{NULL}; stops when the variable is refused.
+#' @keywords internal
+.jst_check_registration_type <- function(kind, x, var_name) {
+  if (.jst_takes_numeric_registration(x)) return(invisible(NULL))
+  article <- if (identical(kind, "numeric")) "a numeric" else
+    paste0("a ", .jst_intent_label(kind))
+  only <- paste0("; ", article,
+                 " registration applies only to numeric variables.")
+  fn   <- .jst_clear_verb(kind)
+  if (inherits(x, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
+    .jst_stop("'", var_name, "' is a date/time variable", only, fn = fn)
+  }
+  if (is.factor(x)) {
+    .jst_stop("'", var_name, "' is a factor", only, "\n",
+              "Convert it to numbers first with jencode().", fn = fn)
+  }
+  if (is.character(x)) {
+    .jst_stop("'", var_name, "' is a character (text) variable", only, "\n",
+              "Convert it to numbers first with jencode().", fn = fn)
+  }
+  if (is.logical(x)) {
+    .jst_stop("'", var_name, "' is a logical (TRUE/FALSE) variable", only,
+              fn = fn)
+  }
+  .jst_stop("'", var_name, "' is of type ", typeof(x),
+            " and cannot be registered.", fn = fn)
+}
+
+#' Internal helper: remove named variables' registrations of one kind
+#'
+#' The \code{remove = TRUE} half of the four registration verbs, working
+#' from the data frame's NAME alone: the stores are keyed by name, so a
+#' registration can be removed after its data frame is gone
+#' (\code{.jst_registration_by_name()}; Session 342). "numeric", "count"
+#' and "likert" remove a variable's record from the \code{.jst_registry}
+#' notebook only when it is of that kind; "dummy" removes its
+#' \code{.jst_dummy} entry.
+#'
+#' @param kind One of "numeric", "count", "likert", "dummy".
+#' @param data_name Character; the data frame's name.
+#' @param var_names Character; the variables named.
+#' @return \code{invisible(NULL)}. Called for its message.
+#' @keywords internal
+.jst_remove_registrations <- function(kind, data_name, var_names) {
+  removed <- character(0)
+  if (identical(kind, "dummy")) {
+    ds <- .jst_get_dummy(data_name)
+    if (!is.null(ds)) {
+      drop    <- vapply(ds, function(r) r$var_name %in% var_names, logical(1))
+      removed <- vapply(ds[drop], function(r) r$var_name, character(1))
+      ds      <- ds[!drop]
+      if (length(ds) == 0) ds <- NULL
+      .jst_set_dummy(data_name, ds)
+    }
+  } else {
+    reg <- .jst_get_registry(data_name)
+    for (v in var_names) {
+      rec <- if (!is.null(reg)) reg[[v]] else NULL
+      if (!is.null(rec) && identical(rec$kind, kind)) {
+        reg[[v]] <- NULL
+        removed  <- c(removed, v)
+      }
+    }
+    if (!is.null(reg) && length(reg) == 0) reg <- NULL
+    .jst_set_registry(data_name, reg)
+  }
+  if (length(removed) > 0) {
+    .jst_msg(.jst_intent_label(kind, cap = TRUE), " registration removed for ",
+             paste0("'", removed, "'", collapse = ", "), " in ", data_name, ".")
+  } else {
+    .jst_msg("No ", .jst_intent_label(kind), " registration to remove for ",
+             paste0("'", var_names, "'", collapse = ", "), " in ", data_name, ".")
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: a registration verb's named clear or removal, by name
+#'
+#' \code{jdummy(z, NULL)} and \code{jdummy(z, Grp, remove = TRUE)} -- and
+#' the \code{jnumeric()}, \code{jcount()} and \code{jlikert()} forms -- name
+#' the data frame whose registrations are to go. The stores are keyed by
+#' NAME, so neither needs the data frame; until Session 342 the name was
+#' resolved as a data frame first, and one that had been removed, or now
+#' held something else, stopped at the resolver ("'z' is not a data frame.
+#' Did you mean to use it as a variable name?"), leaving the registrations
+#' out of the named form's reach (the S334 item; \code{jsubset()} and
+#' \code{jcomplete()} got the by-name forms at v0.9.211, and this follows
+#' them through \code{.jst_setting_name_state()}).
+#'
+#' Called before the resolver. Acts, and returns \code{TRUE}, when the
+#' first argument is a bare name that does not hold a data frame and
+#' registrations of this kind are stored under it. A lone \code{NULL} with
+#' nothing stored under the name is refused as a name
+#' (\code{.jst_registration_name_stop()}) when no \code{juse()} default is
+#' set; with a default, and for the removal form whenever nothing is
+#' stored, the call is left to the resolver, since the name may be a
+#' variable of the default data frame. REGISTERING under such a name is
+#' never served here: it stays the resolver's refusal (Jeff's Session 342
+#' lean 3).
+#'
+#' @param kind One of "numeric", "count", "likert", "dummy".
+#' @param data_sub The substituted first argument.
+#' @param dots The unevaluated \code{...} of the call, as a list.
+#' @param remove The call's \code{remove} flag.
+#' @param envir The caller's environment.
+#' @return \code{TRUE} when the call was served here, otherwise
+#'   \code{FALSE}; stops for a name that carries nothing.
+#' @keywords internal
+.jst_registration_by_name <- function(kind, data_sub, dots, remove, envir) {
+  if (!is.symbol(data_sub) || length(dots) == 0L) return(FALSE)
+  if (!is.null(names(dots)) && any(nzchar(names(dots)))) return(FALSE)
+  lone_null <- length(dots) == 1L && is.null(dots[[1L]])
+  if (!lone_null && !isTRUE(remove)) return(FALSE)
+  st <- .jst_setting_name_state(
+    data_sub, .jst_frames_with_registrations(kind),
+    getOption(".jst_default_data", default = NULL), envir)
+  if (is.null(st)) return(FALSE)
+  if (lone_null) {
+    if (!st$stored) .jst_registration_name_stop(kind, st)
+    .jst_handle_clear(kind, explicit_frame = st$name)
+    return(TRUE)
+  }
+  if (!st$stored) return(FALSE)
+  var_names <- vapply(dots, function(e) paste(deparse(e), collapse = ""),
+                      character(1))
+  .jst_remove_registrations(kind, st$name, var_names)
+  TRUE
+}
+
+#' Internal helper: the stop for a named clear whose name carries nothing
+#'
+#' \code{jdummy(z, NULL)} where \code{z} is not a data frame and no dummy
+#' registration is stored under that name (Session 342). The registration
+#' verbs' form of \code{.jst_setting_name_stop()}'s first message: the name
+#' is the subject (voice Rule AD) and takes no article and no "data frame",
+#' since it is not one; "was not found" for a name that did not evaluate
+#' and "is not a data frame" for one that holds something else (Rule AH);
+#' the status call is the remedy.
+#'
+#' @param kind One of "numeric", "count", "likert", "dummy".
+#' @param st The \code{.jst_setting_name_state()} result.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_registration_name_stop <- function(kind, st) {
+  fn <- .jst_clear_verb(kind)
+  .jst_stop(
+    st$name,
+    if (identical(st$state, "gone")) " was not found" else
+      " is not a data frame",
+    ", and no ", .jst_intent_label(kind),
+    " registrations are stored under that name.\n",
+    "To see the registrations that are stored, run:\n",
+    "  ", fn, "()",
+    fn = fn)
 }
 
 #' Internal helper: resolve which data frame a bare \code{f(NULL)} clears

@@ -57,7 +57,10 @@ stack the analysis path uses, so a jnumeric/jcount registration moves the
 variable to Numeric and lifts the refusal -- the identical escape hatch,
 and the exact path the message names -- while factor/character arguments
 are caught here too (a typed message in place of base R's raw non-numeric
-error). A term that evaluates but yields non-finite values for some
+error). A COMPARISON is not refused (Session 342): a term that only asks
+which cases are in a category -- \code{I(Sex == 1)},
+\code{I(Source == "web")} -- computes as \code{lm()} computes it, with
+no registration (\code{.jst_comparison_exempt()}). A term that evaluates but yields non-finite values for some
 cases -- log() of a zero (-Inf) or of a negative (NaN) -- is NOT
 refused: those cells are set to NA, counted per term, and reported in a
 consequential note, with base R's raw "NaNs produced" warning muffled in

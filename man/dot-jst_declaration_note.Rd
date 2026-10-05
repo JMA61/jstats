@@ -15,7 +15,8 @@
 no-op).}
 }
 \value{
-invisible(NULL). Called for its message side effect.
+Invisibly, \code{TRUE} when the note printed and \code{FALSE}
+when no variable was flagged.
 }
 \description{
 For each just-registered variable, checks whether its data is an implausible

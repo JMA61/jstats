@@ -1821,8 +1821,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # jload() stopped here with "Can't convert `vec_data(x)` <character> to
     # <double>" after it had assigned the frame.
     if (is.character(col)) next
-    # Only scan numeric-like variables
-    num_vals <- suppressWarnings(as.numeric(col))
+    # Only scan numeric-like variables (.jst_as_numeric(): the AUDIT-014
+    # pattern, found at this site by the Session 342 scan)
+    num_vals <- suppressWarnings(.jst_as_numeric(col))
     if (all(is.na(num_vals))) next
 
     # Pull formal UDM declarations once per variable. The heuristic

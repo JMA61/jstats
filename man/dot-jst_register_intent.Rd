@@ -5,7 +5,15 @@
 \title{Internal helper: shared registration engine for jnumeric() / jcount() /
 jlikert()}
 \usage{
-.jst_register_intent(kind, data, data_name, default_used, var_names, remove)
+.jst_register_intent(
+  kind,
+  data,
+  data_name,
+  default_used,
+  var_names,
+  remove,
+  file_stem = data_name
+)
 }
 \arguments{
 \item{kind}{One of "numeric", "count", "likert".}
@@ -19,6 +27,10 @@ jlikert()}
 \item{var_names}{Character vector of variable names to register.}
 
 \item{remove}{Logical; if TRUE, remove rather than write.}
+
+\item{file_stem}{Character(1); the file name in the durability note's
+two lines (\code{.jst_data_file_stem()}). The data frame's name by
+default.}
 }
 \value{
 \code{invisible(NULL)}.

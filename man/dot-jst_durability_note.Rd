@@ -11,7 +11,8 @@
   verb = NULL,
   var_name = NULL,
   modify = FALSE,
-  data_kind = "name"
+  data_kind = "name",
+  file_stem = data_name
 )
 }
 \arguments{
@@ -50,6 +51,13 @@ reassignment line alone, because \code{modify = TRUE} needs a name.
 assigning the result to a new name. Until Session 339 the scaffold
 read \code{mk() <- jconvert(mk(), ...)}, which does not run (the
 S219 item, finding 2).}
+
+\item{file_stem}{Character(1); the file name, without its extension, in
+the two example lines. The data frame's name by default. A caller whose
+data argument is a place passes \code{.jst_data_file_stem()}'s answer,
+so that \code{lst$d} is saved as \code{"d.rds"}: \code{"lst$d.rds"} is
+a poor file name and the double-bracket form's line does not parse
+(Session 342).}
 }
 \description{
 Returns the standardized "where does this state live, and how do you make

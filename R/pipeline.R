@@ -1581,7 +1581,12 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' @param data A data frame, or omit to use the \code{juse()} default.
 #'   \code{jdummy(NULL)} clears the dummy registrations on the \code{juse()}
 #'   default data frame (or, with no default set, the only frame that carries
-#'   them; if several do, it asks rather than wiping all).
+#'   them; if several do, it asks rather than wiping all). Registrations are
+#'   stored under the data frame's name, so it is given as a name (or as a
+#'   place such as \code{lst$d}); an expression that builds one, such as a
+#'   subset, is refused, with the two lines that name it first. For the
+#'   same reason \code{jdummy(data, NULL)} and \code{remove = TRUE} work
+#'   on a name whose data frame has since been removed.
 #' @param ... One or more unquoted variable names to register. The variable
 #'   may be haven-labelled, numeric, logical, character, or a factor: for a
 #'   factor the levels are the categories, in level order, and a level with
@@ -1606,7 +1611,10 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #'   A text variable holding one word or nothing (\code{"Y"} or blank)
 #'   models the word, with \code{<blank>} as the reference.
 #'   Applied to every variable named in the call; to use different
-#'   reference categories, register the variables in separate calls.
+#'   reference categories, register the variables in separate calls. One
+#'   value only. Every variable is checked before any is registered, so a
+#'   call that stops -- a reference one of the variables does not have, for
+#'   example -- registers none of them.
 #'   When the reference was chosen by \code{auto}, the printed
 #'   "Reference category:" line ends with
 #'   \code{(default; change with ref =)}; a reference you name carries
@@ -1666,6 +1674,15 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
       max.categories < 1) {
     .jst_stop_arg(arg = "max.categories",
                   requirement = "a single whole number of at least 1.")
+  }
+  # `ref` is one value, text or a number (Session 342; the S329 item). It
+  # was not checked: two codes registered under R's "longer object length"
+  # warning, two words and an empty one stopped on R's own errors after the
+  # title, and TRUE, NULL and NA took the first category without a word.
+  if (!((is.character(ref) || is.numeric(ref)) && length(ref) == 1L &&
+        !is.na(ref))) {
+    .jst_stop("`ref` must be a single value: a category's code or label, ",
+              "or \"first\", \"last\", or \"auto\".")
   }
 
   default_name <- getOption(".jst_default_data", default = NULL)
@@ -1745,6 +1762,17 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     return(.jst_handle_clear("dummy", default_name = default_name))
   }
 
+  # -- A named clear or removal whose name is not a data frame (S342) -------
+  # jdummy(z, NULL) and jdummy(z, Grp, remove = TRUE) with z removed, or
+  # holding something else: the registrations are stored by name, so both
+  # act on them without the frame. Read before the resolver, which refuses
+  # such a name; registering under one stays refused there.
+  if (.jst_registration_by_name("dummy", raw_data,
+                                as.list(substitute(list(...)))[-1L],
+                                remove, parent.frame())) {
+    return(invisible(NULL))
+  }
+
   # -- Resolve the first argument via the standard helper -------------------
   # Three modes possible at this point:
   #   explicit            : jdummy(MyData, A, B)            - data is a frame
@@ -1761,6 +1789,20 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   data              <- arg1$data
   .jst_data_name    <- arg1$name
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  # An expression given as the data -- jdummy(mk(), Grp) -- has no name to
+  # store a registration under and is refused; a place (lst$d) is accepted,
+  # and the note's file is named for its last part. (S342)
+  if (arg1$mode == "explicit" &&
+      identical(.jst_data_arg_kind(raw_data), "expression")) {
+    .jst_registration_expression_stop(
+      raw_data, "jdummy", sys.call(),
+      registering = !isTRUE(remove) &&
+        !(...length() == 1L &&
+          is.null(as.list(substitute(list(...)))[[2L]])))
+  }
+  file_stem <- if (arg1$mode == "explicit")
+    .jst_data_file_stem(raw_data, .jst_data_name) else .jst_data_name
 
   # -- Collect variable names (multivariable) -------------------------------
   # jdummy accepts one or more variables. In symbol_with_default mode the first
@@ -1835,25 +1877,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 
   # -- jdummy(..., remove = TRUE) -- remove registrations -------------------
   if (remove) {
-    ds      <- .jst_get_dummy(.jst_data_name)
-    removed <- character(0)
-    if (!is.null(ds)) {
-      drop    <- vapply(ds, function(r) r$var_name %in% var_names, logical(1))
-      removed <- vapply(ds[drop], function(r) r$var_name, character(1))
-      ds      <- ds[!drop]
-      if (length(ds) == 0) ds <- NULL
-      .jst_set_dummy(.jst_data_name, ds)
-    }
-    if (length(removed) > 0) {
-      .jst_msg("Dummy registration removed for ",
-               paste0("'", removed, "'", collapse = ", "), " in ",
-               .jst_data_name, ".")
-    } else {
-      .jst_msg("No dummy registration to remove for ",
-               paste0("'", var_names, "'", collapse = ", "), " in ",
-               .jst_data_name, ".")
-    }
-    return(invisible(NULL))
+    return(.jst_remove_registrations("dummy", .jst_data_name, var_names))
   }
 
   # -- Register one or more variables ---------------------------------------
@@ -1861,6 +1885,20 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   # gets its own block. The standard-tier persist reminder prints once after
   # all registrations, and any deferred naming warnings are emitted last so
   # they carry full context. (Session 82: multivariable + persist reminder.)
+  #
+  # Every variable is BUILT before the title prints and before any is
+  # registered (Session 342). The build is where a variable is refused -- a
+  # reference it does not have, fewer than two categories, more than
+  # max.categories, two categories that would share a dummy name -- and
+  # with the build inside the loop jdummy(d, A, B, ref = 2) registered A,
+  # printed its block, and then stopped at B: a refused call that had
+  # changed something.
+  built_all <- lapply(var_names, function(v) {
+    .jst_make_dummy_names(data[[v]], v, ref = ref,
+                          max.categories = max.categories,
+                          data_name = .jst_data_name)
+  })
+
   .cat_red("Dummy Variable Registration\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name, extra_newline = TRUE)
 
@@ -1870,11 +1908,10 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
                  identical(tolower(ref), "auto")
 
   deferred <- character(0)
-  for (var_name in var_names) {
-    col   <- data[[var_name]]
-    built <- .jst_make_dummy_names(col, var_name, ref = ref,
-                                   max.categories = max.categories,
-                                   data_name = .jst_data_name)
+  for (vi in seq_along(var_names)) {
+    var_name <- var_names[vi]
+    col      <- data[[var_name]]
+    built    <- built_all[[vi]]
 
     n_total   <- length(col)
     n_missing <- sum(is.na(col))
@@ -1936,14 +1973,25 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   }
 
   # Persist reminder (standard-tier; suppressed at minimal output).
+  noted <- FALSE
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
     .jst_msg(.jst_durability_note("session", .jst_data_name,
-                                 count = length(var_names)))
+                                 count = length(var_names),
+                                 file_stem = file_stem))
+    noted <- TRUE
   }
 
   # Non-blocking declaration-plausibility heads-up for the just-registered
   # dummy variables (flags a many-category declaration). (Session 91)
-  .jst_declaration_note(data, var_names, "dummy")
+  if (isTRUE(.jst_declaration_note(data, var_names, "dummy"))) noted <- TRUE
+
+  # The call ends on ONE blank line (Session 342; the S329 item). Each
+  # variable's block closes on one, which is the last thing printed at the
+  # minimal level; at the other levels the reminder follows it, and until
+  # now the next call's title sat directly under the reminder's last line.
+  # Written to stdout, as joptions()'s is (S334): the RStudio Console does
+  # not display a blank line on the message stream.
+  if (noted) cat("\n")
 
   for (w in deferred) .jst_warn(w)
 
@@ -2037,9 +2085,16 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 #'   \code{jnumeric(data, NULL)} clears that one frame's numeric registrations.
 #'   Called with no arguments, \code{jnumeric()} lists the session's numeric
 #'   and count registrations.
+#'   Registrations are stored under the data frame's name, so it is given
+#'   as a name (or as a place such as \code{lst$d}); an expression that
+#'   builds one is refused, with the two lines that name it first. The
+#'   \code{NULL} and \code{remove = TRUE} forms work on a name whose data
+#'   frame has since been removed.
 #' @param ... One or more unquoted variable names to register. The
-#'   registration applies to numeric and haven-labelled variables; a factor
-#'   or text variable is categorical regardless and is unaffected by it.
+#'   registration applies to numeric variables and to haven-labelled
+#'   variables that hold numbers. Any other type is refused, and none of
+#'   the call's variables is then registered: convert a factor or a text
+#'   variable to numbers first with \code{\link{jencode}}.
 #' @param remove Logical; if \code{TRUE}, remove the numeric registration for
 #'   the named variables instead of adding it.
 #' @param clear.all Logical; if \code{TRUE}, clear numeric registrations on
@@ -2071,6 +2126,13 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("numeric",
              default_name = getOption(".jst_default_data", default = NULL)))
   }
+  # jnumeric(z, NULL) and jnumeric(z, v, remove = TRUE) with z no longer a data
+  # frame: served by name, before the resolver would refuse z (S342).
+  if (.jst_registration_by_name("numeric", raw_data,
+                                as.list(substitute(list(...)))[-1L],
+                                remove, parent.frame())) {
+    return(invisible(NULL))
+  }
 
   arg1 <- .jst_resolve_first_arg(
     data_sub      = substitute(data),
@@ -2082,6 +2144,18 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   data         <- arg1$data
   data_name    <- arg1$name
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
+  # An expression given as the data has no name to store a registration
+  # under (S342); a place (lst$d) is accepted and saved by its last part.
+  if (arg1$mode == "explicit" &&
+      identical(.jst_data_arg_kind(raw_data), "expression")) {
+    .jst_registration_expression_stop(
+      raw_data, "jnumeric", sys.call(),
+      registering = !isTRUE(remove) &&
+        !(...length() == 1L &&
+          is.null(as.list(substitute(list(...)))[[2L]])))
+  }
+  file_stem <- if (arg1$mode == "explicit")
+    .jst_data_file_stem(raw_data, data_name) else data_name
 
   variables <- rlang::enquos(...)
   .jst_check_named_variables(variables, arg1$data, "jnumeric")   # S290
@@ -2102,7 +2176,7 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
   .jst_register_intent("numeric", data, data_name, default_used,
-                       var_names, remove)
+                       var_names, remove, file_stem = file_stem)
 }
 
 
@@ -2129,9 +2203,16 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #'   if several do, it asks rather than wiping all). \code{jcount(data, NULL)}
 #'   clears that one frame's count registrations. Called with no arguments,
 #'   \code{jcount()} lists the session's numeric and count registrations.
+#'   Registrations are stored under the data frame's name, so it is given
+#'   as a name (or as a place such as \code{lst$d}); an expression that
+#'   builds one is refused, with the two lines that name it first. The
+#'   \code{NULL} and \code{remove = TRUE} forms work on a name whose data
+#'   frame has since been removed.
 #' @param ... One or more unquoted variable names to register. The
-#'   registration applies to numeric and haven-labelled variables; a factor
-#'   or text variable is categorical regardless and is unaffected by it.
+#'   registration applies to numeric variables and to haven-labelled
+#'   variables that hold numbers. Any other type is refused, and none of
+#'   the call's variables is then registered: convert a factor or a text
+#'   variable to numbers first with \code{\link{jencode}}.
 #' @param remove Logical; if \code{TRUE}, remove the count registration for the
 #'   named variables instead of adding it.
 #' @param clear.all Logical; if \code{TRUE}, clear count registrations on every
@@ -2163,6 +2244,13 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("count",
              default_name = getOption(".jst_default_data", default = NULL)))
   }
+  # jcount(z, NULL) and jcount(z, v, remove = TRUE) with z no longer a data
+  # frame: served by name, before the resolver would refuse z (S342).
+  if (.jst_registration_by_name("count", raw_data,
+                                as.list(substitute(list(...)))[-1L],
+                                remove, parent.frame())) {
+    return(invisible(NULL))
+  }
 
   arg1 <- .jst_resolve_first_arg(
     data_sub      = substitute(data),
@@ -2174,6 +2262,18 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   data         <- arg1$data
   data_name    <- arg1$name
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
+  # An expression given as the data has no name to store a registration
+  # under (S342); a place (lst$d) is accepted and saved by its last part.
+  if (arg1$mode == "explicit" &&
+      identical(.jst_data_arg_kind(raw_data), "expression")) {
+    .jst_registration_expression_stop(
+      raw_data, "jcount", sys.call(),
+      registering = !isTRUE(remove) &&
+        !(...length() == 1L &&
+          is.null(as.list(substitute(list(...)))[[2L]])))
+  }
+  file_stem <- if (arg1$mode == "explicit")
+    .jst_data_file_stem(raw_data, data_name) else data_name
 
   variables <- rlang::enquos(...)
   .jst_check_named_variables(variables, arg1$data, "jcount")   # S290
@@ -2193,7 +2293,7 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
   .jst_register_intent("count", data, data_name, default_used,
-                       var_names, remove)
+                       var_names, remove, file_stem = file_stem)
 }
 
 
@@ -2221,11 +2321,17 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' \code{\link{jsave}} to keep them across sessions.
 #'
 #' @param data A data frame, or omitted to use the \code{\link{juse}} default.
+#'   Registrations are stored under the data frame's name, so it is given
+#'   as a name (or as a place such as \code{lst$d}); an expression that
+#'   builds one is refused, with the two lines that name it first. The
+#'   \code{NULL} and \code{remove = TRUE} forms work on a name whose data
+#'   frame has since been removed.
 #' @param ... One or more unquoted variable names to register, or a single
 #'   \code{NULL} to clear this frame's Likert registrations (see Details).
-#'   The registration applies to numeric and haven-labelled variables; a
-#'   factor or text variable is categorical regardless and is unaffected by
-#'   it.
+#'   The registration applies to numeric variables and to haven-labelled
+#'   variables that hold numbers. Any other type is refused, and none of
+#'   the call's variables is then registered: convert a factor or a text
+#'   variable to numbers first with \code{\link{jencode}}.
 #' @param remove Logical; if TRUE, remove the named variables' Likert
 #'   registrations instead of adding them.
 #' @param clear.all Logical; if TRUE, clear Likert registrations on every data
@@ -2267,6 +2373,13 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("likert",
              default_name = getOption(".jst_default_data", default = NULL)))
   }
+  # jlikert(z, NULL) and jlikert(z, v, remove = TRUE) with z no longer a data
+  # frame: served by name, before the resolver would refuse z (S342).
+  if (.jst_registration_by_name("likert", raw_data,
+                                as.list(substitute(list(...)))[-1L],
+                                remove, parent.frame())) {
+    return(invisible(NULL))
+  }
 
   arg1 <- .jst_resolve_first_arg(
     data_sub      = substitute(data),
@@ -2278,6 +2391,18 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   data         <- arg1$data
   data_name    <- arg1$name
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
+  # An expression given as the data has no name to store a registration
+  # under (S342); a place (lst$d) is accepted and saved by its last part.
+  if (arg1$mode == "explicit" &&
+      identical(.jst_data_arg_kind(raw_data), "expression")) {
+    .jst_registration_expression_stop(
+      raw_data, "jlikert", sys.call(),
+      registering = !isTRUE(remove) &&
+        !(...length() == 1L &&
+          is.null(as.list(substitute(list(...)))[[2L]])))
+  }
+  file_stem <- if (arg1$mode == "explicit")
+    .jst_data_file_stem(raw_data, data_name) else data_name
 
   variables <- rlang::enquos(...)
   .jst_check_named_variables(variables, arg1$data, "jlikert")   # S290
@@ -2297,5 +2422,5 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
   .jst_register_intent("likert", data, data_name, default_used,
-                       var_names, remove)
+                       var_names, remove, file_stem = file_stem)
 }

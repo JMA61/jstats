@@ -12,16 +12,29 @@
 }
 \value{
 A list with \code{frame}, \code{typed}, \code{var},
-\code{frame_nm} and \code{in_frame}.
+\code{frame_nm}, \code{in_frame} and \code{computed}.
 }
 \description{
 Builds the one-column data frame that jdesc(), jfreq() and jscreen()
 analyze when given a bare column, as in \code{jdesc(community$Age)}, plus
-the names their messages use: the column as typed, the variable name (the
-part after the last dollar sign), and the frame it came from when typed as
-frame dollar column -- MyData, the placeholder frame, otherwise. A column
-of a data frame (the resolver's \code{first_arg_frame}, Session 324) takes
-both names from that frame, so \code{d[["Age"]]} reads as Age from d, and
-is marked \code{in_frame} for \code{.jst_vector_recurse()}.
+the names their messages use: the column as typed, the variable name, and
+the frame it came from. A column of a data frame (the resolver's
+\code{first_arg_frame}, Session 324) takes both names from that frame, so
+\code{d[["Age"]]} reads as Age from d, and is marked \code{in_frame} for
+\code{.jst_vector_recurse()}.
+}
+\details{
+Anything else is read by its SHAPE (Session 342; the S338 item). A place
+ending in a name -- \code{lst$d$Sex}, a data frame held in a list -- is
+named for that last part, with the rest as its frame. A plain name
+(\code{x}) is named for itself, with the placeholder frame MyData. A
+COMPUTED vector -- \code{d$Sex[d$Age > 40]}, \code{log(d$Age)},
+\code{c(1, 2, 3)} -- is named with the expression as typed and marked
+\code{computed}: until then the name was whatever followed the last
+dollar sign of the text, so those two tables were titled "Age > 40]" and
+"Age)", and the fix line built from the same split read
+\code{jfreq(d$Sex[d, Age > 40], Grp)}. A computed vector has no data
+frame to name in a fix line, so \code{.jst_vector_recurse()} gives it the
+sentence without one.
 }
 \keyword{internal}

@@ -1369,20 +1369,6 @@ jai <- function(setup = NULL, path = NULL) {
 
 # -- Output formatting helpers ------------------------------------------------
 
-#' Internal helper: format a class vector for readable display
-#'
-#' Drops the uninformative "vctrs_vctr" class and appends "(Categorical)"
-#' to "haven_labelled" to make the type line more meaningful to the user.
-#'
-#' @keywords internal
-.format_var_type <- function(classes) {
-  is_haven  <- "haven_labelled" %in% classes
-  classes   <- classes[classes != "vctrs_vctr"]
-  type_str  <- paste(classes, collapse = ", ")
-  if (is_haven) type_str <- paste0(type_str, " (Categorical)")
-  type_str
-}
-
 #' Internal helper: should this output carry color?
 #'
 #' The one test behind \code{.cat_red()} and \code{.cat_yellow()}. Color is
@@ -1533,12 +1519,19 @@ jai <- function(setup = NULL, path = NULL) {
 #'   assigning the result to a new name. Until Session 339 the scaffold
 #'   read \code{mk() <- jconvert(mk(), ...)}, which does not run (the
 #'   S219 item, finding 2).
+#' @param file_stem Character(1); the file name, without its extension, in
+#'   the two example lines. The data frame's name by default. A caller whose
+#'   data argument is a place passes \code{.jst_data_file_stem()}'s answer,
+#'   so that \code{lst$d} is saved as \code{"d.rds"}: \code{"lst$d.rds"} is
+#'   a poor file name and the double-bracket form's line does not parse
+#'   (Session 342).
 #' @keywords internal
 .jst_durability_note <- function(rung, data_name, count = NULL,
                                  verb = NULL, var_name = NULL,
-                                 modify = FALSE, data_kind = "name") {
-  save_call <- paste0("jsave(", data_name, ", \"", data_name, ".rds\")")
-  load_call <- paste0("jload(\"", data_name, ".rds\")")
+                                 modify = FALSE, data_kind = "name",
+                                 file_stem = data_name) {
+  save_call <- paste0("jsave(", data_name, ", \"", file_stem, ".rds\")")
+  load_call <- paste0("jload(\"", file_stem, ".rds\")")
   # The reassignment block of the "frame" and "convert" rungs. call_open is
   # the call up to, and not including, its closing parenthesis.
   assign_or_modify <- function(call_open) {
@@ -1631,6 +1624,92 @@ jai <- function(setup = NULL, path = NULL) {
       as.character(e[[1L]]) %in% c("$", "[[", "@") && is_place(e[[2L]])
   }
   if (is_place(data_sub)) "place" else "expression"
+}
+
+#' Internal helper: the file name a data argument is saved under
+#'
+#' The stem of the file in a save or load line built from a call's data
+#' argument. A name gives itself. A place gives its last component when
+#' that is a name -- \code{lst$d}, \code{lst[["d"]]} and \code{obj@d} all
+#' give \code{d} -- and the placeholder \code{mydata} otherwise (a place
+#' reached by position, \code{lst[[2]]}, or by a computed name). Until
+#' Session 342 the registration note pasted the argument as typed, which
+#' gave \code{jload("lst[["d"]].rds")}.
+#'
+#' @param data_sub The substituted data argument, or \code{NULL} when the
+#'   \code{juse()} default was used.
+#' @param data_name Character(1); the data frame's name as the message
+#'   prints it.
+#' @return Character(1).
+#' @keywords internal
+.jst_data_file_stem <- function(data_sub, data_name) {
+  if (is.null(data_sub) || is.symbol(data_sub)) return(data_name)
+  last <- NULL
+  if (is.call(data_sub) && length(data_sub) == 3L &&
+      is.symbol(data_sub[[1L]])) {
+    h   <- as.character(data_sub[[1L]])
+    rhs <- data_sub[[3L]]
+    if (h %in% c("$", "@") && (is.symbol(rhs) || is.character(rhs))) {
+      last <- as.character(rhs)
+    } else if (h == "[[" && is.character(rhs) && length(rhs) == 1L) {
+      last <- rhs
+    }
+  }
+  if (length(last) == 1L && !is.na(last) && nzchar(last) &&
+      identical(make.names(last), last)) last else "mydata"
+}
+
+#' Internal helper: refuse an expression given as the data to a registration
+#'
+#' A registration is stored under its data frame's NAME, so a registration
+#' verb needs one. Given a call or a subset in the data's place --
+#' \code{jnumeric(mk(), Age)}, \code{jdummy(d[d$Age > 30, ], Grp)} -- the
+#' four verbs stored the registration under the text of the expression,
+#' where no later call could reach it, and printed
+#' \code{jsave(mk(), "mk().rds")} (the S339 item; Session 342, Jeff's lean
+#' 1). The stop gives two lines that run: the expression assigned to a
+#' name, and the user's own call on that name. A place (\code{lst$d}) is
+#' not refused: it works end to end, since \code{jscreen(lst$d)} and
+#' \code{jsave(lst$d, ...)} read the same text.
+#'
+#' A call that clears or removes (\code{jdummy(mk(), NULL)},
+#' \code{remove = TRUE}) is refused too, with the status call as its
+#' remedy: nothing is stored under an expression, and the registrations
+#' the user means are under whatever name the data frame has.
+#'
+#' @param data_sub The substituted data argument, an expression.
+#' @param fn_name Character; the calling verb.
+#' @param cl The verb's call, as typed.
+#' @param registering Logical; \code{FALSE} for a call that clears or
+#'   removes.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_registration_expression_stop <- function(data_sub, fn_name, cl,
+                                              registering = TRUE) {
+  typed <- .jst_term_text(data_sub)
+  if (!isTRUE(registering)) {
+    .jst_stop(
+      typed, " is not a name, and registrations are stored under a data ",
+      "frame's name.\n",
+      "To see the registrations that are stored, run:\n",
+      "  ", fn_name, "()",
+      fn = fn_name)
+  }
+  args  <- as.list(cl)[-1L]
+  hit   <- which(vapply(args, function(a) identical(a, data_sub), logical(1)))
+  recall <- if (length(hit) == 1L) {
+    args[[hit]] <- as.name("mydata")
+    .jst_term_text(as.call(c(list(as.name(fn_name)), args)))
+  } else {
+    paste0(fn_name, "(mydata, ...)")
+  }
+  .jst_stop(
+    typed, " is not a name, and a registration is stored under its data ",
+    "frame's name.\n",
+    "Give the data frame a name first, then register:\n",
+    "  mydata <- ", typed, "\n",
+    "  ", recall,
+    fn = fn_name)
 }
 
 #' Internal helper: the variables shown in a reassignment line

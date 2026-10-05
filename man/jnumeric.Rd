@@ -13,11 +13,18 @@ jnumeric(data, ..., remove = FALSE, clear.all = FALSE)
 that carries them; if several do, it asks rather than wiping all).
 \code{jnumeric(data, NULL)} clears that one frame's numeric registrations.
 Called with no arguments, \code{jnumeric()} lists the session's numeric
-and count registrations.}
+and count registrations.
+Registrations are stored under the data frame's name, so it is given
+as a name (or as a place such as \code{lst$d}); an expression that
+builds one is refused, with the two lines that name it first. The
+\code{NULL} and \code{remove = TRUE} forms work on a name whose data
+frame has since been removed.}
 
 \item{...}{One or more unquoted variable names to register. The
-registration applies to numeric and haven-labelled variables; a factor
-or text variable is categorical regardless and is unaffected by it.}
+registration applies to numeric variables and to haven-labelled
+variables that hold numbers. Any other type is refused, and none of
+the call's variables is then registered: convert a factor or a text
+variable to numbers first with \code{\link{jencode}}.}
 
 \item{remove}{Logical; if \code{TRUE}, remove the numeric registration for
 the named variables instead of adding it.}

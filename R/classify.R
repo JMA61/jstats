@@ -166,7 +166,11 @@
       # categorical once the missing values have been NA'd out. The
       # second check prevents large-N labelled variables (e.g., Income
       # with 10 broad categories) from being flagged.
-      x_num       <- suppressWarnings(as.numeric(x))
+      # .jst_as_numeric(), not a bare as.numeric(): the Session 50 standard
+      # for a haven-labelled input, which these three classifier sites had
+      # missed (AUDIT-014; Session 342). The other two are Rule 2 below and
+      # .jst_is_dichotomy().
+      x_num       <- suppressWarnings(.jst_as_numeric(x))
       non_na_vals <- x_num[!is.na(x_num)]
       if (length(non_na_vals) > 0 &&
           any(val_labs %in% non_na_vals) &&
@@ -180,7 +184,7 @@
 
   # -- Rule 2: whole-number 0-6 range --------------------------------------
   if (is.numeric(x) || haven::is.labelled(x)) {
-    x_num   <- suppressWarnings(as.numeric(x))
+    x_num   <- suppressWarnings(.jst_as_numeric(x))
     x_clean <- x_num[!is.na(x_num)]
     if (length(x_clean) >= 2) {
       unique_vals <- unique(x_clean)
@@ -1810,6 +1814,97 @@
        paste(deparse(e, width.cutoff = 500L), collapse = " "))
 }
 
+#' Internal helper: the variables a comparison term may read as categories
+#'
+#' The categorical-argument guard of
+#' \code{.jst_resolve_formula_transforms()} refuses a computed term on a
+#' variable jstats classifies as Categorical, because arithmetic on category
+#' codes -- \code{log()} of a 1/2/3/4 code -- fits a meaningless predictor
+#' without a word (AUDIT-023, Session 172). A COMPARISON is not arithmetic
+#' on codes: \code{I(Sex == 1)}, \code{I(Region \%in\% c(1, 3))} and
+#' \code{I(Source == "web")} each ask which cases are in a category and
+#' give TRUE or FALSE, which is how \code{lm()} reads them. Until Session
+#' 342 the guard refused these too, and the only way through was the one it
+#' named, a \code{jnumeric()} registration -- on a text variable, a factor
+#' or a logical as well, where the registration did nothing else. When
+#' \code{jnumeric()} began refusing those types (the S310 item) that way
+#' through closed, and Jeff ruled that a comparison computes with no
+#' registration (Session 342, the "option 2" ruling; it amends AUDIT-023's
+#' rule and follows the S322 ruling that formula names are read as
+#' \code{lm()} reads them).
+#'
+#' The exemption is narrow by construction. The TERM must be a logical
+#' expression and nothing else: comparisons (\code{==}, \code{!=},
+#' \code{\%in\%}, \code{<}, \code{>}, \code{<=}, \code{>=}), joined
+#' by \code{&}, \code{|} and \code{!}, inside parentheses or \code{I()}.
+#' Within it, a variable is exempt only where it stands BARE as one side
+#' of a comparison -- \code{I(log(Grp) > 1)} still computes from Grp's
+#' codes, so Grp is not exempt there -- or bare in a logical position when
+#' it is itself a TRUE/FALSE variable (\code{I(Flag & Sex == 1)}). An
+#' order comparison exempts only a variable whose values are numbers:
+#' \code{I(Education >= 3)} reads an ordered code, while \code{<} on a
+#' factor is not meaningful to R and on text is alphabetical. Any other
+#' term -- \code{I((Sex == 1) * Age)}, \code{ifelse(Sex == 1, 0, Age)} --
+#' exempts nothing, and is refused as before.
+#'
+#' @param e A formula term (a call).
+#' @param data The analysis data frame.
+#' @return Character vector: the variables of \code{data} the guard should
+#'   pass over in this term; empty when the term is not a logical
+#'   expression of comparisons.
+#' @keywords internal
+.jst_comparison_exempt <- function(e, data) {
+  cmp_eq  <- c("==", "!=", "%in%")
+  cmp_ord <- c("<", ">", "<=", ">=")
+  bare <- character(0); bare_ord <- character(0)
+  nested <- character(0); logic_pos <- character(0)
+  walk <- function(x) {
+    if (is.call(x)) {
+      h <- x[[1L]]
+      if (!is.symbol(h)) return(FALSE)
+      op <- as.character(h)
+      if (op %in% c("I", "(", "!") && length(x) == 2L) return(walk(x[[2L]]))
+      if (op %in% c("&", "|", "&&", "||") && length(x) == 3L) {
+        a <- walk(x[[2L]]); b <- walk(x[[3L]])
+        return(a && b)
+      }
+      if (op %in% c(cmp_eq, cmp_ord) && length(x) == 3L) {
+        for (k in 2:3) {
+          a <- x[[k]]
+          if (is.symbol(a)) {
+            bare <<- c(bare, as.character(a))
+            if (op %in% cmp_ord) bare_ord <<- c(bare_ord, as.character(a))
+          } else if (is.call(a)) {
+            nested <<- c(nested, all.vars(a))
+          }
+        }
+        return(TRUE)
+      }
+      return(FALSE)
+    }
+    if (is.symbol(x)) {
+      logic_pos <<- c(logic_pos, as.character(x))
+      return(TRUE)
+    }
+    is.logical(x)
+  }
+  if (!isTRUE(walk(e))) return(character(0))
+  cols <- names(data)
+  ord_ok <- vapply(intersect(bare_ord, cols), function(v) {
+    .jst_takes_numeric_registration(data[[v]])
+  }, logical(1))
+  no_ord  <- names(ord_ok)[!ord_ok]
+  logic_ok <- vapply(intersect(logic_pos, cols), function(v) {
+    is.logical(data[[v]])
+  }, logical(1))
+  # A variable used bare in a logical position but not itself TRUE/FALSE
+  # (I(Grp & Sex == 1)) is being read as a number there: not exempt, even
+  # where it is also one side of a comparison.
+  not_logical <- names(logic_ok)[!logic_ok]
+  setdiff(unique(c(intersect(bare, cols), names(logic_ok)[logic_ok])),
+          c(nested, no_ord, not_logical))
+}
+
 #' Internal helper: resolve transformed formula terms into computed columns
 #'
 #' Walks the formula's variables for function-call terms -- log(x), I(x^2),
@@ -1845,7 +1940,10 @@
 #' variable to Numeric and lifts the refusal -- the identical escape hatch,
 #' and the exact path the message names -- while factor/character arguments
 #' are caught here too (a typed message in place of base R's raw non-numeric
-#' error). A term that evaluates but yields non-finite values for some
+#' error). A COMPARISON is not refused (Session 342): a term that only asks
+#' which cases are in a category -- \code{I(Sex == 1)},
+#' \code{I(Source == "web")} -- computes as \code{lm()} computes it, with
+#' no registration (\code{.jst_comparison_exempt()}). A term that evaluates but yields non-finite values for some
 #' cases -- log() of a zero (-Inf) or of a negative (NaN) -- is NOT
 #' refused: those cells are set to NA, counted per term, and reported in a
 #' consequential note, with base R's raw "NaNs produced" warning muffled in
@@ -1889,7 +1987,13 @@
   eval_data <- data
   for (v in names(eval_data)) {
     if (haven::is.labelled(eval_data[[v]])) {
-      eval_data[[v]] <- .jst_as_numeric(eval_data[[v]])
+      # A string variable carrying value labels stays text (Session 342):
+      # coerced to numeric it was all NA, under R's "NAs introduced by
+      # coercion", which a comparison on it -- I(Sx == "M") -- would then
+      # have read.
+      eval_data[[v]] <- if (is.character(eval_data[[v]]))
+        as.character(unclass(eval_data[[v]])) else
+        .jst_as_numeric(eval_data[[v]])
     }
   }
   enclos <- environment(formula)
@@ -1937,15 +2041,33 @@
     # categoricals are caught here too, upgrading base R's raw "non-numeric
     # argument" to a typed message; date-time / numbers-as-text fall through to
     # the evaluation-error branch below.
+    # A comparison reads a category; it computes nothing from its code
+    # (Session 342, Jeff's ruling). The variables a comparison term names
+    # that way are passed over; see .jst_comparison_exempt().
+    cmp_exempt <- .jst_comparison_exempt(v, data)
     for (vn in all.vars(v)) {
       if (!vn %in% names(data)) next
+      if (vn %in% cmp_exempt) next
       if (identical(.jst_jstats_class(data[[vn]], vn, data_name)$class,
                     "Categorical")) {
-        .jst_stop(vn, " is a categorical variable, so the formula term ",
-                  term_txt, " cannot be computed.\n",
-                  "If ", vn, " should be treated as numeric, register it ",
-                  "first:\n",
-                  "  jnumeric(", data_name, ", ", vn, ")")
+        # jnumeric() is offered only where it will take (Session 342): it
+        # refuses a factor, a text variable and a logical now, and before
+        # that its registration on one left the term as uncomputable as it
+        # was. A factor or text variable gets jencode(), the conversion the
+        # refusal itself names; a logical gets the fact alone.
+        lead <- paste0(vn, " is a categorical variable, so the formula term ",
+                       term_txt, " cannot be computed.")
+        if (.jst_takes_numeric_registration(data[[vn]])) {
+          .jst_stop(lead, "\n",
+                    "If ", vn, " should be treated as numeric, register it ",
+                    "first:\n",
+                    "  jnumeric(", data_name, ", ", vn, ")")
+        }
+        if (is.factor(data[[vn]]) || is.character(data[[vn]])) {
+          .jst_stop(lead, "\n",
+                    "Convert it to numbers first with jencode().")
+        }
+        .jst_stop(lead)
       }
     }
 
@@ -2160,7 +2282,7 @@
 
   # -- Numeric or haven_labelled numeric: classify by coding pattern -------
   if (is.numeric(x) || haven::is.labelled(x)) {
-    vals <- suppressWarnings(as.numeric(x))
+    vals <- suppressWarnings(.jst_as_numeric(x))   # AUDIT-014
     vals <- vals[!is.na(vals)]
     unique_vals <- sort(unique(vals))
     if (length(unique_vals) != 2) return(na_result)
@@ -2290,8 +2412,11 @@
   # sit outside the structural 0-6 band.
   if (identical(override, "count")) return(TRUE)
   if (!is.null(var_name) && !is.null(data_name)) {
+    # Read only on a variable that can carry it (Session 342; see
+    # .jst_jstats_class()).
     intent <- .jst_get_intent(data_name, var_name)
-    if (!is.null(intent) && identical(intent$kind, "count")) return(TRUE)
+    if (!is.null(intent) && identical(intent$kind, "count") &&
+        .jst_takes_numeric_registration(x)) return(TRUE)
   }
 
   if (haven::is.labelled(x))   return(FALSE)
@@ -2460,8 +2585,9 @@
     return("")
   }
 
-  # Count / Likert judge the numeric codes.
-  num <- suppressWarnings(as.numeric(present))
+  # Count / Likert judge the numeric codes. (.jst_as_numeric(): the
+  # AUDIT-014 pattern, found at this site by the Session 342 scan.)
+  num <- suppressWarnings(.jst_as_numeric(present))
   num <- num[!is.na(num)]
   if (length(num) == 0L) return("")
 
@@ -2501,7 +2627,8 @@
 #' @param var_names Character vector of the variables just registered.
 #' @param kind The declared role: "count", "likert", or "dummy" ("numeric" is a
 #'   no-op).
-#' @return invisible(NULL). Called for its message side effect.
+#' @return Invisibly, \code{TRUE} when the note printed and \code{FALSE}
+#'   when no variable was flagged.
 #' @keywords internal
 .jst_declaration_note <- function(data, var_names, kind) {
   flagged <- character(0)
@@ -2514,7 +2641,7 @@
     .jst_msg("! Unusual declaration for this variable's data:\n",
              paste(flagged, collapse = "\n"))
   }
-  invisible(NULL)
+  invisible(length(flagged) > 0L)
 }
 
 
@@ -2606,8 +2733,16 @@
   # Numeric/count live in the .jst_registry notebook; categorical lives in the
   # existing .jst_dummy registry. Both keyed by frame name + variable.
   if (!is.null(var_name) && !is.null(data_name)) {
+    # A numeric, count or Likert registration is read only on a variable
+    # that can carry one (Session 342). The verbs refuse any other kind
+    # now, but an .rds file saved before they did can restore such a
+    # registration: on a text variable it made jscreen() show "Numeric /
+    # User-declared" over R's "NAs introduced by coercion", and on a factor
+    # "Likert". It is passed over, not removed, and the variable resolves
+    # by its structure.
     intent <- .jst_get_intent(data_name, var_name)
-    if (!is.null(intent) && !is.null(intent$kind)) {
+    if (!is.null(intent) && !is.null(intent$kind) &&
+        .jst_takes_numeric_registration(x)) {
       res <- .jst_class_from_role(intent$kind, x, var_name, data_name)
       if (!is.null(res)) return(c(res, list(source = "registered")))
     }

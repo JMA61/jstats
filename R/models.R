@@ -1961,6 +1961,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' columns (\code{poly(x, 2)}, spline bases) or a categorical result
 #' (\code{cut(x, 3)}) are not supported inline: create the derived variable
 #' as a column of the data first, then name that column in the formula.
+#' A categorical variable may be compared but not transformed.
+#' \code{I(x == 2)}, \code{I(x \%in\% c(1, 3))} and, for a text variable,
+#' \code{I(x == "web")} each enter the model as a TRUE/FALSE predictor, as
+#' in \code{lm()}; an order comparison such as \code{I(x >= 3)} does too
+#' when \code{x} holds numbers. Arithmetic on a categorical \code{x} --
+#' \code{log(x)}, \code{I(x^2)} -- is refused, because it would be
+#' computed from the category codes; register \code{x} with
+#' \code{\link{jnumeric}} if its codes are meant as numbers.
 #' A value or vector from your workspace may be named inside a computed
 #' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 #' A data frame may not: write \code{y ~ x} with \code{data = MyData},
@@ -3572,6 +3580,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' variable as a column of the data first, then name that column in the
 #' formula. (The dependent variable must be a plain 0/1 dichotomy, so a
 #' transform applies to predictors, not the response.)
+#' A categorical variable may be compared but not transformed.
+#' \code{I(x == 2)}, \code{I(x \%in\% c(1, 3))} and, for a text variable,
+#' \code{I(x == "web")} each enter the model as a TRUE/FALSE predictor, as
+#' in \code{lm()}; an order comparison such as \code{I(x >= 3)} does too
+#' when \code{x} holds numbers. Arithmetic on a categorical \code{x} --
+#' \code{log(x)}, \code{I(x^2)} -- is refused, because it would be
+#' computed from the category codes; register \code{x} with
+#' \code{\link{jnumeric}} if its codes are meant as numbers.
 #' A value or vector from your workspace may be named inside a computed
 #' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 #' A data frame may not: write \code{y ~ x} with \code{data = MyData},

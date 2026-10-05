@@ -108,6 +108,10 @@ empty), and only you know which. A short footnote under the table says
 how many there are; \code{\link{jencode}} gives them a code or makes
 them missing.
 
+A list column (a tibble's, or the geometry column of a spatial data
+frame), a raw column, and a column that is itself a data frame cannot be
+tabulated, and are refused before anything prints.
+
 For haven-labelled variables, value labels and numeric codes are combined
 in the frequency table rows (e.g. \code{1: Strongly Oppose}) at the
 default \code{value.id} setting. Where variable labels are shown, they

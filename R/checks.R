@@ -787,29 +787,66 @@
 #'
 #' Builds the one-column data frame that jdesc(), jfreq() and jscreen()
 #' analyze when given a bare column, as in \code{jdesc(community$Age)}, plus
-#' the names their messages use: the column as typed, the variable name (the
-#' part after the last dollar sign), and the frame it came from when typed as
-#' frame dollar column -- MyData, the placeholder frame, otherwise. A column
-#' of a data frame (the resolver's \code{first_arg_frame}, Session 324) takes
-#' both names from that frame, so \code{d[["Age"]]} reads as Age from d, and
-#' is marked \code{in_frame} for \code{.jst_vector_recurse()}.
+#' the names their messages use: the column as typed, the variable name, and
+#' the frame it came from. A column of a data frame (the resolver's
+#' \code{first_arg_frame}, Session 324) takes both names from that frame, so
+#' \code{d[["Age"]]} reads as Age from d, and is marked \code{in_frame} for
+#' \code{.jst_vector_recurse()}.
+#'
+#' Anything else is read by its SHAPE (Session 342; the S338 item). A place
+#' ending in a name -- \code{lst$d$Sex}, a data frame held in a list -- is
+#' named for that last part, with the rest as its frame. A plain name
+#' (\code{x}) is named for itself, with the placeholder frame MyData. A
+#' COMPUTED vector -- \code{d$Sex[d$Age > 40]}, \code{log(d$Age)},
+#' \code{c(1, 2, 3)} -- is named with the expression as typed and marked
+#' \code{computed}: until then the name was whatever followed the last
+#' dollar sign of the text, so those two tables were titled "Age > 40]" and
+#' "Age)", and the fix line built from the same split read
+#' \code{jfreq(d$Sex[d, Age > 40], Grp)}. A computed vector has no data
+#' frame to name in a fix line, so \code{.jst_vector_recurse()} gives it the
+#' sentence without one.
 #'
 #' @param arg1 The \code{.jst_resolve_first_arg()} result, mode
 #'   \code{vector_input}.
 #' @return A list with \code{frame}, \code{typed}, \code{var},
-#'   \code{frame_nm} and \code{in_frame}.
+#'   \code{frame_nm}, \code{in_frame} and \code{computed}.
 #' @keywords internal
 .jst_vector_frame <- function(arg1) {
-  typed <- paste(deparse(arg1$first_arg_sub), collapse = "")
+  e     <- arg1$first_arg_sub
+  typed <- paste(deparse(e), collapse = "")
   fc    <- arg1$first_arg_frame
-  var   <- if (!is.null(fc)) fc$var else sub("^.*\\$", "", typed)
-  frame <- data.frame(x = arg1$first_arg_value)
+  # The last part of a place, when it is a name: lst$d$Sex, lst$d[["Sex"]].
+  last  <- NULL
+  if (is.null(fc) && is.call(e) && length(e) == 3L && is.symbol(e[[1L]]) &&
+      identical(.jst_data_arg_kind(e), "place")) {
+    h <- as.character(e[[1L]])
+    if (h == "$" && (is.symbol(e[[3L]]) || is.character(e[[3L]]))) {
+      last <- as.character(e[[3L]])
+    } else if (h == "[[" && is.character(e[[3L]]) && length(e[[3L]]) == 1L) {
+      last <- e[[3L]]
+    }
+    if (length(last) != 1L || is.na(last) || !nzchar(last)) last <- NULL
+  }
+  computed <- is.null(fc) && is.null(last) && !is.symbol(e)
+  var      <- if (!is.null(fc)) fc$var else if (!is.null(last)) last else typed
+  # A list (a data frame's list column, d$geom) cannot be spread into a
+  # column by data.frame(), which stopped here with R's "arguments imply
+  # differing number of rows" before the function could refuse the type;
+  # it is put in whole (Session 342).
+  val      <- arg1$first_arg_value
+  frame    <- tryCatch(data.frame(x = val), error = function(e) NULL)
+  if (is.null(frame) || ncol(frame) != 1L) {
+    frame   <- data.frame(x = seq_len(NROW(val)))
+    frame$x <- val
+  }
   names(frame) <- var
   list(frame = frame, typed = typed, var = var,
        frame_nm = if (!is.null(fc)) fc$frame
-                  else if (grepl("\\$", typed)) sub("\\$[^$]*$", "", typed)
+                  else if (!is.null(last))
+                    paste(deparse(e[[2L]]), collapse = "")
                   else "MyData",
-       in_frame = !is.null(fc))
+       in_frame = !is.null(fc),
+       computed = computed)
 }
 
 #' Internal helper: re-call jdesc(), jfreq() or jscreen() on a bare column
@@ -868,10 +905,18 @@
               fn = fn_name)
   }
   lead     <- paste0(" the data frame, not the single column ", typed, ".\n")
-  first    <- "Name the data frame first:\n"
   no_frame <- function(x) sub("^.*\\$", "", x)
-  fix      <- function(tail) paste0("  ", fn_name, "(", wrapped$frame_nm,
-                                    ", ", var, ", ", tail, ")")
+  # A computed vector (Session 342) has no data frame to put in a fix line:
+  # the three refusals below end on the sentence alone, where the line
+  # built from the text read jfreq(d$Sex[d, Age > 40], Grp).
+  computed <- isTRUE(wrapped$computed)
+  first    <- if (computed)
+    "Name the data frame first, and each variable on its own." else
+    "Name the data frame first:\n"
+  fix      <- function(tail) {
+    if (computed) return("")
+    paste0("  ", fn_name, "(", wrapped$frame_nm, ", ", var, ", ", tail, ")")
+  }
 
   if (length(dots) > 0L) {
     extra <- vapply(dots, rlang::quo_name, character(1), USE.NAMES = FALSE)

@@ -18,7 +18,12 @@ jdummy(
 \item{data}{A data frame, or omit to use the \code{juse()} default.
 \code{jdummy(NULL)} clears the dummy registrations on the \code{juse()}
 default data frame (or, with no default set, the only frame that carries
-them; if several do, it asks rather than wiping all).}
+them; if several do, it asks rather than wiping all). Registrations are
+stored under the data frame's name, so it is given as a name (or as a
+place such as \code{lst$d}); an expression that builds one, such as a
+subset, is refused, with the two lines that name it first. For the
+same reason \code{jdummy(data, NULL)} and \code{remove = TRUE} work
+on a name whose data frame has since been removed.}
 
 \item{...}{One or more unquoted variable names to register. The variable
 may be haven-labelled, numeric, logical, character, or a factor: for a
@@ -45,7 +50,10 @@ if one of the two codes is 1, that category is modeled (so a
 A text variable holding one word or nothing (\code{"Y"} or blank)
 models the word, with \code{<blank>} as the reference.
 Applied to every variable named in the call; to use different
-reference categories, register the variables in separate calls.
+reference categories, register the variables in separate calls. One
+value only. Every variable is checked before any is registered, so a
+call that stops -- a reference one of the variables does not have, for
+example -- registers none of them.
 When the reference was chosen by \code{auto}, the printed
 "Reference category:" line ends with
 \code{(default; change with ref =)}; a reference you name carries

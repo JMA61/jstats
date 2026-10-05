@@ -728,6 +728,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' how many there are; \code{\link{jencode}} gives them a code or makes
 #' them missing.
 #'
+#' A list column (a tibble's, or the geometry column of a spatial data
+#' frame), a raw column, and a column that is itself a data frame cannot be
+#' tabulated, and are refused before anything prints.
+#'
 #' For haven-labelled variables, value labels and numeric codes are combined
 #' in the frequency table rows (e.g. \code{1: Strongly Oppose}) at the
 #' default \code{value.id} setting. Where variable labels are shown, they
@@ -883,6 +887,22 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
               "  jfreq(community, Region)")
   }
   .jst_check_vars(data, var_names_check, .jst_data_name, default_used = .jst_default_used)
+
+  # A list column (a data frame's or tibble's list-column, an sf geometry
+  # column, a column that is itself a data frame) and a raw column cannot be
+  # tabulated: after the title and the N line they stopped on R's own
+  # errors -- "all arguments must have the same length", "arguments imply
+  # differing number of rows: 0, 16", "unimplemented type 'raw' in
+  # 'orderVector1'". They take the analysis functions' type stop, before
+  # anything prints (Session 342; the S213 item, Jeff's lean 4). Every
+  # other type is tabulated, as before.
+  for (.fv in var_names_check) {
+    .fk <- .jst_var_kind(data[[.fv]])$kind
+    if (.fk %in% c("list", "raw", "other")) {
+      stop(.jst_analysis_type_error_msg(.fv, .fk, "a frequency table"),
+           call. = FALSE)
+    }
+  }
 
   # -- Title (printed once, before the filters run) --------------------------
   # As in jdesc() (Session 338; the S334 item). jfreq() alone printed its
@@ -1434,6 +1454,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' (or the whole Missing/Outliers table) is omitted entirely when nothing is
 #' flagged, and the header count lines explain the omission.
 #'
+#' A variable R cannot treat as a column of values -- a list column (a
+#' tibble's, or the geometry column of a spatial data frame), a raw one, or
+#' a column that is itself a data frame -- is listed as Unsupported and
+#' screened no further; it does not stop the screening of the rest.
+#'
 #' Text cells with no text -- empty, or holding only spaces or tabs -- are
 #' counted apart from missing values, never among them. When the screened
 #' variables hold any, the header gains a "Cases with blank text" line and
@@ -1452,7 +1477,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' mean of its stored codes and a blank median. A numeric dichotomy coded
 #' other than 0/1 (e.g. the 1/2 Group-4 coding) is flagged with a "*" on its
 #' sub-class cell, since its raw mean is not a proportion; the marker shows
-#' even when \code{stats} is off, surfacing the recode need.
+#' even when \code{stats} is off, surfacing the recode need. A dichotomy
+#' registered with \code{jnumeric()} or \code{jcount()} is Numeric, has no
+#' sub-class, and carries no marker.
 #'
 #' When variable names are supplied, only those variables are screened. When
 #' omitted, all variables in the data frame are screened. Settings stored
@@ -1769,9 +1796,18 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     col         <- .jst_label_blanks(col)
 
     jc          <- .jst_jstats_class(col, v, .jst_data_name)
-    n_missing   <- sum(is.na(col))
+    # A column that is itself a data frame (Session 342; the S213 item) has
+    # rows, not cells: is.na() gives a matrix, so its missing count and its
+    # distinct count are taken by row. A list column and a raw one go
+    # through the general lines, which read them cell by cell.
+    if (is.data.frame(col)) {
+      n_missing <- 0L
+      n_unique  <- nrow(unique(col))
+    } else {
+      n_missing <- sum(is.na(col))
+      n_unique  <- length(unique(col[!is.na(col)]))
+    }
     pct_missing <- round(n_missing / n_cases * 100, 1)
-    n_unique    <- length(unique(col[!is.na(col)]))
 
     # Central tendency for NUMERIC-LIKE variables: Numeric and Count (resolved
     # class "Numeric") get Mean and Median; a numeric-backed dichotomy gets the
@@ -1786,7 +1822,13 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     is_num_dich  <- isTRUE(dich$is_dichotomy) &&
                     dich$coding %in% c("0/1", "1/2", "other")
     numeric_like <- jc$class == "Numeric" || is_num_dich
-    star         <- is_num_dich && dich$coding %in% c("1/2", "other")
+    # The star marks a dichotomy's Sub-class cell, so only a row that is
+    # still Categorical takes one (Session 342; the S324 item). A 1/2
+    # variable registered with jnumeric() has no sub-class: it left the
+    # legend printing under a table with no starred row, or, beside another
+    # variable's sub-class, a cell holding the star alone.
+    star         <- is_num_dich && dich$coding %in% c("1/2", "other") &&
+                    identical(jc$class, "Categorical")
 
     # Declaration-plausibility heads-up: when the resolved class came from a
     # user registration, check whether the variable's structure is an
@@ -1862,7 +1904,24 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   # outlier (outliers are inherently per-variable, so the unit is variables).
   # Both lines always print: a 0 on either line is what explains a dropped
   # column (or the dropped Missing/Outliers table) below. (Session 51)
-  n_cases_missing <- sum(!stats::complete.cases(data))
+  # stats::complete.cases() stops on a list or raw column with R's own
+  # "invalid 'type' (list) of argument", and on a column that is a data
+  # frame with "not all arguments have the same length" -- the error
+  # jscreen() gave for a whole frame holding one, an sf geometry column
+  # being the usual case (Session 342; the S213 item). Those columns are
+  # set aside for this count and screened as Unsupported rows; a list
+  # column's NA cells are then counted in, as its row counts them.
+  container <- vapply(data, function(col) is.list(col) || is.raw(col),
+                      logical(1))
+  row_missing <- if (all(container)) rep(FALSE, n_cases) else
+    !stats::complete.cases(data[, !container, drop = FALSE])
+  for (nm in names(data)[container]) {
+    col <- data[[nm]]
+    if (is.list(col) && !is.data.frame(col)) {
+      row_missing <- row_missing | is.na(col)
+    }
+  }
+  n_cases_missing <- sum(row_missing)
   n_vars_outliers <- sum(!is.na(screen_table$Outliers) & screen_table$Outliers > 0)
   # Cases with a blank cell in at least one text variable (Session 340).
   # Stated on its own line, under the missing count and never added to it:
@@ -1943,7 +2002,9 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     # Append the "*" recode marker to the Sub-class display cell for numeric
     # non-0/1 dichotomies. Display-only: the returned screen_table keeps the
     # clean "dichotomy". A "*" implies a sub-class, so the column is present.
-    if (show_star && "SubClass" %in% cols) {
+    # The legend below prints only when a star was put in a cell (S342).
+    show_star <- show_star && "SubClass" %in% cols
+    if (show_star) {
       t1$SubClass[screen_table$Star] <-
         paste0(t1$SubClass[screen_table$Star], "*")
     }

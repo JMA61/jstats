@@ -7,13 +7,19 @@
 jlikert(data, ..., remove = FALSE, clear.all = FALSE)
 }
 \arguments{
-\item{data}{A data frame, or omitted to use the \code{\link{juse}} default.}
+\item{data}{A data frame, or omitted to use the \code{\link{juse}} default.
+Registrations are stored under the data frame's name, so it is given
+as a name (or as a place such as \code{lst$d}); an expression that
+builds one is refused, with the two lines that name it first. The
+\code{NULL} and \code{remove = TRUE} forms work on a name whose data
+frame has since been removed.}
 
 \item{...}{One or more unquoted variable names to register, or a single
 \code{NULL} to clear this frame's Likert registrations (see Details).
-The registration applies to numeric and haven-labelled variables; a
-factor or text variable is categorical regardless and is unaffected by
-it.}
+The registration applies to numeric variables and to haven-labelled
+variables that hold numbers. Any other type is refused, and none of
+the call's variables is then registered: convert a factor or a text
+variable to numbers first with \code{\link{jencode}}.}
 
 \item{remove}{Logical; if TRUE, remove the named variables' Likert
 registrations instead of adding them.}
