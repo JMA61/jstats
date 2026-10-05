@@ -31,10 +31,18 @@ the descriptive output all use the transformed values.}
 If TRUE, runs Welch's ANOVA (does not assume equal variances). Welch's
 F is not a ratio of two mean squares, so its table shows F, df1, df2
 and p: Sum of Squares and Mean Square belong to the traditional ANOVA
-table and are not applicable to Welch's test.}
+table and are not applicable to Welch's test. Welch's ANOVA needs at
+least 2 cases in every group.}
 
-\item{posthoc}{Logical or NULL. If TRUE, prints Tukey HSD pairwise comparisons.
-Not applicable when welch = TRUE: Tukey HSD assumes equal variances.
+\item{posthoc}{Logical or NULL. If TRUE, prints pairwise comparisons of
+the group means: Tukey HSD for the traditional ANOVA, and Games-Howell
+when welch = TRUE. Games-Howell does not assume equal variances: each
+comparison uses the two groups' own variances and its own degrees of
+freedom, shown in a df column, and the p-values and confidence
+intervals are adjusted for the number of groups through the
+studentized range distribution, as Tukey's are. Commercial
+statistical software offers the same test for unequal variances
+(Games-Howell in SPSS's ONEWAY post-hoc tests).
 If NULL (default), defers to \code{joutput()}.}
 
 \item{effect.size}{Logical or NULL. If TRUE, prints eta-squared. If NULL
@@ -99,15 +107,19 @@ Invisibly returns a list of class \code{jst_anova} containing:
 \code{model} (the \code{aov} or \code{oneway.test} object),
 \code{model_frame} (the analysis data frame used for plotting),
 \code{test_type}, \code{formula}, \code{descriptives}, \code{f},
-\code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n}, and
-\code{sample_info} (pipeline and missing data counts).
+\code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n},
+\code{sample_info} (pipeline and missing data counts), and
+\code{posthoc} (the pairwise comparisons as an unrounded data frame,
+with \code{test} naming the method; \code{NULL} when post-hoc tests
+were not requested).
 }
 \description{
 Runs a one-way ANOVA and prints a formatted group descriptives table
 followed by an ANOVA table. By default, runs the traditional ANOVA
 assuming equal variances. Optional parameters provide post-hoc tests,
 effect size, Levene's test, and confidence intervals. Set welch = TRUE
-for the Welch correction when equal variances cannot be assumed.
+for the Welch correction when equal variances cannot be assumed; its
+post-hoc test is Games-Howell.
 Handles haven-labelled, numeric, and factor grouping variables.
 For haven-labelled variables, numeric codes are displayed alongside
 labels in the group descriptives table.
@@ -134,8 +146,20 @@ set used with \code{\%in\%} may have any length.
 \examples{
 # With explicit data frame
 jaov(WellbeingScore ~ Region, data = community)
-jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
 jaov(WellbeingScore ~ Region, data = community, full = TRUE)
+
+# Checking the equal-variances assumption: Levene's test
+jaov(WellbeingScore ~ Region, data = community, levene = TRUE)
+
+# Pairwise comparisons after the traditional ANOVA: Tukey HSD
+jaov(WellbeingScore ~ Region, data = community, posthoc = TRUE)
+
+# When equal variances cannot be assumed: Welch's ANOVA
+jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
+
+# Pairwise comparisons after Welch's ANOVA: Games-Howell
+jaov(WellbeingScore ~ Region, data = community, welch = TRUE,
+     posthoc = TRUE)
 
 # Using juse() default
 juse(community)

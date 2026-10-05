@@ -103,7 +103,7 @@
 # connect to server'" -- and tryCatch(error = ) catches only the error, so
 # with the network blocked or absent every library(jstats) ended on R's
 # "Warning message: In file(con, "r") : ..." naming an address the user
-# never typed, under the package's own "Could not check for updates" line.
+# never typed, under the package's own startup line.
 # jupdate() makes the same read and leaked the same warning before its stop.
 # startup_check.R, whose offline branch stubs this helper, could not see it:
 # its section F runs the real helper against an address that cannot be
@@ -168,6 +168,25 @@
 }
 
 
+# -- Internal: the startup line when the update check did not complete ---------
+#
+# One line for both ways the check can fail to finish: the gist read (in
+# .onAttach) and the r-universe version read (.jst_show_version_status). Each
+# has a 3-second timeout, and all R establishes is that a read did not
+# complete in it. Until 0.9.215 the line guessed a cause -- "(Could not check
+# for updates - no internet connection?)" -- which was wrong on the first
+# load after a computer wakes, when the connection is merely slow to come
+# back (Session 341; Jeff's own machine, online). jupdate() makes the same
+# version read and says what R could establish if it fails too, so it is the
+# one remedy. Wording Jeff's choice, from two renders.
+
+.jst_update_check_line <- function(installed_ver) {
+  paste0("jstats v", installed_ver, " loaded. ",
+         "The check for updates did not complete.\n",
+         "To check again, run jupdate().")
+}
+
+
 # -- Internal: show the standard version-check message -------------------------
 #
 # Compares the latest r-universe version (via .jst_latest_universe_version()) to
@@ -180,10 +199,7 @@
   universe_ver <- .jst_latest_universe_version(pkg)
 
   if (is.na(universe_ver)) {
-    packageStartupMessage(
-      "jstats v", installed_ver, " loaded.",
-      " (Could not check for updates - no internet connection?)"
-    )
+    packageStartupMessage(.jst_update_check_line(installed_ver))
     return(invisible())
   }
 
@@ -389,10 +405,7 @@
   } else if (isTRUE(gist_info$network_ok)) {
     .jst_show_version_status(installed_ver, pkgname)
   } else {
-    packageStartupMessage(
-      "jstats v", installed_ver, " loaded.",
-      " (Could not check for updates - no internet connection?)"
-    )
+    packageStartupMessage(.jst_update_check_line(installed_ver))
   }
 
   # Append any one-off broadcast message. Fires whether or not a

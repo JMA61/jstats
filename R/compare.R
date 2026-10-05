@@ -401,12 +401,19 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
       size_ratio     <- max(group_ns) / min(group_ns)
       balanced       <- size_ratio <= 1.5
       levene_p_note  <- .jst_fmt_p(levene_p)
+      # "p < .001", never "p = <.001" (Session 341): the formatter's
+      # "<.001" carries its own sign.
+      levene_p_note  <- if (startsWith(levene_p_note, "<")) {
+        paste0("p < ", sub("^<", "", levene_p_note))
+      } else {
+        paste0("p = ", levene_p_note)
+      }
       if (balanced) {
-        .jst_msg_out("Note: Levene's test is significant (p = ",
+        .jst_msg_out("\nNote: Levene's test is significant (",
                      levene_p_note, "), but group sizes are approximately ",
                      "equal so the standard test remains appropriate.")
       } else {
-        .jst_msg_out("Note: Levene's test is significant (p = ",
+        .jst_msg_out("\nNote: Levene's test is significant (",
                      levene_p_note, "), suggesting unequal variances.\n",
                      "With unequal group sizes this may affect results ",
                      "-- consider welch = TRUE.")
@@ -575,7 +582,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' followed by an ANOVA table. By default, runs the traditional ANOVA
 #' assuming equal variances. Optional parameters provide post-hoc tests,
 #' effect size, Levene's test, and confidence intervals. Set welch = TRUE
-#' for the Welch correction when equal variances cannot be assumed.
+#' for the Welch correction when equal variances cannot be assumed; its
+#' post-hoc test is Games-Howell.
 #' Handles haven-labelled, numeric, and factor grouping variables.
 #' For haven-labelled variables, numeric codes are displayed alongside
 #' labels in the group descriptives table.
@@ -607,9 +615,17 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   If TRUE, runs Welch's ANOVA (does not assume equal variances). Welch's
 #'   F is not a ratio of two mean squares, so its table shows F, df1, df2
 #'   and p: Sum of Squares and Mean Square belong to the traditional ANOVA
-#'   table and are not applicable to Welch's test.
-#' @param posthoc Logical or NULL. If TRUE, prints Tukey HSD pairwise comparisons.
-#'   Not applicable when welch = TRUE: Tukey HSD assumes equal variances.
+#'   table and are not applicable to Welch's test. Welch's ANOVA needs at
+#'   least 2 cases in every group.
+#' @param posthoc Logical or NULL. If TRUE, prints pairwise comparisons of
+#'   the group means: Tukey HSD for the traditional ANOVA, and Games-Howell
+#'   when welch = TRUE. Games-Howell does not assume equal variances: each
+#'   comparison uses the two groups' own variances and its own degrees of
+#'   freedom, shown in a df column, and the p-values and confidence
+#'   intervals are adjusted for the number of groups through the
+#'   studentized range distribution, as Tukey's are. Commercial
+#'   statistical software offers the same test for unequal variances
+#'   (Games-Howell in SPSS's ONEWAY post-hoc tests).
 #'   If NULL (default), defers to \code{joutput()}.
 #' @param effect.size Logical or NULL. If TRUE, prints eta-squared. If NULL
 #'   (default), defers to \code{joutput()}.
@@ -651,14 +667,29 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   \code{model} (the \code{aov} or \code{oneway.test} object),
 #'   \code{model_frame} (the analysis data frame used for plotting),
 #'   \code{test_type}, \code{formula}, \code{descriptives}, \code{f},
-#'   \code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n}, and
-#'   \code{sample_info} (pipeline and missing data counts).
+#'   \code{df1}, \code{df2}, \code{p}, \code{eta_squared}, \code{n},
+#'   \code{sample_info} (pipeline and missing data counts), and
+#'   \code{posthoc} (the pairwise comparisons as an unrounded data frame,
+#'   with \code{test} naming the method; \code{NULL} when post-hoc tests
+#'   were not requested).
 #'
 #' @examples
 #' # With explicit data frame
 #' jaov(WellbeingScore ~ Region, data = community)
-#' jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
 #' jaov(WellbeingScore ~ Region, data = community, full = TRUE)
+#'
+#' # Checking the equal-variances assumption: Levene's test
+#' jaov(WellbeingScore ~ Region, data = community, levene = TRUE)
+#'
+#' # Pairwise comparisons after the traditional ANOVA: Tukey HSD
+#' jaov(WellbeingScore ~ Region, data = community, posthoc = TRUE)
+#'
+#' # When equal variances cannot be assumed: Welch's ANOVA
+#' jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
+#'
+#' # Pairwise comparisons after Welch's ANOVA: Games-Howell
+#' jaov(WellbeingScore ~ Region, data = community, welch = TRUE,
+#'      posthoc = TRUE)
 #'
 #' # Using juse() default
 #' juse(community)
@@ -669,7 +700,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-#' @importFrom stats aov oneway.test TukeyHSD qt
+#' @importFrom stats aov oneway.test TukeyHSD qt ptukey qtukey
 #' @param digits Integer or NULL. Number of decimal places for continuous
 #'   statistics in the output tables (range 0-7; \code{digits = 0} prints
 #'   whole numbers with no trailing decimal point). Does not affect p-values,
@@ -696,7 +727,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   .jst_check_flag(ci, "ci", null.ok = TRUE)
   .jst_check_flag(posthoc, "posthoc", null.ok = TRUE)
 
-  digits_n <- .jst_resolve_digits(digits)
+  digits_n    <- .jst_resolve_digits(digits)
+  posthoc_tbl <- NULL
 
   # Front-door check: the formula goes first, then the data. A swapped or
   # misplaced formula otherwise crashes deep inside the data pipeline with
@@ -864,6 +896,28 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                 "rather than a grouping variable."))
   }
 
+  # A one-case group under Welch (Session 341; the Session 105 item's Welch
+  # half). Welch's F weights each group by n / variance, and one case has no
+  # variance: oneway.test() stopped with R's own "not enough observations",
+  # after the title and the descriptives had printed. The traditional ANOVA
+  # pools the variance and runs with such a group, so it is the way out.
+  if (welch) {
+    # Counted on the converted grouping variable, so a labelled group is
+    # named by its label, as the comparison tables name it.
+    solo_n <- table(data[[group_name]][!is.na(data[[dv_name]])])
+    solo   <- names(solo_n)[solo_n == 1L]
+    if (length(solo) > 0L) {
+      .jst_stop(
+        "'", group_name, "' has ", length(solo), " ",
+        .jst_plural(length(solo), "category", "categories"),
+        " with only 1 case (", .jst_format_var_list(solo, and = TRUE), ").\n",
+        "Welch's ANOVA requires at least 2 cases in every category.\n",
+        "The standard ANOVA can include ",
+        .jst_plural(length(solo), "it", "them"),
+        ": run jaov() without welch = TRUE.")
+    }
+  }
+
   # Assumption-check warning (audit): the outcome looks categorical where a
   # continuous outcome is expected. Likert outcomes and an asserted numeric
   # role are exempt (handled inside .jst_warns_seems_categorical).
@@ -930,12 +984,19 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       size_ratio     <- max(group_ns) / min(group_ns)
       balanced       <- size_ratio <= 1.5
       levene_p_note  <- .jst_fmt_p(levene_p)
+      # "p < .001", never "p = <.001" (Session 341): the formatter's
+      # "<.001" carries its own sign.
+      levene_p_note  <- if (startsWith(levene_p_note, "<")) {
+        paste0("p < ", sub("^<", "", levene_p_note))
+      } else {
+        paste0("p = ", levene_p_note)
+      }
       if (balanced) {
-        .jst_msg_out("Note: Levene's test is significant (p = ",
+        .jst_msg_out("\nNote: Levene's test is significant (",
                      levene_p_note, "), but group sizes are approximately ",
                      "equal so the standard test remains appropriate.")
       } else {
-        .jst_msg_out("Note: Levene's test is significant (p = ",
+        .jst_msg_out("\nNote: Levene's test is significant (",
                      levene_p_note, "), suggesting unequal variances.\n",
                      "With unequal group sizes this may affect results ",
                      "-- consider welch = TRUE.")
@@ -969,8 +1030,12 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     )
 
     if (ci) {
+      # A one-case group has no SD and no interval: its cells are blank, as
+      # in SPSS. qt() at 0 degrees of freedom gave NaN with R's own "NaNs
+      # produced" warning above the table (Session 341; the Session 105
+      # item).
       se     <- s / sqrt(n)
-      t_crit <- stats::qt(0.975, df = n - 1)
+      t_crit <- if (n > 1L) stats::qt(0.975, df = n - 1) else NA_real_
       row$CI_Lower <- round(m - t_crit * se, digits_n)
       row$CI_Upper <- round(m + t_crit * se, digits_n)
     }
@@ -1036,15 +1101,6 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                  "For the standard ANOVA table, run jaov() without ",
                  "welch = TRUE.")
 
-    # Tukey HSD rests on the pooled error term, which Welch's test sets
-    # aside.
-    if (posthoc) {
-      .jst_msg_out("\nNote: Tukey HSD post-hoc tests are not applicable to ",
-                   "Welch's ANOVA.\n",
-                   "For Tukey HSD comparisons, run jaov() without ",
-                   "welch = TRUE.")
-    }
-
     # Always compute eta-squared (from traditional SS decomposition)
     temp_model  <- stats::aov(formula, data = data)
     temp_result <- summary(temp_model)[[1]]
@@ -1055,6 +1111,35 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     if (effect.size) {
       cat("\nEta-squared: ", .jst_fmt_stat(eta_sq, digits_n), "\n", sep = "")
       cat("(Note: Eta-squared is calculated from the traditional SS decomposition.)\n")
+    }
+
+    # Games-Howell (Session 341; the S327 item). Tukey HSD rests on the
+    # pooled error term, which Welch's test sets aside, and until 0.9.215 a
+    # note said so and offered nothing. The table takes the Tukey table's
+    # form and place, with the df each comparison was judged on.
+    if (posthoc) {
+      posthoc_tbl <- .jst_games_howell(data[[dv_name]], data[[group_name]])
+      gh_table <- data.frame(
+        Comparison = posthoc_tbl$comparison,
+        Difference = round(posthoc_tbl$diff,  digits_n),
+        CI_Lower   = round(posthoc_tbl$lower, digits_n),
+        CI_Upper   = round(posthoc_tbl$upper, digits_n),
+        df         = round(posthoc_tbl$df, 1),
+        p_adj      = .jst_fmt_p(posthoc_tbl$p),
+        stringsAsFactors = FALSE,
+        row.names  = NULL
+      )
+      cat("\n")
+      # df at Welch's one place, as df2 above; the rest as the Tukey table.
+      .jst_print_table(gh_table,
+                       caption = "Games-Howell Post-Hoc Comparisons",
+                       col.names = c("Comparison", "Mean Difference",
+                                     "95% CI Lower", "95% CI Upper",
+                                     "df", "p (adjusted)"),
+                       row.names = FALSE,
+                       align = c("l", rep("bc", 5L)),
+                       digits = c(Difference = digits_n, CI_Lower = digits_n,
+                                  CI_Upper = digits_n, df = 1L))
     }
 
     # Store F, df, p for the return object
@@ -1115,6 +1200,16 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
       tukey_p     <- tukey_result$`p adj`
       tukey_p_fmt <- .jst_fmt_p(tukey_p)
+      posthoc_tbl <- data.frame(
+        comparison = rownames(tukey_result),
+        diff       = tukey_result$diff,
+        lower      = tukey_result$lwr,
+        upper      = tukey_result$upr,
+        df         = result$Df[2],
+        p          = tukey_p,
+        test       = "Tukey HSD",
+        stringsAsFactors = FALSE
+      )
 
       tukey_table <- data.frame(
         Comparison = rownames(tukey_result),
@@ -1167,10 +1262,71 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     p            = p_value,
     eta_squared  = eta_sq,
     n            = n_analysis,
-    sample_info  = sample_info
+    sample_info  = sample_info,
+    posthoc      = posthoc_tbl
   )
   class(ret) <- "jst_anova"
   invisible(ret)
+}
+
+
+#' Internal helper: Games-Howell pairwise comparisons
+#'
+#' The post-hoc test for Welch's ANOVA (Session 341; the S327 item): every
+#' pair of group means compared without a pooled variance. For groups i and
+#' j the standard error is \code{sqrt(v_i / n_i + v_j / n_j)} from the two
+#' groups' own variances, the degrees of freedom are Welch-Satterthwaite's
+#' for that pair, and the statistic \code{|diff| / se * sqrt(2)} is referred
+#' to the studentized range distribution for k groups
+#' (\code{stats::ptukey()}), which is what adjusts for the number of
+#' comparisons; the 95 percent interval is
+#' \code{diff +/- qtukey(.95, k, df) / sqrt(2) * se}. Rows and names follow
+#' \code{stats::TukeyHSD()}: pairs in level order, each named
+#' \code{later-earlier} with the difference taken the same way, so the two
+#' post-hoc tables read alike. Base R has no Games-Howell function; this
+#' needs none beyond stats.
+#'
+#' A pair whose standard error is 0 (both groups constant) has no df, p or
+#' interval: its cells are NA and print blank. \code{jaov()} stops before
+#' this for a group of one case, which has no variance.
+#'
+#' @param y Numeric vector; the outcome on the analysis rows.
+#' @param g Factor; the groups, with no empty level.
+#' @return A data frame, one row per pair: \code{comparison}, \code{diff},
+#'   \code{lower}, \code{upper}, \code{df}, \code{p} (all unrounded) and
+#'   \code{test} ("Games-Howell").
+#' @keywords internal
+.jst_games_howell <- function(y, g) {
+  ok   <- !is.na(y) & !is.na(g)
+  y    <- y[ok]
+  g    <- droplevels(g[ok])
+  lv   <- levels(g)
+  k    <- length(lv)
+  n    <- as.numeric(tapply(y, g, length))
+  m    <- as.numeric(tapply(y, g, mean))
+  v    <- as.numeric(tapply(y, g, stats::var))
+  rows <- list()
+  for (i in seq_len(k - 1L)) {
+    for (j in (i + 1L):k) {
+      d    <- m[j] - m[i]
+      a    <- v[i] / n[i]
+      b    <- v[j] / n[j]
+      se   <- sqrt(a + b)
+      able <- is.finite(se) && se > 0
+      df   <- if (able) (a + b)^2 / (a^2 / (n[i] - 1) + b^2 / (n[j] - 1))
+              else NA_real_
+      p    <- if (able) stats::ptukey(abs(d) / se * sqrt(2), nmeans = k,
+                                      df = df, lower.tail = FALSE)
+              else NA_real_
+      half <- if (able) stats::qtukey(0.95, nmeans = k, df = df) / sqrt(2) * se
+              else NA_real_
+      rows[[length(rows) + 1L]] <- data.frame(
+        comparison = paste0(lv[j], "-", lv[i]),
+        diff = d, lower = d - half, upper = d + half, df = df, p = p,
+        test = "Games-Howell", stringsAsFactors = FALSE)
+    }
+  }
+  do.call(rbind, rows)
 }
 
 
