@@ -339,19 +339,15 @@ jplot(m, which = "fit", focal = Age, at = "mean")
 # Formula form (scatter and box)
 jplot(WellbeingScore ~ Income, community)               # scatter
 #> Scatterplot: WellbeingScore and Income
-#> 
 
 jplot(WellbeingScore ~ Income, community, line = "lm")  # + regression line
 #> Scatterplot: WellbeingScore and Income
-#> 
 
 jplot(WellbeingScore ~ Income, community, line = "lm", band = "see")
 #> Scatterplot: WellbeingScore and Income
-#> 
 
 jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 #> Scatterplot: WellbeingScore and Income by Volunteer
-#> 
 #> Ignoring unknown labels:
 #> • fill : "Volunteer"
 
@@ -360,26 +356,21 @@ jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 # variables otherwise enter numerically; jdummy() registration also works)
 jplot(WellbeingScore ~ Region, community, categorical = "Region")
 #> Boxplot: WellbeingScore and Region
-#> 
 
 
 # Variable-list form (distributions and counts)
 jplot(community, Age)                      # histogram
 #> Histogram: Age
-#> 
 
 jplot(data = community, Age)               # the same, data frame as data =
 #> Histogram: Age
-#> 
 
 jplot(community, Region)                   # bar chart
 #> Bar Chart: Region
-#> 
 
 jplot(community, Region, Volunteer,        # grouped bar chart
       categorical = c("Region", "Volunteer"))
 #> Grouped Bar Chart: Region and Volunteer
-#> 
 
 
 # Using juse() default (omit the data frame in either form)
@@ -388,22 +379,18 @@ juse(community)
 jplot(WellbeingScore ~ Income)               # scatter
 #> Scatterplot: WellbeingScore and Income
 #> Using default data frame: community
-#> 
 
 jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
 #> Scatterplot: WellbeingScore and Income
 #> Using default data frame: community
-#> 
 
 jplot(Age)                                   # histogram
 #> Histogram: Age
 #> Using default data frame: community
-#> 
 
 jplot(Region, Volunteer,                     # grouped bar chart
       categorical = c("Region", "Volunteer"))
 #> Grouped Bar Chart: Region and Volunteer
 #> Using default data frame: community
-#> 
 
 ```

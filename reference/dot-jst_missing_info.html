@@ -23,7 +23,7 @@ specific knowledge in one place."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.213</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.214</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,7 +116,14 @@ or <code>NULL</code> if only <code>na_range</code> is present. Columns:
 <code>source</code> (<code>"na_values"</code> or <code>"tagged_na"</code>),
 <code>numeric</code> (underlying numeric value; <code>NA</code> for
 tagged NAs), <code>tag</code> (tag letter for Stata; <code>NA</code> for
-SPSS UDMs).</p></dd>
+SPSS UDMs). On a string variable (<code>text</code> below) <code>code</code>
+is the declared string exactly as stored and <code>numeric</code> is
+<code>NA</code>; consumers compare cells against <code>code</code>.</p></dd>
+
+<dt>text</dt>
+<dd><p>SPSS representation only: <code>TRUE</code> when the column
+is character-backed, so its declared missing values are strings
+(Session 340); <code>FALSE</code> otherwise.</p></dd>
 
 <dt>range_values</dt>
 <dd><p>Only when <code>observed = TRUE</code> and an

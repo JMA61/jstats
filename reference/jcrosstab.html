@@ -17,7 +17,7 @@ variables, numeric codes are displayed alongside labels."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.213</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.214</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -215,7 +215,7 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Cross-tabulation only</span></span></span>
 <span class="r-in"><span><span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Volunteer</span>, data <span class="op">=</span> <span class="va">community</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Cross-Tabulation</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -250,7 +250,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With chi-square test</span></span></span>
 <span class="r-in"><span><span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Volunteer</span>, data <span class="op">=</span> <span class="va">community</span>, chisq <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Cross-Tabulation</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -291,7 +291,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># With expected frequencies and column percentages</span></span></span>
 <span class="r-in"><span><span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Volunteer</span>, data <span class="op">=</span> <span class="va">community</span>,</span></span>
 <span class="r-in"><span>          expected <span class="op">=</span> <span class="cn">TRUE</span>, col.pct <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Cross-Tabulation</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -337,7 +337,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With adjusted standardized residuals (interpretation note at full output)</span></span></span>
 <span class="r-in"><span><span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Volunteer</span>, data <span class="op">=</span> <span class="va">community</span>, residuals <span class="op">=</span> <span class="st">"adjusted"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Cross-Tabulation</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -379,8 +379,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: community</span>
 <span class="r-in"><span><span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Volunteer</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Cross-Tabulation</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -413,8 +413,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Total                      49        48        97</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jcrosstab</span><span class="op">(</span><span class="va">Education</span> <span class="op">~</span> <span class="va">Volunteer</span>, chisq <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Cross-Tabulation</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cross-Tabulation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>

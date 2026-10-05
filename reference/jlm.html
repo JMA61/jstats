@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.213</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.214</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -443,7 +443,7 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># With explicit data frame (named argument)</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Income</span> <span class="op">+</span> <span class="va">Age</span>, data <span class="op">=</span> <span class="va">community</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -476,7 +476,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With explicit data frame (positional argument)</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Income</span> <span class="op">+</span> <span class="va">Age</span>, <span class="va">community</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -511,8 +511,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: community</span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Income</span> <span class="op">+</span> <span class="va">Age</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -548,8 +548,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># Per-call: categorical = ... applies for one call only and does not</span></span></span>
 <span class="r-in"><span><span class="co"># persist. Useful for a quick one-off analysis.</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span>, categorical <span class="op">=</span> <span class="st">"Region"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -580,7 +580,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># treatment persistently, so subsequent jlm() calls (and other</span></span></span>
 <span class="r-in"><span><span class="co"># analyses) use the same coding without re-specifying.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="jdummy.html">jdummy</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North (default; change with ref =)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_South, Region_East, Region_West</span>
@@ -593,8 +593,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -622,7 +622,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># To choose a non-default reference category:</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="jdummy.html">jdummy</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, ref <span class="op">=</span> <span class="st">"West"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Dummy Variable Registration</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_West</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_North, Region_South, Region_East</span>
@@ -635,8 +635,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -668,8 +668,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># but you want it treated as a continuous score (e.g., a Likert</span></span></span>
 <span class="r-in"><span><span class="co"># scale you want the slope-per-unit interpretation for).</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Age</span> <span class="op">+</span> <span class="va">Education</span>, numeric <span class="op">=</span> <span class="st">"Education"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -703,8 +703,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># Multiple overrides at once</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Education</span> <span class="op">+</span> <span class="va">Environment4</span> <span class="op">+</span> <span class="va">Smoker</span>,</span></span>
 <span class="r-in"><span>    numeric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Education"</span>, <span class="st">"Environment4"</span><span class="op">)</span>, categorical <span class="op">=</span> <span class="st">"Smoker"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
@@ -744,8 +744,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># std = "all" shows it there too; std = "gelman" puts continuous and</span></span></span>
 <span class="r-in"><span><span class="co"># dummy predictors on one comparable scale; std = "none" drops the column.</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span>, std <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -771,8 +771,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13445.825</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span>, std <span class="op">=</span> <span class="st">"gelman"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -798,8 +798,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Total:      13445.825</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span>, std <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -828,7 +828,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># An interaction, entered in the formula so the standardized column is</span></span></span>
 <span class="r-in"><span><span class="co"># built from the inputs (see the section Comparing with other software)</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">Flourishing</span> <span class="op">~</span> <span class="va">SocialSupport</span> <span class="op">*</span> <span class="va">Stress</span>, data <span class="op">=</span> <span class="va">clinic</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --         70</span>
@@ -867,7 +867,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># A squared term, written with I(); its standardized value is built from</span></span></span>
 <span class="r-in"><span><span class="co"># the standardized Stress</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">Flourishing</span> <span class="op">~</span> <span class="va">Stress</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="va">Stress</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">clinic</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --         70</span>
@@ -905,7 +905,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="co"># The second convention: each predictor standardized as it stands, the</span></span></span>
 <span class="r-in"><span><span class="co"># beta SPSS REGRESSION reports for a product computed as a new variable</span></span></span>
 <span class="r-in"><span><span class="fu">jlm</span><span class="op">(</span><span class="va">Flourishing</span> <span class="op">~</span> <span class="va">SocialSupport</span> <span class="op">*</span> <span class="va">Stress</span>, data <span class="op">=</span> <span class="va">clinic</span>, std <span class="op">=</span> <span class="st">"product"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Linear Regression</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear Regression</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --         70</span>

@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.213</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.214</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -146,7 +146,13 @@ removes the attributes; value labels are preserved so the column
 can still round-trip through <code><a href="jsave.html">jsave()</a></code> with original
 labeling. For columns carrying Stata-style missing values
 (<code>tagged_na</code> markers), uses <code><a href="https://haven.tidyverse.org/reference/zap_missing.html" class="external-link">haven::zap_missing()</a></code> to
-convert them to plain <code>NA</code>s.</p></dd>
+convert them to plain <code>NA</code>s. A string variable's declared
+missing values (SPSS declares them directly, as in
+<code>MISSING VALUES MARITAL ('UNKNOWN')</code>) become <code>NA</code> the
+same way. They cannot become Stata-style or SAS-style missing
+values, which exist only on numeric variables, so
+<code>to = "stata"</code> and <code>to = "sas"</code> stop and name such a
+variable; <code><a href="jencode.html">jencode</a></code> turns it into a numeric one.</p></dd>
 
 <dt><code>to = "spss"</code></dt>
 <dd><p>Convert Stata-style or SAS-style missing

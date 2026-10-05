@@ -25,7 +25,7 @@ and date/time variables gracefully.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.213</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.214</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -175,7 +175,9 @@ setting (default 3).</p></dd>
 row per variable and columns including the Base R type, the jstats
 <code>Class</code> and <code>SubClass</code>, the classification <code>Source</code>
 ("registered" or "structural"), distinct-value count, missing count
-and percentage, the outlier count (NA for non-Numeric variables), and
+and percentage, the count and percentage of blank text cells
+(<code>Blank</code>, <code>Pct_Blank</code>), the outlier count (NA for
+non-Numeric variables), and
 the <code>Mean</code> and <code>Median</code> (NA where not meaningful: Median is NA
 for dichotomies, and both are NA for non-numeric-like variables). The
 returned values are the raw counts; only the printed tables blank zeros
@@ -191,6 +193,12 @@ are SD-screened and the Outliers cell is left blank for the rest. Zero
 counts are shown blank so only affected variables carry numbers; a column
 (or the whole Missing/Outliers table) is omitted entirely when nothing is
 flagged, and the header count lines explain the omission.</p>
+<p>Text cells with no text – empty, or holding only spaces or tabs – are
+counted apart from missing values, never among them. When the screened
+variables hold any, the header gains a "Cases with blank text" line and
+the Missing Data &amp; Outliers table a Blank and a % Blank column. Whether
+a blank is absent data or a real answer depends on the file; see
+<code><a href="jfreq.html">jfreq</a></code>.</p>
 <p>When at least one variable's class comes from a registration (jnumeric,
 jcount, or jdummy) rather than the structural guess, a Source column
 appears. It reads as an exception-marker: "registered" is shown against
@@ -238,7 +246,7 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># With explicit data frame</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34</span>
@@ -278,7 +286,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, outlier.sd <span class="op">=</span> <span class="fl">2.5</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34</span>
@@ -322,7 +330,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Show the Base R storage type column</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, r.type <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34</span>
@@ -364,7 +372,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add Mean and Median columns for numeric-like variables</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, stats <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34</span>
@@ -406,7 +414,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Suppress tables (header block only)</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span>, types <span class="op">=</span> <span class="cn">FALSE</span>, issues <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34</span>
@@ -419,7 +427,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A single variable</span></span></span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">community</span><span class="op">$</span><span class="va">Income</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 6</span>
@@ -443,8 +451,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: community</span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 15</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 34</span>
@@ -484,8 +492,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variables: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Cases with missing data: 6</span>
@@ -507,8 +515,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> jstats treats these as missing; base R functions do not.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jscreen</span><span class="op">(</span><span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span>, subset <span class="op">=</span> <span class="va">Volunteer</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">Data Screening</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">Using default data frame: community</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data Screening</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing  Excluded  Remaining</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Original           --        103</span>

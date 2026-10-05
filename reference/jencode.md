@@ -178,6 +178,18 @@ showing the `blank=` rule; with a map they must be named or swept by an
 `else` rule, and mapping `blank=0` (or any code) gives them their own
 category, which matters in field data where a blank often means "No".
 
+**Declared missing values on a text variable.** A file from SPSS can
+declare some of a string variable's values missing
+(`MISSING VALUES MARITAL ('UNKNOWN')`). In automatic mode those cells
+are left missing rather than numbered as categories, and a note gives
+the map that keeps them declared (`UNKNOWN=missing`). The word `missing`
+produces one missing value, so two declared strings sent to it share it;
+to keep them apart, give each a number of its own in the map and declare
+those numbers with
+[`jdeclare_missing`](https://jma61.github.io/jstats/reference/jdeclare_missing.md).
+With a map they are words like any other: name them, or the call stops
+and lists them.
+
 The variable label from the original variable is carried across
 automatically with "(encoded)" appended; if there is none, the variable
 name is used instead.

@@ -122,6 +122,7 @@ Invisibly returns a data frame of the screening results, with one row
 per variable and columns including the Base R type, the jstats `Class`
 and `SubClass`, the classification `Source` ("registered" or
 "structural"), distinct-value count, missing count and percentage, the
+count and percentage of blank text cells (`Blank`, `Pct_Blank`), the
 outlier count (NA for non-Numeric variables), and the `Mean` and
 `Median` (NA where not meaningful: Median is NA for dichotomies, and
 both are NA for non-numeric-like variables). The returned values are the
@@ -138,6 +139,13 @@ rest. Zero counts are shown blank so only affected variables carry
 numbers; a column (or the whole Missing/Outliers table) is omitted
 entirely when nothing is flagged, and the header count lines explain the
 omission.
+
+Text cells with no text – empty, or holding only spaces or tabs – are
+counted apart from missing values, never among them. When the screened
+variables hold any, the header gains a "Cases with blank text" line and
+the Missing Data & Outliers table a Blank and a % Blank column. Whether
+a blank is absent data or a real answer depends on the file; see
+[`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md).
 
 When at least one variable's class comes from a registration (jnumeric,
 jcount, or jdummy) rather than the structural guess, a Source column

@@ -114,6 +114,15 @@ a blank line, and the frequency table. Declared missing values get
 Missing rows of their own below the valid rows. The frequency table ends
 with a Total row showing the post-pipeline N.
 
+In a text variable, cells with no text – empty, or holding only spaces
+or tabs – are tabulated together in one row labeled `<blank>`. They are
+counted as valid values, not as missing: a blank is absent data in one
+file and a real answer in the next (a column coded "Y" or left empty),
+and only you know which. A short footnote under the table says how many
+there are;
+[`jencode`](https://jma61.github.io/jstats/reference/jencode.md) gives
+them a code or makes them missing.
+
 For haven-labelled variables, value labels and numeric codes are
 combined in the frequency table rows (e.g. `1: Strongly Oppose`) at the
 default `value.id` setting. Where variable labels are shown, they are

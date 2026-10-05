@@ -1,7 +1,8 @@
-# Internal helper: print a string in red using ANSI escape codes
+# Internal helper: print a string in red, where the output draws color
 
-Works in RStudio, most terminals, and R Markdown HTML output. Falls back
-to plain text in environments that strip ANSI codes.
+Red in the RStudio Console (ANSI escape codes); plain text everywhere
+else. See
+[`.jst_use_color()`](https://jma61.github.io/jstats/reference/dot-jst_use_color.md).
 
 ## Usage
 

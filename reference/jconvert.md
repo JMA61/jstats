@@ -99,7 +99,14 @@ The four target formats:
   original labeling. For columns carrying Stata-style missing values
   (`tagged_na` markers), uses
   [`haven::zap_missing()`](https://haven.tidyverse.org/reference/zap_missing.html)
-  to convert them to plain `NA`s.
+  to convert them to plain `NA`s. A string variable's declared missing
+  values (SPSS declares them directly, as in
+  `MISSING VALUES MARITAL ('UNKNOWN')`) become `NA` the same way. They
+  cannot become Stata-style or SAS-style missing values, which exist
+  only on numeric variables, so `to = "stata"` and `to = "sas"` stop and
+  name such a variable;
+  [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) turns
+  it into a numeric one.
 
 - `to = "spss"`:
 

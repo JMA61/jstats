@@ -65,7 +65,15 @@ with:
   `"-99"` or `".a"`), `label` (character or `NA`), `source`
   (`"na_values"` or `"tagged_na"`), `numeric` (underlying numeric value;
   `NA` for tagged NAs), `tag` (tag letter for Stata; `NA` for SPSS
-  UDMs).
+  UDMs). On a string variable (`text` below) `code` is the declared
+  string exactly as stored and `numeric` is `NA`; consumers compare
+  cells against `code`.
+
+- text:
+
+  SPSS representation only: `TRUE` when the column is character-backed,
+  so its declared missing values are strings (Session 340); `FALSE`
+  otherwise.
 
 - range_values:
 
