@@ -2690,6 +2690,32 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 
+#' Internal helper: pick the singular or the plural form for a count
+#'
+#' A runtime message that states a count agrees with it in number (voice
+#' Rule O) where it used to hedge with a shortcut -- "1 category(ies)",
+#' "unused input(s)" (Session 338; the S287 item). Returns the word alone,
+#' so the caller places the count:
+#' \code{paste(n, .jst_plural(n, "category", "categories"))}. Zero takes
+#' the plural, as in "0 categories". Either form may be a phrase, which is
+#' how a verb is made to agree as well:
+#' \code{.jst_plural(n, "This predictor has", "These predictors have")}.
+#'
+#' One site keeps its shortcut on purpose: the map parser's
+#' "Invalid old value(s)", which quotes the whole left-hand side of a rule
+#' and so has no count to agree with.
+#'
+#' @param n The count; a single number.
+#' @param singular Character(1). The form for a count of exactly one.
+#' @param plural Character(1). The form for every other count; by default
+#'   the singular followed by "s".
+#' @return Character(1).
+#' @keywords internal
+.jst_plural <- function(n, singular, plural = paste0(singular, "s")) {
+  if (length(n) == 1L && !is.na(n) && n == 1) singular else plural
+}
+
+
 #' Internal helper: classify one physical line of a runtime message
 #'
 #' The three-category classifier behind \code{.jst_wrap_message()}. Replaces

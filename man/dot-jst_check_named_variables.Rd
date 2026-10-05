@@ -4,7 +4,7 @@
 \alias{.jst_check_named_variables}
 \title{Internal helper: catch a named item in a variable list}
 \usage{
-.jst_check_named_variables(quos, data, fn_name)
+.jst_check_named_variables(quos, data, fn_name, frame = NULL)
 }
 \arguments{
 \item{quos}{The captured variable list (\code{rlang::enquos(...)}).}
@@ -15,6 +15,10 @@ item is treated as a condition.}
 
 \item{fn_name}{Character. The calling function's name, for the message
 prefix and for the \code{jsubset()} fix form.}
+
+\item{frame}{Character(1) or \code{NULL}. For \code{jsubset()}: the data
+frame as typed, when the call named one; the fix line keeps it
+(\code{jsubset(d, Gender == 1)}; Session 338, the S290 item).}
 }
 \description{
 A variable list (the \code{...} of \code{jdesc()}, \code{jsum()},
@@ -26,7 +30,8 @@ mistakes arrive this way, and the name tells them apart (Session 290):
 \code{=}, \code{jdesc(community, Age, Gender = 1)}, where R's parser
 has already turned \code{Gender = 1} into an argument named Gender.
 Before Session 290 the value was looked up as a variable
-("Variable(s) not found in community: 1."), and \code{jsubset()},
+("Variable(s) not found in community: 1."; the not-found message's
+wording until Session 338), and \code{jsubset()},
 which had no \code{...}, died inside R ("unused argument
 (Gender = 1)"). The error now shows the fix in the form the caller
 can take: \code{jsubset(Gender == 1)} for \code{jsubset()};
@@ -36,7 +41,7 @@ are never listed by hand); "list the variable on its own" otherwise.
 \item the name is not a column: a misspelled input that R could not
 partial-match (formals after \code{...} match exactly),
 \code{jdesc(community, Age, digit = 2)}. Routed to
-\code{.jst_check_args()} for its "unused input(s)" message.
+\code{.jst_check_args()} for its "unused input" message.
 Unnamed items pass through untouched. Called at every
 \code{rlang::enquos(...)} site directly after the capture, and from
 \code{jsubset()} before its argument grammar runs.

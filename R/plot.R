@@ -204,9 +204,15 @@ jplot <- function(x, which = "core", ...) {
   #      load_all()).
   # `which` is a formal of this frame, so base which() must not be called
   # here: looking the function up would force the promise.
+  # A data frame's column (tb$Strss) is not evaluated here either (Session
+  # 338; the S324 item): jplot.default's resolver reads it from the call and
+  # refuses it, and forcing it first printed a tibble's "Unknown or
+  # uninitialised column" warning ahead of that stop. It takes route 3.
   mc       <- match.call(expand.dots = TRUE)
   has_data <- "data" %in% names(mc)
-  x_ok     <- if (missing(x)) FALSE else
+  x_col    <- !missing(x) &&
+                !is.null(.jst_frame_column(substitute(x), parent.frame()))
+  x_ok     <- if (missing(x) || x_col) FALSE else
                 tryCatch({ force(x); TRUE }, error = function(e) FALSE)
   rewrite  <- !x_ok || (has_data && is.atomic(x) && !is.null(x))
   if (!rewrite) {
@@ -265,7 +271,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # a juse() default) is not evaluable, so the read is guarded: it is
   # recorded as failed, exactly as the resolver's own evaluation would record
   # it, is not a formula, and the resolver treats it as a variable name.
-  x_eval <- if (missing(x)) NULL else
+  # A data frame's column (tb$Strss) is not read at all (Session 338): the
+  # resolver refuses it from the call as typed, and evaluating it first
+  # printed a tibble's own warning for a misspelled column ahead of that
+  # stop.
+  x_col  <- !missing(x) &&
+    !is.null(.jst_frame_column(substitute(x), parent.frame()))
+  x_eval <- if (missing(x) || x_col) NULL else
     tryCatch(list(value = x, failed = FALSE),
              error = function(e) list(value = NULL, failed = TRUE))
   if (!is.null(x_eval) && !x_eval$failed && inherits(x_eval$value, "formula")) {
@@ -460,13 +472,47 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "goes on the x-axis.)")
   }
   if (resolved_type == "box") {
-    # Numeric goes on y, categorical on x — i.e. numeric ~ categorical
-    num_var <- variable_names[var_types == "numeric"][1]
-    cat_var <- variable_names[var_types == "categorical"][1]
+    # The fix line is built from what the call gave (Session 338; the S316
+    # item). It took both names from the variable list by class, so a
+    # grouping variable given as by =, and a forced type = "box" on two
+    # variables of one class, printed "~ NA". Now: one variable listed, the
+    # by = variable is the grouping variable; two listed, the categorical
+    # one is, or -- when both are of one class -- the one with fewer
+    # distinct values (the first listed on a tie). The line carries
+    # type = "box", because the formula form draws a scatterplot for a
+    # grouping variable that is not registered categorical, which would
+    # answer a boxplot request with a different plot.
+    if (n_vars == 1L && !has_by) {
+      .jst_stop("a boxplot needs a grouping variable, and only ",
+                variable_names[1L], " was given.\n",
+                "Use formula syntax, with the outcome on the left of ~ and ",
+                "the grouping variable on the right, for example:\n",
+                "  jplot(WellbeingScore ~ Region, community, type = \"box\")")
+    }
+    if (n_vars == 1L) {
+      num_var <- variable_names[1L]
+      cat_var <- by_name
+      by_txt  <- ""
+    } else {
+      is_cat <- var_types == "categorical"
+      grp <- if (sum(is_cat) == 1L) {
+        which(is_cat)
+      } else {
+        n_distinct <- vapply(variable_names, function(v) {
+          x <- data[[v]]
+          length(unique(x[!is.na(x)]))
+        }, integer(1))
+        if (n_distinct[2L] < n_distinct[1L]) 2L else 1L
+      }
+      cat_var <- variable_names[grp]
+      num_var <- variable_names[3L - grp]
+      by_txt  <- if (has_by) paste0(", by = ", by_name) else ""
+    }
     .jst_stop("For boxplots, use formula syntax to make the outcome and grouping ",
          "variable explicit (consistent with jaov):\n",
          "  jplot(", num_var, " ~ ", cat_var, ", ",
-         if (!is.null(.jst_data_name)) .jst_data_name else "MyData", ")\n",
+         if (!is.null(.jst_data_name)) .jst_data_name else "MyData",
+         by_txt, ", type = \"box\")\n",
          "(The numeric outcome on the left of ~ goes on the y-axis; the ",
          "categorical grouping variable on the right goes on the x-axis.)")
   }
@@ -1394,7 +1440,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   bad <- setdiff(which, all_plots)
   if (length(bad) > 0) {
     .jst_stop(sprintf(
-      "Invalid plot name(s) for class '%s': %s.\nValid names: %s, or use \"core\" / \"all\".",
+      "Invalid plot %s for class '%s': %s.\nValid names: %s, or use \"core\" / \"all\".",
+      .jst_plural(length(bad), "name"),
       class_name,
       paste(sprintf("'%s'", bad), collapse = ", "),
       paste(sprintf("'%s'", all_plots), collapse = ", ")

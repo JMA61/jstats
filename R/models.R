@@ -2870,7 +2870,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   if (nrow(mf) == 0L) {
     .jst_stop("All cases were excluded by the pipeline and/or listwise ",
          "deletion; no model can be fit. See the Case Processing ",
-         "Summary above to identify which stage(s) excluded the cases.")
+         "Summary above for where the cases were excluded.")
   }
 
   # A registered category with no case in the analysis sample (Session
@@ -2904,7 +2904,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
     constant_ivs <- names(n_unique)[n_unique < 2L]
     if (length(constant_ivs) > 0L) {
-      .jst_stop("The following predictor(s) have no variation in the ",
+      .jst_stop(.jst_plural(length(constant_ivs), "This predictor has",
+                            "These predictors have"),
+           " no variation in the ",
            "analysis sample (only one unique value); cannot fit slope: ",
            paste(constant_ivs, collapse = ", "), ". This often happens ",
            "when jsubset() restricts the sample to a single category of ",
@@ -4301,7 +4303,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   if (nrow(mf) == 0L) {
     .jst_stop("All cases were excluded by the pipeline and/or listwise ",
          "deletion; no model can be fit. See the Case Processing ",
-         "Summary above to identify which stage(s) excluded the cases.")
+         "Summary above for where the cases were excluded.")
   }
 
   # A registered category with no case in the analysis sample (Session
@@ -4329,7 +4331,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
     constant_ivs <- names(n_unique)[n_unique < 2L]
     if (length(constant_ivs) > 0L) {
-      .jst_stop("The following predictor(s) have no variation in the ",
+      .jst_stop(.jst_plural(length(constant_ivs), "This predictor has",
+                            "These predictors have"),
+           " no variation in the ",
            "analysis sample (only one unique value); cannot fit slope: ",
            paste(constant_ivs, collapse = ", "), ". This often happens ",
            "when jsubset() restricts the sample to a single category of ",

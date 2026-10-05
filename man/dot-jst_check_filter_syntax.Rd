@@ -5,7 +5,12 @@
 \title{Internal helper: detect common SPSS-style syntax mistakes in a filter
 expression and show the corrected form}
 \usage{
-.jst_check_filter_syntax(raw_expr, expr_str, origin = c("set", "call"))
+.jst_check_filter_syntax(
+  raw_expr,
+  expr_str,
+  origin = c("set", "call"),
+  frame = NULL
+)
 }
 \arguments{
 \item{raw_expr}{The unevaluated expression (a language object).}
@@ -14,6 +19,10 @@ expression and show the corrected form}
 
 \item{origin}{\code{"set"} (\code{jsubset()}) or \code{"call"} (a
 per-call \code{subset =}); chooses the lead and the fix-line form.}
+
+\item{frame}{Character(1) or \code{NULL}. For \code{"set"}: the data
+frame as typed, when the call named one; the fix line keeps it
+(\code{jsubset(d, !(Age < 40))}; Session 338, the S290 item).}
 }
 \description{
 Called on the PARSED filter expression from two places: \code{jsubset()}

@@ -20,8 +20,11 @@
 found". Read from the call as typed, before anything is evaluated, and
 refused as more than one condition (\code{.jst_one_condition_stop()}).
 The first input is evaluated here only to tell a data frame from a
-condition, and only on this path, which always stops unless one of the
-inputs is \code{off}, \code{on} or \code{NULL}; those calls are left to
-fail as they did.
+condition, and only on this path, which always stops unless an input is
+empty. When one of the inputs is \code{off}, \code{on} or \code{NULL} the
+joined call would be wrong (\code{Age < 40 & on}), and
+\code{.jst_word_with_condition_stop()} refuses the mix instead (Session
+338; until then those calls were left to fail on R's own "object 'on'
+not found").
 }
 \keyword{internal}

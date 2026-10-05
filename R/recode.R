@@ -5062,7 +5062,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   if (anyDuplicated(target_vars) > 0L) {
     dups <- unique(target_vars[duplicated(target_vars)])
-    .jst_stop("variable name(s) given more than once: ",
+    .jst_stop(.jst_plural(length(dups), "variable name"),
+              " given more than once: ",
               paste0("'", dups, "'", collapse = ", "), ".",
               fn = "jdeclare_missing")
   }

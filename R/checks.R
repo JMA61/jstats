@@ -11,7 +11,7 @@
 #'
 #' Without these tailored messages, a string or other non-data-frame value
 #' for `data` would fall through to the variable-name check and produce a
-#' misleading "Variable(s) not found" error pointing at the variables
+#' misleading "not found" error pointing at the variables
 #' rather than at the real problem (the data argument itself).
 #'
 #' @param data The object passed as the data frame.
@@ -75,7 +75,7 @@
   missing_vars <- var_names[!var_names %in% names(data)]
   if (length(missing_vars) > 0) {
     df_label <- if (!is.null(data_name)) {
-      data_name
+      paste0("the ", data_name, " data frame")
     } else {
       "the data frame"
     }
@@ -91,10 +91,17 @@
     } else {
       ""
     }
+    # What was typed is the subject (voice Rule AD), the verb agrees with
+    # the count (Rule O) and the frame takes its article and kind (Rule T):
+    # the form the S330 filter stops use for the same condition. Until
+    # Session 338 this read "Variable(s) not found in d: Agee." / "Check
+    # spelling and make sure the variable exists." (the S287 plural item
+    # and the Session 23 rewording).
     .jst_stop(
-      "Variable(s) not found in ", df_label, ": ",
-      paste(missing_vars, collapse = ", "), ".\n",
-      "Check spelling and make sure the variable exists.",
+      .jst_format_var_list(missing_vars, and = TRUE),
+      .jst_plural(length(missing_vars), " was", " were"),
+      " not found in ", df_label, ".\n",
+      "Check the spelling.",
       default_hint
     )
   }
@@ -246,9 +253,48 @@
   }
   bad <- dot_names[nzchar(dot_names)]
   if (length(bad) > 0) {
-    .jst_stop("unused input(s): ", paste(bad, collapse = ", "), fn = fn_name)
+    .jst_stop("unused ", .jst_plural(length(bad), "input"), ": ",
+              paste(bad, collapse = ", "), fn = fn_name)
   }
   invisible(NULL)
+}
+
+#' Internal helper: the "after applying ..." part of a group-count stop
+#'
+#' \code{jt()}, \code{jaov()} and \code{jcrosstab()} stop when a grouping
+#' variable is left with too few categories. When a stored
+#' \code{jcomplete()} or \code{jsubset()} setting is active for the data
+#' frame the stop says so, since a setting that excludes a group is the
+#' likely cause: "'Condition' has 1 category after applying the jcomplete
+#' setting and the jsubset filter (Condition != 3)". The settings are named
+#' as settings (voice Rule AE), the filter with its condition in
+#' parentheses.
+#'
+#' Until Session 338 the phrase read "after applying jcomplete and jsubset
+#' (Condition != 3)" -- a bare name with a spaced parenthesis, which read as
+#' a malformed call (the S293 rider on the S287 item) -- and it was built
+#' only when the data frame came from \code{juse()}, although a stored
+#' setting applies to its data frame however the call names it: with the
+#' frame named, \code{jt()} said "has 1 categories" and suggested
+#' \code{jaov()}.
+#'
+#' @param data_name Character(1) or \code{NULL}; the data frame's name.
+#' @return Character(1): the phrase with its leading space, or \code{""}
+#'   when no stored setting is active for the data frame.
+#' @keywords internal
+.jst_settings_context <- function(data_name) {
+  if (!is.character(data_name) || length(data_name) != 1L) return("")
+  steps <- character(0)
+  cs <- .jst_get_complete(data_name)
+  if (!is.null(cs) && isTRUE(cs$active)) {
+    steps <- c(steps, "the jcomplete setting")
+  }
+  fs <- .jst_get_filter(data_name)
+  if (!is.null(fs) && isTRUE(fs$active)) {
+    steps <- c(steps, paste0("the jsubset filter (", fs$expr_str, ")"))
+  }
+  if (length(steps) == 0L) return("")
+  paste0(" after applying ", paste(steps, collapse = " and "))
 }
 
 #' Internal helper: catch a named item in a variable list
@@ -261,7 +307,8 @@
 #'   \code{=}, \code{jdesc(community, Age, Gender = 1)}, where R's parser
 #'   has already turned \code{Gender = 1} into an argument named Gender.
 #'   Before Session 290 the value was looked up as a variable
-#'   ("Variable(s) not found in community: 1."), and \code{jsubset()},
+#'   ("Variable(s) not found in community: 1."; the not-found message's
+#'   wording until Session 338), and \code{jsubset()},
 #'   which had no \code{...}, died inside R ("unused argument
 #'   (Gender = 1)"). The error now shows the fix in the form the caller
 #'   can take: \code{jsubset(Gender == 1)} for \code{jsubset()};
@@ -271,7 +318,7 @@
 #' - the name is not a column: a misspelled input that R could not
 #'   partial-match (formals after \code{...} match exactly),
 #'   \code{jdesc(community, Age, digit = 2)}. Routed to
-#'   \code{.jst_check_args()} for its "unused input(s)" message.
+#'   \code{.jst_check_args()} for its "unused input" message.
 #' Unnamed items pass through untouched. Called at every
 #' \code{rlang::enquos(...)} site directly after the capture, and from
 #' \code{jsubset()} before its argument grammar runs.
@@ -282,8 +329,11 @@
 #'   item is treated as a condition.
 #' @param fn_name Character. The calling function's name, for the message
 #'   prefix and for the \code{jsubset()} fix form.
+#' @param frame Character(1) or \code{NULL}. For \code{jsubset()}: the data
+#'   frame as typed, when the call named one; the fix line keeps it
+#'   (\code{jsubset(d, Gender == 1)}; Session 338, the S290 item).
 #' @keywords internal
-.jst_check_named_variables <- function(quos, data, fn_name) {
+.jst_check_named_variables <- function(quos, data, fn_name, frame = NULL) {
   nms <- names(quos)
   if (is.null(nms) || !any(nzchar(nms))) return(invisible(NULL))
   named <- nms[nzchar(nms)]
@@ -299,7 +349,8 @@
     if (identical(fn_name, "jsubset")) {
       .jst_stop(typed, " uses a single =, which does not test equality in R.\n",
                 "Use == (two equals signs):\n",
-                "  jsubset(", fixed, ")", fn = fn_name)
+                "  jsubset(", if (!is.null(frame)) paste0(frame, ", "),
+                fixed, ")", fn = fn_name)
     }
     has_subset <- "subset" %in% names(formals(sys.function(sys.parent())))
     if (has_subset) {
@@ -787,6 +838,10 @@
 #' was "not active for this dataset". Any other value (\code{c(...)}, a
 #' computed vector) is still wrapped. The refusals above apply to both.
 #'
+#' An empty vector that is not a data frame's column
+#' (\code{jdesc(numeric(0))}) is refused first, as typed (Session 338): the
+#' re-call's zero-row guard named the internal frame.
+#'
 #' @param fn The calling function, called again.
 #' @param fn_name Character: its name, for messages and the re-call.
 #' @param wrapped The \code{.jst_vector_frame()} result.
@@ -804,6 +859,14 @@
                                 args = list()) {
   typed    <- wrapped$typed
   var      <- wrapped$var
+  # An empty vector (Session 338; the S324 item) is refused here, as typed:
+  # jdesc(numeric(0)) reached the re-call's zero-row guard, which named the
+  # internal one-column frame ("the temp_df data frame has no rows"). A
+  # column of a data frame is left to the re-call, which names that frame.
+  if (!isTRUE(wrapped$in_frame) && nrow(wrapped$frame) == 0L) {
+    .jst_stop(typed, " has no values, so there is nothing to analyze.",
+              fn = fn_name)
+  }
   lead     <- paste0(" the data frame, not the single column ", typed, ".\n")
   first    <- "Name the data frame first:\n"
   no_frame <- function(x) sub("^.*\\$", "", x)

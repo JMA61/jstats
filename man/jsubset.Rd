@@ -36,7 +36,11 @@ filter cannot be checked without its dataset.
 
 \code{jsubset()} takes one condition. Two conditions separated by a
 comma (\code{jsubset(Age < 40, Gender == 1)}) are refused, with the
-call that joins them: \code{jsubset(Age < 40 & Gender == 1)}.}
+call that joins them: \code{jsubset(Age < 40 & Gender == 1)}.
+\code{off}, \code{on} and \code{NULL} are given alone, after the
+dataset when one is named. Given along with a condition
+(\code{jsubset(d, Age < 40, on)}), they are refused, with the call that
+sets the filter and the call that acts on the stored one.}
 
 \item{clear.all}{Logical. If \code{TRUE}, clears the jsubset setting on
 every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This

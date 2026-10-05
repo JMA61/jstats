@@ -32,7 +32,7 @@ Produces clear error messages for several common user mistakes:
 \details{
 Without these tailored messages, a string or other non-data-frame value
 for \code{data} would fall through to the variable-name check and produce a
-misleading "Variable(s) not found" error pointing at the variables
+misleading "not found" error pointing at the variables
 rather than at the real problem (the data argument itself).
 }
 \keyword{internal}

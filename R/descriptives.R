@@ -193,6 +193,15 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   variable_names <- vapply(variables, rlang::quo_name, character(1))
   by_quo         <- rlang::enquo(by)
 
+  # No variables (Session 338; the Session 74 item): jdesc(clinic), or a
+  # bare jdesc() under a juse() default, went on to "None of the requested
+  # variables can be summarized" over an empty bullet.
+  if (length(variable_names) == 0L) {
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jdesc(community, Age, Income)")
+  }
+
   # Check all variables exist before any processing
   check_names <- variable_names
   if (!rlang::quo_is_null(by_quo)) {
@@ -855,7 +864,23 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 
   # Check all variables exist before any processing
   var_names_check <- vapply(variables, rlang::quo_name, character(1))
+  # No variables (Session 338; the Session 74 item): jfreq(clinic), or a
+  # bare jfreq() under a juse() default, printed its title and "70 Cases in
+  # the 0 Variable Pool".
+  if (length(var_names_check) == 0L) {
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jfreq(community, Region)")
+  }
   .jst_check_vars(data, var_names_check, .jst_data_name, default_used = .jst_default_used)
+
+  # -- Title (printed once, before the filters run) --------------------------
+  # As in jdesc() (Session 338; the S334 item). jfreq() alone printed its
+  # title after the pipeline, so a stored setting that can no longer be
+  # applied, a subset = that cannot be evaluated and a data frame with no
+  # rows stopped with no title above the error.
+  .cat_red("Frequencies\n")
+  if (.jst_default_used) .jst_default_note(.jst_data_name)
 
   # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
   subset_expr <- substitute(subset)
@@ -881,8 +906,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   )
 
   # -- Preamble (printed once, before any per-variable block) ----------------
-  .cat_red("Frequencies\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  # The title and the default-data note are printed above, before the
+  # pipeline (Session 338).
   .jst_print_msgs(pipeline$msgs)
 
   # Case Processing Summary (jfreq is the per-variable Frequencies layout:

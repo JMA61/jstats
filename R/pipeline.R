@@ -189,6 +189,10 @@ juse <- function(data) {
 #'   \code{jsubset()} takes one condition. Two conditions separated by a
 #'   comma (\code{jsubset(Age < 40, Gender == 1)}) are refused, with the
 #'   call that joins them: \code{jsubset(Age < 40 & Gender == 1)}.
+#'   \code{off}, \code{on} and \code{NULL} are given alone, after the
+#'   dataset when one is named. Given along with a condition
+#'   (\code{jsubset(d, Age < 40, on)}), they are refused, with the call that
+#'   sets the filter and the call that acts on the stored one.
 #' @param clear.all Logical. If \code{TRUE}, clears the jsubset setting on
 #'   every dataset; use on its own, \code{jsubset(clear.all = TRUE)}. This
 #'   is the same grammar as the registration functions (\code{jdummy()},
@@ -390,7 +394,23 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   # say anything. Checked before the grammar below, since the call has
   # data and expr both missing. No frame is resolved yet, so every named
   # item is read as a condition; jsubset() has no other input to misspell.
-  .jst_check_named_variables(rlang::enquos(...), NULL, "jsubset")
+  # The data frame as typed, when the call named one: every fix line keeps
+  # it (Session 338; the S290 item). The shape check's lines did
+  # (jsubset(d, Gender == 1)); the two single-= lines and the AND / OR /
+  # NOT line dropped it (jsubset(Gender == 1)), which under no juse()
+  # default is a call that cannot run. Read from the call without
+  # evaluating anything but a plain name.
+  frame_typed <- NULL
+  if (!missing(data)) {
+    data_sym <- substitute(data)
+    if (is.symbol(data_sym) && nzchar(as.character(data_sym)) &&
+        exists(as.character(data_sym), envir = caller_env) &&
+        is.data.frame(get(as.character(data_sym), envir = caller_env))) {
+      frame_typed <- as.character(data_sym)
+    }
+  }
+  .jst_check_named_variables(rlang::enquos(...), NULL, "jsubset",
+                             frame = frame_typed)
 
   # -- No arguments: print session-wide status ------------------------------
   # Session-wide (the clear.all = TRUE scope). Collapse rule: 0 or 1 frame
@@ -500,6 +520,21 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     }
   }
 
+  # -- A condition typed where the data frame goes, read before it is run ----
+  # jsubset((Gender = 1) & (Age < 40)): the juse() default form, with a
+  # single =. The resolver below EVALUATES its input to see whether it is a
+  # data frame, and evaluating this one ran the assignment -- the call was
+  # refused for its single =, and left Gender <- 1 in the user's workspace
+  # (found Session 338, by a battery guard that counts what a run leaves
+  # behind). An input holding an operator = always fails the syntax check,
+  # so it is checked first and nothing is run.
+  if (missing(expr) && is.call(raw_data) && "=" %in% all.names(raw_data)) {
+    .jst_check_filter_syntax(raw_data,
+                             paste(deparse(raw_data, width.cutoff = 500),
+                                   collapse = " "),
+                             origin = "set")
+  }
+
   # -- Resolve which arg is the data and which is the expression ------------
   # Uses the standard helper. For jsubset, the helper distinguishes:
   #   explicit            : raw_data is a data frame  -> raw_expr is the expr
@@ -559,7 +594,10 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 
   # -- Detect common syntax mistakes before trying to evaluate --------------
   expr_str_for_check <- deparse(filter_raw, width.cutoff = 500)
-  .jst_check_filter_syntax(filter_raw, expr_str_for_check, origin = "set")
+  .jst_check_filter_syntax(filter_raw, expr_str_for_check, origin = "set",
+                           frame = if (identical(arg1$mode, "explicit")) {
+                             target_name
+                           })
 
   # -- A data frame named in the condition (Session 323) --------------------
   # jsubset(d, d$Income < 45) would read Income from the raw frame at every
@@ -654,14 +692,24 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' @param expr_str The deparsed expression string (for display in errors).
 #' @param origin \code{"set"} (\code{jsubset()}) or \code{"call"} (a
 #'   per-call \code{subset =}); chooses the lead and the fix-line form.
+#' @param frame Character(1) or \code{NULL}. For \code{"set"}: the data
+#'   frame as typed, when the call named one; the fix line keeps it
+#'   (\code{jsubset(d, !(Age < 40))}; Session 338, the S290 item).
 #' @keywords internal
 .jst_check_filter_syntax <- function(raw_expr, expr_str,
-                                     origin = c("set", "call")) {
+                                     origin = c("set", "call"),
+                                     frame = NULL) {
   origin <- match.arg(origin)
   lead <- if (origin == "call") paste0("subset = ", expr_str) else expr_str
-  fixline <- function(fixed) {
+  # The fix line is the user's own condition rewritten, so it keeps the
+  # frame the call named. A generic example (example = TRUE) is not the
+  # user's call and takes no frame: its variables are not theirs (voice
+  # Rule AC).
+  fixline <- function(fixed, example = FALSE) {
     if (origin == "call") paste0("  subset = ", fixed)
-    else paste0("  jsubset(", fixed, ")")
+    else paste0("  jsubset(",
+                if (!is.null(frame) && !example) paste0(frame, ", "),
+                fixed, ")")
   }
   dep <- function(e) paste(deparse(e, width.cutoff = 500), collapse = " ")
 
@@ -702,7 +750,8 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
       e
     }
     fixed <- dep(fix_kw(raw_expr))
-    if (identical(fixed, dep(raw_expr))) {
+    is_example <- identical(fixed, dep(raw_expr))
+    if (is_example) {
       # The keyword is not a call head (NOT(...) is the reachable form;
       # this is the fallback), so there is nothing to rewrite: show a
       # generic example of the operator instead.
@@ -715,7 +764,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     .jst_stop(
       lead, " uses ", kw, ", which R does not recognize.\n",
       "Use ", replacement, ":\n",
-      fixline(fixed)
+      fixline(fixed, example = is_example)
     )
   }
 

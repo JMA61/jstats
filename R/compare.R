@@ -272,26 +272,27 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   n_levels <- nlevels(data[[group_name]])
   if (n_levels != 2) {
-    # Build context-aware error message
-    active_steps <- character(0)
-    if (.jst_default_used) {
-      cs <- .jst_get_complete(.jst_data_name)
-      if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
-      fs <- .jst_get_filter(.jst_data_name)
-      if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
-                                                       paste0("jsubset (", fs$expr_str, ")"))
+    # The count agrees in number (voice Rule O, .jst_plural()) and each
+    # sentence takes a line (Rule E). More than 2 categories and fewer are
+    # different mistakes (Session 338): only the first is jaov()'s case,
+    # and only the second can come from a stored setting excluding a group
+    # (.jst_settings_context()). Until then a single category with the
+    # frame named in the call read "has 1 categories ... Use jaov() for
+    # more than 2 categories."
+    has <- paste0("'", group_name, "' has ", n_levels, " ",
+                  .jst_plural(n_levels, "category", "categories"))
+    if (n_levels > 2) {
+      .jst_stop(has, ".\n",
+                "A t-test requires exactly 2.\n",
+                "Use jaov() for more than 2 categories.")
     }
-    if (length(active_steps) > 0) {
-      .jst_stop(paste0("'", group_name, "' has ", n_levels,
-                  " category(ies) after applying ", paste(active_steps, collapse = " and "),
-                  ". A t-test requires exactly 2. ",
-                  "Check whether your jsubset or jcomplete settings ",
-                  "are excluding one of the groups."))
-    } else {
-      .jst_stop(paste0("'", group_name, "' has ", n_levels,
-                  " categories. A t-test requires exactly 2. ",
-                  "Use jaov() for more than 2 categories."))
-    }
+    context <- .jst_settings_context(.jst_data_name)
+    .jst_stop(has, context, ".\n",
+              "A t-test requires exactly 2.",
+              if (nzchar(context)) {
+                paste0("\nCheck whether your jsubset or jcomplete settings ",
+                       "are excluding one of the groups.")
+              })
   }
 
   # Assumption-check warning (audit): the outcome looks categorical where a
@@ -829,24 +830,18 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # Check minimum group levels
   n_levels <- nlevels(data[[group_name]])
   if (n_levels < 2) {
-    active_steps <- character(0)
-    if (.jst_default_used) {
-      cs <- .jst_get_complete(.jst_data_name)
-      if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
-      fs <- .jst_get_filter(.jst_data_name)
-      if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
-                                                       paste0("jsubset (", fs$expr_str, ")"))
+    # Number agreement and one sentence per line, as in jt() (Session 338).
+    has <- paste0("'", group_name, "' has ", n_levels, " ",
+                  .jst_plural(n_levels, "category", "categories"))
+    context <- .jst_settings_context(.jst_data_name)
+    if (nzchar(context)) {
+      .jst_stop(has, context, ".\n",
+                "An ANOVA requires at least 2.\n",
+                "Check whether your jsubset or jcomplete settings ",
+                "are excluding one or more groups.")
     }
-    if (length(active_steps) > 0) {
-      .jst_stop(paste0("'", group_name, "' has ", n_levels,
-                  " category(ies) after applying ", paste(active_steps, collapse = " and "),
-                  ". An ANOVA requires at least 2. ",
-                  "Check whether your jsubset or jcomplete settings ",
-                  "are excluding one or more groups."))
-    } else {
-      .jst_stop(paste0("'", group_name, "' has ", n_levels,
-                  " category(ies). An ANOVA requires at least 2 groups."))
-    }
+    .jst_stop(has, ".\n",
+              "An ANOVA requires at least 2 groups.")
   }
 
   # Degenerate-grouping guard (Session 105): when every category contains
@@ -1349,6 +1344,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     .jst_data_name <- deparse(substitute(data))
   }
 
+  # Red title. It prints once the formula and the data frame are in hand,
+  # as in jt(), jaov(), jlm() and jlogistic() (Session 338; AUDIT-026). It
+  # was printed after the checks below, so jcrosstab() alone gave its
+  # not-found, computed-term and same-variable stops with no title above
+  # them and no default-data note.
+  .cat_red("Cross-Tabulation\n")
+  if (.jst_default_used) .jst_default_note(.jst_data_name)
+
   # A data frame named inside a term (d$Region ~ d$Condition) is refused
   # first, with the variables-on-their-own form (Session 323): the
   # computed-term refusal below would call d$Region a function applied to a
@@ -1381,10 +1384,6 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # Type gate (Session 46): both variables are categorical; refuse date/time
   # and complex/list/raw. See .jst_check_analysis_var.
   for (.gv in terms) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a cross-tabulation")
-
-  # Red title
-  .cat_red("Cross-Tabulation\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
 
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
@@ -1455,21 +1454,13 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   for (check_info in list(list(name = row_name, lvls = row_levels),
                           list(name = col_name, lvls = col_levels))) {
     if (length(check_info$lvls) < 2) {
-      active_steps <- character(0)
-      if (.jst_default_used) {
-        cs <- .jst_get_complete(.jst_data_name)
-        if (!is.null(cs) && cs$active) active_steps <- c(active_steps, "jcomplete")
-        fs <- .jst_get_filter(.jst_data_name)
-        if (!is.null(fs) && fs$active) active_steps <- c(active_steps,
-                                                         paste0("jsubset (", fs$expr_str, ")"))
-      }
-      context <- if (length(active_steps) > 0) {
-        paste0(" after applying ", paste(active_steps, collapse = " and "))
-      } else ""
-      .jst_stop(paste0("'", check_info$name, "' has ", length(check_info$lvls),
-                  " category(ies)", context,
-                  ". A cross-tabulation requires at least 2 categories ",
-                  "for each variable."))
+      # Number agreement and one sentence per line, as in jt() (Session 338).
+      n_lvls <- length(check_info$lvls)
+      .jst_stop("'", check_info$name, "' has ", n_lvls, " ",
+                .jst_plural(n_lvls, "category", "categories"),
+                .jst_settings_context(.jst_data_name), ".\n",
+                "A cross-tabulation requires at least 2 categories ",
+                "for each variable.")
     }
   }
 

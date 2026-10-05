@@ -294,6 +294,27 @@
   txt  <- vapply(conds, .jst_term_text, character(1))
   n    <- length(txt)
   word <- if (n <= 4L) c("two", "three", "four")[n - 1L] else as.character(n)
+  .jst_stop(
+    word, " conditions were given, ", .jst_and_list(txt),
+    ", and jsubset() takes one.\n",
+    "Join them with & (and) or | (or):\n",
+    "  jsubset(", if (!is.null(frame)) paste0(frame, ", "),
+    .jst_join_conditions(conds), ")",
+    fn = "jsubset")
+}
+
+#' Internal helper: several conditions as one, joined with the and operator
+#'
+#' The text of the joined call the \code{jsubset()} stops offer. A condition
+#' whose own top-level operator is \code{|} is parenthesized, since
+#' \code{&} binds more tightly; a single condition is returned as typed.
+#'
+#' @param conds A list of unevaluated conditions, one or more.
+#' @return Character(1).
+#' @keywords internal
+.jst_join_conditions <- function(conds) {
+  txt <- vapply(conds, .jst_term_text, character(1))
+  if (length(conds) == 1L) return(txt)
   part <- vapply(seq_along(conds), function(i) {
     e <- conds[[i]]
     if (is.call(e) && as.character(e[[1L]])[1L] %in% c("|", "||")) {
@@ -302,12 +323,53 @@
       txt[i]
     }
   }, character(1))
+  paste(part, collapse = " & ")
+}
+
+#' Internal helper: refuse off, on or NULL given along with a condition
+#'
+#' \code{jsubset(d, Age < 40, on)}: the word acts on the stored filter and
+#' takes no condition. Its third input landed in \code{clear.all}, where
+#' evaluating it gave R's own "object 'on' not found" (the S334 item;
+#' Session 338). What the user meant cannot be told from the call -- to set
+#' the filter, or to act on the one already stored -- so the stop gives
+#' both calls (voice Rule D, equal-standing remedies), the one that sets
+#' the filter first. Two words and no condition (\code{jsubset(d, off,
+#' on)}) get one sentence.
+#'
+#' @param items The call's unnamed inputs after the data frame, unevaluated.
+#' @param is_word Logical, one per item: TRUE for \code{off}, \code{on} or
+#'   \code{NULL}.
+#' @param frame Character(1) or \code{NULL}; the data frame as typed, when
+#'   the call named one.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_word_with_condition_stop <- function(items, is_word, frame = NULL) {
+  as_typed <- function(e) if (is.null(e)) "NULL" else as.character(e)
+  words <- vapply(items[is_word], as_typed, character(1))
+  conds <- items[!is_word]
+  if (length(conds) == 0L) {
+    .jst_stop(.jst_and_list(words), " were given together, and jsubset() ",
+              "takes one of them at a time.", fn = "jsubset")
+  }
+  word <- words[1L]
+  key  <- tolower(word)
+  does <- if (key == "on") "turns a stored filter back on"
+          else if (key == "off") "turns a stored filter off"
+          else "deletes a stored filter"
+  act  <- if (key == "on") "turn the stored filter back on"
+          else if (key == "off") "turn the stored filter off"
+          else "delete the stored filter"
+  txt  <- vapply(conds, .jst_term_text, character(1))
+  fr   <- if (!is.null(frame)) paste0(frame, ", ") else ""
   .jst_stop(
-    word, " conditions were given, ", .jst_and_list(txt),
-    ", and jsubset() takes one.\n",
-    "Join them with & (and) or | (or):\n",
-    "  jsubset(", if (!is.null(frame)) paste0(frame, ", "),
-    paste(part, collapse = " & "), ")",
+    word, " ", does, " and takes no condition.\n",
+    .jst_and_list(txt), if (length(txt) == 1L) " was" else " were",
+    " given with it.\n",
+    "To set the filter, run:\n",
+    "  jsubset(", fr, .jst_join_conditions(conds), ")\n",
+    "To ", act, ", run:\n",
+    "  jsubset(", fr, word, ")",
     fn = "jsubset")
 }
 
@@ -318,9 +380,12 @@
 #' found". Read from the call as typed, before anything is evaluated, and
 #' refused as more than one condition (\code{.jst_one_condition_stop()}).
 #' The first input is evaluated here only to tell a data frame from a
-#' condition, and only on this path, which always stops unless one of the
-#' inputs is \code{off}, \code{on} or \code{NULL}; those calls are left to
-#' fail as they did.
+#' condition, and only on this path, which always stops unless an input is
+#' empty. When one of the inputs is \code{off}, \code{on} or \code{NULL} the
+#' joined call would be wrong (\code{Age < 40 & on}), and
+#' \code{.jst_word_with_condition_stop()} refuses the mix instead (Session
+#' 338; until then those calls were left to fail on R's own "object 'on'
+#' not found").
 #'
 #' @param pos The call's unnamed inputs, unevaluated, three or more.
 #' @param envir The caller's environment.
@@ -343,8 +408,11 @@
     frame <- .jst_term_text(pos[[1L]])
   }
   keep <- if (!is.null(frame) || empty[1L]) seq_len(n)[-1L] else seq_len(n)
-  if (length(keep) < 2L || any(empty[keep]) || any(is_word[keep])) {
+  if (length(keep) < 2L || any(empty[keep])) {
     return(invisible(NULL))
+  }
+  if (any(is_word[keep])) {
+    .jst_word_with_condition_stop(pos[keep], is_word[keep], frame)
   }
   .jst_one_condition_stop(pos[keep], frame)
 }
