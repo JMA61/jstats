@@ -4,10 +4,10 @@ Runs a one-way ANOVA and prints a formatted group descriptives table
 followed by an ANOVA table. By default, runs the traditional ANOVA
 assuming equal variances. Optional parameters provide post-hoc tests,
 effect size, Levene's test, and confidence intervals. Set welch = TRUE
-for the Welch correction when equal variances cannot be assumed. Handles
-haven-labelled, numeric, and factor grouping variables. For
-haven-labelled variables, numeric codes are displayed alongside labels
-in the group descriptives table.
+for the Welch correction when equal variances cannot be assumed; its
+post-hoc test is Games-Howell. Handles haven-labelled, numeric, and
+factor grouping variables. For haven-labelled variables, numeric codes
+are displayed alongside labels in the group descriptives table.
 
 ## Usage
 
@@ -47,13 +47,20 @@ jaov(
   Welch's ANOVA (does not assume equal variances). Welch's F is not a
   ratio of two mean squares, so its table shows F, df1, df2 and p: Sum
   of Squares and Mean Square belong to the traditional ANOVA table and
-  are not applicable to Welch's test.
+  are not applicable to Welch's test. Welch's ANOVA needs at least 2
+  cases in every group.
 
 - posthoc:
 
-  Logical or NULL. If TRUE, prints Tukey HSD pairwise comparisons. Not
-  applicable when welch = TRUE: Tukey HSD assumes equal variances. If
-  NULL (default), defers to
+  Logical or NULL. If TRUE, prints pairwise comparisons of the group
+  means: Tukey HSD for the traditional ANOVA, and Games-Howell when
+  welch = TRUE. Games-Howell does not assume equal variances: each
+  comparison uses the two groups' own variances and its own degrees of
+  freedom, shown in a df column, and the p-values and confidence
+  intervals are adjusted for the number of groups through the
+  studentized range distribution, as Tukey's are. Commercial statistical
+  software offers the same test for unequal variances (Games-Howell in
+  SPSS's ONEWAY post-hoc tests). If NULL (default), defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
 
 - effect.size:
@@ -143,8 +150,10 @@ jaov(
 Invisibly returns a list of class `jst_anova` containing: `model` (the
 `aov` or `oneway.test` object), `model_frame` (the analysis data frame
 used for plotting), `test_type`, `formula`, `descriptives`, `f`, `df1`,
-`df2`, `p`, `eta_squared`, `n`, and `sample_info` (pipeline and missing
-data counts).
+`df2`, `p`, `eta_squared`, `n`, `sample_info` (pipeline and missing data
+counts), and `posthoc` (the pairwise comparisons as an unrounded data
+frame, with `test` naming the method; `NULL` when post-hoc tests were
+not requested).
 
 ## Details
 
@@ -198,30 +207,6 @@ jaov(WellbeingScore ~ Region, data = community)
 #> 
 #> Eta-squared: 0.020
 #> 
-jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
-#> Welch's One-Way ANOVA
-#> 
-#> Analysis N: 103
-#> 
-#> Group Descriptives: WellbeingScore by Region
-#> Group      N   Mean     SD    95% CI Lower  95% CI Upper
-#> --------  --  ------  ------  ------------  ------------
-#> 1: North  27  52.963  10.147     48.949        56.977
-#> 2: South  20  48.150  14.741     41.251        55.049
-#> 3: East   31  50.935   9.936     47.291        54.580
-#> 4: West   25  50.800  11.923     45.878        55.722
-#> 
-#> Welch's ANOVA: WellbeingScore by Region
-#>   F    df1   df2    p
-#> -----  ---  ----  ----
-#> 0.559   3   50.3  .645
-#> 
-#> Note: Sum of Squares and Mean Square are not applicable to Welch's ANOVA.
-#> For the standard ANOVA table, run jaov() without welch = TRUE.
-#> 
-#> Eta-squared: 0.020
-#> (Note: Eta-squared is calculated from the traditional SS decomposition.)
-#> 
 jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> One-Way ANOVA
 #> 
@@ -258,6 +243,132 @@ jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> East-South         2.785          -5.862       11.433          .834
 #> West-South         2.650          -6.395       11.695          .870
 #> West-East         -0.135          -8.240        7.969         1.000
+#> 
+
+# Checking the equal-variances assumption: Levene's test
+jaov(WellbeingScore ~ Region, data = community, levene = TRUE)
+#> One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
+#> Levene's Test for Homogeneity of Variance
+#>   F    df1  df2    p
+#> -----  ---  ---  ----
+#> 1.751   3    99  .162
+#> 
+#> Group Descriptives: WellbeingScore by Region
+#> Group      N   Mean     SD    95% CI Lower  95% CI Upper
+#> --------  --  ------  ------  ------------  ------------
+#> 1: North  27  52.963  10.147     48.949        56.977
+#> 2: South  20  48.150  14.741     41.251        55.049
+#> 3: East   31  50.935   9.936     47.291        54.580
+#> 4: West   25  50.800  11.923     45.878        55.722
+#> 
+#> ANOVA: WellbeingScore by Region
+#> Source     df  Sum of Squares  Mean Square    F      p
+#> --------  ---  --------------  -----------  -----  ----
+#> Region      3       266.441       88.814    0.667  .574
+#> Residual   99     13179.384      133.125
+#> Total     102     13445.825
+#> 
+#> Eta-squared: 0.020
+#> 
+
+# Pairwise comparisons after the traditional ANOVA: Tukey HSD
+jaov(WellbeingScore ~ Region, data = community, posthoc = TRUE)
+#> One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
+#> Group Descriptives: WellbeingScore by Region
+#> Group      N   Mean     SD    95% CI Lower  95% CI Upper
+#> --------  --  ------  ------  ------------  ------------
+#> 1: North  27  52.963  10.147     48.949        56.977
+#> 2: South  20  48.150  14.741     41.251        55.049
+#> 3: East   31  50.935   9.936     47.291        54.580
+#> 4: West   25  50.800  11.923     45.878        55.722
+#> 
+#> ANOVA: WellbeingScore by Region
+#> Source     df  Sum of Squares  Mean Square    F      p
+#> --------  ---  --------------  -----------  -----  ----
+#> Region      3       266.441       88.814    0.667  .574
+#> Residual   99     13179.384      133.125
+#> Total     102     13445.825
+#> 
+#> Eta-squared: 0.020
+#> 
+#> Tukey HSD Post-Hoc Comparisons
+#> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)
+#> -----------  ---------------  ------------  ------------  ------------
+#> South-North       -4.813         -13.708        4.082          .494
+#> East-North        -2.027          -9.964        5.910          .909
+#> West-North        -2.163         -10.532        6.206          .906
+#> East-South         2.785          -5.862       11.433          .834
+#> West-South         2.650          -6.395       11.695          .870
+#> West-East         -0.135          -8.240        7.969         1.000
+#> 
+
+# When equal variances cannot be assumed: Welch's ANOVA
+jaov(WellbeingScore ~ Region, data = community, welch = TRUE)
+#> Welch's One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
+#> Group Descriptives: WellbeingScore by Region
+#> Group      N   Mean     SD    95% CI Lower  95% CI Upper
+#> --------  --  ------  ------  ------------  ------------
+#> 1: North  27  52.963  10.147     48.949        56.977
+#> 2: South  20  48.150  14.741     41.251        55.049
+#> 3: East   31  50.935   9.936     47.291        54.580
+#> 4: West   25  50.800  11.923     45.878        55.722
+#> 
+#> Welch's ANOVA: WellbeingScore by Region
+#>   F    df1   df2    p
+#> -----  ---  ----  ----
+#> 0.559   3   50.3  .645
+#> 
+#> Note: Sum of Squares and Mean Square are not applicable to Welch's ANOVA.
+#> For the standard ANOVA table, run jaov() without welch = TRUE.
+#> 
+#> Eta-squared: 0.020
+#> (Note: Eta-squared is calculated from the traditional SS decomposition.)
+#> 
+
+# Pairwise comparisons after Welch's ANOVA: Games-Howell
+jaov(WellbeingScore ~ Region, data = community, welch = TRUE,
+     posthoc = TRUE)
+#> Welch's One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
+#> Group Descriptives: WellbeingScore by Region
+#> Group      N   Mean     SD    95% CI Lower  95% CI Upper
+#> --------  --  ------  ------  ------------  ------------
+#> 1: North  27  52.963  10.147     48.949        56.977
+#> 2: South  20  48.150  14.741     41.251        55.049
+#> 3: East   31  50.935   9.936     47.291        54.580
+#> 4: West   25  50.800  11.923     45.878        55.722
+#> 
+#> Welch's ANOVA: WellbeingScore by Region
+#>   F    df1   df2    p
+#> -----  ---  ----  ----
+#> 0.559   3   50.3  .645
+#> 
+#> Note: Sum of Squares and Mean Square are not applicable to Welch's ANOVA.
+#> For the standard ANOVA table, run jaov() without welch = TRUE.
+#> 
+#> Eta-squared: 0.020
+#> (Note: Eta-squared is calculated from the traditional SS decomposition.)
+#> 
+#> Games-Howell Post-Hoc Comparisons
+#> Comparison   Mean Difference  95% CI Lower  95% CI Upper   df   p (adjusted)
+#> -----------  ---------------  ------------  ------------  ----  ------------
+#> South-North       -4.813         -15.196        5.570     31.8       .597
+#> East-North        -2.027          -9.038        4.983     54.6       .869
+#> West-North        -2.163         -10.370        6.044     47.3       .896
+#> East-South         2.785          -7.404       12.975     30.1       .879
+#> West-South         2.650          -8.304       13.604     36.2       .914
+#> West-East         -0.135          -8.070        7.799     46.7      1.000
 #> 
 
 # Using juse() default

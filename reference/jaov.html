@@ -3,14 +3,16 @@
 followed by an ANOVA table. By default, runs the traditional ANOVA
 assuming equal variances. Optional parameters provide post-hoc tests,
 effect size, Levene's test, and confidence intervals. Set welch = TRUE
-for the Welch correction when equal variances cannot be assumed.
+for the Welch correction when equal variances cannot be assumed; its
+post-hoc test is Games-Howell.
 Handles haven-labelled, numeric, and factor grouping variables.
 For haven-labelled variables, numeric codes are displayed alongside
 labels in the group descriptives table."><meta property="og:description" content="Runs a one-way ANOVA and prints a formatted group descriptives table
 followed by an ANOVA table. By default, runs the traditional ANOVA
 assuming equal variances. Optional parameters provide post-hoc tests,
 effect size, Levene's test, and confidence intervals. Set welch = TRUE
-for the Welch correction when equal variances cannot be assumed.
+for the Welch correction when equal variances cannot be assumed; its
+post-hoc test is Games-Howell.
 Handles haven-labelled, numeric, and factor grouping variables.
 For haven-labelled variables, numeric codes are displayed alongside
 labels in the group descriptives table."></head><body>
@@ -21,7 +23,7 @@ labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.214</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.215</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +53,8 @@ labels in the group descriptives table."></head><body>
 followed by an ANOVA table. By default, runs the traditional ANOVA
 assuming equal variances. Optional parameters provide post-hoc tests,
 effect size, Levene's test, and confidence intervals. Set welch = TRUE
-for the Welch correction when equal variances cannot be assumed.
+for the Welch correction when equal variances cannot be assumed; its
+post-hoc test is Games-Howell.
 Handles haven-labelled, numeric, and factor grouping variables.
 For haven-labelled variables, numeric codes are displayed alongside
 labels in the group descriptives table.</p>
@@ -95,12 +98,20 @@ the descriptive output all use the transformed values.</p></dd>
 If TRUE, runs Welch's ANOVA (does not assume equal variances). Welch's
 F is not a ratio of two mean squares, so its table shows F, df1, df2
 and p: Sum of Squares and Mean Square belong to the traditional ANOVA
-table and are not applicable to Welch's test.</p></dd>
+table and are not applicable to Welch's test. Welch's ANOVA needs at
+least 2 cases in every group.</p></dd>
 
 
 <dt id="arg-posthoc">posthoc<a class="anchor" aria-label="anchor" href="#arg-posthoc"></a></dt>
-<dd><p>Logical or NULL. If TRUE, prints Tukey HSD pairwise comparisons.
-Not applicable when welch = TRUE: Tukey HSD assumes equal variances.
+<dd><p>Logical or NULL. If TRUE, prints pairwise comparisons of
+the group means: Tukey HSD for the traditional ANOVA, and Games-Howell
+when welch = TRUE. Games-Howell does not assume equal variances: each
+comparison uses the two groups' own variances and its own degrees of
+freedom, shown in a df column, and the p-values and confidence
+intervals are adjusted for the number of groups through the
+studentized range distribution, as Tukey's are. Commercial
+statistical software offers the same test for unequal variances
+(Games-Howell in SPSS's ONEWAY post-hoc tests).
 If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>.</p></dd>
 
 
@@ -185,8 +196,11 @@ which keep their own fixed conventions. NULL (default) defers to
 <code>model</code> (the <code>aov</code> or <code>oneway.test</code> object),
 <code>model_frame</code> (the analysis data frame used for plotting),
 <code>test_type</code>, <code>formula</code>, <code>descriptives</code>, <code>f</code>,
-<code>df1</code>, <code>df2</code>, <code>p</code>, <code>eta_squared</code>, <code>n</code>, and
-<code>sample_info</code> (pipeline and missing data counts).</p>
+<code>df1</code>, <code>df2</code>, <code>p</code>, <code>eta_squared</code>, <code>n</code>,
+<code>sample_info</code> (pipeline and missing data counts), and
+<code>posthoc</code> (the pairwise comparisons as an unrounded data frame,
+with <code>test</code> naming the method; <code>NULL</code> when post-hoc tests
+were not requested).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -238,30 +252,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.020</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, welch <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Welch's One-Way ANOVA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Group      N   Mean     SD    95% CI Lower  95% CI Upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147     48.949        56.977</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741     41.251        55.049</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936     47.291        54.580</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923     45.878        55.722</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Welch's ANOVA: WellbeingScore by Region</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1   df2    p</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ----  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0.559   3   50.3  .645</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Note: Sum of Squares and Mean Square are not applicable to Welch's ANOVA.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> For the standard ANOVA table, run jaov() without welch = TRUE.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.020</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Note: Eta-squared is calculated from the traditional SS decomposition.)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, full <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> One-Way ANOVA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -298,6 +288,132 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> East-South         2.785          -5.862       11.433          .834</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> West-South         2.650          -6.395       11.695          .870</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> West-East         -0.135          -8.240        7.969         1.000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Checking the equal-variances assumption: Levene's test</span></span></span>
+<span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, levene <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> One-Way ANOVA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Levene's Test for Homogeneity of Variance</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1  df2    p</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ---  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.751   3    99  .162</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group      N   Mean     SD    95% CI Lower  95% CI Upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147     48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741     41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936     47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923     45.878        55.722</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ANOVA: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Source     df  Sum of Squares  Mean Square    F      p</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ---  --------------  -----------  -----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region      3       266.441       88.814    0.667  .574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual   99     13179.384      133.125</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total     102     13445.825</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.020</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Pairwise comparisons after the traditional ANOVA: Tukey HSD</span></span></span>
+<span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, posthoc <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> One-Way ANOVA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group      N   Mean     SD    95% CI Lower  95% CI Upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147     48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741     41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936     47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923     45.878        55.722</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ANOVA: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Source     df  Sum of Squares  Mean Square    F      p</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ---  --------------  -----------  -----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region      3       266.441       88.814    0.667  .574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual   99     13179.384      133.125</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total     102     13445.825</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.020</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Tukey HSD Post-Hoc Comparisons</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Comparison   Mean Difference  95% CI Lower  95% CI Upper  p (adjusted)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------  ---------------  ------------  ------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> South-North       -4.813         -13.708        4.082          .494</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-North        -2.027          -9.964        5.910          .909</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-North        -2.163         -10.532        6.206          .906</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-South         2.785          -5.862       11.433          .834</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-South         2.650          -6.395       11.695          .870</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-East         -0.135          -8.240        7.969         1.000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># When equal variances cannot be assumed: Welch's ANOVA</span></span></span>
+<span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, welch <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Welch's One-Way ANOVA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group      N   Mean     SD    95% CI Lower  95% CI Upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147     48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741     41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936     47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923     45.878        55.722</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Welch's ANOVA: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1   df2    p</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.559   3   50.3  .645</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: Sum of Squares and Mean Square are not applicable to Welch's ANOVA.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> For the standard ANOVA table, run jaov() without welch = TRUE.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.020</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Note: Eta-squared is calculated from the traditional SS decomposition.)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Pairwise comparisons after Welch's ANOVA: Games-Howell</span></span></span>
+<span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, welch <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>     posthoc <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Welch's One-Way ANOVA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group      N   Mean     SD    95% CI Lower  95% CI Upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North  27  52.963  10.147     48.949        56.977</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South  20  48.150  14.741     41.251        55.049</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East   31  50.935   9.936     47.291        54.580</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West   25  50.800  11.923     45.878        55.722</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Welch's ANOVA: WellbeingScore by Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1   df2    p</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ----  ----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.559   3   50.3  .645</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Note: Sum of Squares and Mean Square are not applicable to Welch's ANOVA.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> For the standard ANOVA table, run jaov() without welch = TRUE.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.020</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Note: Eta-squared is calculated from the traditional SS decomposition.)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Games-Howell Post-Hoc Comparisons</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Comparison   Mean Difference  95% CI Lower  95% CI Upper   df   p (adjusted)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------  ---------------  ------------  ------------  ----  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> South-North       -4.813         -15.196        5.570     31.8       .597</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-North        -2.027          -9.038        4.983     54.6       .869</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-North        -2.163         -10.370        6.044     47.3       .896</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> East-South         2.785          -7.404       12.975     30.1       .879</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-South         2.650          -8.304       13.604     36.2       .914</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> West-East         -0.135          -8.070        7.799     46.7      1.000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
