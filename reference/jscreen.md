@@ -140,6 +140,11 @@ numbers; a column (or the whole Missing/Outliers table) is omitted
 entirely when nothing is flagged, and the header count lines explain the
 omission.
 
+A variable R cannot treat as a column of values – a list column (a
+tibble's, or the geometry column of a spatial data frame), a raw one, or
+a column that is itself a data frame – is listed as Unsupported and
+screened no further; it does not stop the screening of the rest.
+
 Text cells with no text – empty, or holding only spaces or tabs – are
 counted apart from missing values, never among them. When the screened
 variables hold any, the header gains a "Cases with blank text" line and
@@ -159,7 +164,10 @@ Median, while a numeric dichotomy shows the raw mean of its stored codes
 and a blank median. A numeric dichotomy coded other than 0/1 (e.g. the
 1/2 Group-4 coding) is flagged with a "\*" on its sub-class cell, since
 its raw mean is not a proportion; the marker shows even when `stats` is
-off, surfacing the recode need.
+off, surfacing the recode need. A dichotomy registered with
+[`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md) or
+[`jcount()`](https://jma61.github.io/jstats/reference/jcount.md) is
+Numeric, has no sub-class, and carries no marker.
 
 When variable names are supplied, only those variables are screened.
 When omitted, all variables in the data frame are screened. Settings

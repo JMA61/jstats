@@ -65,15 +65,20 @@ path uses, so a jnumeric/jcount registration moves the variable to
 Numeric and lifts the refusal – the identical escape hatch, and the
 exact path the message names – while factor/character arguments are
 caught here too (a typed message in place of base R's raw non-numeric
-error). A term that evaluates but yields non-finite values for some
-cases – log() of a zero (-Inf) or of a negative (NaN) – is NOT refused:
-those cells are set to NA, counted per term, and reported in a
-consequential note, with base R's raw "NaNs produced" warning muffled in
-favor of that note; the counts travel out as introduced_na so the Case
-Processing Summary can attribute the exclusions (AUDIT-024, AUDIT-025).
-Evaluation happens on the pipeline-masked analysis copy, so declared
-SPSS-style missing values are already NA before any arithmetic touches
-them; haven-labelled inputs are unclassed to plain numeric for the
+error). A COMPARISON is not refused (Session 342): a term that only asks
+which cases are in a category – `I(Sex == 1)`, `I(Source == "web")` –
+computes as [`lm()`](https://rdrr.io/r/stats/lm.html) computes it, with
+no registration
+([`.jst_comparison_exempt()`](https://jma61.github.io/jstats/reference/dot-jst_comparison_exempt.md)).
+A term that evaluates but yields non-finite values for some cases –
+log() of a zero (-Inf) or of a negative (NaN) – is NOT refused: those
+cells are set to NA, counted per term, and reported in a consequential
+note, with base R's raw "NaNs produced" warning muffled in favor of that
+note; the counts travel out as introduced_na so the Case Processing
+Summary can attribute the exclusions (AUDIT-024, AUDIT-025). Evaluation
+happens on the pipeline-masked analysis copy, so declared SPSS-style
+missing values are already NA before any arithmetic touches them;
+haven-labelled inputs are unclassed to plain numeric for the
 computation, the same coercion the analysis functions apply themselves.
 Objects that are not columns (a threshold constant in I(x \> cutoff))
 resolve in the formula's own environment, matching model.frame().

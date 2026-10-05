@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.215</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,7 +32,7 @@ also accepts a plain vector."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>SPSS-like frequency tables for categorical variables</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.215/R/descriptives.R" class="external-link"><code>R/descriptives.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/descriptives.R" class="external-link"><code>R/descriptives.R</code></a></small>
       <div class="d-none name"><code>jfreq.Rd</code></div>
     </div>
 
@@ -161,6 +161,9 @@ in one file and a real answer in the next (a column coded "Y" or left
 empty), and only you know which. A short footnote under the table says
 how many there are; <code><a href="jencode.html">jencode</a></code> gives them a code or makes
 them missing.</p>
+<p>A list column (a tibble's, or the geometry column of a spatial data
+frame), a raw column, and a column that is itself a data frame cannot be
+tabulated, and are refused before anything prints.</p>
 <p>For haven-labelled variables, value labels and numeric codes are combined
 in the frequency table rows (e.g. <code>1: Strongly Oppose</code>) at the
 default <code>value.id</code> setting. Where variable labels are shown, they

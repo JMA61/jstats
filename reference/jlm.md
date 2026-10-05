@@ -370,8 +370,16 @@ convention; the terms supported inline are those that evaluate to one
 numeric or logical column. Terms that produce several columns
 (`poly(x, 2)`, spline bases) or a categorical result (`cut(x, 3)`) are
 not supported inline: create the derived variable as a column of the
-data first, then name that column in the formula. A value or vector from
-your workspace may be named inside a computed term, as in
+data first, then name that column in the formula. A categorical variable
+may be compared but not transformed. `I(x == 2)`, `I(x %in% c(1, 3))`
+and, for a text variable, `I(x == "web")` each enter the model as a
+TRUE/FALSE predictor, as in [`lm()`](https://rdrr.io/r/stats/lm.html);
+an order comparison such as `I(x >= 3)` does too when `x` holds numbers.
+Arithmetic on a categorical `x` – `log(x)`, `I(x^2)` – is refused,
+because it would be computed from the category codes; register `x` with
+[`jnumeric`](https://jma61.github.io/jstats/reference/jnumeric.md) if
+its codes are meant as numbers. A value or vector from your workspace
+may be named inside a computed term, as in
 [`lm()`](https://rdrr.io/r/stats/lm.html): `I(x > cutoff)` with
 `cutoff <- 10`. A data frame may not: write `y ~ x` with
 `data = MyData`, not `MyData$y ~ MyData$x`. A vector used value by value
@@ -602,6 +610,7 @@ jdummy(community, Region)
 #> 
 #> Next session, load that file to restore the registration:
 #>   jload("community.rds")
+#> 
 jlm(WellbeingScore ~ Region + Age)
 #> Linear Regression
 #> Using default data frame: community
@@ -644,6 +653,7 @@ jdummy(community, Region, ref = "West")
 #> 
 #> Next session, load that file to restore the registration:
 #>   jload("community.rds")
+#> 
 jlm(WellbeingScore ~ Region + Age)
 #> Linear Regression
 #> Using default data frame: community

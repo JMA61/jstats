@@ -13,7 +13,7 @@ odds ratios (Exp(B))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.215</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,7 +34,7 @@ odds ratios (Exp(B))."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Logistic regression with SPSS-style output</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.215/R/models.R" class="external-link"><code>R/models.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/models.R" class="external-link"><code>R/models.R</code></a></small>
       <div class="d-none name"><code>jlogistic.Rd</code></div>
     </div>
 
@@ -287,6 +287,14 @@ result (<code>cut(x, 3)</code>) are not supported inline: create the derived
 variable as a column of the data first, then name that column in the
 formula. (The dependent variable must be a plain 0/1 dichotomy, so a
 transform applies to predictors, not the response.)
+A categorical variable may be compared but not transformed.
+<code>I(x == 2)</code>, <code>I(x %in% c(1, 3))</code> and, for a text variable,
+<code>I(x == "web")</code> each enter the model as a TRUE/FALSE predictor, as
+in <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>; an order comparison such as <code>I(x &gt;= 3)</code> does too
+when <code>x</code> holds numbers. Arithmetic on a categorical <code>x</code> –
+<code>log(x)</code>, <code>I(x^2)</code> – is refused, because it would be
+computed from the category codes; register <code>x</code> with
+<code><a href="jnumeric.html">jnumeric</a></code> if its codes are meant as numbers.
 A value or vector from your workspace may be named inside a computed
 term, as in <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>: <code>I(x &gt; cutoff)</code> with <code>cutoff &lt;- 10</code>.
 A data frame may not: write <code>y ~ x</code> with <code>data = MyData</code>,
@@ -488,6 +496,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jlogistic</span><span class="op">(</span><span class="va">Volunteer</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Logistic Regression</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
@@ -535,6 +544,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jlogistic</span><span class="op">(</span><span class="va">Volunteer</span> <span class="op">~</span> <span class="va">Region</span> <span class="op">+</span> <span class="va">Age</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Logistic Regression</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>

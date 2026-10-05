@@ -21,7 +21,7 @@ automatic small-range detection (e.g. a 0-30 victimization count)."></head><body
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.215</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,7 +42,7 @@ automatic small-range detection (e.g. a 0-30 victimization count)."></head><body
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Register variables as counts for analysis</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.215/R/pipeline.R" class="external-link"><code>R/pipeline.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/pipeline.R" class="external-link"><code>R/pipeline.R</code></a></small>
       <div class="d-none name"><code>jcount.Rd</code></div>
     </div>
 
@@ -72,13 +72,20 @@ automatic small-range detection (e.g. a 0-30 victimization count).</p>
 default frame (or, with no default set, the only frame that carries them;
 if several do, it asks rather than wiping all). <code>jcount(data, NULL)</code>
 clears that one frame's count registrations. Called with no arguments,
-<code>jcount()</code> lists the session's numeric and count registrations.</p></dd>
+<code>jcount()</code> lists the session's numeric and count registrations.
+Registrations are stored under the data frame's name, so it is given
+as a name (or as a place such as <code>lst$d</code>); an expression that
+builds one is refused, with the two lines that name it first. The
+<code>NULL</code> and <code>remove = TRUE</code> forms work on a name whose data
+frame has since been removed.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>One or more unquoted variable names to register. The
-registration applies to numeric and haven-labelled variables; a factor
-or text variable is categorical regardless and is unaffected by it.</p></dd>
+registration applies to numeric variables and to haven-labelled
+variables that hold numbers. Any other type is refused, and none of
+the call's variables is then registered: convert a factor or a text
+variable to numbers first with <code><a href="jencode.html">jencode</a></code>.</p></dd>
 
 
 <dt id="arg-remove">remove<a class="anchor" aria-label="anchor" href="#arg-remove"></a></dt>

@@ -12,7 +12,15 @@ registrations are session-only and how to persist them.
 ## Usage
 
 ``` r
-.jst_register_intent(kind, data, data_name, default_used, var_names, remove)
+.jst_register_intent(
+  kind,
+  data,
+  data_name,
+  default_used,
+  var_names,
+  remove,
+  file_stem = data_name
+)
 ```
 
 ## Arguments
@@ -42,6 +50,12 @@ registrations are session-only and how to persist them.
 - remove:
 
   Logical; if TRUE, remove rather than write.
+
+- file_stem:
+
+  Character(1); the file name in the durability note's two lines
+  ([`.jst_data_file_stem()`](https://jma61.github.io/jstats/reference/dot-jst_data_file_stem.md)).
+  The data frame's name by default.
 
 ## Value
 

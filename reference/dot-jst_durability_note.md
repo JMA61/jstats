@@ -19,7 +19,8 @@ wording rather than the helper inferring it.
   verb = NULL,
   var_name = NULL,
   modify = FALSE,
-  data_kind = "name"
+  data_kind = "name",
+  file_stem = data_name
 )
 ```
 
@@ -75,6 +76,16 @@ wording rather than the helper inferring it.
   which gets a line assigning the result to a new name. Until Session
   339 the scaffold read `mk() <- jconvert(mk(), ...)`, which does not
   run (the S219 item, finding 2).
+
+- file_stem:
+
+  Character(1); the file name, without its extension, in the two example
+  lines. The data frame's name by default. A caller whose data argument
+  is a place passes
+  [`.jst_data_file_stem()`](https://jma61.github.io/jstats/reference/dot-jst_data_file_stem.md)'s
+  answer, so that `lst$d` is saved as `"d.rds"`: `"lst$d.rds"` is a poor
+  file name and the double-bracket form's line does not parse (Session
+  342).
 
 ## Details
 

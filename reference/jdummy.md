@@ -34,7 +34,12 @@ jdummy(
   `jdummy(NULL)` clears the dummy registrations on the
   [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default
   data frame (or, with no default set, the only frame that carries them;
-  if several do, it asks rather than wiping all).
+  if several do, it asks rather than wiping all). Registrations are
+  stored under the data frame's name, so it is given as a name (or as a
+  place such as `lst$d`); an expression that builds one, such as a
+  subset, is refused, with the two lines that name it first. For the
+  same reason `jdummy(data, NULL)` and `remove = TRUE` work on a name
+  whose data frame has since been removed.
 
 - ...:
 
@@ -66,9 +71,12 @@ jdummy(
   nothing (`"Y"` or blank) models the word, with `<blank>` as the
   reference. Applied to every variable named in the call; to use
   different reference categories, register the variables in separate
-  calls. When the reference was chosen by `auto`, the printed "Reference
-  category:" line ends with `(default; change with ref =)`; a reference
-  you name carries no such tag.
+  calls. One value only. Every variable is checked before any is
+  registered, so a call that stops – a reference one of the variables
+  does not have, for example – registers none of them. When the
+  reference was chosen by `auto`, the printed "Reference category:" line
+  ends with `(default; change with ref =)`; a reference you name carries
+  no such tag.
 
 - show:
 
@@ -121,6 +129,7 @@ jdummy(Region)                       # Register, first category as reference
 #> 
 #> Next session, load that file to restore the registration:
 #>   jload("community.rds")
+#> 
 jdummy(Region, Education)            # Register several at once
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -141,6 +150,7 @@ jdummy(Region, Education)            # Register several at once
 #> 
 #> Next session, load that file to restore the registrations:
 #>   jload("community.rds")
+#> 
 jdummy(Region, ref = "last")         # Last category as reference
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -156,6 +166,7 @@ jdummy(Region, ref = "last")         # Last category as reference
 #> 
 #> Next session, load that file to restore the registration:
 #>   jload("community.rds")
+#> 
 jdummy(Region, ref = 4)              # Reference by numeric code
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -171,6 +182,7 @@ jdummy(Region, ref = 4)              # Reference by numeric code
 #> 
 #> Next session, load that file to restore the registration:
 #>   jload("community.rds")
+#> 
 jdummy(Region, ref = "East")         # Reference by value label
 #> Dummy Variable Registration
 #> Using default data frame: community
@@ -186,6 +198,7 @@ jdummy(Region, ref = "East")         # Reference by value label
 #> 
 #> Next session, load that file to restore the registration:
 #>   jload("community.rds")
+#> 
 jdummy(Region, show = TRUE)          # Show coding scheme
 #> Dummy Variable Registration
 #> Using default data frame: community

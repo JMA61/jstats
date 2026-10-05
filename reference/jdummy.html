@@ -19,7 +19,7 @@ datasets preserves each dataset's registrations independently."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.215</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,7 +40,7 @@ datasets preserves each dataset's registrations independently."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Register categorical variables for dummy coding in regression</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.215/R/pipeline.R" class="external-link"><code>R/pipeline.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/pipeline.R" class="external-link"><code>R/pipeline.R</code></a></small>
       <div class="d-none name"><code>jdummy.Rd</code></div>
     </div>
 
@@ -75,7 +75,12 @@ datasets preserves each dataset's registrations independently.</p>
 <dd><p>A data frame, or omit to use the <code><a href="juse.html">juse()</a></code> default.
 <code>jdummy(NULL)</code> clears the dummy registrations on the <code><a href="juse.html">juse()</a></code>
 default data frame (or, with no default set, the only frame that carries
-them; if several do, it asks rather than wiping all).</p></dd>
+them; if several do, it asks rather than wiping all). Registrations are
+stored under the data frame's name, so it is given as a name (or as a
+place such as <code>lst$d</code>); an expression that builds one, such as a
+subset, is refused, with the two lines that name it first. For the
+same reason <code>jdummy(data, NULL)</code> and <code>remove = TRUE</code> work
+on a name whose data frame has since been removed.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -106,7 +111,10 @@ if one of the two codes is 1, that category is modeled (so a
 A text variable holding one word or nothing (<code>"Y"</code> or blank)
 models the word, with <code>&lt;blank&gt;</code> as the reference.
 Applied to every variable named in the call; to use different
-reference categories, register the variables in separate calls.
+reference categories, register the variables in separate calls. One
+value only. Every variable is checked before any is registered, so a
+call that stops – a reference one of the variables does not have, for
+example – registers none of them.
 When the reference was chosen by <code>auto</code>, the printed
 "Reference category:" line ends with
 <code>(default; change with ref =)</code>; a reference you name carries
@@ -163,6 +171,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, <span class="va">Education</span><span class="op">)</span>            <span class="co"># Register several at once</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
@@ -183,6 +192,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registrations:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, ref <span class="op">=</span> <span class="st">"last"</span><span class="op">)</span>         <span class="co"># Last category as reference</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
@@ -198,6 +208,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, ref <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>              <span class="co"># Reference by numeric code</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
@@ -213,6 +224,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, ref <span class="op">=</span> <span class="st">"East"</span><span class="op">)</span>         <span class="co"># Reference by value label</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
@@ -228,6 +240,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">Region</span>, show <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>          <span class="co"># Show coding scheme</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>

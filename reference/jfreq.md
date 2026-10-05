@@ -123,6 +123,10 @@ there are;
 [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) gives
 them a code or makes them missing.
 
+A list column (a tibble's, or the geometry column of a spatial data
+frame), a raw column, and a column that is itself a data frame cannot be
+tabulated, and are refused before anything prints.
+
 For haven-labelled variables, value labels and numeric codes are
 combined in the frequency table rows (e.g. `1: Strongly Oppose`) at the
 default `value.id` setting. Where variable labels are shown, they are

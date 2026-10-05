@@ -41,7 +41,7 @@ stay unsupported (jcrosstab)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.215</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,7 +62,7 @@ stay unsupported (jcrosstab)."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Internal helper: resolve transformed formula terms into computed columns</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.215/R/classify.R" class="external-link"><code>R/classify.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/classify.R" class="external-link"><code>R/classify.R</code></a></small>
       <div class="d-none name"><code>dot-jst_resolve_formula_transforms.Rd</code></div>
     </div>
 
@@ -134,7 +134,10 @@ stack the analysis path uses, so a jnumeric/jcount registration moves the
 variable to Numeric and lifts the refusal – the identical escape hatch,
 and the exact path the message names – while factor/character arguments
 are caught here too (a typed message in place of base R's raw non-numeric
-error). A term that evaluates but yields non-finite values for some
+error). A COMPARISON is not refused (Session 342): a term that only asks
+which cases are in a category – <code>I(Sex == 1)</code>,
+<code>I(Source == "web")</code> – computes as <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> computes it, with
+no registration (<code><a href="dot-jst_comparison_exempt.html">.jst_comparison_exempt()</a></code>). A term that evaluates but yields non-finite values for some
 cases – log() of a zero (-Inf) or of a negative (NaN) – is NOT
 refused: those cells are set to NA, counted per term, and reported in a
 consequential note, with base R's raw "NaNs produced" warning muffled in

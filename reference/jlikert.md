@@ -24,13 +24,21 @@ jlikert(data, ..., remove = FALSE, clear.all = FALSE)
 
   A data frame, or omitted to use the
   [`juse`](https://jma61.github.io/jstats/reference/juse.md) default.
+  Registrations are stored under the data frame's name, so it is given
+  as a name (or as a place such as `lst$d`); an expression that builds
+  one is refused, with the two lines that name it first. The `NULL` and
+  `remove = TRUE` forms work on a name whose data frame has since been
+  removed.
 
 - ...:
 
   One or more unquoted variable names to register, or a single `NULL` to
   clear this frame's Likert registrations (see Details). The
-  registration applies to numeric and haven-labelled variables; a factor
-  or text variable is categorical regardless and is unaffected by it.
+  registration applies to numeric variables and to haven-labelled
+  variables that hold numbers. Any other type is refused, and none of
+  the call's variables is then registered: convert a factor or a text
+  variable to numbers first with
+  [`jencode`](https://jma61.github.io/jstats/reference/jencode.md).
 
 - remove:
 

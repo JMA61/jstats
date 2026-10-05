@@ -34,4 +34,5 @@ The declaration always stands; this is advisory only.
 
 ## Value
 
-invisible(NULL). Called for its message side effect.
+Invisibly, `TRUE` when the note printed and `FALSE` when no variable was
+flagged.
