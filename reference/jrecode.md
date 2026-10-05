@@ -430,7 +430,7 @@ df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
 #> new column.
 df <- jdeclare_missing(df, AgeR, codes = c("Not recorded" = -98))
 #> Declared SPSS-style missing values on AgeR:
-#>   -98 ["Not recorded"]
+#>   -98 ["Not recorded"] (not present in the data)
 #> 
 #> This call changes df only if you assign the result:
 #>   df <- jdeclare_missing(df, AgeR, ...)

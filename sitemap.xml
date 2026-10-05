@@ -77,6 +77,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_cps_var_rows.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_cps_visibility_rules.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_create_data_dir.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_arg_kind.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_dir_case_warning.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_dir_created_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_dp.html</loc></url>
@@ -150,8 +151,10 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jai_project.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jai_status.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jcomplete_preview.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_jdeclare_missing_body_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jdeclare_missing_bulk_notification.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jdeclare_missing_convention_error.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_jdeclare_missing_notification.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jencode_lhs_render.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jencode_map_call.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jencode_show_words.html</loc></url>
@@ -250,6 +253,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_resolve_width.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_return_plots.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_role_asserted_numeric.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_scaffold_vars.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_scan_coded_missing.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_search_no_extension.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_seg_category.html</loc></url>

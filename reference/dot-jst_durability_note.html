@@ -21,7 +21,7 @@ helper inferring it.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.212</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.213</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,8 @@ helper inferring it.</p>
 <span>  count <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verb <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  var_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  modify <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  modify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  data_kind <span class="op">=</span> <span class="st">"name"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,8 +98,30 @@ used to build the reassignment line.</p></dd>
 
 
 <dt id="arg-var-name">var_name<a class="anchor" aria-label="anchor" href="#arg-var-name"></a></dt>
-<dd><p>Character string variable name ("frame" rung only), used to
-build the reassignment line.</p></dd>
+<dd><p>Character string ("frame" rung only) placed where the
+call's variables go in the reassignment line: one variable name, or
+what <code><a href="dot-jst_scaffold_vars.html">.jst_scaffold_vars()</a></code> returns for a call on several, which
+is <code>""</code> when the line's own <code>...</code> is to stand for them.</p></dd>
+
+
+<dt id="arg-modify">modify<a class="anchor" aria-label="anchor" href="#arg-modify"></a></dt>
+<dd><p>Logical. <code>TRUE</code> when the call wrote its result back
+(<code>modify = TRUE</code>); the "frame" and "convert" rungs then give the
+save tip in place of the reassignment lines.</p></dd>
+
+
+<dt id="arg-data-kind">data_kind<a class="anchor" aria-label="anchor" href="#arg-data-kind"></a></dt>
+<dd><p>What the call's data argument was, as
+<code><a href="dot-jst_data_arg_kind.html">.jst_data_arg_kind()</a></code> reads it ("frame" and "convert" rungs).
+<code>"name"</code>, the default: a data frame's name or the <code><a href="juse.html">juse()</a></code>
+default, which gets both the reassignment line and the
+<code>modify = TRUE</code> line. <code>"place"</code>: somewhere a result can be
+assigned that is not a plain name (<code>lst$d</code>), which gets the
+reassignment line alone, because <code>modify = TRUE</code> needs a name.
+<code>"expression"</code>: anything else (<code>mk()</code>), which gets a line
+assigning the result to a new name. Until Session 339 the scaffold
+read <code>mk() &lt;- jconvert(mk(), ...)</code>, which does not run (the
+S219 item, finding 2).</p></dd>
 
 </dl></div>
     <div class="section level2">

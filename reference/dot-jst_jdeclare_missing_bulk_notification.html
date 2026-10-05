@@ -7,7 +7,10 @@ where some columns already carry Stata-form markers: the marked
 columns resolve to conversion while plain columns resolve to an
 SPSS-style declaration), each group gets one header plus one body block
 (the declaration is identical within a group by construction), and
-the durability note prints once at the end."><meta property="og:description" content="One summary block instead of one block per column: a bulk call on 52
+the durability note is returned apart from the blocks.
+Returns list(block = , tail = ), as the single-variable builder
+does: tail is the durability reminder, NULL at the minimal
+tier and when no group changed anything."><meta property="og:description" content="One summary block instead of one block per column: a bulk call on 52
 variables must not print 52 near-identical notices. Variables are
 grouped by resulting branch (a single call CAN split branches – e.g.
 numeric codes applied under an active SPSS convention across a frame
@@ -15,7 +18,10 @@ where some columns already carry Stata-form markers: the marked
 columns resolve to conversion while plain columns resolve to an
 SPSS-style declaration), each group gets one header plus one body block
 (the declaration is identical within a group by construction), and
-the durability note prints once at the end."></head><body>
+the durability note is returned apart from the blocks.
+Returns list(block = , tail = ), as the single-variable builder
+does: tail is the durability reminder, NULL at the minimal
+tier and when no group changed anything."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -23,7 +29,7 @@ the durability note prints once at the end."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.212</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.213</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +63,10 @@ where some columns already carry Stata-form markers: the marked
 columns resolve to conversion while plain columns resolve to an
 SPSS-style declaration), each group gets one header plus one body block
 (the declaration is identical within a group by construction), and
-the durability note prints once at the end.</p>
+the durability note is returned apart from the blocks.</p>
+<p>Returns <code>list(block = , tail = )</code>, as the single-variable builder
+does: <code>tail</code> is the durability reminder, <code>NULL</code> at the minimal
+tier and when no group changed anything.</p>
     </div>
 
     <div class="section level2">
@@ -66,15 +75,24 @@ the durability note prints once at the end.</p>
 <span>  <span class="va">data_name</span>,</span>
 <span>  <span class="va">target_vars</span>,</span>
 <span>  <span class="va">results</span>,</span>
-<span>  <span class="va">parsed_codes</span>,</span>
-<span>  range <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  inband_labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  modify <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  modify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  data_kind <span class="op">=</span> <span class="st">"name"</span>,</span>
+<span>  scaffold_var <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">target_vars</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
-  </main></div>
+
+<dl><dt id="arg-scaffold-var">scaffold_var<a class="anchor" aria-label="anchor" href="#arg-scaffold-var"></a></dt>
+<dd><p>The text standing for the call's variables in the
+reminder's two lines (<code><a href="dot-jst_scaffold_vars.html">.jst_scaffold_vars()</a></code>; S339).</p></dd>
+
+</dl></div>
+
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

@@ -8,7 +8,11 @@ where some columns already carry Stata-form markers: the marked columns
 resolve to conversion while plain columns resolve to an SPSS-style
 declaration), each group gets one header plus one body block (the
 declaration is identical within a group by construction), and the
-durability note prints once at the end.
+durability note is returned apart from the blocks.
+
+Returns `list(block = , tail = )`, as the single-variable builder does:
+`tail` is the durability reminder, `NULL` at the minimal tier and when
+no group changed anything.
 
 ## Usage
 
@@ -17,9 +21,16 @@ durability note prints once at the end.
   data_name,
   target_vars,
   results,
-  parsed_codes,
-  range = NULL,
-  inband_labels = NULL,
-  modify = FALSE
+  modify = FALSE,
+  data_kind = "name",
+  scaffold_var = paste(target_vars, collapse = ", ")
 )
 ```
+
+## Arguments
+
+- scaffold_var:
+
+  The text standing for the call's variables in the reminder's two lines
+  ([`.jst_scaffold_vars()`](https://jma61.github.io/jstats/reference/dot-jst_scaffold_vars.md);
+  S339).
