@@ -832,7 +832,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'       \code{source} (\code{"na_values"} or \code{"tagged_na"}),
 #'       \code{numeric} (underlying numeric value; \code{NA} for
 #'       tagged NAs), \code{tag} (tag letter for Stata; \code{NA} for
-#'       SPSS UDMs).}
+#'       SPSS UDMs). On a string variable (\code{text} below) \code{code}
+#'       is the declared string exactly as stored and \code{numeric} is
+#'       \code{NA}; consumers compare cells against \code{code}.}
+#'     \item{text}{SPSS representation only: \code{TRUE} when the column
+#'       is character-backed, so its declared missing values are strings
+#'       (Session 340); \code{FALSE} otherwise.}
 #'     \item{range_values}{Only when \code{observed = TRUE} and an
 #'       \code{na_range} is declared: a data frame of the DISTINCT
 #'       observed in-band values, same columns as \code{codes} (with
@@ -895,11 +900,51 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   val_labs <- if (haven::is.labelled(col)) labelled::val_labels(col) else NULL
 
+  # A character-backed column: its declared missing values are strings. A
+  # range cannot be declared on a string variable (SPSS allows none), so a
+  # stray na_range on one is ignored rather than compared as numbers.
+  is_text <- is.character(col)
+  if (is_text) na_range <- NULL
+
   if (has_spss_udms) {
     # SPSS representation: na_values + optional na_range
     codes_df <- NULL
 
-    if (!is.null(na_vals) && length(na_vals) > 0) {
+    if (is_text && !is.null(na_vals) && length(na_vals) > 0) {
+      # A string variable's declared missing values (S340). SPSS declares
+      # them directly -- MISSING VALUES MARITAL ('UNKNOWN'). -- and haven
+      # carries them as a character na_values on a character-backed
+      # haven_labelled_spss column. The declared STRINGS are the codes:
+      # `code` holds each one exactly as stored (it is what consumers
+      # compare cells against, never a display form), `numeric` is NA,
+      # and the list's `text` element tells a consumer which comparison
+      # to make. Until S340 this arm did not exist: as.numeric() turned
+      # every declared string into NA with a coercion warning, so nothing
+      # downstream could count or mask a cell.
+      s_vals     <- as.character(na_vals)
+      labels_vec <- rep(NA_character_, length(s_vals))
+      if (!is.null(val_labs) && length(val_labs) > 0) {
+        lab_vals <- as.character(unname(val_labs))
+        for (i in seq_along(s_vals)) {
+          idx <- which(!is.na(lab_vals) & lab_vals == s_vals[i])
+          if (length(idx) > 0) labels_vec[i] <- names(val_labs)[idx[1]]
+        }
+      }
+      codes_df <- data.frame(
+        code    = s_vals,
+        label   = labels_vec,
+        source  = rep("na_values", length(s_vals)),
+        numeric = rep(NA_real_, length(s_vals)),
+        tag     = rep(NA_character_, length(s_vals)),
+        stringsAsFactors = FALSE
+      )
+      # Deterministic order, as the numeric arm's: by value, and "radix"
+      # pins C-locale collation so two machines cannot disagree.
+      codes_df <- codes_df[order(codes_df$code, method = "radix"), ,
+                           drop = FALSE]
+      rownames(codes_df) <- NULL
+
+    } else if (!is.null(na_vals) && length(na_vals) > 0) {
       n_vals     <- as.numeric(na_vals)
       labels_vec <- rep(NA_character_, length(n_vals))
 
@@ -982,12 +1027,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       )
     }
 
+    # A text column whose only declaration was the ignored range declares
+    # nothing this package can read.
+    if (is_text && is.null(codes_df)) return(NULL)
+
     list(
       representation = "spss",
       convention     = "spss",
       na_range       = if (!is.null(na_range) && length(na_range) == 2) na_range else NULL,
       codes          = codes_df,
-      range_values   = range_values_df
+      range_values   = range_values_df,
+      text           = is_text
     )
 
   } else {
@@ -1186,7 +1236,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         x_num <- suppressWarnings(as.numeric(unclass(col)))
         mask  <- rep(FALSE, length(x_num))
 
-        if (!is.null(info$codes)) {
+        if (isTRUE(info$text)) {
+          # A string variable's declared values are strings (S340): until
+          # then the numeric comparison matched nothing, so the declaration
+          # was stripped below while its cells stayed in the data as text.
+          x_chr <- as.character(unclass(col))
+          mask  <- !is.na(x_chr) & x_chr %in% info$codes$code
+        } else if (!is.null(info$codes)) {
           mask <- mask | (!is.na(x_num) & x_num %in% info$codes$numeric)
         }
         if (!is.null(info$na_range)) {
@@ -1417,10 +1473,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # jconvert's own run-time messages (settled S227: costs surface
       # where they bite -- jsave's pre-flight refusals cover the .sav
       # dead end).
+      # A declared STRING has no Stata form -- jconvert(to = "stata")
+      # refuses a text variable (S340) -- so a frame holding one is offered
+      # the conversion that does run for it, to plain NA.
+      any_text <- any(vapply(udm_info, function(e) isTRUE(e$info$text),
+                             logical(1)))
       tail_lines <- c(
         "jstats analyses treat these codes as missing. Base R functions do not.",
         "To make them missing in base R as well, convert:",
-        sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", call_name)
+        sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)", call_name,
+                if (any_text) "baseR" else "stata")
       )
     }
     # Uniform Stata-/SAS-style with no conflicting setting (Case 5):
@@ -1753,6 +1815,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   for (vname in names(df)) {
     col <- df[[vname]]
     if (!is.numeric(col) && !inherits(col, "haven_labelled")) next
+    # A character-backed haven_labelled column (a string variable carrying
+    # value labels, as a .sav stores Sex "M" / "F") has no numeric codes to
+    # scan, and as.numeric() on one is a vctrs error, not an NA: until S340
+    # jload() stopped here with "Can't convert `vec_data(x)` <character> to
+    # <double>" after it had assigned the frame.
+    if (is.character(col)) next
     # Only scan numeric-like variables
     num_vals <- suppressWarnings(as.numeric(col))
     if (all(is.na(num_vals))) next
@@ -3298,6 +3366,25 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # character." Adjacent placement (tmpdir = dirname(out_path)) keeps
   # file.rename() within one filesystem so the rename is atomic.
   basename_no_ext <- tools::file_path_sans_ext(basename(out_path))
+
+  # A folder R cannot write to (Session 340): a read-only or protected
+  # folder, or one an AI assistant's sandbox mode keeps writes out of. Probed
+  # before the write, by the attempt itself (.jst_lib_writable(), R core's
+  # own test), because each writer fails in its own words and two of them
+  # are R's: saveRDS() warned "cannot open compressed file
+  # './jsave_d_22e05de3092d.rds', probable reason 'Permission denied'" --
+  # the temporary name below, which the user never typed -- and stopped on
+  # "cannot open the connection"; write_xlsx() printed a C-level "[ERROR]
+  # workbook_close()" that R cannot catch. A write that is REDIRECTED rather
+  # than refused cannot be detected from here: the file is written, and
+  # where it went is the sandbox's to say.
+  if (!.jst_lib_writable(dirname(out_path))) {
+    .jst_stop("R cannot write to this folder:\n",
+              "  ", .jst_norm_path(dirname(out_path)), "\n",
+              "Nothing was saved.\n",
+              "Choose a folder you can write to and run jsave() again.")
+  }
+
   temp_path <- tempfile(
     pattern = paste0("jsave_", basename_no_ext, "_"),
     tmpdir  = dirname(out_path),

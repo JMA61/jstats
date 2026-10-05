@@ -82,7 +82,13 @@ removes the attributes; value labels are preserved so the column
 can still round-trip through \code{jsave()} with original
 labeling. For columns carrying Stata-style missing values
 (\code{tagged_na} markers), uses \code{haven::zap_missing()} to
-convert them to plain \code{NA}s.}
+convert them to plain \code{NA}s. A string variable's declared
+missing values (SPSS declares them directly, as in
+\code{MISSING VALUES MARITAL ('UNKNOWN')}) become \code{NA} the
+same way. They cannot become Stata-style or SAS-style missing
+values, which exist only on numeric variables, so
+\code{to = "stata"} and \code{to = "sas"} stop and name such a
+variable; \code{\link{jencode}} turns it into a numeric one.}
 \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
 values to SPSS-style numeric codes. Each column's distinct letter
 tags, in letter order, take the \code{missing.convention.codes}

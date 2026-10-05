@@ -974,7 +974,33 @@
   # -- Step 1: classify input and extract codes + raw labels ----------------
   is_haven <- haven::is.labelled(x)
 
-  if (is_haven) {
+  if (is_haven && is.character(x)) {
+    # A string variable carrying value labels (a .sav stores Sex "M" / "F"
+    # this way). Its values are text, so it registers as a character
+    # variable does -- codes are positions, the raw strings travel as
+    # `values` -- with one difference: a value's label, where it has one,
+    # names its dummy. Until S340 this fell into the numeric-labelled arm
+    # below, every code coerced to NA, and the stop was "Cannot create
+    # unique dummy names ... 'NA' and 'NA' both produce 'NA'". A declared
+    # missing string is excluded with the NA cells: is.na() is TRUE for it
+    # on a live haven_labelled_spss column.
+    var_type   <- "character"
+    val_labels <- labelled::val_labels(x)
+    x_chr      <- as.character(unclass(.jst_label_blanks(x)))
+    uniq       <- sort(unique(x_chr[!is.na(x)]))
+    # A blank cell is a category (see the plain-text arm below): last.
+    uniq       <- c(uniq[uniq != .jst_blank_label],
+                    uniq[uniq == .jst_blank_label])
+    codes      <- seq_along(uniq)
+    values     <- uniq
+    raw_labels <- uniq
+    if (!is.null(val_labels) && length(val_labels) > 0L) {
+      lab_vals <- as.character(unname(val_labels))
+      hit      <- match(uniq, lab_vals)
+      has_lab  <- !is.na(hit) & nzchar(names(val_labels)[hit])
+      raw_labels[has_lab] <- names(val_labels)[hit[has_lab]]
+    }
+  } else if (is_haven) {
     var_type   <- "haven_labelled"
     val_labels <- labelled::val_labels(x)
     codes      <- .jst_as_numeric(sort(unique(x[!is.na(x)])))
@@ -1000,7 +1026,18 @@
     raw_labels <- lvls
   } else if (is.character(x)) {
     var_type   <- "character"
-    uniq       <- sort(unique(x[!is.na(x) & nzchar(x)]))
+    # A blank cell is a category, as it is a group in jt(), jaov() and
+    # jcrosstab() (Jeff's Session 340 ruling, "A"): the empty and the
+    # whitespace cells together, under the one label, placed LAST so that
+    # the first category -- the default reference of a variable with three
+    # or more -- is a named one. Until then an empty cell was left out of
+    # the category set and dropped from the model as missing, uncounted in
+    # the Missing data block, while a whitespace cell was a category of
+    # its own (and, sorting first, the reference).
+    x          <- .jst_label_blanks(x)
+    uniq       <- sort(unique(x[!is.na(x)]))
+    uniq       <- c(uniq[uniq != .jst_blank_label],
+                    uniq[uniq == .jst_blank_label])
     codes      <- seq_along(uniq)
     values     <- uniq
     raw_labels <- uniq
@@ -1133,6 +1170,12 @@
       } else if (var_type %in% c("haven_labelled", "numeric") &&
                  any(codes == 1)) {
         ref_idx <- which(codes != 1)[1L]
+      } else if (identical(var_type, "character") &&
+                 any(values == .jst_blank_label)) {
+        # (b2) a text variable coded as one word or blank ("Y" or nothing):
+        # the word is the presence, so it is modeled and the blank category
+        # is the reference -- tier (a)'s rule for a yes/no pair (S340).
+        ref_idx <- which(values == .jst_blank_label)[1L]
       }
     }
   } else if (is.character(ref) && tolower(ref) == "first") {
@@ -1300,17 +1343,25 @@
   # listwise-deleted) and let a factor's unused level shift the later
   # positions onto the wrong codes (all-zero dummies). Numeric,
   # haven-labelled and logical columns keep the value comparison,
-  # unchanged. An NA cell, or a blank "" text cell (excluded from the
-  # category set at registration), is missing on every dummy; a
-  # non-missing value the registration does not know is zero on every
-  # dummy, as an unregistered numeric code is.
+  # unchanged. An NA cell is missing on every dummy; a blank text cell is
+  # a category of its own since Session 340 (see below for a registration
+  # older than that); a non-missing value the registration does not know
+  # is zero on every dummy, as an unregistered numeric code is.
   pos_space <- identical(reg$var_type, "factor") ||
                identical(reg$var_type, "character")
   if (pos_space) {
-    col_chr <- as.character(col)
+    col_chr <- as.character(if (is.character(col)) .jst_label_blanks(col)
+                            else col)
     is_miss <- is.na(col_chr)
-    if (is.character(col)) is_miss <- is_miss | !nzchar(col_chr)
-    pos     <- match(col_chr, .jst_dummy_category_values(reg, col))
+    cat_vals <- .jst_dummy_category_values(reg, col)
+    # A blank text cell is a category since Session 340, and a registration
+    # made since then lists it. One made BEFORE (a card restored from an
+    # older .rds file) does not, and for it a blank cell stays what it was
+    # when the registration was made: missing on every dummy.
+    if (is.character(col) && !(.jst_blank_label %in% cat_vals)) {
+      is_miss <- is_miss | (col_chr == .jst_blank_label & !is.na(col_chr))
+    }
+    pos     <- match(col_chr, cat_vals)
   } else {
     orig_col <- .jst_as_numeric(col)
   }

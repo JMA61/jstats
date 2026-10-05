@@ -87,7 +87,9 @@ Invisibly returns a data frame of the screening results, with one
 row per variable and columns including the Base R type, the jstats
 \code{Class} and \code{SubClass}, the classification \code{Source}
 ("registered" or "structural"), distinct-value count, missing count
-and percentage, the outlier count (NA for non-Numeric variables), and
+and percentage, the count and percentage of blank text cells
+(\code{Blank}, \code{Pct_Blank}), the outlier count (NA for
+non-Numeric variables), and
 the \code{Mean} and \code{Median} (NA where not meaningful: Median is NA
 for dichotomies, and both are NA for non-numeric-like variables). The
 returned values are the raw counts; only the printed tables blank zeros
@@ -114,6 +116,13 @@ are SD-screened and the Outliers cell is left blank for the rest. Zero
 counts are shown blank so only affected variables carry numbers; a column
 (or the whole Missing/Outliers table) is omitted entirely when nothing is
 flagged, and the header count lines explain the omission.
+
+Text cells with no text -- empty, or holding only spaces or tabs -- are
+counted apart from missing values, never among them. When the screened
+variables hold any, the header gains a "Cases with blank text" line and
+the Missing Data & Outliers table a Blank and a \% Blank column. Whether
+a blank is absent data or a real answer depends on the file; see
+\code{\link{jfreq}}.
 
 When at least one variable's class comes from a registration (jnumeric,
 jcount, or jdummy) rather than the structural guess, a Source column

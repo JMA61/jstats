@@ -2,12 +2,12 @@
 % Please edit documentation in R/utils.R
 \name{.cat_red}
 \alias{.cat_red}
-\title{Internal helper: print a string in red using ANSI escape codes}
+\title{Internal helper: print a string in red, where the output draws color}
 \usage{
 .cat_red(x)
 }
 \description{
-Works in RStudio, most terminals, and R Markdown HTML output.
-Falls back to plain text in environments that strip ANSI codes.
+Red in the RStudio Console (ANSI escape codes); plain text everywhere
+else. See \code{.jst_use_color()}.
 }
 \keyword{internal}

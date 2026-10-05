@@ -215,13 +215,19 @@
     } else {
       # SPSS-form: per declared code, then na_range. UDM codes are live
       # values in the pre-masking columns, so numeric comparison works.
-      x_pre  <- suppressWarnings(as.numeric(unclass(pre_col)))
-      x_pool <- suppressWarnings(as.numeric(unclass(pool_col)))
+      # A string variable's declared values are strings (S340), matched
+      # against the cells as stored; r$code is the string itself there.
+      text_codes <- isTRUE(mi$text)
+      x_pre  <- if (text_codes) as.character(unclass(pre_col))
+                else suppressWarnings(as.numeric(unclass(pre_col)))
+      x_pool <- if (text_codes) as.character(unclass(pool_col))
+                else suppressWarnings(as.numeric(unclass(pool_col)))
       if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
         for (i in seq_len(nrow(mi$codes))) {
           r   <- mi$codes[i, ]
-          s   <- sum(!is.na(x_pre)  & x_pre  == r$numeric)
-          p   <- sum(!is.na(x_pool) & x_pool == r$numeric)
+          key <- if (text_codes) r$code else r$numeric
+          s   <- sum(!is.na(x_pre)  & x_pre  == key)
+          p   <- sum(!is.na(x_pool) & x_pool == key)
           lab <- if (!is.na(r$label) && nzchar(r$label))
                    sprintf('%s ["%s"]', r$code, r$label)
                  else sprintf('%s (no label)', r$code)

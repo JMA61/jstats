@@ -2,13 +2,14 @@
 % Please edit documentation in R/utils.R
 \name{.cat_yellow}
 \alias{.cat_yellow}
-\title{Internal helper: print text in yellow ANSI color}
+\title{Internal helper: print text in yellow, where the output draws color}
 \usage{
 .cat_yellow(x)
 }
 \description{
 Used for informational/status notes where the text should be visually
 distinct from regular output but not alarming (matches the "warning/note"
-color convention).
+color convention). Yellow in the RStudio Console; plain text everywhere
+else. See \code{.jst_use_color()}.
 }
 \keyword{internal}

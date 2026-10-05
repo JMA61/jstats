@@ -44,7 +44,12 @@ or \code{NULL} if only \code{na_range} is present. Columns:
 \code{source} (\code{"na_values"} or \code{"tagged_na"}),
 \code{numeric} (underlying numeric value; \code{NA} for
 tagged NAs), \code{tag} (tag letter for Stata; \code{NA} for
-SPSS UDMs).}
+SPSS UDMs). On a string variable (\code{text} below) \code{code}
+is the declared string exactly as stored and \code{numeric} is
+\code{NA}; consumers compare cells against \code{code}.}
+\item{text}{SPSS representation only: \code{TRUE} when the column
+is character-backed, so its declared missing values are strings
+(Session 340); \code{FALSE} otherwise.}
 \item{range_values}{Only when \code{observed = TRUE} and an
 \code{na_range} is declared: a data frame of the DISTINCT
 observed in-band values, same columns as \code{codes} (with

@@ -100,6 +100,14 @@ directs), a blank line, and the frequency table. Declared missing
 values get Missing rows of their own below the valid rows. The
 frequency table ends with a Total row showing the post-pipeline N.
 
+In a text variable, cells with no text -- empty, or holding only spaces
+or tabs -- are tabulated together in one row labeled \code{<blank>}.
+They are counted as valid values, not as missing: a blank is absent data
+in one file and a real answer in the next (a column coded "Y" or left
+empty), and only you know which. A short footnote under the table says
+how many there are; \code{\link{jencode}} gives them a code or makes
+them missing.
+
 For haven-labelled variables, value labels and numeric codes are combined
 in the frequency table rows (e.g. \code{1: Strongly Oppose}) at the
 default \code{value.id} setting. Where variable labels are shown, they

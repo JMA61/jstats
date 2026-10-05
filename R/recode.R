@@ -3442,6 +3442,17 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' gives them their own category, which matters in field data where a
 #' blank often means "No".
 #'
+#' \strong{Declared missing values on a text variable.} A file from SPSS
+#' can declare some of a string variable's values missing
+#' (\code{MISSING VALUES MARITAL ('UNKNOWN')}). In automatic mode those
+#' cells are left missing rather than numbered as categories, and a note
+#' gives the map that keeps them declared (\code{UNKNOWN=missing}). The
+#' word \code{missing} produces one missing value, so two declared strings
+#' sent to it share it; to keep them apart, give each a number of its own
+#' in the map and declare those numbers with
+#' \code{\link{jdeclare_missing}}. With a map they are words like any
+#' other: name them, or the call stops and lists them.
+#'
 #' The variable label from the original variable is carried across
 #' automatically with "(encoded)" appended; if there is none, the
 #' variable name is used instead.
@@ -3579,6 +3590,28 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   word_mask  <- !na_mask & !blank_mask
   n_blank    <- sum(blank_mask)
 
+  # A string variable's declared missing values (S340): the strings a .sav
+  # file declared with MISSING VALUES, which haven carries as a character
+  # na_values. In AUTOMATIC mode they are not words to number -- numbering
+  # them would turn a declared missing value into an ordinary category,
+  # silently, by the route every "convert it to numbers first" message
+  # recommends. Their cells are left missing and a note gives the map
+  # that keeps them declared (the blank rule's treatment, below). In MAP
+  # mode the user's rules decide: a declared string is a word like any
+  # other there, named by the map or reported as not in it.
+  decl_mask  <- rep(FALSE, length(txt))
+  decl_words <- character(0)
+  if (!is_factor && is.null(map)) {
+    src_decl <- .jst_missing_info(orig)
+    if (!is.null(src_decl) && isTRUE(src_decl$text)) {
+      decl_mask  <- word_mask & words %in% trimws(src_decl$codes$code)
+      decl_words <- unique(words[decl_mask])
+      decl_words <- decl_words[order(tolower(decl_words), decl_words,
+                                     method = "radix")]
+      word_mask  <- word_mask & !decl_mask
+    }
+  }
+
   words_obs <- unique(words[word_mask])
   if (is_factor) {
     # The factor's levels are the words, in level order. A level that is
@@ -3615,6 +3648,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       .jst_stop("'", var_name, "' contains no words to encode -- every cell ",
                 "is blank or missing.")
     }
+    n_decl <- sum(decl_mask)
 
     # "Numeric-looking" = what as.numeric() accepts. "1,234" and "$5" are
     # words; documented, extendable by explicit decision (S225 decision 4).
@@ -3709,6 +3743,36 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         " in '", var_name,
         "' had outer spaces removed before encoding (e.g. \"", ex_raw,
         "\" was read as \"", trimws(ex_raw), "\")."))
+    }
+
+    # Declared missing strings go to plain NA in automatic mode, as blanks
+    # do just below: the missing token that would keep them declared needs
+    # a convention, and automatic mode never asks for one (S340).
+    if (n_decl > 0) {
+      msgs <- c(msgs, paste0(
+        paste0(
+          "Note: ", .jst_fmt_n(n_decl), " ",
+          .jst_plural(n_decl, "cell", "cells"), " in '", var_name,
+          "' holding a declared missing value (",
+          paste0("\"", decl_words, "\"", collapse = ", "), ") ",
+          .jst_plural(n_decl, "was", "were"), " left missing (NA)."), "\n",
+        # The missing token makes ONE missing value, so two declared
+        # strings sent to it come back as one: said here, before the
+        # rerun's own "combine" note says it.
+        paste0(
+          "To keep ",
+          if (length(decl_words) > 1L) "them declared, as one missing value"
+          else .jst_plural(n_decl, "it as a declared missing value",
+                           "them as declared missing values"),
+          ", rerun with a map sending ",
+          .jst_plural(length(decl_words), "that value", "those values"),
+          " to missing:"), "\n",
+        .jst_jencode_map_call(
+          .jst_data_name, var_name,
+          paste(c(assigned_rules,
+                  paste0(vapply(decl_words, .jst_jencode_lhs_render,
+                                character(1)), "=missing")),
+                collapse = "; "))))
     }
 
     # Blanks go to plain NA in automatic mode -- no convention sensitivity.
@@ -7167,7 +7231,13 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     can still round-trip through \code{jsave()} with original
 #'     labeling. For columns carrying Stata-style missing values
 #'     (\code{tagged_na} markers), uses \code{haven::zap_missing()} to
-#'     convert them to plain \code{NA}s.}
+#'     convert them to plain \code{NA}s. A string variable's declared
+#'     missing values (SPSS declares them directly, as in
+#'     \code{MISSING VALUES MARITAL ('UNKNOWN')}) become \code{NA} the
+#'     same way. They cannot become Stata-style or SAS-style missing
+#'     values, which exist only on numeric variables, so
+#'     \code{to = "stata"} and \code{to = "sas"} stop and name such a
+#'     variable; \code{\link{jencode}} turns it into a numeric one.}
 #'   \item{\code{to = "spss"}}{Convert Stata-style or SAS-style missing
 #'     values to SPSS-style numeric codes. Each column's distinct letter
 #'     tags, in letter order, take the \code{missing.convention.codes}
@@ -7807,6 +7877,33 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
     style_word   <- if (to == "sas") "SAS-style" else "Stata-style"
     over_cap_vars <- list()
 
+    # A string variable's declared missing values cannot take a marker: a
+    # marker is a kind of NA in a NUMERIC column (S340). Refused here,
+    # before any mutation, in the over-cap refusal's form below; until
+    # then the conversion met vctrs' "Can't convert `labels` <character>
+    # to match type of `x` <double>". to = "baseR" converts such a
+    # variable, and to = "spss" has nothing to do.
+    text_vars <- names(info_list)[vapply(info_list, function(i)
+      identical(i$representation, "spss") && isTRUE(i$text), logical(1))]
+    if (length(text_vars) > 0L) {
+      n_text <- length(text_vars)
+      .jst_stop(paste(c(
+        sprintf("%s missing values need a numeric variable.", style_word),
+        "",
+        sprintf("%s in %s %s text, with declared missing values:",
+                .jst_plural(n_text, "This variable", "These variables"),
+                data_name, .jst_plural(n_text, "is", "are")),
+        .jst_cap_var_lines(paste0("  ", text_vars)),
+        "",
+        sprintf("To convert a narrower set, leaving out the %s above:",
+                .jst_plural(n_text, "variable", "variables")),
+        sprintf("  jconvert(%s, to = \"%s\", vars = c(...), modify = TRUE)",
+                data_name, to),
+        sprintf("Or turn %s into a numeric variable first with jencode().",
+                .jst_plural(n_text, "it", "each"))),
+        collapse = "\n"))
+    }
+
     for (vname in names(info_list)) {
       info <- info_list[[vname]]
       if (info$representation != "spss") next
@@ -7920,7 +8017,13 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
       if (info$representation == "spss") {
         x_num <- suppressWarnings(as.numeric(unclass(col)))
         mask  <- rep(FALSE, length(x_num))
-        if (!is.null(info$codes) && nrow(info$codes) > 0L) {
+        if (isTRUE(info$text)) {
+          # A string variable's declared values are strings (S340). Until
+          # then nothing matched here: the declaration was stripped and its
+          # cells stayed in the data, reported as converted.
+          x_chr <- as.character(unclass(col))
+          mask  <- !is.na(x_chr) & x_chr %in% info$codes$code
+        } else if (!is.null(info$codes) && nrow(info$codes) > 0L) {
           declared_codes <- info$codes$numeric
           declared_codes <- declared_codes[!is.na(declared_codes)]
           if (length(declared_codes) > 0L) {

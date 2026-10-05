@@ -163,6 +163,17 @@ swept by an \code{else} rule, and mapping \code{blank=0} (or any code)
 gives them their own category, which matters in field data where a
 blank often means "No".
 
+\strong{Declared missing values on a text variable.} A file from SPSS
+can declare some of a string variable's values missing
+(\code{MISSING VALUES MARITAL ('UNKNOWN')}). In automatic mode those
+cells are left missing rather than numbered as categories, and a note
+gives the map that keeps them declared (\code{UNKNOWN=missing}). The
+word \code{missing} produces one missing value, so two declared strings
+sent to it share it; to keep them apart, give each a number of its own
+in the map and declare those numbers with
+\code{\link{jdeclare_missing}}. With a map they are words like any
+other: name them, or the call stops and lists them.
+
 The variable label from the original variable is carried across
 automatically with "(encoded)" appended; if there is none, the
 variable name is used instead.

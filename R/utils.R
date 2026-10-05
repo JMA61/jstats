@@ -264,9 +264,18 @@ jupdate <- function(ask = FALSE) {
   # One network read doubles as a connectivity probe and a migration check.
   gist <- .jst_read_gist()
   if (!isTRUE(gist$network_ok)) {
+    # One sentence per line (voice Rule E), and no cause named that was not
+    # checked (Rule AH): what failed is R's own read of a web address, which
+    # an absent connection and a blocked one produce alike -- a firewall, a
+    # proxy, an AI assistant's sandbox mode. Until Session 340 this said "no
+    # internet connection was detected ... Connect and run jupdate() again",
+    # which sends a user who IS connected looking for a fault they do not
+    # have.
     .jst_stop(
-      "no internet connection was detected. Updating jstats needs an ",
-      "internet connection. Connect and run jupdate() again."
+      "jstats was not updated: R could not reach the internet.\n",
+      "If this computer is offline, connect and run jupdate() again.\n",
+      "If it is online, something is blocking R's connection, such as a ",
+      "firewall or an AI assistant's sandbox mode."
     )
   }
 
@@ -1374,25 +1383,83 @@ jai <- function(setup = NULL, path = NULL) {
   type_str
 }
 
-#' Internal helper: print a string in red using ANSI escape codes
+#' Internal helper: should this output carry color?
 #'
-#' Works in RStudio, most terminals, and R Markdown HTML output.
-#' Falls back to plain text in environments that strip ANSI codes.
+#' The one test behind \code{.cat_red()} and \code{.cat_yellow()}. Color is
+#' written as ANSI escape sequences, which the RStudio Console draws as
+#' color and almost everything else prints as raw characters
+#' (\code{<ESC>[31mCross-Tabulation}): RGui, a plain terminal, output
+#' captured with \code{sink()} or \code{capture.output()}, a knitr or
+#' Quarto render. The rule (Jeff, Session 336: "Can we simply not do colour
+#' outside of R Studio?") is color in the RStudio Console and plain text
+#' everywhere else, by a check of the package's own -- no crayon or cli.
+#'
+#' "In the RStudio Console" is four things at once, because a capture and
+#' a render both START inside RStudio:
+#' \itemize{
+#'   \item R is RStudio's own session process (\code{.Platform$GUI} is
+#'     \code{"RStudio"}). A render launched from RStudio, a background job
+#'     and the Terminal pane run R as a child process, where it is not.
+#'   \item the Console says it draws color: RStudio sets the environment
+#'     variable \code{RSTUDIO_CONSOLE_COLOR} when its "Show ANSI colors"
+#'     preference is on.
+#'   \item no \code{sink()} is diverting the output
+#'     (\code{capture.output()} is one).
+#'   \item no knitr run is in progress -- \code{rmarkdown::render()} typed
+#'     in the Console runs in the session process.
+#' }
+#'
+#' \code{options(jstats.color = TRUE)} forces color on wherever the output
+#' goes and \code{FALSE} forces it off; unset is the rule above. The
+#' switch is documented for users in \code{?joutput} ("Color"): it serves
+#' a console that draws color but is not RStudio's, and the online guides,
+#' whose Console facsimiles take their red titles and yellow notes from
+#' these escapes during a (captured, knitr) render.
+#'
+#' The signals are arguments so that each arm can be tested anywhere; no
+#' caller passes one.
+#'
+#' @param forced The \code{jstats.color} option.
+#' @param gui \code{.Platform$GUI}.
+#' @param console_color The \code{RSTUDIO_CONSOLE_COLOR} environment
+#'   variable.
+#' @param sinks The number of active output diversions.
+#' @param knitting Is a knitr run in progress?
+#' @return \code{TRUE} or \code{FALSE}.
+#' @keywords internal
+.jst_use_color <- function(forced        = getOption("jstats.color"),
+                           gui           = .Platform$GUI,
+                           console_color = Sys.getenv("RSTUDIO_CONSOLE_COLOR"),
+                           sinks         = sink.number(),
+                           knitting      = isTRUE(getOption("knitr.in.progress"))) {
+  if (isTRUE(forced))  return(TRUE)
+  if (isFALSE(forced)) return(FALSE)
+  identical(gui, "RStudio") &&
+    length(console_color) == 1L && !is.na(console_color) &&
+    nzchar(console_color) && !identical(console_color, "0") &&
+    sinks == 0L && !isTRUE(knitting)
+}
+
+#' Internal helper: print a string in red, where the output draws color
+#'
+#' Red in the RStudio Console (ANSI escape codes); plain text everywhere
+#' else. See \code{.jst_use_color()}.
 #'
 #' @keywords internal
 .cat_red <- function(x) {
-  cat(paste0("\033[31m", x, "\033[0m"))
+  cat(if (.jst_use_color()) paste0("\033[31m", x, "\033[0m") else x)
 }
 
-#' Internal helper: print text in yellow ANSI color
+#' Internal helper: print text in yellow, where the output draws color
 #'
 #' Used for informational/status notes where the text should be visually
 #' distinct from regular output but not alarming (matches the "warning/note"
-#' color convention).
+#' color convention). Yellow in the RStudio Console; plain text everywhere
+#' else. See \code{.jst_use_color()}.
 #'
 #' @keywords internal
 .cat_yellow <- function(x) {
-  cat(paste0("\033[33m", x, "\033[0m"))
+  cat(if (.jst_use_color()) paste0("\033[33m", x, "\033[0m") else x)
 }
 
 #' Internal helper: print the "Using default data frame: X" note in yellow

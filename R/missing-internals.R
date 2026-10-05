@@ -339,6 +339,37 @@
     }
     # Only SPSS representation remains (.jst_missing_info returns no other).
 
+    if (isTRUE(info$text)) {
+      # A string variable's declared missing values (S340): the codes are
+      # strings, matched against the cells as stored. Same record and same
+      # positional NA assignment as the numeric arm below; a string
+      # variable has no range. Until S340 this column fell through to the
+      # numeric comparison, where every cell coerced to NA and nothing was
+      # masked -- the declared strings were analyzed as valid values.
+      x_chr   <- as.character(unclass(col))
+      mask    <- rep(FALSE, length(x_chr))
+      entries <- data.frame(code_display = character(0), label = character(0),
+                            count = integer(0), source = character(0),
+                            numeric = numeric(0), stringsAsFactors = FALSE)
+      for (i in seq_len(nrow(info$codes))) {
+        code_mask <- (!is.na(x_chr) & x_chr == info$codes$code[i])
+        mask      <- mask | code_mask
+        entries   <- rbind(entries, data.frame(
+          code_display = info$codes$code[i],
+          label        = info$codes$label[i],
+          count        = as.integer(sum(code_mask)),
+          source       = "code",
+          numeric      = NA_real_,
+          stringsAsFactors = FALSE))
+      }
+      n_cells <- sum(mask)
+      if (n_cells > 0L) {
+        data[[vname]][mask] <- NA
+        converted[[vname]] <- list(entries = entries, n_cells = n_cells)
+      }
+      next
+    }
+
     # unclass() bypasses vctrs cast issues — see the matching note in
     # .jst_detect_suspicious_values() and .jst_handle_udms() for context.
     x_num <- suppressWarnings(as.numeric(unclass(col)))

@@ -85,7 +85,8 @@
 #
 # Fetches the gist with a short timeout and returns a list with three
 # fields: network_ok (logical), successor (list or NULL), and message
-# (string or NULL).
+# (string or NULL). `url` is the address read; it is an argument only so
+# that a test can aim the real read at an address that cannot be reached.
 #
 # The network read here doubles as a connectivity probe for .onAttach(): the
 # readLines() call is the ONLY part that touches the network, so its success
@@ -95,13 +96,25 @@
 # PARSE failure is different: it can only occur AFTER readLines() has already
 # succeeded, so the network was fine and network_ok stays TRUE -- a transient
 # parse glitch must not suppress a version check that would have worked.
+#
+# The read is wrapped in suppressWarnings() as well as tryCatch() (Session
+# 340). A URL that cannot be opened raises a WARNING before the error --
+# "URL 'https://gist.githubusercontent.com/...': status was 'Couldn't
+# connect to server'" -- and tryCatch(error = ) catches only the error, so
+# with the network blocked or absent every library(jstats) ended on R's
+# "Warning message: In file(con, "r") : ..." naming an address the user
+# never typed, under the package's own "Could not check for updates" line.
+# jupdate() makes the same read and leaked the same warning before its stop.
+# startup_check.R, whose offline branch stubs this helper, could not see it:
+# its section F runs the real helper against an address that cannot be
+# reached.
 
-.jst_read_gist <- function() {
+.jst_read_gist <- function(url = .jst_gist_url) {
   old_opts <- options(timeout = 3)
   on.exit(options(old_opts), add = TRUE)
 
   lines <- tryCatch(
-    readLines(.jst_gist_url, warn = FALSE),
+    suppressWarnings(readLines(url, warn = FALSE)),
     error = function(e) NULL
   )
   if (is.null(lines)) {

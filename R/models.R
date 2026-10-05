@@ -640,7 +640,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                  identical(reg$var_type, "character")
     present <- if (pos_space) {
       vals <- .jst_dummy_category_values(reg, full)
-      !is.na(vals) & vals %in% as.character(col)
+      !is.na(vals) & vals %in%
+        as.character(if (is.character(col)) .jst_label_blanks(col) else col)
     } else {
       reg$codes %in% .jst_as_numeric(col)
     }
@@ -4132,13 +4133,15 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     if (length(u_norm) != 2L) {
       # After case/whitespace folding, not a clean two-category text variable:
       # one category (no variation) or three or more.
-      n_show <- unique(nonmiss)
-      n_show <- n_show[seq_len(min(5L, length(n_show)))]
+      # The blank cells are one category, under its label (S340): they
+      # printed as nothing between two commas, each spelling apart.
+      all_show <- unique(.jst_label_blanks(nonmiss))
+      n_show   <- all_show[seq_len(min(5L, length(all_show)))]
       .jst_stop(paste0(
         "'", dv_name, "' has ", length(u_norm),
         if (length(u_norm) == 1L) " category" else " categories",
         " (", paste(n_show, collapse = ", "),
-        if (length(unique(nonmiss)) > 5L) ", ..." else "", ").\n",
+        if (length(all_show) > 5L) ", ..." else "", ").\n",
         "Logistic regression requires the outcome to have exactly two ",
         "categories.\nRecode to a 0/1 variable before running jlogistic()."
       ))
@@ -4150,12 +4153,21 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     mb   <- .jst_match_binary_tokens(disp)
 
     if (!mb$recognized) {
+      # The fix line is a jencode() call (S340): the jrecode() call it
+      # replaces stopped on any text variable, and sent the user here from
+      # there. Each side of the map lists every spelling this function
+      # folds into the category, outer spaces removed as jencode() removes
+      # them, a blank cell as jencode()'s own word for it.
+      map_side <- function(z) {
+        .jst_jencode_lhs_render(unique(trimws(nonmiss[norm == z])))
+      }
       .jst_stop(paste0(
         "'", dv_name, "' has text categories ",
-        paste(disp, collapse = "/"),
+        paste(.jst_label_blanks(disp), collapse = "/"),
         ". Recode to a 0/1 variable so the modeled category is explicit:\n",
-        "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ",
-        dv_name, ", map = \"", disp[1], "=0; ", disp[2], "=1\")\n",
+        "  ", .jst_data_name, "$", dv_name, "R <- jencode(", .jst_data_name, ", ",
+        dv_name, ", map = \"", map_side(u_norm[1]), "=0; ",
+        map_side(u_norm[2]), "=1\")\n",
         "Then use ", dv_name, "R as your dependent variable (the category mapped ",
         "to 1 is the one jlogistic models)."
       ))

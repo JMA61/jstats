@@ -401,7 +401,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr,
                                   envir = parent.frame())
-  data <- pipeline$data
+  # A text variable's blank cells plot as one category, <blank> (S340).
+  data <- .jst_label_blank_text(pipeline$data)
   # Pipeline messages are printed below, after the red title
 
   # Classify variables (per-call override > structure; see .jst_is_categorical)
@@ -823,7 +824,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr,
                                   envir = parent_env)
-  data <- pipeline$data
+  # A text variable's blank cells plot as one category, <blank> (S340).
+  data <- .jst_label_blank_text(pipeline$data)
 
   # -- Decide plot type from IV's class -------------------------------------
   # Numeric IV -> scatter; categorical IV -> box (numeric DV is required).

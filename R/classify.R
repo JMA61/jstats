@@ -541,6 +541,203 @@
 #' @keywords internal
 .jst_as_numeric <- function(x) as.numeric(unclass(x))
 
+
+#' Internal helper: the distinct stored values of a labelled grouping variable
+#'
+#' The sorted, distinct, non-missing stored values of a haven-labelled
+#' variable, in their own type: numbers for a numeric-backed variable (as
+#' \code{sort(unique(.jst_as_numeric(x[!is.na(x)])))} always gave), strings
+#' for a character-backed one -- a string variable carrying value labels,
+#' as a .sav file stores Sex "M" / "F". The analysis functions pair these
+#' with the levels \code{haven::as_factor()} builds and hand them to
+#' \code{.jst_format_value_labels()}, which compares codes as text on both
+#' sides. Until Session 340 every site coerced to numeric, so a
+#' character-backed variable's codes were all \code{NA}: \code{jt()}
+#' stopped with R's "arguments imply differing number of rows", and
+#' \code{jaov()}, \code{jcrosstab()} and \code{jdesc(by = )} printed
+#' every category label empty, each with "NAs introduced by coercion".
+#'
+#' A declared missing value is excluded with the system-missing cells:
+#' \code{is.na()} is \code{TRUE} for it on a live
+#' \code{haven_labelled_spss} column, and the pipeline has masked it on
+#' the analysis copy before any caller reaches here.
+#'
+#' @param x A haven-labelled variable.
+#' @return A sorted vector of distinct values: character for a
+#'   character-backed variable, numeric otherwise.
+#' @keywords internal
+.jst_group_codes <- function(x) {
+  x <- x[!is.na(x)]
+  if (is.character(x)) return(sort(unique(as.character(unclass(x)))))
+  sort(unique(.jst_as_numeric(x)))
+}
+
+
+# -- Blank text cells ---------------------------------------------------------
+#
+# A text cell can be empty three ways that look the same on screen: "" (an
+# empty string), "   " (spaces or tabs only), and NA. Only NA is missing to
+# R, and the two others are caught by different tests -- a whitespace cell
+# by neither == "" nor is.na(). Until Session 340 jstats saw none of it: a
+# blank printed as a row or a group with no label (three rows, when the
+# cells differed in their spaces), jscreen() counted none of them, and
+# jlm() dropped the empty cells as missing without counting them while it
+# kept the whitespace cells as categories.
+#
+# The rule (Jeff's S222 ruling and the S340 lean and ruling on it): a blank
+# is REPORTED and never ASSUMED missing. Blank is a real value in some
+# files -- a column coded "Y" or blank, where blank means "no" -- and
+# absent data in others, and only the user knows which. So in every
+# function a blank is one category, labeled <blank>, counted as valid;
+# jfreq() footnotes it and jscreen() counts it beside the NA count, never
+# inside it. "Blank" is jencode()'s definition: empty once outer spaces,
+# tabs and line ends are trimmed. jencode() is also the way out -- it codes
+# blank cells or leaves them missing, by the user's choice.
+#
+# The label is put on the ANALYSIS copy, after the filters and after a
+# formula's computed terms are resolved, so that subset = Source != "" and
+# I(Source == "") still see the cells as they are stored.
+
+#' Internal: the label a blank text cell is shown under
+#'
+#' Angle brackets because they do not occur in real category labels, so the
+#' label reads as an annotation rather than as a value.
+#'
+#' @keywords internal
+.jst_blank_label <- "<blank>"
+
+#' Internal helper: which cells of a text vector are blank?
+#'
+#' TRUE for a non-missing cell holding nothing once spaces, tabs and line
+#' ends are removed -- \code{jencode()}'s definition of a blank cell
+#' (\code{trimws()}'s default whitespace). Matched by bytes, so text in any
+#' encoding is read without a conversion.
+#'
+#' @param x A character vector (a character-backed haven-labelled vector is
+#'   read through its stored values).
+#' @return A logical vector the length of \code{x}; FALSE for NA.
+#' @keywords internal
+.jst_is_blank <- function(x) {
+  x <- as.character(unclass(x))
+  !is.na(x) & !grepl("[^ \t\r\n]", x, useBytes = TRUE)
+}
+
+#' Internal helper: put the blank label on a text variable's blank cells
+#'
+#' A character vector (plain or haven-labelled) comes back with every blank
+#' cell holding \code{.jst_blank_label}, so the empty and the whitespace
+#' cells are ONE value. A factor's blank levels are renamed the same way
+#' (and merged, where there were several). Anything else is returned as it
+#' came.
+#'
+#' @param x A variable.
+#' @return \code{x}, relabeled where it had blank cells.
+#' @keywords internal
+.jst_label_blanks <- function(x) {
+  if (is.factor(x)) {
+    lv <- levels(x)
+    b  <- .jst_is_blank(lv)
+    if (any(b)) levels(x)[b] <- .jst_blank_label
+    return(x)
+  }
+  if (!is.character(x)) return(x)
+  b <- .jst_is_blank(x)
+  if (any(b)) x[b] <- .jst_blank_label
+  x
+}
+
+#' Internal helper: the blank label on the text variables of a data frame
+#'
+#' \code{.jst_label_blanks()} over the named variables of an analysis copy.
+#'
+#' @param data A data frame (an analysis copy, never the user's frame).
+#' @param vars The variables to relabel; all of them by default. Names not
+#'   in \code{data} are ignored.
+#' @return \code{data}.
+#' @details Used by \code{jplot()}. The model functions do not call it: a
+#'   text predictor's blank cells are labeled where its dummies are built
+#'   (\code{.jst_make_dummy_names()}, \code{.jst_expand_one_dummy()}), and a
+#'   factor's levels are left as stored there, because they are matched
+#'   against a registration that may predate the label.
+#' @keywords internal
+.jst_label_blank_text <- function(data, vars = names(data)) {
+  for (v in intersect(vars, names(data))) {
+    col <- data[[v]]
+    if (is.character(col) || is.factor(col)) {
+      data[[v]] <- .jst_label_blanks(col)
+    }
+  }
+  data
+}
+
+#' Internal helper: a text variable as a factor, the blank category first
+#'
+#' \code{factor(x)} for a plain character vector, with two differences:
+#' blank cells are one level, labeled \code{.jst_blank_label}, and that
+#' level comes FIRST whatever the session's sort order would make of the
+#' angle bracket (a locale's collation can ignore punctuation, which would
+#' file <blank> between "Adult" and "Juvenile" on one machine and ahead of
+#' both on another). Any other input is \code{factor(x)}.
+#'
+#' @param x A variable.
+#' @return A factor.
+#' @keywords internal
+.jst_text_factor <- function(x) {
+  x <- .jst_label_blanks(x)
+  if (!is.character(x) || haven::is.labelled(x)) return(factor(x))
+  lv <- sort(unique(x[!is.na(x)]))
+  factor(x, levels = c(lv[lv == .jst_blank_label], lv[lv != .jst_blank_label]))
+}
+
+#' Internal helper: count a text variable's blank cells, by kind
+#'
+#' @param x A variable: a character vector, or a factor (read by its
+#'   level text); anything else counts zero.
+#' @return A list: \code{n} blank cells, of which \code{empty} hold an
+#'   empty string and \code{space} only spaces, tabs or line ends.
+#' @keywords internal
+.jst_blank_counts <- function(x) {
+  if (is.factor(x)) x <- as.character(x)
+  if (!is.character(x)) return(list(n = 0L, empty = 0L, space = 0L))
+  b     <- .jst_is_blank(x)
+  empty <- b & !nzchar(as.character(unclass(x)))
+  list(n = sum(b), empty = sum(empty), space = sum(b) - sum(empty))
+}
+
+#' Internal helper: jfreq()'s footnote under a table with a blank row
+#'
+#' Three lines, one sentence each (voice Rule E): what the row is, with the
+#' two kinds counted apart when both occur; that it is counted as valid --
+#' "Valid %" reads to this audience as though blanks were excluded, and
+#' they are not; and the one way to change that. A legend printed with its
+#' table, on stdout, as jscreen()'s star legend is.
+#'
+#' @param counts A \code{.jst_blank_counts()} list.
+#' @return Character(1), newline-joined; \code{""} when there is no blank.
+#' @keywords internal
+.jst_blank_footnote <- function(counts) {
+  n <- counts$n
+  if (n == 0L) return("")
+  cells <- function(k) paste(.jst_fmt_n(k), .jst_plural(k, "cell", "cells"))
+  what <- if (counts$space == 0L) {
+    paste0(.jst_blank_label, ": ", cells(n), " with no text.")
+  } else if (counts$empty == 0L) {
+    paste0(.jst_blank_label, ": ", cells(n),
+           " holding only spaces or tabs.")
+  } else {
+    paste0(.jst_blank_label, ": ", cells(n), " with no text (",
+           .jst_fmt_n(counts$empty), " empty, ", .jst_fmt_n(counts$space),
+           " holding only spaces or tabs).")
+  }
+  paste0(what, "\n",
+         .jst_plural(n, "It is counted as a valid value",
+                     "They are counted as valid values"),
+         ", not as missing.\n",
+         "To give ", .jst_plural(n, "it", "them"),
+         " a code or make ", .jst_plural(n, "it", "them"),
+         " missing, use jencode().")
+}
+
 #' Internal helper: classify a variable's analysis-relevant type "kind"
 #'
 #' Single source of truth for the variable-type distinctions the analysis
@@ -2235,7 +2432,12 @@
   if (length(present) == 0L) return("")
   mi <- .jst_missing_info(x)
   if (!is.null(mi)) {
-    codes_num <- suppressWarnings(as.numeric(present))
+    # .jst_as_numeric(), not as.numeric(): a character-backed labelled
+    # column (a string variable with declared missing values) is a vctrs
+    # error under the bare form, which jdummy() met after it had printed
+    # its registration (S340). Its declared strings are already out of
+    # `present` -- is.na() is TRUE for them -- so nothing numeric applies.
+    codes_num <- suppressWarnings(.jst_as_numeric(present))
     drop <- rep(FALSE, length(present))
     if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
       na_num <- mi$codes$numeric[!is.na(mi$codes$numeric)]

@@ -254,17 +254,19 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
 
-  group_var   <- data[[group_name]]
+  # A text grouping variable's blank cells are one group, <blank> (S340).
+  group_var   <- .jst_label_blanks(data[[group_name]])
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
-    original_codes <- sort(unique(.jst_as_numeric(group_var[!is.na(group_var)])))
+    original_codes <- .jst_group_codes(group_var)
     group_val_labels <- labelled::val_labels(group_var)
   }
 
   if (is_labelled) {
     data[[group_name]] <- haven::as_factor(group_var)
-  } else if (!is.factor(group_var)) {
-    data[[group_name]] <- factor(group_var)
+  } else {
+    data[[group_name]] <- if (is.factor(group_var)) group_var
+                          else .jst_text_factor(group_var)
   }
 
   # Drop empty factor levels (pipeline filtering may leave empty levels)
@@ -811,17 +813,19 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
-  group_var   <- data[[group_name]]
+  # A text grouping variable's blank cells are one group, <blank> (S340).
+  group_var   <- .jst_label_blanks(data[[group_name]])
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
-    original_codes <- sort(unique(.jst_as_numeric(group_var[!is.na(group_var)])))
+    original_codes <- .jst_group_codes(group_var)
     group_val_labels <- labelled::val_labels(group_var)
   }
 
   if (is_labelled) {
     data[[group_name]] <- haven::as_factor(group_var)
-  } else if (!is.factor(group_var)) {
-    data[[group_name]] <- factor(group_var)
+  } else {
+    data[[group_name]] <- if (is.factor(group_var)) group_var
+                          else .jst_text_factor(group_var)
   }
 
   # Drop empty factor levels (pipeline filtering may leave empty levels)
@@ -1412,26 +1416,27 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
-  row_var <- data[[row_name]]
-  col_var <- data[[col_name]]
+  # A text variable's blank cells are one category, <blank> (S340).
+  row_var <- .jst_label_blanks(data[[row_name]])
+  col_var <- .jst_label_blanks(data[[col_name]])
 
   row_labelled <- haven::is.labelled(row_var)
   col_labelled <- haven::is.labelled(col_var)
 
   if (row_labelled) {
-    row_codes <- sort(unique(.jst_as_numeric(row_var[!is.na(row_var)])))
+    row_codes <- .jst_group_codes(row_var)
     row_vl    <- labelled::val_labels(row_var)
     row_var   <- haven::as_factor(row_var)
   } else if (!is.factor(row_var)) {
-    row_var <- factor(row_var)
+    row_var <- .jst_text_factor(row_var)
   }
 
   if (col_labelled) {
-    col_codes <- sort(unique(.jst_as_numeric(col_var[!is.na(col_var)])))
+    col_codes <- .jst_group_codes(col_var)
     col_vl    <- labelled::val_labels(col_var)
     col_var   <- haven::as_factor(col_var)
   } else if (!is.factor(col_var)) {
-    col_var <- factor(col_var)
+    col_var <- .jst_text_factor(col_var)
   }
 
   # Variable label display mode. jcrosstab is a collapse layout: under

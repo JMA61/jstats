@@ -309,6 +309,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
                                     subset_expr = subset_expr, envir = parent.frame())
     data     <- pipeline$data
 
+    # A text grouping variable's blank cells are one group, <blank> (S340).
+    data[[by_name]] <- .jst_label_blanks(data[[by_name]])
     by_var  <- data[[by_name]]
 
     # Capture original class and label BEFORE any conversion. Taken from the
@@ -326,11 +328,11 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
     is_labelled_by <- haven::is.labelled(by_var)
     if (is_labelled_by) {
-      original_codes  <- sort(unique(.jst_as_numeric(by_var[!is.na(by_var)])))
+      original_codes  <- .jst_group_codes(by_var)
       by_val_labels   <- labelled::val_labels(by_var)
       data[[by_name]] <- haven::as_factor(by_var)
     } else if (!is.factor(data[[by_name]])) {
-      data[[by_name]] <- factor(data[[by_name]])
+      data[[by_name]] <- .jst_text_factor(data[[by_name]])
     }
     # Drop factor levels with no surviving cases -- a declared-missing level
     # masked to NA by the pipeline, or a level filtered out -- so group_levels
@@ -718,6 +720,14 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' values get Missing rows of their own below the valid rows. The
 #' frequency table ends with a Total row showing the post-pipeline N.
 #'
+#' In a text variable, cells with no text -- empty, or holding only spaces
+#' or tabs -- are tabulated together in one row labeled \code{<blank>}.
+#' They are counted as valid values, not as missing: a blank is absent data
+#' in one file and a real answer in the next (a column coded "Y" or left
+#' empty), and only you know which. A short footnote under the table says
+#' how many there are; \code{\link{jencode}} gives them a code or makes
+#' them missing.
+#'
 #' For haven-labelled variables, value labels and numeric codes are combined
 #' in the frequency table rows (e.g. \code{1: Strongly Oppose}) at the
 #' default \code{value.id} setting. Where variable labels are shown, they
@@ -946,6 +956,13 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # keeps the displayed Type honest. (Session 47)
     temp_var <- .jst_posixlt_to_posixct(temp_var)
 
+    # Blank text cells (Session 340): counted by kind off the cells as they
+    # are stored, then given their one label, so "" and "   " are a single
+    # <blank> row rather than two rows with no label. They stay in the
+    # valid base; the footnote under the table says so.
+    blank_counts <- .jst_blank_counts(temp_var)
+    temp_var     <- .jst_label_blanks(temp_var)
+
     # Cardinality guard: count distinct non-missing values for the advisory
     # note printed with this variable's block below. (Session 47)
     n_distinct_vals <- length(unique(temp_var[!is.na(temp_var)]))
@@ -974,7 +991,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       # "labels" two distinct codes could in principle share a display string.
       uniq        <- !is.na(codes_chr) & !duplicated(codes_chr)
       sort_codes  <- codes_chr[uniq]
-      sort_levels <- display_str[uniq][order(sort_codes)]
+      # The blank category first, as in a plain text variable (S340).
+      sort_levels <- display_str[uniq][order(sort_codes != .jst_blank_label,
+                                             sort_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
 
     # Haven-labelled (numeric-backed): combine numeric codes with value labels.
@@ -995,6 +1014,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       uniq_vals   <- sort(unique(temp_var[!is.na(temp_var)]))
       sort_levels <- as.character(uniq_vals)
       temp_var    <- factor(as.character(temp_var), levels = sort_levels)
+
+    } else if (is.character(temp_var)) {
+      # Plain text: the levels table() would build, the blank category
+      # first on every machine (S340; .jst_text_factor()).
+      temp_var <- .jst_text_factor(temp_var)
     }
 
     # Frequency table (base R) for the post-masking analysis copy.
@@ -1075,6 +1099,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
           if (is.na(v)) return(0L)
           as.integer(sum(!is.na(x_pool) & x_pool == v))
         }
+        # A string variable's declared values are strings (S340): counted
+        # by matching the pool's cells as stored, and listed in the order
+        # .jst_missing_info() gives them.
+        text_codes <- isTRUE(mi$text)
+        x_pool_chr <- if (text_codes) as.character(unclass(pool_col)) else NULL
 
         # (1) Declared discrete codes. These are the user's own explicit
         # declaration, so they are never capped and never dropped.
@@ -1085,8 +1114,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
             r <- mi$codes[i, ]
             code_rows <- rbind(code_rows, data.frame(
               Value = .jst_udm_row_label(r$code, r$label),
-              Freq  = pool_count(as.numeric(r$numeric)),
-              Sort  = as.numeric(r$numeric),
+              Freq  = if (text_codes) {
+                        as.integer(sum(!is.na(x_pool_chr) &
+                                         x_pool_chr == r$code))
+                      } else pool_count(as.numeric(r$numeric)),
+              Sort  = if (text_codes) as.numeric(i) else as.numeric(r$numeric),
               stringsAsFactors = FALSE))
           }
         }
@@ -1261,6 +1293,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                                      total = total_count,
                                      valid_count = valid_count,
                                      missing     = total_count - valid_count,
+                                     blank       = blank_counts$n,
                                      var_label   = .jst_label_or_name(data, variable_name))
 
     # -- Print: variable anchor (name, or label under "labels") -> blank -> table
@@ -1353,6 +1386,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                      col.names = c("", "Freq", "Total %", "Valid %", "Cum. %"),
                      row.names = FALSE,
                      align     = c("l", "bc", "bc", "bc", "bc"))
+    # The <blank> row's footnote, against the table it explains (S340).
+    if (blank_counts$n > 0L) .jst_msg_out(.jst_blank_footnote(blank_counts))
     cat("\n")
 
     # value.id / variable.id legends under this variable's own table.
@@ -1398,6 +1433,13 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' counts are shown blank so only affected variables carry numbers; a column
 #' (or the whole Missing/Outliers table) is omitted entirely when nothing is
 #' flagged, and the header count lines explain the omission.
+#'
+#' Text cells with no text -- empty, or holding only spaces or tabs -- are
+#' counted apart from missing values, never among them. When the screened
+#' variables hold any, the header gains a "Cases with blank text" line and
+#' the Missing Data & Outliers table a Blank and a % Blank column. Whether
+#' a blank is absent data or a real answer depends on the file; see
+#' \code{\link{jfreq}}.
 #'
 #' When at least one variable's class comes from a registration (jnumeric,
 #' jcount, or jdummy) rather than the structural guess, a Source column
@@ -1496,7 +1538,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'   row per variable and columns including the Base R type, the jstats
 #'   \code{Class} and \code{SubClass}, the classification \code{Source}
 #'   ("registered" or "structural"), distinct-value count, missing count
-#'   and percentage, the outlier count (NA for non-Numeric variables), and
+#'   and percentage, the count and percentage of blank text cells
+#'   (\code{Blank}, \code{Pct_Blank}), the outlier count (NA for
+#'   non-Numeric variables), and
 #'   the \code{Mean} and \code{Median} (NA where not meaningful: Median is NA
 #'   for dichotomies, and both are NA for non-numeric-like variables). The
 #'   returned values are the raw counts; only the printed tables blank zeros
@@ -1716,6 +1760,14 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     # and the Outliers column cannot disagree. (Session 51) Source is the
     # resolved provenance ("registered" / "structural" in jscreen, which takes
     # no per-call override and leaves measure unpopulated in v1). (Session 82)
+    # Blank text cells (Session 340): counted beside the missing cells,
+    # never among them, then given their one label so the class and the
+    # distinct-value count read the variable as jfreq() shows it -- the
+    # empty and the whitespace cells one category.
+    n_blank     <- .jst_blank_counts(col)$n
+    pct_blank   <- round(n_blank / n_cases * 100, 1)
+    col         <- .jst_label_blanks(col)
+
     jc          <- .jst_jstats_class(col, v, .jst_data_name)
     n_missing   <- sum(is.na(col))
     pct_missing <- round(n_missing / n_cases * 100, 1)
@@ -1791,6 +1843,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       Unique      = n_unique,
       Missing     = n_missing,
       Pct_Missing = pct_missing,
+      Blank       = n_blank,
+      Pct_Blank   = pct_blank,
       Outliers    = n_outliers,
       Mean        = mean_val,
       Median      = median_val,
@@ -1810,6 +1864,14 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   # column (or the dropped Missing/Outliers table) below. (Session 51)
   n_cases_missing <- sum(!stats::complete.cases(data))
   n_vars_outliers <- sum(!is.na(screen_table$Outliers) & screen_table$Outliers > 0)
+  # Cases with a blank cell in at least one text variable (Session 340).
+  # Stated on its own line, under the missing count and never added to it:
+  # a blank is absent data in one file and a real value in the next.
+  blank_rows <- Reduce(`|`, lapply(data, function(col) {
+    if (is.factor(col)) col <- as.character(col)
+    if (is.character(col)) .jst_is_blank(col) else rep(FALSE, nrow(data))
+  }), rep(FALSE, nrow(data)))
+  n_cases_blank <- sum(blank_rows)
 
   # The never-mode rider (Session 320): the table's accounting in the form
   # every other function's N line takes, "(17 Excluded)".
@@ -1823,9 +1885,14 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   }
   cat("  Variables: ", n_vars, "\n", sep = "")
   cat("  Cases with missing data: ", n_cases_missing, "\n", sep = "")
+  # Printed only when there is one: a file with no blank text gains no line.
+  if (n_cases_blank > 0L) {
+    cat("  Cases with blank text: ", n_cases_blank, "\n", sep = "")
+  }
   cat("  Variables with outliers: ", n_vars_outliers, "\n", sep = "")
 
   any_missing  <- any(screen_table$Missing > 0)
+  any_blank    <- any(screen_table$Blank > 0)
   any_outliers <- n_vars_outliers > 0
   any_subclass <- any(nzchar(screen_table$SubClass))
 
@@ -1952,8 +2019,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   # dropped when nothing is missing anywhere, the Outliers column when nothing
   # is flagged, and the whole table when both are clean (the header count
   # lines already say so).
-  if (isTRUE(issues) && (any_missing || any_outliers)) {
-    flagged <- screen_table$Missing > 0 |
+  if (isTRUE(issues) && (any_missing || any_blank || any_outliers)) {
+    flagged <- screen_table$Missing > 0 | screen_table$Blank > 0 |
                (!is.na(screen_table$Outliers) & screen_table$Outliers > 0)
     st    <- screen_table[flagged, , drop = FALSE]
     t2    <- data.frame(Variable = st$Variable, stringsAsFactors = FALSE)
@@ -1975,6 +2042,18 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       heads  <- c(heads, "Missing", "% Missing")
       # Block-centered (Session 313; was "r"): the values sit under the
       # middle of their headers, aligned on the ones digit / the decimal.
+      aligns <- c(aligns, "bc", "bc")
+    }
+    if (any_blank) {
+      # Blank text cells in their own pair of columns, in the Missing
+      # pair's form (Session 340); shown only when a variable has one.
+      blk  <- st$Blank
+      bpct <- st$Pct_Blank
+      bpct[blk == 0] <- NA_real_
+      blk[blk == 0]  <- NA_integer_
+      t2$Blank     <- ifelse(is.na(blk), "--", format(blk, trim = TRUE))
+      t2$Pct_Blank <- ifelse(is.na(bpct), "--", sprintf("%.1f", bpct))
+      heads  <- c(heads, "Blank", "% Blank")
       aligns <- c(aligns, "bc", "bc")
     }
     if (any_outliers) {

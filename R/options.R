@@ -215,6 +215,22 @@
 #' \code{options()} directly; \code{joutput()} is the supported
 #' interface, adding validation and the settings display.
 #'
+#' @section Color:
+#' jstats prints its titles in red and its status notes in yellow, and
+#' only where the color can be drawn: in the RStudio Console. Everywhere
+#' else the same text is printed plain -- in RGui, in a terminal, in output
+#' captured with \code{sink()} or \code{capture.output()}, and in a knitr
+#' or Quarto document -- because the codes that make the color would print
+#' there as stray characters.
+#'
+#' One R option overrides the rule. \code{options(jstats.color = TRUE)}
+#' prints the colors wherever the output goes, which suits a console that
+#' draws color but is not RStudio's (Positron, VS Code, most terminals).
+#' \code{options(jstats.color = FALSE)} prints plain text everywhere, the
+#' RStudio Console included. Leaving it unset keeps the rule above. Like any
+#' R option it lasts for the session; put the line in your \code{.Rprofile}
+#' file to make it permanent.
+#'
 #' @return Invisibly returns NULL. Called for its side effect of setting
 #'   session options and printing the settings panel -- in full for a bare
 #'   status query, a level change or a reset, as the named settings alone

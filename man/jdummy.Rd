@@ -24,7 +24,9 @@ them; if several do, it asks rather than wiping all).}
 may be haven-labelled, numeric, logical, character, or a factor: for a
 factor the levels are the categories, in level order, and a level with
 no cases is left out; for a text variable the distinct values are the
-categories, in alphabetical order. Omit (along with data) to display
+categories, in alphabetical order, and cells with no text (empty, or
+holding only spaces or tabs) are one more category, \code{<blank>},
+placed last. Omit (along with data) to display
 all current registrations. A lone \code{NULL} in the variable slot --
 \code{jdummy(data, NULL)} -- clears that frame's dummy registrations.}
 
@@ -40,6 +42,8 @@ category is modeled and the negative category is the reference -- the
 same rule \code{jlogistic()} uses to encode its outcome. Otherwise,
 if one of the two codes is 1, that category is modeled (so a
 1 = Yes / 2 = No variable models Yes, and a 0/1 variable models 1).
+A text variable holding one word or nothing (\code{"Y"} or blank)
+models the word, with \code{<blank>} as the reference.
 Applied to every variable named in the call; to use different
 reference categories, register the variables in separate calls.
 When the reference was chosen by \code{auto}, the printed
