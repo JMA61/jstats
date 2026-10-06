@@ -21,7 +21,7 @@ double-quoting."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.217</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,7 @@ double-quoting.</requirement></arg></fn></p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_stop_arg</span><span class="op">(</span>fn <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">arg</span>, requirement <span class="op">=</span> <span class="cn">NULL</span>, choices <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_stop_arg</span><span class="op">(</span>fn <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">arg</span>, requirement <span class="op">=</span> <span class="cn">NULL</span>, choices <span class="op">=</span> <span class="cn">NULL</span>, hint <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -85,6 +85,12 @@ trailing period. Ignored when choices is supplied.</arg></p></dd>
 Rule A choice-error house form – a double-quoted natural list, "or"
 before the last element, Oxford comma at three or more, and no "one of:"
 lead-in.</p></dd>
+
+
+<dt id="arg-hint">hint<a class="anchor" aria-label="anchor" href="#arg-hint"></a></dt>
+<dd><p>Optional text placed after the requirement, beginning with a
+newline: the did-you-mean line and its call that
+<code><a href="dot-jst_near_choice_hint.html">.jst_near_choice_hint()</a></code> builds (Session 343).</p></dd>
 
 </dl></div>
     <div class="section level2">

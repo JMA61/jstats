@@ -6,14 +6,22 @@ from the column's own words, so the line runs as pasted. The call is
 emitted on one line when it fits the 76-column message width, and
 otherwise breaks after the variable with the map string continuing
 under its own opening quote. Every continuation still parses, because
-.jst_parse_text_map() trims each rule."><meta property="og:description" content="Builds the prefilled, non-destructive jencode() call that
+.jst_parse_text_map() trims each rule. The rules are separated
+at the semicolons OUTSIDE quoted words, by .jst_split_unquoted()
+and before the quotes are escaped: until Session 343 a plain split cut
+a quoted word holding a semicolon across two lines, and the pasted word
+no longer matched the data (the S249 item)."><meta property="og:description" content="Builds the prefilled, non-destructive jencode() call that
 jencode()'s notes offer as a remedy: Rule G's R-suffix target,
 the data name from the user's own call, and the map string filled in
 from the column's own words, so the line runs as pasted. The call is
 emitted on one line when it fits the 76-column message width, and
 otherwise breaks after the variable with the map string continuing
 under its own opening quote. Every continuation still parses, because
-.jst_parse_text_map() trims each rule."></head><body>
+.jst_parse_text_map() trims each rule. The rules are separated
+at the semicolons OUTSIDE quoted words, by .jst_split_unquoted()
+and before the quotes are escaped: until Session 343 a plain split cut
+a quoted word holding a semicolon across two lines, and the pasted word
+no longer matched the data (the S249 item)."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -21,7 +29,7 @@ under its own opening quote. Every continuation still parses, because
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.217</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +62,11 @@ from the column's own words, so the line runs as pasted. The call is
 emitted on one line when it fits the 76-column message width, and
 otherwise breaks after the variable with the map string continuing
 under its own opening quote. Every continuation still parses, because
-<code><a href="dot-jst_parse_text_map.html">.jst_parse_text_map()</a></code> trims each rule.</p>
+<code><a href="dot-jst_parse_text_map.html">.jst_parse_text_map()</a></code> trims each rule. The rules are separated
+at the semicolons OUTSIDE quoted words, by <code><a href="dot-jst_split_unquoted.html">.jst_split_unquoted()</a></code>
+and before the quotes are escaped: until Session 343 a plain split cut
+a quoted word holding a semicolon across two lines, and the pasted word
+no longer matched the data (the S249 item).</p>
     </div>
 
     <div class="section level2">

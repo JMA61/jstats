@@ -9,7 +9,12 @@ it fits the 76-column message width, and otherwise breaks after the
 variable with the map string continuing under its own opening quote.
 Every continuation still parses, because
 [`.jst_parse_text_map()`](https://jma61.github.io/jstats/reference/dot-jst_parse_text_map.md)
-trims each rule.
+trims each rule. The rules are separated at the semicolons OUTSIDE
+quoted words, by
+[`.jst_split_unquoted()`](https://jma61.github.io/jstats/reference/dot-jst_split_unquoted.md)
+and before the quotes are escaped: until Session 343 a plain split cut a
+quoted word holding a semicolon across two lines, and the pasted word no
+longer matched the data (the S249 item).
 
 ## Usage
 

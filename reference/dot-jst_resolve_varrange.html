@@ -11,7 +11,7 @@ column order. Named arguments (e.g. min.valid, var.label) are excluded."></head>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.217</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,13 @@ column order. Named arguments (e.g. min.valid, var.label) are excluded.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_resolve_varrange</span><span class="op">(</span><span class="va">quos_list</span>, <span class="va">data</span>, <span class="va">fn_name</span>, data_name <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_resolve_varrange</span><span class="op">(</span></span>
+<span>  <span class="va">quos_list</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  <span class="va">fn_name</span>,</span>
+<span>  data_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  default_used <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -61,6 +67,16 @@ column order. Named arguments (e.g. min.valid, var.label) are excluded.</p>
 
 <dt id="arg-fn-name">fn_name<a class="anchor" aria-label="anchor" href="#arg-fn-name"></a></dt>
 <dd><p>Character. The calling function name for error messages.</p></dd>
+
+
+<dt id="arg-data-name">data_name<a class="anchor" aria-label="anchor" href="#arg-data-name"></a></dt>
+<dd><p>Character. The data frame's name, for messages.</p></dd>
+
+
+<dt id="arg-default-used">default_used<a class="anchor" aria-label="anchor" href="#arg-default-used"></a></dt>
+<dd><p>Logical. <code>TRUE</code> when the data frame came from
+the <code><a href="juse.html">juse()</a></code> default; passed to <code><a href="dot-jst_check_vars.html">.jst_check_vars()</a></code>, which
+words an endpoint that is not found (Session 343).</p></dd>
 
 </dl></div>
     <div class="section level2">

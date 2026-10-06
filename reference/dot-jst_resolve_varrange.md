@@ -8,7 +8,13 @@ are excluded.
 ## Usage
 
 ``` r
-.jst_resolve_varrange(quos_list, data, fn_name, data_name = NULL)
+.jst_resolve_varrange(
+  quos_list,
+  data,
+  fn_name,
+  data_name = NULL,
+  default_used = FALSE
+)
 ```
 
 ## Arguments
@@ -24,6 +30,18 @@ are excluded.
 - fn_name:
 
   Character. The calling function name for error messages.
+
+- data_name:
+
+  Character. The data frame's name, for messages.
+
+- default_used:
+
+  Logical. `TRUE` when the data frame came from the
+  [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default;
+  passed to
+  [`.jst_check_vars()`](https://jma61.github.io/jstats/reference/dot-jst_check_vars.md),
+  which words an endpoint that is not found (Session 343).
 
 ## Value
 

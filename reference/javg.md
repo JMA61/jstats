@@ -102,7 +102,8 @@ community$ScaleMean <- javg(Environment1:Environment5)
 #> Mean of the new variable: 3.031.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
-#>   community$<name> <- javg(...)
+#>   mydata <- Environment1:Environment5
+#>   mydata$<name> <- javg(mydata, ...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
 # Mix colon ranges and explicit names (e.g. after reverse-coding an item)
@@ -142,7 +143,8 @@ community$ScaleMean <- javg(Environment1:Environment5,
 #> Mean of the new variable: 3.031.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
-#>   community$<name> <- javg(...)
+#>   mydata <- Environment1:Environment5
+#>   mydata$<name> <- javg(mydata, ...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
 # With an explicit data frame (instead of using juse default)

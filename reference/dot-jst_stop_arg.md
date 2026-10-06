@@ -11,7 +11,7 @@ double-quoting.
 ## Usage
 
 ``` r
-.jst_stop_arg(fn = NULL, arg, requirement = NULL, choices = NULL)
+.jst_stop_arg(fn = NULL, arg, requirement = NULL, choices = NULL, hint = NULL)
 ```
 
 ## Arguments
@@ -36,6 +36,13 @@ double-quoting.
   choice-error house form – a double-quoted natural list, "or" before
   the last element, Oxford comma at three or more, and no "one of:"
   lead-in.
+
+- hint:
+
+  Optional text placed after the requirement, beginning with a newline:
+  the did-you-mean line and its call that
+  [`.jst_near_choice_hint()`](https://jma61.github.io/jstats/reference/dot-jst_near_choice_hint.md)
+  builds (Session 343).
 
 ## Value
 

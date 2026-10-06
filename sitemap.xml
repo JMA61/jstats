@@ -24,6 +24,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_apply_mask.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_apply_pipeline.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_as_numeric.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_assign_lines.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_assign_reminder.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_assumption_clauses.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_assumption_warning.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_auto_plot_type.html</loc></url>
@@ -199,6 +201,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_missing_info.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_msg.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_msg_out.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_near_choice_hint.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_nonmissing_label_set.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_norm_path.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_one_condition_stop.html</loc></url>

@@ -25,7 +25,7 @@ range of consecutive columns (e.g. Attitude1:Attitude6)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.217</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -138,7 +138,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Mean of the new variable: 15.155.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jsum() returns the totals; assign them to a column to keep them:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community$&lt;name&gt; &lt;- jsum(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   mydata &lt;- Environment1:Environment5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   mydata$&lt;name&gt; &lt;- jsum(mydata, ...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> For the full distribution (min, max, SD), run jdesc() on the new column.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Mix colon ranges and explicit names (e.g. after reverse-coding an item)</span></span></span>
@@ -165,7 +166,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Mean of the new variable: 15.155.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: jsum() returns the totals; assign them to a column to keep them:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   community$&lt;name&gt; &lt;- jsum(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   mydata &lt;- Environment1:Environment5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   mydata$&lt;name&gt; &lt;- jsum(mydata, ...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> For the full distribution (min, max, SD), run jdesc() on the new column.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With an explicit data frame (instead of using juse default)</span></span></span>

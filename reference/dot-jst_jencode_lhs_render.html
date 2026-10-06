@@ -21,7 +21,7 @@ quotes-around-nothing form is deliberately never shown to users."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.216</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.217</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,6 +73,17 @@ quotes-around-nothing form is deliberately never shown to users.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Character scalar: the rule's left-hand side.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>A word is also quoted when the map parser would otherwise read it as
+something else: a reserved word (<code>else</code>, <code>NA</code>,
+<code>System</code>, <code>SYSMIS</code>, <code>blank</code>, in any case), which is a
+keyword unless quoted, and a word that begins with a quotation mark,
+which would open a quoted word. Since Session 343 the automatic-mode
+suggestions render their words through this helper too: built from
+bare words, the offered call stopped on a category holding a
+semicolon and sent a category named "else" to the else rule.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

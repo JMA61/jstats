@@ -27,3 +27,14 @@ to users.
 ## Value
 
 Character scalar: the rule's left-hand side.
+
+## Details
+
+A word is also quoted when the map parser would otherwise read it as
+something else: a reserved word (`else`, `NA`, `System`, `SYSMIS`,
+`blank`, in any case), which is a keyword unless quoted, and a word that
+begins with a quotation mark, which would open a quoted word. Since
+Session 343 the automatic-mode suggestions render their words through
+this helper too: built from bare words, the offered call stopped on a
+category holding a semicolon and sent a category named "else" to the
+else rule.

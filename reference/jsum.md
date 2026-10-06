@@ -90,7 +90,8 @@ community$EnvTotal <- jsum(Environment1:Environment5)
 #> Mean of the new variable: 15.155.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
-#>   community$<name> <- jsum(...)
+#>   mydata <- Environment1:Environment5
+#>   mydata$<name> <- jsum(mydata, ...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
 # Mix colon ranges and explicit names (e.g. after reverse-coding an item)
@@ -117,7 +118,8 @@ community$ScaleTotal <- jsum(Environment1:Environment5,
 #> Mean of the new variable: 15.155.
 #> 
 #> Note: jsum() returns the totals; assign them to a column to keep them:
-#>   community$<name> <- jsum(...)
+#>   mydata <- Environment1:Environment5
+#>   mydata$<name> <- jsum(mydata, ...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
 # With an explicit data frame (instead of using juse default)
