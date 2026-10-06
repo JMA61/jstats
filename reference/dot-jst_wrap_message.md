@@ -37,3 +37,8 @@ Called by the emitters rather than at the builder site, so that a
 message whose prose was never wrapped by hand still lands within the
 width, and so that the first-line `reserve` can be the REAL prefix
 length – the emitter knows it, a builder can only guess.
+
+A line that offers `modify = TRUE` on a place is first given the
+assignment form
+([`.jst_place_lines()`](https://jma61.github.io/jstats/reference/dot-jst_place_lines.md),
+Session 345), here because every emitter passes through this function.

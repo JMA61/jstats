@@ -234,6 +234,16 @@ convention). The assignment proceeds independently of the
 `joutput` tier, a conversion note shows the tagged-marker equivalent for
 future calls.
 
+The letters are taken from the start of the alphabet whatever the
+variable already holds, so a code is refused when its letter is one the
+variable already carries, in its cells or as a labeled value: converting
+`-99` to `.a` on a variable whose `.a` cells mean "Skipped" would put
+two kinds of missing data on one marker. The message gives two
+[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) calls
+that run: one recodes the codes to markers the variable does not use,
+which keeps the kinds distinct; the other recodes them to the markers
+they would have taken, for kinds that mean the same thing.
+
 ## Missing-value ranges
 
 A range declares a whole band of values missing at once – the form
@@ -255,7 +265,9 @@ output that breaks out in-range values can then show their meanings.
 Because a range replaces the column's existing range and existing
 discrete codes survive a range-only call, a column already carrying two
 or more discrete codes cannot take a range in the same declaration; the
-call is refused with the surviving codes named.
+call is refused with the surviving codes named. When the new range no
+longer covers all of the old one, a note names the range as it was and
+counts the cases that are no longer missing.
 
 ## Mixed conventions and file export
 

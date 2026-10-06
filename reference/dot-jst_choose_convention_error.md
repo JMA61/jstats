@@ -35,9 +35,8 @@ base-R/AI mixing), and the permanence line stating the action itself.
 
 - fn:
 
-  The exported caller's name, for the first line's wrap reserve (the
-  [`.jst_stop()`](https://jma61.github.io/jstats/reference/dot-jst_stop.md)
-  prefix length).
+  The exported caller's name. Read by nothing since the emitters took
+  over wrapping (Session 255); kept for the callers.
 
 - head_tail:
 

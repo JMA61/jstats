@@ -10,7 +10,7 @@ rows.
 ## Usage
 
 ``` r
-.jst_udm_row_label(code_display, label)
+.jst_udm_row_label(code_display, label, unlabelled = "note")
 ```
 
 ## Arguments
@@ -21,8 +21,26 @@ rows.
 
 - label:
 
-  Character label, or `NA` / `""` for none.
+  Character label; `NA`, `""`, `NULL` or a zero-length vector for none.
+
+- unlabelled:
+
+  What a value with no label gets: `"note"`, the table rows'
+  `-99 (no label)`; or `"bare"`, the value alone, for a message that
+  says "no label" in its own way or not at all.
 
 ## Value
 
 A single character string.
+
+## Details
+
+Since Session 345 (the S319 item) it is also the ONE place the bracketed
+form is built. The Case Processing rows, the load narrative, the
+declaration confirmation and its drop notice,
+[`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)'s
+report and
+[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)'s
+notes each wrote their own
+[`sprintf()`](https://rdrr.io/r/base/sprintf.html); they call this, and
+`unlabelled` carries the one difference between them.

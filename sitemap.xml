@@ -42,6 +42,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_caller_fn.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_canonical_tag.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_cap_var_lines.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_carried_tag.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_carry_col_attrs.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_analysis_var.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_check_args.html</loc></url>
@@ -90,6 +91,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_file_stem.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declaration_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declaration_plausibility.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_declare_gate_lead.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_detect_suspicious_values.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_drop_formula_terms.html</loc></url>
@@ -106,6 +108,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_status_signal.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_filter_unbound.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_find_file.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_first_typed_marker.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_fmt_code.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_fmt_n.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_fmt_p.html</loc></url>
@@ -221,6 +224,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_parse_rhs_token.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_parse_text_map.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_pipeline_clear_target.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_place_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_lm_diagnostics.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_logistic_diagnostics.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_title.html</loc></url>

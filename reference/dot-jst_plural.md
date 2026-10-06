@@ -36,6 +36,6 @@ Character(1).
 
 ## Details
 
-One site keeps its shortcut on purpose: the map parser's "Invalid old
-value(s)", which quotes the whole left-hand side of a rule and so has no
-count to agree with.
+The last shortcut, the map parser's "Invalid old value(s)", went in
+Session 345: the stop names the invalid values alone, so it has a count
+to agree with.

@@ -177,6 +177,16 @@ nor an NA. In automatic mode blanks are left missing, with a note
 showing the `blank=` rule; with a map they must be named or swept by an
 `else` rule, and mapping `blank=0` (or any code) gives them their own
 category, which matters in field data where a blank often means "No".
+Every map a note offers after an automatic call names the blank cells
+(and any declared missing strings, below), so each offered call runs as
+printed.
+
+**A map word the data do not hold.** A map may name a word no case
+holds, to label a category ahead of time; a note says so at the full
+output level. When an `else` rule sent a word of the data to missing in
+the same call, the note is shown at every level, under the note naming
+the swept word: together the two usually mean a mistyped map word
+(`"Parol=2; else=NA"` sends every "Parole" to missing).
 
 **Declared missing values on a text variable.** A file from SPSS can
 declare some of a string variable's values missing

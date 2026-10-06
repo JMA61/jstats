@@ -61,7 +61,7 @@ declare on every column, pass vars = names(data) explicitly."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.217</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.218</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -322,6 +322,15 @@ assignment proceeds independently of the <code>missing.convention.codes</code>
 setting in <code><a href="joptions.html">joptions</a></code> (which only governs the reverse
 Stata-to-SPSS direction). At the full <code>joutput</code> tier, a
 conversion note shows the tagged-marker equivalent for future calls.</p>
+<p>The letters are taken from the start of the alphabet whatever the
+variable already holds, so a code is refused when its letter is one
+the variable already carries, in its cells or as a labeled value:
+converting <code>-99</code> to <code>.a</code> on a variable whose <code>.a</code>
+cells mean "Skipped" would put two kinds of missing data on one
+marker. The message gives two <code><a href="jrecode.html">jrecode()</a></code> calls that run: one
+recodes the codes to markers the variable does not use, which keeps
+the kinds distinct; the other recodes them to the markers they would
+have taken, for kinds that mean the same thing.</p>
     </div>
     <div class="section level2">
     <h2 id="missing-value-ranges">Missing-value ranges<a class="anchor" aria-label="anchor" href="#missing-value-ranges"></a></h2>
@@ -345,7 +354,9 @@ can then show their meanings. Because a range replaces the column's
 existing range and existing discrete codes survive a range-only
 call, a column already carrying two or more discrete codes cannot
 take a range in the same declaration; the call is refused with the
-surviving codes named.</p>
+surviving codes named. When the new range no longer covers all of
+the old one, a note names the range as it was and counts the cases
+that are no longer missing.</p>
     </div>
     <div class="section level2">
     <h2 id="mixed-conventions-and-file-export">Mixed conventions and file export<a class="anchor" aria-label="anchor" href="#mixed-conventions-and-file-export"></a></h2>
