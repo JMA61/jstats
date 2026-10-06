@@ -217,6 +217,16 @@ assignment proceeds independently of the \code{missing.convention.codes}
 setting in \code{\link{joptions}} (which only governs the reverse
 Stata-to-SPSS direction). At the full \code{joutput} tier, a
 conversion note shows the tagged-marker equivalent for future calls.
+
+The letters are taken from the start of the alphabet whatever the
+variable already holds, so a code is refused when its letter is one
+the variable already carries, in its cells or as a labeled value:
+converting \code{-99} to \code{.a} on a variable whose \code{.a}
+cells mean "Skipped" would put two kinds of missing data on one
+marker. The message gives two \code{jrecode()} calls that run: one
+recodes the codes to markers the variable does not use, which keeps
+the kinds distinct; the other recodes them to the markers they would
+have taken, for kinds that mean the same thing.
 }
 
 \section{Missing-value ranges}{
@@ -240,7 +250,9 @@ can then show their meanings. Because a range replaces the column's
 existing range and existing discrete codes survive a range-only
 call, a column already carrying two or more discrete codes cannot
 take a range in the same declaration; the call is refused with the
-surviving codes named.
+surviving codes named. When the new range no longer covers all of
+the old one, a note names the range as it was and counts the cases
+that are no longer missing.
 }
 
 \section{Mixed conventions and file export}{

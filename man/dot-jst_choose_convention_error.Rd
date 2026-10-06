@@ -23,8 +23,8 @@
 \code{"range_unset"}, \code{"conflict_setting"},
 \code{"conflict_call"}.}
 
-\item{fn}{The exported caller's name, for the first line's wrap
-reserve (the \code{.jst_stop()} prefix length).}
+\item{fn}{The exported caller's name. Read by nothing since the
+emitters took over wrapping (Session 255); kept for the callers.}
 
 \item{head_tail}{Menu/pair variants: the clause completing the head.}
 

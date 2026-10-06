@@ -3002,9 +3002,9 @@ jai <- function(setup = NULL, path = NULL) {
 #' how a verb is made to agree as well:
 #' \code{.jst_plural(n, "This predictor has", "These predictors have")}.
 #'
-#' One site keeps its shortcut on purpose: the map parser's
-#' "Invalid old value(s)", which quotes the whole left-hand side of a rule
-#' and so has no count to agree with.
+#' The last shortcut, the map parser's "Invalid old value(s)", went in
+#' Session 345: the stop names the invalid values alone, so it has a count
+#' to agree with.
 #'
 #' @param n The count; a single number.
 #' @param singular Character(1). The form for a count of exactly one.
@@ -3089,6 +3089,83 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 
+#' Internal helper: make an offered modify = TRUE line run for a place
+#'
+#' \code{modify = TRUE} changes a data frame through its NAME, so
+#' \code{jdeclare_missing(lst$d, ..., modify = TRUE)} stops ("can only
+#' change a data frame that has a name"). Many builders paste the data
+#' argument as typed into such a line, and a call that named a place --
+#' \code{jencode(lst$d, w, map = ...)} -- was offered lines that then
+#' stopped (the S343 item; Session 345). A place can be assigned to, so the
+#' line that runs for it is the assignment form, the one the durability
+#' reminder has given a place since Session 339:
+#' \code{lst$d <- jdeclare_missing(lst$d, ...)}.
+#'
+#' Done once, in the wrapper layer every emitter passes through, rather
+#' than at each of some forty builder sites: a printed call whose FIRST
+#' argument is a place and whose last is \code{modify = TRUE} always stops
+#' as printed, whichever function built it, so the rewrite needs to know
+#' nothing about the message it is in. A line is changed only when it is
+#' one whole call that parses, its first argument unnamed and a place by
+#' \code{.jst_data_arg_kind()}; every other line is returned untouched.
+#' The place is copied as typed, up to the first comma outside brackets
+#' and quotes. Only \code{jdeclare_missing()} and \code{jconvert()} take
+#' \code{modify}, and both return the data frame.
+#'
+#' @param lines Character vector: the physical lines of one message.
+#'
+#' @return Character vector of the same length.
+#' @keywords internal
+.jst_place_lines <- function(lines) {
+  tail_txt <- ", modify = TRUE)"
+  hit <- which(endsWith(lines, tail_txt) & startsWith(lines, " "))
+  for (i in hit) {
+    ln   <- lines[i]
+    body <- sub("^ +", "", ln)
+    ind  <- substr(ln, 1L, nchar(ln) - nchar(body))
+    open <- regexpr("(", body, fixed = TRUE)[1L]
+    if (open < 2L || !grepl("^[A-Za-z.][A-Za-z0-9._]*$",
+                            substr(body, 1L, open - 1L))) next
+    e <- tryCatch(parse(text = body, keep.source = FALSE),
+                  error = function(e) NULL)
+    if (length(e) != 1L || !is.call(e[[1L]]) || length(e[[1L]]) < 3L) next
+    cl <- e[[1L]]
+    if (!is.null(names(cl)) && nzchar(names(cl)[2L])) next
+    if (!identical(.jst_data_arg_kind(cl[[2L]]), "place")) next
+    # The first argument as typed: up to the first comma outside brackets
+    # and quotes.
+    ch    <- strsplit(substr(body, open + 1L, nchar(body)), "")[[1L]]
+    depth <- 0L
+    quote <- ""
+    cut   <- NA_integer_
+    k     <- 1L
+    while (k <= length(ch)) {
+      c1 <- ch[k]
+      if (nzchar(quote)) {
+        if (c1 == "\\") k <- k + 1L
+        else if (c1 == quote) quote <- ""
+      } else if (c1 %in% c("\"", "'", "`")) {
+        quote <- c1
+      } else if (c1 %in% c("(", "[", "{")) {
+        depth <- depth + 1L
+      } else if (c1 %in% c(")", "]", "}")) {
+        depth <- depth - 1L
+      } else if (c1 == "," && depth == 0L) {
+        cut <- k
+        break
+      }
+      k <- k + 1L
+    }
+    if (is.na(cut)) next
+    place <- trimws(paste(ch[seq_len(cut - 1L)], collapse = ""))
+    lines[i] <- paste0(
+      ind, place, " <- ",
+      substr(body, 1L, nchar(body) - nchar(tail_txt)), ")")
+  }
+  lines
+}
+
+
 #' Internal helper: width-wrap a whole multi-line runtime message
 #'
 #' Applies \code{.jst_seg_category()} line by line and wraps each line the way
@@ -3098,6 +3175,10 @@ jai <- function(setup = NULL, path = NULL) {
 #' whose prose was never wrapped by hand still lands within the width, and so
 #' that the first-line \code{reserve} can be the REAL prefix length -- the
 #' emitter knows it, a builder can only guess.
+#'
+#' A line that offers \code{modify = TRUE} on a place is first given the
+#' assignment form (\code{.jst_place_lines()}, Session 345), here because
+#' every emitter passes through this function.
 #'
 #' @param text Character scalar, possibly containing newlines.
 #' @param width Target line width. Defaults to the resolved
@@ -3110,6 +3191,7 @@ jai <- function(setup = NULL, path = NULL) {
                               reserve = 0L) {
   lines <- strsplit(text, "\n", fixed = TRUE)[[1]]
   if (length(lines) == 0L) return(text)
+  lines <- .jst_place_lines(lines)
   out <- character(length(lines))
   for (i in seq_along(lines)) {
     ln  <- lines[i]

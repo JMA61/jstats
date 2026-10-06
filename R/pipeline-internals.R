@@ -1631,15 +1631,30 @@
 #' declared codes, Stata tags, and observed in-band values all render
 #' identically -- nothing new is invented for the in-band rows.
 #'
+#'
+#' Since Session 345 (the S319 item) it is also the ONE place the
+#' bracketed form is built. The Case Processing rows, the load
+#' narrative, the declaration confirmation and its drop notice,
+#' \code{jconvert()}'s report and \code{jrecode()}'s notes each wrote
+#' their own \code{sprintf()}; they call this, and \code{unlabelled}
+#' carries the one difference between them.
+#'
 #' @param code_display Character display form of the value.
-#' @param label Character label, or \code{NA} / \code{""} for none.
+#' @param label Character label; \code{NA}, \code{""}, \code{NULL} or a
+#'   zero-length vector for none.
+#' @param unlabelled What a value with no label gets: \code{"note"}, the
+#'   table rows' \code{-99 (no label)}; or \code{"bare"}, the value
+#'   alone, for a message that says "no label" in its own way or not at
+#'   all.
 #'
 #' @return A single character string.
 #'
 #' @keywords internal
-.jst_udm_row_label <- function(code_display, label) {
-  if (!is.na(label) && nzchar(label)) {
+.jst_udm_row_label <- function(code_display, label, unlabelled = "note") {
+  if (length(label) == 1L && !is.na(label) && nzchar(label)) {
     sprintf('%s ["%s"]', code_display, label)
+  } else if (identical(unlabelled, "bare")) {
+    as.character(code_display)
   } else {
     sprintf('%s (no label)', code_display)
   }
@@ -1798,8 +1813,8 @@
 #' @param variant One of \code{"menu"}, \code{"pair"},
 #'   \code{"range_unset"}, \code{"conflict_setting"},
 #'   \code{"conflict_call"}.
-#' @param fn The exported caller's name, for the first line's wrap
-#'   reserve (the \code{.jst_stop()} prefix length).
+#' @param fn The exported caller's name. Read by nothing since the
+#'   emitters took over wrapping (Session 255); kept for the callers.
 #' @param head_tail Menu/pair variants: the clause completing the head.
 #' @param conv Conflict variants: the conflicting convention token
 #'   (\code{"stata"} or \code{"sas"}) -- the per-call value for E, the
@@ -1833,19 +1848,26 @@
                                          prefixed  = TRUE) {
 
   # prefixed = FALSE is the message() caller's contract (S250): no
-  # "<fn>(): " is prepended, so the head neither reserves width for it
-  # nor starts mid-sentence. Body text is otherwise identical, which is
-  # the point -- one menu copy, two emission paths.
-  reserve <- if (isTRUE(prefixed)) nchar(fn) + 4L else 0L
+  # "<fn>(): " is prepended, so the head does not start mid-sentence.
+  # Body text is otherwise identical, which is the point -- one menu
+  # copy, two emission paths. (The builder reserved width for the prefix
+  # until the S255 builder-strip left wrapping to the emitters; its
+  # `reserve` local, read by nothing since, went at S345, and `fn` stays
+  # in the signature for the callers that pass it.)
 
   # --- D / E: the range-vs-tagged-convention conflicts ----------------------
   if (variant %in% c("conflict_setting", "conflict_call")) {
     style <- if (identical(conv, "sas")) "SAS" else "Stata"
+    # S345 (the S251 item): the head capitalizes for a message() caller,
+    # as the menu's does. Both callers stop today, so nothing printed
+    # changes; the branch is here before a caller needs it.
     head  <- if (identical(variant, "conflict_setting")) {
-      paste0("a missing-value range can exist only under SPSS convention, ",
+      paste0(if (isTRUE(prefixed)) "a" else "A",
+             " missing-value range can exist only under SPSS convention, ",
              "and your missing.convention setting is \"", conv, "\".")
     } else {
-      paste0("a missing-value range can exist only under SPSS convention; ",
+      paste0(if (isTRUE(prefixed)) "a" else "A",
+             " missing-value range can exist only under SPSS convention; ",
              "it cannot be combined with convention = \"", conv, "\".")
     }
     frv       <- function(x) format(x, trim = TRUE, scientific = FALSE)
@@ -1930,6 +1952,43 @@
     "To make the choice permanent, put the same line in your .Rprofile.")
   paste0(head, "\n",
          paste(parts, collapse = "\n"))
+}
+
+
+#' Internal helper: the choose-first menu, for a remedy that says "declare it"
+#'
+#' Several notes and one error close by telling the reader to declare a
+#' value with \code{jdeclare_missing()}. With no missing-value convention
+#' selected that call stops at the choose-first gate, so the advice led to
+#' a second message -- the round trip Session 250 rejected for the D1 note,
+#' which has carried the gate's own menu since. This helper gives the other
+#' sites the same menu (Session 345; the S251 item): the text to place
+#' before the remedy, or \code{NULL} when a convention is selected or
+#' \code{plain} is FALSE.
+#'
+#' Reads the SETTING only. A per-call \code{convention =} on the call that
+#' printed the note does not travel to the \code{jdeclare_missing()} call
+#' the reader types next.
+#'
+#' @param fn The exported caller's name (the menu builder's signature).
+#' @param n How many values the remedy names; picks "value" or "values".
+#' @param plain FALSE when the variable to declare on already carries
+#'   declared missing values of either form: \code{jdeclare_missing()}
+#'   follows the variable's own form there and meets no gate.
+#'
+#' @return Character scalar ending without a newline, or \code{NULL}.
+#' @keywords internal
+.jst_declare_gate_lead <- function(fn, n = 1L, plain = TRUE) {
+  if (!isTRUE(plain)) return(NULL)
+  conv <- getOption(".jst_options_missing_convention",
+                    .jst_options_defaults$missing.convention)
+  if (isTRUE(conv %in% c("spss", "stata", "sas"))) return(NULL)
+  .jst_choose_convention_error(
+    variant   = "menu",
+    fn        = fn,
+    head_tail = paste0("the ", .jst_plural(n, "value"),
+                       " cannot be declared yet."),
+    prefixed  = FALSE)
 }
 
 
@@ -2119,6 +2178,39 @@
 #' @keywords internal
 .jst_canonical_tag <- function(tag, convention) {
   if (identical(convention, "sas")) toupper(tag) else tolower(tag)
+}
+
+
+#' Internal helper: the marker a typed letter names on a given variable
+#'
+#' \code{.jst_canonical_tag()} with one deferral (Session 345; the S247
+#' item): a letter whose canonical case no cell carries, while cells do
+#' carry the other case, names the marker the cells carry. Only a variable
+#' holding markers in both letter cases can differ from the canonical
+#' answer. Before 0.9.218, \code{codes = c(Refused = ".a")} under a sas
+#' resolution on a variable with .a and .B cells put the label on .A, a
+#' marker in no cell, and left the .a cells unnamed.
+#'
+#' Cells only, never value labels: a label-only marker is the state this
+#' deferral exists to avoid creating. A letter carried in both cases, or
+#' in neither, keeps its canonical case (Decision 13: typed case carries
+#' no meaning).
+#'
+#' @param tag Character vector of single tag letters, any case.
+#' @param convention The resolved convention.
+#' @param carried Character vector: the tag letters the variable's cells
+#'   carry, as \code{haven::na_tag()} returns them (NA entries ignored).
+#'
+#' @return Character vector of tag letters, the length of \code{tag}.
+#'
+#' @keywords internal
+.jst_carried_tag <- function(tag, convention, carried) {
+  canon   <- .jst_canonical_tag(tag, convention)
+  other   <- ifelse(canon == toupper(canon), tolower(canon), toupper(canon))
+  carried <- unique(carried[!is.na(carried)])
+  swap    <- !(canon %in% carried) & (other %in% carried)
+  canon[swap] <- other[swap]
+  canon
 }
 
 # -----------------------------------------------------------------------------

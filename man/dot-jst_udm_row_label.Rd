@@ -4,12 +4,18 @@
 \alias{.jst_udm_row_label}
 \title{Internal helper: render one missing-value row label}
 \usage{
-.jst_udm_row_label(code_display, label)
+.jst_udm_row_label(code_display, label, unlabelled = "note")
 }
 \arguments{
 \item{code_display}{Character display form of the value.}
 
-\item{label}{Character label, or \code{NA} / \code{""} for none.}
+\item{label}{Character label; \code{NA}, \code{""}, \code{NULL} or a
+zero-length vector for none.}
+
+\item{unlabelled}{What a value with no label gets: \code{"note"}, the
+table rows' \code{-99 (no label)}; or \code{"bare"}, the value
+alone, for a message that says "no label" in its own way or not at
+all.}
 }
 \value{
 A single character string.
@@ -20,5 +26,13 @@ The established form for a missing-value row in jfreq and in
 carries a label, \code{-99 (no label)} when it does not. Shared so
 declared codes, Stata tags, and observed in-band values all render
 identically -- nothing new is invented for the in-band rows.
+}
+\details{
+Since Session 345 (the S319 item) it is also the ONE place the
+bracketed form is built. The Case Processing rows, the load
+narrative, the declaration confirmation and its drop notice,
+\code{jconvert()}'s report and \code{jrecode()}'s notes each wrote
+their own \code{sprintf()}; they call this, and \code{unlabelled}
+carries the one difference between them.
 }
 \keyword{internal}

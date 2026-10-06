@@ -206,9 +206,7 @@
         r   <- mi$codes[i, ]
         s   <- sum(!is.na(tag_pre)  & tag_pre  == r$tag)
         p   <- sum(!is.na(tag_pool) & tag_pool == r$tag)
-        lab <- if (!is.na(r$label) && nzchar(r$label))
-                 sprintf('%s ["%s"]', r$code, r$label)
-               else sprintf('%s (no label)', r$code)
+        lab <- .jst_udm_row_label(r$code, r$label)
         rows <- rbind(rows, data.frame(code_label = lab, src = s, pool = p,
                                        stringsAsFactors = FALSE))
       }
@@ -228,9 +226,7 @@
           key <- if (text_codes) r$code else r$numeric
           s   <- sum(!is.na(x_pre)  & x_pre  == key)
           p   <- sum(!is.na(x_pool) & x_pool == key)
-          lab <- if (!is.na(r$label) && nzchar(r$label))
-                   sprintf('%s ["%s"]', r$code, r$label)
-                 else sprintf('%s (no label)', r$code)
+          lab <- .jst_udm_row_label(r$code, r$label)
           rows <- rbind(rows, data.frame(code_label = lab, src = s, pool = p,
                                          stringsAsFactors = FALSE))
         }

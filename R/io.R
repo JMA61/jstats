@@ -1382,11 +1382,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       for (j in seq_len(nrow(info$codes))) {
         code  <- info$codes$code[j]
         label <- info$codes$label[j]
-        val_strs[j] <- if (!is.na(label) && nzchar(label)) {
-          sprintf('%s ["%s"]', code, label)
-        } else {
-          sprintf('%s (no label)', code)
-        }
+        val_strs[j] <- .jst_udm_row_label(code, label)
       }
       parts <- c(parts, paste(val_strs, collapse = ", "))
     }

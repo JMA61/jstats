@@ -3105,8 +3105,16 @@
     old_vals <- suppressWarnings(as.numeric(old_strs))
 
     if (any(is.na(old_vals))) {
+      # S345 (the S287 remainder): name the invalid value or values alone,
+      # so the count agrees with what is quoted. Until 0.9.218 the whole
+      # left side was quoted under "value(s)": on "1, abc = 9" two values
+      # were shown and one was invalid. Still a bare stop(): jrecode()
+      # catches and re-frames it.
+      bad <- unique(old_strs[is.na(old_vals)])
       stop(paste0(
-        "Invalid old value(s) '", lhs, "' in map rule '", rule, "'. ",
+        "Invalid old ", .jst_plural(length(bad), "value"), " ",
+        .jst_and_list(paste0("'", bad, "'")),
+        " in map rule '", rule, "'. ",
         "Old values must be numeric, a system-NA alias (NA, System, ",
         "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
       ), call. = FALSE)
