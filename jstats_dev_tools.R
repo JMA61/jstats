@@ -28,6 +28,20 @@
 #        check(), reporting the error/warning/note tally (the known benign
 #        quarto/TMPDIR quirk on Windows is filtered out of the tally).
 #
+#    receive_all("jstats_source.R", version = "0.9.217")
+#        The whole routine after a build, in one call (S342): sets the
+#        version in DESCRIPTION, runs receive_package(), then every
+#        assertion battery (regression/run_all.R), then the pending
+#        walk sections (regression/walk_tools.R, rewalk()). It stops
+#        after the check if R CMD check found an error, a warning or a
+#        note, and after the batteries if any is not green, each time
+#        printing a block to paste back to Claude; a clean run ends on
+#        that block too. On Windows the block is also put on the
+#        clipboard. After a stop that has been looked at,
+#        receive_all(from = "batteries") or receive_all(from = "walks")
+#        carries on without receiving again. receive_package() is
+#        unchanged and can still be called on its own.
+#
 #    assemble_package()
 #        Concatenates the R/ files in canonical order (sentinels included)
 #        into an assembled master for upload to Claude's knowledge base.
@@ -51,6 +65,15 @@
 .jdev_manifest_path  <- file.path("tools", "file_manifest.txt")
 .jdev_marker         <- ".jst_jstats_class"
 .jdev_backups_kept   <- 5L
+# receive_all() (S342): where the batteries and the walks are. An option
+# overrides it, for a run somewhere other than the workstation.
+.jdev_regression_dir <- function() {
+  getOption("jdev.regression.dir",
+            "E:/00 R Projects/00_jstats_test_data/regression")
+}
+# What the last receive_all() learned, kept so that a call resumed with
+# from = "batteries" or "walks" can still report the earlier stages.
+.jdev_last <- new.env()
 
 # ---- internal helpers --------------------------------------------------------
 
@@ -465,6 +488,263 @@ receive_package <- function(file = "jstats_source.R") {
   }
   cat("==============================================\n")
   invisible(res)
+}
+
+# ---- receive_all: receive, batteries, walks, and the report --------------------
+
+# The check findings that count: receive_package()'s own filter (the benign
+# quarto/TMPDIR quirk on Windows), applied to a devtools::check() result.
+.jdev_check_findings <- function(res) {
+  quirk <- function(x) grepl("TMPDIR", x) | grepl("quarto", x, ignore.case = TRUE)
+  keep  <- function(x) { x <- as.character(x); x[!quirk(x)] }
+  list(errors = keep(res$errors), warnings = keep(res$warnings),
+       notes = keep(res$notes))
+}
+
+# Set "Version:" in DESCRIPTION, byte for byte otherwise. Returns the bytes
+# the file held before (for a restore) with attributes old and new.
+.jdev_set_version <- function(version) {
+  if (!is.character(version) || length(version) != 1L ||
+      !grepl("^[0-9]+\\.[0-9]+\\.[0-9]+$", version)) {
+    stop("version must be one string such as \"0.9.217\".", call. = FALSE)
+  }
+  before <- .jdev_read_raw("DESCRIPTION")
+  txt    <- rawToChar(before)
+  m      <- regexpr("(?m)^Version:[ \t]*[^\r\n]*", txt, perl = TRUE)
+  if (m < 0L) stop("DESCRIPTION has no Version: line.", call. = FALSE)
+  old <- trimws(sub("^Version:", "", regmatches(txt, m)))
+  if (package_version(version) < package_version(old)) {
+    stop("version ", version, " is lower than DESCRIPTION's ", old, ".",
+         call. = FALSE)
+  }
+  if (!identical(old, version)) {
+    regmatches(txt, m) <- paste0("Version: ", version)
+    writeBin(charToRaw(txt), "DESCRIPTION")
+  }
+  structure(before, old = old, new = version)
+}
+
+# TRUE when R/ holds exactly the inbound file: the receive got as far as
+# writing it, and the self-check did not put the backup back.
+.jdev_build_is_in_R <- function(file) {
+  tryCatch({
+    raw_in <- .jdev_read_raw(file)
+    nm     <- names(.jdev_split_sentinels(raw_in))
+    all(file.exists(file.path("R", nm))) &&
+      identical(do.call(c, lapply(nm, function(f)
+        .jdev_read_raw(file.path("R", f)))), raw_in)
+  }, error = function(e) FALSE)
+}
+
+# The batteries and the walks call the package's internals bare, so they
+# need the development load, not an installed copy.
+.jdev_ensure_loaded <- function() {
+  dev <- tryCatch(pkgload::is_dev_package("jstats"), error = function(e) FALSE)
+  if (!isTRUE(dev)) devtools::load_all()
+  invisible(TRUE)
+}
+
+.jdev_current_version <- function() {
+  txt <- rawToChar(.jdev_read_raw("DESCRIPTION"))
+  m   <- regexpr("(?m)^Version:[ \t]*[^\r\n]*", txt, perl = TRUE)
+  if (m < 0L) "?" else trimws(sub("^Version:", "", regmatches(txt, m)))
+}
+
+# Print the block to paste back to Claude, between two rules, and put it on
+# the clipboard where there is one (Windows). The rules are not part of it.
+.jdev_report <- function(lines) {
+  rule <- strrep("-", 62)
+  cat("\n", rule, "\n", "PASTE THIS BACK TO CLAUDE", sep = "")
+  on_clip <- FALSE
+  if (identical(.Platform$OS.type, "windows")) {
+    on_clip <- isTRUE(tryCatch({ utils::writeClipboard(lines); TRUE },
+                               error = function(e) FALSE))
+  }
+  cat(if (on_clip) " (it is on the clipboard: Ctrl+V)" else "", "\n",
+      rule, "\n", sep = "")
+  cat(lines, sep = "\n")
+  cat(rule, "\n", sep = "")
+  invisible(lines)
+}
+
+# The pending sections of every walk in a folder, read through rewalk()'s
+# own parser: list(<file> = "19, 22, 25, 26", ...), empty when none.
+.jdev_pending_walks <- function(dir) {
+  E <- environment(get("rewalk", envir = globalenv()))
+  out <- list()
+  for (f in E$find_walks(dir)) {
+    w <- tryCatch(E$parse_walk(f), error = function(e) NULL)
+    if (is.null(w) || length(w$pending$ids) == 0L) next
+    out[[basename(f)]] <- paste(w$pending$ids, collapse = ", ")
+  }
+  out
+}
+
+receive_all <- function(file = "jstats_source.R", version = NULL,
+                        from = c("receive", "batteries", "walks")) {
+  from <- match.arg(from)
+  .jdev_assert_package_root()
+  reg <- .jdev_regression_dir()
+  if (!dir.exists(reg)) {
+    stop("regression folder not found: ", reg, call. = FALSE)
+  }
+  head_line <- function() paste0("v", .jdev_current_version(), " received.")
+  resume    <- function(stage) {
+    cat("\nWhen that has been looked at, carry on without receiving again:\n",
+        "  receive_all(from = \"", stage, "\")\n", sep = "")
+  }
+
+  ## -- 1. receive: the version, then receive_package() -------------------------
+  if (from == "receive") {
+    rm(list = ls(.jdev_last, all.names = TRUE), envir = .jdev_last)
+    before <- NULL
+    if (!is.null(version)) {
+      before <- .jdev_set_version(version)
+      cat("Version:            DESCRIPTION ",
+          if (identical(attr(before, "old"), version)) "already reads " else
+            paste0(attr(before, "old"), " -> "),
+          version, "\n", sep = "")
+    }
+    # A receive that stops at a gate or at the self-check has changed
+    # nothing in R/, and DESCRIPTION is put back to match. One that stops
+    # later (load_all, document, check) has written the build, and the
+    # new version stays with it.
+    res <- tryCatch(receive_package(file), error = function(e) {
+      back <- !is.null(before) && !.jdev_build_is_in_R(file) &&
+              !identical(attr(before, "old"), attr(before, "new"))
+      if (back) writeBin(as.raw(before), "DESCRIPTION")
+      stop(conditionMessage(e),
+           if (back) paste0("\n(Nothing was received; DESCRIPTION is back at ",
+                            attr(before, "old"), ".)"),
+           call. = FALSE)
+    })
+    fnd   <- .jdev_check_findings(res)
+    count <- function(n, word) paste0(n, " ", word, if (n != 1L) "s")
+    tally <- paste0("R CMD check: ", count(length(fnd$errors), "error"), ", ",
+                    count(length(fnd$warnings), "warning"), ", ",
+                    count(length(fnd$notes), "note"), ".")
+    assign("check", tally, envir = .jdev_last)
+    if (length(unlist(fnd)) > 0L) {
+      body <- c(head_line(), tally)
+      for (k in c("errors", "warnings", "notes")) {
+        for (x in fnd[[k]]) {
+          body <- c(body, "", paste0("[", sub("s$", "", k), "]"),
+                    strsplit(x, "\n", fixed = TRUE)[[1L]])
+        }
+      }
+      .jdev_report(c(body, "", "The batteries were not run."))
+      resume("batteries")
+      return(invisible(list(stage = "check", ok = FALSE)))
+    }
+  }
+  check_line <- get0("check", envir = .jdev_last,
+                     ifnotfound = "R CMD check: not run in this call.")
+
+  ## -- 2. the batteries --------------------------------------------------------
+  if (from %in% c("receive", "batteries")) {
+    .jdev_ensure_loaded()
+    run_all <- file.path(reg, "run_all.R")
+    if (!file.exists(run_all)) stop("not found: ", run_all, call. = FALSE)
+    cat("\n--- ", run_all, " ---\n", sep = "")
+    G <- globalenv()
+    if (exists(".ra_board", envir = G, inherits = FALSE)) rm(".ra_board", envir = G)
+    err <- tryCatch({ source(run_all, local = FALSE); NULL },
+                    error = function(e) conditionMessage(e))
+    board <- get0(".ra_board", envir = G, inherits = FALSE)
+    lines <- character(0); n <- 0L; green <- !is.null(board) && is.null(err)
+    for (nm in names(board)) {
+      b <- board[[nm]]
+      n <- n + if (is.na(b$n)) 0L else b$n
+      if (!identical(b$status, "PASS")) green <- FALSE
+      lines <- c(lines, paste0("  ", formatC(nm, width = -28),
+                               formatC(b$status, width = -6), "  ",
+                               if (is.na(b$n)) "?" else paste0(b$n_ok, "/", b$n)))
+      for (d in b$bad) {
+        lines <- c(lines, paste0("      failed: ", gsub("\\s*\n\\s*", " ", d)))
+      }
+      if (!is.null(b$err) && !identical(b$err, "assertion battery failed")) {
+        lines <- c(lines, paste0("      halted: ",
+                                 gsub("\\s*\n\\s*", " ", b$err)))
+      }
+    }
+    if (green) {
+      bat_line <- paste0("run_all.R: ALL BATTERIES GREEN (", length(board),
+                         " run, ", n, " checks).")
+      assign("batteries", bat_line, envir = .jdev_last)
+    } else {
+      red <- names(board)[vapply(board, function(b)
+        !identical(b$status, "PASS"), logical(1))]
+      assign("batteries",
+             if (is.null(board)) "run_all.R: stopped before any battery ran."
+             else paste0("run_all.R: NOT GREEN (", length(red), " of ",
+                         length(board), "): ", paste(red, collapse = ", "),
+                         "."),
+             envir = .jdev_last)
+      .jdev_report(c(head_line(), check_line, "run_all.R: NOT GREEN.", lines,
+                     if (!is.null(err)) paste0("run_all.R stopped: ", err),
+                     "", "The walks were not run."))
+      resume("walks")
+      return(invisible(list(stage = "batteries", ok = FALSE)))
+    }
+  }
+  bat_line <- get0("batteries", envir = .jdev_last,
+                   ifnotfound = "run_all.R: not run in this call.")
+
+  ## -- 3. the walks ------------------------------------------------------------
+  .jdev_ensure_loaded()
+  tools <- file.path(reg, "walk_tools.R")
+  if (!file.exists(tools)) stop("not found: ", tools, call. = FALSE)
+  source(tools, local = FALSE)
+  rw <- get("rewalk", envir = globalenv())
+  cat("\n")
+  rw(dir = reg)
+  pend  <- .jdev_pending_walks(reg)
+  named <- paste(vapply(names(pend), function(f) paste(f, pend[[f]]), ""),
+                 collapse = "; ")
+  calls <- paste0("rewalk(\"", sub("_walk\\.R$", "", names(pend)), "\")")
+  if (length(pend) == 0L) {
+    walk_line <- "Walks: none pending."
+  } else {
+    cat("\n")
+    ans <- readline("Enter to walk the pending sections now, n to skip: ")
+    if (tolower(trimws(ans)) %in% c("n", "no", "q", "skip")) {
+      cat("\nTo walk them later, one line at a time:\n",
+          paste0("  ", calls, "\n"), sep = "")
+      walk_line <- paste0("Walks: ", named, " -- NOT walked yet.")
+    } else {
+      done <- 0L
+      for (k in seq_along(pend)) {
+        rw(sub("_walk\\.R$", "", names(pend)[k]), dir = reg)
+        done <- k
+        if (k < length(pend)) {
+          cat("\n")
+          ans <- readline(paste0("Enter for ", names(pend)[k + 1L],
+                                 ", q to stop: "))
+          if (tolower(trimws(ans)) %in% c("q", "quit", "stop")) break
+        }
+      }
+      part <- function(i) paste(vapply(names(pend)[i], function(f)
+        paste(f, pend[[f]]), ""), collapse = "; ")
+      walk_line <- c(paste0("Walks: ", part(seq_len(done)),
+                            " -- walked, all okay"),
+                     "(assuming that the walks are okay).")
+      if (done < length(pend)) {
+        rest <- seq_along(pend)[-seq_len(done)]
+        cat("\nStill to walk, one line at a time:\n",
+            paste0("  ", calls[rest], "\n"), sep = "")
+        walk_line <- c(walk_line, paste0("Not walked yet: ", part(rest), "."))
+      }
+    }
+  }
+
+  ## -- 4. the report -----------------------------------------------------------
+  .jdev_report(c(head_line(), check_line, bat_line, walk_line))
+  ready <- grepl("0 errors, 0 warnings, 0 notes", check_line, fixed = TRUE) &&
+           grepl("ALL BATTERIES GREEN", bat_line, fixed = TRUE) &&
+           !any(grepl("NOT walked yet|Not walked yet", walk_line))
+  cat(if (ready) "\nNext: commit with Claude's message, then push.\n"
+      else "\nPaste the block to Claude before committing.\n")
+  invisible(list(stage = "done", ok = ready))
 }
 
 # ---- assemble mode -------------------------------------------------------------
