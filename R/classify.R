@@ -902,9 +902,13 @@
 #'   Rule A choice-error house form -- a double-quoted natural list, "or"
 #'   before the last element, Oxford comma at three or more, and no "one of:"
 #'   lead-in.
+#' @param hint Optional text placed after the requirement, beginning with a
+#'   newline: the did-you-mean line and its call that
+#'   \code{.jst_near_choice_hint()} builds (Session 343).
 #' @return Never returns; always signals an error.
 #' @keywords internal
-.jst_stop_arg <- function(fn = NULL, arg, requirement = NULL, choices = NULL) {
+.jst_stop_arg <- function(fn = NULL, arg, requirement = NULL, choices = NULL,
+                          hint = NULL) {
   if (!is.null(choices)) {
     # Choice-error house form (Rule A): backtick the name, drop "one of:",
     # natural list with Oxford comma on 3+ choices and none on exactly 2.
@@ -920,7 +924,39 @@
     requirement <- paste0(lst, ".")
     arg <- paste0("`", arg, "`")
   }
-  .jst_stop(arg, " must be ", requirement, fn = fn)
+  .jst_stop(arg, " must be ", requirement, hint, fn = fn)
+}
+
+
+#' Internal helper: the did-you-mean lines for a mistyped choice
+#'
+#' A value typed for a fixed-choice setting that is a near miss of one of
+#' its choices -- \code{joptions("spps")} -- gets, after the Rule A choice
+#' error, the choice it is nearest to and the call to run (the S281 item's
+#' value half; Session 343). Near is Levenshtein distance, case-insensitive,
+#' of at most 2 and of less than half the typed string's length: the second
+#' test keeps a short string from matching by insertion alone ("sa" is one
+#' edit from "sas" and is still not a near miss of it; "data" is two edits
+#' from "stata" and is more likely a question about data.dir). Choices tied
+#' for nearest are all offered, each with its line.
+#'
+#' @param typed What the user gave; compared in lowercase.
+#' @param choices Character vector of the allowed values.
+#' @param line_open Character(1); the call up to and including the value's
+#'   opening quotation mark.
+#' @return Character(1) beginning with a newline, or \code{NULL} when
+#'   \code{typed} is not a single string or is near no choice.
+#' @keywords internal
+.jst_near_choice_hint <- function(typed, choices, line_open) {
+  if (!is.character(typed) || length(typed) != 1L || is.na(typed)) {
+    return(NULL)
+  }
+  dist <- as.integer(utils::adist(tolower(typed), choices))
+  best <- min(dist)
+  if (best > 2L || best * 2L >= nchar(typed)) return(NULL)
+  near <- choices[dist == best]
+  paste0("\nDid you mean ", paste0("\"", near, "\"", collapse = " or "), "?",
+         paste0("\n  ", line_open, near, "\")", collapse = ""))
 }
 
 

@@ -4906,7 +4906,8 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   # Resolve variable names, expanding colon ranges (e.g. Item1:Item6) the same
   # way jsum()/javg() do via .jst_resolve_varrange(); plain names pass through
   # unchanged.
-  resolved       <- .jst_resolve_varrange(variables, data, "jalpha", .jst_data_name)
+  resolved       <- .jst_resolve_varrange(variables, data, "jalpha", .jst_data_name,
+                                          default_used = .jst_default_used)
   variable_names <- resolved$var_names
 
   .jst_check_vars(data, variable_names, .jst_data_name, default_used = .jst_default_used)

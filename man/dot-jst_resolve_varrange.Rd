@@ -4,7 +4,13 @@
 \alias{.jst_resolve_varrange}
 \title{Internal helper: resolve variable names from enquos, expanding colon ranges}
 \usage{
-.jst_resolve_varrange(quos_list, data, fn_name, data_name = NULL)
+.jst_resolve_varrange(
+  quos_list,
+  data,
+  fn_name,
+  data_name = NULL,
+  default_used = FALSE
+)
 }
 \arguments{
 \item{quos_list}{A list of quosures from rlang::enquos(...).}
@@ -12,6 +18,12 @@
 \item{data}{The data frame to resolve column names against.}
 
 \item{fn_name}{Character. The calling function name for error messages.}
+
+\item{data_name}{Character. The data frame's name, for messages.}
+
+\item{default_used}{Logical. \code{TRUE} when the data frame came from
+the \code{juse()} default; passed to \code{.jst_check_vars()}, which
+words an endpoint that is not found (Session 343).}
 }
 \value{
 A list with two components:

@@ -1626,6 +1626,72 @@ jai <- function(setup = NULL, path = NULL) {
   if (is_place(data_sub)) "place" else "expression"
 }
 
+#' Internal helper: the assign-or-lose reminder of jrecode() and jencode()
+#'
+#' Both functions return the new values and change nothing, so an
+#' unassigned call drops them; the reminder closes each call's notes at the
+#' standard and full output levels. The line it shows assigns to a variable
+#' of the data frame the call named. An expression in the data's place --
+#' \code{jencode(mt(), w)} -- has no such variable to assign to, and until
+#' Session 343 the line read \code{mt()$<name> <- jencode(...)}, which is
+#' not R (the S339 item's second half). It now gets the two lines the
+#' registration verbs give: the expression assigned to a name, and the
+#' assignment on that name. A place (\code{lst$d}) keeps the one line,
+#' which runs.
+#'
+#' @param fn_name Character(1); \code{"jrecode"} or \code{"jencode"}.
+#' @param data_name Character(1); the data frame as the lines name it.
+#' @param data_kind What the call gave as its data, as
+#'   \code{.jst_data_arg_kind()} reads it.
+#' @param typed Character(1); the data argument as typed, for the
+#'   \code{"expression"} kind's first line.
+#' @param landed Character(1); the noun of the closing check line
+#'   (\code{"recode"}, \code{"encoding"}).
+#' @return Character(1) with a leading newline (voice Rule F) and no
+#'   trailing one.
+#' @keywords internal
+.jst_assign_reminder <- function(fn_name, data_name, data_kind, typed,
+                                 landed) {
+  paste0(
+    if (identical(data_kind, "expression")) {
+      paste0(
+        "\nNote: The result is kept only if you assign it.\n",
+        "Name the data frame first, then assign the result to a variable ",
+        "in it:\n")
+    } else {
+      paste0("\nNote: This call changes ", data_name,
+             " only if you assign the result:\n")
+    },
+    .jst_assign_lines(fn_name, data_name, data_kind, typed),
+    "To check the ", landed, " landed correctly, compare jfreq() on the ",
+    "original and the new column.")
+}
+
+#' Internal helper: the assignment lines of an assign-or-lose reminder
+#'
+#' The code lines under the reminders of \code{jrecode()},
+#' \code{jencode()}, \code{jsum()} and \code{javg()}, each of which
+#' returns a new variable's values and changes nothing. A name or a place
+#' gets the one pattern line it always had. An expression gets two: it is
+#' assigned to \code{mydata}, and the pattern line is written on
+#' \code{mydata}, because \code{mk()$<name> <- jsum(...)} is not R
+#' (Session 343).
+#'
+#' @param fn_name Character(1); the function the lines call.
+#' @param data_name Character(1); the data frame as the line names it.
+#' @param data_kind What the call gave as its data, as
+#'   \code{.jst_data_arg_kind()} reads it.
+#' @param typed Character(1); the data argument as typed.
+#' @return Character(1): one line or two, each ending in a newline.
+#' @keywords internal
+.jst_assign_lines <- function(fn_name, data_name, data_kind, typed) {
+  if (identical(data_kind, "expression")) {
+    return(paste0("  mydata <- ", typed, "\n",
+                  "  mydata$<name> <- ", fn_name, "(mydata, ...)\n"))
+  }
+  paste0("  ", data_name, "$<name> <- ", fn_name, "(...)\n")
+}
+
 #' Internal helper: the file name a data argument is saved under
 #'
 #' The stem of the file in a save or load line built from a call's data

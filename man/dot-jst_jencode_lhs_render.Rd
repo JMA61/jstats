@@ -22,4 +22,14 @@ they contain a map separator; the empty string renders as the taught
 \code{blank} token rather than as a pair of quotes, since the
 quotes-around-nothing form is deliberately never shown to users.
 }
+\details{
+A word is also quoted when the map parser would otherwise read it as
+something else: a reserved word (\code{else}, \code{NA},
+\code{System}, \code{SYSMIS}, \code{blank}, in any case), which is a
+keyword unless quoted, and a word that begins with a quotation mark,
+which would open a quoted word. Since Session 343 the automatic-mode
+suggestions render their words through this helper too: built from
+bare words, the offered call stopped on a category holding a
+semicolon and sent a category named "else" to the else rule.
+}
 \keyword{internal}

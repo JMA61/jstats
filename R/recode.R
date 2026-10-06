@@ -129,8 +129,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     .jst_stop("The first argument must be a data frame.")
   }
   if (!var_name %in% names(data)) {
-    frame_ref <- if (!is.null(arg1$name) && nzchar(arg1$name)) arg1$name else "the data frame"
-    .jst_stop(paste0("Variable '", var_name, "' not found in ", frame_ref, "."))
+    # The package's one not-found sentence (S338; S343 here).
+    .jst_check_vars(data, var_name, arg1$name,
+                    default_used = arg1$mode %in%
+                      c("default", "symbol_with_default"))
   }
 
   x <- data[[var_name]]
@@ -1202,8 +1204,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   # --- Resolve first argument -----------------------------------------------
+  data_sub <- substitute(data)
   arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
+    data_sub      = data_sub,
     data_missing  = missing(data),
     fn_name       = "jrecode",
     envir         = parent.frame(),
@@ -1233,8 +1236,19 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     .jst_stop("The first argument must be a data frame.")
   }
   if (!orig_name %in% names(data)) {
-    .jst_stop(paste0("Variable '", orig_name, "' not found in '", .jst_data_name, "'."))
+    # The package's one not-found sentence (S338), with the juse() default
+    # hint. Until Session 343: "Variable 'Agee' not found in 'd'."
+    .jst_check_vars(data, orig_name, .jst_data_name,
+                    default_used = arg1$mode %in%
+                      c("default", "symbol_with_default"))
   }
+  # An expression given as the data -- jrecode(mk(), Age, ...) -- is never
+  # pasted into a line the user is meant to run: every such line below
+  # names mydata, and the closing reminder says how mydata is made (S343;
+  # the S339 rule, Internals "Notes -- S339").
+  data_kind  <- .jst_data_arg_kind(data_sub)
+  data_typed <- .jst_term_text(data_sub)
+  if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
   if (missing(map) || !is.character(map) || length(map) != 1) {
     .jst_stop("The map argument must be a single quoted string, e.g. map = \"1=1; 2=0\".")
   }
@@ -2949,12 +2963,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # values invisibly, so an unassigned top-level call silently drops them. The
   # leading blank line keeps it clear of any label note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    .jst_msg(
-      "\nNote: This call changes ", .jst_data_name,
-      " only if you assign the result:\n",
-      "  ", .jst_data_name, "$<name> <- jrecode(...)\n",
-      "To check the recode landed correctly, compare jfreq() on the ",
-      "original and the new column.")
+    .jst_msg(.jst_assign_reminder("jrecode", .jst_data_name, data_kind,
+                                  data_typed, "recode"))
   }
 
   # The rebuilds above (haven::labelled_spss(), labelled::labelled(), and
@@ -3234,7 +3244,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' emitted on one line when it fits the 76-column message width, and
 #' otherwise breaks after the variable with the map string continuing
 #' under its own opening quote. Every continuation still parses, because
-#' \code{.jst_parse_text_map()} trims each rule.
+#' \code{.jst_parse_text_map()} trims each rule. The rules are separated
+#' at the semicolons OUTSIDE quoted words, by \code{.jst_split_unquoted()}
+#' and before the quotes are escaped: until Session 343 a plain split cut
+#' a quoted word holding a semicolon across two lines, and the pasted word
+#' no longer matched the data (the S249 item).
 #'
 #' @param data_name Character. The data frame's name in the user's call.
 #' @param var_name Character. The variable being encoded.
@@ -3255,7 +3269,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # breaks the moment the map also carries an apostrophe, and a map can
   # easily hold both (an apostrophe word alongside a quoted phrase).
   # Escape before any width measurement, so the packing below counts the
-  # characters the user will actually see.
+  # characters the user will actually see. The rules are separated FIRST:
+  # the splitter knows a quoted word by the quote mark that opens it, and
+  # an escaped mark opens with a backslash.
+  pieces <- trimws(as.character(.jst_split_unquoted(rules_text, ";")))
+  pieces <- gsub("\"", "\\\"", pieces[nzchar(pieces)], fixed = TRUE)
   rules_text <- gsub("\"", "\\\"", rules_text, fixed = TRUE)
   new_name <- paste0(var_name, "R")
   head_str <- paste0(indent, data_name, "$", new_name, " <- jencode(")
@@ -3269,8 +3287,6 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   # Pack the rules across continuation lines, keeping each within the
   # message width. The separator stays on the line it ends.
-  pieces  <- trimws(strsplit(rules_text, ";", fixed = TRUE)[[1]])
-  pieces  <- pieces[nzchar(pieces)]
   lines   <- character(0)
   current <- paste0(cont, "map = \"")
   first   <- TRUE
@@ -3489,8 +3505,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 
   # --- Resolve first argument -----------------------------------------------
+  data_sub <- substitute(data)
   arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
+    data_sub      = data_sub,
     data_missing  = missing(data),
     fn_name       = "jencode",
     envir         = parent.frame(),
@@ -3520,9 +3537,15 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     .jst_stop("The first argument must be a data frame.")
   }
   if (!var_name %in% names(data)) {
-    .jst_stop(paste0("Variable '", var_name, "' not found in '",
-                     .jst_data_name, "'."))
+    # The package's one not-found sentence (S338; S343 here), as jrecode().
+    .jst_check_vars(data, var_name, .jst_data_name,
+                    default_used = arg1$mode %in%
+                      c("default", "symbol_with_default"))
   }
+  # An expression given as the data: see jrecode() (S343).
+  data_kind  <- .jst_data_arg_kind(data_sub)
+  data_typed <- .jst_term_text(data_sub)
+  if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
   if (!is.null(map) && (!is.character(map) || length(map) != 1)) {
     .jst_stop("The map argument must be a single quoted string, e.g. map = \"Bail=1; Parole=2\".")
   }
@@ -3701,7 +3724,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         new_num[word_mask & words == words_u[i]] <- codes[i]
       }
       val_labels_out <- stats::setNames(as.numeric(codes), words_u)
-      assigned_rules <- paste0(words_u, "=", codes)
+      # Rendered, not bare (S343): a category holding a separator or
+      # named like a keyword is quoted, so the offered call runs.
+      assigned_rules <- paste0(vapply(words_u, .jst_jencode_lhs_render,
+                                      character(1)), "=", codes)
 
       # A factor level with no cases is still listed (it keeps its code and
       # label) and is tagged, since jfreq() on the encoded column will not
@@ -4663,12 +4689,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
     # S267: builder wraps stripped (the emitter wraps); first sentence
     # adopts the jdeclare_missing durability shape, twinned with jrecode's.
-    .jst_msg(
-      "\nNote: This call changes ", .jst_data_name,
-      " only if you assign the result:\n",
-      "  ", .jst_data_name, "$<name> <- jencode(...)\n",
-      "To check the encoding landed correctly, compare jfreq() on the ",
-      "original and the new column.")
+    .jst_msg(.jst_assign_reminder("jencode", .jst_data_name, data_kind,
+                                  data_typed, "encoding"))
   }
 
   return(invisible(result))
@@ -4742,6 +4764,15 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' \code{blank} token rather than as a pair of quotes, since the
 #' quotes-around-nothing form is deliberately never shown to users.
 #'
+#' A word is also quoted when the map parser would otherwise read it as
+#' something else: a reserved word (\code{else}, \code{NA},
+#' \code{System}, \code{SYSMIS}, \code{blank}, in any case), which is a
+#' keyword unless quoted, and a word that begins with a quotation mark,
+#' which would open a quoted word. Since Session 343 the automatic-mode
+#' suggestions render their words through this helper too: built from
+#' bare words, the offered call stopped on a category holding a
+#' semicolon and sent a category named "else" to the else rule.
+#'
 #' @param old_vals Character vector of old values from one parsed rule.
 #'
 #' @return Character scalar: the rule's left-hand side.
@@ -4750,7 +4781,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 .jst_jencode_lhs_render <- function(old_vals) {
   paste(vapply(old_vals, function(w) {
     if (!nzchar(w)) return("blank")
-    if (grepl("[;=,]", w)) return(paste0("\"", w, "\""))
+    if (grepl("[;=,]", w) || grepl("^[\"']", w) ||
+        tolower(w) %in% c("else", "na", "sysmis", "system", "blank")) {
+      return(paste0("\"", w, "\""))
+    }
     w
   }, character(1)), collapse = ",")
 }

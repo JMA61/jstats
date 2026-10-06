@@ -12,6 +12,10 @@
 #' @param quos_list A list of quosures from rlang::enquos(...).
 #' @param data The data frame to resolve column names against.
 #' @param fn_name Character. The calling function name for error messages.
+#' @param data_name Character. The data frame's name, for messages.
+#' @param default_used Logical. \code{TRUE} when the data frame came from
+#'   the \code{juse()} default; passed to \code{.jst_check_vars()}, which
+#'   words an endpoint that is not found (Session 343).
 #'
 #' @return A list with two components:
 #'   \describe{
@@ -22,7 +26,8 @@
 #'   }
 #'
 #' @keywords internal
-.jst_resolve_varrange <- function(quos_list, data, fn_name, data_name = NULL) {
+.jst_resolve_varrange <- function(quos_list, data, fn_name, data_name = NULL,
+                                  default_used = FALSE) {
 
   all_cols    <- names(data)
   var_names   <- character(0)
@@ -59,17 +64,15 @@
       start_idx <- match(start_name, all_cols)
       end_idx   <- match(end_name, all_cols)
 
-      if (is.na(start_idx)) {
-        .jst_stop(
-          "Variable '", start_name, "' not found in ", frame_ref, ".\n",
-          "Check spelling and capitalization."
-        )
-      }
-      if (is.na(end_idx)) {
-        .jst_stop(
-          "Variable '", end_name, "' not found in ", frame_ref, ".\n",
-          "Check spelling and capitalization."
-        )
+      # An endpoint that is not a variable: the package's one not-found
+      # sentence (S338), both endpoints in one message when both are
+      # missing. Until Session 343: "Variable 'Agee' not found in d." /
+      # "Check spelling and capitalization."
+      if (is.na(start_idx) || is.na(end_idx)) {
+        .jst_check_vars(
+          data,
+          unique(c(start_name, end_name)[is.na(c(start_idx, end_idx))]),
+          data_name, default_used = default_used)
       }
 
       if (start_idx > end_idx) {
@@ -170,8 +173,9 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # or bare-symbol-as-variable-name (leading comma omitted).
+  data_sub <- substitute(data)
   arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
+    data_sub      = data_sub,
     data_missing  = missing(data),
     fn_name       = "jsum",
     envir         = parent.frame(),
@@ -194,7 +198,8 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     class(quos_list) <- "quosures"
   }
 
-  resolved    <- .jst_resolve_varrange(quos_list, data, "jsum", .jst_data_name)
+  resolved    <- .jst_resolve_varrange(quos_list, data, "jsum", .jst_data_name,
+                                       default_used = .jst_default_used)
   var_names   <- resolved$var_names
   label_parts <- resolved$label_parts
 
@@ -332,9 +337,11 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   # invisibly, so an unassigned top-level call silently drops them. The
   # leading blank line keeps it clear of any advisory note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    # An expression given as the data gets the naming line first (S343).
     .jst_msg(
       "\nNote: jsum() returns the totals; assign them to a column to keep them:\n",
-      "  ", .jst_data_name, "$<name> <- jsum(...)\n",
+      .jst_assign_lines("jsum", .jst_data_name, .jst_data_arg_kind(data_sub),
+                        .jst_term_text(data_sub)),
       "For the full distribution (min, max, SD), run jdesc() on the new column."
     )
   }
@@ -438,8 +445,9 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
 
   # Resolve the first argument: explicit data frame, juse default,
   # or bare-symbol-as-variable-name (leading comma omitted).
+  data_sub <- substitute(data)
   arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
+    data_sub      = data_sub,
     data_missing  = missing(data),
     fn_name       = "javg",
     envir         = parent.frame(),
@@ -462,7 +470,8 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     class(quos_list) <- "quosures"
   }
 
-  resolved    <- .jst_resolve_varrange(quos_list, data, "javg", .jst_data_name)
+  resolved    <- .jst_resolve_varrange(quos_list, data, "javg", .jst_data_name,
+                                       default_used = .jst_default_used)
   var_names   <- resolved$var_names
   label_parts <- resolved$label_parts
 
@@ -608,9 +617,11 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   # invisibly, so an unassigned top-level call silently drops them. The
   # leading blank line keeps it clear of any advisory note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    # An expression given as the data gets the naming line first (S343).
     .jst_msg(
       "\nNote: javg() returns the scores; assign them to a column to keep them:\n",
-      "  ", .jst_data_name, "$<name> <- javg(...)\n",
+      .jst_assign_lines("javg", .jst_data_name, .jst_data_arg_kind(data_sub),
+                        .jst_term_text(data_sub)),
       "For the full distribution (min, max, SD), run jdesc() on the new column."
     )
   }

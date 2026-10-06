@@ -27,6 +27,10 @@ from the column's own words, so the line runs as pasted. The call is
 emitted on one line when it fits the 76-column message width, and
 otherwise breaks after the variable with the map string continuing
 under its own opening quote. Every continuation still parses, because
-\code{.jst_parse_text_map()} trims each rule.
+\code{.jst_parse_text_map()} trims each rule. The rules are separated
+at the semicolons OUTSIDE quoted words, by \code{.jst_split_unquoted()}
+and before the quotes are escaped: until Session 343 a plain split cut
+a quoted word holding a semicolon across two lines, and the pasted word
+no longer matched the data (the S249 item).
 }
 \keyword{internal}

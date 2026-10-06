@@ -4,7 +4,7 @@
 \alias{.jst_stop_arg}
 \title{Internal helper: raise a standardized argument-validation error}
 \usage{
-.jst_stop_arg(fn = NULL, arg, requirement = NULL, choices = NULL)
+.jst_stop_arg(fn = NULL, arg, requirement = NULL, choices = NULL, hint = NULL)
 }
 \arguments{
 \item{fn}{The user-facing function name, without parentheses (e.g. "jcorr").}
@@ -19,6 +19,10 @@ trailing period. Ignored when choices is supplied.}
 Rule A choice-error house form -- a double-quoted natural list, "or"
 before the last element, Oxford comma at three or more, and no "one of:"
 lead-in.}
+
+\item{hint}{Optional text placed after the requirement, beginning with a
+newline: the did-you-mean line and its call that
+\code{.jst_near_choice_hint()} builds (Session 343).}
 }
 \value{
 Never returns; always signals an error.

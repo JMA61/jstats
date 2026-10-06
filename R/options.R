@@ -1155,8 +1155,16 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     if (!is.character(missing.convention) ||
         length(missing.convention) != 1L ||
         !(missing.convention %in% c("none", "spss", "stata", "sas"))) {
+      # S343 (the S281 item's value half): a near miss of a convention
+      # value -- joptions("spps") -- gets the value it is nearest to and
+      # the call to run, after the choice error. The line keeps the form
+      # the call used: a lone positional string, or the argument by name.
       .jst_stop_arg("joptions", "missing.convention",
-                    choices = c("none", "spss", "stata", "sas"))
+                    choices = c("none", "spss", "stata", "sas"),
+                    hint = .jst_near_choice_hint(
+                      missing.convention, c("none", "spss", "stata", "sas"),
+                      if (lone_positional) "joptions(\""
+                      else "joptions(missing.convention = \""))
     }
   }
   if (cc_supplied && !is.null(missing.convention.codes)) {
