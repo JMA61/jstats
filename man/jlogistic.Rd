@@ -25,7 +25,9 @@ jlogistic(
 }
 \arguments{
 \item{formula}{A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
-must be a binary variable coded 0/1. Transformed predictor terms such
+must be a binary variable coded 0/1, and a variable of the data: a
+computed term on the left, such as \code{I(Score > 50)}, is refused,
+so create the 0/1 variable first. Transformed predictor terms such
 as \code{log(IV1)} are computed automatically and used throughout the
 output.}
 
@@ -69,9 +71,14 @@ Exp(B). If NULL (default), defers to \code{joutput()}.}
 \item{classification}{Logical. If TRUE, prints a classification table
 showing predicted vs observed outcomes. Default is FALSE.}
 
-\item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints
-VIF table. If a character vector, \code{vif} is currently the only
-supported option. If NULL (default), defers to \code{joutput()}.}
+\item{diagnostics}{Logical, \code{"vif"}, or NULL. If TRUE (or
+\code{"vif"}), prints the VIF table for a model with two or more
+predictors. The values are the predictors' ordinary variance inflation
+factors, computed from their correlations as for a linear model. A
+VIF above 10 gets a line of interpretation under the table, except at
+\code{joutput("minimal")}. If NULL (default), defers to
+\code{joutput()}'s \code{diagnostics} setting, which is off at every
+output level until it is set.}
 
 \item{ref.categories}{Logical or NULL. Per-call override for showing the
 reference-categories block (the baseline level dropped from each set of
@@ -80,8 +87,9 @@ dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
 \code{jlogistic()} only, since they are the functions that produce
 dummy-coded coefficient tables.}
 
-\item{full}{Logical. If TRUE, turns on ci, classification, and
-diagnostics. Does not override explicit FALSE values.}
+\item{full}{Logical. If TRUE, turns on ci and classification. Does not
+override an explicit FALSE, and does not turn on diagnostics, which
+\code{diagnostics} alone governs.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},

@@ -10,6 +10,11 @@
 #' within any level. Per-call arguments on analysis functions always take
 #' precedence over joutput() settings.
 #'
+#' Diagnostic output -- Levene's test, the VIF table, the regression
+#' diagnostic plots -- is set apart from the levels: it is off at every
+#' level and is turned on with \code{diagnostics}, here or in an analysis
+#' call.
+#'
 #' @param level Character. One of \code{minimal}, \code{standard}
 #'   (default), or \code{full}. If omitted, prints the current settings.
 #'   If \code{NULL}, resets to defaults (standard with no toggle overrides).
@@ -29,10 +34,10 @@
 #'       in-table labels per call or via the \code{variable.id} toggle.}
 #'     \item{full}{Everything in standard plus a variable label legend
 #'       (\code{variable.id = "legend"}), regression coefficient confidence
-#'       intervals, assumption checks (Levene's
-#'       test), post-hoc tests, regression diagnostics, and the Case
+#'       intervals, post-hoc tests, and the Case
 #'       Processing table on every call, with the per-code missing
-#'       breakdown.}
+#'       breakdown. Diagnostic output is not part of it: see
+#'       \code{diagnostics}.}
 #'   }
 #' @param effect.size Logical or NULL. Override the level's default for
 #'   effect size display.
@@ -42,12 +47,32 @@
 #' @param means.ci Logical or NULL. Override the level's default for
 #'   confidence intervals on means and mean differences (\code{jt},
 #'   \code{jaov}). Off at minimal, on at standard and full.
-#' @param levene Logical or NULL. Override the level's default for
-#'   Levene's test display.
 #' @param posthoc Logical or NULL. Override the level's default for
 #'   post-hoc test display (jaov only).
-#' @param diagnostics Logical or NULL. Override the level's default for
-#'   regression diagnostic output (jlm only).
+#' @param diagnostics Logical, character vector, or NULL. The diagnostic
+#'   output of the analysis functions -- assumption checks and the like --
+#'   which no level turns on. \code{TRUE} shows every diagnostic a function
+#'   has; \code{FALSE} (the setting until one is made) shows none; a
+#'   character vector shows the ones named, each function taking those that
+#'   apply to it:
+#'   \itemize{
+#'     \item \code{"levene"} -- Levene's test for homogeneity of variance
+#'       (\code{jt}, \code{jaov});
+#'     \item \code{"vif"} -- the variance inflation factors (\code{jlm},
+#'       \code{jlogistic});
+#'     \item \code{"residuals"}, \code{"qq"}, \code{"scale"},
+#'       \code{"cooks"}, \code{"leverage"} -- the regression diagnostic
+#'       plots (\code{jlm}).
+#'   }
+#'   Name more than one with \code{c()}:
+#'   \code{joutput(diagnostics = c("levene", "vif"))}. A diagnostic prints
+#'   with its brief interpretation (the note under a significant Levene's
+#'   test, the lines under a VIF above 10) except at the minimal level,
+#'   which prints the table alone. Unlike the other settings it is not
+#'   cleared by a level call: \code{joutput("full")} leaves it as it was.
+#'   \code{joutput(NULL)} turns it off with everything else. The same
+#'   argument on \code{jt()}, \code{jaov()}, \code{jlm()} and
+#'   \code{jlogistic()} sets it for one call.
 #' @param case.processing Three-state toggle for the Case Processing
 #'   table -- the block at the top of every analysis function's output
 #'   (and of \code{jscreen()}'s) that accounts for the cases: the original
@@ -177,7 +202,7 @@
 #'     differs from the level's default.}
 #'   \item{\code{joutput("setting")}}{Print one setting and nothing else --
 #'     \code{joutput("digits")}, or several at once with
-#'     \code{joutput(c("levene", "posthoc"))} -- closed by a pointer to
+#'     \code{joutput(c("posthoc", "digits"))} -- closed by a pointer to
 #'     \code{joutput()} for the full panel. A setting name given WITHOUT
 #'     an argument name is read as a query rather than as a level; the
 #'     three level names and the setting names share no string, so the
@@ -187,7 +212,8 @@
 #'   \item{\code{joutput("level")}}{Set the level, clearing any earlier
 #'     overrides, then print the full panel -- a level moves most
 #'     settings at once. Settings given in the same call are applied as
-#'     overrides on the new level.}
+#'     overrides on the new level. \code{diagnostics} is the exception:
+#'     it belongs to no level, so a level call leaves it as it was.}
 #'   \item{\code{joutput(setting = value, ...)}}{Set one or more settings
 #'     within the current level, then echo only what the call touched,
 #'     closed by a pointer to \code{joutput()} for the full panel. The
@@ -240,7 +266,10 @@
 #' @examples
 #' joutput("standard")                       # effect sizes + means/diff CIs (jt, jaov)
 #' joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
-#' joutput("full")                         # everything
+#' joutput("full")                         # every statistic and every detail
+#' joutput(diagnostics = TRUE)             # diagnostic output on, at any level
+#' joutput(diagnostics = c("levene", "vif")) # only the diagnostics named
+#' joutput(diagnostics = FALSE)            # and off again
 #' joutput(digits = 2)                     # set one setting; echoes only that one
 #' joutput("digits")                       # show one setting
 #' joutput()                               # show current settings
@@ -256,7 +285,7 @@
 #'   status query, and a \code{joutput("setting")} query, always print
 #'   regardless of quiet.
 joutput <- function(level, effect.size = NULL,
-                    regression.ci = NULL, means.ci = NULL, levene = NULL,
+                    regression.ci = NULL, means.ci = NULL,
                     posthoc = NULL, diagnostics = NULL,
                     case.processing = NULL, case.processing.detail = NULL,
                     case.processing.filter = NULL,
@@ -269,9 +298,9 @@ joutput <- function(level, effect.size = NULL,
   .jst_check_flag(effect.size, "effect.size", null.ok = TRUE)
   .jst_check_flag(regression.ci, "regression.ci", null.ok = TRUE)
   .jst_check_flag(means.ci, "means.ci", null.ok = TRUE)
-  .jst_check_flag(levene, "levene", null.ok = TRUE)
   .jst_check_flag(posthoc, "posthoc", null.ok = TRUE)
-  .jst_check_flag(diagnostics, "diagnostics", null.ok = TRUE)
+  # TRUE, FALSE or the names of diagnostics, any function's (Session 346).
+  .jst_check_diagnostics(diagnostics, "joutput")
   .jst_check_flag(case.processing, "case.processing", null.ok = TRUE)
   .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
   .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
@@ -314,7 +343,6 @@ joutput <- function(level, effect.size = NULL,
   if (!is.null(effect.size))     toggle_args$effect.size     <- effect.size
   if (!is.null(regression.ci))   toggle_args$regression.ci   <- regression.ci
   if (!is.null(means.ci))        toggle_args$means.ci        <- means.ci
-  if (!is.null(levene))          toggle_args$levene          <- levene
   if (!is.null(posthoc))         toggle_args$posthoc         <- posthoc
   if (!is.null(diagnostics))     toggle_args$diagnostics     <- diagnostics
   if (!is.null(case.processing)) toggle_args$case.processing <- case.processing
@@ -429,7 +457,13 @@ joutput <- function(level, effect.size = NULL,
     .jst_stop_arg("joutput", "level", choices = c("minimal", "standard", "full"))
   }
 
-  # Set level and toggles
+  # Set level and toggles. A level call clears the earlier overrides --
+  # every one but diagnostics, which is no part of a level and stays as it
+  # was unless this call names it (Session 346).
+  kept_diag <- getOption(".jst_output_toggles", list())$diagnostics
+  if (!("diagnostics" %in% names(toggle_args)) && !is.null(kept_diag)) {
+    toggle_args$diagnostics <- kept_diag
+  }
   options(.jst_output_level = level)
   if (length(toggle_args) > 0) {
     options(.jst_output_toggles = toggle_args)
@@ -449,7 +483,7 @@ joutput <- function(level, effect.size = NULL,
 
 #' @keywords internal
 .jst_output_toggle_names <- c("effect.size", "regression.ci", "means.ci",
-                              "levene", "posthoc", "diagnostics",
+                              "posthoc", "diagnostics",
                               "case.processing", "case.processing.detail",
                               "case.processing.filter",
                               "variable.id", "value.id", "ref.categories",
@@ -523,6 +557,9 @@ joutput <- function(level, effect.size = NULL,
                      length(effective) == 1L && length(default_val) == 1L &&
                      effective == default_val)
     override_str <- if (!same_value) " (override)" else ""
+    # diagnostics is no part of a level, so it has no level default to
+    # override (Session 346).
+    if (identical(nm, "diagnostics")) override_str <- ""
 
     # case.processing.detail carries a string tier (none/totals/per_code);
     # case.processing.filter a string mode (auto/list/collapse);
@@ -537,6 +574,9 @@ joutput <- function(level, effect.size = NULL,
       toupper(effective)
     } else if (nm == "digits") {
       as.character(effective)
+    } else if (nm == "diagnostics" && is.character(effective)) {
+      # The diagnostics named, in the panel's capitals: LEVENE, VIF.
+      toupper(paste(effective, collapse = ", "))
     } else if (is.null(effective)) {
       "AUTO"
     } else if (isTRUE(effective)) {

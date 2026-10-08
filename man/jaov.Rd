@@ -10,14 +10,15 @@ jaov(
   welch = FALSE,
   posthoc = NULL,
   effect.size = NULL,
-  levene = NULL,
+  diagnostics = NULL,
   ci = NULL,
   subset = NULL,
   variable.id = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
   full = FALSE,
-  digits = NULL
+  digits = NULL,
+  ...
 )
 }
 \arguments{
@@ -32,7 +33,10 @@ If TRUE, runs Welch's ANOVA (does not assume equal variances). Welch's
 F is not a ratio of two mean squares, so its table shows F, df1, df2
 and p: Sum of Squares and Mean Square belong to the traditional ANOVA
 table and are not applicable to Welch's test. Welch's ANOVA needs at
-least 2 cases in every group.}
+least 2 cases in every group, and some variation within every group:
+a group whose cases all hold one value has a variance of zero, which
+Welch's F divides by. The traditional ANOVA can include such a group,
+or a group of one case.}
 
 \item{posthoc}{Logical or NULL. If TRUE, prints pairwise comparisons of
 the group means: Tukey HSD for the traditional ANOVA, and Games-Howell
@@ -42,14 +46,24 @@ freedom, shown in a df column, and the p-values and confidence
 intervals are adjusted for the number of groups through the
 studentized range distribution, as Tukey's are. Commercial
 statistical software offers the same test for unequal variances
-(Games-Howell in SPSS's ONEWAY post-hoc tests).
+(Games-Howell in SPSS's ONEWAY post-hoc tests). A Games-Howell
+comparison with fewer than 2 degrees of freedom -- possible when a
+group has two or three cases -- shows its difference and its df and
+leaves its interval and p-value blank, with a line under the table
+saying so: the studentized range distribution is not defined there.
+With two groups no post-hoc table is printed or returned, after
+either ANOVA: the test above it is the only comparison.
 If NULL (default), defers to \code{joutput()}.}
 
 \item{effect.size}{Logical or NULL. If TRUE, prints eta-squared. If NULL
 (default), defers to \code{joutput()}.}
 
-\item{levene}{Logical or NULL. If TRUE, prints Levene's test for homogeneity
-of variance. If NULL (default), defers to \code{joutput()}.}
+\item{diagnostics}{Logical, \code{"levene"}, or NULL. If TRUE (or
+\code{"levene"}), prints Levene's test for homogeneity of variance,
+with a note under it when the test is significant (see "Unequal
+variances"). If NULL (default), defers to \code{joutput()}'s
+\code{diagnostics} setting, which is off at every output level until
+it is set.}
 
 \item{ci}{Logical or NULL. If TRUE, adds 95\% confidence intervals to the
 group descriptives table. If NULL (default), defers to \code{joutput()}.}
@@ -92,8 +106,9 @@ Processing table itself prints only when a filter or listwise
 deletion excluded cases; otherwise a one-line N statement takes its
 place. See \code{?joutput} (\code{case.processing}).}
 
-\item{full}{Logical. If TRUE, turns on posthoc, effect.size, levene,
-and ci all at once. Does not override explicit FALSE values.}
+\item{full}{Logical. If TRUE, turns on posthoc, effect.size and ci
+together. Does not override explicit FALSE values, and does not turn
+on diagnostics, which \code{diagnostics} alone governs.}
 
 \item{digits}{Integer or NULL. Number of decimal places for continuous
 statistics in the output tables (range 0-7; \code{digits = 0} prints
@@ -101,6 +116,10 @@ whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
 which keep their own fixed conventions. NULL (default) defers to
 \code{joutput()}'s \code{digits} setting (default 3).}
+
+\item{...}{Reserved for argument-name checking. Passing \code{levene},
+the name of the diagnostics setting before version 0.9.219, produces
+an error that names \code{diagnostics}.}
 }
 \value{
 Invisibly returns a list of class \code{jst_anova} containing:
@@ -143,13 +162,53 @@ must hold one value for each case -- each row of \code{data} left
 after filtering -- where \code{lm()} would recycle a shorter one; a
 set used with \code{\%in\%} may have any length.
 }
+\section{Unequal variances}{
+
+The traditional ANOVA assumes the groups have the same variance, and
+Levene's test (\code{diagnostics = TRUE}) asks whether they do. When it
+is significant, a note under its table states the two things that
+decide how much that matters -- the ratio of the largest group's size to
+the smallest, and of the largest standard deviation to the smallest --
+and then takes one of three forms. Textbooks give different guidelines
+and no single cutoff is agreed, so the note does not treat one as
+exact:
+\itemize{
+\item Stevens (\emph{Applied Multivariate Statistics for the Social
+Sciences}; \emph{Intermediate Statistics: A Modern Approach}) treats
+the F test as robust to unequal variances while the largest group is
+less than 1.5 times the smallest.
+\item Moore, McCabe and Craig (\emph{Introduction to the Practice of
+Statistics}) treat the results as approximately correct while the
+largest standard deviation is less than twice the smallest; Howell
+(\emph{Statistical Methods for Psychology}) gives the same limit as
+a variance ratio of four and adds that unequal variances and unequal
+group sizes do not mix.
+}
+The note reads "usually still acceptable" when the largest group is no
+more than 1.25 times the smallest and the largest standard deviation no
+more than twice the smallest; it says the p-value may not be reliable
+when the group sizes differ by more than 1.5 times and the standard
+deviations by more than twice; and between the two it says that
+guidelines differ. The 1.25 is not a textbook figure. It comes from
+simulations run for jstats (a true null hypothesis, normal scores, a
+nominal 5 percent level, four groups, the smallest group the most
+variable): in the cases tried, the traditional ANOVA rejected up to
+about 7.5 percent of the time inside the first range, about 7 to 13
+percent in the middle one, and 13 to 16 percent in the last. The
+direction matters: those figures are for the worst case, and when the
+LARGEST group is the most variable the rate is lower, falling under 5
+percent where the sizes are clearly unequal. Welch's ANOVA
+(\code{welch = TRUE}) does not assume equal variances. The note is not
+printed at \code{joutput("minimal")}, which prints the table alone.
+}
+
 \examples{
 # With explicit data frame
 jaov(WellbeingScore ~ Region, data = community)
 jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 
 # Checking the equal-variances assumption: Levene's test
-jaov(WellbeingScore ~ Region, data = community, levene = TRUE)
+jaov(WellbeingScore ~ Region, data = community, diagnostics = TRUE)
 
 # Pairwise comparisons after the traditional ANOVA: Tukey HSD
 jaov(WellbeingScore ~ Region, data = community, posthoc = TRUE)

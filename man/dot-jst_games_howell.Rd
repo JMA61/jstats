@@ -33,7 +33,11 @@ needs none beyond stats.
 }
 \details{
 A pair whose standard error is 0 (both groups constant) has no df, p or
-interval: its cells are NA and print blank. \code{jaov()} stops before
-this for a group of one case, which has no variance.
+interval: its cells are NA and print blank. A pair with fewer than 2
+degrees of freedom keeps its df and has no p or interval: the
+studentized range distribution is not defined there, and
+\code{stats::ptukey()} and \code{stats::qtukey()} are not called
+(Session 346). \code{jaov()} stops before this for a group of one case,
+which has no variance, and for a group whose cases all hold one value.
 }
 \keyword{internal}

@@ -47,13 +47,17 @@
 #'   comparisons), and a note reports how many pairs were dropped. Default
 #'   is FALSE.
 #' @param welch Logical. If FALSE (default), runs Student's t-test
-#'   (equal variances assumed). If TRUE, runs Welch's t-test. Ignored
-#'   when paired = TRUE.
+#'   (equal variances assumed). If TRUE, runs Welch's t-test, which needs
+#'   at least 2 cases in each group; Student's test can include a group of
+#'   one case. Ignored when paired = TRUE.
 #' @param effect.size Logical or NULL. If TRUE, prints Cohen's d. If NULL
 #'   (default), defers to \code{joutput()} session setting.
-#' @param levene Logical or NULL. If TRUE, prints Levene's test for homogeneity
-#'   of variance. Ignored when paired = TRUE. If NULL (default), defers to
-#'   \code{joutput()}.
+#' @param diagnostics Logical, \code{"levene"}, or NULL. If TRUE (or
+#'   \code{"levene"}), prints Levene's test for homogeneity of variance,
+#'   with a note under it when the test is significant (see "Unequal
+#'   variances"). Not applicable when paired = TRUE. If NULL (default),
+#'   defers to \code{joutput()}'s \code{diagnostics} setting, which is off
+#'   at every output level until it is set.
 #' @param ci Logical or NULL. If TRUE, adds 95% confidence interval for the
 #'   mean difference. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
@@ -82,8 +86,51 @@
 #'   are produced). A no-op for grouping variables with
 #'   no value labels. NULL (default) defers to \code{joutput()}'s
 #'   \code{value.id} setting. Not a logical.
-#' @param full Logical. If TRUE, turns on effect.size, levene, and ci
-#'   all at once. Does not override explicit FALSE values.
+#' @param full Logical. If TRUE, turns on effect.size and ci together.
+#'   Does not override explicit FALSE values, and does not turn on
+#'   diagnostics, which \code{diagnostics} alone governs.
+#' @param ... Reserved for argument-name checking. Passing \code{levene},
+#'   the name of the diagnostics setting before version 0.9.219, produces
+#'   an error that names \code{diagnostics}.
+#'
+#' @section Unequal variances:
+#' Student's t-test assumes the two groups have the same variance, and
+#' Levene's test (\code{diagnostics = TRUE}) asks whether they do. When it
+#' is significant, a note under its table states the two things that
+#' decide how much that matters -- the ratio of the larger group's size to
+#' the smaller, and of the larger standard deviation to the smaller -- and
+#' then takes one of three forms. Textbooks give different guidelines and
+#' no single cutoff is agreed, so the note does not treat one as exact:
+#' \itemize{
+#'   \item Stevens (\emph{Intermediate Statistics: A Modern Approach};
+#'     \emph{Applied Multivariate Statistics for the Social Sciences})
+#'     holds that unequal variances distort the test appreciably only when
+#'     the larger group is more than 1.5 times the smaller.
+#'   \item Moore, McCabe and Craig (\emph{Introduction to the Practice of
+#'     Statistics}) treat results as approximately correct while the
+#'     largest standard deviation is less than twice the smallest, a rule
+#'     they state for the analysis of variance; Howell (\emph{Statistical
+#'     Methods for Psychology}) gives the same limit as a variance ratio of
+#'     four and adds that unequal variances and unequal group sizes do not
+#'     mix.
+#' }
+#' The note reads "usually still acceptable" when the larger group is no
+#' more than 1.25 times the smaller and the larger standard deviation no
+#' more than twice the smaller; it says the p-value may not be reliable
+#' when the group sizes differ by more than 1.5 times and the standard
+#' deviations by more than twice; and between the two it says that
+#' guidelines differ. The 1.25 is not a textbook figure. It comes from
+#' simulations run for jstats (a true null hypothesis, normal scores, a
+#' nominal 5 percent level, the smaller group the more variable): in the
+#' cases tried, Student's test rejected up to about 7 percent of the time
+#' inside the first range, up to about 10 percent in the middle one, and
+#' about 14 to 15 percent in the last. Two groups of the same size are the
+#' most forgiving case: the rate stayed near 5 percent with one standard
+#' deviation up to three times the other. The direction matters: when the
+#' LARGER group is the more variable, the test rejects too rarely
+#' instead. Welch's t-test (\code{welch = TRUE}) does not assume equal
+#' variances. The note is not printed at \code{joutput("minimal")}, which
+#' prints the table alone.
 #'
 #' @return Invisibly returns a list of class \code{jst_ttest} containing:
 #'   \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
@@ -97,6 +144,9 @@
 #' jt(WellbeingScore ~ Volunteer, data = community)
 #' jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
 #' jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
+#'
+#' # Checking the equal-variances assumption: Levene's test
+#' jt(WellbeingScore ~ Volunteer, data = community, diagnostics = TRUE)
 #'
 #' # Using juse() default
 #' juse(community)
@@ -122,17 +172,20 @@
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
 jt <- function(formula, data, paired = FALSE, welch = FALSE,
-               effect.size = NULL, levene = NULL, ci = NULL,
+               effect.size = NULL, diagnostics = NULL, ci = NULL,
                subset = NULL, variable.id = NULL, value.id = NULL,
-               case.processing.detail = NULL, full = FALSE, digits = NULL) {
+               case.processing.detail = NULL, full = FALSE, digits = NULL,
+               ...) {
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(paired, "paired")
   .jst_check_flag(welch, "welch")
   .jst_check_flag(full, "full")
   .jst_check_flag(effect.size, "effect.size", null.ok = TRUE)
-  .jst_check_flag(levene, "levene", null.ok = TRUE)
   .jst_check_flag(ci, "ci", null.ok = TRUE)
+  # levene = was the name of this setting until v0.9.219.
+  .jst_check_args(list(...), aliases = c(levene = "diagnostics"),
+                  fn_name = "jt")
 
   digits_n <- .jst_resolve_digits(digits)
 
@@ -164,14 +217,15 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   if (full) {
     if (is.null(effect.size)) effect.size <- TRUE
-    if (is.null(levene))      levene      <- TRUE
     if (is.null(ci))          ci          <- TRUE
   }
 
   # Resolve display toggles: per-call > joutput() toggle > joutput() level
   effect.size <- .jst_resolve_toggle("effect.size", effect.size)
   ci          <- .jst_resolve_toggle("means.ci",    ci)
-  levene      <- .jst_resolve_toggle("levene",      levene)
+  # Diagnostics are apart from the levels and from full = TRUE (Session
+  # 346): the call's own diagnostics =, else joutput()'s, else off.
+  levene      <- "levene" %in% .jst_resolve_diagnostics(diagnostics, "jt")
   # Red title - determined before any output
   if (paired) {
     .cat_red("Paired Samples T-Test\n")
@@ -253,9 +307,22 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
+  # No case left: one stop, ahead of the group count (Session 346).
+  .jst_stop_empty_sample(sample_info)
 
   # A text grouping variable's blank cells are one group, <blank> (S340).
   group_var   <- .jst_label_blanks(data[[group_name]])
+
+  # A group is counted on the cases the test can use (Session 346). A group
+  # whose cases are all missing on the outcome was still counted: with two
+  # groups in the data the descriptives printed its row with N 0 and R
+  # stopped on "grouping factor must have exactly 2 levels", and with three
+  # the test was refused as an ANOVA's although two groups had cases. Not
+  # for a paired test, which pairs the two groups' rows by position before
+  # it drops a pair with a missing value (AUDIT-001).
+  n_groups_data <- length(unique(unclass(group_var)[!is.na(group_var)]))
+  if (!paired) group_var[is.na(data[[dv_name]])] <- NA
+
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
     original_codes <- .jst_group_codes(group_var)
@@ -273,6 +340,11 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   data[[group_name]] <- droplevels(data[[group_name]])
 
   n_levels <- nlevels(data[[group_name]])
+  # Said under a group count that missing data lowered, so the count can be
+  # squared with the categories the variable holds.
+  uncounted <- if (n_levels < n_groups_data) {
+    paste0("\nCases with a missing '", dv_name, "' are not counted.")
+  }
   if (n_levels != 2) {
     # The count agrees in number (voice Rule O, .jst_plural()) and each
     # sentence takes a line (Rule E). More than 2 categories and fewer are
@@ -288,13 +360,67 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                 "A t-test requires exactly 2.\n",
                 "Use jaov() for more than 2 categories.")
     }
+    # A filter that names the grouping variable kept one category of it
+    # (Session 346): the stop said "'g' has 1 category" and nothing of the
+    # filter that was its whole cause.
+    fn <- .jst_filters_naming(group_name, sample_info, .jst_data_name)
+    if (n_groups_data == 1L && (fn$per || fn$stored)) {
+      .jst_stop(.jst_filter_keeps(fn), " only 1 category of '", group_name,
+                "', and a t-test requires exactly 2.\n",
+                .jst_filter_way_out(fn, .jst_data_name,
+                                    "To compare the categories"))
+    }
     context <- .jst_settings_context(.jst_data_name)
     .jst_stop(has, context, ".\n",
               "A t-test requires exactly 2.",
+              uncounted,
               if (nzchar(context)) {
                 paste0("\nCheck whether your jsubset or jcomplete settings ",
                        "are excluding one of the groups.")
               })
+  }
+
+  # Groups the test cannot be computed on (Session 346; the S341 item, the
+  # jt() sibling of jaov()'s one-case stops). Each of these reached R:
+  # Welch's test with a group of one case stopped on "not enough 'y'
+  # observations" after the descriptives had printed, two groups of one
+  # case each on "not enough observations", and two groups with no
+  # variation between them on "data are essentially constant". Stopped
+  # here, before any table. A paired test has its own checks, on the pairs.
+  if (!paired) {
+    shape <- .jst_group_shape(
+      if (haven::is.labelled(data[[dv_name]])) .jst_as_numeric(data[[dv_name]])
+      else data[[dv_name]],
+      data[[group_name]])
+    solo <- names(shape$n)[shape$n == 1L]
+    if (length(solo) == 2L) {
+      .jst_stop("'", group_name, "' has 2 categories with only 1 case in ",
+                "each.\n",
+                "A t-test requires at least one category with 2 or more ",
+                "cases.")
+    }
+    if (welch && length(solo) == 1L) {
+      .jst_stop("'", group_name, "' has 1 category with only 1 case (", solo,
+                ").\n",
+                "Welch's t-test requires at least 2 cases in both ",
+                "categories.\n",
+                "Student's t-test can include it: run jt() without ",
+                "welch = TRUE.")
+    }
+    # No variation to test against: the standard error of the difference is
+    # zero. t.test()'s own threshold, so its error can never surface.
+    n_g  <- as.numeric(shape$n)
+    v_g  <- ifelse(n_g > 1, as.numeric(shape$var), 0)
+    se_d <- if (welch) {
+      sqrt(sum(v_g / n_g))
+    } else {
+      sqrt(sum((n_g - 1) * v_g) / (sum(n_g) - 2) * sum(1 / n_g))
+    }
+    if (se_d < 10 * .Machine$double.eps * max(abs(as.numeric(shape$mean)))) {
+      .jst_stop("'", dv_name, "' has the same value for every case in each ",
+                "category of '", group_name, "'.\n",
+                "A t-test requires variation within at least one category.")
+    }
   }
 
   # Assumption-check warning (audit): the outcome looks categorical where a
@@ -395,30 +521,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                      align = rep("bc", 4L),
                      digits = c(F_value = digits_n))
 
-    # Interpretive note (only when significant and not already using Welch)
-    if (!is.na(levene_p) && levene_p < 0.05 && !welch) {
-      group_ns       <- tapply(dv_vals, group_factor, function(x) sum(!is.na(x)))
-      size_ratio     <- max(group_ns) / min(group_ns)
-      balanced       <- size_ratio <= 1.5
-      levene_p_note  <- .jst_fmt_p(levene_p)
-      # "p < .001", never "p = <.001" (Session 341): the formatter's
-      # "<.001" carries its own sign.
-      levene_p_note  <- if (startsWith(levene_p_note, "<")) {
-        paste0("p < ", sub("^<", "", levene_p_note))
-      } else {
-        paste0("p = ", levene_p_note)
-      }
-      if (balanced) {
-        .jst_msg_out("\nNote: Levene's test is significant (",
-                     levene_p_note, "), but group sizes are approximately ",
-                     "equal so the standard test remains appropriate.")
-      } else {
-        .jst_msg_out("\nNote: Levene's test is significant (",
-                     levene_p_note, "), suggesting unequal variances.\n",
-                     "With unequal group sizes this may affect results ",
-                     "-- consider welch = TRUE.")
-      }
-    }
+    # The note under a significant test, in one of three forms (Session
+    # 346; .jst_levene_note()). Not when Welch's test is the one run.
+    if (!welch) .jst_levene_note(levene_p, dv_vals, group_factor, "jt")
     cat("\n")
   } else if (levene && paired) {
     .jst_msg("Note: Levene's test is not applicable for paired samples.")
@@ -535,7 +640,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     cohens_d <- mean(diffs) / sd(diffs)
     d_label  <- "Cohen's dz (paired)"
   } else {
-    sp       <- sqrt(((n1 - 1) * s1^2 + (n2 - 1) * s2^2) / (n1 + n2 - 2))
+    # The pooled SD, as the test above pooled it. A group of one case has
+    # no SD of its own and adds nothing to the sum of squares -- its term
+    # is (1 - 1) * s^2 -- so d is defined by the other group's SD; taking
+    # the term through R gave 0 * NA and "Cohen's d: NA" (Session 346; the
+    # S341 item). effectsize::cohens_d() pools the same way.
+    ss1      <- if (n1 > 1L) (n1 - 1) * s1^2 else 0
+    ss2      <- if (n2 > 1L) (n2 - 1) * s2^2 else 0
+    sp       <- sqrt((ss1 + ss2) / (n1 + n2 - 2))
     cohens_d <- (m1 - m2) / sp
     d_label  <- "Cohen's d"
   }
@@ -616,7 +728,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   F is not a ratio of two mean squares, so its table shows F, df1, df2
 #'   and p: Sum of Squares and Mean Square belong to the traditional ANOVA
 #'   table and are not applicable to Welch's test. Welch's ANOVA needs at
-#'   least 2 cases in every group.
+#'   least 2 cases in every group, and some variation within every group:
+#'   a group whose cases all hold one value has a variance of zero, which
+#'   Welch's F divides by. The traditional ANOVA can include such a group,
+#'   or a group of one case.
 #' @param posthoc Logical or NULL. If TRUE, prints pairwise comparisons of
 #'   the group means: Tukey HSD for the traditional ANOVA, and Games-Howell
 #'   when welch = TRUE. Games-Howell does not assume equal variances: each
@@ -625,12 +740,22 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   intervals are adjusted for the number of groups through the
 #'   studentized range distribution, as Tukey's are. Commercial
 #'   statistical software offers the same test for unequal variances
-#'   (Games-Howell in SPSS's ONEWAY post-hoc tests).
+#'   (Games-Howell in SPSS's ONEWAY post-hoc tests). A Games-Howell
+#'   comparison with fewer than 2 degrees of freedom -- possible when a
+#'   group has two or three cases -- shows its difference and its df and
+#'   leaves its interval and p-value blank, with a line under the table
+#'   saying so: the studentized range distribution is not defined there.
+#'   With two groups no post-hoc table is printed or returned, after
+#'   either ANOVA: the test above it is the only comparison.
 #'   If NULL (default), defers to \code{joutput()}.
 #' @param effect.size Logical or NULL. If TRUE, prints eta-squared. If NULL
 #'   (default), defers to \code{joutput()}.
-#' @param levene Logical or NULL. If TRUE, prints Levene's test for homogeneity
-#'   of variance. If NULL (default), defers to \code{joutput()}.
+#' @param diagnostics Logical, \code{"levene"}, or NULL. If TRUE (or
+#'   \code{"levene"}), prints Levene's test for homogeneity of variance,
+#'   with a note under it when the test is significant (see "Unequal
+#'   variances"). If NULL (default), defers to \code{joutput()}'s
+#'   \code{diagnostics} setting, which is off at every output level until
+#'   it is set.
 #' @param ci Logical or NULL. If TRUE, adds 95% confidence intervals to the
 #'   group descriptives table. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
@@ -660,8 +785,50 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   are produced). A no-op for grouping variables with
 #'   no value labels. NULL (default) defers to \code{joutput()}'s
 #'   \code{value.id} setting. Not a logical.
-#' @param full Logical. If TRUE, turns on posthoc, effect.size, levene,
-#'   and ci all at once. Does not override explicit FALSE values.
+#' @param full Logical. If TRUE, turns on posthoc, effect.size and ci
+#'   together. Does not override explicit FALSE values, and does not turn
+#'   on diagnostics, which \code{diagnostics} alone governs.
+#' @param ... Reserved for argument-name checking. Passing \code{levene},
+#'   the name of the diagnostics setting before version 0.9.219, produces
+#'   an error that names \code{diagnostics}.
+#'
+#' @section Unequal variances:
+#' The traditional ANOVA assumes the groups have the same variance, and
+#' Levene's test (\code{diagnostics = TRUE}) asks whether they do. When it
+#' is significant, a note under its table states the two things that
+#' decide how much that matters -- the ratio of the largest group's size to
+#' the smallest, and of the largest standard deviation to the smallest --
+#' and then takes one of three forms. Textbooks give different guidelines
+#' and no single cutoff is agreed, so the note does not treat one as
+#' exact:
+#' \itemize{
+#'   \item Stevens (\emph{Applied Multivariate Statistics for the Social
+#'     Sciences}; \emph{Intermediate Statistics: A Modern Approach}) treats
+#'     the F test as robust to unequal variances while the largest group is
+#'     less than 1.5 times the smallest.
+#'   \item Moore, McCabe and Craig (\emph{Introduction to the Practice of
+#'     Statistics}) treat the results as approximately correct while the
+#'     largest standard deviation is less than twice the smallest; Howell
+#'     (\emph{Statistical Methods for Psychology}) gives the same limit as
+#'     a variance ratio of four and adds that unequal variances and unequal
+#'     group sizes do not mix.
+#' }
+#' The note reads "usually still acceptable" when the largest group is no
+#' more than 1.25 times the smallest and the largest standard deviation no
+#' more than twice the smallest; it says the p-value may not be reliable
+#' when the group sizes differ by more than 1.5 times and the standard
+#' deviations by more than twice; and between the two it says that
+#' guidelines differ. The 1.25 is not a textbook figure. It comes from
+#' simulations run for jstats (a true null hypothesis, normal scores, a
+#' nominal 5 percent level, four groups, the smallest group the most
+#' variable): in the cases tried, the traditional ANOVA rejected up to
+#' about 7.5 percent of the time inside the first range, about 7 to 13
+#' percent in the middle one, and 13 to 16 percent in the last. The
+#' direction matters: those figures are for the worst case, and when the
+#' LARGEST group is the most variable the rate is lower, falling under 5
+#' percent where the sizes are clearly unequal. Welch's ANOVA
+#' (\code{welch = TRUE}) does not assume equal variances. The note is not
+#' printed at \code{joutput("minimal")}, which prints the table alone.
 #'
 #' @return Invisibly returns a list of class \code{jst_anova} containing:
 #'   \code{model} (the \code{aov} or \code{oneway.test} object),
@@ -679,7 +846,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #'
 #' # Checking the equal-variances assumption: Levene's test
-#' jaov(WellbeingScore ~ Region, data = community, levene = TRUE)
+#' jaov(WellbeingScore ~ Region, data = community, diagnostics = TRUE)
 #'
 #' # Pairwise comparisons after the traditional ANOVA: Tukey HSD
 #' jaov(WellbeingScore ~ Region, data = community, posthoc = TRUE)
@@ -715,17 +882,20 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
 jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
-                 effect.size = NULL, levene = NULL, ci = NULL,
+                 effect.size = NULL, diagnostics = NULL, ci = NULL,
                  subset = NULL, variable.id = NULL, value.id = NULL,
-                 case.processing.detail = NULL, full = FALSE, digits = NULL) {
+                 case.processing.detail = NULL, full = FALSE, digits = NULL,
+                 ...) {
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(welch, "welch")
   .jst_check_flag(full, "full")
   .jst_check_flag(effect.size, "effect.size", null.ok = TRUE)
-  .jst_check_flag(levene, "levene", null.ok = TRUE)
   .jst_check_flag(ci, "ci", null.ok = TRUE)
   .jst_check_flag(posthoc, "posthoc", null.ok = TRUE)
+  # levene = was the name of this setting until v0.9.219.
+  .jst_check_args(list(...), aliases = c(levene = "diagnostics"),
+                  fn_name = "jaov")
 
   digits_n    <- .jst_resolve_digits(digits)
   posthoc_tbl <- NULL
@@ -759,15 +929,16 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   if (full) {
     if (is.null(posthoc))     posthoc     <- TRUE
     if (is.null(effect.size)) effect.size <- TRUE
-    if (is.null(levene))      levene      <- TRUE
     if (is.null(ci))          ci          <- TRUE
   }
 
   # Resolve display toggles: per-call > joutput() toggle > joutput() level
   effect.size  <- .jst_resolve_toggle("effect.size", effect.size)
   ci           <- .jst_resolve_toggle("means.ci",   ci)
-  levene       <- .jst_resolve_toggle("levene",      levene)
   posthoc      <- .jst_resolve_toggle("posthoc",     posthoc)
+  # Diagnostics are apart from the levels and from full = TRUE (Session
+  # 346): the call's own diagnostics =, else joutput()'s, else off.
+  levene       <- "levene" %in% .jst_resolve_diagnostics(diagnostics, "jaov")
   # Red title
   if (welch) {
     .cat_red("Welch's One-Way ANOVA\n")
@@ -845,8 +1016,19 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
+  # No case left: one stop, ahead of the group count (Session 346).
+  .jst_stop_empty_sample(sample_info)
+
   # A text grouping variable's blank cells are one group, <blank> (S340).
   group_var   <- .jst_label_blanks(data[[group_name]])
+
+  # A group is counted on the cases the test can use, as in jt() (Session
+  # 346): a group whose cases are all missing on the outcome printed a
+  # descriptives row with N 0, and with two groups in the data R stopped on
+  # "contrasts can be applied only to factors with 2 or more levels".
+  n_groups_data <- length(unique(unclass(group_var)[!is.na(group_var)]))
+  group_var[is.na(data[[dv_name]])] <- NA
+
   is_labelled <- haven::is.labelled(group_var)
   if (is_labelled) {
     original_codes <- .jst_group_codes(group_var)
@@ -869,15 +1051,29 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     # Number agreement and one sentence per line, as in jt() (Session 338).
     has <- paste0("'", group_name, "' has ", n_levels, " ",
                   .jst_plural(n_levels, "category", "categories"))
+    uncounted <- if (n_levels < n_groups_data) {
+      paste0("\nCases with a missing '", dv_name, "' are not counted.")
+    }
+    # A filter that names the grouping variable kept one category of it
+    # (Session 346), as in jt().
+    fn <- .jst_filters_naming(group_name, sample_info, .jst_data_name)
+    if (n_levels == 1L && n_groups_data == 1L && (fn$per || fn$stored)) {
+      .jst_stop(.jst_filter_keeps(fn), " only 1 category of '", group_name,
+                "', and an ANOVA requires at least 2.\n",
+                .jst_filter_way_out(fn, .jst_data_name,
+                                    "To compare the categories"))
+    }
     context <- .jst_settings_context(.jst_data_name)
     if (nzchar(context)) {
       .jst_stop(has, context, ".\n",
-                "An ANOVA requires at least 2.\n",
+                "An ANOVA requires at least 2.",
+                uncounted, "\n",
                 "Check whether your jsubset or jcomplete settings ",
                 "are excluding one or more groups.")
     }
     .jst_stop(has, ".\n",
-              "An ANOVA requires at least 2 groups.")
+              "An ANOVA requires at least 2 groups.",
+              uncounted)
   }
 
   # Degenerate-grouping guard (Session 105): when every category contains
@@ -916,6 +1112,35 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
         .jst_plural(length(solo), "it", "them"),
         ": run jaov() without welch = TRUE.")
     }
+  }
+
+  # No variation inside the groups (Session 346; the S341 constant-group
+  # item). With every group constant the residual sum of squares is zero
+  # and the traditional F is a rounding error over nothing: it printed as
+  # 27815876027865139260134097158144.000. With one group constant Welch's F
+  # weights that group by n / 0, and its table printed with blank F, df2
+  # and p cells; the traditional ANOVA pools the variance and runs. A group
+  # of one case is not counted here: it has no variance to be zero.
+  shape <- .jst_group_shape(
+    if (haven::is.labelled(data[[dv_name]])) .jst_as_numeric(data[[dv_name]])
+    else data[[dv_name]],
+    data[[group_name]])
+  if (all(shape$flat | shape$n == 1L)) {
+    .jst_stop("'", dv_name, "' has the same value for every case in each ",
+              "category of '", group_name, "'.\n",
+              "An ANOVA requires variation within at least one category.")
+  }
+  if (welch && any(shape$flat)) {
+    flat <- names(shape$flat)[shape$flat]
+    .jst_stop(
+      "'", group_name, "' has ", length(flat), " ",
+      .jst_plural(length(flat), "category", "categories"),
+      " in which '", dv_name, "' does not vary (",
+      .jst_format_var_list(flat, and = TRUE), ").\n",
+      "Welch's ANOVA requires variation within every category.\n",
+      "The standard ANOVA can include ",
+      .jst_plural(length(flat), "it", "them"),
+      ": run jaov() without welch = TRUE.")
   }
 
   # Assumption-check warning (audit): the outcome looks categorical where a
@@ -978,30 +1203,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                      align = rep("bc", 4L),
                      digits = c(F_value = digits_n))
 
-    # Interpretive note (only when significant and not already using Welch)
-    if (!is.na(levene_p) && levene_p < 0.05 && !welch) {
-      group_ns       <- tapply(dv_vals, group_factor, function(x) sum(!is.na(x)))
-      size_ratio     <- max(group_ns) / min(group_ns)
-      balanced       <- size_ratio <= 1.5
-      levene_p_note  <- .jst_fmt_p(levene_p)
-      # "p < .001", never "p = <.001" (Session 341): the formatter's
-      # "<.001" carries its own sign.
-      levene_p_note  <- if (startsWith(levene_p_note, "<")) {
-        paste0("p < ", sub("^<", "", levene_p_note))
-      } else {
-        paste0("p = ", levene_p_note)
-      }
-      if (balanced) {
-        .jst_msg_out("\nNote: Levene's test is significant (",
-                     levene_p_note, "), but group sizes are approximately ",
-                     "equal so the standard test remains appropriate.")
-      } else {
-        .jst_msg_out("\nNote: Levene's test is significant (",
-                     levene_p_note, "), suggesting unequal variances.\n",
-                     "With unequal group sizes this may affect results ",
-                     "-- consider welch = TRUE.")
-      }
-    }
+    # The note under a significant test, in one of three forms (Session
+    # 346; .jst_levene_note()). Not when Welch's test is the one run.
+    if (!welch) .jst_levene_note(levene_p, dv_vals, group_factor, "jaov")
     cat("\n")
   }
 
@@ -1117,7 +1321,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     # pooled error term, which Welch's test sets aside, and until 0.9.215 a
     # note said so and offered nothing. The table takes the Tukey table's
     # form and place, with the df each comparison was judged on.
-    if (posthoc) {
+    if (posthoc && n_levels == 2L) {
+      .jst_posthoc_two_groups()
+    } else if (posthoc) {
       posthoc_tbl <- .jst_games_howell(data[[dv_name]], data[[group_name]])
       gh_table <- data.frame(
         Comparison = posthoc_tbl$comparison,
@@ -1140,6 +1346,18 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                        align = c("l", rep("bc", 5L)),
                        digits = c(Difference = digits_n, CI_Lower = digits_n,
                                   CI_Upper = digits_n, df = 1L))
+      # Why a row's interval and p cells are blank (Session 346).
+      n_low <- sum(!is.na(posthoc_tbl$df) & is.na(posthoc_tbl$p))
+      if (n_low > 0L) {
+        .jst_msg_out(
+          "\nNote: ", n_low, " ",
+          .jst_plural(n_low,
+                      "comparison has fewer than 2 degrees of freedom, so its ",
+                      "comparisons have fewer than 2 degrees of freedom, so their "),
+          .jst_plural(n_low, "confidence interval and p-value",
+                      "confidence intervals and p-values"),
+          " cannot be computed.")
+      }
     }
 
     # Store F, df, p for the return object
@@ -1194,7 +1412,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       cat("\nEta-squared: ", .jst_fmt_stat(eta_sq, digits_n), "\n", sep = "")
     }
 
-    if (posthoc) {
+    if (posthoc && n_levels == 2L) {
+      .jst_posthoc_two_groups()
+    } else if (posthoc) {
       tukey        <- stats::TukeyHSD(model)
       tukey_result <- as.data.frame(tukey[[1]])
 
@@ -1270,6 +1490,23 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 }
 
 
+#' Internal helper: the line that stands in for a two-group post-hoc table
+#'
+#' With two groups there is one comparison, and the test above it has made
+#' it: a post-hoc table held one row whose p repeated that test's (Tukey
+#' HSD after the traditional ANOVA, Games-Howell after Welch's). No table
+#' is printed and none is returned; one line says why (Session 346; the
+#' S344 item's rider).
+#'
+#' @return Invisibly NULL; called for the line it prints.
+#' @keywords internal
+.jst_posthoc_two_groups <- function() {
+  .jst_msg_out("\nNote: Post-hoc comparisons are not shown for 2 groups: ",
+               "the test above is the only comparison.")
+  invisible(NULL)
+}
+
+
 #' Internal helper: Games-Howell pairwise comparisons
 #'
 #' The post-hoc test for Welch's ANOVA (Session 341; the S327 item): every
@@ -1287,8 +1524,12 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' needs none beyond stats.
 #'
 #' A pair whose standard error is 0 (both groups constant) has no df, p or
-#' interval: its cells are NA and print blank. \code{jaov()} stops before
-#' this for a group of one case, which has no variance.
+#' interval: its cells are NA and print blank. A pair with fewer than 2
+#' degrees of freedom keeps its df and has no p or interval: the
+#' studentized range distribution is not defined there, and
+#' \code{stats::ptukey()} and \code{stats::qtukey()} are not called
+#' (Session 346). \code{jaov()} stops before this for a group of one case,
+#' which has no variance, and for a group whose cases all hold one value.
 #'
 #' @param y Numeric vector; the outcome on the analysis rows.
 #' @param g Factor; the groups, with no empty level.
@@ -1315,10 +1556,18 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       able <- is.finite(se) && se > 0
       df   <- if (able) (a + b)^2 / (a^2 / (n[i] - 1) + b^2 / (n[j] - 1))
               else NA_real_
-      p    <- if (able) stats::ptukey(abs(d) / se * sqrt(2), nmeans = k,
-                                      df = df, lower.tail = FALSE)
+      # The studentized range distribution is defined from 2 degrees of
+      # freedom, and a pair with a group of two or three cases can fall
+      # below that: ptukey() and qtukey() then return NaN with R's "NaNs
+      # produced", four times a table (Session 346; the S344 item). Such a
+      # pair keeps its difference and its df; jaov() says under the table
+      # why its other cells are blank.
+      ranged <- able && df >= 2
+      p    <- if (ranged) stats::ptukey(abs(d) / se * sqrt(2), nmeans = k,
+                                        df = df, lower.tail = FALSE)
               else NA_real_
-      half <- if (able) stats::qtukey(0.95, nmeans = k, df = df) / sqrt(2) * se
+      half <- if (ranged) stats::qtukey(0.95, nmeans = k, df = df) /
+                            sqrt(2) * se
               else NA_real_
       rows[[length(rows) + 1L]] <- data.frame(
         comparison = paste0(lv[j], "-", lv[i]),
@@ -1572,6 +1821,9 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # Case Processing Summary
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
 
+  # No case left: one stop, ahead of the category count (Session 346).
+  .jst_stop_empty_sample(sample_info)
+
   # A text variable's blank cells are one category, <blank> (S340).
   row_var <- .jst_label_blanks(data[[row_name]])
   col_var <- .jst_label_blanks(data[[col_name]])
@@ -1617,6 +1869,17 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     if (length(check_info$lvls) < 2) {
       # Number agreement and one sentence per line, as in jt() (Session 338).
       n_lvls <- length(check_info$lvls)
+      # A filter that names the variable kept one category of it (Session
+      # 346). The categories are counted before listwise deletion here, so
+      # one category is the filter's doing, or the data's.
+      fn <- .jst_filters_naming(check_info$name, sample_info, .jst_data_name)
+      if (n_lvls == 1L && (fn$per || fn$stored)) {
+        .jst_stop(.jst_filter_keeps(fn), " only 1 category of '",
+                  check_info$name, "', and a cross-tabulation requires at ",
+                  "least 2 for each variable.\n",
+                  .jst_filter_way_out(fn, .jst_data_name,
+                                      "To cross-tabulate it"))
+      }
       .jst_stop("'", check_info$name, "' has ", n_lvls, " ",
                 .jst_plural(n_lvls, "category", "categories"),
                 .jst_settings_context(.jst_data_name), ".\n",

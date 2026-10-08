@@ -753,7 +753,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (length(x_vars) > 1) {
     .jst_stop("Only one independent variable is supported in the formula.\n",
          "For multi-variable regression, fit with jlm() and plot the result:\n",
-         "  m <- jlm(", deparse(formula), ", <data>)\n",
+         "  m <- jlm(", .jst_term_text(formula),
+         if (!isTRUE(.jst_default_used)) paste0(", ", .jst_data_name),
+         ")\n",
          "  jplot(m)")
   }
   x_name <- x_vars[1]

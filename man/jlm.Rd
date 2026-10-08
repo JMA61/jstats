@@ -128,11 +128,17 @@ product of two other predictors in the model, or the square of one, is
 named in a note of its own, and under \code{std = "product"} a note
 says which convention the column follows.}
 
-\item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints VIF
-table and diagnostic plots. If a character vector, specifies which
-diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
-\code{scale}, \code{cooks}, \code{leverage}. If NULL (default),
-defers to \code{joutput()} session setting.}
+\item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints the
+VIF table (for a model with two or more predictors) and draws the five
+diagnostic plots. A character vector names the ones to show:
+\code{vif}, \code{residuals}, \code{qq}, \code{scale}, \code{cooks},
+\code{leverage}, more than one combined with \code{c()}, as in
+\code{diagnostics = c("vif", "qq")}; a name that is not one of these
+is an error. A VIF above 10 gets a line of interpretation under the
+table, except at \code{joutput("minimal")}. If NULL (default), defers
+to \code{joutput()}'s \code{diagnostics} setting, which is off at
+every output level until it is set. The same plots are available
+afterwards from \code{jplot()} on the returned object.}
 
 \item{ref.categories}{Logical or NULL. Per-call override for showing the
 reference-categories block (the baseline level dropped from each set of
@@ -141,8 +147,9 @@ dummy variables). \code{NULL} (default) defers to \code{joutput()}'s
 \code{jlogistic()} only, since they are the functions that produce
 dummy-coded coefficient tables.}
 
-\item{full}{Logical. If TRUE, turns on the coefficient confidence interval
-and diagnostics. Does not override explicit FALSE values.}
+\item{full}{Logical. If TRUE, turns on the coefficient confidence
+interval. Does not override an explicit FALSE, and does not turn on
+diagnostics, which \code{diagnostics} alone governs.}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},

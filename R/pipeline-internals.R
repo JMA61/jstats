@@ -1298,7 +1298,7 @@
 #           .jst_missing_notice_shown option); no preset level uses this
 .jst_output_defaults <- list(
   minimal  = list(effect.size = FALSE,
-                  regression.ci = FALSE, means.ci = FALSE, levene = FALSE,
+                  regression.ci = FALSE, means.ci = FALSE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = FALSE, case.processing.detail = "none",
                   case.processing.filter = "collapse",
@@ -1306,7 +1306,7 @@
                   ref.categories = FALSE, digits = 3,
                   missing.notice = FALSE),
   standard = list(effect.size = TRUE,
-                  regression.ci = FALSE, means.ci = TRUE,  levene = FALSE,
+                  regression.ci = FALSE, means.ci = TRUE,
                   posthoc = FALSE, diagnostics = FALSE,
                   case.processing = NULL,  case.processing.detail = "totals",
                   case.processing.filter = "auto",
@@ -1314,8 +1314,8 @@
                   ref.categories = TRUE, digits = 3,
                   missing.notice = TRUE),
   full     = list(effect.size = TRUE,
-                  regression.ci = TRUE,  means.ci = TRUE,  levene = TRUE,
-                  posthoc = TRUE,  diagnostics = TRUE,
+                  regression.ci = TRUE,  means.ci = TRUE,
+                  posthoc = TRUE,  diagnostics = FALSE,
                   case.processing = TRUE,  case.processing.detail = "per_code",
                   case.processing.filter = "list",
                   variable.id = "legend", value.id = "both",
@@ -1387,7 +1387,7 @@
 #' (2) individual joutput() toggle override, (3) joutput() level default.
 #' Per-call arguments use NULL to mean "I didn't specify -- defer to joutput()".
 #'
-#' @param name Character. Toggle name (e.g. "effect.size", "means.ci", "levene").
+#' @param name Character. Toggle name (e.g. "effect.size", "means.ci", "posthoc").
 #' @param per_call_value The value passed by the user in the function call,
 #'   or NULL if not specified.
 #'
@@ -1404,6 +1404,217 @@
   level    <- getOption(".jst_output_level", "standard")
   defaults <- .jst_output_defaults
   defaults[[level]][[name]]
+}
+
+# -- Diagnostics: one setting, apart from the levels (Session 346) -------------
+#
+# Jeff's ruling of 8 October 2026, amending ruling R14 parts 3 and 4.
+# Diagnostic output -- Levene's test in jt() and jaov(), the VIF table and
+# the five plots in jlm(), the VIF table in jlogistic() -- is asked for with
+# ONE argument, diagnostics, in joutput() and in each of the four functions.
+# It is off at every output level: joutput("full") and the per-call
+# full = TRUE no longer bring it, and a level call leaves it as it is. Until
+# v0.9.219 two switches did the job (levene, and a diagnostics that only the
+# models read), both of them on at the full level, so "full" bundled the
+# assumption checks with the extra statistics and the extra bookkeeping.
+#
+# Each function has its own SET of diagnostics, below. TRUE means all of
+# the set, plots included; FALSE none; a character vector the ones named.
+# A new diagnostic joins its function's set and TRUE picks it up.
+
+#' @keywords internal
+.jst_diagnostic_sets <- list(
+  jt        = "levene",
+  jaov      = "levene",
+  jlm       = c("vif", "residuals", "qq", "scale", "cooks", "leverage"),
+  jlogistic = "vif"
+)
+
+#' Internal helper: validate a diagnostics value
+#'
+#' A \code{diagnostics} value is \code{TRUE}, \code{FALSE}, \code{NULL}
+#' (not given) or a character vector of diagnostic names. Per call the
+#' names are the calling function's own set; in \code{joutput()} they are
+#' every function's, since each function takes from the stored setting what
+#' applies to it.
+#'
+#' A name that is not one of them stops, where \code{jlm()} ignored it
+#' until Session 346: \code{diagnostics = c("vif", "qqq")} printed the VIF
+#' table and no plot, with nothing to say a diagnostic had been asked for
+#' and not produced. Several names typed into ONE string --
+#' \code{"vif + qq"}, \code{"vif, qq"} -- get the stop that shows the form
+#' that works, \code{c("vif", "qq")}: the form R uses for a set of values
+#' everywhere, and the one \code{categorical =} takes in the same call.
+#'
+#' @param value The value given.
+#' @param fn Character(1); the function it was given to.
+#' @return Invisibly \code{value}; stops when it is not valid.
+#' @keywords internal
+.jst_check_diagnostics <- function(value, fn) {
+  if (is.null(value)) return(invisible(NULL))
+  if (is.logical(value) && length(value) == 1L && !is.na(value)) {
+    return(invisible(value))
+  }
+  global <- identical(fn, "joutput")
+  valid  <- if (global) {
+    unique(unlist(.jst_diagnostic_sets, use.names = FALSE))
+  } else {
+    .jst_diagnostic_sets[[fn]]
+  }
+  quoted <- paste0("\"", valid, "\"")
+  takes  <- paste0("`diagnostics` must be TRUE, FALSE, or ",
+                   if (length(valid) == 1L) quoted
+                   else paste0("one or more of ",
+                               .jst_format_var_list(quoted, and = TRUE)),
+                   ".")
+  if (!is.character(value) || length(value) == 0L || anyNA(value)) {
+    .jst_stop(takes, fn = fn)
+  }
+  bad <- setdiff(value, valid)
+  if (length(bad) == 0L) return(invisible(value))
+  # Several names in one string: show the c() form, built from what was
+  # typed, when every piece is a name this function takes.
+  parts <- trimws(strsplit(bad[1L], "[+,;[:space:]]+")[[1L]])
+  parts <- parts[nzchar(parts)]
+  if (length(parts) > 1L && all(parts %in% valid)) {
+    .jst_stop("\"", bad[1L], "\" is not a diagnostic.\n",
+              "To ask for more than one, combine them with c():\n",
+              "  diagnostics = c(",
+              paste0("\"", unique(c(setdiff(value, bad[1L]), parts)), "\"",
+                     collapse = ", "),
+              ")", fn = fn)
+  }
+  .jst_stop("\"", bad[1L], "\" is not a diagnostic",
+            if (!global) paste0(" of ", fn, "()"), ".\n",
+            takes, fn = fn)
+}
+
+#' Internal helper: the diagnostics a call is to show
+#'
+#' Precedence as for every display setting: the call's own
+#' \code{diagnostics =}, then the one stored by \code{joutput()}, then off.
+#' The output level is not consulted (Session 346).
+#'
+#' @param per_call The calling function's \code{diagnostics} argument.
+#' @param fn Character(1); the calling function, a name of
+#'   \code{.jst_diagnostic_sets}.
+#' @return Character vector: the names to show, in the set's own order;
+#'   empty when none.
+#' @keywords internal
+.jst_resolve_diagnostics <- function(per_call, fn) {
+  .jst_check_diagnostics(per_call, fn)
+  own   <- .jst_diagnostic_sets[[fn]]
+  value <- per_call
+  if (is.null(value)) {
+    value <- getOption(".jst_output_toggles", list())$diagnostics
+  }
+  if (is.character(value)) return(intersect(own, value))
+  if (isTRUE(value)) own else character(0)
+}
+
+#' Internal helper: are interpretive notes printed at this output level?
+#'
+#' A diagnostic's brief interpretation -- the note under Levene's test, the
+#' lines under a VIF above 10 -- is part of the diagnostic output and
+#' prints with it, except at \code{joutput("minimal")}, the level for a user
+#' who wants the numbers alone (Jeff, Session 346). The 1/2-dichotomy note
+#' of \code{jlm()} has been silent at that level on the same reasoning.
+#'
+#' @return Logical(1).
+#' @keywords internal
+.jst_notes_on <- function() {
+  !identical(getOption(".jst_output_level", "standard"), "minimal")
+}
+
+#' Internal helper: the note under a significant Levene's test
+#'
+#' Printed by \code{jt()} and \code{jaov()} under the Levene table when the
+#' test is significant and the test run assumes equal variances. Three
+#' forms (Jeff's ruling, Session 346, replacing ruling R14 part 1). The
+#' first two lines are the same in each and state the facts the reader
+#' needs to judge for themselves: the ratio of the largest group to the
+#' smallest, and of the largest standard deviation to the smallest. The
+#' verdict that follows is graded, because the textbooks do not agree on a
+#' cutoff (Stevens: group sizes within 1.5; Moore, McCabe and Craig: the
+#' largest SD less than twice the smallest; Howell: a variance ratio of
+#' four, with unequal sizes "not mixing" with it):
+#' \itemize{
+#'   \item sizes within 1.25 AND SDs within 2: "usually still acceptable";
+#'   \item sizes beyond 1.5 AND SDs beyond 2: the p-value "may not be
+#'     reliable";
+#'   \item anything between: "guidelines differ".
+#' }
+#' The 1.25 is from simulation, not from a text: inside it the standard
+#' test's rejection rate under a true null stayed at or under about 7.5
+#' percent at a nominal 5. The wording does not say which way the p-value
+#' errs, because that depends on which groups are the more variable.
+#'
+#' Until v0.9.219 there were two forms and one test, the group sizes within
+#' 1.5, under which the note said the standard test "remains appropriate"
+#' for clinic's ScreenTime by Condition, whose smallest group has more than
+#' twice the smallest SD (the S344 item).
+#'
+#' Not printed at the minimal level (\code{.jst_notes_on()}), nor when a
+#' group has fewer than two cases, which leaves no SD to compare.
+#'
+#' @param p The Levene test's p-value.
+#' @param y Numeric vector; the outcome.
+#' @param g Factor; the groups.
+#' @param fn Character(1); \code{"jt"} or \code{"jaov"}.
+#' @return Invisibly NULL; called for the note it prints.
+#' @keywords internal
+.jst_levene_note <- function(p, y, g, fn) {
+  if (is.na(p) || p >= 0.05 || !.jst_notes_on()) return(invisible(NULL))
+  n <- tapply(y, g, function(v) sum(!is.na(v)))
+  s <- tapply(y, g, stats::sd, na.rm = TRUE)
+  if (any(is.na(n)) || any(n < 2L) || anyNA(s)) return(invisible(NULL))
+  r_n <- max(n) / min(n)
+  r_s <- if (min(s) == 0) Inf else max(s) / min(s)
+  # One decimal place. Two where one would mislead: where it would print
+  # "1.0" for sizes or SDs that are not the same, and where it would put
+  # the ratio on the other side of a guideline from the verdict below
+  # ("2.0 times" over "Guidelines differ", for a ratio of 2.04).
+  ratio <- function(x, cuts) {
+    one <- as.numeric(formatC(x, format = "f", digits = 1L))
+    formatC(x, format = "f",
+            digits = if (x < 1.095 || any((x > cuts) != (one > cuts))) 2L
+                     else 1L)
+  }
+  p_txt <- .jst_fmt_p(p)
+  # "p < .001", never "p = <.001" (Session 341): the formatter's "<.001"
+  # carries its own sign.
+  p_txt <- if (startsWith(p_txt, "<")) paste0("p < ", sub("^<", "", p_txt))
+           else paste0("p = ", p_txt)
+  # Two groups have a larger and a smaller; three or more, a largest and
+  # a smallest.
+  two   <- length(n) == 2L
+  big   <- if (two) "larger" else "largest"
+  small <- if (two) "smaller" else "smallest"
+  sizes <- if (r_n == 1) "The groups are the same size"
+           else paste0("The ", big, " group is ", ratio(r_n, c(1.25, 1.5)),
+                       " times the ", small)
+  sds   <- if (is.infinite(r_s)) paste0("the ", small, " SD is 0")
+           else paste0("the ", big, " SD is ", ratio(r_s, 2),
+                       " times the ", small)
+  std   <- if (identical(fn, "jt")) "Student's t-test" else "the standard ANOVA"
+  wel   <- if (identical(fn, "jt")) "Welch's t-test" else "Welch's ANOVA"
+  welch_line <- paste0(wel, " does not assume equal variances: ",
+                       "welch = TRUE.\n")
+  verdict <- if (r_n <= 1.25 && r_s <= 2) {
+    paste0("Both are within the usual guidelines, so ", std,
+           " is usually still acceptable.\n")
+  } else if (r_n > 1.5 && r_s > 2) {
+    paste0("Both are beyond the usual guidelines, so the p-value of ", std,
+           " may not be reliable.\n", welch_line)
+  } else {
+    paste0("Guidelines differ on whether ", std,
+           " is acceptable at these values.\n", welch_line)
+  }
+  .jst_msg_out("\nNote: Levene's test is significant (", p_txt, ").\n",
+               sizes, ", and ", sds, ".\n",
+               verdict,
+               "See ?", fn, ".")
+  invisible(NULL)
 }
 
 #' Internal helper: validate and resolve the digits (decimal places) setting

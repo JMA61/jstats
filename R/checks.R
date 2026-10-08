@@ -297,6 +297,448 @@
   paste0(" after applying ", paste(steps, collapse = " and "))
 }
 
+#' Internal helper: the variables a model term is built from
+#'
+#' A name, or every name inside a computed term: \code{I(Stress > 20)} is
+#' built from \code{Stress}. A name that does not parse as R -- a column
+#' named with a space and given without backticks -- is returned as it is.
+#'
+#' @param term Character(1); a term as the model frame names it.
+#' @return Character vector of variable names.
+#' @keywords internal
+.jst_term_vars <- function(term) {
+  ex <- tryCatch(str2lang(term), error = function(e) NULL)
+  v  <- if (is.null(ex)) character(0) else all.vars(ex)
+  if (length(v) == 0L) .jst_unbacktick(term) else v
+}
+
+#' Internal helper: the filters of a call that name a variable
+#'
+#' When a variable an analysis needs to vary has one value, and a filter's
+#' condition names that variable, the filter is the cause, and the stop
+#' says so in place of guessing (Session 346; Jeff, on
+#' \code{jlm(Flourishing ~ SocialSupport + PriorTherapy, subset =
+#' PriorTherapy == 1)}: "the error message doesn't address the real
+#' problem"). The filters are this call's \code{subset =} and the frame's
+#' active \code{jsubset()} filter; \code{jcomplete()} keeps cases with
+#' values and cannot leave one value of a variable it names.
+#'
+#' @param terms Character vector; the variables or terms that have one
+#'   value.
+#' @param sample_info The list \code{.jst_build_sample_info()} returns.
+#' @param data_name Character(1) or \code{NULL}; the data frame's name.
+#' @return A list: \code{per} and \code{stored} (logical: does that filter
+#'   name one of the terms' variables), their condition texts, and
+#'   \code{vars}, the variables the naming filters name.
+#' @keywords internal
+.jst_filters_naming <- function(terms, sample_info, data_name) {
+  cond_vars <- function(s) {
+    ex <- tryCatch(str2lang(s), error = function(e) NULL)
+    if (is.null(ex)) character(0) else all.vars(ex)
+  }
+  tv  <- unique(unlist(lapply(terms, .jst_term_vars), use.names = FALSE))
+  pe  <- sample_info$subset_expr
+  pe  <- if (length(pe) >= 1L && !is.na(pe[1L]) && nzchar(pe[1L])) pe[1L]
+         else NULL
+  pv  <- if (is.null(pe)) character(0) else intersect(cond_vars(pe), tv)
+  fs  <- .jst_get_filter(data_name)
+  se  <- if (!is.null(fs) && isTRUE(fs$active)) fs$expr_str else NULL
+  sv  <- if (is.null(se)) character(0) else intersect(cond_vars(se), tv)
+  list(per = length(pv) > 0L, per_expr = pe,
+       stored = length(sv) > 0L, stored_expr = se,
+       vars = union(sv, pv))
+}
+
+#' Internal helper: the opening of a stop that a filter caused
+#'
+#' "subset = X == 1 keeps", "Your jsubset() filter (X == 1) keeps", or,
+#' when both name the variable, the two joined with "keep".
+#'
+#' @param fn The list \code{.jst_filters_naming()} returns.
+#' @return Character(1).
+#' @keywords internal
+.jst_filter_keeps <- function(fn) {
+  s <- c(if (fn$stored) paste0("Your jsubset() filter (", fn$stored_expr, ")"),
+         if (fn$per) paste0("subset = ", fn$per_expr))
+  if (length(s) == 2L) paste0(s[1L], " and ", s[2L], " keep")
+  else paste0(s, " keeps")
+}
+
+#' Internal helper: the way out of a stop that a filter caused
+#'
+#' A \code{subset =} is removed from the call; a stored filter is set
+#' aside with the line \code{.jst_filter_exits()} gives for it.
+#'
+#' @param fn The list \code{.jst_filters_naming()} returns.
+#' @param data_name Character(1); the data frame's name.
+#' @param purpose Character(1); what the way out is for ("To estimate
+#'   it").
+#' @return Character(1), with no closing newline.
+#' @keywords internal
+.jst_filter_way_out <- function(fn, data_name, purpose) {
+  aside <- paste0("  jsubset(", data_name, ", off)")
+  if (fn$stored && fn$per) {
+    paste0(purpose, ", remove subset = and set the filter aside:\n", aside)
+  } else if (fn$stored) {
+    paste0(purpose, ", set the filter aside:\n", aside)
+  } else {
+    paste0(purpose, ", remove the filter.")
+  }
+}
+
+#' Internal helper: the line that points at the filters, hedged
+#'
+#' For a variable left with one value when no filter names it: the filters
+#' may be the cause, so the line asks the user to check them. Only when a
+#' filter excluded cases from this analysis (the S338 item: a stop that
+#' guessed at \code{jsubset()} on a frame with no filter of any kind).
+#'
+#' @param sample_info The list \code{.jst_build_sample_info()} returns.
+#' @param data_name Character(1) or \code{NULL}.
+#' @param what Character(1); what the filters may be excluding ("the other
+#'   values").
+#' @return Character(1) starting with a newline, or \code{NULL}.
+#' @keywords internal
+.jst_filter_hedge <- function(sample_info, data_name, what) {
+  stored <- nzchar(.jst_settings_context(data_name))
+  per    <- !is.null(sample_info$subset_expr) &&
+            !is.na(sample_info$subset_expr[1L]) &&
+            nzchar(sample_info$subset_expr[1L])
+  cut    <- sample_info$n_after_pipeline < sample_info$n_original
+  if (!(cut && (stored || per))) return(NULL)
+  paste0("\nCheck whether ",
+         if (stored) "your jsubset or jcomplete settings",
+         if (stored && per) ", or ",
+         if (per) "subset =",
+         if (stored && per) ",",
+         if (stored) " are" else " is",
+         " excluding ", what, ".")
+}
+
+#' Internal helper: stop on an outcome with one value in the analysis sample
+#'
+#' A regression needs an outcome that varies, and a logistic regression an
+#' outcome with both of its values. Until Session 346 \code{jlm()} fitted a
+#' constant outcome, \code{summary.lm()} warned "essentially perfect fit"
+#' and the output stopped on R's "0 (non-NA) cases"; \code{jlogistic()}
+#' said "'y' has values: 1 ... Use jrecode() to create a 0/1 coded version"
+#' of an outcome coded 0/1 whose zeros a filter had removed. When a filter
+#' names the outcome it is the cause, and the way out is to remove it;
+#' otherwise the hedged line points at the filters when they excluded
+#' cases.
+#'
+#' @param dv Character(1); the outcome, as the model frame names it.
+#' @param value Character(1); the one value, as it is shown.
+#' @param logistic Logical(1); \code{TRUE} for \code{jlogistic()}.
+#' @param sample_info The list \code{.jst_build_sample_info()} returns.
+#' @param data_name Character(1) or \code{NULL}.
+#' @param before_listwise Logical(1); whether the filtered data already
+#'   held one value of the outcome, before listwise deletion.
+#' @return Never returns.
+#' @keywords internal
+.jst_stop_one_value_outcome <- function(dv, value, logistic, sample_info,
+                                        data_name, before_listwise) {
+  dv   <- .jst_unbacktick(dv)
+  need <- if (logistic) "the outcome of a logistic regression needs two"
+          else "a regression needs an outcome that varies"
+  fn   <- .jst_filters_naming(dv, sample_info, data_name)
+  if (before_listwise && (fn$per || fn$stored)) {
+    .jst_stop(.jst_filter_keeps(fn), " only one value of ", dv, ", and ",
+              need, ".\n",
+              .jst_filter_way_out(fn, data_name, paste0("To model ", dv)))
+  }
+  .jst_stop(dv, " has only one value (", value, ") in the analysis sample, ",
+            "and ", need, ".",
+            .jst_filter_hedge(sample_info, data_name,
+                              if (logistic) "the other value"
+                              else "the other values"))
+}
+
+#' Internal helper: a variable's one value, as a message shows it
+#'
+#' A labelled code with its label ("1: Yes"), a text value as it is (a
+#' blank cell as \code{<blank>}), anything else as R prints it.
+#'
+#' @param x The variable; its first non-missing value is shown.
+#' @return Character(1).
+#' @keywords internal
+.jst_one_value_text <- function(x) {
+  seen <- x[!is.na(x)]
+  if (haven::is.labelled(x)) {
+    .jst_format_value_labels(unclass(seen[1L]), labelled::val_labels(x), "both")
+  } else if (is.character(seen) || is.factor(seen)) {
+    .jst_label_blanks(as.character(seen[1L]))
+  } else {
+    as.character(seen[1L])
+  }
+}
+
+#' Internal helper: stop when a filter kept one category of a predictor to
+#' be dummy-coded in the call
+#'
+#' \code{jlm()} and \code{jlogistic()} build a predictor's dummies in the
+#' call -- \code{categorical =}, a factor, a text or logical variable --
+#' from the filtered data, before the Case Processing block, and with one
+#' category they stopped "'gf' has fewer than 2 categories. Cannot create
+#' dummy variables." When a filter names the variable it is the cause: the
+#' stop says so, with both ways out, as for a registered predictor
+#' (\code{.jst_prune_absent_categories()}; Session 346). Otherwise the
+#' builder's own stop stands.
+#'
+#' @param x The variable, filtered.
+#' @param v Character(1); its name.
+#' @param subset_expr This call's \code{subset =} condition text, or
+#'   \code{NULL}.
+#' @param data_name Character(1) or \code{NULL}.
+#' @return Invisibly \code{NULL}; stops when a filter kept one category.
+#' @keywords internal
+.jst_stop_if_filter_kept_one <- function(x, v, subset_expr, data_name) {
+  seen <- x[!is.na(x)]
+  u <- unique(as.character(if (haven::is.labelled(seen)) unclass(seen)
+                           else seen))
+  if (length(u) != 1L) return(invisible(NULL))
+  fn <- .jst_filters_naming(v, list(subset_expr = subset_expr), data_name)
+  if (!(fn$per || fn$stored)) return(invisible(NULL))
+  .jst_stop(.jst_filter_keeps(fn), " only one category of ", v, " (",
+            .jst_one_value_text(x), "), and a dummy-coded predictor ",
+            "requires at least two.\n",
+            .jst_filter_way_out(fn, data_name,
+                                "To estimate its coefficients"), "\n",
+            "To analyze only those cases, remove ", v, " from the formula.")
+}
+
+#' Internal helper: does a variable hold one value before listwise deletion?
+#'
+#' A filter is named as the cause of a variable's one value only when the
+#' filtered data already hold one value of it; when listwise deletion on
+#' another variable took the rest, the filter did not. A term that is not
+#' a column (a computed term) is taken as yes.
+#'
+#' @param data The filtered data, before listwise deletion.
+#' @param v Character(1); the variable or term.
+#' @return Logical(1).
+#' @keywords internal
+.jst_one_value_before_listwise <- function(data, v) {
+  v <- .jst_unbacktick(v)
+  if (is.null(data) || !(v %in% names(data))) return(TRUE)
+  x <- data[[v]]
+  x <- if (haven::is.labelled(x)) unclass(x) else x
+  length(unique(as.vector(x[!is.na(x)]))) <= 1L
+}
+
+#' Internal helper: stop when no case is left to analyze
+#'
+#' The listwise functions -- \code{jt()}, \code{jaov()}, \code{jcrosstab()},
+#' \code{jlm()}, \code{jlogistic()} and \code{jalpha()} -- call this directly
+#' after the Case Processing block has printed. With no case left only
+#' \code{jlm()} and \code{jlogistic()} had a stop of their own; the others
+#' went on to answer "'g3' has 0 categories", R's "grouping factor must have
+#' exactly 2 levels" or "contrasts can be applied only to factors with 2 or
+#' more levels", raw "NaNs produced", and in \code{jalpha()} a warning that
+#' items "NA, NA, NA" were negatively correlated (the S338 item; Session
+#' 346). One stop now, ahead of every group count.
+#'
+#' The second line says how the cases went, from the counts the block above
+#' it shows: by a filter (\code{jcomplete()}, \code{jsubset()},
+#' \code{subset =}), because of missing data on an analysis variable, or
+#' both. It names no table, because at \code{joutput("minimal")} the block
+#' is one line.
+#'
+#' One case left stops the same way (Session 346): none of the six can
+#' analyze one case, and the stop each reached named a variable -- "k has
+#' only one value", "'g' has 1 category" -- when every variable has one
+#' value in one case and the cause is the case count.
+#'
+#' @param sample_info The list \code{.jst_build_sample_info()} returns.
+#' @return Invisibly \code{NULL} when at least two cases are left; otherwise
+#'   never returns.
+#' @keywords internal
+.jst_stop_empty_sample <- function(sample_info) {
+  n_left <- sample_info$n_analysis
+  if (length(n_left) != 1L || is.na(n_left) || n_left > 1L) {
+    return(invisible(NULL))
+  }
+  n_all     <- sample_info$n_original
+  after     <- sample_info$n_after_pipeline
+  by_filter <- n_all - after
+  by_miss   <- after - n_left
+  how <- if (by_miss == 0L) {
+    "by a filter"
+  } else if (by_filter == 0L) {
+    "because of missing data"
+  } else {
+    "by a filter or because of missing data"
+  }
+  if (n_left == 1L) {
+    if (n_all <= 1L) .jst_stop("There is only 1 case to analyze.")
+    gone <- n_all - 1L
+    .jst_stop("Only 1 case is left to analyze.\n",
+              .jst_plural(gone, "The other case was",
+                          paste0("The other ", .jst_fmt_n(gone),
+                                 " cases were")),
+              " excluded ", how, ".")
+  }
+  .jst_stop("No cases are left to analyze.\n",
+            .jst_plural(n_all, "The 1 case was",
+                        paste0("All ", .jst_fmt_n(n_all), " cases were")),
+            " excluded ", how, ".")
+}
+
+#' Internal helper: the "seems categorical" warning of jlm() and jlogistic()
+#'
+#' A predictor that looks categorical and entered the model as a number
+#' gets a warning with the two ways to treat it as categorical, each as
+#' lines to run: register it with \code{jdummy()} and run the model again,
+#' or name it in \code{categorical =} for this call.
+#'
+#' Until Session 346 the rerun lines were built from
+#' \code{.jst_unbacktick(deparse(formula))} on the REWRITTEN formula.
+#' \code{deparse()} returns one string for each 60 characters, so any longer
+#' formula printed cut off, with a stray closing parenthesis; the backticks
+#' a name such as \code{`W2-W24 (binary)`} needs were stripped with those of
+#' the computed terms; a variable already registered with \code{jdummy()}
+#' appeared as its dummy columns; and a call that named its data frame was
+#' offered \code{jlm(y ~ x)}, which runs only with a \code{juse()} default
+#' (the S345 item). The lines are now built from the formula as typed, in
+#' one piece, with the data the call named. The second call sits on a line
+#' of its own: after "Or: " it was wrapped as prose, and a break could land
+#' inside a backticked name.
+#'
+#' An expression given as the data (\code{jlm(y ~ g, mk())}) cannot be
+#' registered on, so the first route names it first (\code{mydata <- mk()}),
+#' as \code{jrecode()}'s reminder does since v0.9.217. Arguments of the
+#' call other than the formula and the data are not repeated.
+#'
+#' @param fn Character(1); \code{"jlm"} or \code{"jlogistic"}.
+#' @param v Character(1); the predictor's name.
+#' @param formula The formula as the call gave it.
+#' @param data_name Character(1); the data frame as the call named it, or
+#'   the \code{juse()} default's name.
+#' @param data_kind What the call gave as its data, as
+#'   \code{.jst_data_arg_kind()} reads it.
+#' @param default_used Logical; the call gave no data.
+#' @param categorical The call's own \code{categorical =}, kept in the
+#'   second route's line.
+#' @return Character(1); the warning's text.
+#' @keywords internal
+.jst_seems_categorical_msg <- function(fn, v, formula, data_name, data_kind,
+                                       default_used, categorical = NULL) {
+  f_txt <- .jst_term_text(formula)
+  # The name as a line of R takes it: in backticks when it needs them,
+  # which deparse() adds to a bare name only when asked.
+  v_txt <- paste(deparse(as.name(v), backtick = TRUE), collapse = "")
+  expr  <- identical(data_kind, "expression")
+  reg   <- if (expr) "mydata" else data_name
+  cats  <- unique(c(categorical, v))
+  c_txt <- if (length(cats) == 1L) {
+    deparse(cats)
+  } else {
+    paste0("c(", paste(vapply(cats, deparse, character(1)),
+                       collapse = ", "), ")")
+  }
+  paste0(
+    v, " seems categorical.\n",
+    "To treat it that way, register it with jdummy() and rerun:\n\n",
+    if (expr) paste0("  mydata <- ", data_name, "\n"),
+    "  jdummy(", reg, ", ", v_txt, ")\n",
+    "  ", fn, "(", f_txt, if (!default_used) paste0(", ", reg), ")\n\n",
+    "Or, for this call only:\n",
+    "  ", fn, "(", f_txt, if (!default_used) paste0(", ", data_name),
+    ", categorical = ", c_txt, ")")
+}
+
+#' Internal helper: stop on a predictor with one value in the analysis sample
+#'
+#' \code{jlm()} and \code{jlogistic()} cannot estimate a coefficient for a
+#' predictor that takes a single value. The predictor is the subject of the
+#' sentence (voice Rule AD), and each sentence has a line (Rule E). A second
+#' line points at the filters only when a filter excluded cases from this
+#' analysis: until Session 346 the stop ended "This often happens when
+#' jsubset() restricts the sample to a single category of a variable that
+#' is then used as a predictor" on a frame with no filter of any kind (the
+#' S338 item).
+#'
+#' When a filter's condition names the predictor -- \code{subset =
+#' PriorTherapy == 1} with PriorTherapy in the formula -- the filter is the
+#' cause and the call asks for two things that cannot both be had, so the
+#' stop says what the filter did and gives both ways out: remove the filter
+#' to estimate the coefficient, or remove the predictor to analyze only
+#' those cases (Session 346; Jeff, on the hedged form: "the error message
+#' doesn't address the real problem").
+#'
+#' @param vars Character vector; the predictors, as the model frame names
+#'   them.
+#' @param sample_info The list \code{.jst_build_sample_info()} returns.
+#' @param data_name Character(1) or \code{NULL}; the data frame's name, for
+#'   its stored settings.
+#' @param data The filtered data before listwise deletion, or \code{NULL};
+#'   a filter is named as the cause only where these data already hold one
+#'   value (\code{.jst_one_value_before_listwise()}).
+#' @return Never returns.
+#' @keywords internal
+.jst_stop_constant_predictors <- function(vars, sample_info, data_name,
+                                          data = NULL) {
+  vars <- .jst_unbacktick(vars)
+  # A filter that names a predictor kept it to one value: say so.
+  fn <- .jst_filters_naming(vars, sample_info, data_name)
+  named <- vars[vapply(vars, function(v) {
+    any(.jst_term_vars(v) %in% fn$vars) &&
+      .jst_one_value_before_listwise(data, v)
+  }, logical(1))]
+  if (length(named) > 0L) {
+    fn   <- .jst_filters_naming(named, sample_info, data_name)
+    one  <- length(named) == 1L
+    who  <- .jst_format_var_list(named, and = TRUE)
+    .jst_stop(.jst_filter_keeps(fn), " only one value of ",
+              if (!one) "each of ", who, ", so ",
+              if (one) "its coefficient" else "their coefficients",
+              " cannot be estimated.\n",
+              .jst_filter_way_out(fn, data_name,
+                                  if (one) "To estimate it"
+                                  else "To estimate them"), "\n",
+              "To analyze only those cases, remove ", who,
+              " from the formula.")
+  }
+  one   <- length(vars) == 1L
+  check <- .jst_filter_hedge(sample_info, data_name, "the other values")
+  .jst_stop(.jst_format_var_list(vars, and = TRUE),
+            if (one) " has only one value" else " have only one value each",
+            " in the analysis sample, so ",
+            if (one) "its coefficient" else "their coefficients",
+            " cannot be estimated.",
+            check)
+}
+
+#' Internal helper: group sizes and within-group variation of an outcome
+#'
+#' What \code{jt()} and \code{jaov()} need to know before they compute
+#' anything: how many analysis cases each group holds, and whether the
+#' outcome varies inside it. A group of one case has no variance, and a
+#' group whose cases all hold one value has a variance of zero; R answers
+#' both in its own words ("not enough 'y' observations", "data are
+#' essentially constant"), or with an F of 27815876027865139260134097158144
+#' (Session 346).
+#'
+#' @param y Numeric vector; the outcome.
+#' @param g Factor; the groups, with no empty level.
+#' @return A list: \code{n} (cases per group, named by level), \code{flat}
+#'   (logical per group: two or more cases, all holding one value),
+#'   \code{mean} and \code{var} (per group; \code{var} is \code{NA} for a
+#'   group of one case).
+#' @keywords internal
+.jst_group_shape <- function(y, g) {
+  ok  <- !is.na(y) & !is.na(g)
+  y   <- as.numeric(y[ok])
+  g   <- droplevels(g[ok])
+  n   <- tapply(y, g, length)
+  n[is.na(n)] <- 0L
+  rng <- tapply(y, g, function(v) max(v) - min(v))
+  list(n    = n,
+       flat = !is.na(rng) & n >= 2L & rng == 0,
+       mean = tapply(y, g, mean),
+       var  = tapply(y, g, stats::var))
+}
+
 #' Internal helper: catch a named item in a variable list
 #'
 #' A variable list (the \code{...} of \code{jdesc()}, \code{jsum()},

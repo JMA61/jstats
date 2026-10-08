@@ -9,7 +9,6 @@ joutput(
   effect.size = NULL,
   regression.ci = NULL,
   means.ci = NULL,
-  levene = NULL,
   posthoc = NULL,
   diagnostics = NULL,
   case.processing = NULL,
@@ -43,10 +42,10 @@ default (\code{variable.id = "names"}); request a label legend or
 in-table labels per call or via the \code{variable.id} toggle.}
 \item{full}{Everything in standard plus a variable label legend
 (\code{variable.id = "legend"}), regression coefficient confidence
-intervals, assumption checks (Levene's
-test), post-hoc tests, regression diagnostics, and the Case
+intervals, post-hoc tests, and the Case
 Processing table on every call, with the per-code missing
-breakdown.}
+breakdown. Diagnostic output is not part of it: see
+\code{diagnostics}.}
 }}
 
 \item{effect.size}{Logical or NULL. Override the level's default for
@@ -60,14 +59,33 @@ confidence intervals on regression coefficients (\code{jlm},
 confidence intervals on means and mean differences (\code{jt},
 \code{jaov}). Off at minimal, on at standard and full.}
 
-\item{levene}{Logical or NULL. Override the level's default for
-Levene's test display.}
-
 \item{posthoc}{Logical or NULL. Override the level's default for
 post-hoc test display (jaov only).}
 
-\item{diagnostics}{Logical or NULL. Override the level's default for
-regression diagnostic output (jlm only).}
+\item{diagnostics}{Logical, character vector, or NULL. The diagnostic
+output of the analysis functions -- assumption checks and the like --
+which no level turns on. \code{TRUE} shows every diagnostic a function
+has; \code{FALSE} (the setting until one is made) shows none; a
+character vector shows the ones named, each function taking those that
+apply to it:
+\itemize{
+\item \code{"levene"} -- Levene's test for homogeneity of variance
+(\code{jt}, \code{jaov});
+\item \code{"vif"} -- the variance inflation factors (\code{jlm},
+\code{jlogistic});
+\item \code{"residuals"}, \code{"qq"}, \code{"scale"},
+\code{"cooks"}, \code{"leverage"} -- the regression diagnostic
+plots (\code{jlm}).
+}
+Name more than one with \code{c()}:
+\code{joutput(diagnostics = c("levene", "vif"))}. A diagnostic prints
+with its brief interpretation (the note under a significant Levene's
+test, the lines under a VIF above 10) except at the minimal level,
+which prints the table alone. Unlike the other settings it is not
+cleared by a level call: \code{joutput("full")} leaves it as it was.
+\code{joutput(NULL)} turns it off with everything else. The same
+argument on \code{jt()}, \code{jaov()}, \code{jlm()} and
+\code{jlogistic()} sets it for one call.}
 
 \item{case.processing}{Three-state toggle for the Case Processing
 table -- the block at the top of every analysis function's output
@@ -216,6 +234,12 @@ are available, and individual toggles can override specific settings
 within any level. Per-call arguments on analysis functions always take
 precedence over joutput() settings.
 }
+\details{
+Diagnostic output -- Levene's test, the VIF table, the regression
+diagnostic plots -- is set apart from the levels: it is off at every
+level and is turned on with \code{diagnostics}, here or in an analysis
+call.
+}
 \section{Call patterns}{
 
 \describe{
@@ -224,7 +248,7 @@ every setting, each marked \code{(override)} where its value
 differs from the level's default.}
 \item{\code{joutput("setting")}}{Print one setting and nothing else --
 \code{joutput("digits")}, or several at once with
-\code{joutput(c("levene", "posthoc"))} -- closed by a pointer to
+\code{joutput(c("posthoc", "digits"))} -- closed by a pointer to
 \code{joutput()} for the full panel. A setting name given WITHOUT
 an argument name is read as a query rather than as a level; the
 three level names and the setting names share no string, so the
@@ -234,7 +258,8 @@ and like the full panel a query prints regardless of
 \item{\code{joutput("level")}}{Set the level, clearing any earlier
 overrides, then print the full panel -- a level moves most
 settings at once. Settings given in the same call are applied as
-overrides on the new level.}
+overrides on the new level. \code{diagnostics} is the exception:
+it belongs to no level, so a level call leaves it as it was.}
 \item{\code{joutput(setting = value, ...)}}{Set one or more settings
 within the current level, then echo only what the call touched,
 closed by a pointer to \code{joutput()} for the full panel. The
@@ -286,7 +311,10 @@ file to make it permanent.
 \examples{
 joutput("standard")                       # effect sizes + means/diff CIs (jt, jaov)
 joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient CIs
-joutput("full")                         # everything
+joutput("full")                         # every statistic and every detail
+joutput(diagnostics = TRUE)             # diagnostic output on, at any level
+joutput(diagnostics = c("levene", "vif")) # only the diagnostics named
+joutput(diagnostics = FALSE)            # and off again
 joutput(digits = 2)                     # set one setting; echoes only that one
 joutput("digits")                       # show one setting
 joutput()                               # show current settings

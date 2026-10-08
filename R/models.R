@@ -621,7 +621,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 .jst_prune_absent_categories <- function(mf, data, formula, dummy_regs,
                                          expanded_originals, auto_cat_regs,
                                          dummy_coef_names, ref_cats,
-                                         auto_ref_cats, value_mode) {
+                                         auto_ref_cats, value_mode,
+                                         sample_info = NULL,
+                                         data_name = NULL) {
   rows <- match(rownames(mf), rownames(data))
   if (anyNA(rows)) {
     stop("internal: the analysis rows do not map onto the analysis frame",
@@ -652,17 +654,37 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                                                    value_mode)
     n_present <- sum(present)
     if (n_present < 2L) {
+      # A filter that names the variable kept one category of it: say so
+      # and give both ways out, as the one-value stop does (Session 346).
+      fnm <- if (n_present == 1L && !is.null(sample_info)) {
+        .jst_filters_naming(v, sample_info, data_name)
+      }
+      if (!is.null(fnm) && (fnm$per || fnm$stored) &&
+          .jst_one_value_before_listwise(data, v)) {
+        .jst_stop(.jst_filter_keeps(fnm), " only one category of ", v,
+                  " (", disp(which(present)), "), and a dummy-coded ",
+                  "predictor requires at least two.\n",
+                  .jst_filter_way_out(fnm, data_name,
+                                      "To estimate its coefficients"),
+                  "\n",
+                  "To analyze only those cases, remove ", v,
+                  " from the formula.")
+      }
       have <- if (n_present == 0L) {
         "has none of its categories in the analysis sample"
       } else {
         paste0("has only one category in the analysis sample (",
                disp(which(present)), ")")
       }
+      # The S306 sentence; the line under it guessed "This often happens
+      # when jsubset() restricts the sample to a single category of a
+      # variable that is then used as a predictor" -- the case the form
+      # above now names -- whatever the filter, or none.
       .jst_stop(
-        v, " ", have, "; a dummy-coded predictor requires at least two.\n",
-        "This often happens when jsubset() restricts the sample to a ",
-        "single category of a variable that is then used as a predictor."
-      )
+        v, " ", have, "; a dummy-coded predictor requires at least two.",
+        if (!is.null(sample_info)) {
+          .jst_filter_hedge(sample_info, data_name, "the other categories")
+        })
     }
 
     ref_absent <- !present[reg$ref_idx]
@@ -2096,13 +2118,20 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   product of two other predictors in the model, or the square of one, is
 #'   named in a note of its own, and under \code{std = "product"} a note
 #'   says which convention the column follows.
-#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints VIF
-#'   table and diagnostic plots. If a character vector, specifies which
-#'   diagnostics to show: \code{vif}, \code{residuals}, \code{qq},
-#'   \code{scale}, \code{cooks}, \code{leverage}. If NULL (default),
-#'   defers to \code{joutput()} session setting.
-#' @param full Logical. If TRUE, turns on the coefficient confidence interval
-#'   and diagnostics. Does not override explicit FALSE values.
+#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints the
+#'   VIF table (for a model with two or more predictors) and draws the five
+#'   diagnostic plots. A character vector names the ones to show:
+#'   \code{vif}, \code{residuals}, \code{qq}, \code{scale}, \code{cooks},
+#'   \code{leverage}, more than one combined with \code{c()}, as in
+#'   \code{diagnostics = c("vif", "qq")}; a name that is not one of these
+#'   is an error. A VIF above 10 gets a line of interpretation under the
+#'   table, except at \code{joutput("minimal")}. If NULL (default), defers
+#'   to \code{joutput()}'s \code{diagnostics} setting, which is off at
+#'   every output level until it is set. The same plots are available
+#'   afterwards from \code{jplot()} on the returned object.
+#' @param full Logical. If TRUE, turns on the coefficient confidence
+#'   interval. Does not override an explicit FALSE, and does not turn on
+#'   diagnostics, which \code{diagnostics} alone governs.
 #' @param ... Reserved for argument-name checking. Passing \code{which},
 #'   \code{plots}, or \code{show} will produce a helpful error suggesting
 #'   \code{diagnostics} instead.
@@ -2291,14 +2320,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   .jst_check_flag(full, "full")
   .jst_check_flag(ci, "ci", null.ok = TRUE)
   .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
-  # `diagnostics` is a documented tri-mode argument: TRUE/FALSE, a character
-  # vector of diagnostic names, or NULL (defer to joutput()).
-  if (!is.null(diagnostics) && !is.character(diagnostics) &&
-      !(is.logical(diagnostics) && length(diagnostics) == 1L &&
-        !is.na(diagnostics))) {
-    .jst_stop("`diagnostics` must be TRUE or FALSE, or diagnostic names, ",
-              "e.g. c(\"vif\", \"qq\").")
-  }
+  # `diagnostics` is TRUE/FALSE, a character vector of diagnostic names, or
+  # NULL (defer to joutput()); a name that is not one of jlm()'s stops
+  # (.jst_check_diagnostics(), Session 346).
+  .jst_check_diagnostics(diagnostics, "jlm")
 
   .jst_check_args(
     list(...),
@@ -2353,6 +2378,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     fn         = "jlm"
   )
 
+  # The formula as typed and the kind of thing given as the data, for the
+  # rerun lines of the "seems categorical" warning (Session 346). Read
+  # here, before the formula is rewritten and the data replaced.
+  formula_typed  <- formula
+  .jst_data_kind <- if (missing(data)) "name"
+                    else .jst_data_arg_kind(substitute(data))
+
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
@@ -2390,20 +2422,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # jlogistic; `full` forces it on unless the caller set it FALSE. (Session 69)
   if (full) {
     if (is.null(ci))          ci          <- TRUE
-    if (is.null(diagnostics)) diagnostics <- TRUE
   }
   ci <- .jst_resolve_toggle("regression.ci", ci)
-  if (is.character(diagnostics)) {
-    show_diag  <- TRUE
-    diag_which <- diagnostics
-  } else {
-    show_diag  <- .jst_resolve_toggle("diagnostics", diagnostics)
-    diag_which <- if (show_diag) {
-      c("vif", "residuals", "qq", "scale", "cooks", "leverage")
-    } else {
-      character(0)
-    }
-  }
+  # Diagnostics are apart from the levels and from full = TRUE (Session
+  # 346): the call's own diagnostics =, else joutput()'s, else off. TRUE is
+  # every one of jlm()'s -- the VIF table and the five plots.
+  diag_which <- .jst_resolve_diagnostics(diagnostics, "jlm")
+  show_diag  <- length(diag_which) > 0L
 
   # Raw-name existence check first, so the transform resolver below can
   # assume every plain variable in the formula exists.
@@ -2744,6 +2769,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Override: categorical = "Var" forces categorical ---
     if (v %in% categorical) {
+      .jst_stop_if_filter_kept_one(data[[v]], v,
+                                   pipeline$pipeline_counts$subset_expr,
+                                   .jst_data_name)
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
@@ -2775,6 +2803,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     # data, or small-range whole-number numeric), the user may have meant
     # to register with jdummy() or pass categorical = instead.
     if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
+      .jst_stop_if_filter_kept_one(data[[v]], v,
+                                   pipeline$pipeline_counts$subset_expr,
+                                   .jst_data_name)
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
@@ -2825,17 +2856,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         # asserted a numeric/count role (jnumeric/jcount) -- the hedge is a
         # guess they have already answered. (A per-call numeric=/count= IV
         # short-circuits earlier, so only registration reaches this gate.)
-        # The formula deparses in its post-resolve form, where a computed
-        # transform is a backticked column name; strip the backticks so
-        # the suggested rerun reads as what the user typed (AUDIT-030).
-        .jst_warn(
-          v, " seems categorical. To treat it that way, register it with ",
-          "jdummy() and rerun:\n\n",
-          "  jdummy(", .jst_data_name, ", ", v, ")\n",
-          "  jlm(", .jst_unbacktick(deparse(formula)), ")\n\n",
-          "Or: jlm(", .jst_unbacktick(deparse(formula)),
-          ", categorical = \"", v, "\")"
-        )
+        # The rerun lines are built from the formula as typed (Session
+        # 346; see .jst_seems_categorical_msg()).
+        .jst_warn(.jst_seems_categorical_msg(
+          "jlm", v, formula_typed, .jst_data_name, .jst_data_kind,
+          .jst_default_used, categorical))
       }
     }
   }
@@ -2876,10 +2901,20 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # confusing lm.fit error "0 (non-NA) cases" — distinguishing the two
   # different underlying conditions for a clearer message.
 
-  if (nrow(mf) == 0L) {
-    .jst_stop("All cases were excluded by the pipeline and/or listwise ",
-         "deletion; no model can be fit. See the Case Processing ",
-         "Summary above for where the cases were excluded.")
+  # The stop every listwise function shares since Session 346; until then
+  # jlm() and jlogistic() had the only one ("All cases were excluded by the
+  # pipeline and/or listwise deletion; no model can be fit.").
+  .jst_stop_empty_sample(sample_info)
+
+  # An outcome with one value (Session 346): lm() fitted it, summary.lm()
+  # warned "essentially perfect fit", and the output stopped on R's
+  # "0 (non-NA) cases".
+  y_mf <- mf[[1L]]
+  if (length(unique(as.vector(unclass(y_mf)))) < 2L) {
+    .jst_stop_one_value_outcome(
+      names(mf)[1L], format(as.vector(unclass(y_mf))[1L], trim = TRUE),
+      FALSE, sample_info, .jst_data_name,
+      .jst_one_value_before_listwise(pipeline$data, names(mf)[1L]))
   }
 
   # A registered category with no case in the analysis sample (Session
@@ -2892,7 +2927,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # all-zero dummy under its internal column name.
   pruned <- .jst_prune_absent_categories(
     mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
-    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef)
+    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef,
+    sample_info, .jst_data_name)
   formula          <- pruned$formula
   mf               <- pruned$mf
   dummy_regs       <- pruned$dummy_regs
@@ -2913,13 +2949,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
     constant_ivs <- names(n_unique)[n_unique < 2L]
     if (length(constant_ivs) > 0L) {
-      .jst_stop(.jst_plural(length(constant_ivs), "This predictor has",
-                            "These predictors have"),
-           " no variation in the ",
-           "analysis sample (only one unique value); cannot fit slope: ",
-           paste(constant_ivs, collapse = ", "), ". This often happens ",
-           "when jsubset() restricts the sample to a single category of ",
-           "a variable that is then used as a predictor.")
+      .jst_stop_constant_predictors(constant_ivs, sample_info,
+                                    .jst_data_name, pipeline$data)
     }
   }
 
@@ -3402,9 +3433,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                          align = c("l", "bc"),
                          digits = c(VIF = 3L))
 
-        # Targeted notes for VIF > 10
+        # Targeted notes for VIF > 10: the table's brief interpretation,
+        # printed with it except at the minimal level (Session 346).
         high_vif <- vif_values[vif_values > 10]
-        if (length(high_vif) > 0) {
+        if (length(high_vif) > 0 && .jst_notes_on()) {
           cat("\n")
           # Both numbers to one place, padded (Session 327): through
           # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
@@ -3605,7 +3637,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' an error, as in \code{lm()}; write \code{I(x^k)}.
 #'
 #' @param formula A model formula, e.g. \code{DV ~ IV1 + IV2}. The DV
-#'   must be a binary variable coded 0/1. Transformed predictor terms such
+#'   must be a binary variable coded 0/1, and a variable of the data: a
+#'   computed term on the left, such as \code{I(Score > 50)}, is refused,
+#'   so create the 0/1 variable first. Transformed predictor terms such
 #'   as \code{log(IV1)} are computed automatically and used throughout the
 #'   output.
 #' @param data A data frame containing variables referenced in \code{formula}.
@@ -3656,11 +3690,17 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   Exp(B). If NULL (default), defers to \code{joutput()}.
 #' @param classification Logical. If TRUE, prints a classification table
 #'   showing predicted vs observed outcomes. Default is FALSE.
-#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints
-#'   VIF table. If a character vector, \code{vif} is currently the only
-#'   supported option. If NULL (default), defers to \code{joutput()}.
-#' @param full Logical. If TRUE, turns on ci, classification, and
-#'   diagnostics. Does not override explicit FALSE values.
+#' @param diagnostics Logical, \code{"vif"}, or NULL. If TRUE (or
+#'   \code{"vif"}), prints the VIF table for a model with two or more
+#'   predictors. The values are the predictors' ordinary variance inflation
+#'   factors, computed from their correlations as for a linear model. A
+#'   VIF above 10 gets a line of interpretation under the table, except at
+#'   \code{joutput("minimal")}. If NULL (default), defers to
+#'   \code{joutput()}'s \code{diagnostics} setting, which is off at every
+#'   output level until it is set.
+#' @param full Logical. If TRUE, turns on ci and classification. Does not
+#'   override an explicit FALSE, and does not turn on diagnostics, which
+#'   \code{diagnostics} alone governs.
 #' @param ... Reserved for argument-name checking. Passing \code{which},
 #'   \code{plots}, or \code{show} will produce a helpful error suggesting
 #'   \code{diagnostics} instead.
@@ -3773,14 +3813,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   .jst_check_flag(full, "full")
   .jst_check_flag(ci, "ci", null.ok = TRUE)
   .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
-  # `diagnostics` is a documented tri-mode argument: TRUE/FALSE, a character
-  # vector of diagnostic names, or NULL (defer to joutput()).
-  if (!is.null(diagnostics) && !is.character(diagnostics) &&
-      !(is.logical(diagnostics) && length(diagnostics) == 1L &&
-        !is.na(diagnostics))) {
-    .jst_stop("`diagnostics` must be TRUE or FALSE, or diagnostic names, ",
-              "e.g. \"vif\".")
-  }
+  # `diagnostics` is TRUE/FALSE, a character vector of diagnostic names, or
+  # NULL (defer to joutput()); a name that is not one of jlogistic()'s
+  # stops (.jst_check_diagnostics(), Session 346).
+  .jst_check_diagnostics(diagnostics, "jlogistic")
 
   .jst_check_args(
     list(...),
@@ -3830,6 +3866,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     fn         = "jlogistic"
   )
 
+  # The formula as typed and the kind of thing given as the data, for the
+  # rerun lines of the "seems categorical" warning (Session 346). Read
+  # here, before the formula is rewritten and the data replaced.
+  formula_typed  <- formula
+  .jst_data_kind <- if (missing(data)) "name"
+                    else .jst_data_arg_kind(substitute(data))
+
   # Resolve default data frame if not specified
   .jst_default_used <- FALSE
   .jst_data_name    <- NULL
@@ -3844,20 +3887,15 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   if (full) {
     if (is.null(ci))          ci          <- TRUE
-    if (is.null(diagnostics)) diagnostics <- TRUE
     classification <- TRUE
   }
 
   # Resolve display toggles
   ci           <- .jst_resolve_toggle("regression.ci", ci)
-  # Resolve diagnostics toggle
-  if (is.character(diagnostics)) {
-    show_diag  <- TRUE
-    diag_which <- diagnostics
-  } else {
-    show_diag  <- .jst_resolve_toggle("diagnostics", diagnostics)
-    diag_which <- if (show_diag) c("vif") else character(0)
-  }
+  # Diagnostics are apart from the levels and from full = TRUE (Session
+  # 346): the call's own diagnostics =, else joutput()'s, else off.
+  diag_which <- .jst_resolve_diagnostics(diagnostics, "jlogistic")
+  show_diag  <- length(diag_which) > 0L
 
   # Red title
   .cat_red("Logistic Regression\n")
@@ -3908,6 +3946,18 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   model_vars            <- all.vars(formula)
   dv_name               <- model_vars[1]
+
+  # A computed outcome (Session 346; the S342 item). The outcome's coding
+  # is read from the data frame's own column, and a computed term has
+  # none: jlogistic(I(y > 50) ~ x) stopped with "'I(y > 50)' has values: ."
+  # over an empty list and a jrecode() suggestion for a term that is not a
+  # variable. The remedy names the state to reach, not a way to it (voice
+  # Rule X): a line of base R would read past declared missing values.
+  if (dv_name %in% resolved$computed) {
+    .jst_stop(dv_name, " is a computed term, and the outcome of a logistic ",
+              "regression must be a variable in the data.\n",
+              "Create a 0/1 variable first, then use it as the outcome.")
+  }
 
   # Preserve the original (pre-expansion) variable names for use in
   # missing-by-variable reporting. After dummy expansion, model_vars
@@ -4008,6 +4058,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Override: categorical = "Var" forces categorical ---
     if (!is.null(categorical) && v %in% categorical) {
+      .jst_stop_if_filter_kept_one(data[[v]], v,
+                                   pipeline$pipeline_counts$subset_expr,
+                                   .jst_data_name)
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
@@ -4027,6 +4080,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
     # --- Auto-detection via unified classifier ---
     if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
+      .jst_stop_if_filter_kept_one(data[[v]], v,
+                                   pipeline$pipeline_counts$subset_expr,
+                                   .jst_data_name)
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
@@ -4077,17 +4133,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         # informational warning so the user can confirm continuous
         # treatment or switch to categorical. Suppressed when the user has
         # asserted a numeric/count role (jnumeric/jcount).
-        # The formula deparses in its post-resolve form, where a computed
-        # transform is a backticked column name; strip the backticks so
-        # the suggested rerun reads as what the user typed (AUDIT-030).
-        .jst_warn(
-          v, " seems categorical. To treat it that way, register it with ",
-          "jdummy() and rerun:\n\n",
-          "  jdummy(", .jst_data_name, ", ", v, ")\n",
-          "  jlogistic(", .jst_unbacktick(deparse(formula)), ")\n\n",
-          "Or: jlogistic(", .jst_unbacktick(deparse(formula)),
-          ", categorical = \"", v, "\")"
-        )
+        # The rerun lines are built from the formula as typed (Session
+        # 346; see .jst_seems_categorical_msg()).
+        .jst_warn(.jst_seems_categorical_msg(
+          "jlogistic", v, formula_typed, .jst_data_name, .jst_data_kind,
+          .jst_default_used, categorical))
       }
     }
   }
@@ -4124,8 +4174,33 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   dv_kind       <- .jst_var_kind(orig_dv)
   dv_event_disp <- NULL
   dv_ref_disp   <- NULL
+  one_value_dv  <- NULL
+  dv_seen       <- orig_dv[!is.na(orig_dv)]
+  dv_distinct   <- unique(as.character(if (haven::is.labelled(dv_seen))
+                                         unclass(dv_seen) else dv_seen))
 
-  if (identical(dv_kind$kind, "logical")) {
+  if (!any(!is.na(orig_dv))) {
+    # No value of the outcome is left -- a filter excluded every case, or
+    # every case is missing it -- so there is no coding to read. Until
+    # Session 346 the numeric branch below answered "'y' has values: ."
+    # over an empty list, ahead of the Case Processing block (the S338
+    # item). Passed on as missing: the analysis sample is then empty and
+    # the stop every listwise function shares is raised under that block.
+    data[[dv_name]] <- rep(NA_real_, nrow(data))
+
+  } else if (length(dv_distinct) == 1L) {
+    # One value of the outcome is left (Session 346). The coding checks
+    # below each answered with a recode -- "'y' has values: 1 ... Use
+    # jrecode() to create a 0/1 coded version" of an outcome coded 0/1
+    # whose zeros a filter had removed -- ahead of the Case Processing
+    # block. Passed on as a placeholder and stopped under that block, by
+    # .jst_stop_one_value_outcome(), which names a filter that caused it.
+    one_value_dv <- .jst_one_value_text(orig_dv)
+    y <- rep(NA_real_, nrow(data))
+    y[!is.na(orig_dv)] <- 1
+    data[[dv_name]] <- y
+
+  } else if (identical(dv_kind$kind, "logical")) {
     # Logical: TRUE is the event. .jst_is_dichotomy() guards single-value input.
     if (!.jst_is_dichotomy(orig_dv)$is_dichotomy) {
       .jst_stop(paste0(
@@ -4328,10 +4403,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # must be a nonempty numeric vector", and a constant predictor was
   # silently dropped by the fit and then crashed the return object.
 
-  if (nrow(mf) == 0L) {
-    .jst_stop("All cases were excluded by the pipeline and/or listwise ",
-         "deletion; no model can be fit. See the Case Processing ",
-         "Summary above for where the cases were excluded.")
+  .jst_stop_empty_sample(sample_info)
+
+  # An outcome with one value (Session 346): one value left by the filters,
+  # read above, or one value after listwise deletion on the predictors.
+  if (!is.null(one_value_dv) || length(unique(mf[[1L]])) < 2L) {
+    shown_value <- if (!is.null(one_value_dv)) {
+      one_value_dv
+    } else if (identical(as.numeric(mf[[1L]][1L]), 1)) {
+      if (is.null(dv_event_disp)) "1" else dv_event_disp
+    } else {
+      if (is.null(dv_ref_disp)) "0" else dv_ref_disp
+    }
+    .jst_stop_one_value_outcome(dv_name, shown_value, TRUE, sample_info,
+                                .jst_data_name, !is.null(one_value_dv))
   }
 
   # A registered category with no case in the analysis sample (Session
@@ -4342,7 +4427,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # the absent category's all-zero dummy under its internal column name.
   pruned <- .jst_prune_absent_categories(
     mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
-    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef)
+    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef,
+    sample_info, .jst_data_name)
   formula          <- pruned$formula
   mf               <- pruned$mf
   dummy_regs       <- pruned$dummy_regs
@@ -4359,13 +4445,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
     constant_ivs <- names(n_unique)[n_unique < 2L]
     if (length(constant_ivs) > 0L) {
-      .jst_stop(.jst_plural(length(constant_ivs), "This predictor has",
-                            "These predictors have"),
-           " no variation in the ",
-           "analysis sample (only one unique value); cannot fit slope: ",
-           paste(constant_ivs, collapse = ", "), ". This often happens ",
-           "when jsubset() restricts the sample to a single category of ",
-           "a variable that is then used as a predictor.")
+      .jst_stop_constant_predictors(constant_ivs, sample_info,
+                                    .jst_data_name, pipeline$data)
     }
   }
 
@@ -4653,9 +4734,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                          align = c("l", "bc"),
                          digits = c(VIF = 3L))
 
-        # Targeted notes for VIF > 10
+        # Targeted notes for VIF > 10: the table's brief interpretation,
+        # printed with it except at the minimal level (Session 346).
         high_vif <- vif_values[vif_values > 10]
-        if (length(high_vif) > 0) {
+        if (length(high_vif) > 0 && .jst_notes_on()) {
           cat("\n")
           # Both numbers to one place, padded (Session 327): through
           # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
@@ -4974,6 +5056,10 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   # Case Processing Summary (standard CPS chain; jalpha uses listwise
   # deletion across all scale items)
   .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
+
+  # No case left (Session 346): the tables printed blank, under a warning
+  # that items "NA, NA, NA" were negatively correlated with the scale.
+  .jst_stop_empty_sample(sample_info)
 
   # Overall Cronbach's Alpha
   k             <- ncol(items_complete)
