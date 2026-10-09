@@ -18,14 +18,15 @@ jt(
   paired = FALSE,
   welch = FALSE,
   effect.size = NULL,
-  levene = NULL,
+  diagnostics = NULL,
   ci = NULL,
   subset = NULL,
   variable.id = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
   full = FALSE,
-  digits = NULL
+  digits = NULL,
+  ...
 )
 ```
 
@@ -53,7 +54,9 @@ jt(
 - welch:
 
   Logical. If FALSE (default), runs Student's t-test (equal variances
-  assumed). If TRUE, runs Welch's t-test. Ignored when paired = TRUE.
+  assumed). If TRUE, runs Welch's t-test, which needs at least 2 cases
+  in each group; Student's test can include a group of one case. Ignored
+  when paired = TRUE.
 
 - effect.size:
 
@@ -61,11 +64,15 @@ jt(
   to [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
   session setting.
 
-- levene:
+- diagnostics:
 
-  Logical or NULL. If TRUE, prints Levene's test for homogeneity of
-  variance. Ignored when paired = TRUE. If NULL (default), defers to
-  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
+  Logical, `"levene"`, or NULL. If TRUE (or `"levene"`), prints Levene's
+  test for homogeneity of variance, with a note under it when the test
+  is significant (see "Unequal variances"). Not applicable when paired =
+  TRUE. If NULL (default), defers to
+  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
+  `diagnostics` setting, which is off at every output level until it is
+  set.
 
 - ci:
 
@@ -123,8 +130,9 @@ jt(
 
 - full:
 
-  Logical. If TRUE, turns on effect.size, levene, and ci all at once.
-  Does not override explicit FALSE values.
+  Logical. If TRUE, turns on effect.size and ci together. Does not
+  override explicit FALSE values, and does not turn on diagnostics,
+  which `diagnostics` alone governs.
 
 - digits:
 
@@ -135,6 +143,12 @@ jt(
   own fixed conventions. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `digits` setting (default 3).
+
+- ...:
+
+  Reserved for argument-name checking. Passing `levene`, the name of the
+  diagnostics setting before version 0.9.219, produces an error that
+  names `diagnostics`.
 
 ## Value
 
@@ -163,6 +177,46 @@ with the data, as in `I(x * w)`, must hold one value for each case –
 each row of `data` left after filtering – where
 [`lm()`](https://rdrr.io/r/stats/lm.html) would recycle a shorter one; a
 set used with `%in%` may have any length.
+
+## Unequal variances
+
+Student's t-test assumes the two groups have the same variance, and
+Levene's test (`diagnostics = TRUE`) asks whether they do. When it is
+significant, a note under its table states the two things that decide
+how much that matters – the ratio of the larger group's size to the
+smaller, and of the larger standard deviation to the smaller – and then
+takes one of three forms. Textbooks give different guidelines and no
+single cutoff is agreed, so the note does not treat one as exact:
+
+- Stevens (*Intermediate Statistics: A Modern Approach*; *Applied
+  Multivariate Statistics for the Social Sciences*) holds that unequal
+  variances distort the test appreciably only when the larger group is
+  more than 1.5 times the smaller.
+
+- Moore, McCabe and Craig (*Introduction to the Practice of Statistics*)
+  treat results as approximately correct while the largest standard
+  deviation is less than twice the smallest, a rule they state for the
+  analysis of variance; Howell (*Statistical Methods for Psychology*)
+  gives the same limit as a variance ratio of four and adds that unequal
+  variances and unequal group sizes do not mix.
+
+The note reads "usually still acceptable" when the larger group is no
+more than 1.25 times the smaller and the larger standard deviation no
+more than twice the smaller; it says the p-value may not be reliable
+when the group sizes differ by more than 1.5 times and the standard
+deviations by more than twice; and between the two it says that
+guidelines differ. The 1.25 is not a textbook figure. It comes from
+simulations run for jstats (a true null hypothesis, normal scores, a
+nominal 5 percent level, the smaller group the more variable): in the
+cases tried, Student's test rejected up to about 7 percent of the time
+inside the first range, up to about 10 percent in the middle one, and
+about 14 to 15 percent in the last. Two groups of the same size are the
+most forgiving case: the rate stayed near 5 percent with one standard
+deviation up to three times the other. The direction matters: when the
+LARGER group is the more variable, the test rejects too rarely instead.
+Welch's t-test (`welch = TRUE`) does not assume equal variances. The
+note is not printed at `joutput("minimal")`, which prints the table
+alone.
 
 ## See also
 
@@ -215,6 +269,26 @@ jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 #> 
 #> Analysis N: 103
 #> 
+#> Group Descriptives: WellbeingScore by Volunteer
+#> Group    N   Mean     SD
+#> ------  --  ------  ------
+#> 0: No   54  47.463  11.699
+#> 1: Yes  49  54.673  10.059
+#> 
+#> Independent Samples T-Test Results (equal variances assumed)
+#>    t     df    p   Mean Difference  95% CI Lower  95% CI Upper
+#> ------  ---  ----  ---------------  ------------  ------------
+#> -3.338  101  .001       -7.211         -11.496       -2.925
+#> 
+#> Cohen's d: -0.658
+#> 
+
+# Checking the equal-variances assumption: Levene's test
+jt(WellbeingScore ~ Volunteer, data = community, diagnostics = TRUE)
+#> Independent Samples T-Test
+#> 
+#> Analysis N: 103
+#> 
 #> Levene's Test for Homogeneity of Variance
 #>   F    df1  df2    p
 #> -----  ---  ---  ----
@@ -261,11 +335,6 @@ jt(WellbeingScore ~ Volunteer, full = TRUE)
 #> Using default data frame: community
 #> 
 #> Analysis N: 103
-#> 
-#> Levene's Test for Homogeneity of Variance
-#>   F    df1  df2    p
-#> -----  ---  ---  ----
-#> 0.719   1   101  .399
 #> 
 #> Group Descriptives: WellbeingScore by Volunteer
 #> Group    N   Mean     SD

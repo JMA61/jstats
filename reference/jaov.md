@@ -18,14 +18,15 @@ jaov(
   welch = FALSE,
   posthoc = NULL,
   effect.size = NULL,
-  levene = NULL,
+  diagnostics = NULL,
   ci = NULL,
   subset = NULL,
   variable.id = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
   full = FALSE,
-  digits = NULL
+  digits = NULL,
+  ...
 )
 ```
 
@@ -48,7 +49,10 @@ jaov(
   ratio of two mean squares, so its table shows F, df1, df2 and p: Sum
   of Squares and Mean Square belong to the traditional ANOVA table and
   are not applicable to Welch's test. Welch's ANOVA needs at least 2
-  cases in every group.
+  cases in every group, and some variation within every group: a group
+  whose cases all hold one value has a variance of zero, which Welch's F
+  divides by. The traditional ANOVA can include such a group, or a group
+  of one case.
 
 - posthoc:
 
@@ -60,7 +64,13 @@ jaov(
   intervals are adjusted for the number of groups through the
   studentized range distribution, as Tukey's are. Commercial statistical
   software offers the same test for unequal variances (Games-Howell in
-  SPSS's ONEWAY post-hoc tests). If NULL (default), defers to
+  SPSS's ONEWAY post-hoc tests). A Games-Howell comparison with fewer
+  than 2 degrees of freedom – possible when a group has two or three
+  cases – shows its difference and its df and leaves its interval and
+  p-value blank, with a line under the table saying so: the studentized
+  range distribution is not defined there. With two groups no post-hoc
+  table is printed or returned, after either ANOVA: the test above it is
+  the only comparison. If NULL (default), defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
 
 - effect.size:
@@ -69,11 +79,14 @@ jaov(
   defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
 
-- levene:
+- diagnostics:
 
-  Logical or NULL. If TRUE, prints Levene's test for homogeneity of
-  variance. If NULL (default), defers to
-  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
+  Logical, `"levene"`, or NULL. If TRUE (or `"levene"`), prints Levene's
+  test for homogeneity of variance, with a note under it when the test
+  is significant (see "Unequal variances"). If NULL (default), defers to
+  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
+  `diagnostics` setting, which is off at every output level until it is
+  set.
 
 - ci:
 
@@ -132,8 +145,9 @@ jaov(
 
 - full:
 
-  Logical. If TRUE, turns on posthoc, effect.size, levene, and ci all at
-  once. Does not override explicit FALSE values.
+  Logical. If TRUE, turns on posthoc, effect.size and ci together. Does
+  not override explicit FALSE values, and does not turn on diagnostics,
+  which `diagnostics` alone governs.
 
 - digits:
 
@@ -144,6 +158,12 @@ jaov(
   own fixed conventions. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `digits` setting (default 3).
+
+- ...:
+
+  Reserved for argument-name checking. Passing `levene`, the name of the
+  diagnostics setting before version 0.9.219, produces an error that
+  names `diagnostics`.
 
 ## Value
 
@@ -174,6 +194,45 @@ with the data, as in `I(x * w)`, must hold one value for each case –
 each row of `data` left after filtering – where
 [`lm()`](https://rdrr.io/r/stats/lm.html) would recycle a shorter one; a
 set used with `%in%` may have any length.
+
+## Unequal variances
+
+The traditional ANOVA assumes the groups have the same variance, and
+Levene's test (`diagnostics = TRUE`) asks whether they do. When it is
+significant, a note under its table states the two things that decide
+how much that matters – the ratio of the largest group's size to the
+smallest, and of the largest standard deviation to the smallest – and
+then takes one of three forms. Textbooks give different guidelines and
+no single cutoff is agreed, so the note does not treat one as exact:
+
+- Stevens (*Applied Multivariate Statistics for the Social Sciences*;
+  *Intermediate Statistics: A Modern Approach*) treats the F test as
+  robust to unequal variances while the largest group is less than 1.5
+  times the smallest.
+
+- Moore, McCabe and Craig (*Introduction to the Practice of Statistics*)
+  treat the results as approximately correct while the largest standard
+  deviation is less than twice the smallest; Howell (*Statistical
+  Methods for Psychology*) gives the same limit as a variance ratio of
+  four and adds that unequal variances and unequal group sizes do not
+  mix.
+
+The note reads "usually still acceptable" when the largest group is no
+more than 1.25 times the smallest and the largest standard deviation no
+more than twice the smallest; it says the p-value may not be reliable
+when the group sizes differ by more than 1.5 times and the standard
+deviations by more than twice; and between the two it says that
+guidelines differ. The 1.25 is not a textbook figure. It comes from
+simulations run for jstats (a true null hypothesis, normal scores, a
+nominal 5 percent level, four groups, the smallest group the most
+variable): in the cases tried, the traditional ANOVA rejected up to
+about 7.5 percent of the time inside the first range, about 7 to 13
+percent in the middle one, and 13 to 16 percent in the last. The
+direction matters: those figures are for the worst case, and when the
+LARGEST group is the most variable the rate is lower, falling under 5
+percent where the sizes are clearly unequal. Welch's ANOVA
+(`welch = TRUE`) does not assume equal variances. The note is not
+printed at `joutput("minimal")`, which prints the table alone.
 
 ## See also
 
@@ -212,11 +271,6 @@ jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> 
 #> Analysis N: 103
 #> 
-#> Levene's Test for Homogeneity of Variance
-#>   F    df1  df2    p
-#> -----  ---  ---  ----
-#> 1.751   3    99  .162
-#> 
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N   Mean     SD    95% CI Lower  95% CI Upper
 #> --------  --  ------  ------  ------------  ------------
@@ -246,7 +300,7 @@ jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> 
 
 # Checking the equal-variances assumption: Levene's test
-jaov(WellbeingScore ~ Region, data = community, levene = TRUE)
+jaov(WellbeingScore ~ Region, data = community, diagnostics = TRUE)
 #> One-Way ANOVA
 #> 
 #> Analysis N: 103
@@ -402,11 +456,6 @@ jaov(WellbeingScore ~ Region, full = TRUE)
 #> Using default data frame: community
 #> 
 #> Analysis N: 103
-#> 
-#> Levene's Test for Homogeneity of Variance
-#>   F    df1  df2    p
-#> -----  ---  ---  ----
-#> 1.751   3    99  .162
 #> 
 #> Group Descriptives: WellbeingScore by Region
 #> Group      N   Mean     SD    95% CI Lower  95% CI Upper

@@ -28,7 +28,9 @@ collinearity warning the only hint.
   dummy_coef_names,
   ref_cats,
   auto_ref_cats,
-  value_mode
+  value_mode,
+  sample_info = NULL,
+  data_name = NULL
 )
 ```
 

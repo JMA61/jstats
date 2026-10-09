@@ -34,8 +34,10 @@ jlogistic(
 - formula:
 
   A model formula, e.g. `DV ~ IV1 + IV2`. The DV must be a binary
-  variable coded 0/1. Transformed predictor terms such as `log(IV1)` are
-  computed automatically and used throughout the output.
+  variable coded 0/1, and a variable of the data: a computed term on the
+  left, such as `I(Score > 50)`, is refused, so create the 0/1 variable
+  first. Transformed predictor terms such as `log(IV1)` are computed
+  automatically and used throughout the output.
 
 - data:
 
@@ -98,10 +100,15 @@ jlogistic(
 
 - diagnostics:
 
-  Logical, character vector, or NULL. If TRUE, prints VIF table. If a
-  character vector, `vif` is currently the only supported option. If
+  Logical, `"vif"`, or NULL. If TRUE (or `"vif"`), prints the VIF table
+  for a model with two or more predictors. The values are the
+  predictors' ordinary variance inflation factors, computed from their
+  correlations as for a linear model. A VIF above 10 gets a line of
+  interpretation under the table, except at `joutput("minimal")`. If
   NULL (default), defers to
-  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md).
+  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
+  `diagnostics` setting, which is off at every output level until it is
+  set.
 
 - ref.categories:
 
@@ -116,8 +123,9 @@ jlogistic(
 
 - full:
 
-  Logical. If TRUE, turns on ci, classification, and diagnostics. Does
-  not override explicit FALSE values.
+  Logical. If TRUE, turns on ci and classification. Does not override an
+  explicit FALSE, and does not turn on diagnostics, which `diagnostics`
+  alone governs.
 
 - case.processing.detail:
 

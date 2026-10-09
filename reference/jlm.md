@@ -160,12 +160,19 @@ jlm(
 
 - diagnostics:
 
-  Logical, character vector, or NULL. If TRUE, prints VIF table and
-  diagnostic plots. If a character vector, specifies which diagnostics
-  to show: `vif`, `residuals`, `qq`, `scale`, `cooks`, `leverage`. If
-  NULL (default), defers to
-  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)
-  session setting.
+  Logical, character vector, or NULL. If TRUE, prints the VIF table (for
+  a model with two or more predictors) and draws the five diagnostic
+  plots. A character vector names the ones to show: `vif`, `residuals`,
+  `qq`, `scale`, `cooks`, `leverage`, more than one combined with
+  [`c()`](https://rdrr.io/r/base/c.html), as in
+  `diagnostics = c("vif", "qq")`; a name that is not one of these is an
+  error. A VIF above 10 gets a line of interpretation under the table,
+  except at `joutput("minimal")`. If NULL (default), defers to
+  [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
+  `diagnostics` setting, which is off at every output level until it is
+  set. The same plots are available afterwards from
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) on the
+  returned object.
 
 - ref.categories:
 
@@ -180,8 +187,9 @@ jlm(
 
 - full:
 
-  Logical. If TRUE, turns on the coefficient confidence interval and
-  diagnostics. Does not override explicit FALSE values.
+  Logical. If TRUE, turns on the coefficient confidence interval. Does
+  not override an explicit FALSE, and does not turn on diagnostics,
+  which `diagnostics` alone governs.
 
 - case.processing.detail:
 

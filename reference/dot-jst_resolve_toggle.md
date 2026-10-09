@@ -15,7 +15,7 @@ joutput()".
 
 - name:
 
-  Character. Toggle name (e.g. "effect.size", "means.ci", "levene").
+  Character. Toggle name (e.g. "effect.size", "means.ci", "posthoc").
 
 - per_call_value:
 

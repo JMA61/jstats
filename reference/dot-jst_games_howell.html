@@ -31,7 +31,7 @@ needs none beyond stats."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.218</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,8 +98,12 @@ needs none beyond stats.</p>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>A pair whose standard error is 0 (both groups constant) has no df, p or
-interval: its cells are NA and print blank. <code><a href="jaov.html">jaov()</a></code> stops before
-this for a group of one case, which has no variance.</p>
+interval: its cells are NA and print blank. A pair with fewer than 2
+degrees of freedom keeps its df and has no p or interval: the
+studentized range distribution is not defined there, and
+<code><a href="https://rdrr.io/r/stats/Tukey.html" class="external-link">stats::ptukey()</a></code> and <code><a href="https://rdrr.io/r/stats/Tukey.html" class="external-link">stats::qtukey()</a></code> are not called
+(Session 346). <code><a href="jaov.html">jaov()</a></code> stops before this for a group of one case,
+which has no variance, and for a group whose cases all hold one value.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

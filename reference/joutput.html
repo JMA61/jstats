@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.218</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,6 @@ precedence over joutput() settings.</p>
 <span>  effect.size <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  regression.ci <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  means.ci <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  levene <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  posthoc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  diagnostics <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  case.processing <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -94,10 +93,10 @@ in-table labels per call or via the <code>variable.id</code> toggle.</p></dd>
 <dt>full</dt>
 <dd><p>Everything in standard plus a variable label legend
 (<code>variable.id = "legend"</code>), regression coefficient confidence
-intervals, assumption checks (Levene's
-test), post-hoc tests, regression diagnostics, and the Case
+intervals, post-hoc tests, and the Case
 Processing table on every call, with the per-code missing
-breakdown.</p></dd>
+breakdown. Diagnostic output is not part of it: see
+<code>diagnostics</code>.</p></dd>
 
 
 </dl></dd>
@@ -120,19 +119,33 @@ confidence intervals on means and mean differences (<code>jt</code>,
 <code>jaov</code>). Off at minimal, on at standard and full.</p></dd>
 
 
-<dt id="arg-levene">levene<a class="anchor" aria-label="anchor" href="#arg-levene"></a></dt>
-<dd><p>Logical or NULL. Override the level's default for
-Levene's test display.</p></dd>
-
-
 <dt id="arg-posthoc">posthoc<a class="anchor" aria-label="anchor" href="#arg-posthoc"></a></dt>
 <dd><p>Logical or NULL. Override the level's default for
 post-hoc test display (jaov only).</p></dd>
 
 
 <dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
-<dd><p>Logical or NULL. Override the level's default for
-regression diagnostic output (jlm only).</p></dd>
+<dd><p>Logical, character vector, or NULL. The diagnostic
+output of the analysis functions – assumption checks and the like –
+which no level turns on. <code>TRUE</code> shows every diagnostic a function
+has; <code>FALSE</code> (the setting until one is made) shows none; a
+character vector shows the ones named, each function taking those that
+apply to it:</p><ul><li><p><code>"levene"</code> – Levene's test for homogeneity of variance
+(<code>jt</code>, <code>jaov</code>);</p></li>
+<li><p><code>"vif"</code> – the variance inflation factors (<code>jlm</code>,
+<code>jlogistic</code>);</p></li>
+<li><p><code>"residuals"</code>, <code>"qq"</code>, <code>"scale"</code>,
+<code>"cooks"</code>, <code>"leverage"</code> – the regression diagnostic
+plots (<code>jlm</code>).</p></li>
+</ul><p>Name more than one with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>:
+<code>joutput(diagnostics = c("levene", "vif"))</code>. A diagnostic prints
+with its brief interpretation (the note under a significant Levene's
+test, the lines under a VIF above 10) except at the minimal level,
+which prints the table alone. Unlike the other settings it is not
+cleared by a level call: <code>joutput("full")</code> leaves it as it was.
+<code>joutput(NULL)</code> turns it off with everything else. The same
+argument on <code><a href="jt.html">jt()</a></code>, <code><a href="jaov.html">jaov()</a></code>, <code><a href="jlm.html">jlm()</a></code> and
+<code><a href="jlogistic.html">jlogistic()</a></code> sets it for one call.</p></dd>
 
 
 <dt id="arg-case-processing">case.processing<a class="anchor" aria-label="anchor" href="#arg-case-processing"></a></dt>
@@ -292,6 +305,13 @@ for a <code>joutput("setting")</code> query, or as an echo of the settings
 a setting call touched.</p>
     </div>
     <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Diagnostic output – Levene's test, the VIF table, the regression
+diagnostic plots – is set apart from the levels: it is off at every
+level and is turned on with <code>diagnostics</code>, here or in an analysis
+call.</p>
+    </div>
+    <div class="section level2">
     <h2 id="call-patterns">Call patterns<a class="anchor" aria-label="anchor" href="#call-patterns"></a></h2>
 
 
@@ -303,7 +323,7 @@ differs from the level's default.</p></dd>
 <dt><code>joutput("setting")</code></dt>
 <dd><p>Print one setting and nothing else –
 <code>joutput("digits")</code>, or several at once with
-<code>joutput(c("levene", "posthoc"))</code> – closed by a pointer to
+<code>joutput(c("posthoc", "digits"))</code> – closed by a pointer to
 <code>joutput()</code> for the full panel. A setting name given WITHOUT
 an argument name is read as a query rather than as a level; the
 three level names and the setting names share no string, so the
@@ -315,7 +335,8 @@ and like the full panel a query prints regardless of
 <dd><p>Set the level, clearing any earlier
 overrides, then print the full panel – a level moves most
 settings at once. Settings given in the same call are applied as
-overrides on the new level.</p></dd>
+overrides on the new level. <code>diagnostics</code> is the exception:
+it belongs to no level, so a level call leaves it as it was.</p></dd>
 
 <dt><code>joutput(setting = value, ...)</code></dt>
 <dd><p>Set one or more settings
@@ -383,7 +404,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   effect.size: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   regression.ci: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   means.ci: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   levene: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   posthoc: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: AUTO</span>
@@ -401,7 +421,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   effect.size: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   regression.ci: ON (override)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   means.ci: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   levene: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   posthoc: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: AUTO</span>
@@ -413,15 +432,14 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="st">"full"</span><span class="op">)</span>                         <span class="co"># everything</span></span></span>
+<span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span><span class="st">"full"</span><span class="op">)</span>                         <span class="co"># every statistic and every detail</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Output Settings</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Level: full</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   effect.size: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   regression.ci: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   means.ci: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   levene: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   posthoc: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.detail: PER_CODE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.filter: LIST</span>
@@ -430,6 +448,21 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span>diagnostics <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>             <span class="co"># diagnostic output on, at any level</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output Settings</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joutput() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span>diagnostics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"levene"</span>, <span class="st">"vif"</span><span class="op">)</span><span class="op">)</span> <span class="co"># only the diagnostics named</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output Settings</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: LEVENE, VIF</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joutput() to see all settings.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span>diagnostics <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>            <span class="co"># and off again</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Output Settings</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: OFF</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Run joutput() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joutput</span><span class="op">(</span>digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>                     <span class="co"># set one setting; echoes only that one</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Output Settings</span>
@@ -447,9 +480,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   effect.size: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   regression.ci: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   means.ci: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   levene: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   posthoc: ON</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   diagnostics: OFF</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.detail: PER_CODE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   case.processing.filter: LIST</span>

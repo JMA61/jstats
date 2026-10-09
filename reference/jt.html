@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.218</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,14 +62,15 @@ are displayed alongside labels in the group descriptives table.</p>
 <span>  paired <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  welch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  effect.size <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  levene <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  diagnostics <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  subset <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  variable.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  case.processing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  full <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  digits <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -99,8 +100,9 @@ is FALSE.</p></dd>
 
 <dt id="arg-welch">welch<a class="anchor" aria-label="anchor" href="#arg-welch"></a></dt>
 <dd><p>Logical. If FALSE (default), runs Student's t-test
-(equal variances assumed). If TRUE, runs Welch's t-test. Ignored
-when paired = TRUE.</p></dd>
+(equal variances assumed). If TRUE, runs Welch's t-test, which needs
+at least 2 cases in each group; Student's test can include a group of
+one case. Ignored when paired = TRUE.</p></dd>
 
 
 <dt id="arg-effect-size">effect.size<a class="anchor" aria-label="anchor" href="#arg-effect-size"></a></dt>
@@ -108,10 +110,13 @@ when paired = TRUE.</p></dd>
 (default), defers to <code><a href="joutput.html">joutput()</a></code> session setting.</p></dd>
 
 
-<dt id="arg-levene">levene<a class="anchor" aria-label="anchor" href="#arg-levene"></a></dt>
-<dd><p>Logical or NULL. If TRUE, prints Levene's test for homogeneity
-of variance. Ignored when paired = TRUE. If NULL (default), defers to
-<code><a href="joutput.html">joutput()</a></code>.</p></dd>
+<dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
+<dd><p>Logical, <code>"levene"</code>, or NULL. If TRUE (or
+<code>"levene"</code>), prints Levene's test for homogeneity of variance,
+with a note under it when the test is significant (see "Unequal
+variances"). Not applicable when paired = TRUE. If NULL (default),
+defers to <code><a href="joutput.html">joutput()</a></code>'s <code>diagnostics</code> setting, which is off
+at every output level until it is set.</p></dd>
 
 
 <dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
@@ -165,8 +170,9 @@ place. See <code><a href="joutput.html">?joutput</a></code> (<code>case.processi
 
 
 <dt id="arg-full">full<a class="anchor" aria-label="anchor" href="#arg-full"></a></dt>
-<dd><p>Logical. If TRUE, turns on effect.size, levene, and ci
-all at once. Does not override explicit FALSE values.</p></dd>
+<dd><p>Logical. If TRUE, turns on effect.size and ci together.
+Does not override explicit FALSE values, and does not turn on
+diagnostics, which <code>diagnostics</code> alone governs.</p></dd>
 
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
@@ -176,6 +182,12 @@ whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
 which keep their own fixed conventions. NULL (default) defers to
 <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Reserved for argument-name checking. Passing <code>levene</code>,
+the name of the diagnostics setting before version 0.9.219, produces
+an error that names <code>diagnostics</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -204,6 +216,45 @@ A vector used value by value with the data, as in <code>I(x * w)</code>,
 must hold one value for each case – each row of <code>data</code> left
 after filtering – where <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would recycle a shorter one; a
 set used with <code>%in%</code> may have any length.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="unequal-variances">Unequal variances<a class="anchor" aria-label="anchor" href="#unequal-variances"></a></h2>
+
+
+<p>Student's t-test assumes the two groups have the same variance, and
+Levene's test (<code>diagnostics = TRUE</code>) asks whether they do. When it
+is significant, a note under its table states the two things that
+decide how much that matters – the ratio of the larger group's size to
+the smaller, and of the larger standard deviation to the smaller – and
+then takes one of three forms. Textbooks give different guidelines and
+no single cutoff is agreed, so the note does not treat one as exact:</p><ul><li><p>Stevens (<em>Intermediate Statistics: A Modern Approach</em>;
+<em>Applied Multivariate Statistics for the Social Sciences</em>)
+holds that unequal variances distort the test appreciably only when
+the larger group is more than 1.5 times the smaller.</p></li>
+<li><p>Moore, McCabe and Craig (<em>Introduction to the Practice of
+Statistics</em>) treat results as approximately correct while the
+largest standard deviation is less than twice the smallest, a rule
+they state for the analysis of variance; Howell (<em>Statistical
+Methods for Psychology</em>) gives the same limit as a variance ratio of
+four and adds that unequal variances and unequal group sizes do not
+mix.</p></li>
+</ul><p>The note reads "usually still acceptable" when the larger group is no
+more than 1.25 times the smaller and the larger standard deviation no
+more than twice the smaller; it says the p-value may not be reliable
+when the group sizes differ by more than 1.5 times and the standard
+deviations by more than twice; and between the two it says that
+guidelines differ. The 1.25 is not a textbook figure. It comes from
+simulations run for jstats (a true null hypothesis, normal scores, a
+nominal 5 percent level, the smaller group the more variable): in the
+cases tried, Student's test rejected up to about 7 percent of the time
+inside the first range, up to about 10 percent in the middle one, and
+about 14 to 15 percent in the last. Two groups of the same size are the
+most forgiving case: the rate stayed near 5 percent with one standard
+deviation up to three times the other. The direction matters: when the
+LARGER group is the more variable, the test rejects too rarely
+instead. Welch's t-test (<code>welch = TRUE</code>) does not assume equal
+variances. The note is not printed at <code>joutput("minimal")</code>, which
+prints the table alone.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -255,6 +306,26 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Volunteer</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group    N   Mean     SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------  --  ------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No   54  47.463  11.699</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes  49  54.673  10.059</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Independent Samples T-Test Results (equal variances assumed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    t     df    p   Mean Difference  95% CI Lower  95% CI Upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------  ---  ----  ---------------  ------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -3.338  101  .001       -7.211         -11.496       -2.925</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cohen's d: -0.658</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Checking the equal-variances assumption: Levene's test</span></span></span>
+<span class="r-in"><span><span class="fu">jt</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Volunteer</span>, data <span class="op">=</span> <span class="va">community</span>, diagnostics <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Independent Samples T-Test</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Levene's Test for Homogeneity of Variance</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1  df2    p</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ---  ----</span>
@@ -301,11 +372,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Levene's Test for Homogeneity of Variance</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1  df2    p</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ---  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0.719   1   101  .399</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group    N   Mean     SD</span>

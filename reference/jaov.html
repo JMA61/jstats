@@ -23,7 +23,7 @@ labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.218</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,14 +68,15 @@ labels in the group descriptives table.</p>
 <span>  welch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  posthoc <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  effect.size <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  levene <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  diagnostics <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  subset <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  variable.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  case.processing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  full <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  digits <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -99,7 +100,10 @@ If TRUE, runs Welch's ANOVA (does not assume equal variances). Welch's
 F is not a ratio of two mean squares, so its table shows F, df1, df2
 and p: Sum of Squares and Mean Square belong to the traditional ANOVA
 table and are not applicable to Welch's test. Welch's ANOVA needs at
-least 2 cases in every group.</p></dd>
+least 2 cases in every group, and some variation within every group:
+a group whose cases all hold one value has a variance of zero, which
+Welch's F divides by. The traditional ANOVA can include such a group,
+or a group of one case.</p></dd>
 
 
 <dt id="arg-posthoc">posthoc<a class="anchor" aria-label="anchor" href="#arg-posthoc"></a></dt>
@@ -111,7 +115,13 @@ freedom, shown in a df column, and the p-values and confidence
 intervals are adjusted for the number of groups through the
 studentized range distribution, as Tukey's are. Commercial
 statistical software offers the same test for unequal variances
-(Games-Howell in SPSS's ONEWAY post-hoc tests).
+(Games-Howell in SPSS's ONEWAY post-hoc tests). A Games-Howell
+comparison with fewer than 2 degrees of freedom – possible when a
+group has two or three cases – shows its difference and its df and
+leaves its interval and p-value blank, with a line under the table
+saying so: the studentized range distribution is not defined there.
+With two groups no post-hoc table is printed or returned, after
+either ANOVA: the test above it is the only comparison.
 If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>.</p></dd>
 
 
@@ -120,9 +130,13 @@ If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>.<
 (default), defers to <code><a href="joutput.html">joutput()</a></code>.</p></dd>
 
 
-<dt id="arg-levene">levene<a class="anchor" aria-label="anchor" href="#arg-levene"></a></dt>
-<dd><p>Logical or NULL. If TRUE, prints Levene's test for homogeneity
-of variance. If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>.</p></dd>
+<dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
+<dd><p>Logical, <code>"levene"</code>, or NULL. If TRUE (or
+<code>"levene"</code>), prints Levene's test for homogeneity of variance,
+with a note under it when the test is significant (see "Unequal
+variances"). If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>'s
+<code>diagnostics</code> setting, which is off at every output level until
+it is set.</p></dd>
 
 
 <dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
@@ -177,8 +191,9 @@ place. See <code><a href="joutput.html">?joutput</a></code> (<code>case.processi
 
 
 <dt id="arg-full">full<a class="anchor" aria-label="anchor" href="#arg-full"></a></dt>
-<dd><p>Logical. If TRUE, turns on posthoc, effect.size, levene,
-and ci all at once. Does not override explicit FALSE values.</p></dd>
+<dd><p>Logical. If TRUE, turns on posthoc, effect.size and ci
+together. Does not override explicit FALSE values, and does not turn
+on diagnostics, which <code>diagnostics</code> alone governs.</p></dd>
 
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
@@ -188,6 +203,12 @@ whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
 which keep their own fixed conventions. NULL (default) defers to
 <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Reserved for argument-name checking. Passing <code>levene</code>,
+the name of the diagnostics setting before version 0.9.219, produces
+an error that names <code>diagnostics</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -220,6 +241,44 @@ A vector used value by value with the data, as in <code>I(x * w)</code>,
 must hold one value for each case – each row of <code>data</code> left
 after filtering – where <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would recycle a shorter one; a
 set used with <code>%in%</code> may have any length.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="unequal-variances">Unequal variances<a class="anchor" aria-label="anchor" href="#unequal-variances"></a></h2>
+
+
+<p>The traditional ANOVA assumes the groups have the same variance, and
+Levene's test (<code>diagnostics = TRUE</code>) asks whether they do. When it
+is significant, a note under its table states the two things that
+decide how much that matters – the ratio of the largest group's size to
+the smallest, and of the largest standard deviation to the smallest –
+and then takes one of three forms. Textbooks give different guidelines
+and no single cutoff is agreed, so the note does not treat one as
+exact:</p><ul><li><p>Stevens (<em>Applied Multivariate Statistics for the Social
+Sciences</em>; <em>Intermediate Statistics: A Modern Approach</em>) treats
+the F test as robust to unequal variances while the largest group is
+less than 1.5 times the smallest.</p></li>
+<li><p>Moore, McCabe and Craig (<em>Introduction to the Practice of
+Statistics</em>) treat the results as approximately correct while the
+largest standard deviation is less than twice the smallest; Howell
+(<em>Statistical Methods for Psychology</em>) gives the same limit as
+a variance ratio of four and adds that unequal variances and unequal
+group sizes do not mix.</p></li>
+</ul><p>The note reads "usually still acceptable" when the largest group is no
+more than 1.25 times the smallest and the largest standard deviation no
+more than twice the smallest; it says the p-value may not be reliable
+when the group sizes differ by more than 1.5 times and the standard
+deviations by more than twice; and between the two it says that
+guidelines differ. The 1.25 is not a textbook figure. It comes from
+simulations run for jstats (a true null hypothesis, normal scores, a
+nominal 5 percent level, four groups, the smallest group the most
+variable): in the cases tried, the traditional ANOVA rejected up to
+about 7.5 percent of the time inside the first range, about 7 to 13
+percent in the middle one, and 13 to 16 percent in the last. The
+direction matters: those figures are for the worst case, and when the
+LARGEST group is the most variable the rate is lower, falling under 5
+percent where the sizes are clearly unequal. Welch's ANOVA
+(<code>welch = TRUE</code>) does not assume equal variances. The note is not
+printed at <code>joutput("minimal")</code>, which prints the table alone.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -257,11 +316,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Levene's Test for Homogeneity of Variance</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1  df2    p</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ---  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.751   3    99  .162</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group      N   Mean     SD    95% CI Lower  95% CI Upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------  --  ------  ------  ------------  ------------</span>
@@ -291,7 +345,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Checking the equal-variances assumption: Levene's test</span></span></span>
-<span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, levene <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jaov</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, data <span class="op">=</span> <span class="va">community</span>, diagnostics <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> One-Way ANOVA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
@@ -447,11 +501,6 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Levene's Test for Homogeneity of Variance</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   F    df1  df2    p</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -----  ---  ---  ----</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.751   3    99  .162</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Group      N   Mean     SD    95% CI Lower  95% CI Upper</span>

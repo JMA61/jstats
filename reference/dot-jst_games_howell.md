@@ -38,6 +38,12 @@ A data frame, one row per pair: `comparison`, `diff`, `lower`, `upper`,
 ## Details
 
 A pair whose standard error is 0 (both groups constant) has no df, p or
-interval: its cells are NA and print blank.
+interval: its cells are NA and print blank. A pair with fewer than 2
+degrees of freedom keeps its df and has no p or interval: the
+studentized range distribution is not defined there, and
+[`stats::ptukey()`](https://rdrr.io/r/stats/Tukey.html) and
+[`stats::qtukey()`](https://rdrr.io/r/stats/Tukey.html) are not called
+(Session 346).
 [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md) stops
-before this for a group of one case, which has no variance.
+before this for a group of one case, which has no variance, and for a
+group whose cases all hold one value.

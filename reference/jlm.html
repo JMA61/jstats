@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.218</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -190,11 +190,17 @@ says which convention the column follows.</p></dd>
 
 
 <dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
-<dd><p>Logical, character vector, or NULL. If TRUE, prints VIF
-table and diagnostic plots. If a character vector, specifies which
-diagnostics to show: <code>vif</code>, <code>residuals</code>, <code>qq</code>,
-<code>scale</code>, <code>cooks</code>, <code>leverage</code>. If NULL (default),
-defers to <code><a href="joutput.html">joutput()</a></code> session setting.</p></dd>
+<dd><p>Logical, character vector, or NULL. If TRUE, prints the
+VIF table (for a model with two or more predictors) and draws the five
+diagnostic plots. A character vector names the ones to show:
+<code>vif</code>, <code>residuals</code>, <code>qq</code>, <code>scale</code>, <code>cooks</code>,
+<code>leverage</code>, more than one combined with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>, as in
+<code>diagnostics = c("vif", "qq")</code>; a name that is not one of these
+is an error. A VIF above 10 gets a line of interpretation under the
+table, except at <code>joutput("minimal")</code>. If NULL (default), defers
+to <code><a href="joutput.html">joutput()</a></code>'s <code>diagnostics</code> setting, which is off at
+every output level until it is set. The same plots are available
+afterwards from <code><a href="jplot.html">jplot()</a></code> on the returned object.</p></dd>
 
 
 <dt id="arg-ref-categories">ref.categories<a class="anchor" aria-label="anchor" href="#arg-ref-categories"></a></dt>
@@ -207,8 +213,9 @@ dummy-coded coefficient tables.</p></dd>
 
 
 <dt id="arg-full">full<a class="anchor" aria-label="anchor" href="#arg-full"></a></dt>
-<dd><p>Logical. If TRUE, turns on the coefficient confidence interval
-and diagnostics. Does not override explicit FALSE values.</p></dd>
+<dd><p>Logical. If TRUE, turns on the coefficient confidence
+interval. Does not override an explicit FALSE, and does not turn on
+diagnostics, which <code>diagnostics</code> alone governs.</p></dd>
 
 
 <dt id="arg-case-processing-detail">case.processing.detail<a class="anchor" aria-label="anchor" href="#arg-case-processing-detail"></a></dt>

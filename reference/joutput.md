@@ -13,7 +13,6 @@ joutput(
   effect.size = NULL,
   regression.ci = NULL,
   means.ci = NULL,
-  levene = NULL,
   posthoc = NULL,
   diagnostics = NULL,
   case.processing = NULL,
@@ -57,9 +56,9 @@ joutput(
 
   :   Everything in standard plus a variable label legend
       (`variable.id = "legend"`), regression coefficient confidence
-      intervals, assumption checks (Levene's test), post-hoc tests,
-      regression diagnostics, and the Case Processing table on every
-      call, with the per-code missing breakdown.
+      intervals, post-hoc tests, and the Case Processing table on every
+      call, with the per-code missing breakdown. Diagnostic output is
+      not part of it: see `diagnostics`.
 
 - effect.size:
 
@@ -77,11 +76,6 @@ joutput(
   on means and mean differences (`jt`, `jaov`). Off at minimal, on at
   standard and full.
 
-- levene:
-
-  Logical or NULL. Override the level's default for Levene's test
-  display.
-
 - posthoc:
 
   Logical or NULL. Override the level's default for post-hoc test
@@ -89,8 +83,32 @@ joutput(
 
 - diagnostics:
 
-  Logical or NULL. Override the level's default for regression
-  diagnostic output (jlm only).
+  Logical, character vector, or NULL. The diagnostic output of the
+  analysis functions – assumption checks and the like – which no level
+  turns on. `TRUE` shows every diagnostic a function has; `FALSE` (the
+  setting until one is made) shows none; a character vector shows the
+  ones named, each function taking those that apply to it:
+
+  - `"levene"` – Levene's test for homogeneity of variance (`jt`,
+    `jaov`);
+
+  - `"vif"` – the variance inflation factors (`jlm`, `jlogistic`);
+
+  - `"residuals"`, `"qq"`, `"scale"`, `"cooks"`, `"leverage"` – the
+    regression diagnostic plots (`jlm`).
+
+  Name more than one with [`c()`](https://rdrr.io/r/base/c.html):
+  `joutput(diagnostics = c("levene", "vif"))`. A diagnostic prints with
+  its brief interpretation (the note under a significant Levene's test,
+  the lines under a VIF above 10) except at the minimal level, which
+  prints the table alone. Unlike the other settings it is not cleared by
+  a level call: `joutput("full")` leaves it as it was. `joutput(NULL)`
+  turns it off with everything else. The same argument on
+  [`jt()`](https://jma61.github.io/jstats/reference/jt.md),
+  [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md),
+  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md) and
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)
+  sets it for one call.
 
 - case.processing:
 
@@ -253,6 +271,12 @@ query, a level change or a reset, as the named settings alone for a
 `joutput("setting")` query, or as an echo of the settings a setting call
 touched.
 
+## Details
+
+Diagnostic output – Levene's test, the VIF table, the regression
+diagnostic plots – is set apart from the levels: it is off at every
+level and is turned on with `diagnostics`, here or in an analysis call.
+
 ## Call patterns
 
 - `joutput()`:
@@ -263,7 +287,7 @@ touched.
 - `joutput("setting")`:
 
   Print one setting and nothing else – `joutput("digits")`, or several
-  at once with `joutput(c("levene", "posthoc"))` – closed by a pointer
+  at once with `joutput(c("posthoc", "digits"))` – closed by a pointer
   to `joutput()` for the full panel. A setting name given WITHOUT an
   argument name is read as a query rather than as a level; the three
   level names and the setting names share no string, so the two readings
@@ -274,7 +298,9 @@ touched.
 
   Set the level, clearing any earlier overrides, then print the full
   panel – a level moves most settings at once. Settings given in the
-  same call are applied as overrides on the new level.
+  same call are applied as overrides on the new level. `diagnostics` is
+  the exception: it belongs to no level, so a level call leaves it as it
+  was.
 
 - `joutput(setting = value, ...)`:
 
@@ -339,7 +365,6 @@ joutput("standard")                       # effect sizes + means/diff CIs (jt, j
 #>   effect.size: ON
 #>   regression.ci: OFF
 #>   means.ci: ON
-#>   levene: OFF
 #>   posthoc: OFF
 #>   diagnostics: OFF
 #>   case.processing: AUTO
@@ -357,7 +382,6 @@ joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient 
 #>   effect.size: ON
 #>   regression.ci: ON (override)
 #>   means.ci: ON
-#>   levene: OFF
 #>   posthoc: OFF
 #>   diagnostics: OFF
 #>   case.processing: AUTO
@@ -369,15 +393,14 @@ joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient 
 #>   missing.notice: ON
 #>   digits: 3
 #> 
-joutput("full")                         # everything
+joutput("full")                         # every statistic and every detail
 #> Output Settings
 #> Level: full
 #>   effect.size: ON
 #>   regression.ci: ON
 #>   means.ci: ON
-#>   levene: ON
 #>   posthoc: ON
-#>   diagnostics: ON
+#>   diagnostics: OFF
 #>   case.processing: ON
 #>   case.processing.detail: PER_CODE
 #>   case.processing.filter: LIST
@@ -386,6 +409,21 @@ joutput("full")                         # everything
 #>   ref.categories: ON
 #>   missing.notice: ON
 #>   digits: 3
+#> 
+joutput(diagnostics = TRUE)             # diagnostic output on, at any level
+#> Output Settings
+#>   diagnostics: ON
+#> Run joutput() to see all settings.
+#> 
+joutput(diagnostics = c("levene", "vif")) # only the diagnostics named
+#> Output Settings
+#>   diagnostics: LEVENE, VIF
+#> Run joutput() to see all settings.
+#> 
+joutput(diagnostics = FALSE)            # and off again
+#> Output Settings
+#>   diagnostics: OFF
+#> Run joutput() to see all settings.
 #> 
 joutput(digits = 2)                     # set one setting; echoes only that one
 #> Output Settings
@@ -403,9 +441,8 @@ joutput()                               # show current settings
 #>   effect.size: ON
 #>   regression.ci: ON
 #>   means.ci: ON
-#>   levene: ON
 #>   posthoc: ON
-#>   diagnostics: ON
+#>   diagnostics: OFF
 #>   case.processing: ON
 #>   case.processing.detail: PER_CODE
 #>   case.processing.filter: LIST
