@@ -1131,8 +1131,6 @@
 #'   documentation in \code{jdummy()}; otherwise the first category),
 #'   \code{first}, \code{last}, a numeric code, or a character string
 #'   matching a canonical label.
-#' @param name.length.warn Integer. Warn if any final dummy name exceeds
-#'   this many characters. Default 30.
 #' @param max.categories Integer. Maximum number of input categories allowed;
 #'   a variable with more raises an error rather than building the dummy set.
 #'   Default \code{20L}.
@@ -1149,11 +1147,12 @@
 #'   against for factor and character variables; Session 305),
 #'   \code{ref_idx}, \code{ref_code}, \code{ref_label},
 #'   \code{non_ref_idx}, \code{notes} (character vector of informational
-#'   messages), \code{warnings_msg} (character vector of warnings).
+#'   messages), \code{warnings_msg} (character vector of warnings; empty
+#'   since Session 347, when the one warning it carried was retired: see
+#'   Step 7).
 #'
 #' @keywords internal
 .jst_make_dummy_names <- function(x, var_name, ref = "auto",
-                                  name.length.warn = 30L,
                                   max.categories = 20L,
                                   data_name = NULL) {
 
@@ -1409,26 +1408,27 @@
   non_ref_idx <- setdiff(seq_len(n_cats), ref_idx)
   dummy_names <- final_labels[non_ref_idx]
 
-  # -- Step 7: build informational notes and warnings -----------------------
+  # -- Step 7: build informational notes ------------------------------------
+  # The note prints through .jst_msg_out(), one sentence a line, wrapped by
+  # width (Session 347): it was printed by cat() as one line of some 300
+  # characters, at five sites.
   if (any(used_code_fallback)) {
     notes <- c(notes, paste0(
       "(Note: One or more dummy names for '", var_name, "' were built ",
       "from numeric codes because descriptive value labels were not ",
-      "available. If these names aren't ideal, use jrelabel() to set ",
+      "available.\nIf these names aren't ideal, use jrelabel() to set ",
       "value labels, or jrecode() to change the underlying values, ",
       "then re-register with jdummy().)"
     ))
   }
 
-  long_names <- final_labels[nchar(final_labels) > name.length.warn]
-  if (length(long_names) > 0) {
-    warnings_msg <- c(warnings_msg, paste0(
-      "Some dummy names for '", var_name, "' exceed ", name.length.warn,
-      " characters: ", paste(shQuote(long_names), collapse = ", "),
-      ". The model will fit, but coefficient tables may look awkward. ",
-      "Use jrelabel() to shorten the labels before jdummy()."
-    ))
-  }
+  # No warning for a long dummy name (retired Session 347). It said that
+  # names over 30 characters would make "coefficient tables ... look
+  # awkward" and asked for shorter labels; since the grouped coefficient
+  # rows (Session 320) the tables show each category by its value label
+  # under its variable, and a long name is seen only in the VIF table,
+  # whole. It also fired on a long VARIABLE name whose labels were short,
+  # and listed the reference, which has no dummy.
 
   list(
     codes        = codes,

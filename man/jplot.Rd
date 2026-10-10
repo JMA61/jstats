@@ -138,7 +138,11 @@ x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
 independent variables are held when drawing the fitted line in
 \code{jst_lm} / \code{jst_logistic} methods. One of \code{zero}
 (default), \code{mean}, \code{mixed} (categorical at 0, interval
-at mean), or a named list \code{list(Var1 = value, ...)}.}
+at mean), or a named list \code{list(Var1 = value, ...)}. A term
+computed from the focal variable alone, or from it and variables
+held -- a square, \code{I(x^2)}; a log, \code{log(x + 1)} -- is not
+held: it is computed from the focal variable at each point of the
+line, so the line of a model with a squared term is a curve.}
 }
 \value{
 Invisibly, a single \code{ggplot} object if one plot is produced,

@@ -370,13 +370,20 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                 .jst_filter_way_out(fn, .jst_data_name,
                                     "To compare the categories"))
     }
+    # The line pointing at the filters takes .jst_filter_hedge()'s form,
+    # as the one-value stops do (Session 347): it named a stored jsubset()
+    # filter and said nothing of a subset = that had excluded cases in the
+    # same way, and it was printed for a stored setting that excluded none.
+    # Not when the filtered data hold two groups or more and a missing
+    # outcome took the rest: the line above says so, and the filters are
+    # known not to be the cause (voice Rule AI).
     context <- .jst_settings_context(.jst_data_name)
     .jst_stop(has, context, ".\n",
               "A t-test requires exactly 2.",
               uncounted,
-              if (nzchar(context)) {
-                paste0("\nCheck whether your jsubset or jcomplete settings ",
-                       "are excluding one of the groups.")
+              if (n_groups_data < 2L) {
+                .jst_filter_hedge(sample_info, .jst_data_name,
+                                  "one of the groups")
               })
   }
 
@@ -525,7 +532,10 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     # 346; .jst_levene_note()). Not when Welch's test is the one run.
     if (!welch) .jst_levene_note(levene_p, dv_vals, group_factor, "jt")
     cat("\n")
-  } else if (levene && paired) {
+  } else if (levene && paired && !is.null(diagnostics)) {
+    # Said only when this call asked for Levene's test (Session 347). Under
+    # joutput(diagnostics = TRUE) every paired t-test printed the note,
+    # about a test the call had not asked for.
     .jst_msg("Note: Levene's test is not applicable for paired samples.")
     cat("\n")
   }
@@ -1063,17 +1073,18 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                 .jst_filter_way_out(fn, .jst_data_name,
                                     "To compare the categories"))
     }
+    # The filters' line in .jst_filter_hedge()'s form, as in jt() (Session
+    # 347): a subset = that excluded cases is named as a stored filter is.
+    # Not when a missing outcome took the groups the filters left, as in
+    # jt().
     context <- .jst_settings_context(.jst_data_name)
-    if (nzchar(context)) {
-      .jst_stop(has, context, ".\n",
-                "An ANOVA requires at least 2.",
-                uncounted, "\n",
-                "Check whether your jsubset or jcomplete settings ",
-                "are excluding one or more groups.")
+    hedge   <- if (n_groups_data < 2L) {
+      .jst_filter_hedge(sample_info, .jst_data_name, "one or more groups")
     }
-    .jst_stop(has, ".\n",
-              "An ANOVA requires at least 2 groups.",
-              uncounted)
+    .jst_stop(has, context, ".\n",
+              if (nzchar(context)) "An ANOVA requires at least 2."
+              else "An ANOVA requires at least 2 groups.",
+              uncounted, hedge)
   }
 
   # Degenerate-grouping guard (Session 105): when every category contains
@@ -1880,11 +1891,15 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                   .jst_filter_way_out(fn, .jst_data_name,
                                       "To cross-tabulate it"))
       }
+      # The filters' line as in jt() and jaov() (Session 347): jcrosstab()
+      # had none, for a stored filter or for subset =.
       .jst_stop("'", check_info$name, "' has ", n_lvls, " ",
                 .jst_plural(n_lvls, "category", "categories"),
                 .jst_settings_context(.jst_data_name), ".\n",
                 "A cross-tabulation requires at least 2 categories ",
-                "for each variable.")
+                "for each variable.",
+                .jst_filter_hedge(sample_info, .jst_data_name,
+                                  "the other categories"))
     }
   }
 

@@ -2094,10 +2094,18 @@
         lead <- paste0(vn, " is a categorical variable, so the formula term ",
                        term_txt, " cannot be computed.")
         if (.jst_takes_numeric_registration(data[[vn]])) {
+          # An expression given as the data is named first (Session 347):
+          # the line was "jnumeric(mk(), g)", which the registration verbs
+          # refuse since v0.9.216.
+          kind <- tryCatch(.jst_data_arg_kind(str2lang(data_name)),
+                           error = function(e) "name")
+          expr <- identical(kind, "expression")
           .jst_stop(lead, "\n",
                     "If ", vn, " should be treated as numeric, register it ",
                     "first:\n",
-                    "  jnumeric(", data_name, ", ", vn, ")")
+                    if (expr) paste0("  mydata <- ", data_name, "\n"),
+                    "  jnumeric(", if (expr) "mydata" else data_name, ", ",
+                    vn, ")")
         }
         if (is.factor(data[[vn]]) || is.character(data[[vn]])) {
           .jst_stop(lead, "\n",

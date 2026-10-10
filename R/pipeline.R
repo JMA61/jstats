@@ -1917,7 +1917,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     n_missing <- sum(is.na(col))
 
     # Informational notes from the helper (e.g. labels not descriptive).
-    for (n in built$notes) cat(n, "\n", sep = "")
+    for (n in built$notes) .jst_msg_out(n)
 
     reg <- list(
       var_name    = var_name,

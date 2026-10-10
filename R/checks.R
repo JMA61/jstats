@@ -507,6 +507,55 @@
             "To analyze only those cases, remove ", v, " from the formula.")
 }
 
+#' Internal helper: the categories a predictor dummy-coded in the call holds
+#'
+#' Counted as \code{.jst_make_dummy_names()} counts them: the observed
+#' values, a factor's levels in use, a text variable's blank cells as one
+#' category.
+#'
+#' @param x The variable, filtered.
+#' @return Integer(1).
+#' @keywords internal
+.jst_n_categories <- function(x) {
+  keep <- !is.na(x)
+  if (is.factor(x)) return(nlevels(droplevels(x[keep])))
+  if (is.character(unclass(x))) {
+    v <- as.character(unclass(.jst_label_blanks(x)))
+    return(length(unique(v[keep])))
+  }
+  length(unique(as.vector(unclass(x))[keep]))
+}
+
+#' Internal helper: stop on a predictor dummy-coded in the call that has
+#' one category
+#'
+#' \code{jlm()} and \code{jlogistic()} build the dummies of a predictor
+#' named in \code{categorical =}, or of a factor, text or logical variable,
+#' in the call, before the Case Processing block. With one category the
+#' builder stopped there, "'gf' has fewer than 2 categories. Cannot create
+#' dummy variables.", where a predictor registered with \code{jdummy()} got
+#' the Session 306 sentence under the block, naming the category, with the
+#' line pointing at the filters when a filter excluded cases. The call now
+#' sets such a predictor aside and this stop is made under the block, in
+#' the registered predictor's words (Session 347). A filter whose
+#' condition names the variable is named as the cause before this, by
+#' \code{.jst_stop_if_filter_kept_one()}.
+#'
+#' @param one A list with \code{v}, the variable's name, and \code{x}, the
+#'   variable as filtered; or \code{NULL}.
+#' @param sample_info The list \code{.jst_build_sample_info()} returns.
+#' @param data_name Character(1) or \code{NULL}.
+#' @return Invisibly \code{NULL} when \code{one} is \code{NULL}; otherwise
+#'   never returns.
+#' @keywords internal
+.jst_stop_one_category_in_call <- function(one, sample_info, data_name) {
+  if (is.null(one)) return(invisible(NULL))
+  .jst_stop(one$v, " has only one category in the analysis sample (",
+            .jst_one_value_text(one$x),
+            "); a dummy-coded predictor requires at least two.",
+            .jst_filter_hedge(sample_info, data_name, "the other categories"))
+}
+
 #' Internal helper: does a variable hold one value before listwise deletion?
 #'
 #' A filter is named as the cause of a variable's one value only when the
@@ -584,6 +633,62 @@
             " excluded ", how, ".")
 }
 
+#' Internal helper: stop when a model has no more cases than coefficients
+#'
+#' \code{jlm()} and \code{jlogistic()} call this after the Case Processing
+#' block and the checks on single variables, just before the fit. With as
+#' many cases as coefficients a linear model fits every case exactly and has
+#' no residual degrees of freedom: \code{lm()} returned it, and the
+#' Coefficients table printed NaN standard errors and t values, an empty p
+#' column, "Adjusted R-squared: NaN" and "F-statistic: NaN on 2 and 0 DF,
+#' p-value: " under R's "NaNs produced". \code{glm()} on the same cases
+#' warned "fitted probabilities numerically 0 or 1 occurred" dozens of
+#' times and printed an Exp(B) of 62 digits. With fewer cases than
+#' coefficients some coefficients cannot be estimated at all. One stop now,
+#' naming both counts, and how the other cases went when some did (Session
+#' 347; the S346 item).
+#'
+#' @param sample_info The list \code{.jst_build_sample_info()} returns.
+#' @param n_coef Integer(1); the coefficients the model would estimate, the
+#'   intercept included (the columns of its model matrix).
+#' @param what Character(1); "A regression" or "A logistic regression".
+#' @return Invisibly \code{NULL} when there are more cases than
+#'   coefficients; otherwise never returns.
+#' @keywords internal
+.jst_stop_too_few_cases <- function(sample_info, n_coef, what) {
+  n_left <- sample_info$n_analysis
+  if (length(n_left) != 1L || is.na(n_left) || length(n_coef) != 1L ||
+      is.na(n_coef) || n_left > n_coef) {
+    return(invisible(NULL))
+  }
+  n_all  <- sample_info$n_original
+  after  <- sample_info$n_after_pipeline
+  gone   <- n_all - n_left
+  coefs  <- paste0(", and the model has ", .jst_fmt_n(n_coef), " ",
+                   .jst_plural(n_coef, "coefficient", "coefficients"), ".\n")
+  first  <- if (gone == 0L) {
+    paste0("There are only ", .jst_fmt_n(n_left), " cases to analyze", coefs)
+  } else {
+    paste0("Only ", .jst_fmt_n(n_left), " cases are left to analyze", coefs)
+  }
+  how <- if (after == n_left) {
+    "by a filter"
+  } else if (after == n_all) {
+    "because of missing data"
+  } else {
+    "by a filter or because of missing data"
+  }
+  .jst_stop(first,
+            what, " needs more cases than coefficients.",
+            if (gone > 0L) {
+              paste0("\n",
+                     .jst_plural(gone, "The other case was",
+                                 paste0("The other ", .jst_fmt_n(gone),
+                                        " cases were")),
+                     " excluded ", how, ".")
+            })
+}
+
 #' Internal helper: the "seems categorical" warning of jlm() and jlogistic()
 #'
 #' A predictor that looks categorical and entered the model as a number
@@ -609,8 +714,14 @@
 #' as \code{jrecode()}'s reminder does since v0.9.217. Arguments of the
 #' call other than the formula and the data are not repeated.
 #'
+#' Several predictors that seem categorical get ONE warning (Session 347):
+#' each had a warning of its own, with its own \code{jdummy()} line and the
+#' same refit line repeated. Now the names are joined in the first line,
+#' one \code{jdummy()} call takes them all, and \code{categorical =} lists
+#' them.
+#'
 #' @param fn Character(1); \code{"jlm"} or \code{"jlogistic"}.
-#' @param v Character(1); the predictor's name.
+#' @param v Character; the predictor's name, or the names of several.
 #' @param formula The formula as the call gave it.
 #' @param data_name Character(1); the data frame as the call named it, or
 #'   the \code{juse()} default's name.
@@ -626,7 +737,9 @@
   f_txt <- .jst_term_text(formula)
   # The name as a line of R takes it: in backticks when it needs them,
   # which deparse() adds to a bare name only when asked.
-  v_txt <- paste(deparse(as.name(v), backtick = TRUE), collapse = "")
+  v_txt <- vapply(v, function(n) paste(deparse(as.name(n), backtick = TRUE),
+                                        collapse = ""), character(1))
+  v_txt <- paste(v_txt, collapse = ", ")
   expr  <- identical(data_kind, "expression")
   reg   <- if (expr) "mydata" else data_name
   cats  <- unique(c(categorical, v))
@@ -636,9 +749,11 @@
     paste0("c(", paste(vapply(cats, deparse, character(1)),
                        collapse = ", "), ")")
   }
+  one <- length(v) == 1L
   paste0(
-    v, " seems categorical.\n",
-    "To treat it that way, register it with jdummy() and rerun:\n\n",
+    .jst_and_list(v), if (one) " seems" else " seem", " categorical.\n",
+    "To treat ", if (one) "it" else "them", " that way, register ",
+    if (one) "it" else "them", " with jdummy() and rerun:\n\n",
     if (expr) paste0("  mydata <- ", data_name, "\n"),
     "  jdummy(", reg, ", ", v_txt, ")\n",
     "  ", fn, "(", f_txt, if (!default_used) paste0(", ", reg), ")\n\n",

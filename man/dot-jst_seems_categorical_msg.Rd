@@ -17,7 +17,7 @@
 \arguments{
 \item{fn}{Character(1); \code{"jlm"} or \code{"jlogistic"}.}
 
-\item{v}{Character(1); the predictor's name.}
+\item{v}{Character; the predictor's name, or the names of several.}
 
 \item{formula}{The formula as the call gave it.}
 
@@ -59,5 +59,11 @@ An expression given as the data (\code{jlm(y ~ g, mk())}) cannot be
 registered on, so the first route names it first (\code{mydata <- mk()}),
 as \code{jrecode()}'s reminder does since v0.9.217. Arguments of the
 call other than the formula and the data are not repeated.
+
+Several predictors that seem categorical get ONE warning (Session 347):
+each had a warning of its own, with its own \code{jdummy()} line and the
+same refit line repeated. Now the names are joined in the first line,
+one \code{jdummy()} call takes them all, and \code{categorical =} lists
+them.
 }
 \keyword{internal}

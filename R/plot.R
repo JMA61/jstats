@@ -85,7 +85,11 @@
 #'   independent variables are held when drawing the fitted line in
 #'   \code{jst_lm} / \code{jst_logistic} methods. One of \code{zero}
 #'   (default), \code{mean}, \code{mixed} (categorical at 0, interval
-#'   at mean), or a named list \code{list(Var1 = value, ...)}.
+#'   at mean), or a named list \code{list(Var1 = value, ...)}. A term
+#'   computed from the focal variable alone, or from it and variables
+#'   held -- a square, \code{I(x^2)}; a log, \code{log(x + 1)} -- is not
+#'   held: it is computed from the focal variable at each point of the
+#'   line, so the line of a model with a squared term is a curve.
 #' @param equation Logical. If TRUE (default), displays the equation in the
 #'   subtitle for \code{line = "lm"} scatter plots (data-first form) or
 #'   \code{jst_lm} \code{fit} plots (result-object form).
@@ -1478,6 +1482,70 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   invisible(plots)
 }
 
+#' Internal helper: compute the terms built from the focal variable on a
+#' plot's grid
+#'
+#' A fitted-line plot moves one predictor along its axis and holds the
+#' others at the values \code{.jst_resolve_at()} gives. A term computed
+#' from the moving predictor -- \code{I(x^2)}, \code{log(x + 5)},
+#' \code{I(x * z)} with \code{z} held -- is a column of its own in the
+#' model, and until Session 347 it was held too: at 0 by default, so the
+#' line for \code{y ~ x + I(x^2)} was the straight line \code{b0 + b1 x},
+#' subtitled "(line shown at I(x^2) = 0)". Such a term is now computed from
+#' the grid. Only terms built from arithmetic, comparisons and elementwise
+#' functions are computed; a term whose value depends on the whole sample
+#' (\code{scale(x)}, \code{poly(x, 2)}) or that names a variable that is
+#' neither held nor a single number in the formula's environment is held
+#' as before.
+#'
+#' @param newdata The grid: the focal variable's values, the held values.
+#' @param focal Character(1); the focal variable.
+#' @param at_vals The held values, by model column.
+#' @param enclos The formula's environment, for a constant a term names.
+#' @return A list: \code{newdata}, with the terms computed, and
+#'   \code{computed}, their names (to leave out of the held-at note).
+#' @keywords internal
+.jst_terms_on_grid <- function(newdata, focal, at_vals, enclos = NULL) {
+  if (!is.environment(enclos)) enclos <- baseenv()
+  pointwise <- c("I", "(", "+", "-", "*", "/", "^", "%%", "%/%",
+                 "log", "log2", "log10", "log1p", "exp", "expm1", "sqrt",
+                 "abs", "sin", "cos", "tan", "round", "floor", "ceiling",
+                 "trunc", "pmin", "pmax", ">", "<", ">=", "<=", "==", "!=",
+                 "&", "|", "!")
+  done <- character(0)
+  for (v in names(at_vals)) {
+    ex <- tryCatch(str2lang(v), error = function(e) NULL)
+    if (is.null(ex) || !is.call(ex)) next
+    vars <- all.vars(ex)
+    fns  <- setdiff(all.names(ex), vars)
+    if (!(focal %in% vars) || !all(fns %in% pointwise)) next
+    vals <- list()
+    vals[[focal]] <- newdata[[focal]]
+    ok <- TRUE
+    for (w in setdiff(vars, focal)) {
+      if (w %in% names(at_vals)) {
+        vals[[w]] <- at_vals[[w]]
+        next
+      }
+      hit <- tryCatch(get(w, envir = enclos), error = function(e) NULL)
+      if (is.numeric(hit) && length(hit) == 1L) {
+        vals[[w]] <- hit
+        next
+      }
+      ok <- FALSE
+      break
+    }
+    if (!ok) next
+    val <- tryCatch(suppressWarnings(eval(ex, vals, baseenv())),
+                    error = function(e) NULL)
+    if (!(is.numeric(val) || is.logical(val)) ||
+        length(val) != nrow(newdata)) next
+    newdata[[v]] <- as.numeric(val)
+    done <- c(done, v)
+  }
+  list(newdata = newdata, computed = done)
+}
+
 #' Internal helper: resolve the `at` argument for regression-line plots
 #'
 #' Computes the values at which non-focal predictors should be held when
@@ -1552,6 +1620,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' plot subtitle. Truncates to \code{max_terms} predictors and joins
 #' them with appropriate sign characters.
 #'
+#' The terms are named as the coefficient table names them (Session 347):
+#' without the backticks R puts around a computed term or a name with a
+#' space (\code{`I(x^2)`}, \code{`my var`}), and an interaction with
+#' \code{" * "} for R's \code{":"}. A dummy column keeps its name
+#' (\code{g_Mid}), which the line's "(line shown at g_Mid = 0, ...)" uses
+#' too.
+#'
 #' @param coefs_vec Named numeric vector of regression coefficients
 #'   (intercept first).
 #' @param dv_name Character. The dependent variable name used at the
@@ -1567,6 +1642,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   intercept <- coefs_vec[1]
   slopes    <- coefs_vec[-1]
+  # A term the fit dropped as aliased has no coefficient and is left out
+  # (Session 347): its NA stopped jplot() on "missing value where
+  # TRUE/FALSE needed".
+  slopes    <- slopes[!is.na(slopes)]
   iv_count  <- length(slopes)
 
   if (iv_count > max_terms) {
@@ -1578,7 +1657,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     b <- slopes[i]
     sign_char <- if (b >= 0) "+" else "\u2212"
     eq <- paste0(eq, " ", sign_char, " ", sprintf("%.2f", abs(b)),
-                 "\u00b7", names(slopes)[i])
+                 "\u00b7",
+                 .jst_interaction_label(.jst_unbacktick(names(slopes)[i])))
   }
   eq
 }
@@ -1640,6 +1720,13 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     newdata <- data.frame(grid_x)
     names(newdata) <- focal_name
     for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
+    # A term computed from the focal variable follows it along the axis
+    # (Session 347): I(x^2) was held at 0 while x varied, so the line was
+    # straight and the subtitle said "(line shown at I(x^2) = 0)".
+    on_grid <- .jst_terms_on_grid(newdata, focal_name, at_vals,
+                                  environment(x$formula_used))
+    newdata <- on_grid$newdata
+    at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
 
     pred <- stats::predict(model, newdata = newdata, interval = "confidence",
                            level = 0.95)
@@ -1750,6 +1837,8 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       newdata  <- data.frame(grid_x)
       names(newdata) <- iv
       for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
+      newdata <- .jst_terms_on_grid(newdata, iv, at_vals,
+                                    environment(x$formula_used))$newdata
 
       pred <- stats::predict(model, newdata = newdata,
                              interval = "confidence", level = 0.95)
@@ -1771,8 +1860,11 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       plots[[paste0("effect_", iv)]] <- p
       n_effects <- n_effects + 1
     }
-    .jst_msg_out("\n(", n_effects,
-                 " effect plots produced, one per predictor)")
+    # In number (Session 347): it read "(1 effect plots produced, one per
+    # predictor)".
+    .jst_msg_out("\n(", .jst_plural(n_effects, "1 effect plot produced",
+                                     paste0(n_effects, " effect plots produced, ",
+                                            "one per predictor")), ")")
   }
 
   # ---- coef forest plot ----------------------------------------------------
@@ -1897,6 +1989,13 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
     newdata <- data.frame(grid_x)
     names(newdata) <- focal_name
     for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
+    # A term computed from the focal variable follows it along the axis
+    # (Session 347): I(x^2) was held at 0 while x varied, so the line was
+    # straight and the subtitle said "(line shown at I(x^2) = 0)".
+    on_grid <- .jst_terms_on_grid(newdata, focal_name, at_vals,
+                                  environment(x$formula_used))
+    newdata <- on_grid$newdata
+    at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
 
     pred_link <- stats::predict(model, newdata = newdata, type = "link",
                                 se.fit = TRUE)
@@ -2025,6 +2124,39 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
 }
 
 
+#' Internal helper: a box plot's groups, labeled as the descriptives label
+#' them
+#'
+#' \code{jplot()} on a \code{jt()} or \code{jaov()} result drew its boxes
+#' over the codes -- 1, 2, 3, 4 -- where the Group Descriptives table of the
+#' same result reads "1: Control", "2: CBT" (Session 347; the S344 item).
+#' The axis now takes the table's labels, which follow \code{value.id} as
+#' the call that made the result resolved it. The groups are in the table's
+#' order: a labelled variable's codes sorted, a factor's levels in use, a
+#' text variable's values with the blank cells last, under \code{<blank>}.
+#' A result whose table does not match the groups in its model frame (one
+#' made by an older version) keeps the old axis.
+#'
+#' @param x The grouping variable from the result's model frame.
+#' @param groups Character; the Group column of the result's descriptives,
+#'   or \code{NULL}.
+#' @return A factor.
+#' @keywords internal
+.jst_plot_group_factor <- function(x, groups = NULL) {
+  if (haven::is.labelled(x)) {
+    codes <- .jst_group_codes(x)
+    v     <- unclass(x)
+    v     <- if (is.character(v)) as.character(v) else .jst_as_numeric(x)
+    if (length(groups) == length(codes)) {
+      return(factor(v, levels = codes, labels = groups))
+    }
+    return(droplevels(haven::as_factor(x)))
+  }
+  f <- if (is.factor(x)) droplevels(x) else droplevels(.jst_text_factor(x))
+  if (length(groups) == nlevels(f)) levels(f) <- groups
+  f
+}
+
 # -- jplot.jst_ttest -----------------------------------------------------------
 
 #' @describeIn jplot a group-comparison box plot for a \code{jt()} result, with the group means marked.
@@ -2060,10 +2192,9 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
 
   if ("box" %in% plot_set) {
     plot_df <- data.frame(
-      dv    = mf[[dv_name]],
-      group = mf[[group_name]]
+      dv    = as.vector(unclass(mf[[dv_name]])),
+      group = .jst_plot_group_factor(mf[[group_name]], x$descriptives$Group)
     )
-    if (!is.factor(plot_df$group)) plot_df$group <- factor(plot_df$group)
 
     p <- ggplot2::ggplot(plot_df,
                          ggplot2::aes(x = .data$group, y = .data$dv)) +
@@ -2117,10 +2248,9 @@ jplot.jst_anova <- function(x, which = "core", ...) {
 
   if ("box" %in% plot_set) {
     plot_df <- data.frame(
-      dv    = mf[[dv_name]],
-      group = mf[[group_name]]
+      dv    = as.vector(unclass(mf[[dv_name]])),
+      group = .jst_plot_group_factor(mf[[group_name]], x$descriptives$Group)
     )
-    if (!is.factor(plot_df$group)) plot_df$group <- factor(plot_df$group)
 
     p <- ggplot2::ggplot(plot_df,
                          ggplot2::aes(x = .data$group, y = .data$dv)) +

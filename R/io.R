@@ -3497,8 +3497,19 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # Two lines (S230): the parenthetical (format, cases, variables) is the
   # verification payload and gets its own flush-left line regardless of
   # path length, so it is never hostage to a long path's console wrap.
+  # A call given as the data names nothing a user could find again
+  # (Session 347): the line read "Saved mk() to ...". An index into a data
+  # frame -- wv[, c("Education", "Age")] -- does, and is kept as typed.
+  saved_what <- if (identical(arg1$mode, "explicit") &&
+                    identical(.jst_data_arg_kind(data_sub), "expression") &&
+                    !(is.call(data_sub) &&
+                      identical(data_sub[[1L]], as.name("[")))) {
+    "the data"
+  } else {
+    data_name
+  }
   .jst_msg(
-    "Saved ", data_name, " to ", .jst_norm_path(out_path),
+    "Saved ", saved_what, " to ", .jst_norm_path(out_path),
     "\n(", .jst_format_label(ext), "; ",
     format(nrow(data), big.mark = ","),
     if (nrow(data) == 1L) " case, " else " cases, ",

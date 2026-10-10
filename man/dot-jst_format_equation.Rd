@@ -25,4 +25,12 @@ Builds a short equation string from a coefficient vector for use as a
 plot subtitle. Truncates to \code{max_terms} predictors and joins
 them with appropriate sign characters.
 }
+\details{
+The terms are named as the coefficient table names them (Session 347):
+without the backticks R puts around a computed term or a name with a
+space (\code{`I(x^2)`}, \code{`my var`}), and an interaction with
+\code{" * "} for R's \code{":"}. A dummy column keeps its name
+(\code{g_Mid}), which the line's "(line shown at g_Mid = 0, ...)" uses
+too.
+}
 \keyword{internal}

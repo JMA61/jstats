@@ -8,7 +8,6 @@
   x,
   var_name,
   ref = "auto",
-  name.length.warn = 30L,
   max.categories = 20L,
   data_name = NULL
 )
@@ -25,9 +24,6 @@ affirmative or code-1 category is modeled -- see the \code{ref}
 documentation in \code{jdummy()}; otherwise the first category),
 \code{first}, \code{last}, a numeric code, or a character string
 matching a canonical label.}
-
-\item{name.length.warn}{Integer. Warn if any final dummy name exceeds
-this many characters. Default 30.}
 
 \item{max.categories}{Integer. Maximum number of input categories allowed;
 a variable with more raises an error rather than building the dummy set.
@@ -47,7 +43,9 @@ themselves -- what \code{.jst_expand_one_dummy()} matches cases
 against for factor and character variables; Session 305),
 \code{ref_idx}, \code{ref_code}, \code{ref_label},
 \code{non_ref_idx}, \code{notes} (character vector of informational
-messages), \code{warnings_msg} (character vector of warnings).
+messages), \code{warnings_msg} (character vector of warnings; empty
+since Session 347, when the one warning it carried was retired: see
+Step 7).
 }
 \description{
 Single source of truth for how categorical variables are turned into named

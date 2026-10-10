@@ -1252,6 +1252,28 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     order(abs(x), decreasing = TRUE)[seq_len(n)]
   }
 
+  # The three plots with a loess trend line are drawn with the smoother's
+  # warnings caught (Session 347; Jeff's lean B). On few cases, or few
+  # distinct fitted values, loess() raised them raw -- "pseudoinverse used
+  # at -0.47261", "neighborhood radius 0.43668", twelve on a nine-case
+  # model -- and at R's default warn = 0 they were held to the end of the
+  # output, where past ten R printed only "There were 13 warnings (use
+  # warnings() to see them)", the thirteenth being the package's own. One
+  # note under the plots says which trend lines they concern. Only the
+  # smoother's warnings are caught; any other passes as before.
+  smoothed <- integer(0)
+  smooth_print <- function(p, title) {
+    n <- 0L
+    withCallingHandlers(print(p), warning = function(w) {
+      cl <- conditionCall(w)
+      if (is.call(cl) && identical(cl[[1L]], as.name("simpleLoess"))) {
+        n <<- n + 1L
+        invokeRestart("muffleWarning")
+      }
+    })
+    if (n > 0L) smoothed[[title]] <<- n
+  }
+
   # -- 1. Residuals vs Fitted -----------------------------------------------
   if ("residuals" %in% which) {
     idx <- top_n(df$resid, n_label)
@@ -1266,7 +1288,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       ggplot2::labs(title = "Residuals vs Fitted",
                     x = "Fitted Values", y = "Residuals") +
       ggplot2::theme_minimal()
-    print(p)
+    smooth_print(p, "Residuals vs Fitted")
     plots$residuals <- p
   }
 
@@ -1311,7 +1333,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                     x = "Fitted Values",
                     y = expression(sqrt("|Standardized Residuals|"))) +
       ggplot2::theme_minimal()
-    print(p)
+    smooth_print(p, "Scale-Location")
     plots$scale <- p
   }
 
@@ -1352,8 +1374,19 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       ggplot2::labs(title = "Residuals vs Leverage",
                     x = "Leverage", y = "Standardized Residuals") +
       ggplot2::theme_minimal()
-    print(p)
+    smooth_print(p, "Residuals vs Leverage")
     plots$leverage <- p
+  }
+
+  if (length(smoothed) > 0L) {
+    one <- length(smoothed) == 1L
+    n   <- sum(smoothed)
+    cat("\n")
+    .jst_msg("Note: The trend ", if (one) "line" else "lines", " in ",
+             .jst_and_list(names(smoothed)), " may not be reliable.\n",
+             "R's smoother reported ", .jst_fmt_n(n), " numerical ",
+             .jst_plural(n, "problem", "problems"), " while drawing ",
+             if (one) "it" else "them", ".")
   }
 
   invisible(plots)
@@ -2527,6 +2560,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # DV is always numeric regardless of overrides.
   auto_ref_cats <- character(0)
   auto_cat_regs <- list()  # in-flight registrations for auto-cat / categorical = vars
+  one_cat_in_call <- NULL  # a predictor dummy-coded in the call with one category
+  seems_cat       <- character(0)  # predictors that seem categorical: one warning
   dv_name <- all.vars(formula)[1]
   .jst_check_dummy_outcome(.jst_data_name, dv_name, "jlm")
 
@@ -2562,9 +2597,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   dv_dich <- .jst_is_dichotomy(data[[dv_name]])
   if (dv_dich$is_dichotomy) {
     # Dichotomy used as a linear-regression DV: short, definitive caution.
+    # A coding other than 0/1 or 1/2 is "a dichotomy" alone (Session 347):
+    # it read "(a other dichotomy)".
     .jst_warn(
       "'", dv_name, "' is the outcome variable but looks categorical (a ",
-      dv_dich$coding, " dichotomy). Linear regression expects an interval outcome."
+      if (identical(dv_dich$coding, "other")) "" else paste0(dv_dich$coding, " "),
+      "dichotomy). Linear regression expects an interval outcome."
     )
   } else if (.jst_is_count(data[[dv_name]], dv_name, .jst_data_name,
                            override = dv_override)) {
@@ -2772,10 +2810,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       .jst_stop_if_filter_kept_one(data[[v]], v,
                                    pipeline$pipeline_counts$subset_expr,
                                    .jst_data_name)
+      # One category: set aside, and stopped under the Case Processing
+      # block in the registered predictor's words (Session 347).
+      if (.jst_n_categories(data[[v]]) < 2L) {
+        if (is.null(one_cat_in_call)) {
+          one_cat_in_call <- list(v = v, x = data[[v]])
+        }
+        next
+      }
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) cat(n, "\n", sep = "")
+      for (n in reg$notes) .jst_msg_out(n)
       for (w in reg$warnings_msg) .jst_warn(w)
       auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
       next
@@ -2806,10 +2852,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       .jst_stop_if_filter_kept_one(data[[v]], v,
                                    pipeline$pipeline_counts$subset_expr,
                                    .jst_data_name)
+      # One category: set aside, and stopped under the Case Processing
+      # block in the registered predictor's words (Session 347).
+      if (.jst_n_categories(data[[v]]) < 2L) {
+        if (is.null(one_cat_in_call)) {
+          one_cat_in_call <- list(v = v, x = data[[v]])
+        }
+        next
+      }
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) cat(n, "\n", sep = "")
+      for (n in reg$notes) .jst_msg_out(n)
       for (w in reg$warnings_msg) .jst_warn(w)
       auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
     } else {
@@ -2827,6 +2881,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       #   - 0/1, factor, character, logical: no note, clean run.
       #   - 1/2: registering as a dummy clarifies the intercept.
       #   - other (e.g., 5/10): non-0/1 codes; same dummy/recode steer.
+      # The last line states the state to reach, not a method (voice Rule
+      # X, Session 347): it ended "Or recode to a permanent 0/1 variable
+      # with jrecode()."
       iv_dich <- .jst_is_dichotomy(data[[v]])
       if (iv_dich$is_dichotomy) {
         if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
@@ -2835,7 +2892,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
               "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
               "registering ", v, " as a dummy can help interpret the intercept:\n",
               "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or recode to a permanent 0/1 variable with jrecode()."
+              "Or make it a 0/1 variable in the data frame."
             )
           } else if (iv_dich$coding == "other") {
             .jst_msg(
@@ -2843,7 +2900,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
               "correctly, but registering ", v, " as a dummy can help interpret ",
               "the intercept:\n",
               "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or recode to a permanent 0/1 variable with jrecode()."
+              "Or make it a 0/1 variable in the data frame."
             )
           }
         }
@@ -2857,12 +2914,16 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         # guess they have already answered. (A per-call numeric=/count= IV
         # short-circuits earlier, so only registration reaches this gate.)
         # The rerun lines are built from the formula as typed (Session
-        # 346; see .jst_seems_categorical_msg()).
-        .jst_warn(.jst_seems_categorical_msg(
-          "jlm", v, formula_typed, .jst_data_name, .jst_data_kind,
-          .jst_default_used, categorical))
+        # 346; see .jst_seems_categorical_msg()). Collected, so that several
+        # get one warning (Session 347).
+        seems_cat <- c(seems_cat, v)
       }
     }
+  }
+  if (length(seems_cat) > 0L) {
+    .jst_warn(.jst_seems_categorical_msg(
+      "jlm", seems_cat, formula_typed, .jst_data_name, .jst_data_kind,
+      .jst_default_used, categorical))
   }
 
   # -- Apply auto-categorical expansions ------------------------------------
@@ -2925,6 +2986,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # coefficient-table header and the returned ref_cats. Placed before the
   # zero-variance guard, which otherwise stopped on the absent category's
   # all-zero dummy under its internal column name.
+  # A predictor dummy-coded in the call that has one category (Session
+  # 347): stopped here, as a registered one is in the step below.
+  .jst_stop_one_category_in_call(one_cat_in_call, sample_info, .jst_data_name)
+
   pruned <- .jst_prune_absent_categories(
     mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
     dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef,
@@ -2953,6 +3018,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                                     .jst_data_name, pipeline$data)
     }
   }
+
+  # No more cases than coefficients (Session 347): an exact fit with no
+  # residual df, printed as NaN standard errors and a blank p column.
+  .jst_stop_too_few_cases(
+    sample_info,
+    tryCatch(ncol(stats::model.matrix(formula, mf)),
+             error = function(e) NA_integer_),
+    "A regression")
 
   model         <- stats::lm(formula, data = mf)
   model_summary <- summary(model)
@@ -3468,11 +3541,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         cat("\n(Diagnostic plot produced: ",
             plot_labels[plot_which[1]], ")\n", sep = "")
       } else {
-        .jst_msg_out("\n(", length(plot_which),
-                     " diagnostic plots produced -- use the back arrow ",
-                     "in the Plots pane to view all)")
+        # jplot()'s line for jlogistic(), word for word (Session 347): the
+        # two said one thing two ways, this one "use the back arrow in the
+        # Plots pane to view all".
+        .jst_msg_out("\n", length(plot_which), " diagnostic plots produced ",
+                     "(use the arrow buttons in RStudio's Plots pane to ",
+                     "navigate):")
         for (i in seq_along(plot_which)) {
-          cat("  ", i, ": ", plot_labels[plot_which[i]], "\n", sep = "")
+          cat("  ", i, ". ", plot_labels[plot_which[i]], "\n", sep = "")
         }
       }
       .jst_plot_lm_diagnostics(model, which = plot_which)
@@ -4023,6 +4099,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   auto_detected  <- character(0)
   auto_ref_cats  <- character(0)
   auto_cat_regs  <- list()  # in-flight registrations for auto-cat / categorical = vars
+  one_cat_in_call <- NULL   # a predictor dummy-coded in the call with one category
+  seems_cat       <- character(0)  # predictors that seem categorical: one warning
   all_ref_cats   <- ref_cats
 
   # Originals actually expanded into dummy columns come from
@@ -4061,10 +4139,18 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       .jst_stop_if_filter_kept_one(data[[v]], v,
                                    pipeline$pipeline_counts$subset_expr,
                                    .jst_data_name)
+      # One category: set aside, and stopped under the Case Processing
+      # block in the registered predictor's words (Session 347).
+      if (.jst_n_categories(data[[v]]) < 2L) {
+        if (is.null(one_cat_in_call)) {
+          one_cat_in_call <- list(v = v, x = data[[v]])
+        }
+        next
+      }
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) cat(n, "\n", sep = "")
+      for (n in reg$notes) .jst_msg_out(n)
       for (w in reg$warnings_msg) .jst_warn(w)
       auto_ref_cats <- c(auto_ref_cats,
                          paste0(v, " = ", reg$ref_label))
@@ -4083,10 +4169,18 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       .jst_stop_if_filter_kept_one(data[[v]], v,
                                    pipeline$pipeline_counts$subset_expr,
                                    .jst_data_name)
+      # One category: set aside, and stopped under the Case Processing
+      # block in the registered predictor's words (Session 347).
+      if (.jst_n_categories(data[[v]]) < 2L) {
+        if (is.null(one_cat_in_call)) {
+          one_cat_in_call <- list(v = v, x = data[[v]])
+        }
+        next
+      }
       reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
                                    data_name = .jst_data_name)
       auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) cat(n, "\n", sep = "")
+      for (n in reg$notes) .jst_msg_out(n)
       for (w in reg$warnings_msg) .jst_warn(w)
       auto_detected <- c(auto_detected, v)
       auto_ref_cats <- c(auto_ref_cats,
@@ -4106,6 +4200,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       #   - 0/1, factor, character, logical: no note, clean run.
       #   - 1/2: registering as a dummy clarifies the intercept.
       #   - other (e.g., 5/10): non-0/1 codes; same dummy/recode steer.
+      # The last line states the state to reach, not a method (voice Rule
+      # X, Session 347): it ended "Or recode to a permanent 0/1 variable
+      # with jrecode()."
       iv_dich <- .jst_is_dichotomy(data[[v]])
       if (iv_dich$is_dichotomy) {
         if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
@@ -4114,7 +4211,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
               "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
               "registering ", v, " as a dummy can help interpret the intercept:\n",
               "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or recode to a permanent 0/1 variable with jrecode()."
+              "Or make it a 0/1 variable in the data frame."
             )
           } else if (iv_dich$coding == "other") {
             .jst_msg(
@@ -4122,7 +4219,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
               "correctly, but registering ", v, " as a dummy can help interpret ",
               "the intercept:\n",
               "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or recode to a permanent 0/1 variable with jrecode()."
+              "Or make it a 0/1 variable in the data frame."
             )
           }
         }
@@ -4134,12 +4231,16 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         # treatment or switch to categorical. Suppressed when the user has
         # asserted a numeric/count role (jnumeric/jcount).
         # The rerun lines are built from the formula as typed (Session
-        # 346; see .jst_seems_categorical_msg()).
-        .jst_warn(.jst_seems_categorical_msg(
-          "jlogistic", v, formula_typed, .jst_data_name, .jst_data_kind,
-          .jst_default_used, categorical))
+        # 346; see .jst_seems_categorical_msg()). Collected, so that several
+        # get one warning (Session 347).
+        seems_cat <- c(seems_cat, v)
       }
     }
+  }
+  if (length(seems_cat) > 0L) {
+    .jst_warn(.jst_seems_categorical_msg(
+      "jlogistic", seems_cat, formula_typed, .jst_data_name, .jst_data_kind,
+      .jst_default_used, categorical))
   }
 
   all_ref_cats <- c(ref_cats, auto_ref_cats)
@@ -4252,13 +4353,27 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       map_side <- function(z) {
         .jst_jencode_lhs_render(unique(trimws(nonmiss[norm == z])))
       }
+      # Session 347: one sentence a line, and the verb of the call it
+      # offers (it said "Recode" over a jencode() call). The map codes the
+      # categories in the order seen, but a blank category is always coded
+      # 0: the map offered for a tick-box outcome ("Y" or nothing) read
+      # "Y=0; blank=1" and so modeled the blank. An expression given as the
+      # data is named first, as jrecode()'s reminder does (v0.9.217): the
+      # line was "mk()$yR <- jencode(mk(), ...)", which is not R.
+      zero <- if (identical(u_norm[2L], "")) 2L else 1L
+      dn   <- if (identical(.jst_data_kind, "expression")) "mydata"
+              else .jst_data_name
       .jst_stop(paste0(
         "'", dv_name, "' has text categories ",
-        paste(.jst_label_blanks(disp), collapse = "/"),
-        ". Recode to a 0/1 variable so the modeled category is explicit:\n",
-        "  ", .jst_data_name, "$", dv_name, "R <- jencode(", .jst_data_name, ", ",
-        dv_name, ", map = \"", map_side(u_norm[1]), "=0; ",
-        map_side(u_norm[2]), "=1\")\n",
+        paste(.jst_label_blanks(disp), collapse = "/"), ".\n",
+        "Encode it as a 0/1 variable, so that the modeled category is ",
+        "explicit:\n",
+        if (identical(.jst_data_kind, "expression")) {
+          paste0("  mydata <- ", .jst_data_name, "\n")
+        },
+        "  ", dn, "$", dv_name, "R <- jencode(", dn, ", ",
+        dv_name, ", map = \"", map_side(u_norm[zero]), "=0; ",
+        map_side(u_norm[3L - zero]), "=1\")\n",
         "Then use ", dv_name, "R as your dependent variable (the category mapped ",
         "to 1 is the one jlogistic models)."
       ))
@@ -4425,6 +4540,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # per-call registration copies feed the header and the returned
   # ref_cats. Before the zero-variance guard, which otherwise stopped on
   # the absent category's all-zero dummy under its internal column name.
+  # A predictor dummy-coded in the call that has one category (Session
+  # 347): stopped here, as a registered one is in the step below.
+  .jst_stop_one_category_in_call(one_cat_in_call, sample_info, .jst_data_name)
+
   pruned <- .jst_prune_absent_categories(
     mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
     dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef,
@@ -4449,6 +4568,15 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                                     .jst_data_name, pipeline$data)
     }
   }
+
+  # No more cases than coefficients (Session 347), as in jlm(): glm()
+  # warned of fitted probabilities of 0 or 1 dozens of times and printed
+  # an Exp(B) of 62 digits.
+  .jst_stop_too_few_cases(
+    sample_info,
+    tryCatch(ncol(stats::model.matrix(formula, mf)),
+             error = function(e) NA_integer_),
+    "A logistic regression")
 
   model <- stats::glm(formula, data = data, family = stats::binomial,
                        na.action = stats::na.omit)
@@ -4704,67 +4832,50 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # -- Diagnostics (VIF) -----------------------------------------------------
   vif_values <- NULL
   if (show_diag && "vif" %in% diag_which) {
-    # Compute VIF from the linear predictor model matrix
-    X <- stats::model.matrix(model)[, -1, drop = FALSE]
-    if (ncol(X) >= 2) {
-      vif_values <- tryCatch({
-        R <- stats::cor(X)
-        vif_vals <- diag(solve(R))
-        names(vif_vals) <- .jst_unbacktick(colnames(X))
-        vif_vals
-      }, error = function(e) {
-        .jst_msg("VIF could not be computed (possible perfect collinearity).")
-        NULL
-      })
+    # VIF from the linear predictor model matrix, through the helper jlm()
+    # uses (Session 347; the two blocks here repeated its body since
+    # Session 172). NULL for fewer than two predictor columns.
+    vif_values <- .jst_compute_vif(model)
+    if (!is.null(vif_values)) {
+      cat("\n")
+      vif_df <- data.frame(
+        Variable = .jst_interaction_label(names(vif_values)),
+        VIF      = round(vif_values, 3),
+        stringsAsFactors = FALSE,
+        row.names = NULL
+      )
+      # VIF keeps its fixed three places, trailing zeros included.
+      # (Session 326) The VIF column block-centered, the lines trimmed.
+      # (Session 327)
+      .jst_print_table(vif_df,
+                       caption = "VIF (Variance Inflation Factors)",
+                       row.names = FALSE,
+                       align = c("l", "bc"),
+                       digits = c(VIF = 3L))
 
-      if (!is.null(vif_values)) {
+      # Targeted notes for VIF > 10: the table's brief interpretation,
+      # printed with it except at the minimal level (Session 346).
+      high_vif <- vif_values[vif_values > 10]
+      if (length(high_vif) > 0 && .jst_notes_on()) {
         cat("\n")
-        vif_df <- data.frame(
-          Variable = .jst_interaction_label(names(vif_values)),
-          VIF      = round(vif_values, 3),
-          stringsAsFactors = FALSE,
-          row.names = NULL
-        )
-        # VIF keeps its fixed three places, trailing zeros included.
-        # (Session 326) The VIF column block-centered, the lines trimmed.
-        # (Session 327)
-        .jst_print_table(vif_df,
-                         caption = "VIF (Variance Inflation Factors)",
-                         row.names = FALSE,
-                         align = c("l", "bc"),
-                         digits = c(VIF = 3L))
-
-        # Targeted notes for VIF > 10: the table's brief interpretation,
-        # printed with it except at the minimal level (Session 346).
-        high_vif <- vif_values[vif_values > 10]
-        if (length(high_vif) > 0 && .jst_notes_on()) {
-          cat("\n")
-          # Both numbers to one place, padded (Session 327): through
-          # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
-          # table showing 16.000.
-          for (nm in names(high_vif)) {
-            .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
-                         .jst_fmt_stat(high_vif[[nm]], 1L),
-                         "): standard error inflated by a factor of ",
-                         .jst_fmt_stat(sqrt(high_vif[[nm]]), 1L), ".\n",
-                         "  If you need to interpret this coefficient ",
-                         "specifically, consider whether the collinearity ",
-                         "is a concern for your research question.")
-          }
+        # Both numbers to one place, padded (Session 327): through
+        # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
+        # table showing 16.000.
+        for (nm in names(high_vif)) {
+          .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
+                       .jst_fmt_stat(high_vif[[nm]], 1L),
+                       "): standard error inflated by a factor of ",
+                       .jst_fmt_stat(sqrt(high_vif[[nm]]), 1L), ".\n",
+                       "  If you need to interpret this coefficient ",
+                       "specifically, consider whether the collinearity ",
+                       "is a concern for your research question.")
         }
       }
     }
   } else if (show_diag) {
-    # Compute VIF silently for return object
-    X <- stats::model.matrix(model)[, -1, drop = FALSE]
-    if (ncol(X) >= 2) {
-      vif_values <- tryCatch({
-        R <- stats::cor(X)
-        vif_vals <- diag(solve(R))
-        names(vif_vals) <- .jst_unbacktick(colnames(X))
-        vif_vals
-      }, error = function(e) NULL)
-    }
+    # Compute VIF silently for the return object: the helper's note when
+    # the matrix is singular is not printed here, as it was not before.
+    vif_values <- suppressMessages(.jst_compute_vif(model))
   }
 
   cat("\n")
