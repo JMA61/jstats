@@ -406,12 +406,21 @@
   # ---- Listwise-discrepancy notification (per-variable layouts only) -------
   # Fires when 2+ analysis variables AND listwise across them would drop
   # cases beyond the smallest per-variable N. Independent of the CPS table.
+  # A jcomplete() setting that covers every analysis variable leaves nothing
+  # for listwise deletion to drop, so the note stays silent. One that covers
+  # only some of them (Session 348; the after-Session-17 item) -- set to drop
+  # the survey's non-completers, say, while the analysis reads other
+  # variables -- still leaves the Ns unequal, and the note fires naming the
+  # variables it does not cover.
+  uncovered <- if (isTRUE(sample_info$complete_active))
+                 setdiff(analysis_vars, as.character(sample_info$complete_vars))
+               else analysis_vars
   notification_eligible <- function() {
     if (!is_per_var || is.null(notification_template) ||
         is.null(data) || is.null(analysis_vars) ||
         length(analysis_vars) < 2 ||
         getOption(".jst_output_level", "standard") == "minimal" ||
-        isTRUE(sample_info$complete_active)) {
+        length(uncovered) == 0L) {
       return(FALSE)
     }
     listwise_n <- sum(stats::complete.cases(data[, analysis_vars, drop = FALSE]))
@@ -421,7 +430,12 @@
   }
   fire_notification <- function() {
     listwise_n <- sum(stats::complete.cases(data[, analysis_vars, drop = FALSE]))
-    msg <- if (grepl("%d", notification_template, fixed = TRUE)) {
+    msg <- if (isTRUE(sample_info$complete_active)) {
+      paste0("Note: jcomplete() is not set on ",
+             .jst_format_var_list(uncovered, and = TRUE),
+             ". Listwise deletion across all of these variables would leave ",
+             listwise_n, " ", .jst_plural(listwise_n, "case", "cases"), ".")
+    } else if (grepl("%d", notification_template, fixed = TRUE)) {
       sprintf(notification_template, listwise_n)
     } else notification_template
     # S286: routed through the stdout emitter so it width-wraps (it was a
@@ -519,14 +533,20 @@
   # plain pool form rather than re-deriving masking here. (Not
   # sample_info$missing_by_var: it arrives unnamed from some callers.)
   n_pool <- if (!is.null(pool)) nrow(pool) else sample_info$n_after_pipeline
-  have_frame <- !is.null(data) && all(cps_vars %in% names(data))
+  # The pool's variables: the analysis variables less a grouped jdesc's
+  # grouping variable, which rides in analysis_vars for the breakdown but is
+  # not a member of the pool (Session 316). A grouped call supplies the
+  # cases that HAVE a group (Session 348), so the complete-on-all count is
+  # taken among the cases its tables describe and agrees with the by = row.
+  pool_vars  <- setdiff(cps_vars, sample_info$by_var)
+  have_frame <- !is.null(data) && all(pool_vars %in% names(data))
   per_var_n  <- if (have_frame)
-                  vapply(cps_vars, function(v) sum(!is.na(data[[v]])),
+                  vapply(pool_vars, function(v) sum(!is.na(data[[v]])),
                          integer(1), USE.NAMES = FALSE)
                 else integer(0)
   unequal_ns <- length(per_var_n) > 1L && length(unique(per_var_n)) > 1L
   complete_n <- if (unequal_ns)
-                  sum(stats::complete.cases(data[, cps_vars, drop = FALSE]))
+                  sum(stats::complete.cases(data[, pool_vars, drop = FALSE]))
                 else NA_integer_
 
   spec <- .jst_resolve_cps_render(
@@ -578,11 +598,16 @@
         # Excluded)".
         if (isTRUE(n_exc > 0L)) header_excluded <- as.integer(n_exc)
       } else {
+        # "Grouped Cases" once the by = row has excluded cases (Session
+        # 348; the S316 mv item): the count is then the cases that HAVE a
+        # group, which "Cases in the Variable Pool" did not quite name.
+        cases_w <- if (isTRUE(spec$show_by_row)) "Grouped Cases" else "Cases"
         n_line <- switch(spec$n_line_form,
           analysis      = sprintf("Analysis N: %d", n_analysis),
-          pool          = sprintf("%d Cases in the %d Variable Pool", n_line_n, k),
-          pool_complete = sprintf("%d Cases in the %d Variable Pool; %d Complete on All",
-                                  n_line_n, k, complete_n))
+          pool          = sprintf("%d %s in the %d Variable Pool", n_line_n,
+                                  cases_w, k),
+          pool_complete = sprintf("%d %s in the %d Variable Pool; %d Complete on All",
+                                  n_line_n, cases_w, k, complete_n))
         if (isTRUE(n_exc > 0L)) {
           n_line <- sprintf("%s (%d Excluded)", n_line, n_exc)
         }
@@ -815,7 +840,12 @@
         all_srcs <- ifelse(is.na(all_src), dash, as.character(all_src))
         all_srcp <- ifelse(is.na(all_src), dash,
                            fmt1(all_src / n_original * 100))
-        all_plp  <- fmt1(all_pool / n_pool * 100)
+        # A percent of no cases prints "--" (Session 348): a filter that
+        # leaves no row made every pool percent 0 / 0, printed "NaN".
+        pct_of   <- function(x, base) {
+          if (isTRUE(base > 0)) fmt1(x / base * 100) else rep(dash, length(x))
+        }
+        all_plp  <- pct_of(all_pool, n_pool)
 
         # The "Filtered" column (Session 312): the variable's missing cases
         # that a pipeline step removed before the pool -- source minus pool
@@ -899,7 +929,7 @@
             sp_str <- if (is.na(sc)) dash else fmt1(sc / n_original * 100)
             emit(c_ind, d$rows$code_label[j], lab_end - c_ind,
                  sc_str, sp_str,
-                 as.character(pl), fmt1(pl / n_pool * 100),
+                 as.character(pl), pct_of(pl, n_pool),
                  f1 = if (is.na(sc)) dash else as.character(sc - pl))
           }
         }

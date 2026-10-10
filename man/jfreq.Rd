@@ -100,6 +100,19 @@ directs), a blank line, and the frequency table. Declared missing
 values get Missing rows of their own below the valid rows. The
 frequency table ends with a Total row showing the post-pipeline N.
 
+When the table has Missing rows, a "Total valid" row closes the valid
+rows -- the valid N, the base of every Valid \% -- and, when there is
+more than one Missing row, a "Total missing" row closes them, as in
+SPSS FREQUENCIES.
+
+A value that has a value label but no case gets a row of its own at 0,
+as an empty level of a factor does: a valid value, a declared missing
+code, and a labelled code inside a declared missing-value range when
+the range's values are listed one by one. A range with no case in it
+keeps its single "range" row. When more than ten labelled values (or
+factor levels) in one table have no case, none of them is listed, and
+a line under the table says how many there are.
+
 In a text variable, cells with no text -- empty, or holding only spaces
 or tabs -- are tabulated together in one row labeled \code{<blank>}.
 They are counted as valid values, not as missing: a blank is absent data
@@ -125,6 +138,13 @@ of a data frame is tabulated in its frame, exactly as
 apply. Any other vector is tabulated on its own. A second variable, and a
 \code{subset} condition naming another variable, need the data frame, and
 each stops with that form of the call.
+
+With a \code{juse()} default set, a name the default data frame has is
+that frame's variable, as in every jstats function, even when a separate
+object of the same name exists in the workspace: \code{jfreq(Region)}
+tabulates the default frame's Region, and a line under "Using default
+data frame" says so. A separate object is read only when the default
+frame has no variable of that name, or when no default is set.
 }
 \examples{
 # With explicit data frame

@@ -36,6 +36,18 @@
 #' \code{subset} condition naming another variable need the data frame, and
 #' each stops with that form of the call.
 #'
+#' With a \code{juse()} default set, a name the default data frame has is
+#' that frame's variable, as in every jstats function, even when a separate
+#' object of the same name exists in the workspace: \code{jdesc(Age)}
+#' describes the default frame's Age, and a line under "Using default data
+#' frame" says so. A separate object is read only when the default frame
+#' has no variable of that name, or when no default is set.
+#'
+#' With \code{by}, the case-processing summary counts the cases that have
+#' a group. Where it is a single line rather than a table (at the minimal
+#' output level, for example), that line counts "Grouped Cases" once the
+#' grouping variable has excluded any.
+#'
 #' Haven-labelled variables are reported as \code{haven_labelled (Categorical)}
 #' in the type line; the uninformative \code{vctrs_vctr} class is suppressed.
 #'
@@ -381,7 +393,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # layouts render CPS once; locked CPS rendering design).
     .cat_red(paste0("Descriptive Statistics by ", by_name,
                     " (", length(group_levels), " levels)\n"))
-    if (.jst_default_used) .jst_default_note(.jst_data_name)
+    if (.jst_default_used) .jst_default_note(.jst_data_name,
+                                           vars = c(variable_names, by_name),
+                                           envir = parent.frame())
     .jst_print_msgs(pipeline$msgs)
     # Variable label display mode (B1: the former inline Type/label block is
     # gone). jdesc grouped is a per-variable collapse layout: each mini-table
@@ -406,8 +420,21 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # under the title. This grouped path is jdesc's SECOND CPS call site and
     # was missed by the S286 finding, which named only the ungrouped one;
     # the doubling here predates S286. (Session 287.)
-    .jst_print_case_processing(sample_info, analysis_type = "per_var_desc",
-                               detail = case.processing.detail)
+    # The grouped cases (Session 348; the S316 item): the per-variable Ns,
+    # the "Complete on All" count and the listwise-deletion note are read
+    # off the cases the group tables describe -- those with a group -- or
+    # they would disagree with the by = row. Before, this call passed no
+    # data, so a grouped call never stated how many cases were complete on
+    # all its variables.
+    .jst_print_case_processing(
+      sample_info,
+      analysis_type         = "per_var_desc",
+      detail                = case.processing.detail,
+      notification_template = paste0(
+        "Note: Listwise deletion using jcomplete() first would leave %d cases."
+      ),
+      data          = data[!is.na(data[[by_name]]), , drop = FALSE],
+      analysis_vars = good_vars)
 
     for (v in good_vars) {
       v_disp <- .jst_combine_id(v, lab_disp(v, original_dv_info[[v]]$label), vlmode)
@@ -535,7 +562,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
   # -- Print title and apply pipeline before computation -----------------------
   .cat_red("Descriptive Statistics\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) .jst_default_note(.jst_data_name,
+                                         vars = variable_names,
+                                         envir = parent.frame())
 
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
@@ -704,6 +733,60 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
 # -- jfreq --------------------------------------------------------------------
 
+#' Internal constant: the most zero rows one jfreq() table prints
+#'
+#' Ruling R4 (Session 345, built Session 348): a labelled value no case
+#' holds, and a factor level, take a zero row; past this many in one table
+#' none of them prints and one line under the table says how many there are
+#' (a classification with hundreds of labels).
+#' @keywords internal
+.jst_freq_zero_row_cap <- 10L
+
+#' Internal helper: the labelled VALID values no case holds
+#'
+#' jfreq()'s zero rows on the Valid side (Session 348, ruling R4 (b)). From a
+#' variable's value labels, the values that are not among those observed in
+#' the analysis pool and that the variable does not declare missing -- a
+#' declared code, a value inside a declared range, or a Stata-style or
+#' SAS-style marker (whose label value is NA, so it never reaches here). A
+#' label on a blank text value is left out: blank cells are one category,
+#' <blank>, which a zero row would duplicate.
+#'
+#' @param labs The variable's value labels (\code{labelled::val_labels()}).
+#' @param observed The values present in the pool, as the caller holds them
+#'   (numeric, or character when \code{text = TRUE}).
+#' @param mi The variable's \code{.jst_missing_info()} (or NULL).
+#' @param text Logical; TRUE for a character-backed labelled variable.
+#' @return The values, in label order, of the same type as \code{observed}.
+#' @keywords internal
+.jst_freq_empty_labels <- function(labs, observed, mi, text = FALSE) {
+  if (is.null(labs) || length(labs) == 0L) {
+    return(if (text) character(0) else numeric(0))
+  }
+  v <- unname(labs)
+  if (text) {
+    v <- as.character(unclass(v))
+    v <- v[!is.na(v) & nzchar(trimws(v))]
+  } else {
+    v <- suppressWarnings(as.numeric(unclass(v)))
+    v <- v[!is.na(v)]
+  }
+  v <- unique(v)
+  v <- v[!(v %in% observed)]
+  if (length(v) && !is.null(mi) && identical(mi$representation, "spss")) {
+    if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
+      declared <- if (text) as.character(mi$codes$code)
+                  else suppressWarnings(as.numeric(mi$codes$numeric))
+      v <- v[!(v %in% declared)]
+    }
+    if (!text && !is.null(mi$na_range) && length(mi$na_range) == 2L) {
+      rg <- range(as.numeric(mi$na_range))
+      v  <- v[!(v >= rg[1L] & v <= rg[2L])]
+    }
+  }
+  v
+}
+
 #' SPSS-like frequency tables for categorical variables
 #'
 #' Prints an SPSS-style frequency table (Freq, Total %, Valid %, Cum. %) for
@@ -719,6 +802,19 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' directs), a blank line, and the frequency table. Declared missing
 #' values get Missing rows of their own below the valid rows. The
 #' frequency table ends with a Total row showing the post-pipeline N.
+#'
+#' When the table has Missing rows, a "Total valid" row closes the valid
+#' rows -- the valid N, the base of every Valid % -- and, when there is
+#' more than one Missing row, a "Total missing" row closes them, as in
+#' SPSS FREQUENCIES.
+#'
+#' A value that has a value label but no case gets a row of its own at 0,
+#' as an empty level of a factor does: a valid value, a declared missing
+#' code, and a labelled code inside a declared missing-value range when
+#' the range's values are listed one by one. A range with no case in it
+#' keeps its single "range" row. When more than ten labelled values (or
+#' factor levels) in one table have no case, none of them is listed, and
+#' a line under the table says how many there are.
 #'
 #' In a text variable, cells with no text -- empty, or holding only spaces
 #' or tabs -- are tabulated together in one row labeled \code{<blank>}.
@@ -745,6 +841,13 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' apply. Any other vector is tabulated on its own. A second variable, and a
 #' \code{subset} condition naming another variable, need the data frame, and
 #' each stops with that form of the call.
+#'
+#' With a \code{juse()} default set, a name the default data frame has is
+#' that frame's variable, as in every jstats function, even when a separate
+#' object of the same name exists in the workspace: \code{jfreq(Region)}
+#' tabulates the default frame's Region, and a line under "Using default
+#' data frame" says so. A separate object is read only when the default
+#' frame has no variable of that name, or when no default is set.
 #'
 #' @param data A data frame, or a single variable: a column of a data frame
 #'   or a vector.
@@ -910,7 +1013,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   # applied, a subset = that cannot be evaluated and a data frame with no
   # rows stopped with no title above the error.
   .cat_red("Frequencies\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) .jst_default_note(.jst_data_name, vars = var_names_check,
+                                         envir = parent.frame())
 
   # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
   subset_expr <- substitute(subset)
@@ -987,6 +1091,15 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # note printed with this variable's block below. (Session 47)
     n_distinct_vals <- length(unique(temp_var[!is.na(temp_var)]))
 
+    # The pre-masking column and its declaration (S285; see TWO COLUMNS, TWO
+    # JOBS below). Read here, ahead of the Valid rows, since Session 348:
+    # which labeled values are VALID -- and so take a zero row when no case
+    # holds them -- depends on what the variable declares missing.
+    pre_col  <- pipeline$pipeline_counts$pre_pipeline_data[[variable_name]]
+    pool_col <- pre_col[pipeline$pipeline_counts$surviving_ids]
+    mi       <- .jst_missing_info(pre_col)
+    was_factor <- is.factor(data[[variable_name]])
+
     # Sort key for Valid rows: build a (display_string, sort_key) mapping
     # so the table sorts numerically when the underlying values are
     # numeric, regardless of the categorical-display treatment. Without
@@ -1011,9 +1124,19 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       # "labels" two distinct codes could in principle share a display string.
       uniq        <- !is.na(codes_chr) & !duplicated(codes_chr)
       sort_codes  <- codes_chr[uniq]
+      # A labeled value no case holds takes a zero row (Session 348, ruling
+      # R4), sorted among the values present.
+      empty_chr   <- .jst_freq_empty_labels(val_labs, sort_codes, mi,
+                                            text = TRUE)
+      all_codes   <- c(sort_codes, empty_chr)
+      all_disp    <- c(display_str[uniq],
+                       .jst_format_value_labels(empty_chr, val_labs,
+                                                value_mode))
+      keep        <- !duplicated(all_disp)
+      all_codes   <- all_codes[keep]; all_disp <- all_disp[keep]
       # The blank category first, as in a plain text variable (S340).
-      sort_levels <- display_str[uniq][order(sort_codes != .jst_blank_label,
-                                             sort_codes)]
+      sort_levels <- all_disp[order(all_codes != .jst_blank_label,
+                                    all_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
 
     # Haven-labelled (numeric-backed): combine numeric codes with value labels.
@@ -1026,7 +1149,17 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
       display_str <- .jst_format_value_labels(codes, val_labs, value_mode)
       uniq        <- !is.na(codes) & !duplicated(codes)
       sort_codes  <- codes[uniq]
-      sort_levels <- display_str[uniq][order(sort_codes)]
+      # A labeled value no case holds takes a zero row (Session 348, ruling
+      # R4): a valid value, not one the variable declares missing, sorted
+      # among the values present -- as a factor's empty level always has.
+      empty_num   <- .jst_freq_empty_labels(val_labs, sort_codes, mi)
+      all_codes   <- c(sort_codes, empty_num)
+      all_disp    <- c(display_str[uniq],
+                       .jst_format_value_labels(empty_num, val_labs,
+                                                value_mode))
+      keep        <- !duplicated(all_disp)
+      all_codes   <- all_codes[keep]; all_disp <- all_disp[keep]
+      sort_levels <- all_disp[order(all_codes)]
       temp_var    <- factor(display_str, levels = sort_levels)
 
     } else if (is.numeric(temp_var)) {
@@ -1084,13 +1217,20 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     # a pipeline the Missing rows, their Total %, and the System/NA row
     # were all on the wrong base and Valid + Missing != Total (S217,
     # reproduced S284). With no pipeline active surviving_ids is every
-    # row, pool_col is pre_col, and nothing here changes.
-    pre_col   <- pipeline$pipeline_counts$pre_pipeline_data[[variable_name]]
-    pool_col  <- pre_col[pipeline$pipeline_counts$surviving_ids]
-    mi        <- .jst_missing_info(pre_col)
+    # row, pool_col is pre_col, and nothing here changes. (pre_col,
+    # pool_col and mi are read above, before the Valid rows, since
+    # Session 348.)
     udm_rows  <- data.frame(Value = character(0), Freq = integer(0),
                             stringsAsFactors = FALSE)
     udm_total <- 0L
+
+    # Zero rows (Session 348, ruling R4). The Valid block's are already in
+    # valid_df (a labeled value or a factor level no case holds); a labeled
+    # code inside a declared range adds its own below. Past
+    # .jst_freq_zero_row_cap of them in one table none prints, and one line
+    # under the table says how many there are.
+    n_empty    <- sum(valid_df$Freq == 0L)
+    range_zero <- NULL
 
     if (!is.null(mi)) {
       if (identical(mi$representation, "stata")) {
@@ -1229,6 +1369,39 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
               Freq  = as.integer(in_band$count),
               Sort  = as.numeric(in_band$numeric),
               stringsAsFactors = FALSE)
+
+            # A labeled code inside the range that no case in the pool
+            # holds takes a zero row too (Session 348, ruling R4), as a
+            # declared discrete code does. Only when the range is spelled
+            # out: with nothing in it, its one "range a to b" row already
+            # says 0 for every code inside it. An unlabeled number in the
+            # range never gets a row, and a value also declared discretely
+            # is filed under its code row above. The rows the cap dropped
+            # are not "no case": they are counted in the overflow row.
+            rl <- labelled::val_labels(pre_col)
+            if (length(rl)) {
+              rl_num <- suppressWarnings(as.numeric(unname(rl)))
+              lo <- min(rg); hi <- max(rg)
+              disc <- if (!is.null(mi$codes) && nrow(mi$codes) > 0L)
+                        as.numeric(mi$codes$numeric) else numeric(0)
+              seen <- as.numeric(rv$numeric)
+              z_i  <- which(!is.na(rl_num) & rl_num >= lo & rl_num <= hi &
+                            !(rl_num %in% disc) & !(rl_num %in% seen) &
+                            !duplicated(rl_num))
+              if (length(z_i)) {
+                range_zero <- data.frame(
+                  Value = vapply(z_i, function(i)
+                            .jst_udm_row_label(format(rl_num[i]),
+                                               names(rl)[i]), character(1)),
+                  Freq  = 0L,
+                  Sort  = rl_num[z_i],
+                  stringsAsFactors = FALSE)
+                n_empty <- n_empty + nrow(range_zero)
+                if (n_empty <= .jst_freq_zero_row_cap) {
+                  range_rows <- rbind(range_rows, range_zero)
+                }
+              }
+            }
           }
         }
 
@@ -1261,6 +1434,15 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                                  stringsAsFactors = FALSE)
         }
       }
+    }
+
+    # Past the cap, no zero row prints (Session 348, ruling R4 (c)): a
+    # classification with hundreds of labels would otherwise list hundreds
+    # of empty categories. The range's were never added above; the Valid
+    # block's are dropped here, before any percentage is taken.
+    zero_hidden <- if (n_empty > .jst_freq_zero_row_cap) n_empty else 0L
+    if (zero_hidden > 0L) {
+      valid_df <- valid_df[valid_df$Freq > 0L, , drop = FALSE]
     }
 
     # One source for the missing subtotal, so the Valid / Missing / Total
@@ -1353,6 +1535,20 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
         stringsAsFactors = FALSE))
     }
 
+    # The Valid block's subtotal (Session 348, ruling R7), whenever the
+    # table has a Missing block: the valid N -- the denominator of every
+    # Valid % -- stated, not left to the reader's addition. With no missing
+    # data it would repeat the Total row, so it is left out.
+    if (has_missing) {
+      display_df <- rbind(display_df, data.frame(
+        Value    = "Total valid",
+        Freq     = as.character(valid_count),
+        TotalPct = fmt_pct(valid_count / total_count * 100),
+        ValidPct = fmt_pct(valid_count / valid_count * 100),
+        CumPct   = "",
+        stringsAsFactors = FALSE))
+    }
+
     if (has_missing) {
       # Missing section header (blank line + header row for separation)
       display_df <- rbind(display_df, data.frame(
@@ -1383,6 +1579,19 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
           CumPct   = "--",
           stringsAsFactors = FALSE))
       }
+
+      # The Missing block's subtotal (Session 348, ruling R7), when the
+      # block has more than one row -- SPSS FREQUENCIES' rule. One row is
+      # its own total.
+      if (nrow(udm_rows) + as.integer(!is.null(na_row)) > 1L) {
+        display_df <- rbind(display_df, data.frame(
+          Value    = "Total missing",
+          Freq     = as.character(total_count - valid_count),
+          TotalPct = fmt_pct((total_count - valid_count) / total_count * 100),
+          ValidPct = "",
+          CumPct   = "",
+          stringsAsFactors = FALSE))
+      }
     }
 
     # Total row (always; no Valid % or Cum. %)
@@ -1406,6 +1615,17 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                      col.names = c("", "Freq", "Total %", "Valid %", "Cum. %"),
                      row.names = FALSE,
                      align     = c("l", "bc", "bc", "bc", "bc"))
+    # The zero rows left out past the cap (Session 348, ruling R4 (c)): one
+    # line, against the table it explains.
+    if (zero_hidden > 0L) {
+      .jst_msg_out(.jst_fmt_n(zero_hidden), " ",
+                   if (was_factor)
+                     .jst_plural(zero_hidden, "category has", "categories have")
+                   else .jst_plural(zero_hidden, "labelled value has",
+                                    "labelled values have"),
+                   " no cases and ",
+                   .jst_plural(zero_hidden, "is", "are"), " not listed.")
+    }
     # The <blank> row's footnote, against the table it explains (S340).
     if (blank_counts$n > 0L) .jst_msg_out(.jst_blank_footnote(blank_counts))
     cat("\n")
@@ -1495,6 +1715,12 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' apply. Any other vector is screened on its own. A second variable, and a
 #' \code{subset} condition naming another variable, need the data frame, and
 #' each stops with that form of the call.
+#'
+#' With a \code{juse()} default set, a name the default data frame has is
+#' that frame's variable, as in every jstats function, even when a separate
+#' object of the same name exists in the workspace, and a line under "Using
+#' default data frame" says so. A separate object is read only when the
+#' default frame has no variable of that name, or when no default is set.
 #'
 #' Those filters are accounted for as in the analysis functions: a Case
 #' Processing table between the title and the header lists the original
@@ -1694,7 +1920,9 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
   # Red title
   .cat_red("Data Screening\n")
-  if (.jst_default_used) .jst_default_note(.jst_data_name)
+  if (.jst_default_used) .jst_default_note(.jst_data_name,
+                      vars = if (length(variables) > 0) var_names else NULL,
+                      envir = parent.frame())
 
   # Apply data pipeline (jcomplete, jsubset, subset) to the WHOLE frame, and
   # only then narrow to the named variables. Narrowing first (before S317)

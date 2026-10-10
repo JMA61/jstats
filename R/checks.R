@@ -1148,6 +1148,22 @@
   default_name <- getOption(".jst_default_data", default = NULL)
 
   # -- Case 4: evaluated to a non-data-frame value (vector input) -----------
+  # Under a juse() default, a bare name the default frame has is the frame's
+  # variable (Session 348, ruling R12), as it is in every function that does
+  # not take a single column: jdesc(Age) with a separate vector Age in the
+  # workspace described the vector and said nothing. The object is read only
+  # when the default frame has no variable of that name, or with no default.
+  # The caller's default note says which was read (.jst_default_note()).
+  if (accept_vector && !eval_result$failed && is.symbol(data_sub) &&
+      !is.null(default_name) && is.null(frame_col)) {
+    dflt <- if (exists(default_name, envir = envir))
+              get(default_name, envir = envir) else NULL
+    if (is.data.frame(dflt) && as.character(data_sub) %in% names(dflt)) {
+      return(list(mode = "symbol_with_default",
+                  data = dflt, name = default_name,
+                  first_arg_sub = data_sub, first_arg_value = NULL))
+    }
+  }
   if (accept_vector && !eval_result$failed) {
     return(list(mode = "vector_input",
                 data = NULL, name = NULL,

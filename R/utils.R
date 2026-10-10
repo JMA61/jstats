@@ -1461,10 +1461,62 @@ jai <- function(setup = NULL, path = NULL) {
 #'   jcomplete and jdummy summaries pass TRUE explicitly to keep their
 #'   trailing blank. (Default flipped TRUE -> FALSE in Session 52 to
 #'   collapse the double blank line above the Case Processing block.)
+#' @param vars,envir The variables the call names and the caller's
+#'   environment (Session 348, ruling R12). When given, a second line says
+#'   which object was read for each variable that a separate vector or
+#'   factor in the workspace shares a name with: the default frame's
+#'   variable. jdesc(), jfreq() and jscreen() pass them; the functions that
+#'   never take a single column read the frame's variable without question.
 #' @keywords internal
-.jst_default_note <- function(data_name, extra_newline = FALSE) {
+.jst_default_note <- function(data_name, extra_newline = FALSE,
+                              vars = NULL, envir = NULL) {
   .cat_yellow(paste0("Using default data frame: ", data_name, "\n"))
+  if (length(vars) && !is.null(envir)) {
+    tw <- .jst_loose_twins(unique(vars), envir)
+    if (length(tw)) {
+      line <- if (length(tw) == 1L) {
+        paste0(tw, " is the variable in ", data_name,
+               ", not the separate object with that name.")
+      } else {
+        paste0(.jst_and_list(tw), " are variables in ", data_name,
+               ", not the separate objects with those names.")
+      }
+      .cat_yellow(.jst_wrap_message(line))
+      cat("\n")
+    }
+  }
   if (extra_newline) cat("\n")
+}
+
+#' Internal helper: the variables a separate workspace object shares a name with
+#'
+#' Ruling R12 (Session 348): of \code{vars}, those for which a vector or a
+#' factor of the same name exists in \code{envir} or an enclosing
+#' environment up to the global environment -- the objects a user made. A
+#' function, a data frame, a list, and anything only a package supplies
+#' (\code{pi}, \code{letters}) are left out: none of them could have been
+#' meant as the variable.
+#'
+#' @param vars Character; variable names.
+#' @param envir The caller's environment.
+#' @return Character; the names in \code{vars} that have such a twin.
+#' @keywords internal
+.jst_loose_twins <- function(vars, envir) {
+  has_twin <- function(v) {
+    e <- envir
+    repeat {
+      if (isNamespace(e) || identical(e, baseenv()) ||
+          identical(e, emptyenv())) return(FALSE)
+      if (exists(v, envir = e, inherits = FALSE)) {
+        obj <- get(v, envir = e, inherits = FALSE)
+        return((is.atomic(obj) || is.factor(obj)) && !is.null(obj) &&
+               !is.data.frame(obj))
+      }
+      if (identical(e, globalenv()) || identical(e, emptyenv())) return(FALSE)
+      e <- parent.env(e)
+    }
+  }
+  vars[vapply(vars, has_twin, logical(1))]
 }
 
 #' Internal helper: build a persistence/durability note

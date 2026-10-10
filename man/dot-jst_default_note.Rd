@@ -4,7 +4,7 @@
 \alias{.jst_default_note}
 \title{Internal helper: print the "Using default data frame: X" note in yellow}
 \usage{
-.jst_default_note(data_name, extra_newline = FALSE)
+.jst_default_note(data_name, extra_newline = FALSE, vars = NULL, envir = NULL)
 }
 \arguments{
 \item{data_name}{Character string name of the default data frame.}
@@ -15,6 +15,13 @@ Defaults to FALSE, so the note abuts the next line directly; the
 jcomplete and jdummy summaries pass TRUE explicitly to keep their
 trailing blank. (Default flipped TRUE -> FALSE in Session 52 to
 collapse the double blank line above the Case Processing block.)}
+
+\item{vars, envir}{The variables the call names and the caller's
+environment (Session 348, ruling R12). When given, a second line says
+which object was read for each variable that a separate vector or
+factor in the workspace shares a name with: the default frame's
+variable. jdesc(), jfreq() and jscreen() pass them; the functions that
+never take a single column read the frame's variable without question.}
 }
 \description{
 Used by every analysis function immediately after its red title line.
