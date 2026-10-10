@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.220</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.221</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -154,6 +154,17 @@ on its own line (the name, or name and label, as <code>variable.id</code>
 directs), a blank line, and the frequency table. Declared missing
 values get Missing rows of their own below the valid rows. The
 frequency table ends with a Total row showing the post-pipeline N.</p>
+<p>When the table has Missing rows, a "Total valid" row closes the valid
+rows – the valid N, the base of every Valid % – and, when there is
+more than one Missing row, a "Total missing" row closes them, as in
+SPSS FREQUENCIES.</p>
+<p>A value that has a value label but no case gets a row of its own at 0,
+as an empty level of a factor does: a valid value, a declared missing
+code, and a labelled code inside a declared missing-value range when
+the range's values are listed one by one. A range with no case in it
+keeps its single "range" row. When more than ten labelled values (or
+factor levels) in one table have no case, none of them is listed, and
+a line under the table says how many there are.</p>
 <p>In a text variable, cells with no text – empty, or holding only spaces
 or tabs – are tabulated together in one row labeled <code>&lt;blank&gt;</code>.
 They are counted as valid values, not as missing: a blank is absent data
@@ -176,6 +187,12 @@ of a data frame is tabulated in its frame, exactly as
 apply. Any other vector is tabulated on its own. A second variable, and a
 <code>subset</code> condition naming another variable, need the data frame, and
 each stops with that form of the call.</p>
+<p>With a <code><a href="juse.html">juse()</a></code> default set, a name the default data frame has is
+that frame's variable, as in every jstats function, even when a separate
+object of the same name exists in the workspace: <code>jfreq(Region)</code>
+tabulates the default frame's Region, and a line under "Using default
+data frame" says so. A separate object is read only when the default
+frame has no variable of that name, or when no default is set.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -223,15 +240,17 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                          Freq  Total %  Valid %  Cum. %</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  ----  -------  -------  ------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Valid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        23    22.33   23.71    23.71</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate    18    17.48   18.56    42.27</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            25    24.27   25.77    68.04</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree       13    12.62   13.40    81.44</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree         18    17.48   18.56   100.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        23    22.33    23.71   23.71</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate    18    17.48    18.56   42.27</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            25    24.27    25.77   68.04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree       13    12.62    13.40   81.44</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree         18    17.48    18.56  100.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total valid                97    94.17   100.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -99 ["Refused"]             3     2.91      --       --</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -98 ["Don't know"]          3     2.91      --       --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -99 ["Refused"]             3     2.91       --      --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -98 ["Don't know"]          3     2.91       --      --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total missing               6     5.83</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Total                     103   100.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -278,15 +297,17 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                          Freq  Total %  Valid %  Cum. %</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------  ----  -------  -------  ------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Valid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        23    22.33   23.71    23.71</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate    18    17.48   18.56    42.27</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            25    24.27   25.77    68.04</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree       13    12.62   13.40    81.44</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree         18    17.48   18.56   100.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Some high school        23    22.33    23.71   23.71</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: High school graduate    18    17.48    18.56   42.27</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: Some college            25    24.27    25.77   68.04</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: Bachelor's degree       13    12.62    13.40   81.44</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: Graduate degree         18    17.48    18.56  100.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total valid                97    94.17   100.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Missing</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -99 ["Refused"]             3     2.91      --       --</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -98 ["Don't know"]          3     2.91      --       --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -99 ["Refused"]             3     2.91       --      --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -98 ["Don't know"]          3     2.91       --      --</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total missing               6     5.83</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Total                     103   100.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

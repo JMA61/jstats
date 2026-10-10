@@ -11,7 +11,7 @@ jcomplete) under a consistent yellow coloring."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.220</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.221</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,7 @@ jcomplete) under a consistent yellow coloring.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_default_note</span><span class="op">(</span><span class="va">data_name</span>, extra_newline <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_default_note</span><span class="op">(</span><span class="va">data_name</span>, extra_newline <span class="op">=</span> <span class="cn">FALSE</span>, vars <span class="op">=</span> <span class="cn">NULL</span>, envir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -62,6 +62,15 @@ Defaults to FALSE, so the note abuts the next line directly; the
 jcomplete and jdummy summaries pass TRUE explicitly to keep their
 trailing blank. (Default flipped TRUE -&gt; FALSE in Session 52 to
 collapse the double blank line above the Case Processing block.)</p></dd>
+
+
+<dt id="arg-vars-envir">vars, envir<a class="anchor" aria-label="anchor" href="#arg-vars-envir"></a></dt>
+<dd><p>The variables the call names and the caller's
+environment (Session 348, ruling R12). When given, a second line says
+which object was read for each variable that a separate vector or
+factor in the workspace shares a name with: the default frame's
+variable. jdesc(), jfreq() and jscreen() pass them; the functions that
+never take a single column read the frame's variable without question.</p></dd>
 
 </dl></div>
 

@@ -189,6 +189,13 @@ its own. A second variable, and a `subset` condition naming another
 variable, need the data frame, and each stops with that form of the
 call.
 
+With a [`juse()`](https://jma61.github.io/jstats/reference/juse.md)
+default set, a name the default data frame has is that frame's variable,
+as in every jstats function, even when a separate object of the same
+name exists in the workspace, and a line under "Using default data
+frame" says so. A separate object is read only when the default frame
+has no variable of that name, or when no default is set.
+
 Those filters are accounted for as in the analysis functions: a Case
 Processing table between the title and the header lists the original
 count, the cases each filter excluded, and the count remaining, which

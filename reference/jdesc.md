@@ -172,6 +172,19 @@ its own. A second variable, `by`, and a `subset` condition naming
 another variable need the data frame, and each stops with that form of
 the call.
 
+With a [`juse()`](https://jma61.github.io/jstats/reference/juse.md)
+default set, a name the default data frame has is that frame's variable,
+as in every jstats function, even when a separate object of the same
+name exists in the workspace: `jdesc(Age)` describes the default frame's
+Age, and a line under "Using default data frame" says so. A separate
+object is read only when the default frame has no variable of that name,
+or when no default is set.
+
+With `by`, the case-processing summary counts the cases that have a
+group. Where it is a single line rather than a table (at the minimal
+output level, for example), that line counts "Grouped Cases" once the
+grouping variable has excluded any.
+
 Haven-labelled variables are reported as `haven_labelled (Categorical)`
 in the type line; the uninformative `vctrs_vctr` class is suppressed.
 
