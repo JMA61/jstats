@@ -20,6 +20,13 @@
 #' once per 1 and reported it with a case-processing table that added up
 #' (the Session 289 workstation reproduction).
 #'
+#' On a data frame of ONE row a single TRUE or FALSE is one for every row,
+#' and it passes when the condition names a variable of the frame (Session
+#' 349, the S346 item): \code{jfreq(one, g, subset = y > 1)} was refused as
+#' "a single value (TRUE), not one TRUE or FALSE for every row". A condition
+#' that names no variable -- \code{TRUE}, or a comparison of workspace
+#' values -- is refused there as anywhere.
+#'
 #' Three origins share the check and differ only in wording:
 #' \describe{
 #'   \item{\code{"set"}}{the set-time dry run in \code{jsubset()}. The user
@@ -63,6 +70,9 @@
 #'   frame in the call, so the quoted-keyword fix echoes that form.
 #' @param prior Logical. For \code{"set"}: an earlier filter exists for the
 #'   frame; the message says it is unchanged.
+#' @param data_names Character or NULL. The variables of the frame the
+#'   filter ran on; on a one-row frame a single value passes only when the
+#'   condition names one of them.
 #'
 #' @return \code{invisible(NULL)} when the result is well-shaped; otherwise
 #'   stops via \code{.jst_stop()}, which supplies the "<fn>(): " prefix
@@ -72,9 +82,14 @@
 #' @keywords internal
 .jst_check_mask_shape <- function(mask, n_rows, expr, expr_str, origin,
                                   data_name = NULL, named_frame = FALSE,
-                                  prior = FALSE) {
+                                  prior = FALSE, data_names = NULL) {
   origin <- match.arg(origin, c("set", "call", "stored", "reactivate",
                                 "status"))
+
+  # On a one-row frame a single TRUE or FALSE from a condition that names
+  # one of the frame's variables is one value for every row (Session 349).
+  one_row_ok <- n_rows == 1L && is.logical(mask) && length(mask) == 1L &&
+    length(intersect(all.vars(expr), data_names)) > 0L
 
   # -- What did the filter give? --------------------------------------------
   # Order matters: an empty result first (any type), then kind, then count.
@@ -93,7 +108,7 @@
     if (is.character(expr)) "is text" else paste0("is text (\"", mask[1L], "\")")
   } else if (!is.logical(mask)) {
     if (is.numeric(mask)) "is numeric" else paste0("is ", class(mask)[1L], " values")
-  } else if (length(mask) == 1L) {
+  } else if (length(mask) == 1L && !one_row_ok) {
     if (is.logical(expr)) "is a single value"
     else paste0("is a single value (", as.character(mask), ")")
   } else if (length(mask) != n_rows) {
@@ -525,6 +540,7 @@
 #' @return A data frame.
 #' @keywords internal
 .jst_complete_kept <- function(data, data_name) {
+  data <- .jst_plain_frame(data)   # sf's `[` keeps its geometry (S349)
   cs <- .jst_get_complete(data_name)
   if (is.null(cs) || !isTRUE(cs$active) || length(cs$vars) == 0L ||
       length(setdiff(cs$vars, names(data))) > 0L) {
@@ -798,7 +814,8 @@
   .jst_check_mask_shape(mask, n_rows, expr, expr_str, origin,
                         data_name   = data_name,
                         named_frame = named_frame,
-                        prior       = prior)
+                        prior       = prior,
+                        data_names  = names(data))
   recycled()
   # When set, the filter passed on the frame as given; an active
   # jcomplete() will hand it fewer cases at every analysis (S331).
@@ -902,6 +919,34 @@
   out
 }
 
+#' Internal helper: read an sf data frame as an ordinary data frame
+#'
+#' An sf object is a data frame whose geometry is a list column, and sf's
+#' own \code{[} method keeps that column whatever columns are asked for:
+#' \code{s[, c("Age", "Score")]} returns three columns. The analysis copy's
+#' column subsets therefore carried the geometry into
+#' \code{complete.cases()} and the like, and \code{jscreen()},
+#' \code{jdesc()} and \code{jt()} stopped on R's "invalid 'type' (list) of
+#' argument" (the S213 container-class item; Session 349, Jeff's lean
+#' okayed S348). Dropping the class and sf's two attributes leaves a plain
+#' data frame -- a tibble stays a tibble -- whose geometry is an ordinary
+#' list column: \code{jscreen()} shows it as an Unsupported row, and an
+#' analysis that names it refuses it as any list column is refused. Spatial
+#' data stay outside production scope (the Scope reference, Part 6): the
+#' attributes are read, the spatial object is not used. Any other input is
+#' returned unchanged.
+#'
+#' @param data A data frame.
+#' @return \code{data}, without the sf class when it had one.
+#' @keywords internal
+.jst_plain_frame <- function(data) {
+  if (!inherits(data, "sf")) return(data)
+  class(data) <- setdiff(class(data), "sf")
+  attr(data, "sf_column") <- NULL
+  attr(data, "agr")       <- NULL
+  data
+}
+
 #' Internal helper: apply the full data pipeline and return filtered data + messages
 #'
 #' Order of operations:
@@ -953,6 +998,12 @@
 #' @keywords internal
 .jst_apply_pipeline <- function(data, data_name, is_default,
                                 subset_expr = NULL, envir = parent.frame()) {
+
+  # An sf data frame is read as an ordinary one (Session 349): sf's own `[`
+  # keeps the geometry column whatever columns are asked for, so the
+  # analysis copy's column subsets carried a list along and R stopped
+  # ("invalid 'type' (list) of argument").
+  data <- .jst_plain_frame(data)
 
   msgs <- character(0)
   n_original <- nrow(data)
@@ -1028,7 +1079,12 @@
   # Temporary survival-tracking id (removed before this function returns).
   # Added after masking (which preserves row order) and before filtering, so
   # the surviving values are the original 1..n_original row positions.
-  data$.jst_row_id <- seq_len(n_original)
+  # Named so it cannot meet a column of the user's (AUDIT-018, Session 349):
+  # a frame that already held a .jst_row_id had that column overwritten
+  # here and stripped below, so jdesc(d, .jst_row_id) described no cases.
+  row_id <- ".jst_row_id"
+  while (row_id %in% names(data)) row_id <- paste0(row_id, "_")
+  data[[row_id]] <- seq_len(n_original)
 
   # -- Step 1: jcomplete -----------------------------------------------------
   # Applied whenever a jcomplete is set on the current dataset (by name),
@@ -1119,8 +1175,8 @@
 
   # Recover surviving original row positions, then strip the temp id column
   # so the returned analysis data is clean.
-  surviving_ids    <- data$.jst_row_id
-  data$.jst_row_id <- NULL
+  surviving_ids    <- data[[row_id]]
+  data[[row_id]]   <- NULL
 
   # Restore variable labels from the pre-pipeline snapshot. Row subsetting via
   # `[.data.frame` (jcomplete's direct subset at Step 1, the jsubset / subset

@@ -10,8 +10,11 @@
 \item{quos}{The captured variable list (\code{rlang::enquos(...)}).}
 
 \item{data}{The resolved data frame, or \code{NULL} when no frame is in
-hand (\code{jsubset()} calls before resolving one); then every named
-item is treated as a condition.}
+hand; then every named item is treated as a condition.
+\code{jsubset()}, which calls before resolving its frame, passes the
+frame the call names or else the \code{juse()} default (Session 349),
+so that \code{quiet = TRUE} beside a condition is an unused input,
+not a condition typed with one \code{=}.}
 
 \item{fn_name}{Character. The calling function's name, for the message
 prefix and for the \code{jsubset()} fix form.}

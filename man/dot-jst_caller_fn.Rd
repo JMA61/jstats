@@ -17,4 +17,14 @@ shared validation helpers can name the function the user actually called,
 even though errors are signaled with call. = FALSE. Returns NULL when no
 jstats frame is on the stack.
 }
+\details{
+A frame counts only when its function belongs to the package -- defined
+in the same top-level environment as this helper, the jstats namespace
+(AUDIT-015, Session 349). Before, any j-prefixed name did, so a user's
+own wrapper took the blame: \code{justify_data <- function() jt(Y ~ X,
+d)} stopped "justify_data(): Y and X were not found ...", where the call
+to fix is \code{jt()}. When the master is sourced into the global
+environment (the older sandbox route) the package and the user share
+that environment, and the name alone decides, as it did.
+}
 \keyword{internal}

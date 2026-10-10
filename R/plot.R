@@ -581,6 +581,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # Print pipeline messages (default data frame note, filter/complete status)
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
+  # The cases the plot draws, and how many it leaves out (Session 349).
+  .jst_plot_n_line(data, c(variable_names, by_name),
+                   pipeline$pipeline_counts$n_original)
 
   # Convert haven-labelled variables for plotting, by their resolved class.
   # A variable plotted with categorical geometry (bar, grouped bar, the x of a
@@ -890,6 +893,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
+  # The cases the plot draws, and how many it leaves out (Session 349).
+  .jst_plot_n_line(data, c(x_name, y_name, if (has_by) by_name),
+                   pipeline$pipeline_counts$n_original)
 
   # -- Convert haven-labelled variables by their resolved class -------------
   # Geometry-aware, mirroring jplot.default: a categorical-typed variable
@@ -992,6 +998,39 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     return(paste0(substr(lbl, 1, max_len - 3), "..."))
   }
   lbl
+}
+
+#' Internal helper: print a plot's one-line N statement
+#'
+#' A plot draws the cases that have a value on every variable it plots --
+#' each builder keeps the complete cases of its columns -- after the
+#' pipeline's filters. Until Session 349 jplot() said nothing of the cases
+#' it left out (the S316 item): under \code{jsubset(clinic, Condition !=
+#' 3)} a grouped histogram of Flourishing by Medication printed only its
+#' title, where \code{jt()} on the same data states Analysis N 51. The
+#' statement is the listwise layout's N line (the CPS reference, Table 4),
+#' in the slot it takes there -- under the title and the notes, one blank
+#' line before and one after -- with the excluded count beside it whenever
+#' the plot drew fewer cases than the data frame holds: "Analysis N: 51
+#' (19 Excluded)". It is the only Case Processing a plot prints, at every
+#' output level (Jeff's lean, okayed S336: the N statement, not the
+#' table).
+#'
+#' @param data The frame the plot is drawn from, after the pipeline.
+#' @param vars Character; the variables the plot draws, its \code{by}
+#'   variable included.
+#' @param n_original Integer; the data frame's rows before the pipeline.
+#' @return \code{invisible(NULL)}; prints the line.
+#' @keywords internal
+.jst_plot_n_line <- function(data, vars, n_original) {
+  vars  <- intersect(unique(vars), names(data))
+  n_plot <- if (length(vars) == 0L) nrow(data) else
+    sum(stats::complete.cases(data[, vars, drop = FALSE]))
+  n_exc <- n_original - n_plot
+  cat("\nAnalysis N: ", n_plot,
+      if (isTRUE(n_exc > 0L)) paste0(" (", n_exc, " Excluded)"),
+      "\n\n", sep = "")
+  invisible(NULL)
 }
 
 #' Internal helper: build a red-title string for jplot.default output

@@ -12,7 +12,8 @@
   origin,
   data_name = NULL,
   named_frame = FALSE,
-  prior = FALSE
+  prior = FALSE,
+  data_names = NULL
 )
 }
 \arguments{
@@ -40,6 +41,10 @@ frame in the call, so the quoted-keyword fix echoes that form.}
 
 \item{prior}{Logical. For \code{"set"}: an earlier filter exists for the
 frame; the message says it is unchanged.}
+
+\item{data_names}{Character or NULL. The variables of the frame the
+filter ran on; on a one-row frame a single value passes only when the
+condition names one of them.}
 }
 \value{
 \code{invisible(NULL)} when the result is well-shaped; otherwise
@@ -67,6 +72,13 @@ once per 1 and reported it with a case-processing table that added up
 (the Session 289 workstation reproduction).
 }
 \details{
+On a data frame of ONE row a single TRUE or FALSE is one for every row,
+and it passes when the condition names a variable of the frame (Session
+349, the S346 item): \code{jfreq(one, g, subset = y > 1)} was refused as
+"a single value (TRUE), not one TRUE or FALSE for every row". A condition
+that names no variable -- \code{TRUE}, or a comparison of workspace
+values -- is refused there as anywhere.
+
 Three origins share the check and differ only in wording:
 \describe{
 \item{\code{"set"}}{the set-time dry run in \code{jsubset()}. The user

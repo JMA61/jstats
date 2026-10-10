@@ -1795,21 +1795,34 @@ jai <- function(setup = NULL, path = NULL) {
 #' remedy: nothing is stored under an expression, and the registrations
 #' the user means are under whatever name the data frame has.
 #'
+#' The two stored settings take the same stop since Session 349 (the S341
+#' item; the lean Jeff okayed at S342): \code{jsubset(mk(), Age > 30)}
+#' printed "jsubset activated for mk(): Age > 30", a filter no later call
+#' reached unless it typed \code{mk()} again. \code{noun} and \code{then}
+#' carry their words: "a jsubset filter is stored under its data frame's
+#' name" / "Give the data frame a name first, then set it:".
+#'
 #' @param data_sub The substituted data argument, an expression.
 #' @param fn_name Character; the calling verb.
 #' @param cl The verb's call, as typed.
 #' @param registering Logical; \code{FALSE} for a call that clears or
 #'   removes.
+#' @param noun Character; what is stored, in the singular, without an
+#'   article (\code{"registration"}, \code{"jsubset filter"},
+#'   \code{"jcomplete setting"}).
+#' @param then Character; the verb phrase after "then" in the second line.
 #' @return Does not return; stops.
 #' @keywords internal
 .jst_registration_expression_stop <- function(data_sub, fn_name, cl,
-                                              registering = TRUE) {
+                                              registering = TRUE,
+                                              noun = "registration",
+                                              then = "register") {
   typed <- .jst_term_text(data_sub)
   if (!isTRUE(registering)) {
     .jst_stop(
-      typed, " is not a name, and registrations are stored under a data ",
+      typed, " is not a name, and ", noun, "s are stored under a data ",
       "frame's name.\n",
-      "To see the registrations that are stored, run:\n",
+      "To see the ", noun, "s that are stored, run:\n",
       "  ", fn_name, "()",
       fn = fn_name)
   }
@@ -1822,9 +1835,9 @@ jai <- function(setup = NULL, path = NULL) {
     paste0(fn_name, "(mydata, ...)")
   }
   .jst_stop(
-    typed, " is not a name, and a registration is stored under its data ",
+    typed, " is not a name, and a ", noun, " is stored under its data ",
     "frame's name.\n",
-    "Give the data frame a name first, then register:\n",
+    "Give the data frame a name first, then ", then, ":\n",
     "  mydata <- ", typed, "\n",
     "  ", recall,
     fn = fn_name)

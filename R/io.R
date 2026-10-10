@@ -879,9 +879,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # the label arm, a forward-declared column returned NULL here and its
   # declarations were invisible to every consumer of this abstraction,
   # including jload's narrative.
+  # The cells are read only where they can hold a tag (Session 349, the S217
+  # item's fix 1): a tagged NA is always an NA, so a column with no NA has
+  # none, and among a column's cells only the NA ones need reading. The
+  # answer is the same by construction; the test, paid on every double
+  # column of every analysis call, ran some 35 times faster on a column of
+  # 1.9 million rows with no NA, and 6 times on one with NA cells.
   has_tagged <- FALSE
   if (is.double(col)) {
-    has_tagged <- any(!is.na(haven::na_tag(col)))
+    has_tagged <- anyNA(col) &&
+      any(!is.na(haven::na_tag(col[is.na(col)])))
     if (!has_tagged && haven::is.labelled(col)) {
       vl_probe <- labelled::val_labels(col)
       if (!is.null(vl_probe) && length(vl_probe) > 0L &&

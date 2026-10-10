@@ -392,8 +392,15 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   # it an argument named Gender, and before ... was added (S290) R itself
   # refused the call ("unused argument (Gender = 1)") before jstats could
   # say anything. Checked before the grammar below, since the call has
-  # data and expr both missing. No frame is resolved yet, so every named
-  # item is read as a condition; jsubset() has no other input to misspell.
+  # data and expr both missing. A named item is read as a condition when it
+  # names a variable of the frame in hand -- the one the call names, else
+  # the juse() default -- and as an input jsubset() does not have when it
+  # does not (Session 349, the S346 item): jsubset(d, x3 <= 4, quiet =
+  # TRUE), the reflex from joutput() and joptions(), was read as a
+  # condition typed with one = and offered jsubset(d, quiet == TRUE), a
+  # line that does not run. That is the rule every variable list has
+  # followed since S290. With no frame in hand every named item is still
+  # read as a condition.
   # The data frame as typed, when the call named one: every fix line keeps
   # it (Session 338; the S290 item). The shape check's lines did
   # (jsubset(d, Gender == 1)); the two single-= lines and the AND / OR /
@@ -409,7 +416,17 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
       frame_typed <- as.character(data_sym)
     }
   }
-  .jst_check_named_variables(rlang::enquos(...), NULL, "jsubset",
+  frame_in_hand <- if (!is.null(frame_typed)) {
+    get(frame_typed, envir = caller_env)
+  } else {
+    dflt <- getOption(".jst_default_data", default = NULL)
+    if (is.character(dflt) && length(dflt) == 1L &&
+        exists(dflt, envir = caller_env) &&
+        is.data.frame(get(dflt, envir = caller_env))) {
+      get(dflt, envir = caller_env)
+    }
+  }
+  .jst_check_named_variables(rlang::enquos(...), frame_in_hand, "jsubset",
                              frame = frame_typed)
 
   # -- No arguments: print session-wide status ------------------------------
@@ -554,6 +571,23 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     # jsubset(MyData, <expr>) — explicit data frame + expression slot.
     # The named-frame forms of NULL / off / on are intercepted here, before
     # the expression slot is treated as a filter (S288 decision 4).
+    # An expression given as the data -- jsubset(mk(), Age > 30) -- has no
+    # name to store a filter under (Session 349, the S341 item): it printed
+    # "jsubset activated for mk()" for a filter no later call reached. It is
+    # refused as the registration verbs refuse one; a place (lst$d) is
+    # accepted, since an analysis of lst$d reads the same text.
+    if (identical(.jst_data_arg_kind(raw_data), "expression")) {
+      .jst_registration_expression_stop(
+        raw_data, "jsubset",
+        if (missing(expr)) {
+          as.call(list(as.name("jsubset"), raw_data, quote(Age < 40)))
+        } else {
+          sys.call()
+        },
+        registering = missing(expr) ||
+          (!is.null(raw_expr) && is.null(toggle_word(raw_expr))),
+        noun = "jsubset filter", then = "set it")
+    }
     if (missing(expr)) {
       .jst_stop("the condition must be a logical expression. ",
            "Example: jsubset(", target_name, ", Age < 40)")
@@ -1190,7 +1224,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
                  " is not reachable here to build the preview.")
         return(invisible(NULL))
       }
-      df         <- get(target, envir = calling_env)
+      df         <- .jst_plain_frame(get(target, envir = calling_env))
       # A setting naming a variable the frame no longer has cannot be
       # applied, so there is nothing truthful to preview (S331; until then
       # the rows shown were those the REMAINING variables would drop).
@@ -1218,7 +1252,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
       gone_vars <- character(0)
       calling_env <- parent.frame()
       if (exists(dnames[1L], envir = calling_env)) {
-        df         <- get(dnames[1L], envir = calling_env)
+        df         <- .jst_plain_frame(get(dnames[1L], envir = calling_env))
         valid_vars <- cs$vars
         if (is.data.frame(df)) gone_vars <- setdiff(cs$vars, names(df))
         if (length(gone_vars) > 0L) {
@@ -1352,9 +1386,26 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     accept_vector = FALSE
   )
 
-  data              <- arg1$data
+  # An sf data frame is read as an ordinary one, as every analysis reads it
+  # (.jst_plain_frame(), Session 349); the setting is stored by name.
+  data              <- .jst_plain_frame(arg1$data)
   .jst_data_name    <- arg1$name
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  # -- An expression given as the data (Session 349) ------------------------
+  # jcomplete(mk(), Age) stored a setting under "mk()", which no later call
+  # reached unless it typed mk() again: refused as the registration verbs
+  # and jsubset() refuse one, a place (lst$d) accepted. Its off, on and
+  # NULL forms get the status call.
+  if (arg1$mode == "explicit" &&
+      identical(.jst_data_arg_kind(raw_data), "expression")) {
+    .jst_registration_expression_stop(
+      raw_data, "jcomplete", sys.call(),
+      registering = !(length(dots_raw) == 1L &&
+                        (is.null(dots_raw[[1L]]) ||
+                           !is.null(toggle_word(dots_raw[[1L]])))),
+      noun = "jcomplete setting", then = "set it")
+  }
 
   # -- Named-frame off / on / NULL: jcomplete(d, off), jcomplete(d, NULL) ---
   # Intercepted here, once `data` is known to be a frame and before the

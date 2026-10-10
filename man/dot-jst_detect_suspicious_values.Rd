@@ -19,14 +19,20 @@ empty numeric if none are found.
 \description{
 Scans a numeric vector for values likely to be coded missing markers
 (e.g. \code{99}, \code{999}, \code{-99}) rather than legitimate
-data. Two heuristics are applied:
+data. Two heuristics are applied to the variable's distinct values:
 \enumerate{
-\item Any negative value when all other values are positive --
-catches conventions like \code{-99} or \code{-9} for missing in
-otherwise non-negative categorical data.
-\item Any value whose absolute magnitude is at least 5 times the
-maximum of the other values -- catches \code{99} in a 1-5 scale,
-\code{999} in a 1-10 scale, and so on.
+\item Any negative value whose magnitude is at least 3 times the
+largest non-negative value, when at least two distinct non-negative
+values are present -- catches conventions like \code{-99} or
+\code{-9} for missing in otherwise non-negative categorical data
+(\code{-9} in a 1-3 scale), while leaving \code{-99} unflagged
+beside ages of 18 to 80, since 99 is less than 3 times 80. (Until
+Session 349 this entry read "any negative value when all other
+values are positive", leaving out the 3-times condition the code
+applies; the S197 item.)
+\item Any value whose magnitude is at least 5 times the largest
+magnitude among the other values -- catches \code{99} in a 1-5
+scale, \code{999} in a 1-10 scale, and so on.
 }
 Does not print messages; the calling function decides how to surface
 the findings.

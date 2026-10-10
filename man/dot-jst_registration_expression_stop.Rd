@@ -4,7 +4,14 @@
 \alias{.jst_registration_expression_stop}
 \title{Internal helper: refuse an expression given as the data to a registration}
 \usage{
-.jst_registration_expression_stop(data_sub, fn_name, cl, registering = TRUE)
+.jst_registration_expression_stop(
+  data_sub,
+  fn_name,
+  cl,
+  registering = TRUE,
+  noun = "registration",
+  then = "register"
+)
 }
 \arguments{
 \item{data_sub}{The substituted data argument, an expression.}
@@ -15,6 +22,12 @@
 
 \item{registering}{Logical; \code{FALSE} for a call that clears or
 removes.}
+
+\item{noun}{Character; what is stored, in the singular, without an
+article (\code{"registration"}, \code{"jsubset filter"},
+\code{"jcomplete setting"}).}
+
+\item{then}{Character; the verb phrase after "then" in the second line.}
 }
 \value{
 Does not return; stops.
@@ -36,5 +49,12 @@ A call that clears or removes (\code{jdummy(mk(), NULL)},
 \code{remove = TRUE}) is refused too, with the status call as its
 remedy: nothing is stored under an expression, and the registrations
 the user means are under whatever name the data frame has.
+
+The two stored settings take the same stop since Session 349 (the S341
+item; the lean Jeff okayed at S342): \code{jsubset(mk(), Age > 30)}
+printed "jsubset activated for mk(): Age > 30", a filter no later call
+reached unless it typed \code{mk()} again. \code{noun} and \code{then}
+carry their words: "a jsubset filter is stored under its data frame's
+name" / "Give the data frame a name first, then set it:".
 }
 \keyword{internal}

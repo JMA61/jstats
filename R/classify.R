@@ -821,12 +821,23 @@
 #' shared validation helpers can name the function the user actually called,
 #' even though errors are signaled with call. = FALSE. Returns NULL when no
 #' jstats frame is on the stack.
+#'
+#' A frame counts only when its function belongs to the package -- defined
+#' in the same top-level environment as this helper, the jstats namespace
+#' (AUDIT-015, Session 349). Before, any j-prefixed name did, so a user's
+#' own wrapper took the blame: \code{justify_data <- function() jt(Y ~ X,
+#' d)} stopped "justify_data(): Y and X were not found ...", where the call
+#' to fix is \code{jt()}. When the master is sourced into the global
+#' environment (the older sandbox route) the package and the user share
+#' that environment, and the name alone decides, as it did.
 #' @return A function name string, or NULL.
 #' @keywords internal
 .jst_caller_fn <- function() {
   calls <- sys.calls()
   if (is.null(calls)) return(NULL)
-  for (cl in calls) {
+  home <- topenv(environment(sys.function()))
+  for (i in seq_along(calls)) {
+    cl <- calls[[i]]
     if (!is.call(cl)) next
     head <- cl[[1L]]
     nm <- NULL
@@ -837,6 +848,9 @@
       nm <- as.character(head[[3L]])
     }
     if (!is.null(nm) && grepl("^j[a-z]", nm)) {
+      fun <- tryCatch(sys.function(i), error = function(e) NULL)
+      env <- if (is.function(fun)) environment(fun) else NULL
+      if (!is.null(env) && !identical(topenv(env), home)) next
       return(sub("^(j[a-z]+)\\..*$", "\\1", nm))
     }
   }
