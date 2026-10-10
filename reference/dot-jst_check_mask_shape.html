@@ -39,7 +39,7 @@ once per 1 and reported it with a case-processing table that added up
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.221</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.222</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -94,7 +94,8 @@ once per 1 and reported it with a case-processing table that added up
 <span>  <span class="va">origin</span>,</span>
 <span>  data_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  named_frame <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  prior <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  prior <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  data_names <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -142,6 +143,12 @@ frame in the call, so the quoted-keyword fix echoes that form.</p></dd>
 <dd><p>Logical. For <code>"set"</code>: an earlier filter exists for the
 frame; the message says it is unchanged.</p></dd>
 
+
+<dt id="arg-data-names">data_names<a class="anchor" aria-label="anchor" href="#arg-data-names"></a></dt>
+<dd><p>Character or NULL. The variables of the frame the
+filter ran on; on a one-row frame a single value passes only when the
+condition names one of them.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -152,7 +159,13 @@ otherwise).</fn></p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Three origins share the check and differ only in wording:</p><dl><dt><code>"set"</code></dt>
+    <p>On a data frame of ONE row a single TRUE or FALSE is one for every row,
+and it passes when the condition names a variable of the frame (Session
+349, the S346 item): <code>jfreq(one, g, subset = y &gt; 1)</code> was refused as
+"a single value (TRUE), not one TRUE or FALSE for every row". A condition
+that names no variable – <code>TRUE</code>, or a comparison of workspace
+values – is refused there as anywhere.</p>
+<p>Three origins share the check and differ only in wording:</p><dl><dt><code>"set"</code></dt>
 <dd><p>the set-time dry run in <code><a href="jsubset.html">jsubset()</a></code>. The user
 has just typed the filter, so the fix is a corrected call. A quoted
 keyword (<code>"null"</code>, <code>"off"</code>, <code>"on"</code>) is a reset typed

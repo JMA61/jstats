@@ -25,7 +25,7 @@ jsave(lst$d, ...) read the same text."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.221</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.222</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,14 @@ not refused: it works end to end, since <code>jscreen(lst$d)</code> and
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_registration_expression_stop</span><span class="op">(</span><span class="va">data_sub</span>, <span class="va">fn_name</span>, <span class="va">cl</span>, registering <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_registration_expression_stop</span><span class="op">(</span></span>
+<span>  <span class="va">data_sub</span>,</span>
+<span>  <span class="va">fn_name</span>,</span>
+<span>  <span class="va">cl</span>,</span>
+<span>  registering <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  noun <span class="op">=</span> <span class="st">"registration"</span>,</span>
+<span>  then <span class="op">=</span> <span class="st">"register"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -88,6 +95,16 @@ not refused: it works end to end, since <code>jscreen(lst$d)</code> and
 <dd><p>Logical; <code>FALSE</code> for a call that clears or
 removes.</p></dd>
 
+
+<dt id="arg-noun">noun<a class="anchor" aria-label="anchor" href="#arg-noun"></a></dt>
+<dd><p>Character; what is stored, in the singular, without an
+article (<code>"registration"</code>, <code>"jsubset filter"</code>,
+<code>"jcomplete setting"</code>).</p></dd>
+
+
+<dt id="arg-then">then<a class="anchor" aria-label="anchor" href="#arg-then"></a></dt>
+<dd><p>Character; the verb phrase after "then" in the second line.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -99,6 +116,12 @@ removes.</p></dd>
 <code>remove = TRUE</code>) is refused too, with the status call as its
 remedy: nothing is stored under an expression, and the registrations
 the user means are under whatever name the data frame has.</p>
+<p>The two stored settings take the same stop since Session 349 (the S341
+item; the lean Jeff okayed at S342): <code>jsubset(mk(), Age &gt; 30)</code>
+printed "jsubset activated for mk(): Age &gt; 30", a filter no later call
+reached unless it typed <code>mk()</code> again. <code>noun</code> and <code>then</code>
+carry their words: "a jsubset filter is stored under its data frame's
+name" / "Give the data frame a name first, then set it:".</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

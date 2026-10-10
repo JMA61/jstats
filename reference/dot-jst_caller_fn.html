@@ -17,7 +17,7 @@ jstats frame is on the stack."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.221</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.222</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,6 +59,17 @@ jstats frame is on the stack.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A function name string, or NULL.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>A frame counts only when its function belongs to the package – defined
+in the same top-level environment as this helper, the jstats namespace
+(AUDIT-015, Session 349). Before, any j-prefixed name did, so a user's
+own wrapper took the blame: <code>justify_data &lt;- function() jt(Y ~ X,
+d)</code> stopped "justify_data(): Y and X were not found ...", where the call
+to fix is <code><a href="jt.html">jt()</a></code>. When the master is sourced into the global
+environment (the older sandbox route) the package and the user share
+that environment, and the name alone decides, as it did.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

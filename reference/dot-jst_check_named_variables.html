@@ -55,7 +55,7 @@ jsubset() before its argument grammar runs.
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.221</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.222</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -120,8 +120,11 @@ Unnamed items pass through untouched. Called at every
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>The resolved data frame, or <code>NULL</code> when no frame is in
-hand (<code><a href="jsubset.html">jsubset()</a></code> calls before resolving one); then every named
-item is treated as a condition.</p></dd>
+hand; then every named item is treated as a condition.
+<code><a href="jsubset.html">jsubset()</a></code>, which calls before resolving its frame, passes the
+frame the call names or else the <code><a href="juse.html">juse()</a></code> default (Session 349),
+so that <code>quiet = TRUE</code> beside a condition is an unused input,
+not a condition typed with one <code>=</code>.</p></dd>
 
 
 <dt id="arg-fn-name">fn_name<a class="anchor" aria-label="anchor" href="#arg-fn-name"></a></dt>

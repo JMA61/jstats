@@ -13,7 +13,14 @@ A place (`lst$d`) is not refused: it works end to end, since
 ## Usage
 
 ``` r
-.jst_registration_expression_stop(data_sub, fn_name, cl, registering = TRUE)
+.jst_registration_expression_stop(
+  data_sub,
+  fn_name,
+  cl,
+  registering = TRUE,
+  noun = "registration",
+  then = "register"
+)
 ```
 
 ## Arguments
@@ -34,6 +41,15 @@ A place (`lst$d`) is not refused: it works end to end, since
 
   Logical; `FALSE` for a call that clears or removes.
 
+- noun:
+
+  Character; what is stored, in the singular, without an article
+  (`"registration"`, `"jsubset filter"`, `"jcomplete setting"`).
+
+- then:
+
+  Character; the verb phrase after "then" in the second line.
+
 ## Value
 
 Does not return; stops.
@@ -44,3 +60,10 @@ A call that clears or removes (`jdummy(mk(), NULL)`, `remove = TRUE`) is
 refused too, with the status call as its remedy: nothing is stored under
 an expression, and the registrations the user means are under whatever
 name the data frame has.
+
+The two stored settings take the same stop since Session 349 (the S341
+item; the lean Jeff okayed at S342): `jsubset(mk(), Age > 30)` printed
+"jsubset activated for mk(): Age \> 30", a filter no later call reached
+unless it typed `mk()` again. `noun` and `then` carry their words: "a
+jsubset filter is stored under its data frame's name" / "Give the data
+frame a name first, then set it:".

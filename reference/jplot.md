@@ -343,15 +343,27 @@ jplot(m, which = "fit", focal = Age, at = "mean")
 # Formula form (scatter and box)
 jplot(WellbeingScore ~ Income, community)               # scatter
 #> Scatterplot: WellbeingScore and Income
+#> 
+#> Analysis N: 97 (6 Excluded)
+#> 
 
 jplot(WellbeingScore ~ Income, community, line = "lm")  # + regression line
 #> Scatterplot: WellbeingScore and Income
+#> 
+#> Analysis N: 97 (6 Excluded)
+#> 
 
 jplot(WellbeingScore ~ Income, community, line = "lm", band = "see")
 #> Scatterplot: WellbeingScore and Income
+#> 
+#> Analysis N: 97 (6 Excluded)
+#> 
 
 jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 #> Scatterplot: WellbeingScore and Income by Volunteer
+#> 
+#> Analysis N: 97 (6 Excluded)
+#> 
 #> Ignoring unknown labels:
 #> • fill : "Volunteer"
 
@@ -360,21 +372,36 @@ jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 # variables otherwise enter numerically; jdummy() registration also works)
 jplot(WellbeingScore ~ Region, community, categorical = "Region")
 #> Boxplot: WellbeingScore and Region
+#> 
+#> Analysis N: 103
+#> 
 
 
 # Variable-list form (distributions and counts)
 jplot(community, Age)                      # histogram
 #> Histogram: Age
+#> 
+#> Analysis N: 103
+#> 
 
 jplot(data = community, Age)               # the same, data frame as data =
 #> Histogram: Age
+#> 
+#> Analysis N: 103
+#> 
 
 jplot(community, Region)                   # bar chart
 #> Bar Chart: Region
+#> 
+#> Analysis N: 103
+#> 
 
 jplot(community, Region, Volunteer,        # grouped bar chart
       categorical = c("Region", "Volunteer"))
 #> Grouped Bar Chart: Region and Volunteer
+#> 
+#> Analysis N: 103
+#> 
 
 
 # Using juse() default (omit the data frame in either form)
@@ -383,18 +410,30 @@ juse(community)
 jplot(WellbeingScore ~ Income)               # scatter
 #> Scatterplot: WellbeingScore and Income
 #> Using default data frame: community
+#> 
+#> Analysis N: 97 (6 Excluded)
+#> 
 
 jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
 #> Scatterplot: WellbeingScore and Income
 #> Using default data frame: community
+#> 
+#> Analysis N: 97 (6 Excluded)
+#> 
 
 jplot(Age)                                   # histogram
 #> Histogram: Age
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
 
 jplot(Region, Volunteer,                     # grouped bar chart
       categorical = c("Region", "Volunteer"))
 #> Grouped Bar Chart: Region and Volunteer
 #> Using default data frame: community
+#> 
+#> Analysis N: 103
+#> 
 
 ```

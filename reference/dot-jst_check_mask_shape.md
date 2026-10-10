@@ -29,7 +29,8 @@ table that added up (the Session 289 workstation reproduction).
   origin,
   data_name = NULL,
   named_frame = FALSE,
-  prior = FALSE
+  prior = FALSE,
+  data_names = NULL
 )
 ```
 
@@ -74,6 +75,12 @@ table that added up (the Session 289 workstation reproduction).
   Logical. For `"set"`: an earlier filter exists for the frame; the
   message says it is unchanged.
 
+- data_names:
+
+  Character or NULL. The variables of the frame the filter ran on; on a
+  one-row frame a single value passes only when the condition names one
+  of them.
+
 ## Value
 
 `invisible(NULL)` when the result is well-shaped; otherwise stops via
@@ -82,6 +89,13 @@ which supplies the "(): " prefix from the call stack (`jsubset` at set
 time, the analysis function otherwise).
 
 ## Details
+
+On a data frame of ONE row a single TRUE or FALSE is one for every row,
+and it passes when the condition names a variable of the frame (Session
+349, the S346 item): `jfreq(one, g, subset = y > 1)` was refused as "a
+single value (TRUE), not one TRUE or FALSE for every row". A condition
+that names no variable – `TRUE`, or a comparison of workspace values –
+is refused there as anywhere.
 
 Three origins share the check and differ only in wording:
 

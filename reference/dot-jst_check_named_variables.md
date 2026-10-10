@@ -47,10 +47,14 @@ and the name tells them apart (Session 290):
 
 - data:
 
-  The resolved data frame, or `NULL` when no frame is in hand
-  ([`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
-  calls before resolving one); then every named item is treated as a
-  condition.
+  The resolved data frame, or `NULL` when no frame is in hand; then
+  every named item is treated as a condition.
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md),
+  which calls before resolving its frame, passes the frame the call
+  names or else the
+  [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default
+  (Session 349), so that `quiet = TRUE` beside a condition is an unused
+  input, not a condition typed with one `=`.
 
 - fn_name:
 
