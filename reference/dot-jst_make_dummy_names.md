@@ -16,7 +16,6 @@ IVs.
   x,
   var_name,
   ref = "auto",
-  name.length.warn = 30L,
   max.categories = 20L,
   data_name = NULL
 )
@@ -41,11 +40,6 @@ IVs.
   otherwise the first category), `first`, `last`, a numeric code, or a
   character string matching a canonical label.
 
-- name.length.warn:
-
-  Integer. Warn if any final dummy name exceeds this many characters.
-  Default 30.
-
 - max.categories:
 
   Integer. Maximum number of input categories allowed; a variable with
@@ -68,7 +62,8 @@ codes themselves – what
 matches cases against for factor and character variables; Session 305),
 `ref_idx`, `ref_code`, `ref_label`, `non_ref_idx`, `notes` (character
 vector of informational messages), `warnings_msg` (character vector of
-warnings).
+warnings; empty since Session 347, when the one warning it carried was
+retired: see Step 7).
 
 ## Details
 

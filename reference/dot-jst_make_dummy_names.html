@@ -13,7 +13,7 @@ categorical = arguments and auto-detected categorical IVs."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.220</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,6 @@ registration and by <code><a href="jlm.html">jlm()</a></code> / <code><a href="j
 <span>  <span class="va">x</span>,</span>
 <span>  <span class="va">var_name</span>,</span>
 <span>  ref <span class="op">=</span> <span class="st">"auto"</span>,</span>
-<span>  name.length.warn <span class="op">=</span> <span class="fl">30L</span>,</span>
 <span>  max.categories <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span>  data_name <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -79,11 +78,6 @@ documentation in <code><a href="jdummy.html">jdummy()</a></code>; otherwise the 
 matching a canonical label.</p></dd>
 
 
-<dt id="arg-name-length-warn">name.length.warn<a class="anchor" aria-label="anchor" href="#arg-name-length-warn"></a></dt>
-<dd><p>Integer. Warn if any final dummy name exceeds
-this many characters. Default 30.</p></dd>
-
-
 <dt id="arg-max-categories">max.categories<a class="anchor" aria-label="anchor" href="#arg-max-categories"></a></dt>
 <dd><p>Integer. Maximum number of input categories allowed;
 a variable with more raises an error rather than building the dummy set.
@@ -107,7 +101,9 @@ themselves – what <code><a href="dot-jst_expand_one_dummy.html">.jst_expand_on
 against for factor and character variables; Session 305),
 <code>ref_idx</code>, <code>ref_code</code>, <code>ref_label</code>,
 <code>non_ref_idx</code>, <code>notes</code> (character vector of informational
-messages), <code>warnings_msg</code> (character vector of warnings).</p>
+messages), <code>warnings_msg</code> (character vector of warnings; empty
+since Session 347, when the one warning it carried was retired: see
+Step 7).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

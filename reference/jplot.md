@@ -172,7 +172,11 @@ jplot(x, which = "core", ...)
   variables are held when drawing the fitted line in `jst_lm` /
   `jst_logistic` methods. One of `zero` (default), `mean`, `mixed`
   (categorical at 0, interval at mean), or a named list
-  `list(Var1 = value, ...)`.
+  `list(Var1 = value, ...)`. A term computed from the focal variable
+  alone, or from it and variables held – a square, `I(x^2)`; a log,
+  `log(x + 1)` – is not held: it is computed from the focal variable at
+  each point of the line, so the line of a model with a squared term is
+  a curve.
 
 ## Value
 

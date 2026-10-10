@@ -11,7 +11,7 @@ them with appropriate sign characters."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.220</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -70,6 +70,15 @@ include. Default 3; additional terms are summarized as
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A character string of the formatted equation.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>The terms are named as the coefficient table names them (Session 347):
+without the backticks R puts around a computed term or a name with a
+space (<code>`I(x^2)`</code>, <code>`my var`</code>), and an interaction with
+<code>" * "</code> for R's <code>":"</code>. A dummy column keeps its name
+(<code>g_Mid</code>), which the line's "(line shown at g_Mid = 0, ...)" uses
+too.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

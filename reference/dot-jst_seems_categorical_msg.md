@@ -28,7 +28,7 @@ the model again, or name it in `categorical =` for this call.
 
 - v:
 
-  Character(1); the predictor's name.
+  Character; the predictor's name, or the names of several.
 
 - formula:
 
@@ -81,3 +81,11 @@ registered on, so the first route names it first (`mydata <- mk()`), as
 [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)'s
 reminder does since v0.9.217. Arguments of the call other than the
 formula and the data are not repeated.
+
+Several predictors that seem categorical get ONE warning (Session 347):
+each had a warning of its own, with its own
+[`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md) line
+and the same refit line repeated. Now the names are joined in the first
+line, one
+[`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md) call
+takes them all, and `categorical =` lists them.

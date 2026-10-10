@@ -29,3 +29,11 @@ appropriate sign characters.
 ## Value
 
 A character string of the formatted equation.
+
+## Details
+
+The terms are named as the coefficient table names them (Session 347):
+without the backticks R puts around a computed term or a name with a
+space (`` `I(x^2)` ``, `` `my var` ``), and an interaction with `" * "`
+for R's `":"`. A dummy column keeps its name (`g_Mid`), which the line's
+"(line shown at g_Mid = 0, ...)" uses too.

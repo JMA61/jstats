@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.219</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.220</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -207,7 +207,11 @@ x-axis for <code>jst_lm</code> / <code>jst_logistic</code> <code>fit</code> and
 independent variables are held when drawing the fitted line in
 <code>jst_lm</code> / <code>jst_logistic</code> methods. One of <code>zero</code>
 (default), <code>mean</code>, <code>mixed</code> (categorical at 0, interval
-at mean), or a named list <code>list(Var1 = value, ...)</code>.</p></dd>
+at mean), or a named list <code>list(Var1 = value, ...)</code>. A term
+computed from the focal variable alone, or from it and variables
+held – a square, <code>I(x^2)</code>; a log, <code>log(x + 1)</code> – is not
+held: it is computed from the focal variable at each point of the
+line, so the line of a model with a squared term is a curve.</p></dd>
 
 </dl></div>
     <div class="section level2">
