@@ -72,8 +72,13 @@
             "E:/00 R Projects/00_jstats_test_data/regression")
 }
 # What the last receive_all() learned, kept so that a call resumed with
-# from = "batteries" or "walks" can still report the earlier stages.
-.jdev_last <- new.env()
+# from = "batteries" or "walks" can still report the earlier stages. Its
+# parent is the empty environment, and it is read with inherits = FALSE
+# (S347): a lookup that missed here went on into the global environment,
+# where a red battery leaves its check() helper, and the report then got a
+# function in place of the R CMD check line ("argument 1 (type 'list')
+# cannot be handled by 'cat'").
+.jdev_last <- new.env(parent = emptyenv())
 
 # ---- internal helpers --------------------------------------------------------
 
@@ -637,7 +642,7 @@ receive_all <- function(file = "jstats_source.R", version = NULL,
       return(invisible(list(stage = "check", ok = FALSE)))
     }
   }
-  check_line <- get0("check", envir = .jdev_last,
+  check_line <- get0("check", envir = .jdev_last, inherits = FALSE,
                      ifnotfound = "R CMD check: not run in this call.")
 
   ## -- 2. the batteries --------------------------------------------------------
@@ -687,7 +692,7 @@ receive_all <- function(file = "jstats_source.R", version = NULL,
       return(invisible(list(stage = "batteries", ok = FALSE)))
     }
   }
-  bat_line <- get0("batteries", envir = .jdev_last,
+  bat_line <- get0("batteries", envir = .jdev_last, inherits = FALSE,
                    ifnotfound = "run_all.R: not run in this call.")
 
   ## -- 3. the walks ------------------------------------------------------------
