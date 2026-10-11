@@ -21,7 +21,7 @@ plain is FALSE."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,7 @@ before the remedy, or <code>NULL</code> when a convention is selected or
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_declare_gate_lead</span><span class="op">(</span><span class="va">fn</span>, n <span class="op">=</span> <span class="fl">1L</span>, plain <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_declare_gate_lead</span><span class="op">(</span><span class="va">fn</span>, n <span class="op">=</span> <span class="fl">1L</span>, plain <span class="op">=</span> <span class="cn">TRUE</span>, what <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -78,6 +78,12 @@ before the remedy, or <code>NULL</code> when a convention is selected or
 <dd><p>FALSE when the variable to declare on already carries
 declared missing values of either form: <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>
 follows the variable's own form there and meets no gate.</p></dd>
+
+
+<dt id="arg-what">what<a class="anchor" aria-label="anchor" href="#arg-what"></a></dt>
+<dd><p>Optional: what cannot be declared, in place of "the value"
+or "the values" – the load scan's block says "these codes" (Session
+352, ruling R15).</p></dd>
 
 </dl></div>
     <div class="section level2">

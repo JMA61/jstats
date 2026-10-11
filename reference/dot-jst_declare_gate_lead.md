@@ -13,7 +13,7 @@ a convention is selected or `plain` is FALSE.
 ## Usage
 
 ``` r
-.jst_declare_gate_lead(fn, n = 1L, plain = TRUE)
+.jst_declare_gate_lead(fn, n = 1L, plain = TRUE, what = NULL)
 ```
 
 ## Arguments
@@ -32,6 +32,12 @@ a convention is selected or `plain` is FALSE.
   values of either form:
   [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
   follows the variable's own form there and meets no gate.
+
+- what:
+
+  Optional: what cannot be declared, in place of "the value" or "the
+  values" – the load scan's block says "these codes" (Session 352,
+  ruling R15).
 
 ## Value
 

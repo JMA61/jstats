@@ -41,3 +41,12 @@ wrap their own prose ahead of this emitter (receive_package()'s
 structural gate refuses the file): only the emitter knows the real
 prefix and chrome, so only its reserve can be correct rather than
 guessed.
+
+The condition also carries the message as it was before wrapping, in a
+field named `raw` (Session 352). A caller that catches the error and
+sets its text inside a message of its own – jdeclare_missing()'s refusal
+on several variables, which nests each variable's refusal under its name
+– takes `raw`, so the outer emitter wraps the text once, at its new
+indent. Nested as caught, a line wrapped for the full width was indented
+and broken again mid-phrase. The error itself is unchanged: a
+simpleError with no call, as `stop(..., call. = FALSE)` makes.

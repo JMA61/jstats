@@ -15,7 +15,9 @@ reduction.
 .jst_jsave_sav_overcap_error_msg(
   overcap_info,
   data_name,
-  text_vars = character(0)
+  text_vars = character(0),
+  prose_name = data_name,
+  stem = data_name
 )
 ```
 
@@ -38,6 +40,18 @@ reduction.
   keep a text variable's declared missing values, so its "also keeping
   all the codes" would be false, and its jconvert() line stops on them
   (the S340 item; Jeff's lean, S351).
+
+- prose_name:
+
+  The data frame as the sentence names it; by default `data_name`.
+  jsave() gives the typed expression here when the lines name mydata
+  (Session 352).
+
+- stem:
+
+  The name the offered files take; by default `data_name`. Until Session
+  352 the data argument as typed, which for an expression gave a file
+  name that does not parse.
 
 ## Value
 

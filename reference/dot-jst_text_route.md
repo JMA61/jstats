@@ -18,7 +18,8 @@ reason (v0.9.214).
   to,
   text_vars,
   convert_rest = TRUE,
-  more_lines = FALSE
+  more_lines = FALSE,
+  rest_vars = NULL
 )
 ```
 
@@ -47,6 +48,12 @@ reason (v0.9.214).
   Logical: will the caller print a line after these calls (the
   joptions() rider)? Then the sentence says "the first line" even when
   there is one call.
+
+- rest_vars:
+
+  Optional: the variables the second call converts, as its vars =
+  (Session 352, jdeclare_missing()'s align line); NULL converts the
+  frame.
 
 ## Value
 

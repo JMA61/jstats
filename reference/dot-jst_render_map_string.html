@@ -25,7 +25,7 @@ typed."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,8 @@ typed.</p>
 <span>  <span class="va">parsed_map</span>,</span>
 <span>  lhs_render <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  targets_to_missing <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
-<span>  missing_as <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  missing_as <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  targets_as <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -98,6 +99,13 @@ render as the missing token instead of their value.</p></dd>
 <dd><p>Optional character. When supplied, token rules
 render as this text instead of the word missing (the cap error's
 declared-code swap).</p></dd>
+
+
+<dt id="arg-targets-as">targets_as<a class="anchor" aria-label="anchor" href="#arg-targets-as"></a></dt>
+<dd><p>Optional named character vector: a plain numeric
+target whose <code><a href="dot-jst_fmt_code.html">.jst_fmt_code()</a></code> form is a name renders as that
+element instead – a code sent to a marker the variable does not use
+(Session 352, the lines ruling R8 asked to run).</p></dd>
 
 </dl></div>
     <div class="section level2">

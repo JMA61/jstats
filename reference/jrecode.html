@@ -25,7 +25,7 @@ below for the canonical patterns under each convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -139,7 +139,14 @@ Stata or SAS convention the token always uses the first marker
 (<code>.a</code>, or <code>.A</code>), so a map that also assigns that marker
 itself stops rather than merge two missing categories onto one
 marker; the message offers the next free marker, or the same marker
-for both when that is what you mean.</p>
+for both when that is what you mean. When the variable already
+carries that marker – data from Stata often has its own <code>.a</code> –
+the recoded cases join it, and a note says so and gives the line that
+keeps them apart (the next free marker). Under every convention, a
+<code>labels = "missing=..."</code> that differs from the label the marker or
+code already has stops, since it would rename the cases already there:
+the message gives the line that keeps the two apart and the line that
+merges them on purpose, keeping the existing label.</p>
 <p>Examples:</p><ul><li><p><code>"1=1; 2=0"</code></p></li>
 <li><p><code>"1=1; 2,3=2; 4,5=3; else=NA"</code></p></li>
 <li><p><code>"1=1; 2=0; else=copy"</code></p></li>

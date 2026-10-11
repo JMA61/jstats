@@ -17,7 +17,8 @@ numbers, as typed.
   parsed_map,
   lhs_render = NULL,
   targets_to_missing = numeric(0),
-  missing_as = NULL
+  missing_as = NULL,
+  targets_as = NULL
 )
 ```
 
@@ -48,6 +49,14 @@ numbers, as typed.
 
   Optional character. When supplied, token rules render as this text
   instead of the word missing (the cap error's declared-code swap).
+
+- targets_as:
+
+  Optional named character vector: a plain numeric target whose
+  [`.jst_fmt_code()`](https://jma61.github.io/jstats/reference/dot-jst_fmt_code.md)
+  form is a name renders as that element instead – a code sent to a
+  marker the variable does not use (Session 352, the lines ruling R8
+  asked to run).
 
 ## Value
 

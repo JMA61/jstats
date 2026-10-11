@@ -19,7 +19,7 @@ are offered before the lossy jrecode() reduction."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,9 @@ are offered before the lossy jrecode() reduction.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_sav_overcap_error_msg</span><span class="op">(</span></span>
 <span>  <span class="va">overcap_info</span>,</span>
 <span>  <span class="va">data_name</span>,</span>
-<span>  text_vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span></span>
+<span>  text_vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
+<span>  prose_name <span class="op">=</span> <span class="va">data_name</span>,</span>
+<span>  stem <span class="op">=</span> <span class="va">data_name</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -83,6 +85,18 @@ are offered before the lossy jrecode() reduction.</p>
 .dta file cannot keep a text variable's declared missing values, so
 its "also keeping all the codes" would be false, and its jconvert()
 line stops on them (the S340 item; Jeff's lean, S351).</p></dd>
+
+
+<dt id="arg-prose-name">prose_name<a class="anchor" aria-label="anchor" href="#arg-prose-name"></a></dt>
+<dd><p>The data frame as the sentence names it; by default
+<code>data_name</code>. jsave() gives the typed expression here when the
+lines name mydata (Session 352).</p></dd>
+
+
+<dt id="arg-stem">stem<a class="anchor" aria-label="anchor" href="#arg-stem"></a></dt>
+<dd><p>The name the offered files take; by default
+<code>data_name</code>. Until Session 352 the data argument as typed,
+which for an expression gave a file name that does not parse.</p></dd>
 
 </dl></div>
     <div class="section level2">

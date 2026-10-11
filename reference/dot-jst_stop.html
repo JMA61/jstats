@@ -15,7 +15,7 @@ rather than erroring. Always signals with call. = FALSE.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,6 +82,14 @@ stop 8 plus the fn tag, warn 9, msg / msg_out 0. Builders must not wrap
 their own prose ahead of this emitter (receive_package()'s structural gate
 refuses the file): only the emitter knows the real prefix and chrome, so
 only its reserve can be correct rather than guessed.</p>
+<p>The condition also carries the message as it was before wrapping, in a
+field named <code>raw</code> (Session 352). A caller that catches the error and
+sets its text inside a message of its own – jdeclare_missing()'s refusal
+on several variables, which nests each variable's refusal under its
+name – takes <code>raw</code>, so the outer emitter wraps the text once, at
+its new indent. Nested as caught, a line wrapped for the full width was
+indented and broken again mid-phrase. The error itself is unchanged: a
+simpleError with no call, as <code>stop(..., call. = FALSE)</code> makes.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
