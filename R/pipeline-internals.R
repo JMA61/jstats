@@ -2073,7 +2073,8 @@
 #' Recipes echo the caller's actual data-frame name, variables, and
 #' range bounds, in the data, variable(s), named-options teaching form
 #' with flat \code{modify = TRUE}; runnable lines are bare Rule L lines
-#' (2-space indent, never width-wrapped). Prose is Rule U wrapped;
+#' (2-space indent, never prose-wrapped; one wider than the message is laid
+#' out by \code{.jst_layout_call()}, ruling R5). Prose is Rule U wrapped;
 #' menu consequence lines wrap at their own indent via
 #' \code{.jst_wrap_indent()}.
 #'

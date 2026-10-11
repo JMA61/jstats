@@ -29,8 +29,8 @@ template's \code{...}.
 \description{
 The text that stands for a call's variables in the durability note's two
 lines, each of which ends in the template's own \code{...} and is never
-wrapped (voice Rule L). A call on many variables once put every name on
-both lines: 52 names made two lines of some 1,300 characters (the S298
+prose-wrapped (voice Rule L). A call on many variables once put every
+name on both lines: 52 names made two lines of some 1,300 characters (the S298
 item, with S292 site 1; Session 339). Three forms, the first that
 applies: \code{vars =} as the call typed it, when the call gave it and
 it fits the line; every name, when there are three or fewer and they fit;

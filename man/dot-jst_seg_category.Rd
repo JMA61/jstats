@@ -24,7 +24,10 @@ rendered such lines at 97 and 81 characters.
 \details{
 \describe{
 \item{pass}{Byte-identical. Blank lines, anything already fitting, Rule L
-runnable command lines, Rule V menu options, and column-aligned layout.}
+runnable command lines, Rule V menu options, and column-aligned layout.
+(A runnable line wider than the message is laid out by
+\code{.jst_layout_call()} before it reaches this classifier, Session
+353; one the layout cannot read as a call passes whole.)}
 \item{prose}{Wrapped by \code{.jst_wrap_prose()} at the full width.}
 \item{indent}{Wrapped by \code{.jst_wrap_indent()} at its own indent, so
 every continuation line keeps the indent it started with.}

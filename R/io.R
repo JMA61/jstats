@@ -2333,14 +2333,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (!is.null(ex_route)) {
         .jst_msg_out("\nTo recode one variable's codes to markers it does ",
                      "not use:")
-        cat(ex_route, "\n", sep = "")
+        # S353: the offered lines go through the stdout emitter, as the
+        # prose around them does, so a line wider than the message gets
+        # ruling R5's layout; a bare cat() printed it whole.
+        .jst_msg_out(ex_route)
         if (identical(ex_src, "suspected")) {
           .jst_msg_out("To recode and label them in one call, replacing ",
                        "the placeholder names:")
-          cat(.jst_marker_recode_line(
-                obj_name, ex_var, ex_codes, ex_clash$conv, ex_clash$tags,
-                labels = paste0("label", seq_along(ex_codes))),
-              "\n", sep = "")
+          .jst_msg_out(.jst_marker_recode_line(
+            obj_name, ex_var, ex_codes, ex_clash$conv, ex_clash$tags,
+            labels = paste0("label", seq_along(ex_codes))))
         }
       } else {
         # S352 (ruling R15; Jeff, S347: "that's what I want"): with no
@@ -2361,8 +2363,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         } else {
           .jst_msg_out("\nTo declare one variable's codes as missing:")
         }
-        cat(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)\n",
-                    obj_name, ex_var, codes_str))
+        .jst_msg_out(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)",
+                             obj_name, ex_var, codes_str))
         # For a suspected (unlabelled) target, offer a commented example
         # that also attaches labels in the same call. Placeholder label
         # strings, not guessed meanings -- the scan does not know what the
@@ -2374,8 +2376,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
           .jst_msg_out("To declare and label them in one call, replacing ",
                        "the placeholder names:")
-          cat(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)\n",
-                      obj_name, ex_var, lbl_str))
+          .jst_msg_out(sprintf(
+            "  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)",
+            obj_name, ex_var, lbl_str))
         }
       }
     }
@@ -2500,20 +2503,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param more_lines Logical: will the caller print a line after these
 #'   calls (the joptions() rider)? Then the sentence says "the first line"
 #'   even when there is one call.
-#' @param rest_vars Optional: the variables the second call converts, as
-#'   its vars = (Session 352, jdeclare_missing()'s align line); NULL
-#'   converts the frame.
 #' @return A list: \code{calls}, the indented call lines; \code{note}, the
 #'   sentence.
 #' @keywords internal
 .jst_text_route <- function(data_name, to, text_vars, convert_rest = TRUE,
-                            more_lines = FALSE, rest_vars = NULL) {
+                            more_lines = FALSE) {
   n <- length(text_vars)
   base_line <- paste0("  jconvert(", data_name, ", to = \"baseR\", vars = ",
                       .jst_names_arg(text_vars), ", modify = TRUE)")
   conv_line <- paste0("  jconvert(", data_name, ", to = \"", to, "\"",
-                      if (length(rest_vars) > 0L) paste0(
-                        ", vars = ", .jst_names_arg(rest_vars)),
                       ", modify = TRUE)")
   list(
     calls = if (isTRUE(convert_rest)) c(base_line, conv_line) else base_line,

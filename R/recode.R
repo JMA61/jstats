@@ -3315,11 +3315,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   }
 
   # Assign-or-lose reminder (standard + full): jrecode() returns the recoded
-  # values invisibly, so an unassigned top-level call silently drops them. The
-  # leading blank line keeps it clear of any label note above (Rule F).
+  # values invisibly, so an unassigned top-level call silently drops them.
+  # Rule F: a blank line before it when a note has printed above it, none
+  # when it is the call's only output (Session 353; the S352 item).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
     .jst_msg(.jst_assign_reminder("jrecode", .jst_data_name, data_kind,
-                                  data_typed, "recode"))
+                                  data_typed, "recode",
+                                  lead = notes_before))
   }
 
   # The rebuilds above (haven::labelled_spss(), labelled::labelled(), and
@@ -3640,74 +3642,36 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' Builds the prefilled, non-destructive jencode() call that
 #' \code{jencode()}'s notes offer as a remedy: Rule G's R-suffix target,
 #' the data name from the user's own call, and the map string filled in
-#' from the column's own words, so the line runs as pasted. The call is
-#' emitted on one line when it fits the 76-column message width, and
-#' otherwise breaks after the variable with the map string continuing
-#' under its own opening quote. Every continuation still parses, because
-#' \code{.jst_parse_text_map()} trims each rule. The rules are separated
-#' at the semicolons OUTSIDE quoted words, by \code{.jst_split_unquoted()}
-#' and before the quotes are escaped: until Session 343 a plain split cut
-#' a quoted word holding a semicolon across two lines, and the pasted word
-#' no longer matched the data (the S249 item).
+#' from the column's own words, so the line runs as pasted. Always ONE
+#' line: since Session 353 the layout of a call wider than the message is
+#' the wrapper layer's (\code{.jst_layout_call()}, ruling R5), which breaks
+#' it after the commas between arguments and after the semicolons between
+#' the map's rules, as it does every printed call. Until then this builder
+#' packed the map itself, hung under the parenthesis at a fixed 76
+#' columns, while a longer remedy built elsewhere ran on whole (the S255
+#' item).
+#'
+#' The map's double quotes are escaped (Session 249):
+#' \code{.jst_jencode_lhs_render()} re-quotes a word holding a semicolon,
+#' an equals sign or a comma with double quotes, and the map is itself a
+#' double-quoted string.
 #'
 #' @param data_name Character. The data frame's name in the user's call.
 #' @param var_name Character. The variable being encoded.
 #' @param rules_text Character. The map string's contents, without the
 #'   surrounding quotes.
-#' @param indent Character. Leading indent for the first line.
+#' @param indent Character. Leading indent for the line.
 #'
-#' @return Character scalar; may contain newlines.
+#' @return Character scalar: one line.
 #'
 #' @keywords internal
 .jst_jencode_map_call <- function(data_name, var_name, rules_text,
                                   indent = "  ") {
-  # S249: .jst_jencode_lhs_render re-quotes any word containing ; = or ,
-  # with DOUBLE quotes, and this builder wraps the whole map in double
-  # quotes -- so an unescaped inner quote closed the string early and the
-  # suggested line did not parse. Escaping is the form that survives BOTH
-  # hazards at once: switching the outer quote to ' looks equivalent but
-  # breaks the moment the map also carries an apostrophe, and a map can
-  # easily hold both (an apostrophe word alongside a quoted phrase).
-  # Escape before any width measurement, so the packing below counts the
-  # characters the user will actually see. The rules are separated FIRST:
-  # the splitter knows a quoted word by the quote mark that opens it, and
-  # an escaped mark opens with a backslash.
-  pieces <- trimws(as.character(.jst_split_unquoted(rules_text, ";")))
-  pieces <- gsub("\"", "\\\"", pieces[nzchar(pieces)], fixed = TRUE)
+  # S249: escaping rather than switching the outer quote to ' -- a map can
+  # carry an apostrophe word and a quoted phrase at once.
   rules_text <- gsub("\"", "\\\"", rules_text, fixed = TRUE)
-  new_name <- paste0(var_name, "R")
-  head_str <- paste0(indent, data_name, "$", new_name, " <- jencode(")
-  one_line <- paste0(head_str, data_name, ", ", var_name,
-                     ", map = \"", rules_text, "\")")
-  if (nchar(one_line) <= 76L) return(one_line)
-
-  cont      <- strrep(" ", nchar(head_str))
-  str_cont  <- strrep(" ", nchar(cont) + 6L)
-  line1     <- paste0(head_str, data_name, ", ", var_name, ",")
-
-  # Pack the rules across continuation lines, keeping each within the
-  # message width. The separator stays on the line it ends.
-  lines   <- character(0)
-  current <- paste0(cont, "map = \"")
-  first   <- TRUE
-  for (i in seq_along(pieces)) {
-    sep      <- if (i < length(pieces)) ";" else ""
-    addition <- paste0(if (first) "" else " ", pieces[i], sep)
-    # The last rule is followed by the closing quote and parenthesis, which
-    # count toward its line (S345). Without them a last rule that only
-    # just fit made a line of 77 or 78, and the emitter's wrapper broke it
-    # again at an indent of its own.
-    closing  <- if (i == length(pieces)) 2L else 0L
-    if (!first && nchar(current) + nchar(addition) + closing > 76L) {
-      lines   <- c(lines, current)
-      current <- paste0(str_cont, pieces[i], sep)
-    } else {
-      current <- paste0(current, addition)
-    }
-    first <- FALSE
-  }
-  lines <- c(lines, paste0(current, "\")"))
-  paste(c(line1, lines), collapse = "\n")
+  paste0(indent, data_name, "$", var_name, "R <- jencode(", data_name, ", ",
+         var_name, ", map = \"", rules_text, "\")")
 }
 
 
@@ -4069,6 +4033,20 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   new_num        <- rep(NA_real_, length(txt))
   val_labels_out <- c()
   msgs           <- character(0)   # emitted in order at the end
+
+  # Advisory notes print where they arise, at the full level only. Voice
+  # Rule F (Session 353): a blank line between notes and none before the
+  # first, so whether one has printed is kept here, for the next advisory,
+  # the notes block and the assign-or-lose reminder. Until S353 an advisory
+  # was glued to the note after it, and the reminder always opened blank.
+  adv_noted <- FALSE
+  .adv_note <- function(...) {
+    if (identical(getOption(".jst_output_level", "standard"), "full")) {
+      .jst_msg(if (adv_noted) "\n" else "", ...)
+      adv_noted <<- TRUE
+    }
+    invisible(NULL)
+  }
 
   # Missing-token state (Decision 14; set by map mode, read at the
   # result build). jencode's column is fresh, so the token has no
@@ -4466,7 +4444,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     absent_raised <- !is.null(absent_note) &&
       isTRUE(parsed_map$else_explicit) && length(unmapped) > 0
     if (!is.null(absent_note) && !absent_raised) {
-      .jst_advisory_note(absent_note)
+      .adv_note(absent_note)
     }
 
     # Strict default: an unhandled word or blank is an error, not a silent
@@ -4802,7 +4780,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
       }
     }
     # Not reached by an else sweep after all: the note keeps its level.
-    if (isTRUE(absent_raised)) .jst_advisory_note(absent_note)
+    if (isTRUE(absent_raised)) .adv_note(absent_note)
 
     # --- NA rule (E11 semantics, transplanted) -----------------------------
     # Plain-NA cells of the ORIGINAL column only; at most one NA rule;
@@ -4811,7 +4789,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     if (!is.null(parsed_map$na_rule)) {
       n_plain_na <- sum(na_mask)
       if (n_plain_na == 0) {
-        .jst_advisory_note(paste0(
+        .adv_note(paste0(
           "Note: '", var_name, "' contained no NA values -- nothing was ",
           "encoded for the NA rule."))
       } else {
@@ -5038,11 +5016,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
         # map can carry an apostrophe word and a quoted phrase together,
         # and single outer quotes break on the apostrophe.
         #
-        # Deliberately NOT routed through .jst_jencode_map_call(): that
-        # builder packs long maps across lines by splitting on ";", which
-        # is quote-naive, so a quoted phrase holding a semicolon would be
-        # broken across the split and the pasted word would no longer
-        # match the data. These lines stay whole.
+        # Built whole, on one line each, like every printed call: a line
+        # wider than the message is laid out by the wrapper layer (ruling
+        # R5, Session 353), after the commas between arguments and the
+        # semicolons between rules, never inside a quoted word. (Until
+        # S343 .jst_jencode_map_call() split maps quote-naively, which is
+        # why these lines were built here; until S353 they ran on whole.)
         #
         # S303: see the jrecode twin. Here the S267 form was not merely
         # inert but an error -- the source is text, and a text column
@@ -5173,17 +5152,23 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 
   # --- Messages, in order ---------------------------------------------------
   # S267 (Rule F): one emission with blank-line joins -- per-entry
-  # .jst_msg() calls printed consecutive notes glued together.
-  if (length(msgs) > 0L) .jst_msg(paste(msgs, collapse = "\n\n"))
+  # .jst_msg() calls printed consecutive notes glued together. S353: a
+  # blank line above the block when an advisory note printed before it
+  # (at the full level they had been glued to it).
+  if (length(msgs) > 0L) {
+    .jst_msg(if (adv_noted) "\n" else "", paste(msgs, collapse = "\n\n"))
+  }
 
   # Assign-or-lose reminder (standard + full): jencode() returns the encoded
   # values invisibly, so an unassigned top-level call silently drops them.
-  # The leading blank line keeps it clear of any note above (Rule F).
+  # Rule F: a blank line before it when a note has printed above it, none
+  # when it is the call's only output (Session 353; the S352 item).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
     # S267: builder wraps stripped (the emitter wraps); first sentence
     # adopts the jdeclare_missing durability shape, twinned with jrecode's.
     .jst_msg(.jst_assign_reminder("jencode", .jst_data_name, data_kind,
-                                  data_typed, "encoding"))
+                                  data_typed, "encoding",
+                                  lead = adv_noted || length(msgs) > 0L))
   }
 
   return(invisible(result))

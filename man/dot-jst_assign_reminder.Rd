@@ -4,7 +4,7 @@
 \alias{.jst_assign_reminder}
 \title{Internal helper: the assign-or-lose reminder of jrecode() and jencode()}
 \usage{
-.jst_assign_reminder(fn_name, data_name, data_kind, typed, landed)
+.jst_assign_reminder(fn_name, data_name, data_kind, typed, landed, lead = TRUE)
 }
 \arguments{
 \item{fn_name}{Character(1); \code{"jrecode"} or \code{"jencode"}.}
@@ -19,10 +19,15 @@
 
 \item{landed}{Character(1); the noun of the closing check line
 (\code{"recode"}, \code{"encoding"}).}
+
+\item{lead}{TRUE when a note of the same call has printed above it:
+the reminder then opens with a blank line, and otherwise does not
+(voice Rule F: a blank line between notes, none before the first).
+Until Session 353 it always opened with one, so a call whose only
+output was the reminder printed a blank first line (the S352 item).}
 }
 \value{
-Character(1) with a leading newline (voice Rule F) and no
-trailing one.
+Character(1) with no trailing newline.
 }
 \description{
 Both functions return the new values and change nothing, so an

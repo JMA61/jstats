@@ -1719,19 +1719,24 @@ jai <- function(setup = NULL, path = NULL) {
 #'   \code{"expression"} kind's first line.
 #' @param landed Character(1); the noun of the closing check line
 #'   (\code{"recode"}, \code{"encoding"}).
-#' @return Character(1) with a leading newline (voice Rule F) and no
-#'   trailing one.
+#' @param lead TRUE when a note of the same call has printed above it:
+#'   the reminder then opens with a blank line, and otherwise does not
+#'   (voice Rule F: a blank line between notes, none before the first).
+#'   Until Session 353 it always opened with one, so a call whose only
+#'   output was the reminder printed a blank first line (the S352 item).
+#' @return Character(1) with no trailing newline.
 #' @keywords internal
 .jst_assign_reminder <- function(fn_name, data_name, data_kind, typed,
-                                 landed) {
+                                 landed, lead = TRUE) {
   paste0(
+    if (isTRUE(lead)) "\n" else "",
     if (identical(data_kind, "expression")) {
       paste0(
-        "\nNote: The result is kept only if you assign it.\n",
+        "Note: The result is kept only if you assign it.\n",
         "Name the data frame first, then assign the result to a variable ",
         "in it:\n")
     } else {
-      paste0("\nNote: This call changes ", data_name,
+      paste0("Note: This call changes ", data_name,
              " only if you assign the result:\n")
     },
     .jst_assign_lines(fn_name, data_name, data_kind, typed),
@@ -1904,8 +1909,8 @@ jai <- function(setup = NULL, path = NULL) {
 #'
 #' The text that stands for a call's variables in the durability note's two
 #' lines, each of which ends in the template's own \code{...} and is never
-#' wrapped (voice Rule L). A call on many variables once put every name on
-#' both lines: 52 names made two lines of some 1,300 characters (the S298
+#' prose-wrapped (voice Rule L). A call on many variables once put every
+#' name on both lines: 52 names made two lines of some 1,300 characters (the S298
 #' item, with S292 site 1; Session 339). Three forms, the first that
 #' applies: \code{vars =} as the call typed it, when the call gave it and
 #' it fits the line; every name, when there are three or fewer and they fit;
@@ -3148,7 +3153,10 @@ jai <- function(setup = NULL, path = NULL) {
 #'
 #' \describe{
 #'   \item{pass}{Byte-identical. Blank lines, anything already fitting, Rule L
-#'     runnable command lines, Rule V menu options, and column-aligned layout.}
+#'     runnable command lines, Rule V menu options, and column-aligned layout.
+#'     (A runnable line wider than the message is laid out by
+#'     \code{.jst_layout_call()} before it reaches this classifier, Session
+#'     353; one the layout cannot read as a call passes whole.)}
 #'   \item{prose}{Wrapped by \code{.jst_wrap_prose()} at the full width.}
 #'   \item{indent}{Wrapped by \code{.jst_wrap_indent()} at its own indent, so
 #'     every continuation line keeps the indent it started with.}
@@ -3288,6 +3296,410 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 
+#' Internal helper: read a line of R code as R reads it
+#'
+#' Walks the characters of one line of code, keeping the bracket depth and
+#' whether each character sits inside a string, as R's own reader does: a
+#' quotation mark (", ' or a backtick) opens a string that the same mark
+#' closes, a backslash inside a string escapes the character after it, and
+#' a # outside a string begins a comment. The layout of a printed call
+#' (ruling R5, Session 353) reads a line through it to find where the
+#' call's arguments begin and end, and whether a line leaves a call open.
+#'
+#' @param s Character(1): the text, with no newlines.
+#' @return A list: \code{ch}, the characters; \code{depth}, the bracket
+#'   depth at each character before it is read; \code{instr}, TRUE for a
+#'   character inside a string (its closing mark included); \code{open},
+#'   TRUE when the text ends inside a string or a bracket; and
+#'   \code{comment}, the position of a comment's #, or NA.
+#' @keywords internal
+.jst_code_scan <- function(s) {
+  ch    <- strsplit(s, "", fixed = TRUE)[[1L]]
+  n     <- length(ch)
+  depth <- integer(n)
+  instr <- logical(n)
+  d       <- 0L
+  q       <- ""
+  comment <- NA_integer_
+  k       <- 1L
+  while (k <= n) {
+    c1 <- ch[k]
+    depth[k] <- d
+    instr[k] <- nzchar(q)
+    if (nzchar(q)) {
+      if (c1 == "\\" && k < n) {
+        k <- k + 1L
+        depth[k] <- d
+        instr[k] <- TRUE
+      } else if (c1 == q) {
+        q <- ""
+      }
+    } else if (c1 %in% c("\"", "'", "`")) {
+      q <- c1
+    } else if (c1 == "#") {
+      comment <- k
+      break
+    } else if (c1 %in% c("(", "[", "{")) {
+      d <- d + 1L
+    } else if (c1 %in% c(")", "]", "}")) {
+      d <- d - 1L
+    }
+    k <- k + 1L
+  }
+  list(ch = ch, depth = depth, instr = instr,
+       open = d > 0L || nzchar(q), comment = comment)
+}
+
+
+#' Internal helper: does a message line have the shape of a printed call?
+#'
+#' The test \code{.jst_seg_category()} applies to a runnable line (voice
+#' Rule L): indented, and starting with a call or an assignment. Shape
+#' only; whether the line parses is the caller's question.
+#'
+#' @param line Character(1): one physical line.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_call_shape <- function(line) {
+  body <- sub("^ +", "", line)
+  nchar(body) < nchar(line) &&
+    (grepl("^[A-Za-z._][A-Za-z0-9._:]*\\(", body) ||
+       grepl("^[^ ]+ *<- ", body))
+}
+
+
+#' Internal helper: does text parse as exactly one R expression?
+#'
+#' @param body Character(1).
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_parses_once <- function(body) {
+  tryCatch(length(parse(text = body, keep.source = FALSE)) == 1L,
+           error = function(e) FALSE)
+}
+
+
+#' Internal helper: put a call a builder broke over lines back on one
+#'
+#' The layout of a long printed call is the wrapper layer's (ruling R5,
+#' Session 353), so a call that reaches it already broken over lines --
+#' by a builder that laid it out itself, or by an earlier pass of the
+#' wrapper -- is first put back on one line, and then laid out like any
+#' other. A line with the shape of a call that leaves a bracket or a
+#' string open is joined with the lines under it, each without its indent
+#' and after one space, until the call closes; the joined line is kept only
+#' when it parses as one expression, so prose that merely opens with a
+#' call and an open bracket is left as it was. A blank line ends the
+#' search. Joining also lets \code{.jst_place_lines()} see a broken call
+#' whole.
+#'
+#' @param lines Character vector: the physical lines of one message.
+#' @return Character vector, possibly shorter.
+#' @keywords internal
+.jst_join_calls <- function(lines) {
+  n   <- length(lines)
+  out <- character(0)
+  i   <- 1L
+  while (i <= n) {
+    ln <- lines[i]
+    if (.jst_call_shape(ln)) {
+      sc <- .jst_code_scan(ln)
+      if (sc$open && is.na(sc$comment)) {
+        acc <- ln
+        j   <- i
+        while (j < n && j - i < 40L && nzchar(trimws(lines[j + 1L]))) {
+          j   <- j + 1L
+          acc <- paste(acc, sub("^ +", "", lines[j]))
+          if (!.jst_code_scan(acc)$open) break
+        }
+        sc <- .jst_code_scan(acc)
+        if (!sc$open && is.na(sc$comment) &&
+            .jst_parses_once(sub("^ +", "", acc))) {
+          out <- c(out, acc)
+          i   <- j + 1L
+          next
+        }
+      }
+    }
+    out <- c(out, ln)
+    i   <- i + 1L
+  }
+  out
+}
+
+
+#' Internal helper: the rules of a map string, cut where a line may break
+#'
+#' Splits the CONTENTS of a map or labels string, as written in code --
+#' the text between its quotation marks, escapes included -- after each
+#' semicolon that separates two rules. A semicolon inside a quoted word
+#' (the word Not applicable; other, quoted in the map) does not separate
+#' rules, so the quoted words are found as the map parsers find them,
+#' \code{.jst_split_unquoted()}'s rule: a quotation mark opens a quoted
+#' word only at the start of a word. The pieces keep the text exactly as
+#' written, each but the last ending in its semicolon, the spaces after a
+#' semicolon dropped.
+#'
+#' @param content Character vector: the string's characters as written.
+#' @return Character vector of pieces, or \code{NULL} when the contents
+#'   cannot be read with certainty (a backslash escape other than an
+#'   escaped quotation mark, apostrophe or backslash; an unbalanced quoted
+#'   word; an empty rule).
+#' @keywords internal
+.jst_map_pieces <- function(content) {
+  # The value's characters, each with the position of its last character
+  # as written.
+  val <- character(0)
+  pos <- integer(0)
+  k   <- 1L
+  while (k <= length(content)) {
+    if (content[k] == "\\") {
+      if (k == length(content) ||
+          !(content[k + 1L] %in% c("\"", "'", "\\"))) return(NULL)
+      val <- c(val, content[k + 1L])
+      pos <- c(pos, k + 1L)
+      k   <- k + 2L
+    } else {
+      val <- c(val, content[k])
+      pos <- c(pos, k)
+      k   <- k + 1L
+    }
+  }
+  cuts <- integer(0)
+  cur  <- character(0)
+  q    <- ""
+  for (j in seq_along(val)) {
+    c1 <- val[j]
+    if (nzchar(q)) {
+      cur <- c(cur, c1)
+      if (c1 == q) q <- ""
+    } else if (c1 %in% c("'", "\"") &&
+               !nzchar(trimws(paste(cur, collapse = "")))) {
+      q   <- c1
+      cur <- c(cur, c1)
+    } else if (c1 == ";") {
+      cuts <- c(cuts, pos[j])
+      cur  <- character(0)
+    } else {
+      cur <- c(cur, c1)
+    }
+  }
+  if (nzchar(q)) return(NULL)
+  bounds <- c(0L, cuts, length(content))
+  pieces <- vapply(seq_len(length(bounds) - 1L), function(i) {
+    sub("^[ \t]+", "",
+        paste(content[seq_len(bounds[i + 1L] - bounds[i]) + bounds[i]],
+              collapse = ""))
+  }, character(1))
+  if (any(!nzchar(pieces) | pieces == ";")) return(NULL)
+  pieces
+}
+
+
+#' Internal helper: break one argument of a printed call that will not fit
+#'
+#' The second level of ruling R5's layout: an argument too long for a line
+#' of its own. A \code{map =} or \code{labels =} string breaks after the
+#' semicolons between its rules, the rules that follow set under its first
+#' rule; a call such as \code{c(...)} breaks after the commas between its
+#' elements, set under its first element. Anything else -- a long name, a
+#' formula, a string of another kind -- is kept whole on its line, past
+#' the width: a call is never shortened.
+#'
+#' @param arg Character(1): the argument as written.
+#' @param tail Character(1): what follows it, "," or ")".
+#' @param ind Character(1): what its first line holds before it -- the
+#'   indent of a continuation line, or the call's opening for the first
+#'   argument.
+#' @param width The message width.
+#' @param hang Character(1) or NULL: the indent of its later lines. NULL
+#'   sets them under its first rule or element, which is a few columns in
+#'   from a continuation line's fixed indent. The first argument passes the
+#'   call's fixed indent instead, since it starts beside the call's name and
+#'   a line set under it would hang far right.
+#' @return Character vector: its lines.
+#' @keywords internal
+.jst_break_arg <- function(arg, tail, ind, width, hang = NULL) {
+  whole <- paste0(ind, arg, tail)
+  sc    <- .jst_code_scan(arg)
+  ch    <- sc$ch
+  dp    <- sc$depth
+  ins   <- sc$instr
+  n     <- length(ch)
+  if (n < 3L || sc$open || !is.na(sc$comment)) return(whole)
+
+  # Pack pieces after a fixed first part, each later line under the first
+  # piece; the closing text rides with the last piece.
+  pack <- function(first, pieces, closing, sep) {
+    if (is.null(hang)) hang <- strrep(" ", nchar(first))
+    lines <- character(0)
+    cur   <- paste0(first, pieces[1L])
+    for (p in seq_along(pieces)[-1L]) {
+      add <- paste0(pieces[p], if (p == length(pieces)) closing else "")
+      if (nchar(cur) + nchar(sep) + nchar(add) <= width) {
+        cur <- paste0(cur, sep, add)
+      } else {
+        lines <- c(lines, cur)
+        cur   <- paste0(hang, add)
+      }
+    }
+    c(lines, cur)
+  }
+
+  m <- regmatches(arg, regexec("^((map|labels) *= *)([\"'])", arg))[[1L]]
+  if (length(m)) {
+    at <- nchar(m[2L]) + 1L                  # the opening quotation mark
+    if (ch[n] == m[4L] && all(ins[(at + 1L):n])) {
+      pieces <- .jst_map_pieces(ch[(at + 1L):(n - 1L)])
+      if (length(pieces) > 1L) {
+        return(pack(paste0(ind, substr(arg, 1L, at)), pieces,
+                    paste0(m[4L], tail), " "))
+      }
+    }
+    return(whole)
+  }
+
+  m <- regmatches(arg, regexec(
+    "^(([A-Za-z.][A-Za-z0-9._]* *= *)?[A-Za-z.][A-Za-z0-9._:]*\\()", arg))[[1L]]
+  if (length(m)) {
+    at <- nchar(m[2L])                       # the opening parenthesis
+    if (at < n - 1L && ch[n] == ")" && !ins[n] &&
+        all(dp[(at + 1L):(n - 1L)] >= 1L)) {
+      inner <- (at + 1L):(n - 1L)
+      cuts  <- inner[!ins[inner] & dp[inner] == 1L & ch[inner] == ","]
+      bnd   <- c(at, cuts, n)
+      elems <- vapply(seq_len(length(bnd) - 1L), function(i) {
+        trimws(paste(ch[bnd[i] + seq_len(bnd[i + 1L] - bnd[i] - 1L)],
+                 collapse = ""))
+      }, character(1))
+      if (length(elems) > 1L && all(nzchar(elems))) {
+        elems[-length(elems)] <- paste0(elems[-length(elems)], ",")
+        return(pack(paste0(ind, substr(arg, 1L, at)), elems,
+                    paste0(")", tail), " "))
+      }
+    }
+  }
+  whole
+}
+
+
+#' Internal helper: lay out a printed call that is wider than the message
+#'
+#' Ruling R5 (Jeff, Session 345; built Session 353): every call the
+#' package prints for pasting has ONE layout.
+#' \enumerate{
+#'   \item Within the message width, one line.
+#'   \item Wider, broken where R allows: after a comma between the call's
+#'     arguments, each later line at a FIXED indent four spaces in from
+#'     the call's own -- not hung under the opening parenthesis, which a
+#'     long name pushes far right. As many arguments go on a line as fit.
+#'     An argument that will not fit on a line of its own breaks inside
+#'     (\code{.jst_break_arg()}): a map or labels string after its
+#'     semicolons, its rules set under the first, and a \code{c(...)}
+#'     after its commas.
+#'   \item Never left as one long line, never shortened with "...", never
+#'     broken by the prose wrapper: it runs as printed.
+#' }
+#' A map broken over lines still runs: the map parsers trim each rule,
+#' so the line break and the spaces after it are dropped with the space a
+#' one-line map has there.
+#'
+#' Called from \code{.jst_wrap_message()}, so it holds for every emitter
+#' and every function; until Session 353 \code{.jst_jencode_map_call()}
+#' packed its own maps, hung under the parenthesis at a fixed 76 columns,
+#' and every other call ran on past the width. A line it cannot read as
+#' one call -- two calls, a comment, a call with text after it -- is
+#' returned unchanged.
+#'
+#' @param line Character(1): one indented line holding one call, or an
+#'   assignment whose right side is a call or a subscript (the
+#'   \code{mydata <- d[rows, cols]} a message offers for an expression
+#'   given as the data, broken after the commas inside its brackets).
+#' @param width The message width for the line.
+#' @return Character(1), with newlines where it was broken.
+#' @keywords internal
+.jst_layout_call <- function(line, width) {
+  if (nchar(line) <= width || !.jst_call_shape(line)) return(line)
+  body <- sub("^ +", "", line)
+  ind  <- substr(line, 1L, nchar(line) - nchar(body))
+  if (!.jst_parses_once(body)) return(line)
+  sc <- .jst_code_scan(body)
+  if (sc$open || !is.na(sc$comment)) return(line)
+  ch  <- sc$ch
+  dp  <- sc$depth
+  ins <- sc$instr
+  n   <- length(ch)
+  top <- !ins & dp == 0L
+  # The call is the right side of an assignment, when there is one.
+  start <- 1L
+  arrow <- which(top[-n] & ch[-n] == "<" & ch[-1L] == "-")
+  if (length(arrow)) start <- arrow[1L] + 2L
+  # A call -- fn(...) -- or a subscript -- d[rows, cols], the frame an
+  # expression names when a message offers "mydata <- d[...]".
+  open <- which(top & ch %in% c("(", "[") & seq_len(n) > start)
+  if (!length(open) || open[1L] <= start) return(line)
+  open   <- open[1L]
+  closer <- if (ch[open] == "(") ")" else "]"
+  fname  <- trimws(paste(ch[start:(open - 1L)], collapse = ""))
+  if (closer == ")" && !grepl("^[A-Za-z.][A-Za-z0-9._:]*$", fname)) {
+    return(line)
+  }
+  if (closer == "]" && (!grepl("^[A-Za-z.][A-Za-z0-9._$@]*$", fname) ||
+                        (open < n && ch[open + 1L] == "["))) {
+    return(line)
+  }
+  close <- which(!ins & ch == closer & dp == 1L & seq_len(n) > open)
+  if (!length(close)) return(line)
+  close <- close[1L]
+  if (close < n &&
+      nzchar(trimws(paste(ch[(close + 1L):n], collapse = "")))) {
+    return(line)
+  }
+  if (close == open + 1L) return(line)
+  inner <- (open + 1L):(close - 1L)
+  cuts  <- inner[!ins[inner] & dp[inner] == 1L & ch[inner] == ","]
+  bnd   <- c(open, cuts, close)
+  args  <- vapply(seq_len(length(bnd) - 1L), function(i) {
+    trimws(paste(ch[bnd[i] + seq_len(bnd[i + 1L] - bnd[i] - 1L)],
+                 collapse = ""))
+  }, character(1))
+  # An empty argument is R only in a subscript (d[, cols]).
+  if (closer == ")" && !all(nzchar(args))) return(line)
+  if (!nzchar(args[length(args)])) return(line)
+
+  cont <- paste0(ind, "    ")
+  name <- paste0(ind, paste(ch[seq_len(open)], collapse = ""))
+  out  <- character(0)
+  # The first argument stays beside the call's name; only one too long for
+  # that line is broken inside (a call of one long c() or map), its later
+  # lines at the call's fixed indent rather than under the argument.
+  tail1 <- if (length(args) > 1L) "," else closer
+  cur   <- paste0(name, args[1L], tail1)
+  if (nchar(cur) > width) {
+    br  <- .jst_break_arg(args[1L], tail1, name, width, hang = cont)
+    out <- br[-length(br)]
+    cur <- br[length(br)]
+  }
+  for (k in seq_along(args)[-1L]) {
+    tail  <- if (k < length(args)) "," else closer
+    piece <- paste0(args[k], tail)
+    if (nchar(cur) + 1L + nchar(piece) <= width) {
+      cur <- paste0(cur, " ", piece)
+      next
+    }
+    out <- c(out, cur)
+    if (nchar(cont) + nchar(piece) <= width) {
+      cur <- paste0(cont, piece)
+      next
+    }
+    br  <- .jst_break_arg(args[k], tail, cont, width)
+    out <- c(out, br[-length(br)])
+    cur <- br[length(br)]
+  }
+  paste(c(out, cur), collapse = "\n")
+}
+
+
 #' Internal helper: width-wrap a whole multi-line runtime message
 #'
 #' Applies \code{.jst_seg_category()} line by line and wraps each line the way
@@ -3300,7 +3712,11 @@ jai <- function(setup = NULL, path = NULL) {
 #'
 #' A line that offers \code{modify = TRUE} on a place is first given the
 #' assignment form (\code{.jst_place_lines()}, Session 345), here because
-#' every emitter passes through this function.
+#' every emitter passes through this function. Before that, a call a
+#' builder broke over lines is put back on one (\code{.jst_join_calls()});
+#' and a printed call wider than the message is laid out in the one house
+#' form (\code{.jst_layout_call()}, ruling R5, Session 353) rather than
+#' passed whole.
 #'
 #' @param text Character scalar, possibly containing newlines.
 #' @param width Target line width. Defaults to the resolved
@@ -3313,11 +3729,22 @@ jai <- function(setup = NULL, path = NULL) {
                               reserve = 0L) {
   lines <- strsplit(text, "\n", fixed = TRUE)[[1]]
   if (length(lines) == 0L) return(text)
+  lines <- .jst_join_calls(lines)
   lines <- .jst_place_lines(lines)
   out <- character(length(lines))
   for (i in seq_along(lines)) {
     ln  <- lines[i]
     res <- if (i == 1L) reserve else 0L
+    # A printed call wider than the line: ruling R5's layout (Session 353).
+    # A line the layout cannot read as one call comes back unchanged and
+    # goes on to the classifier, which passes it whole.
+    if (nchar(ln) > width - res && .jst_call_shape(ln)) {
+      lay <- .jst_layout_call(ln, width - res)
+      if (!identical(lay, ln)) {
+        out[i] <- lay
+        next
+      }
+    }
     switch(.jst_seg_category(ln, width = width - res),
       pass   = { out[i] <- ln },
       prose  = { out[i] <- .jst_wrap_prose(ln, width = width, reserve = res) },

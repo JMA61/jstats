@@ -29,6 +29,10 @@ emitter knows it, a builder can only guess.
 
 A line that offers \code{modify = TRUE} on a place is first given the
 assignment form (\code{.jst_place_lines()}, Session 345), here because
-every emitter passes through this function.
+every emitter passes through this function. Before that, a call a
+builder broke over lines is put back on one (\code{.jst_join_calls()});
+and a printed call wider than the message is laid out in the one house
+form (\code{.jst_layout_call()}, ruling R5, Session 353) rather than
+passed whole.
 }
 \keyword{internal}

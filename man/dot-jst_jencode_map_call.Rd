@@ -14,23 +14,28 @@
 \item{rules_text}{Character. The map string's contents, without the
 surrounding quotes.}
 
-\item{indent}{Character. Leading indent for the first line.}
+\item{indent}{Character. Leading indent for the line.}
 }
 \value{
-Character scalar; may contain newlines.
+Character scalar: one line.
 }
 \description{
 Builds the prefilled, non-destructive jencode() call that
 \code{jencode()}'s notes offer as a remedy: Rule G's R-suffix target,
 the data name from the user's own call, and the map string filled in
-from the column's own words, so the line runs as pasted. The call is
-emitted on one line when it fits the 76-column message width, and
-otherwise breaks after the variable with the map string continuing
-under its own opening quote. Every continuation still parses, because
-\code{.jst_parse_text_map()} trims each rule. The rules are separated
-at the semicolons OUTSIDE quoted words, by \code{.jst_split_unquoted()}
-and before the quotes are escaped: until Session 343 a plain split cut
-a quoted word holding a semicolon across two lines, and the pasted word
-no longer matched the data (the S249 item).
+from the column's own words, so the line runs as pasted. Always ONE
+line: since Session 353 the layout of a call wider than the message is
+the wrapper layer's (\code{.jst_layout_call()}, ruling R5), which breaks
+it after the commas between arguments and after the semicolons between
+the map's rules, as it does every printed call. Until then this builder
+packed the map itself, hung under the parenthesis at a fixed 76
+columns, while a longer remedy built elsewhere ran on whole (the S255
+item).
+}
+\details{
+The map's double quotes are escaped (Session 249):
+\code{.jst_jencode_lhs_render()} re-quotes a word holding a semicolon,
+an equals sign or a comma with double quotes, and the map is itself a
+double-quoted string.
 }
 \keyword{internal}
