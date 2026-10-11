@@ -104,7 +104,9 @@ To clear a previously-set folder back to this default, pass
 \code{data.dir = NULL} or \code{data.dir = ""} (an empty string;
 see Call patterns). Filenames containing a directory
 separator (a forward slash, or a backslash on Windows) bypass this
-setting and are taken literally.}
+setting and are taken literally. Write the folder with forward
+slashes: a folder typed with single backslashes, which R reads as
+special characters, stops the call with nothing set.}
 \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
 \code{\link{jcorr}} when three or more variables are correlated:

@@ -123,7 +123,18 @@ extension). Use the \code{name} argument to specify a different name.
 \strong{File paths:}
 Use forward slashes (\code{/}) in file paths. If you copy a path from
 Windows File Explorer, replace the backslashes with forward slashes.
-R does not accept single backslashes in file paths.
+R does not accept single backslashes in file paths: inside quoted text
+it reads a backslash and the letter after it as one special character
+(a backslash before t is a tab), so the path that arrives is not the
+one typed. \code{jload()} stops on such a path and shows it written
+with forward slashes.
+
+\strong{CSV files:}
+A CSV file with one column keeps its empty lines: each is a case whose
+one cell is empty, which is how a missing value is written there. In a
+file with two or more columns an empty line is not a case. An empty
+cell in a text variable is read as blank text, never as missing (see
+\code{\link{jsave}}).
 
 \strong{File search order:}
 \enumerate{

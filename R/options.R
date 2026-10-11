@@ -925,7 +925,9 @@ joutput <- function(level, effect.size = NULL,
 #'     \code{data.dir = NULL} or \code{data.dir = ""} (an empty string;
 #'     see Call patterns). Filenames containing a directory
 #'     separator (a forward slash, or a backslash on Windows) bypass this
-#'     setting and are taken literally.}
+#'     setting and are taken literally. Write the folder with forward
+#'     slashes: a folder typed with single backslashes, which R reads as
+#'     special characters, stops the call with nothing set.}
 #'   \item{corr.layout}{Character, length 1. One of \code{"wide"} or
 #'     \code{"stacked"}. Default: \code{"wide"}. The default cell layout for
 #'     \code{\link{jcorr}} when three or more variables are correlated:
@@ -1233,6 +1235,9 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
            'back to the working directory, use data.dir = NULL (no quotes) ',
            'or data.dir = "" (empty quotes).')
     }
+    # A folder typed with single backslashes (S343; Session 351): stopped
+    # before anything is set or created, as jload() and jsave() stop it.
+    .jst_check_path_chars(data.dir, what = "folder")
   }
   if (cl_supplied && !is.null(corr.layout)) {
     if (!is.character(corr.layout) ||

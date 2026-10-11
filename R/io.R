@@ -90,7 +90,18 @@
 #' \strong{File paths:}
 #' Use forward slashes (\code{/}) in file paths. If you copy a path from
 #' Windows File Explorer, replace the backslashes with forward slashes.
-#' R does not accept single backslashes in file paths.
+#' R does not accept single backslashes in file paths: inside quoted text
+#' it reads a backslash and the letter after it as one special character
+#' (a backslash before t is a tab), so the path that arrives is not the
+#' one typed. \code{jload()} stops on such a path and shows it written
+#' with forward slashes.
+#'
+#' \strong{CSV files:}
+#' A CSV file with one column keeps its empty lines: each is a case whose
+#' one cell is empty, which is how a missing value is written there. In a
+#' file with two or more columns an empty line is not a case. An empty
+#' cell in a text variable is read as blank text, never as missing (see
+#' \code{\link{jsave}}).
 #'
 #' \strong{File search order:}
 #' \enumerate{
@@ -234,9 +245,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # Rule F: consecutive load-time notes are separated by a blank line so
   # they do not run together. The "Loaded ..." summary is a status line,
-  # not a note, and is not spaced this way. say_note() wraps say() with
-  # the tracking; the UDM narrative (emitted directly via message())
-  # participates through the same .jst_note_fired flag.
+  # and since ruling R6 (S345; built Session 351) a blank line sets it off
+  # from a note on either side. say_note() wraps say() with the tracking;
+  # the Loaded line and the UDM narrative (emitted directly via message())
+  # take part through the same .jst_note_fired flag.
   .jst_note_fired <- FALSE
   say_note <- function(...) {
     if (.jst_note_fired) say("")
@@ -245,10 +257,30 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- Validate file argument ------------------------------------------------
+  # What was given is read before the generic stop (Session 351, Fix Slate
+  # 6). A name typed without its quotes, jload(mydata.sav), stopped on R's
+  # own "object 'mydata.sav' not found" when the test below forced it; a
+  # data frame, jload(community), and an expression that came out empty,
+  # jload(system.file(...)) finding no file, both got "Provide a filename".
+  # The argument is forced once, here, so an expression is not evaluated
+  # twice.
+  if (!missing(file)) {
+    file_sub <- substitute(file)
+    if (is.symbol(file_sub) &&
+        !exists(as.character(file_sub), envir = parent.frame())) {
+      .jst_stop(as.character(file_sub), " is not in quotes.\n",
+                "A file name goes in quotes:\n",
+                "  jload(\"", as.character(file_sub), "\")")
+    }
+    .jst_jload_file_value(file_sub, file)
+  }
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
     .jst_stop("Provide a filename, e.g. jload(\"mydata.sav\")")
   }
+  # A path typed with single backslashes (S343, Jeff's decision; built
+  # S351): R made "\t" and "\n" a tab and a new line before jload() saw it.
+  .jst_check_path_chars(file)
 
   # --- Determine if file has a directory component ---------------------------
   has_dir <- grepl("[/\\\\]", file)  # forward slash or Windows-native backslash
@@ -263,7 +295,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Handle .RData/.rda redirect -------------------------------------------
   if (ext %in% c("rdata", "rda")) {
     .jst_stop(
-      ".RData files contain multiple named objects. ",
+      # "can contain" (Session 351, the S219 item's finding 7): an .RData
+      # file MAY hold several objects -- community.rda holds one.
+      ".RData files can contain multiple named objects. ",
       # Slash-swap for the same reason as the leading-digit recipe:
       # the echoed call must paste back into R.
       "Use load(\"", gsub("\\", "/", file, fixed = TRUE),
@@ -404,11 +438,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     obj_name <- tools::file_path_sans_ext(basename(file))
   }
 
-  # Check for leading digit
+  # Check for leading digit. The rule is about the DATA FRAME's name
+  # (Session 351, the Session 154 item's part 3): "variable names" read as
+  # columns to the users this message meets. A name given with name = is
+  # the name that starts with the digit, not the file's.
   if (grepl("^[0-9]", obj_name)) {
     .jst_stop(
-      "The filename '", basename(file), "' starts with a number. ",
-      "R does not allow variable names to start with a digit.\n",
+      if (is.null(name)) {
+        paste0("The filename '", basename(file), "' starts with a number.\n")
+      } else {
+        paste0("The name '", name, "' starts with a number.\n")
+      },
+      "R does not allow a data frame's name to start with a digit.\n",
       "Provide a name, e.g.:\n",
       # Slash-swap, not normalizePath: a bare data.dir-resolved name
       # must stay bare so the rerun resolves the same way; only the
@@ -499,7 +540,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                dta      = haven::read_dta(resolved_path),
                sas7bdat = haven::read_sas(resolved_path),
                xpt      = haven::read_xpt(resolved_path),
-               csv      = utils::read.csv(resolved_path, stringsAsFactors = FALSE),
+               # A one-column file keeps its empty lines (Session 351, the
+               # S345 item): each is a case whose one cell is empty -- how
+               # jsave(), write.csv(na = "") and Excel all write a missing
+               # cell there -- and read.csv() skipped them, so 8 cases saved
+               # came back as 6. A file of two or more columns is read as
+               # before: an empty line in it is not a case.
+               csv      = utils::read.csv(resolved_path, stringsAsFactors = FALSE,
+                                          blank.lines.skip =
+                                            !.jst_csv_one_column(resolved_path)),
                rds      = readRDS(resolved_path),
                xlsx     = ,
                xls      = {
@@ -582,7 +631,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # Printed BEFORE the UDM narrative (S227, E17 reorder): the load
   # confirmation leads, and the narrative reads as detail under it. The
   # object is already in place -- the environment assign happened above.
-  # A status line, not a note: no Rule F spacing (see say_note above).
+  # A status line, set off by a blank line from a note on either side
+  # (ruling R6, Jeff, S345; built Session 351): the narrative sat directly
+  # on it. Under quiet = TRUE nothing the flag spaces prints, so it is set
+  # whatever quiet is (a guard on it was dead code: the S351 mutant round).
+  if (.jst_note_fired) say("")
   if (from_package) {
     say("Loaded the jstats example dataset '", file, "'.")
   } else {
@@ -595,6 +648,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (ncol(df) == 1L) " variable)" else " variables)"
     )
   }
+  .jst_note_fired <- TRUE
 
   # --- UDM narrative notification --------------------------------------------
   # Toggle resolution: per-call missing.notice arg > joutput global toggle >
@@ -606,8 +660,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # later showings use the compact form (inventory plus any convention
   # note, guidance lines dropped). An explicitly passed missing.notice = TRUE
   # forces the full form, giving a way to recall the guidance later in a
-  # session. The narrative follows the Loaded line directly with no blank
-  # line, so the pre-narrative Rule F spacer is gone by design.
+  # session. A blank line sets it off from the Loaded line above it (ruling
+  # R6, Session 351; from S227 to S350 it followed with none).
   if (length(udm_info) > 0) {
     notice_setting <- .jst_resolve_toggle("missing.notice", missing.notice)
     show_notice <- if (isTRUE(notice_setting)) {
@@ -621,6 +675,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     if (show_notice && !quiet) {
       compact <- isTRUE(getOption(".jst_missing_notice_shown", FALSE)) &&
         !isTRUE(missing.notice)
+      if (.jst_note_fired) say("")
       .jst_msg(.jst_format_udm_narrative(udm_info, preserve.declarations,
                                         data_name = obj_name,
                                         compact = compact))
@@ -753,6 +808,139 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     normalizePath(p, winslash = "/", mustWork = FALSE),
     error = function(e) p
   )
+}
+
+#' Internal: does a CSV file have exactly one column?
+#'
+#' Reads the header line alone -- the separator and quoting read.csv()
+#' uses, so a quoted name holding a comma is one field -- and counts its
+#' fields. jload() reads a one-column file without skipping empty lines
+#' (Session 351), since there an empty line is a case with an empty cell.
+#' A file that cannot be read this way answers FALSE, leaving read.csv()'s
+#' default and its own error.
+#' @param path Path to the file.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_csv_one_column <- function(path) {
+  hdr <- tryCatch(scan(path, what = "", sep = ",", quote = "\"",
+                       nlines = 1L, quiet = TRUE, na.strings = character(0)),
+                  error = function(e) character(0))
+  length(hdr) == 1L
+}
+
+#' Internal: stop on a path holding characters R made from single backslashes
+#'
+#' A Windows path typed or pasted into R with single backslashes reaches the
+#' function changed: inside quoted text R reads a backslash and the letter
+#' after it as one special character, so a backslash before t becomes a tab
+#' and one before n a new line, and the file is then reported not found
+#' under a name the user never typed (Session 343, Jeff's decision; built
+#' Session 351). An ILLEGAL escape, such as a backslash before the digit 5,
+#' stops R while it reads the line, before any function runs; that case is
+#' the guides' Troubleshooting entry, not this check's.
+#'
+#' A path holding a control character (below a space, or DEL) stops here,
+#' before the file is looked for. The message quotes the path as R holds
+#' it -- deparse() writes the characters back as the escapes that made
+#' them -- and, when every such character is one of the seven a backslash
+#' and a letter make (bell, backspace, tab, new line, vertical tab, form
+#' feed, carriage return), gives the same path with forward slashes;
+#' otherwise the instruction alone, since an octal or hex escape cannot be
+#' told from the character it made. A path with none passes untouched:
+#' spaces, a UNC path and doubled backslashes hold no control character.
+#' Callers: jload() and jsave() on their file argument, joptions() on
+#' data.dir.
+#'
+#' @param path The path argument as received.
+#' @param what The noun for it in the fix line, "path" or "folder".
+#' @return Invisibly NULL when the path holds no control character;
+#'   otherwise stops through .jst_stop().
+#' @keywords internal
+.jst_check_path_chars <- function(path, what = "path") {
+  if (!is.character(path) || length(path) != 1L || is.na(path) ||
+      !grepl("[\\x01-\\x1F\\x7F]", path, perl = TRUE)) {
+    return(invisible(NULL))
+  }
+  letter <- c("\a" = "a", "\b" = "b", "\t" = "t", "\n" = "n",
+              "\v" = "v", "\f" = "f", "\r" = "r")
+  word   <- c(a = "a bell", b = "a backspace", t = "a tab",
+              n = "a new line", v = "a vertical tab", f = "a form feed",
+              r = "a carriage return")
+  chars <- strsplit(path, "", fixed = TRUE)[[1L]]
+  ctrl  <- chars[grepl("[\\x01-\\x1F\\x7F]", chars, perl = TRUE)]
+  typed <- deparse(path)
+  n     <- length(ctrl)
+  if (all(ctrl %in% names(letter))) {
+    seen  <- unique(unname(letter[ctrl]))
+    kinds <- paste0("\\", seen, " as ", word[seen])
+    fixed <- chars
+    hit   <- fixed %in% names(letter)
+    fixed[hit] <- paste0("/", letter[fixed[hit]])
+    fixed <- gsub("\\", "/", paste(fixed, collapse = ""), fixed = TRUE)
+    .jst_stop("R read the ", .jst_plural(n, "single backslash", "single backslashes"),
+              " in ", typed, " as ",
+              .jst_plural(n, "a special character", "special characters"),
+              " (", paste(kinds, collapse = ", "), ").\n",
+              "Write the ", what, " with forward slashes:\n",
+              "  ", deparse(fixed))
+  }
+  .jst_stop("R read ", .jst_plural(n, "a single backslash", "single backslashes"),
+            " in ", typed, " as ",
+            .jst_plural(n, "a special character", "special characters"), ".\n",
+            "Type the ", what, " again with forward slashes in place of ",
+            "the backslashes.")
+}
+
+#' Internal: jload()'s file argument when it is not a file name
+#'
+#' Called by jload() with the argument as typed and its value, before the
+#' generic "Provide a filename" stop (Session 351, Fix Slate 6). Two inputs
+#' get a stop of their own:
+#' \itemize{
+#'   \item a data frame -- for a shipped dataset's name (jload(community),
+#'     the quotes left off the documented jload("community")) the quoted
+#'     call; for any other frame named by itself, that it is already
+#'     loaded and the jsave() call that writes it to a file (the Session 40
+#'     item);
+#'   \item an empty string that an EXPRESSION gave -- a variable, or a call
+#'     such as system.file() finding no file (the S197 item, a failure mode
+#'     an AI assistant was seen to produce). The expression is the subject
+#'     of the sentence; for system.file() a second line says it gives an
+#'     empty string when the file is not in the package. An empty string
+#'     typed as such keeps the generic stop.
+#' }
+#' Anything else returns and meets jload()'s own checks.
+#'
+#' @param file_sub The file argument as typed, from substitute().
+#' @param value Its value, already forced by jload().
+#' @return Invisibly NULL, or stops through .jst_stop().
+#' @keywords internal
+.jst_jload_file_value <- function(file_sub, value) {
+  if (is.data.frame(value)) {
+    if (is.symbol(file_sub)) {
+      nm <- as.character(file_sub)
+      if (.jst_is_package_dataset(nm)) {
+        .jst_stop("the name of the ", nm, " dataset goes in quotes:\n",
+                  "  jload(\"", nm, "\")")
+      }
+      .jst_stop("the ", nm, " data frame is already loaded.\n",
+                "To save it to a file:\n",
+                "  jsave(", deparse(file_sub), ", \"", nm, ".rds\")")
+    }
+    .jst_stop(paste(deparse(file_sub), collapse = " "),
+              " is a data frame, not a file name.\n",
+              "Provide a filename, e.g. jload(\"mydata.sav\")")
+  }
+  if (is.character(value) && length(value) == 1L && !is.na(value) &&
+      identical(value, "") && !is.character(file_sub)) {
+    expr <- paste(deparse(file_sub), collapse = " ")
+    if (is.call(file_sub) && identical(file_sub[[1L]], as.name("system.file"))) {
+      .jst_stop(expr, " is \"\", an empty file name.\n",
+                "system.file() gives \"\" when the file is not in the package.")
+    }
+    .jst_stop(expr, " is \"\", an empty file name.")
+  }
+  invisible(NULL)
 }
 
 #' Internal: map a file extension to its user-facing format label
@@ -1451,6 +1639,37 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   tail_lines <- character(0)  # Case 1 guidance; dropped in compact form
   note_lines <- character(0)  # convention note; retained in compact form
 
+  # A conversion remedy, as a block: the lead with its "run" verb, the
+  # calls, and for a frame holding a text variable with declared missing
+  # values a sentence after them (Session 351, the S340 item). jconvert()
+  # refuses such a variable under to = "stata" or "sas", so the offered
+  # whole-frame call stopped; the route that runs makes its declared
+  # values plain NA first (.jst_text_route()), and the second call is
+  # left out when nothing else would convert. rider adds the joptions()
+  # line that keeps the setting matching the result. Without a text
+  # variable every block is the same as before, line for line.
+  text_vars <- unname(vapply(Filter(function(e) isTRUE(e$info$text), udm_info),
+                             function(e) e$var, character(1)))
+  conv_block <- function(lead, g, rider = FALSE) {
+    route <- NULL
+    if (length(text_vars) > 0L && g %in% c("stata", "sas")) {
+      rest <- any(vapply(udm_info, function(e) {
+        !isTRUE(e$info$text) && !identical(e$info$convention, g)
+      }, logical(1)))
+      route <- .jst_text_route(call_name, g, text_vars, convert_rest = rest,
+                               more_lines = rider)
+    }
+    calls <- if (is.null(route)) {
+      sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)", call_name, g)
+    } else route$calls
+    if (rider) {
+      calls <- c(calls, sprintf("  joptions(missing.convention = \"%s\")", g))
+    }
+    run <- switch(as.character(length(calls)),
+                  "1" = "run:", "2" = "run both:", "run all three:")
+    c(paste(lead, run), calls, if (!is.null(route)) route$note)
+  }
+
   if (uniform) {
     st <- present
     if (explicit_set && !identical(opt, st)) {
@@ -1465,8 +1684,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           disp_label(st), opt),
         sprintf("To use %s missing values, run:", disp_label(st)),
         sprintf("  joptions(missing.convention = \"%s\")", st),
-        sprintf("To use %s missing values, run:", disp_label(opt)),
-        sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)", call_name, opt)
+        conv_block(sprintf("To use %s missing values,", disp_label(opt)), opt)
       )
     } else if (identical(st, "spss")) {
       # Case 1: uniform SPSS-style, no conflicting setting. The one
@@ -1500,11 +1718,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # joptions rider so the chosen style and the setting end up
       # matching either way.
       off_groups <- setdiff(present, opt)
+      # Names while a group is short, a count past three (Session 351, the
+      # S294 item): a wide frame put ten names and "... and 2 more" ahead
+      # of the verb. The inventory above lists them, as Case 4's "these
+      # variables" relies on. Three is the durability reminder's limit
+      # (S339).
       seg <- vapply(off_groups, function(g) {
         vars_g <- vapply(udm_info[convs == g], function(e) e$var,
                          character(1))
         sprintf("%s %s %s",
-                .jst_format_var_list(vars_g, and = TRUE),
+                if (length(vars_g) <= 3L) {
+                  .jst_format_var_list(vars_g, and = TRUE)
+                } else {
+                  paste(length(vars_g), "variables")
+                },
                 if (length(vars_g) == 1L) "is" else "are",
                 disp_label(g))
       }, character(1))
@@ -1518,18 +1745,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # period. An off-setting target carries the joptions rider as a
       # second indented call under "run both:".
       note_rest <- unlist(lapply(remedy_styles, function(g) {
-        conv_line <- sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)",
-                             call_name, g)
-        if (identical(g, opt)) {
-          c(sprintf("To use %s missing values throughout, run:",
-                    disp_label(g)),
-            conv_line)
-        } else {
-          c(sprintf("To use %s missing values throughout, run both:",
-                    disp_label(g)),
-            conv_line,
-            sprintf("  joptions(missing.convention = \"%s\")", g))
-        }
+        conv_block(sprintf("To use %s missing values throughout,",
+                           disp_label(g)),
+                   g, rider = !identical(g, opt))
       }), use.names = FALSE)
       note_lines <- c(note_first, note_rest)
     } else {
@@ -1553,11 +1771,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # ("make them missing in base R") and is deliberately left alone.
       note_lines <- c(
         sprintf("Note: %s mixes %s missing values.", call_name, mix_str),
-        unlist(lapply(styles_present, function(g) c(
-          sprintf("To use %s throughout, run both:", disp_label(g)),
-          sprintf("  jconvert(%s, to = \"%s\", modify = TRUE)", call_name, g),
-          sprintf("  joptions(missing.convention = \"%s\")", g)
-        )), use.names = FALSE)
+        unlist(lapply(styles_present, function(g) {
+          conv_block(sprintf("To use %s throughout,", disp_label(g)),
+                     g, rider = TRUE)
+        }), use.names = FALSE)
       )
     }
   }
@@ -2147,11 +2364,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param data_name Character. Name of the data frame argument in
 #'   the user's call to \code{jsave()}, used to construct the
 #'   suggested \code{jconvert()} call.
+#' @param text_vars The variables of \code{spss_vars} that are text
+#'   (Session 351). When there are any, the remedy is the route
+#'   \code{.jst_text_route()} builds -- their declared values made plain
+#'   NA, then the rest converted -- with its sentence, and at the standard
+#'   and full levels a closing line pointing to \code{jencode()}.
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
-.jst_jsave_dta_error_msg <- function(spss_vars, data_name) {
+.jst_jsave_dta_error_msg <- function(spss_vars, data_name,
+                                     text_vars = character(0)) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n_total      <- length(spss_vars)
@@ -2159,25 +2382,122 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   noun         <- if (is_sg) "variable" else "variables"
   verb_carry   <- if (is_sg) "carries" else "carry"
 
+  # A text variable with declared missing values (Session 351, the S340
+  # item): jconvert(to = "stata") refuses one since v0.9.214, so the line
+  # this message offered stopped. Offered instead: its declared values made
+  # plain NA, then the rest converted -- which is what a .dta file can
+  # hold -- or jencode() first, which keeps them.
+  route <- if (length(text_vars) > 0L) {
+    .jst_text_route(data_name, "stata", text_vars,
+                    convert_rest = length(setdiff(spss_vars, text_vars)) > 0L)
+  } else NULL
+  calls <- if (is.null(route)) {
+    paste0("  jconvert(", data_name, ", to = \"stata\", modify = TRUE)")
+  } else route$calls
+
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
-    return(paste0(
-      n_total, " ", noun, " ", verb_carry,
-      " SPSS-style missing values, incompatible with the .dta format.\n",
-      "Convert first, then save again:\n",
-      "  jconvert(", data_name, ", to = \"stata\", modify = TRUE)"))
+    return(paste(c(
+      paste0(n_total, " ", noun, " ", verb_carry,
+             " SPSS-style missing values, incompatible with the .dta format."),
+      "Convert first, then save again:",
+      calls,
+      if (!is.null(route)) route$note), collapse = "\n"))
   }
 
   # --- Standard / full tier ----------------------------------------------
   # S267: aligned to the trio's .sav/.xpt shape -- colon head, list glued
   # to it, blank after the list.
-  paste0(
-    n_total, " ", noun, " ", verb_carry,
-    " SPSS-style missing values, incompatible with the .dta format:\n",
-    "  ", .jst_format_var_list(spss_vars), "\n\n",
-    "Before saving to Stata format, convert with:\n",
-    "  jconvert(", data_name, ", to = \"stata\", modify = TRUE)"
-  )
+  paste(c(
+    paste0(n_total, " ", noun, " ", verb_carry,
+           " SPSS-style missing values, incompatible with the .dta format:"),
+    paste0("  ", .jst_format_var_list(spss_vars)),
+    "",
+    if (is.null(route)) {
+      "Before saving to Stata format, convert with:"
+    } else {
+      paste0("Before saving to Stata format, run",
+             if (length(calls) == 2L) " both:" else ":")
+    },
+    calls,
+    if (!is.null(route)) c(route$note,
+      paste0("Or turn ", .jst_plural(length(text_vars), "it", "each"),
+             " into a numeric variable first with jencode()."))),
+    collapse = "\n")
+}
+
+#' Internal: a variable list as the vars = argument of a printed call
+#'
+#' One name as a quoted string, several as c() of quoted strings --
+#' \code{vars = "S"}, \code{vars = c("S", "T")} -- through deparse(), so a
+#' name holding a quotation mark or a backslash is written as R reads it.
+#' @param v Character vector of variable names.
+#' @return Character scalar.
+#' @keywords internal
+.jst_names_arg <- function(v) {
+  paste(deparse(unname(as.character(v)), width.cutoff = 500L), collapse = "")
+}
+
+#' Internal: the route to Stata-style or SAS-style missing values for a frame
+#' holding text variables with declared missing values
+#'
+#' A marker is a kind of NA in a NUMERIC variable, so jconvert() refuses a
+#' text variable with declared missing values under to = "stata" or "sas"
+#' (Session 340), and every message that offered the whole-frame
+#' conversion printed a call that stopped (the S340 item, built Session
+#' 351). What runs: the text variables' declared values made plain NA,
+#' then the frame converted -- the order matters, since the conversion
+#' refuses while a declared string remains -- with one sentence naming
+#' what the first line does. The load narrative's Case 1 line takes
+#' to = "baseR" for the same reason (v0.9.214).
+#'
+#' @param data_name The data frame's name, for the printed calls.
+#' @param to "stata" or "sas".
+#' @param text_vars The text variables with declared missing values.
+#' @param convert_rest Logical: does a variable remain for the second call
+#'   to convert? FALSE leaves the first call alone, its sentence saying
+#'   "this" for "the first line".
+#' @param more_lines Logical: will the caller print a line after these
+#'   calls (the joptions() rider)? Then the sentence says "the first line"
+#'   even when there is one call.
+#' @return A list: \code{calls}, the indented call lines; \code{note}, the
+#'   sentence.
+#' @keywords internal
+.jst_text_route <- function(data_name, to, text_vars, convert_rest = TRUE,
+                            more_lines = FALSE) {
+  n <- length(text_vars)
+  base_line <- paste0("  jconvert(", data_name, ", to = \"baseR\", vars = ",
+                      .jst_names_arg(text_vars), ", modify = TRUE)")
+  conv_line <- paste0("  jconvert(", data_name, ", to = \"", to,
+                      "\", modify = TRUE)")
+  list(
+    calls = if (isTRUE(convert_rest)) c(base_line, conv_line) else base_line,
+    note  = paste0(.jst_format_var_list(text_vars, and = TRUE), " ",
+                   .jst_plural(n, "is", "are"), " text, so ",
+                   if (isTRUE(convert_rest) || isTRUE(more_lines)) {
+                     "the first line"
+                   } else "this",
+                   " makes ", .jst_plural(n, "its", "their"),
+                   " declared values plain NA."))
+}
+
+#' Internal: the text variables among those with SPSS-style declarations
+#'
+#' The variables of \code{vars} whose declared missing values sit on a text
+#' (string) variable, read through \code{.jst_missing_info()}'s \code{text}
+#' flag. jconvert() cannot give these Stata-style or SAS-style missing
+#' values (Session 340), so a message offering that conversion asks first
+#' (Session 351).
+#' @param data A data frame.
+#' @param vars Names of its variables to consider; default every one.
+#' @return Character vector, possibly empty.
+#' @keywords internal
+.jst_declared_text_vars <- function(data, vars = names(data)) {
+  vars[vapply(vars, function(v) {
+    info <- .jst_missing_info(data[[v]])
+    !is.null(info) && identical(info$representation, "spss") &&
+      isTRUE(info$text)
+  }, logical(1))]
 }
 
 #' Internal: build jsave's .xpt pre-flight error message
@@ -2361,26 +2681,37 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{var} (name), \code{n} (count of discrete na_values codes), and
 #'   \code{range} (logical: does the column also carry an na_range?).
 #' @param data_name The data frame's name, used in the suggested fix code.
+#' @param text_vars The frame's text variables with declared missing values
+#'   (Session 351). When there are any, the Stata route is not offered: a
+#'   .dta file cannot keep a text variable's declared missing values, so
+#'   its "also keeping all the codes" would be false, and its jconvert()
+#'   line stops on them (the S340 item; Jeff's lean, S351).
 #'
 #' @return Character scalar suitable as a \code{.jst_jsave_combined_error_msg}
 #'   section (no \code{jsave():} prefix; that is added on emission).
 #' @keywords internal
-.jst_jsave_sav_overcap_error_msg <- function(overcap_info, data_name) {
+.jst_jsave_sav_overcap_error_msg <- function(overcap_info, data_name,
+                                             text_vars = character(0)) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n     <- length(overcap_info)
   is_sg <- (n == 1)
   noun  <- if (is_sg) "variable" else "variables"
   verb  <- if (is_sg) "has"      else "have"
+  stata_route <- length(text_vars) == 0L
 
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
       n, " ", noun, " ", verb, " more declared missing values than SPSS format (.sav) ",
       "allows (at most 3, or a range plus one).\n",
-      "Save as R format (.rds) or ",
-      "convert to Stata format (.dta) to keep all the codes, or reduce ",
-      "them first."
+      if (stata_route) {
+        paste0("Save as R format (.rds) or ",
+               "convert to Stata format (.dta) to keep all the codes, or reduce ",
+               "them first.")
+      } else {
+        "Save as R format (.rds) to keep all the codes, or reduce them first."
+      }
     ))
   }
 
@@ -2403,9 +2734,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "",
     "To save in R format (.rds) instead, keeping all the codes:",
     sprintf("  jsave(%s, \"%s.rds\")", data_name, data_name),
-    "To convert to Stata and save as Stata format (.dta), also keeping all the codes:",
-    sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
-    sprintf("  jsave(%s, \"%s.dta\")", data_name, data_name),
+    if (stata_route) c(
+      "To convert to Stata and save as Stata format (.dta), also keeping all the codes:",
+      sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
+      sprintf("  jsave(%s, \"%s.dta\")", data_name, data_name)),
     "Or reduce each variable's declared missing values to fit."
   ), collapse = "\n")
 }
@@ -2798,12 +3130,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param preserve.declarations Logical, the value passed to jsave.
 #' @param n_blanked Integer count of SPSS-style code cells blanked when
 #'   \code{preserve.declarations = FALSE}; zero otherwise.
+#' @param text_udm Logical: is one of \code{spss_vars} a text variable?
+#'   Its declared codes are words, so "(e.g. -99) are written as literal
+#'   numbers" and "ordinary numbers" become "ordinary values" (Session 351,
+#'   the S340 item's rider).
 #'
 #' @return A single message string, or \code{NULL} if no note applies.
 #'
 #' @keywords internal
 .jst_jsave_label_loss_note <- function(ext, spss_vars, stata_vars,
-                                       preserve.declarations, n_blanked) {
+                                       preserve.declarations, n_blanked,
+                                       text_udm = FALSE) {
   fmt <- if (identical(ext, "xlsx")) {
     "Excel format (.xlsx)"
   } else {
@@ -2826,7 +3163,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "Note: ", fmt, " does not store variable labels, value labels, or ",
       "missing-value metadata.\n",
       "Declared missing-value codes lose their missing status, which may ",
-      "result in them being written as ordinary numbers.\n",
+      "result in them being written as ordinary ",
+      if (isTRUE(text_udm)) "values" else "numbers", ".\n",
       "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
       "empty cells instead.")))
   }
@@ -2836,8 +3174,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
       "missing-value metadata.\n",
-      "Any SPSS-style missing-value codes (e.g. -99) are written as literal ",
-      "numbers and will read back as ordinary values.\n",
+      if (isTRUE(text_udm)) {
+        paste0("Any SPSS-style missing-value codes are written as ordinary ",
+               "values and will read back as valid data.\n")
+      } else {
+        paste0("Any SPSS-style missing-value codes (e.g. -99) are written as ",
+               "literal numbers and will read back as ordinary values.\n")
+      },
       "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
       "empty cells instead.")))
   }
@@ -2852,6 +3195,62 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # Neither: labels-only.
   paste0("Note: ", fmt, " does not store variable labels or value labels.")
+}
+
+
+#' Internal: the note for a text variable's missing cells that a format
+#' writes as blank text
+#'
+#' @description
+#' Ruling R13 (Jeff, S345; built Session 351). SPSS format (.sav), Stata
+#' format (.dta), SAS interchange format (.xpt) and CSV format (.csv) have
+#' no missing value for text: haven and write.csv() write a text
+#' variable's NA as an empty string, and jload() reads that back as the
+#' \code{<blank>} category, counted as valid (the S340 decision: a blank is
+#' reported, never assumed missing, and a file cannot say which blanks were
+#' once missing). So jsave() says so when it happens: the variables, the
+#' cells, and the two formats that keep them (.rds, .xlsx). The .xpt format
+#' and a factor in a CSV file (written as its labels) lose the same way,
+#' probed at S351 and added on Jeff's lean. A missing NUMBER survives every
+#' format. A loss note, as the label and declaration losses are: not gated
+#' to the joutput() levels.
+#'
+#' @param data The data frame as written.
+#' @param ext Lowercase target extension.
+#' @return The note, or NULL when the format keeps text NA or the frame has
+#'   none.
+#' @keywords internal
+.jst_jsave_text_na_note <- function(data, ext) {
+  if (!ext %in% c("sav", "dta", "xpt", "csv")) return(NULL)
+  is_text <- function(col) {
+    is.character(col) || (identical(ext, "csv") && is.factor(col))
+  }
+  # unclass(): is.na() on a declared string counts its declared values too.
+  counts <- vapply(data, function(col) {
+    if (!is_text(col)) return(0L)
+    sum(is.na(unclass(col)))
+  }, integer(1))
+  vars <- names(data)[counts > 0L]
+  if (length(vars) == 0L) return(NULL)
+  n     <- counts[vars]
+  total <- sum(n)
+  kind  <- if (any(vapply(data[vars], is.factor, logical(1)))) {
+    "a text or categorical variable"
+  } else {
+    "a text variable"
+  }
+  where <- if (length(vars) == 1L) {
+    vars
+  } else {
+    .jst_format_var_list(paste0(vars, " (", n, ")"), and = TRUE)
+  }
+  paste0(
+    "Note: ", .jst_format_label(ext), " (.", ext, ") cannot store a missing ",
+    "value in ", kind, ".\n",
+    total, " missing ", .jst_plural(total, "cell", "cells"), " in ", where,
+    " ", .jst_plural(total, "was", "were"), " saved as blank text.\n",
+    "R format (.rds) and Excel format (.xlsx) keep ",
+    .jst_plural(total, "it", "them"), " missing.")
 }
 
 
@@ -2909,7 +3308,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \strong{File paths:}
 #' Use forward slashes (\code{/}) in file paths. If you copy a path from
 #' Windows File Explorer, replace the backslashes with forward slashes.
-#' R does not accept single backslashes in file paths.
+#' R does not accept single backslashes in file paths: inside quoted text
+#' it reads a backslash and the letter after it as one special character.
+#' \code{jsave()} stops on such a path, before anything is written, and
+#' shows it written with forward slashes.
 #'
 #' \strong{File location:}
 #' \itemize{
@@ -2945,6 +3347,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     \code{.xpt}); and, for \code{.sav}, more than three declared codes,
 #'     or a range plus more than one code, on one column. No file is
 #'     written until the problems are fixed.
+#'   \item SPSS (\code{.sav}), Stata (\code{.dta}), SAS interchange
+#'     (\code{.xpt}) and CSV (\code{.csv}) have no missing value for text:
+#'     a text variable's missing cells are saved as blank text, and read
+#'     back as blank, not missing. A note says so when it happens. R native
+#'     (\code{.rds}) and Excel (\code{.xlsx}) keep them missing. In a CSV
+#'     file the same holds for a factor, which is written as its labels.
 #'   \item Stata files are written as version 14 format.
 #'   \item Legacy Excel format (\code{.xls}) is not supported for saving.
 #'     Use \code{.xlsx} instead.
@@ -3044,11 +3452,23 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       .jst_stop("'", data_str, "' is NULL. ",
            "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
     }
+    # The resolver's sentence for the same input (S334 item, Session 351):
+    # "'z' is a integer" pasted an article before the class.
     if (!is.data.frame(val) && !is.character(val)) {
       data_str   <- paste(deparse(data_sub), collapse = "")
-      class_desc <- paste(class(val), collapse = "/")
-      .jst_stop("'", data_str, "' is a ", class_desc, ", not a data frame. ",
+      .jst_stop("'", data_str, "' is not a data frame.\n",
            "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
+    }
+    # A file name alone with no default set (the Session 40 item, Session
+    # 351): the resolver asked "Did you mean to use it as a variable
+    # name?" of a quoted file name. A string here is the file; what is
+    # missing is the data frame.
+    if (is.character(val) && length(val) == 1L && missing(file) &&
+        is.null(getOption(".jst_default_data", default = NULL))) {
+      .jst_stop(deparse(val), " is a file name, and no data frame was ",
+                "given to save.\n",
+                "Name the data frame first:\n",
+                "  jsave(MyData, ", deparse(val), ")")
     }
   }
 
@@ -3109,8 +3529,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # --- Validate data is a data frame -----------------------------------------
   if (!is.data.frame(data)) {
     .jst_stop(
-      "Only data frames can be saved. '", data_name, "' is ",
-      paste0("a ", paste(class(data), collapse = "/"), ", not a data frame.")
+      "Only data frames can be saved. '", data_name, "' is not a data frame."
     )
   }
 
@@ -3128,6 +3547,10 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       "  .rds       R native"
     )
   }
+  # A path typed with single backslashes (S343; Session 351): checked
+  # before the folder is looked for and before a file is written. Not
+  # caught, such a path saved on Linux under a name holding a tab.
+  .jst_check_path_chars(file)
 
   # --- Check extension -------------------------------------------------------
   ext <- tolower(tools::file_ext(file))
@@ -3275,7 +3698,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       }
       if (length(overcap_info) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_sav_overcap_error_msg(overcap_info, data_name)
+          .jst_jsave_sav_overcap_error_msg(overcap_info, data_name,
+                                           .jst_declared_text_vars(data))
       }
     } else if (ext == "dta") {
       # Any SPSS-form column blocks the write; since S218 the remedy is
@@ -3287,7 +3711,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       spss_vars <- .jst_has_spss_udm(data)
       if (length(spss_vars) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_dta_error_msg(spss_vars, data_name)
+          .jst_jsave_dta_error_msg(spss_vars, data_name,
+                                   .jst_declared_text_vars(data, spss_vars))
       }
     } else if (ext == "xpt") {
       # Both missing-value forms are unrepresentable in .xpt: tagged NAs
@@ -3333,10 +3758,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # jload's preserve.declarations path, so collapse semantics stay identical both ways.
   spss_udm_vars  <- character(0)
   stata_udm_vars <- character(0)
+  text_udm       <- FALSE
   n_udm_blanked  <- 0L
   if (ext %in% c("xlsx", "csv") || !preserve.declarations) {
     spss_udm_vars  <- .jst_has_spss_udm(data)
     stata_udm_vars <- .jst_has_tagged_na(data)
+    # A text variable's declared codes are words, not -99 (the S340
+    # item's rider, Session 351): the loss note says "values" then.
+    text_udm <- length(.jst_declared_text_vars(data, spss_udm_vars)) > 0L
     if (!preserve.declarations &&
         (length(spss_udm_vars) > 0 || length(stata_udm_vars) > 0)) {
       collapsed <- .jst_handle_udms(data, preserve.declarations = FALSE)
@@ -3452,9 +3881,17 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # codes, confirms it).
   if (ext %in% c("xlsx", "csv")) {
     label_note <- .jst_jsave_label_loss_note(
-      ext, spss_udm_vars, stata_udm_vars, preserve.declarations, n_udm_blanked)
+      ext, spss_udm_vars, stata_udm_vars, preserve.declarations, n_udm_blanked,
+      text_udm = text_udm)
     if (!is.null(label_note)) loss_notes <- c(loss_notes, label_note)
   }
+
+  # A text variable's missing cells (ruling R13, Jeff, S345; built Session
+  # 351): .sav, .dta, .xpt and .csv have no missing value for text, and
+  # write one as an empty string, which jload() reads back as the <blank>
+  # category, counted valid. Read on the frame as written.
+  text_na_note <- .jst_jsave_text_na_note(data, ext)
+  if (!is.null(text_na_note)) loss_notes <- c(loss_notes, text_na_note)
 
   # Classification registrations ride along only in .rds (baked above). Any
   # other format silently drops them, so note the loss -- but only when the
@@ -3628,8 +4065,8 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
   # Validate and normalise the destination name (mirrors jload()).
   dest_name <- paste(deparse(dest_sub), collapse = "")
   if (grepl("^[0-9]", dest_name)) {
-    .jst_stop("The name '", dest_name, "' starts with a number. ",
-         "R does not allow variable names to start with a digit.")
+    .jst_stop("The name '", dest_name, "' starts with a number.\n",
+         "R does not allow a data frame's name to start with a digit.")
   }
   dest_name <- make.names(dest_name)
 

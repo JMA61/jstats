@@ -9,7 +9,8 @@
   spss_vars,
   stata_vars,
   preserve.declarations,
-  n_blanked
+  n_blanked,
+  text_udm = FALSE
 )
 }
 \arguments{
@@ -25,6 +26,11 @@ names, as detected before any collapse.}
 
 \item{n_blanked}{Integer count of SPSS-style code cells blanked when
 \code{preserve.declarations = FALSE}; zero otherwise.}
+
+\item{text_udm}{Logical: is one of \code{spss_vars} a text variable?
+Its declared codes are words, so "(e.g. -99) are written as literal
+numbers" and "ordinary numbers" become "ordinary values" (Session 351,
+the S340 item's rider).}
 }
 \value{
 A single message string, or \code{NULL} if no note applies.

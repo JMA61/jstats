@@ -4,7 +4,7 @@
 \alias{.jst_jsave_dta_error_msg}
 \title{Internal: build jsave's .dta pre-flight error message}
 \usage{
-.jst_jsave_dta_error_msg(spss_vars, data_name)
+.jst_jsave_dta_error_msg(spss_vars, data_name, text_vars = character(0))
 }
 \arguments{
 \item{spss_vars}{Character vector of variable names carrying
@@ -14,6 +14,12 @@ SPSS-form UDM declarations (\code{na_values} and/or
 \item{data_name}{Character. Name of the data frame argument in
 the user's call to \code{jsave()}, used to construct the
 suggested \code{jconvert()} call.}
+
+\item{text_vars}{The variables of \code{spss_vars} that are text
+(Session 351). When there are any, the remedy is the route
+\code{.jst_text_route()} builds -- their declared values made plain
+NA, then the rest converted -- with its sentence, and at the standard
+and full levels a closing line pointing to \code{jencode()}.}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.

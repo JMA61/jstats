@@ -5,7 +5,11 @@
 \title{Internal: build jsave's error message for SPSS-form UDM columns that exceed
 the .sav missing-value limit}
 \usage{
-.jst_jsave_sav_overcap_error_msg(overcap_info, data_name)
+.jst_jsave_sav_overcap_error_msg(
+  overcap_info,
+  data_name,
+  text_vars = character(0)
+)
 }
 \arguments{
 \item{overcap_info}{List of per-variable entries, each a list with
@@ -13,6 +17,12 @@ the .sav missing-value limit}
 \code{range} (logical: does the column also carry an na_range?).}
 
 \item{data_name}{The data frame's name, used in the suggested fix code.}
+
+\item{text_vars}{The frame's text variables with declared missing values
+(Session 351). When there are any, the Stata route is not offered: a
+.dta file cannot keep a text variable's declared missing values, so
+its "also keeping all the codes" would be false, and its jconvert()
+line stops on them (the S340 item; Jeff's lean, S351).}
 }
 \value{
 Character scalar suitable as a \code{.jst_jsave_combined_error_msg}

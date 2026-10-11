@@ -7847,8 +7847,15 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
 
     # Pattern A scan: no formal declaration. Look for value labels matching
     # the missing-label wordlist (.jst_label_suggests_missing).
+    # Not on a text variable under to = "stata" or "sas" (Session 351): a
+    # text variable cannot take a marker (S340), so the report's remedy,
+    # declaring the value, leads back to that refusal. The route the load
+    # narrative and jsave() offer a frame holding a declared string --
+    # its declared values made plain NA, then the frame converted --
+    # printed the report about the label the first line left behind.
     pa_entries <- list()
-    if (haven::is.labelled(col)) {
+    if (haven::is.labelled(col) &&
+        !(to %in% c("stata", "sas") && is.character(col))) {
       val_labs <- labelled::val_labels(col)
       if (!is.null(val_labs) && length(val_labs) > 0L) {
         for (i in seq_along(val_labs)) {
