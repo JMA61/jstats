@@ -876,6 +876,15 @@
 #' their own prose ahead of this emitter (receive_package()'s structural gate
 #' refuses the file): only the emitter knows the real prefix and chrome, so
 #' only its reserve can be correct rather than guessed.
+#'
+#' The condition also carries the message as it was before wrapping, in a
+#' field named \code{raw} (Session 352). A caller that catches the error and
+#' sets its text inside a message of its own -- jdeclare_missing()'s refusal
+#' on several variables, which nests each variable's refusal under its
+#' name -- takes \code{raw}, so the outer emitter wraps the text once, at
+#' its new indent. Nested as caught, a line wrapped for the full width was
+#' indented and broken again mid-phrase. The error itself is unchanged: a
+#' simpleError with no call, as \code{stop(..., call. = FALSE)} makes.
 #' @param ... Message parts, concatenated with paste0().
 #' @param fn Optional function name (without parentheses); auto-detected when NULL.
 #' @return Never returns; always signals an error.
@@ -883,16 +892,18 @@
 .jst_stop <- function(..., fn = NULL) {
   if (is.null(fn)) fn <- tryCatch(.jst_caller_fn(), error = function(e) NULL)
   prefix <- if (is.null(fn) || !nzchar(fn)) "" else paste0(fn, "(): ")
-  body   <- paste0(...)
+  raw    <- paste0(...)
   # Wrap here rather than at the builder: the emitter is the only place that
   # knows the real prefix length, so reserve is correct rather than guessed.
   # The + 8L is R's own chrome on this route ("Error : " under try(); see
   # the roxygen above). Guarded because an error emitter must never fail to
   # emit -- if the wrapper raises, the unwrapped message still reaches the
   # user.
-  body <- tryCatch(.jst_wrap_message(body, reserve = nchar(prefix) + 8L),
-                   error = function(e) body)
-  stop(paste0(prefix, body), call. = FALSE)
+  body <- tryCatch(.jst_wrap_message(raw, reserve = nchar(prefix) + 8L),
+                   error = function(e) raw)
+  cond <- simpleError(paste0(prefix, body))
+  cond$raw <- paste0(prefix, raw)
+  stop(cond)
 }
 
 
@@ -3496,13 +3507,17 @@
 #' @param missing_as Optional character. When supplied, token rules
 #'   render as this text instead of the word missing (the cap error's
 #'   declared-code swap).
+#' @param targets_as Optional named character vector: a plain numeric
+#'   target whose \code{.jst_fmt_code()} form is a name renders as that
+#'   element instead -- a code sent to a marker the variable does not use
+#'   (Session 352, the lines ruling R8 asked to run).
 #'
 #' @return Character scalar: the map string, without surrounding quotes.
 #'
 #' @keywords internal
 .jst_render_map_string <- function(parsed_map, lhs_render = NULL,
                                    targets_to_missing = numeric(0),
-                                   missing_as = NULL) {
+                                   missing_as = NULL, targets_as = NULL) {
   fmt_lhs <- function(old_vals) {
     if (is.null(lhs_render)) {
       paste(vapply(as.numeric(old_vals), .jst_fmt_code, character(1)),
@@ -3521,6 +3536,10 @@
     if (length(targets_to_missing) > 0 &&
         rule$new_val %in% targets_to_missing) {
       return("missing")
+    }
+    if (!is.null(targets_as)) {
+      k <- .jst_fmt_code(rule$new_val)
+      if (k %in% names(targets_as)) return(unname(targets_as[[k]]))
     }
     .jst_fmt_code(rule$new_val)
   }

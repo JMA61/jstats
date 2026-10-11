@@ -3978,6 +3978,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
   # Apply data pipeline (jcomplete, jsubset, subset)
+  # The frame as given, kept for the outcome's three-value stop (Session
+  # 352): its declare line reads the outcome's declared form and markers,
+  # which the pipeline's analysis copy does not carry.
+  data_in <- data
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame())
@@ -4457,6 +4461,47 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
           paste0("c(", paste(vapply(coded_miss, .jst_fmt_code,
                                     character(1)), collapse = ", "), ")")
         }
+        # The outcome as given, before the pipeline's analysis copy.
+        raw_dv <- if (dv_name %in% names(data_in)) data_in[[dv_name]] else NULL
+        # S352 (ruling R8's offered declarations): on an outcome of Stata or
+        # SAS form whose markers the codes' letters would meet, the
+        # declaration is refused (v0.9.218); what runs is the codes sent to
+        # markers the outcome does not use, in a new variable.
+        dv_clash <- if (!is.null(raw_dv)) {
+          .jst_marker_clash(raw_dv, length(coded_miss))
+        } else NULL
+        dv_route <- if (!is.null(dv_clash)) {
+          .jst_marker_recode_line(.jst_data_name, dv_name, coded_miss,
+                                  dv_clash$conv, dv_clash$tags)
+        } else NULL
+        # S352 (ruling R15, Jeff, S347: "that's what I want"): with no
+        # convention selected the declaration stops at the choose-first
+        # gate, so the menu comes first, as at the other six sites
+        # (.jst_declare_gate_lead()); an outcome with declared missing
+        # values of its own is declared in its own form and meets no gate.
+        dv_gate <- if (is.null(dv_route)) {
+          .jst_declare_gate_lead(
+            "jlogistic", n = length(coded_miss),
+            plain = is.null(raw_dv) || is.null(.jst_missing_info(raw_dv)))
+        } else NULL
+        declare_block <- if (!is.null(dv_route)) {
+          paste0(
+            "Recode ", if (one) "it" else "them", " to ",
+            if (one) "a " else "", .jst_convention_label(dv_clash$conv),
+            " marker", if (one) "" else "s", " ", dv_name,
+            " does not use, so analyses exclude ",
+            if (one) "it" else "them", ":\n",
+            dv_route, "\n",
+            "Then use ", dv_name, "R as your dependent variable.\n")
+        } else {
+          paste0(
+            if (!is.null(dv_gate)) paste0(dv_gate, "\nThen declare ")
+            else "Declare ",
+            if (one) "it" else "them",
+            " so analyses exclude ", if (one) "it" else "them", ":\n",
+            "  jdeclare_missing(", .jst_data_name, ", ", dv_name, ", codes = ",
+            codes_txt, ", modify = TRUE)\n")
+        }
         .jst_stop(
           paste0(
             dv_name, " has ", n_unique, " unique values (",
@@ -4467,10 +4512,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
             miss_txt,
             if (one) " looks like a coded missing value."
             else " look like coded missing values."), "\n",
-          "Declare ", if (one) "it" else "them",
-          " so analyses exclude ", if (one) "it" else "them", ":\n",
-          "  jdeclare_missing(", .jst_data_name, ", ", dv_name, ", codes = ",
-          codes_txt, ", modify = TRUE)\n",
+          declare_block,
           "Or convert ", if (one) "it" else "them",
           " to NA, dropping the code", if (one) "" else "s", ":\n",
           "  ", .jst_data_name, "$", dv_name, "R <- jrecode(",

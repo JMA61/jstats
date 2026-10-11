@@ -4,7 +4,7 @@
 \alias{.jst_declare_gate_lead}
 \title{Internal helper: the choose-first menu, for a remedy that says "declare it"}
 \usage{
-.jst_declare_gate_lead(fn, n = 1L, plain = TRUE)
+.jst_declare_gate_lead(fn, n = 1L, plain = TRUE, what = NULL)
 }
 \arguments{
 \item{fn}{The exported caller's name (the menu builder's signature).}
@@ -14,6 +14,10 @@
 \item{plain}{FALSE when the variable to declare on already carries
 declared missing values of either form: \code{jdeclare_missing()}
 follows the variable's own form there and meets no gate.}
+
+\item{what}{Optional: what cannot be declared, in place of "the value"
+or "the values" -- the load scan's block says "these codes" (Session
+352, ruling R15).}
 }
 \value{
 Character scalar ending without a newline, or \code{NULL}.

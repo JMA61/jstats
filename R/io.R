@@ -2318,25 +2318,65 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       } else {
         paste0("c(", paste(format(ex_codes, trim = TRUE), collapse = ", "), ")")
       }
-      # S267: intros are plain prose through the stdout emitter -- the
-      # old "#" prefixes made the block read as a script fragment and
-      # left the second call commented out (not directly runnable).
-      .jst_msg_out("\nTo declare one variable's codes as missing:")
-      cat(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)\n",
-                  obj_name, ex_var, codes_str))
-      # For a suspected (unlabelled) target, offer a commented example that
-      # also attaches labels in the same call. Placeholder label strings, not
-      # guessed meanings -- the scan does not know what the codes signify
-      # (Session 115). Omitted for a label-only target, where the codes already
-      # carry labels and bare codes preserve them.
-      if (identical(ex_src, "suspected")) {
-        lbl_parts <- paste0("\"label", seq_along(ex_codes), "\" = ",
-                            format(ex_codes, trim = TRUE))
-        lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
-        .jst_msg_out("To declare and label them in one call, replacing ",
-                     "the placeholder names:")
+      ex_col <- df[[ex_var]]
+      # S352 (ruling R8's offered declarations): on a variable of Stata or
+      # SAS form -- a .dta file's -99 beside the variable's own .a -- the
+      # declaration would give the codes letters the variable carries, and
+      # jdeclare_missing() refuses that (v0.9.218). What runs is the codes
+      # sent to markers it does not use, in a new variable; a label each
+      # code carries moves with it.
+      ex_clash <- .jst_marker_clash(ex_col, length(ex_codes))
+      ex_route <- if (!is.null(ex_clash)) {
+        .jst_marker_recode_line(obj_name, ex_var, ex_codes, ex_clash$conv,
+                                ex_clash$tags)
+      } else NULL
+      if (!is.null(ex_route)) {
+        .jst_msg_out("\nTo recode one variable's codes to markers it does ",
+                     "not use:")
+        cat(ex_route, "\n", sep = "")
+        if (identical(ex_src, "suspected")) {
+          .jst_msg_out("To recode and label them in one call, replacing ",
+                       "the placeholder names:")
+          cat(.jst_marker_recode_line(
+                obj_name, ex_var, ex_codes, ex_clash$conv, ex_clash$tags,
+                labels = paste0("label", seq_along(ex_codes))),
+              "\n", sep = "")
+        }
+      } else {
+        # S352 (ruling R15; Jeff, S347: "that's what I want"): with no
+        # convention selected the line below stops at the choose-first
+        # gate, so the menu comes first, as at the other six sites. A
+        # variable with declared missing values of its own is declared in
+        # its own form and meets no gate.
+        ex_gate <- .jst_declare_gate_lead(
+          "jload", n = length(ex_codes),
+          plain = is.null(.jst_missing_info(ex_col)),
+          what = if (length(ex_codes) == 1L) "this code" else "these codes")
+        # S267: intros are plain prose through the stdout emitter -- the
+        # old "#" prefixes made the block read as a script fragment and
+        # left the second call commented out (not directly runnable).
+        if (!is.null(ex_gate)) {
+          .jst_msg_out("\n", ex_gate)
+          .jst_msg_out("Then, to declare one variable's codes as missing:")
+        } else {
+          .jst_msg_out("\nTo declare one variable's codes as missing:")
+        }
         cat(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)\n",
-                    obj_name, ex_var, lbl_str))
+                    obj_name, ex_var, codes_str))
+        # For a suspected (unlabelled) target, offer a commented example
+        # that also attaches labels in the same call. Placeholder label
+        # strings, not guessed meanings -- the scan does not know what the
+        # codes signify (Session 115). Omitted for a label-only target,
+        # where the codes already carry labels and bare codes preserve them.
+        if (identical(ex_src, "suspected")) {
+          lbl_parts <- paste0("\"label", seq_along(ex_codes), "\" = ",
+                              format(ex_codes, trim = TRUE))
+          lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
+          .jst_msg_out("To declare and label them in one call, replacing ",
+                       "the placeholder names:")
+          cat(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)\n",
+                      obj_name, ex_var, lbl_str))
+        }
       }
     }
   }
@@ -2460,16 +2500,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param more_lines Logical: will the caller print a line after these
 #'   calls (the joptions() rider)? Then the sentence says "the first line"
 #'   even when there is one call.
+#' @param rest_vars Optional: the variables the second call converts, as
+#'   its vars = (Session 352, jdeclare_missing()'s align line); NULL
+#'   converts the frame.
 #' @return A list: \code{calls}, the indented call lines; \code{note}, the
 #'   sentence.
 #' @keywords internal
 .jst_text_route <- function(data_name, to, text_vars, convert_rest = TRUE,
-                            more_lines = FALSE) {
+                            more_lines = FALSE, rest_vars = NULL) {
   n <- length(text_vars)
   base_line <- paste0("  jconvert(", data_name, ", to = \"baseR\", vars = ",
                       .jst_names_arg(text_vars), ", modify = TRUE)")
-  conv_line <- paste0("  jconvert(", data_name, ", to = \"", to,
-                      "\", modify = TRUE)")
+  conv_line <- paste0("  jconvert(", data_name, ", to = \"", to, "\"",
+                      if (length(rest_vars) > 0L) paste0(
+                        ", vars = ", .jst_names_arg(rest_vars)),
+                      ", modify = TRUE)")
   list(
     calls = if (isTRUE(convert_rest)) c(base_line, conv_line) else base_line,
     note  = paste0(.jst_format_var_list(text_vars, and = TRUE), " ",
@@ -2498,6 +2543,38 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     !is.null(info) && identical(info$representation, "spss") &&
       isTRUE(info$text)
   }, logical(1))]
+}
+
+#' Internal: the text route for a whole frame, when it needs one
+#'
+#' Five more messages offered the whole-frame jconvert(to = "stata" or
+#' "sas") that stops on a text variable with declared missing values
+#' (Session 352; the S351 item): joptions()'s workspace check, the
+#' convert-first remedy of the marker error a column of SPSS-style missing
+#' values gets, jrecode()'s ambiguous-missing stop and its marker refusal,
+#' and jdeclare_missing()'s note on a setting the variables do not use. Each
+#' asks this helper first: NULL when the plain call runs -- a target that
+#' is not "stata" or "sas", or no declared string in the frame -- else
+#' \code{.jst_text_route()}'s calls and sentence, the second call kept only
+#' when a variable of another form remains to convert.
+#'
+#' @param data The data frame.
+#' @param data_name Its name, for the printed calls.
+#' @param to The conversion target.
+#' @param more_lines Passed to \code{.jst_text_route()}.
+#' @return NULL, or the list \code{.jst_text_route()} returns.
+#' @keywords internal
+.jst_frame_text_route <- function(data, data_name, to, more_lines = FALSE) {
+  if (!is.data.frame(data) || length(to) != 1L ||
+      !isTRUE(to %in% c("stata", "sas"))) return(NULL)
+  tv <- .jst_declared_text_vars(data)
+  if (length(tv) == 0L) return(NULL)
+  rest <- any(vapply(setdiff(names(data), tv), function(v) {
+    info <- .jst_missing_info(data[[v]])
+    !is.null(info) && !identical(info$convention, to)
+  }, logical(1)))
+  .jst_text_route(data_name, to, tv, convert_rest = rest,
+                  more_lines = more_lines)
 }
 
 #' Internal: build jsave's .xpt pre-flight error message
@@ -2686,12 +2763,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   .dta file cannot keep a text variable's declared missing values, so
 #'   its "also keeping all the codes" would be false, and its jconvert()
 #'   line stops on them (the S340 item; Jeff's lean, S351).
+#' @param prose_name The data frame as the sentence names it; by default
+#'   \code{data_name}. jsave() gives the typed expression here when the
+#'   lines name mydata (Session 352).
+#' @param stem The name the offered files take; by default
+#'   \code{data_name}. Until Session 352 the data argument as typed,
+#'   which for an expression gave a file name that does not parse.
 #'
 #' @return Character scalar suitable as a \code{.jst_jsave_combined_error_msg}
 #'   section (no \code{jsave():} prefix; that is added on emission).
 #' @keywords internal
 .jst_jsave_sav_overcap_error_msg <- function(overcap_info, data_name,
-                                             text_vars = character(0)) {
+                                             text_vars = character(0),
+                                             prose_name = data_name,
+                                             stem = data_name) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n     <- length(overcap_info)
@@ -2722,7 +2807,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }, character(1)))
 
   lead <- sprintf("%s %s in %s %s more:",
-                  if (is_sg) "This" else "These", noun, data_name, verb)
+                  if (is_sg) "This" else "These", noun, prose_name, verb)
 
   # S267 redraft: family treatment (locked generic term, Rule L
   # two-space remedies, Rule X, unnumbered alternatives).
@@ -2733,11 +2818,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     var_lines,
     "",
     "To save in R format (.rds) instead, keeping all the codes:",
-    sprintf("  jsave(%s, \"%s.rds\")", data_name, data_name),
+    sprintf("  jsave(%s, \"%s.rds\")", data_name, stem),
     if (stata_route) c(
       "To convert to Stata and save as Stata format (.dta), also keeping all the codes:",
       sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
-      sprintf("  jsave(%s, \"%s.dta\")", data_name, data_name)),
+      sprintf("  jsave(%s, \"%s.dta\")", data_name, stem)),
     "Or reduce each variable's declared missing values to fit."
   ), collapse = "\n")
 }
@@ -3514,6 +3599,26 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   data      <- arg1$data
   data_name <- arg1$name
 
+  # The data as the printed lines name it (Session 352; the S351 item). An
+  # expression given as the data -- jsave(oc86["X"], "oc86.sav") -- is
+  # never pasted into a line to run: the pre-flight refusals pasted it
+  # whole, into jsave(oc86["X"], "oc86["X"].rds"), which does not parse,
+  # and into jconvert(oc86["X"], ..., modify = TRUE), which stops. Their
+  # lines name mydata, and each block of them opens on "mydata <- ...",
+  # the S339 form (.jst_expr_assign_lines()). A place (lst$d) keeps its
+  # lines, which .jst_place_lines() makes run; its file is named by its
+  # last part (.jst_data_file_stem()).
+  data_kind <- if (identical(arg1$mode, "explicit")) {
+    .jst_data_arg_kind(data_sub)
+  } else "name"
+  code_name <- if (identical(data_kind, "expression")) "mydata" else data_name
+  code_stem <- .jst_data_file_stem(
+    if (identical(arg1$mode, "explicit")) data_sub else NULL, data_name)
+  expr_lines <- function(msg) {
+    if (!identical(data_kind, "expression")) return(msg)
+    .jst_expr_assign_lines(msg, .jst_term_text(data_sub))
+  }
+
   # If data was omitted (e.g. jsave("file.rds")), route the captured first
   # argument into the file slot.
   if (arg1$mode == "symbol_with_default") {
@@ -3570,10 +3675,10 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       xls_msg <- paste0(
         "\n\nThe legacy .xls format is not supported for saving. ",
         "Use .xlsx instead:\n",
-        "  jsave(", data_name, ", \"",
+        "  jsave(", code_name, ", \"",
         tools::file_path_sans_ext(file), ".xlsx\")")
     }
-    .jst_stop(
+    .jst_stop(expr_lines(paste0(
       "Unsupported file extension '.", ext, "'. Supported formats for saving:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
@@ -3582,7 +3687,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       "  .csv       Comma-separated values\n",
       "  .rds       R native",
       xls_msg
-    )
+    )))
   }
 
   # --- Resolve output path ---------------------------------------------------
@@ -3672,7 +3777,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
     unsup_vars <- !is.na(type_of)
     if (any(unsup_vars)) {
       sections[[length(sections) + 1L]] <- .jst_jsave_unsupported_type_error_msg(
-        names(data)[unsup_vars], unname(type_of[unsup_vars]), ext, data_name)
+        names(data)[unsup_vars], unname(type_of[unsup_vars]), ext, code_name)
     }
 
     # (2) Missing-value incompatibilities -- format-specific.
@@ -3680,7 +3785,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       tagged_vars <- .jst_has_tagged_na(data)
       if (length(tagged_vars) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_sav_error_msg(tagged_vars, data, data_name)
+          .jst_jsave_sav_error_msg(tagged_vars, data, code_name)
       }
       # SPSS-form columns exceeding the .sav missing-value limit (at most 3
       # discrete codes, or a range plus 1). haven::write_sav() enforces SPSS's
@@ -3698,8 +3803,10 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       }
       if (length(overcap_info) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_sav_overcap_error_msg(overcap_info, data_name,
-                                           .jst_declared_text_vars(data))
+          .jst_jsave_sav_overcap_error_msg(overcap_info, code_name,
+                                           .jst_declared_text_vars(data),
+                                           prose_name = data_name,
+                                           stem       = code_stem)
       }
     } else if (ext == "dta") {
       # Any SPSS-form column blocks the write; since S218 the remedy is
@@ -3711,7 +3818,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       spss_vars <- .jst_has_spss_udm(data)
       if (length(spss_vars) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_dta_error_msg(spss_vars, data_name,
+          .jst_jsave_dta_error_msg(spss_vars, code_name,
                                    .jst_declared_text_vars(data, spss_vars))
       }
     } else if (ext == "xpt") {
@@ -3723,13 +3830,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       spss_vars   <- .jst_has_spss_udm(data)
       if (length(tagged_vars) > 0 || length(spss_vars) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_xpt_error_msg(tagged_vars, data_name, spss_vars)
+          .jst_jsave_xpt_error_msg(tagged_vars, code_name, spss_vars)
       }
     }
 
     # Report all blocking issues at once (single message when only one fired).
     if (length(sections) > 0) {
-      .jst_stop(.jst_jsave_combined_error_msg(sections, data_name, ext))
+      .jst_stop(expr_lines(
+        .jst_jsave_combined_error_msg(sections, data_name, ext)))
     }
 
     # .dta only, once we know there are no blocking issues: lowercase any

@@ -8,7 +8,8 @@
   parsed_map,
   lhs_render = NULL,
   targets_to_missing = numeric(0),
-  missing_as = NULL
+  missing_as = NULL,
+  targets_as = NULL
 )
 }
 \arguments{
@@ -26,6 +27,11 @@ render as the missing token instead of their value.}
 \item{missing_as}{Optional character. When supplied, token rules
 render as this text instead of the word missing (the cap error's
 declared-code swap).}
+
+\item{targets_as}{Optional named character vector: a plain numeric
+target whose \code{.jst_fmt_code()} form is a name renders as that
+element instead -- a code sent to a marker the variable does not use
+(Session 352, the lines ruling R8 asked to run).}
 }
 \value{
 Character scalar: the map string, without surrounding quotes.

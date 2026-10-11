@@ -1678,6 +1678,26 @@ jai <- function(setup = NULL, path = NULL) {
   if (is_place(data_sub)) "place" else "expression"
 }
 
+#' Internal helper: a call on a place, assigned back to it
+#'
+#' The line that runs for a call given \code{modify = TRUE} on a place
+#' such as \code{lst$d}, which modify cannot change: the call as typed,
+#' without its modify argument, assigned to the place --
+#' \code{lst$d <- jdeclare_missing(lst$d, W, codes = -99)} (Session 352;
+#' the S345 item). The form \code{.jst_place_lines()} gives an offered
+#' line since Session 345, here for the call the user typed.
+#'
+#' @param call The call as made, from \code{sys.call()} in the exported
+#'   function.
+#' @param place The data argument as typed, a place.
+#' @return Character(1): one indented line.
+#' @keywords internal
+.jst_place_assign_line <- function(call, place) {
+  if (!is.null(names(call))) call <- call[names(call) != "modify"]
+  paste0("  ", .jst_term_text(place), " <- ",
+         paste(deparse(call, width.cutoff = 500L), collapse = " "))
+}
+
 #' Internal helper: the assign-or-lose reminder of jrecode() and jencode()
 #'
 #' Both functions return the new values and change nothing, so an
@@ -1742,6 +1762,43 @@ jai <- function(setup = NULL, path = NULL) {
                   "  mydata$<name> <- ", fn_name, "(mydata, ...)\n"))
   }
   paste0("  ", data_name, "$<name> <- ", fn_name, "(...)\n")
+}
+
+#' Internal helper: name an expression before the lines that use it
+#'
+#' A message whose runnable lines name \code{mydata} in place of an
+#' expression given as the data -- \code{jsave(oc86["X"], ...)} -- opens
+#' each block of those lines with the assignment that makes mydata, the
+#' S339 form (Session 352; jsave()'s pre-flight refusals, the S351 item).
+#' A block is a run of lines indented two spaces or more; it gets the
+#' assignment when one of its lines names mydata, so a list of variables
+#' is left alone and each of several alternative remedies runs on its own.
+#'
+#' @param msg Character(1): the message.
+#' @param typed Character(1): the expression as typed.
+#' @return Character(1).
+#' @keywords internal
+.jst_expr_assign_lines <- function(msg, typed) {
+  ln  <- strsplit(msg, "\n", fixed = TRUE)[[1L]]
+  ind <- grepl("^  ", ln)
+  out <- character(0)
+  i   <- 1L
+  while (i <= length(ln)) {
+    if (!ind[i]) {
+      out <- c(out, ln[i])
+      i   <- i + 1L
+      next
+    }
+    j <- i
+    while (j < length(ln) && ind[j + 1L]) j <- j + 1L
+    blk <- ln[i:j]
+    if (any(grepl("\\bmydata\\b", blk))) {
+      blk <- c(paste0("  mydata <- ", typed), blk)
+    }
+    out <- c(out, blk)
+    i   <- j + 1L
+  }
+  paste(out, collapse = "\n")
 }
 
 #' Internal helper: the file name a data argument is saved under

@@ -584,3 +584,119 @@
   label_only <- setdiff(lab_tags, cell_tags)
   list(all = c(cell_tags, label_only), label_only = label_only)
 }
+
+#' Internal helper: the convention argument a printed marker line needs
+#'
+#' A jrecode() call that maps a value to a lettered marker resolves its
+#' convention from the call, then the setting: under no setting it stops at
+#' the choose-first gate, under "spss" at the cross-convention error. A
+#' line the package prints for a variable whose own form is Stata-style or
+#' SAS-style -- read from the variable, as jdeclare_missing() reads it --
+#' therefore carries that convention unless the setting is already it
+#' (Session 352; ruling R8's offered lines, and the two lines of
+#' jdeclare_missing()'s marker refusal, which stopped under an unset or
+#' spss setting since v0.9.218).
+#'
+#' @param conv "stata" or "sas": the variable's form.
+#' @return Character(1): "" or \code{, convention = "<conv>"}.
+#' @keywords internal
+.jst_marker_conv_arg <- function(conv) {
+  set <- getOption(".jst_options_missing_convention",
+                   .jst_options_defaults$missing.convention)
+  if (identical(set, conv)) "" else paste0(", convention = \"", conv, "\"")
+}
+
+#' Internal helper: the first markers free of those in use
+#'
+#' The letters, in alphabet order and in the convention's case, that none
+#' of \code{used} takes in either case -- the markers a printed line can
+#' send values to without joining a kind of missing data already there.
+#'
+#' @param used Character vector of tag letters in use (cells, labels, a
+#'   map's targets), any case; NA ignored.
+#' @param conv "stata" or "sas".
+#' @param n How many letters are wanted.
+#' @return Character vector of up to \code{n} letters.
+#' @keywords internal
+.jst_free_tags <- function(used, conv, n = 1L) {
+  alphabet <- if (identical(conv, "sas")) LETTERS else letters
+  used <- as.character(used[!is.na(used)])
+  free <- setdiff(alphabet, .jst_canonical_tag(used, conv))
+  free[seq_len(min(n, length(free)))]
+}
+
+#' Internal helper: would declaring codes put them on markers a variable has?
+#'
+#' jdeclare_missing() converts numeric codes on a variable of Stata or SAS
+#' form to markers from the start of the alphabet, and since v0.9.218 it
+#' refuses a code whose letter the variable already carries, in a cell or as
+#' a labeled value. A message that offers jdeclare_missing(..., codes = )
+#' for such a variable printed a line that stops (ruling R8's offered
+#' declarations, Session 352). This reads the convention the call would
+#' resolve -- the variable's own form, else the per-call convention, else
+#' the setting -- and says whether the first \code{n} letters meet a marker
+#' the variable carries.
+#'
+#' @param col The variable.
+#' @param n The number of codes the declaration would name.
+#' @param per_call A per-call convention, or NULL.
+#' @return NULL when the declaration would run as offered; otherwise a list:
+#'   \code{conv}, the convention, and \code{tags}, the markers carried.
+#' @keywords internal
+.jst_marker_clash <- function(col, n, per_call = NULL) {
+  if (!is.double(col) || n < 1L) return(NULL)
+  info <- .jst_missing_info(col)
+  conv <- if (!is.null(info)) info$convention else NULL
+  if (is.null(conv)) {
+    conv <- if (!is.null(per_call)) per_call else
+      getOption(".jst_options_missing_convention",
+                .jst_options_defaults$missing.convention)
+  }
+  if (length(conv) != 1L || is.na(conv) || !conv %in% c("stata", "sas")) {
+    return(NULL)
+  }
+  tags <- .jst_marker_tags(col)$all
+  need <- (if (identical(conv, "sas")) LETTERS else letters)[
+    seq_len(min(n, 26L))]
+  if (!any(need %in% tags)) return(NULL)
+  list(conv = conv, tags = tags)
+}
+
+#' Internal helper: the jrecode() line that sends codes to free markers
+#'
+#' What runs, for a variable of Stata or SAS form, in place of a
+#' jdeclare_missing() line that would put its codes on markers the variable
+#' carries (\code{.jst_marker_clash()}): a recode of the codes to markers
+#' the variable does not use, each code's label carried, the else rule
+#' keeping every other value -- the "keep them distinct" line of
+#' jdeclare_missing()'s own refusal. The codes take the letters in the
+#' order jdeclare_missing() gives them (largest magnitude first).
+#'
+#' @param data_name The data frame as the line names it.
+#' @param var_name The variable.
+#' @param codes Numeric codes to send to markers.
+#' @param conv "stata" or "sas".
+#' @param used Tag letters already in use.
+#' @param labels Optional character vector parallel to \code{codes}: a label
+#'   for each code's marker ("" for none).
+#' @return Character(1): one indented line, or NULL when too few letters
+#'   are free.
+#' @keywords internal
+.jst_marker_recode_line <- function(data_name, var_name, codes, conv, used,
+                                    labels = NULL) {
+  ord   <- order(-abs(codes), codes)
+  codes <- codes[ord]
+  if (!is.null(labels)) labels <- labels[ord]
+  free  <- .jst_free_tags(used, conv, length(codes))
+  if (length(free) < length(codes)) return(NULL)
+  fmt   <- function(v) format(v, trim = TRUE, scientific = FALSE)
+  lab   <- if (!is.null(labels) && any(nzchar(labels))) {
+    paste0(", labels = \"",
+           paste0(".", free[nzchar(labels)], "=", labels[nzchar(labels)],
+                  collapse = "; "), "\"")
+  } else ""
+  paste0("  ", data_name, "$", var_name, "R <- jrecode(", data_name, ", ",
+         var_name, ", map = \"",
+         paste0(fmt(codes), "=.", free, collapse = "; "), "; else=copy\"",
+         lab, .jst_marker_conv_arg(conv), ")")
+}

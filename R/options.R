@@ -829,17 +829,68 @@ joutput <- function(level, effect.size = NULL,
           paste0("  jconvert(", nm, ", to = \"", target_convention,
                  "\", modify = TRUE)")
         }
+        # S352 (the S351 item): a frame holding a text variable with
+        # declared missing values cannot be converted whole to "stata" or
+        # "sas" (jconvert() refuses the variable since v0.9.214), so its
+        # lines are the route that runs: those values made plain NA first.
+        routes <- lapply(dfs, function(nm) {
+          .jst_frame_text_route(
+            tryCatch(get(nm, envir = env, inherits = FALSE),
+                     error = function(e) NULL),
+            nm, target_convention)
+        })
+        has_rt <- !vapply(routes, is.null, logical(1))
+        ord_w  <- c("first", "second", "third", "fourth")
         if (length(dfs) == 1L) {
-          intro <- "To convert it to match this setting, run:"
-          calls <- recipe_line(dfs[1L])
+          if (has_rt[1L]) {
+            intro <- paste0("To convert it to match this setting, run",
+                            if (length(routes[[1L]]$calls) == 2L) " both"
+                            else "", ":")
+            calls <- paste(c(routes[[1L]]$calls, routes[[1L]]$note),
+                           collapse = "\n")
+          } else {
+            intro <- "To convert it to match this setting, run:"
+            calls <- recipe_line(dfs[1L])
+          }
         } else if (length(dfs) == 2L) {
-          intro <- "To convert them to match this setting, run both:"
-          calls <- paste(vapply(dfs, recipe_line, character(1)),
-                         collapse = "\n")
+          if (any(has_rt)) {
+            lines_by <- lapply(seq_along(dfs), function(i) {
+              if (has_rt[i]) routes[[i]]$calls else recipe_line(dfs[i])
+            })
+            all_lines <- unlist(lines_by)
+            # Each routed frame's sentence names its first line by place.
+            starts <- cumsum(c(1L, lengths(lines_by)))[seq_along(dfs)]
+            rt_notes <- unlist(lapply(which(has_rt), function(i) {
+              tv <- .jst_declared_text_vars(get(dfs[i], envir = env,
+                                                inherits = FALSE))
+              paste0(.jst_format_var_list(tv, and = TRUE), " in ", dfs[i],
+                     " ", .jst_plural(length(tv), "is", "are"),
+                     " text, so the ", ord_w[starts[i]], " line makes ",
+                     .jst_plural(length(tv), "its", "their"),
+                     " declared values plain NA.")
+            }))
+            intro <- "To convert them to match this setting, run these lines:"
+            calls <- paste(c(all_lines, rt_notes), collapse = "\n")
+          } else {
+            intro <- "To convert them to match this setting, run both:"
+            calls <- paste(vapply(dfs, recipe_line, character(1)),
+                           collapse = "\n")
+          }
         } else {
-          intro <- paste0("To convert them to match this setting, run ",
-                          "one call per data frame:")
-          calls <- recipe_line(dfs[1L])
+          # The exemplar is a frame whose one call runs, where there is
+          # one; otherwise the first frame's route.
+          ex <- if (any(!has_rt)) which(!has_rt)[1L] else 1L
+          if (has_rt[ex]) {
+            intro <- paste0("To convert them to match this setting, run ",
+                            "these lines for each data frame, as for ",
+                            dfs[ex], ":")
+            calls <- paste(c(routes[[ex]]$calls, routes[[ex]]$note),
+                           collapse = "\n")
+          } else {
+            intro <- paste0("To convert them to match this setting, run ",
+                            "one call per data frame:")
+            calls <- recipe_line(dfs[ex])
+          }
         }
         if (mode == "u") {
           verb <- if (length(dfs) == 1L) "uses" else "use"

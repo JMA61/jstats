@@ -2242,19 +2242,22 @@
 #' @param plain FALSE when the variable to declare on already carries
 #'   declared missing values of either form: \code{jdeclare_missing()}
 #'   follows the variable's own form there and meets no gate.
+#' @param what Optional: what cannot be declared, in place of "the value"
+#'   or "the values" -- the load scan's block says "these codes" (Session
+#'   352, ruling R15).
 #'
 #' @return Character scalar ending without a newline, or \code{NULL}.
 #' @keywords internal
-.jst_declare_gate_lead <- function(fn, n = 1L, plain = TRUE) {
+.jst_declare_gate_lead <- function(fn, n = 1L, plain = TRUE, what = NULL) {
   if (!isTRUE(plain)) return(NULL)
   conv <- getOption(".jst_options_missing_convention",
                     .jst_options_defaults$missing.convention)
   if (isTRUE(conv %in% c("spss", "stata", "sas"))) return(NULL)
+  if (is.null(what)) what <- paste0("the ", .jst_plural(n, "value"))
   .jst_choose_convention_error(
     variant   = "menu",
     fn        = fn,
-    head_tail = paste0("the ", .jst_plural(n, "value"),
-                       " cannot be declared yet."),
+    head_tail = paste0(what, " cannot be declared yet."),
     prefixed  = FALSE)
 }
 

@@ -484,7 +484,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
                                                data_name, var_name, col,
                                                per_call_convention = NULL,
                                                tagged_raw = NULL,
-                                               arg_label = "codes") {
+                                               arg_label = "codes",
+                                               data = NULL) {
 
   # S218 rewrite. Sole caller is the hoisted tagged-token gate, and the
   # sole case is a column that carries SPSS-STYLE declarations while the
@@ -563,6 +564,15 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   }
   decl_disp <- paste(decl_disp, collapse = "; ")
 
+  # The convert-first line, or for a frame holding a text variable with
+  # declared missing values the route that runs (Session 352; the S351
+  # item): jconvert() refuses such a variable under to = "stata" or "sas",
+  # so the whole-frame call stopped.
+  route <- .jst_frame_text_route(data, data_name, phr)
+  convert_lines <- if (is.null(route)) {
+    paste0("  jconvert(", data_name, ", to = \"", phr, "\", modify = TRUE)")
+  } else paste(c(route$calls, route$note), collapse = "\n")
+
   # --- Verbosity gate -------------------------------------------------------
   output_level <- getOption(".jst_output_level", "standard")
 
@@ -574,7 +584,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
         " carries SPSS-style missing values."),
       "\n",
       "Name the numeric codes directly, or convert first:\n",
-      "  jconvert(", data_name, ", to = \"", phr, "\", modify = TRUE)"
+      convert_lines
     ))
   }
 
@@ -676,8 +686,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   msg_parts <- c(msg_parts, "",
     paste0("To use ", phr_style, " markers instead, convert the column ",
            "first:"),
-    paste0("  jconvert(", data_name,
-           ", to = \"", phr, "\", modify = TRUE)"))
+    convert_lines)
 
   paste(msg_parts, collapse = "\n")
 }
@@ -946,7 +955,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   (\code{.a}, or \code{.A}), so a map that also assigns that marker
 #'   itself stops rather than merge two missing categories onto one
 #'   marker; the message offers the next free marker, or the same marker
-#'   for both when that is what you mean.
+#'   for both when that is what you mean. When the variable already
+#'   carries that marker -- data from Stata often has its own \code{.a} --
+#'   the recoded cases join it, and a note says so and gives the line that
+#'   keeps them apart (the next free marker). Under every convention, a
+#'   \code{labels = "missing=..."} that differs from the label the marker or
+#'   code already has stops, since it would rename the cases already there:
+#'   the message gives the line that keeps the two apart and the line that
+#'   merges them on purpose, keeping the existing label.
 #'
 #'   Examples:
 #'   \itemize{
@@ -1483,8 +1499,15 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         .jst_render_map_string(parsed_map), "\", convention = \"",
         src_conv, "\")\n",
         "Or convert the data frame to match your setting first:\n",
-        "  jconvert(", .jst_data_name, ", to = \"", opt_conv,
-        "\", modify = TRUE)")
+        # S352 (the S351 item): a frame holding a text variable with
+        # declared missing values takes the route that runs.
+        {
+          rt <- .jst_frame_text_route(data, .jst_data_name, opt_conv)
+          if (is.null(rt)) {
+            paste0("  jconvert(", .jst_data_name, ", to = \"", opt_conv,
+                   "\", modify = TRUE)")
+          } else paste(c(rt$calls, rt$note), collapse = "\n")
+        })
     }
 
     tok_conv <- .jst_resolve_convention(convention, act = "token",
@@ -1789,8 +1812,16 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                ", so the marker ", gate_marker,
                " cannot be added to it."), "\n",
         "Convert the data frame first, then recode:\n",
-        "  jconvert(", .jst_data_name, ", to = \"", resolved_convention,
-        "\", modify = TRUE)",
+        # S352 (the S351 item): the route that runs for a frame holding a
+        # text variable with declared missing values.
+        {
+          rt <- .jst_frame_text_route(data, .jst_data_name,
+                                      resolved_convention)
+          if (is.null(rt)) {
+            paste0("  jconvert(", .jst_data_name, ", to = \"",
+                   resolved_convention, "\", modify = TRUE)")
+          } else paste(c(rt$calls, rt$note), collapse = "\n")
+        },
         # The map-them-too remedy only where every carried code is a
         # survivor: a declared code the map recodes INTO is being used on
         # purpose, and "map it as well" would be advice against the call.
@@ -1875,6 +1906,147 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       })
   }
 
+  # --- The token on a value the source already labels (ruling R8, part 2) ---
+  # The word missing lands on the marker the convention gives it (.a, .A)
+  # or, under spss, on the first convention code. When the source already
+  # carries that marker or declares that code WITH a label, a label for
+  # missing that differs from it is refused, under every convention (Jeff,
+  # S345: "yes to your recommendations for both"): it would rename the
+  # cases already there and put two kinds of missing data on one value --
+  # until Session 352 the relabeling was silent. The two lines are
+  # jdeclare_missing()'s two since v0.9.218: the token sent to a value the
+  # variable does not use, its label with it; or the value named in the
+  # map, keeping its own label (the merge, on purpose). A label equal to
+  # the one there names the same category, and the call proceeds.
+  orig_vl_r8 <- if (inherits(orig, "haven_labelled")) {
+    labelled::val_labels(orig)
+  } else NULL
+  r8_conv_arg <- if (!is.null(convention)) {
+    paste0(", convention = \"", convention, "\"")
+  } else ""
+  # The labels string with its missing= rule given a new left side, or
+  # dropped (NULL); the user's other rules as typed.
+  r8_labels_arg <- function(new_lhs) {
+    if (is.null(labels)) return("")
+    rules <- trimws(strsplit(labels, ";", fixed = TRUE)[[1]])
+    rules <- rules[nzchar(rules)]
+    lhs   <- tolower(trimws(sub("=.*$", "", rules)))
+    if (is.null(new_lhs)) {
+      rules <- rules[lhs != "missing"]
+    } else {
+      rules[lhs == "missing"] <- paste0(
+        new_lhs, "=", trimws(sub("^[^=]*=", "", rules[lhs == "missing"])))
+    }
+    if (length(rules) == 0L) "" else
+      paste0(", labels = \"", paste(rules, collapse = "; "), "\"")
+  }
+  if (!is.null(tok_missing_label) && length(orig_vl_r8) > 0L) {
+    have_lab <- character(0)
+    if (!is.null(tok_tag) && is.double(orig_vl_r8)) {
+      lt <- haven::na_tag(orig_vl_r8)
+      have_lab <- names(orig_vl_r8)[!is.na(lt) & lt == tok_tag]
+    } else if (!is.null(tok_mint_code) && isTRUE(tok_reused)) {
+      lv <- suppressWarnings(as.numeric(orig_vl_r8))
+      have_lab <- names(orig_vl_r8)[!is.na(lv) & lv == tok_mint_code]
+    }
+    have_lab <- have_lab[!is.na(have_lab) & nzchar(have_lab)]
+    if (length(have_lab) > 0L &&
+        !identical(trimws(have_lab[1L]), trimws(tok_missing_label))) {
+      line <- function(map_str, lab_arg) {
+        paste0("  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+               .jst_data_name, ", ", orig_name, ", map = \"", map_str, "\"",
+               lab_arg, r8_conv_arg, ")")
+      }
+      if (!is.null(tok_tag)) {
+        held   <- .jst_udm_row_label(paste0(".", tok_tag), have_lab[1L])
+        target <- paste0(".", tok_tag)
+        head1  <- paste0("'missing' would use ", target, " under ",
+                         if (identical(tok_conv, "sas")) "SAS" else "Stata",
+                         " convention, but ", orig_name, " already carries ",
+                         held, ", so the two would share one missing value.")
+        used <- c(unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
+                  parsed_map$na_rule$tagged, parsed_map$else_tag,
+                  if (is.double(parsed_labels)) haven::na_tag(parsed_labels),
+                  .jst_marker_tags(orig)$all)
+        free <- .jst_free_tags(used, tok_conv, 1L)
+        apart <- if (length(free) == 1L) paste0(
+          "To keep them distinct, give missing a marker ", orig_name,
+          " does not use:\n",
+          line(.jst_render_map_string(parsed_map,
+                                      missing_as = paste0(".", free)),
+               r8_labels_arg(paste0(".", free))))
+        else paste0("To keep them distinct, give missing a marker ",
+                    orig_name, " does not use, after freeing one: every ",
+                    "letter is in use.")
+      } else {
+        held   <- .jst_udm_row_label(.jst_fmt_code(tok_mint_code),
+                                     have_lab[1L])
+        target <- .jst_fmt_code(tok_mint_code)
+        head1  <- paste0("'missing' would use ", target, ", from ", cc_src,
+                         ", but ", orig_name, " already declares ", held,
+                         ", so the two would share one missing value.")
+        # A code the variable does not use: the next convention code not
+        # declared, inside the range, held as a value or named by the map.
+        cc_all <- as.numeric(getOption(
+          ".jst_options_missing_convention_codes",
+          .jst_options_defaults$missing.convention.codes))
+        taken  <- c(src_codes, lhs_all, orig_num[!is.na(orig_num)],
+                    unlist(lapply(parsed_map$mappings, `[[`, "new_val")))
+        free_c <- cc_all[!(cc_all %in% taken) & !.in_band(cc_all)]
+        n_after <- length(carried_codes) + 1L
+        fits   <- if (has_band) length(carried_codes) == 0L else n_after <= 3L
+        apart <- if (length(free_c) > 0L && fits) {
+          fc <- .jst_fmt_code(free_c[1L])
+          paste0(
+            "To keep them distinct, give missing a code ", orig_name,
+            " does not use, and declare it on the recoded variable:\n",
+            line(.jst_render_map_string(parsed_map, missing_as = fc),
+                 r8_labels_arg(fc)), "\n",
+            "  jdeclare_missing(", .jst_data_name, ", ", orig_name,
+            "R, codes = c(",
+            paste(format(sort(unique(c(carried_codes, free_c[1L]))),
+                         trim = TRUE, scientific = FALSE), collapse = ", "),
+            ")", r8_conv_arg, ", modify = TRUE)")
+        } else {
+          paste0("To keep them distinct, give missing a code of its own; ",
+                 orig_name, " has no free code to offer here.")
+        }
+      }
+      .jst_stop(
+        head1, "\n",
+        paste0("The label \"", tok_missing_label, "\" would also rename ",
+               "the cases already at ", target, "."), "\n",
+        apart, "\n",
+        paste0("Or, if they mean the same thing, use ", target,
+               " for both, keeping its label:"), "\n",
+        line(.jst_render_map_string(parsed_map, missing_as = target),
+             r8_labels_arg(NULL)))
+    }
+  }
+
+  # --- Notes: one blank line between them (ruling R6, jrecode's half) ------
+  # Voice Rule F: a blank line between consecutive notes, none before the
+  # first. Every note below goes through .note(), which opens with a blank
+  # line when a note has already printed in this call (Jeff, S345, ruling
+  # R6: the premise that the RStudio Console drops the line was withdrawn).
+  # Until Session 352 the older notes were separate .jst_msg() calls with no
+  # such tracking -- the kept-code note then the NA note, the D1 note then
+  # "Categories were collapsed." ran together -- and the labels hint opened
+  # with a blank line even when it was the first. An advisory note counts
+  # only at the output level that prints it. The assign-or-lose reminder,
+  # the closing block jrecode() shares with jencode(), jsum() and javg(),
+  # keeps its own leading blank line.
+  notes_before <- FALSE
+  .note <- function(..., advisory = FALSE) {
+    if (advisory &&
+        !identical(getOption(".jst_output_level", "standard"), "full")) {
+      return(invisible(NULL))
+    }
+    .jst_msg(if (notes_before) "\n" else "", ...)
+    notes_before <<- TRUE
+    invisible(NULL)
+  }
+
   # --- Apply recode ---
   # orig_num (the unclass()ed double payload) was taken at the declaration
   # read above. orig_tags reads the source's lettered markers once (S319):
@@ -1909,7 +2081,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     absent_tags       <- rule$old_tags_raw[
       !(rule$old_tags %in% orig_tags_lc[!is.na(orig_tags_lc)])]
     if (length(missing_from_data) > 0 || length(absent_tags) > 0) {
-      .jst_advisory_note(paste0(
+      .note(advisory = TRUE, paste0(
         "Note: '", orig_name, "' contained none of the map values ",
         paste(c(if (length(missing_from_data) > 0)
                   paste(missing_from_data, collapse = ", "),
@@ -2086,7 +2258,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # surviving code, exceed what a range allows). The band rides separately,
   # as na_range, at result construction. The first two sets were computed
   # at the declaration read above.
-  if (!is.null(tok_mint_code)) {
+  # Read under every convention since Session 352: the stata/sas arm's
+  # note on a carried marker (ruling R8, part 1) fires only when the token
+  # reached a cell, as D4 does.
+  if (has_missing_token) {
     tok_lhs  <- unlist(lapply(parsed_map$mappings[tok_rule_idx],
                               `[[`, "old_vals"))
     tok_tags <- unlist(lapply(parsed_map$mappings[tok_rule_idx],
@@ -2276,13 +2451,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     rendered <- paste(vapply(preserved_udm_codes, .code_with_label,
                              character(1)), collapse = ", ")
     if (length(preserved_udm_codes) == 1L) {
-      .jst_msg(paste0(
+      .note(paste0(
         "Note: ", rendered, " is a declared missing value and was kept on ",
         "the recoded variable.\n",
         "To convert it to a plain NA instead, add ", preserved_udm_codes[1],
         "=NA to the map."))
     } else {
-      .jst_msg(paste0(
+      .note(paste0(
         "Note: ", rendered, " are declared missing values and were kept on ",
         "the recoded variable.\n",
         "To convert them to plain NA instead, map them to NA ",
@@ -2306,17 +2481,16 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     if (n_band > length(shown)) {
       rendered <- paste0(rendered, " and ", n_band - length(shown), " more")
     }
-    # Rule F: a blank separates this from the discrete-code note above it.
-    lead <- if (length(preserved_udm_codes) > 0) "\n" else ""
+    # Rule F's blank line before it, when a note has printed, is .note()'s.
     if (n_band == 1L) {
-      .jst_msg(paste0(
-        lead, "Note: ", rendered, " is inside the declared missing-value range ",
+      .note(paste0(
+        "Note: ", rendered, " is inside the declared missing-value range ",
         band_txt, " and was kept on the recoded variable.\n",
         "To convert it to a plain NA instead, add ",
         .jst_fmt_code(preserved_band_vals[1]), "=NA to the map."))
     } else {
-      .jst_msg(paste0(
-        lead, "Note: ", rendered, " are inside the declared missing-value range ",
+      .note(paste0(
+        "Note: ", rendered, " are inside the declared missing-value range ",
         band_txt, " and were kept on the recoded variable.\n",
         "To convert them to plain NA instead, map them to NA ",
         "(for example ", .jst_fmt_code(preserved_band_vals[1]), "=NA)."))
@@ -2330,6 +2504,25 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   result_plain <- length(result_na_values) == 0 && !has_band &&
     !any(!is.na(haven::na_tag(new_num)))
 
+  # The lettered markers the recoded variable will carry -- in its cells,
+  # the source's marker labels the map leaves in place, and any the labels
+  # give -- and the form they make it (Session 352). jdeclare_missing()
+  # follows a variable's own form, and on a variable of Stata or SAS form it
+  # gives numeric codes the letters from .a on, refusing one the variable
+  # carries (v0.9.218); the notes below that offer a declaration read these
+  # to offer a line that runs (ruling R8's offered declarations).
+  res_tags <- unique(c(
+    {rt <- haven::na_tag(new_num); rt[!is.na(rt)]},
+    {mk <- .jst_marker_tags(orig); mk$all[!(tolower(mk$all) %in% lhs_tags_all)]},
+    if (is.double(parsed_labels)) {
+      lt <- haven::na_tag(parsed_labels); lt[!is.na(lt)]
+    }))
+  res_conv <- if (length(res_tags) == 0L) NA_character_
+              else if (all(res_tags == tolower(res_tags))) "stata"
+              else if (all(res_tags == toupper(res_tags))) "sas"
+              else NA_character_
+  res_style <- if (identical(res_conv, "sas")) "SAS-style" else "Stata-style"
+
   if (length(heur_unspecified) > 0 && parsed_map$else_explicit &&
       parsed_map$else_action == "copy") {
     # S345 (the S251 item): the menu leads where the declare would meet
@@ -2338,14 +2531,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     gate_lead <- .jst_declare_gate_lead(
       "jrecode", n = length(heur_unspecified), plain = result_plain)
     if (length(heur_unspecified) == 1L) {
-      .jst_advisory_note(paste0(
+      .note(advisory = TRUE, paste0(
         "Note: ", heur_unspecified, " in '", orig_name, "' looks like a ",
         "coded missing value and was carried through unchanged.\n",
         if (!is.null(gate_lead)) paste0(gate_lead, "\nThen, if") else "If",
         " it represents missing data, declare it with jdeclare_missing() so ",
         "analyses exclude it."))
     } else {
-      .jst_advisory_note(paste0(
+      .note(advisory = TRUE, paste0(
         "Note: ", paste(heur_unspecified, collapse = ", "), " in '",
         orig_name, "' look like coded missing values and were carried ",
         "through unchanged.\n",
@@ -2364,7 +2557,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   if (!is.null(parsed_map$na_rule)) {
     n_plain_na <- sum(is.na(orig_num) & is.na(haven::na_tag(orig_num)))
     if (n_plain_na == 0) {
-      .jst_advisory_note(paste0(
+      .note(advisory = TRUE, paste0(
         "Note: '", orig_name, "' contained no NA values -- nothing was ",
         "recoded for the NA rule."))
     } else if (is.null(parsed_map$na_rule$tagged) &&
@@ -2384,7 +2577,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         # declared code the map recodes into (S302), or one the S319 rule
         # declared -- so the declare remedy below would be false. It has
         # been since S302 whenever the NA rule targeted a declared code.
-        .jst_msg(paste0(
+        .note(paste0(
           "Note: ", if (n_plain_na == 1L) "1 NA value" else
             paste0(n_plain_na, " NA values"), " in '", orig_name, "' ",
           if (n_plain_na == 1L) "was" else "were", " recoded to ",
@@ -2394,14 +2587,60 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         # meet the choose-first gate (see the carried-through note above).
         gate_lead <- .jst_declare_gate_lead("jrecode", n = 1L,
                                             plain = result_plain)
-        .jst_msg(paste0(
+        na_head <- paste0(
           "Note: ", if (n_plain_na == 1L) "1 NA value" else
             paste0(n_plain_na, " NA values"), " in '", orig_name, "' ",
           if (n_plain_na == 1L) "was" else "were", " recoded to ",
-          code_txt, ".\n",
-          if (!is.null(gate_lead)) paste0(gate_lead, "\nThen declare ")
-          else "Declare ",
-          code_txt, " with jdeclare_missing() so analyses exclude it."))
+          code_txt, ".")
+        na_who  <- if (n_plain_na == 1L) "that case" else "those cases"
+        na_conv_arg <- if (!is.null(convention)) {
+          paste0(", convention = \"", convention, "\"")
+        } else ""
+        na_clash <- !is.na(res_conv) &&
+          (if (identical(res_conv, "sas")) "A" else "a") %in% res_tags
+        if (length(result_na_values) > 0 || has_band) {
+          # S352 (the S345 item): the recoded variable declares codes of its
+          # own, and jdeclare_missing() REPLACES a variable's codes (Decision
+          # 12), so "Declare -98" followed as written dropped the others --
+          # -7 "Refused" went, and the drop notice said so after the fact.
+          # The pair names every code, as the S319 notes' pairs do.
+          .note(
+            na_head, "\n",
+            "To make ", na_who, " missing, declare ", code_txt,
+            " on the recoded variable:\n",
+            "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+            .jst_data_name, ", ", orig_name, ", map = \"",
+            .jst_render_map_string(parsed_map), "\"", na_conv_arg, ")\n",
+            "  jdeclare_missing(", .jst_data_name, ", ", orig_name,
+            "R, codes = c(",
+            paste(format(c(result_na_values, na_code), trim = TRUE,
+                         scientific = FALSE), collapse = ", "),
+            ")", na_conv_arg, ", modify = TRUE)")
+        } else if (na_clash) {
+          # S352: on a variable of Stata or SAS form the declaration would
+          # turn the code into .a, which the variable already carries, and
+          # jdeclare_missing() refuses that (v0.9.218). What runs is the NA
+          # rule sent to a marker the variable does not use.
+          na_free <- .jst_free_tags(
+            c(res_tags, unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
+              parsed_map$else_tag), res_conv, 1L)
+          na_as   <- stats::setNames(paste0(".", na_free), code_txt)
+          .note(
+            na_head, "\n",
+            "To make ", na_who, " missing, map NA to a ", res_style,
+            " marker the recoded variable does not use:\n",
+            "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+            .jst_data_name, ", ", orig_name, ", map = \"",
+            .jst_render_map_string(parsed_map, targets_as = na_as), "\"",
+            if (identical(convention, res_conv)) na_conv_arg
+            else .jst_marker_conv_arg(res_conv), ")")
+        } else {
+          .note(
+            na_head, "\n",
+            if (!is.null(gate_lead)) paste0(gate_lead, "\nThen declare ")
+            else "Declare ",
+            code_txt, " with jdeclare_missing() so analyses exclude it.")
+        }
       }
     }
   }
@@ -2415,7 +2654,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # (S302) the declaration reused is the source's band.
   if (!is.null(tok_mint_code) && isTRUE(tok_minted_any)) {
     if (isTRUE(tok_reused)) {
-      .jst_msg(paste0(
+      .note(paste0(
         paste0(
           "Note: ", .jst_fmt_code(tok_mint_code), " was used for ",
           "missing, from ", cc_src, "."), "\n",
@@ -2428,10 +2667,58 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
           " as a missing value, so the recoded variable carries the ",
           "existing declaration.")))
     } else {
-      .jst_msg(paste0(
+      .note(paste0(
         "Note: ", .jst_fmt_code(tok_mint_code), " was used for missing, ",
         "from ", cc_src, ", and declared as a ",
         "missing value on the recoded variable."))
+    }
+  }
+
+  # The token on a marker the source already carries (ruling R8, part 1;
+  # Jeff, S345: "yes to your recommendations for both"). Under stata or sas
+  # the word missing takes .a (.A), and on a variable that already carries
+  # that marker -- in its cells or as a labeled value, as data read from
+  # Stata routinely do -- the recoded cases join the kind of missing data
+  # already there. The merge stands, since the user wrote the generic word,
+  # and is now said, as D4 says it under spss, with the line that keeps the
+  # two apart. Silent, as S239 ruled, when the variable carries no such
+  # marker; silent too when labels = names the marker's own label, which
+  # is the merge on purpose. A different label was refused above.
+  if (!is.null(tok_tag) && isTRUE(tok_minted_any)) {
+    src_mk <- .jst_marker_tags(orig)$all
+    if (tok_tag %in% src_mk) {
+      have <- character(0)
+      if (length(orig_vl_r8) > 0L && is.double(orig_vl_r8)) {
+        lt   <- haven::na_tag(orig_vl_r8)
+        have <- names(orig_vl_r8)[!is.na(lt) & lt == tok_tag]
+        have <- have[!is.na(have) & nzchar(have)]
+      }
+      same_label <- !is.null(tok_missing_label) && length(have) > 0L &&
+        identical(trimws(have[1L]), trimws(tok_missing_label))
+      if (!same_label) {
+        used <- c(unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
+                  parsed_map$na_rule$tagged, parsed_map$else_tag,
+                  if (is.double(parsed_labels)) haven::na_tag(parsed_labels),
+                  src_mk)
+        free <- .jst_free_tags(used, tok_conv, 1L)
+        .note(
+          "Note: .", tok_tag, " was used for missing, under ",
+          if (identical(tok_conv, "sas")) "SAS" else "Stata",
+          " convention.\n",
+          orig_name, " already carries ",
+          .jst_udm_row_label(paste0(".", tok_tag),
+                             if (length(have) > 0L) have[1L] else "",
+                             unlabelled = "bare"),
+          ", so the recoded cases share that missing value.",
+          if (length(free) == 1L) paste0(
+            "\nTo keep them apart, give missing a marker ", orig_name,
+            " does not use:\n",
+            "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+            .jst_data_name, ", ", orig_name, ", map = \"",
+            .jst_render_map_string(parsed_map,
+                                   missing_as = paste0(".", free)), "\"",
+            r8_labels_arg(paste0(".", free)), r8_conv_arg, ")"))
+      }
     }
   }
 
@@ -2455,14 +2742,6 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         vapply(e$from_tags, .tag_with_label, character(1)))
     })))
   }
-  e11_fired <- !is.null(parsed_map$na_rule) &&
-    any(is.na(orig_num) & is.na(orig_tags)) &&
-    is.null(parsed_map$na_rule$tagged) &&
-    !is.na(parsed_map$na_rule$new_val) &&
-    !isTRUE(parsed_map$na_rule$missing)
-  notes_before <- length(preserved_udm_codes) > 0 ||
-    length(preserved_band_vals) > 0 || e11_fired ||
-    (!is.null(tok_mint_code) && isTRUE(tok_minted_any))
 
   # Declared missing values moved onto a new code (S319; Rule R): the codes
   # the S319 rule declared, and the source values and markers they took
@@ -2470,14 +2749,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # declaration.
   if (length(r2_codes) > 0) {
     r2_srcs <- .srcs_of(r2_from)
-    .jst_msg(paste0(
-      if (notes_before) "\n" else "", "Note: ",
+    .note(paste0(
+      "Note: ",
       .jst_and_list(vapply(r2_codes, .jst_fmt_code, character(1))),
       if (length(r2_codes) == 1L) " was declared as a missing value"
       else " were declared as missing values",
       " on the recoded variable, as ", .jst_and_list(r2_srcs),
       if (length(r2_srcs) == 1L) " is" else " are", " on ", orig_name, "."))
-    notes_before <- TRUE
   }
 
   # Map-target mint note (D1, S239 row 5): plain numeric targets the map
@@ -2626,10 +2904,43 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                  if (length(flagged) == 2L) "both" else "them all",
                  " to missing.")
         }
-        notes_before <- TRUE
-        .jst_msg(paste0(
-          if (length(r2_codes) > 0) "
-" else "",
+        # S352 (ruling R8's offered declarations): on a recoded variable of
+        # Stata or SAS form the lines above can stop. The declaration gives
+        # the codes the letters from .a on and is refused on a letter the
+        # variable carries (v0.9.218); the word missing takes .a, joining a
+        # kind of missing data already there; and under a setting that is
+        # not the variable's form the word stops as ambiguous. What runs is
+        # the flagged values sent to markers the variable does not use, the
+        # convention carried when the setting is not the variable's.
+        d1_letters <- (if (identical(res_conv, "sas")) LETTERS else letters)[
+          seq_along(flagged)]
+        if (!is.na(res_conv) &&
+            (!identical(d1_conv, res_conv) || any(d1_letters %in% res_tags))) {
+          d1_free <- .jst_free_tags(
+            c(res_tags, unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
+              parsed_map$na_rule$tagged, parsed_map$else_tag),
+            res_conv, length(flagged))
+          if (length(d1_free) == length(flagged)) {
+            d1_lead <- paste0(
+              "To make the value", if (one) "" else "s", " missing, map ",
+              if (one) "it to a " else "them to ", res_style, " marker",
+              if (one) "" else "s", " the recoded variable does not use:")
+            d1_body <- paste0(
+              "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
+              .jst_data_name, ", ", orig_name, ", map = \"",
+              .jst_render_map_string(
+                parsed_map,
+                targets_as = stats::setNames(paste0(".", d1_free), codes)),
+              "\"",
+              if (identical(convention, res_conv)) d1_conv_arg
+              else .jst_marker_conv_arg(res_conv), ")",
+              if (!one) paste0(
+                "\nTo make them one missing value instead, map ",
+                if (length(flagged) == 2L) "both" else "them all",
+                " to .", d1_free[1L], "."))
+          }
+        }
+        .note(paste0(
           paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
             if (one) "looks like a coded missing value."
@@ -2716,7 +3027,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                      scientific = FALSE), collapse = ", "),
         ")", rel_conv_arg, ", modify = TRUE)")
     }
-    .jst_msg(paste0(if (notes_before) "\n" else "", rel_head, rel_body))
+    .note(rel_head, rel_body)
   }
 
   # --- Variable label ---
@@ -2897,8 +3208,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       }
 
       if (is_collapsing) {
-        .jst_msg("Note: Categories were collapsed.\n",
-                 "Use labels argument or jrelabel() to assign new value labels.")
+        .note("Note: Categories were collapsed.\n",
+              "Use labels argument or jrelabel() to assign new value labels.")
         # The collapse note covers the recoded categories only. Kept
         # declared values (codes and in-band values) are never part of a
         # collapse, so their labels ride here; otherwise a kept code would
@@ -2994,9 +3305,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                                     tok_rule_idx)],
         function(r) !is.na(r$new_val), logical(1)))
       if (mints_non_na) {
-        # S267 (Rule F): leading blank separates this from a mint note
-        # above, matching the assign-or-lose reminder's pattern.
-        .jst_msg("\nNote: No value labels assigned. To add labels, use jrelabel().")
+        # Rule F: a blank line before it when a note has printed, as
+        # .note() gives every note (Session 352; from S267 to S351 it always
+        # opened with one, which made a stray blank first line when it was
+        # the call's first note).
+        .note("Note: No value labels assigned. To add labels, use jrelabel().")
       }
     }
   }
@@ -4767,6 +5080,55 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
                  if (length(flagged) == 2L) "both" else "them all",
                  " to missing.")
         }
+        # S352 (ruling R8's offered declarations; see the jrecode twin): a
+        # map that gives a word a lettered marker makes the encoded variable
+        # Stata-style or SAS-style, and on it the word missing and the
+        # declaration both take .a. With "Refused=.a" in the map the token
+        # line stopped at the collision guard and the declaration was
+        # refused, so the note offered two lines that both stopped. What
+        # runs is the flagged words sent to markers the map does not use.
+        enc_tags <- unique(c(
+          {et <- haven::na_tag(new_num); et[!is.na(et)]},
+          if (length(val_labels_out) > 0L && is.double(val_labels_out)) {
+            lt <- haven::na_tag(val_labels_out); lt[!is.na(lt)]
+          }))
+        enc_conv <- if (length(enc_tags) == 0L) NA_character_
+                    else if (all(enc_tags == tolower(enc_tags))) "stata"
+                    else if (all(enc_tags == toupper(enc_tags))) "sas"
+                    else NA_character_
+        d1_letters <- (if (identical(enc_conv, "sas")) LETTERS else letters)[
+          seq_along(flagged)]
+        if (!is.na(enc_conv) &&
+            (!identical(d1_conv, enc_conv) || any(d1_letters %in% enc_tags))) {
+          d1_free <- .jst_free_tags(
+            c(enc_tags, unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
+              parsed_map$na_rule$tagged, parsed_map$else_tag),
+            enc_conv, length(flagged))
+          if (length(d1_free) == length(flagged)) {
+            d1_lead <- paste0(
+              "To make the value", if (one) "" else "s", " missing, map ",
+              if (one) "it to a " else "them to ",
+              if (identical(enc_conv, "sas")) "SAS-style" else "Stata-style",
+              " marker", if (one) "" else "s",
+              " the encoded variable does not use:")
+            d1_body <- paste0(
+              "  ", .jst_data_name, "$", var_name, "R <- jencode(",
+              .jst_data_name, ", ", var_name, ", map = \"",
+              gsub("\"", "\\\"",
+                   .jst_render_map_string(
+                     parsed_map, lhs_render = .jst_jencode_lhs_render,
+                     targets_as = stats::setNames(paste0(".", d1_free),
+                                                  codes)),
+                   fixed = TRUE),
+              "\"",
+              if (identical(convention, enc_conv)) d1_conv_arg
+              else .jst_marker_conv_arg(enc_conv), ")",
+              if (!one) paste0(
+                "\nTo make them one missing value instead, map ",
+                if (length(flagged) == 2L) "both" else "them all",
+                " to .", d1_free[1L], "."))
+          }
+        }
         msgs <- c(msgs, paste0(
           paste0(
             "Note: ", .jst_and_list(pairs), ", which ",
@@ -5395,6 +5757,17 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # fine: the default name is the write-back target there.
   if (isTRUE(modify) && arg1$mode == "explicit" &&
       !is.symbol(data_sub_expr)) {
+    # A place (lst$d) can be assigned to, so the line that changes it is
+    # the call itself, assigned back, without modify = TRUE (Session 352;
+    # the S345 item): the two lines offered before named mydata, which
+    # changed a copy and left the list as it was. The form every offered
+    # line for a place takes since v0.9.218 (.jst_place_lines()).
+    if (identical(.jst_data_arg_kind(data_sub_expr), "place")) {
+      .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
+                "To change ", .jst_term_text(data_sub_expr),
+                " itself, assign the result to it:\n",
+                .jst_place_assign_line(sys.call(), data_sub_expr))
+    }
     .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
          "Name the data first, then rerun with modify = TRUE:\n",
          "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "), "\n",
@@ -5707,7 +6080,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # ==========================================================================
 
   results   <- vector("list", n_targets)
-  build_err <- character(0)
+  build_err     <- character(0)
+  build_err_raw <- character(0)
 
   for (ti in seq_len(n_targets)) {
     vn <- target_vars[ti]
@@ -5779,7 +6153,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
             col                 = col,
             per_call_convention = convention,
             tagged_raw          = codes_tagged_raw,
-            arg_label           = if (labels_only) "labels" else "codes"
+            arg_label           = if (labels_only) "labels" else "codes",
+            data                = data
           )
           .jst_stop(err_msg)
         }
@@ -6055,12 +6430,18 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
              inband_labels  = inband_labels,
              conversion_info = conversion_info))
     }, error = function(e) {
-      structure(list(msg = conditionMessage(e)), class = "jst_build_err")
+      # The text before the emitter wrapped it, where .jst_stop() raised
+      # the error (Session 352): the bulk refusal below nests it at a new
+      # indent and lets its own emitter wrap it once.
+      structure(list(msg = conditionMessage(e),
+                     raw = if (is.character(e$raw)) e$raw
+                           else conditionMessage(e)),
+                class = "jst_build_err")
     })
 
     if (inherits(res, "jst_build_err")) {
-      build_err <- c(build_err,
-                     stats::setNames(res$msg, vn))
+      build_err     <- c(build_err, stats::setNames(res$msg, vn))
+      build_err_raw <- c(build_err_raw, stats::setNames(res$raw, vn))
     } else {
       results[[ti]] <- res
     }
@@ -6073,10 +6454,18 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       # (it already carries the variable name where relevant).
       stop(build_err[[1L]], call. = FALSE)
     }
-    lines <- vapply(seq_along(build_err), function(i) {
-      m <- sub("^jdeclare_missing\\(\\): ", "", build_err[[i]])
-      paste0("  ", names(build_err)[i], ": ",
-             gsub("\n", "\n    ", m, fixed = TRUE))
+    # Each variable's name on a line of its own, and its refusal under it
+    # at an indent of four, its runnable lines at six (Session 352; the S345
+    # item). The refusal is the text as raised, before any wrapping: until
+    # Session 352 the wrapped text was indented here and the emitter broke
+    # its lines again, mid-phrase. Prose lines are wrapped once, at their
+    # indent, by the emitter; the runnable lines pass whole.
+    lines <- vapply(seq_along(build_err_raw), function(i) {
+      m <- sub("^jdeclare_missing\\(\\): ", "", build_err_raw[[i]])
+      m <- paste0("  ", names(build_err_raw)[i], ":\n    ",
+                  gsub("\n", "\n    ", m, fixed = TRUE))
+      # A blank line inside the refusal stays blank, not four spaces.
+      gsub("(?m)^ +$", "", m, perl = TRUE)
     }, character(1))
     .jst_stop("cannot declare on ", length(build_err), " of ", n_targets,
               " variables; no variable was changed:\n",
@@ -6335,9 +6724,20 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           "Note: ", .jst_format_var_list(vars_cv, and = TRUE), " ", verb,
           " ", .jst_convention_label(cv), " missing values, but your ",
           "missing.convention setting is \"", d2_opt, "\"."), "\n",
-        "To convert the data frame, run:\n",
-        "  jconvert(", data_name, ", to = \"", d2_opt,
-        "\", modify = TRUE)\n",
+        # S352 (the S351 item): the route that runs for a frame holding a
+        # text variable with declared missing values.
+        {
+          rt <- .jst_frame_text_route(data, data_name, d2_opt)
+          if (is.null(rt)) {
+            paste0("To convert the data frame, run:\n",
+                   "  jconvert(", data_name, ", to = \"", d2_opt,
+                   "\", modify = TRUE)\n")
+          } else {
+            paste0("To convert the data frame, run",
+                   if (length(rt$calls) == 2L) " both" else "", ":\n",
+                   paste(c(rt$calls, rt$note), collapse = "\n"), "\n")
+          }
+        },
         "To keep ", .jst_convention_label(cv),
         " instead, change the setting:\n",
         "  joptions(missing.convention = \"", cv, "\")"))
@@ -6749,6 +7149,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         "; else=copy\"",
         if (length(lab_txt) > 0L) paste0(
           ", labels = \"", paste(lab_txt, collapse = "; "), "\"") else "",
+        # The variable's form decided this call's convention; a marker in a
+        # jrecode() map is resolved from the call and the setting, so the
+        # line carries it unless the setting is already it (Session 352):
+        # under no setting the line stopped at the choose-first gate.
+        .jst_marker_conv_arg(convention),
         ")")
     }
     n_clash <- sum(clash)
@@ -7778,6 +8183,17 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
   # fine: the default name is the write-back target there.
   if (isTRUE(modify) && arg1$mode == "explicit" &&
       !is.symbol(data_sub_expr)) {
+    # A place (lst$d) can be assigned to, so the line that changes it is
+    # the call itself, assigned back, without modify = TRUE (Session 352;
+    # the S345 item): the two lines offered before named mydata, which
+    # changed a copy and left the list as it was. The form every offered
+    # line for a place takes since v0.9.218 (.jst_place_lines()).
+    if (identical(.jst_data_arg_kind(data_sub_expr), "place")) {
+      .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
+                "To change ", .jst_term_text(data_sub_expr),
+                " itself, assign the result to it:\n",
+                .jst_place_assign_line(sys.call(), data_sub_expr))
+    }
     .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
          "Name the data first, then rerun with modify = TRUE:\n",
          "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "), "\n",

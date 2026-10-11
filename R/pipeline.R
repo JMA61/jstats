@@ -426,7 +426,18 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
       get(dflt, envir = caller_env)
     }
   }
-  .jst_check_named_variables(rlang::enquos(...), frame_in_hand, "jsubset",
+  # With no frame in hand (none named, no juse() default) a named input
+  # BESIDE a condition is an input jsubset() does not have, as it is with a
+  # frame that lacks the variable (Session 352; the S349 item): until then
+  # jsubset(x > 1, quiet = TRUE) was read as a condition typed with one =
+  # and offered jsubset(quiet == TRUE), a line that does not run. A named
+  # input on its own -- jsubset(Gender = 1) -- is still the condition it
+  # most likely is. An empty frame stands for "no variable can match".
+  named_against <- if (is.null(frame_in_hand) &&
+                       (!missing(data) || !missing(expr))) {
+    data.frame()
+  } else frame_in_hand
+  .jst_check_named_variables(rlang::enquos(...), named_against, "jsubset",
                              frame = frame_typed)
 
   # -- No arguments: print session-wide status ------------------------------

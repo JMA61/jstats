@@ -79,7 +79,14 @@ Stata or SAS convention the token always uses the first marker
 (\code{.a}, or \code{.A}), so a map that also assigns that marker
 itself stops rather than merge two missing categories onto one
 marker; the message offers the next free marker, or the same marker
-for both when that is what you mean.
+for both when that is what you mean. When the variable already
+carries that marker -- data from Stata often has its own \code{.a} --
+the recoded cases join it, and a note says so and gives the line that
+keeps them apart (the next free marker). Under every convention, a
+\code{labels = "missing=..."} that differs from the label the marker or
+code already has stops, since it would rename the cases already there:
+the message gives the line that keeps the two apart and the line that
+merges them on purpose, keeping the existing label.
 
 Examples:
 \itemize{

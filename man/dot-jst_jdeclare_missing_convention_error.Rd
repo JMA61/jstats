@@ -11,7 +11,8 @@
   col,
   per_call_convention = NULL,
   tagged_raw = NULL,
-  arg_label = "codes"
+  arg_label = "codes",
+  data = NULL
 )
 }
 \arguments{
