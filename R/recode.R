@@ -6700,10 +6700,17 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # of its own, so merging it is not this function's to decide. jrecode()'s
   # missing token joining a column's own .a cells is a different act, and
   # stays as Decision 14 has it (to-do ruling R8).
+  # Both probes guarded the same way (S350): haven::na_tag() takes only a
+  # double, and a labelled variable stored as whole numbers -- six in each
+  # shipped dataset -- has integer cells AND integer labels. 0.9.218-0.9.222
+  # guarded the cells alone, so every codes = call on such a variable under
+  # a stata or sas resolution stopped with haven's "`x` must be a double
+  # vector". An integer vector cannot hold a marker, so it carries none.
   have_cells <- if (is.double(col)) haven::na_tag(col) else character(0)
   have_labs  <- if (haven::is.labelled(col)) labelled::val_labels(col)
                 else NULL
-  lab_tags   <- if (length(have_labs) > 0L) haven::na_tag(have_labs)
+  lab_tags   <- if (length(have_labs) > 0L && is.double(have_labs))
+                  haven::na_tag(have_labs)
                 else character(0)
   have_tags  <- unique(c(have_cells[!is.na(have_cells)],
                          lab_tags[!is.na(lab_tags)]))
