@@ -367,7 +367,6 @@ df <- community
 df$OwnsHome01 <- jrecode(df, OwnsHome,
                          map    = "1=1; 2=0",
                          labels = "0=No; 1=Yes")
-#> 
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the
@@ -377,7 +376,6 @@ df$OwnsHome01 <- jrecode(df, OwnsHome,
 df$RegionR <- jrecode(df, Region,
                       map    = "1,2=1; 3,4=2",
                       labels = "1=North or South; 2=East or West")
-#> 
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the
@@ -430,7 +428,6 @@ joptions(missing.convention = "spss")
 #> Run joptions() to see all settings.
 #> 
 df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
-#> 
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the
@@ -453,7 +450,6 @@ df$EducR4 <- jrecode(df, Education,
                      map    = "1,2=1; 3,4,5=2; -99,-98=.a",
                      labels = "1=No college; 2=College; .a=Refused",
                      convention = "stata")
-#> 
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the
@@ -465,7 +461,6 @@ df$EducR5 <- jrecode(df, Education,
                      map    = "1,2=1; 3,4,5=2; -99,-98=.a",
                      labels = "1=No college; 2=College; .a=Refused",
                      convention = "sas")
-#> 
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the
@@ -476,7 +471,6 @@ juse(df)
 #> Default data frame set to: df
 df$RegionR2 <- jrecode(Region, map = "1,2=1; 3,4=2",
                        labels = "1=North or South; 2=East or West")
-#> 
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the

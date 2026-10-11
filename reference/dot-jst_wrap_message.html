@@ -9,7 +9,7 @@ its category requires. Idempotent: wrapping twice equals wrapping once."></head>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,7 +73,11 @@ that the first-line <code>reserve</code> can be the REAL prefix length – the
 emitter knows it, a builder can only guess.</p>
 <p>A line that offers <code>modify = TRUE</code> on a place is first given the
 assignment form (<code><a href="dot-jst_place_lines.html">.jst_place_lines()</a></code>, Session 345), here because
-every emitter passes through this function.</p>
+every emitter passes through this function. Before that, a call a
+builder broke over lines is put back on one (<code><a href="dot-jst_join_calls.html">.jst_join_calls()</a></code>);
+and a printed call wider than the message is laid out in the one house
+form (<code><a href="dot-jst_layout_call.html">.jst_layout_call()</a></code>, ruling R5, Session 353) rather than
+passed whole.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

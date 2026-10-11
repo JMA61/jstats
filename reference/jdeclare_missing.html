@@ -61,7 +61,7 @@ declare on every column, pass vars = names(data) explicitly."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -487,7 +487,6 @@ ends up out of step with the rest of its DF.</p>
 <span class="r-in"><span><span class="va">df5</span><span class="op">$</span><span class="va">Mood2</span> <span class="op">&lt;-</span> <span class="fu"><a href="jrecode.html">jrecode</a></span><span class="op">(</span><span class="va">df5</span>, <span class="va">MoodRating</span>,</span></span>
 <span class="r-in"><span>                     map <span class="op">=</span> <span class="st">"-99=.a; -98=.b; else=copy"</span>,</span></span>
 <span class="r-in"><span>                     convention <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df5 only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df5$&lt;name&gt; &lt;- jrecode(...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>

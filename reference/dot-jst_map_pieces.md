@@ -1,0 +1,29 @@
+# Internal helper: the rules of a map string, cut where a line may break
+
+Splits the CONTENTS of a map or labels string, as written in code – the
+text between its quotation marks, escapes included – after each
+semicolon that separates two rules. A semicolon inside a quoted word
+(the word Not applicable; other, quoted in the map) does not separate
+rules, so the quoted words are found as the map parsers find them,
+[`.jst_split_unquoted()`](https://jma61.github.io/jstats/reference/dot-jst_split_unquoted.md)'s
+rule: a quotation mark opens a quoted word only at the start of a word.
+The pieces keep the text exactly as written, each but the last ending in
+its semicolon, the spaces after a semicolon dropped.
+
+## Usage
+
+``` r
+.jst_map_pieces(content)
+```
+
+## Arguments
+
+- content:
+
+  Character vector: the string's characters as written.
+
+## Value
+
+Character vector of pieces, or `NULL` when the contents cannot be read
+with certainty (a backslash escape other than an escaped quotation mark,
+apostrophe or backslash; an unbalanced quoted word; an empty rule).

@@ -116,6 +116,8 @@ Variants (the S243 approved-text sheet, changelog SESSION 243 (g)):
 Recipes echo the caller's actual data-frame name, variables, and range
 bounds, in the data, variable(s), named-options teaching form with flat
 `modify = TRUE`; runnable lines are bare Rule L lines (2-space indent,
-never width-wrapped). Prose is Rule U wrapped; menu consequence lines
-wrap at their own indent via
+never prose-wrapped; one wider than the message is laid out by
+[`.jst_layout_call()`](https://jma61.github.io/jstats/reference/dot-jst_layout_call.md),
+ruling R5). Prose is Rule U wrapped; menu consequence lines wrap at
+their own indent via
 [`.jst_wrap_indent()`](https://jma61.github.io/jstats/reference/dot-jst_wrap_indent.md).

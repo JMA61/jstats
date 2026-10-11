@@ -359,7 +359,6 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 df <- community
 df$OwnsHome01 <- jrecode(df, OwnsHome,
                          map = "1=1; 2=0", labels = "0=No; 1=Yes")
-#> 
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the

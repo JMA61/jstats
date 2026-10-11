@@ -233,8 +233,7 @@ MyData$StatusR <- jencode(MyData, Status)
 #>   "Remand" -> 3
 #> If these categories have a natural order (like Low/Medium/High), rerun with a
 #> map to choose the numbers:
-#>   MyData$StatusR <- jencode(MyData, Status,
-#>                             map = "Bail=1; Parole=2; Remand=3")
+#>   MyData$StatusR <- jencode(MyData, Status, map = "Bail=1; Parole=2; Remand=3")
 #> 
 #> Note: This call changes MyData only if you assign the result:
 #>   MyData$<name> <- jencode(...)
@@ -244,7 +243,6 @@ MyData$StatusR <- jencode(MyData, Status)
 # Map mode: choose the numbers; apostrophes need no quoting
 MyData$AnswerR <- jencode(MyData, Answer,
                           map = "Yes=1; No=0; Don't know=8; blank=9")
-#> 
 #> Note: This call changes MyData only if you assign the result:
 #>   MyData$<name> <- jencode(...)
 #> To check the encoding landed correctly, compare jfreq() on the original and the

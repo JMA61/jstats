@@ -13,7 +13,7 @@ rendered such lines at 97 and 81 characters.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,10 @@ first-line reserve before calling).</p></dd>
 
 <dl><dt>pass</dt>
 <dd><p>Byte-identical. Blank lines, anything already fitting, Rule L
-runnable command lines, Rule V menu options, and column-aligned layout.</p></dd>
+runnable command lines, Rule V menu options, and column-aligned layout.
+(A runnable line wider than the message is laid out by
+<code><a href="dot-jst_layout_call.html">.jst_layout_call()</a></code> before it reaches this classifier, Session
+353; one the layout cannot read as a call passes whole.)</p></dd>
 
 <dt>prose</dt>
 <dd><p>Wrapped by <code><a href="dot-jst_wrap_prose.html">.jst_wrap_prose()</a></code> at the full width.</p></dd>

@@ -32,7 +32,11 @@ One of "pass", "prose", or "indent".
 - pass:
 
   Byte-identical. Blank lines, anything already fitting, Rule L runnable
-  command lines, Rule V menu options, and column-aligned layout.
+  command lines, Rule V menu options, and column-aligned layout. (A
+  runnable line wider than the message is laid out by
+  [`.jst_layout_call()`](https://jma61.github.io/jstats/reference/dot-jst_layout_call.md)
+  before it reaches this classifier, Session 353; one the layout cannot
+  read as a call passes whole.)
 
 - prose:
 

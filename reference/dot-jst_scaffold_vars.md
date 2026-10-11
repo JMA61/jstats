@@ -2,16 +2,17 @@
 
 The text that stands for a call's variables in the durability note's two
 lines, each of which ends in the template's own `...` and is never
-wrapped (voice Rule L). A call on many variables once put every name on
-both lines: 52 names made two lines of some 1,300 characters (the S298
-item, with S292 site 1; Session 339). Three forms, the first that
-applies: `vars =` as the call typed it, when the call gave it and it
-fits the line; every name, when there are three or fewer and they fit;
-otherwise nothing, so the line reads `d <- jdeclare_missing(d, ...)` and
-the template's `...` stands for all of the call's arguments (voice Rule
-K). A list is never shown in part: a line naming the first few of
-fourteen variables, completed and run, would declare on those few (the
-concern modify_form_walk.R Section 10 has recorded since S282).
+prose-wrapped (voice Rule L). A call on many variables once put every
+name on both lines: 52 names made two lines of some 1,300 characters
+(the S298 item, with S292 site 1; Session 339). Three forms, the first
+that applies: `vars =` as the call typed it, when the call gave it and
+it fits the line; every name, when there are three or fewer and they
+fit; otherwise nothing, so the line reads
+`d <- jdeclare_missing(d, ...)` and the template's `...` stands for all
+of the call's arguments (voice Rule K). A list is never shown in part: a
+line naming the first few of fourteen variables, completed and run,
+would declare on those few (the concern modify_form_walk.R Section 10
+has recorded since S282).
 
 ## Usage
 

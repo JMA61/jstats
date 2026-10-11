@@ -4,17 +4,14 @@ Builds the prefilled, non-destructive jencode() call that
 [`jencode()`](https://jma61.github.io/jstats/reference/jencode.md)'s
 notes offer as a remedy: Rule G's R-suffix target, the data name from
 the user's own call, and the map string filled in from the column's own
-words, so the line runs as pasted. The call is emitted on one line when
-it fits the 76-column message width, and otherwise breaks after the
-variable with the map string continuing under its own opening quote.
-Every continuation still parses, because
-[`.jst_parse_text_map()`](https://jma61.github.io/jstats/reference/dot-jst_parse_text_map.md)
-trims each rule. The rules are separated at the semicolons OUTSIDE
-quoted words, by
-[`.jst_split_unquoted()`](https://jma61.github.io/jstats/reference/dot-jst_split_unquoted.md)
-and before the quotes are escaped: until Session 343 a plain split cut a
-quoted word holding a semicolon across two lines, and the pasted word no
-longer matched the data (the S249 item).
+words, so the line runs as pasted. Always ONE line: since Session 353
+the layout of a call wider than the message is the wrapper layer's
+([`.jst_layout_call()`](https://jma61.github.io/jstats/reference/dot-jst_layout_call.md),
+ruling R5), which breaks it after the commas between arguments and after
+the semicolons between the map's rules, as it does every printed call.
+Until then this builder packed the map itself, hung under the
+parenthesis at a fixed 76 columns, while a longer remedy built elsewhere
+ran on whole (the S255 item).
 
 ## Usage
 
@@ -38,8 +35,15 @@ longer matched the data (the S249 item).
 
 - indent:
 
-  Character. Leading indent for the first line.
+  Character. Leading indent for the line.
 
 ## Value
 
-Character scalar; may contain newlines.
+Character scalar: one line.
+
+## Details
+
+The map's double quotes are escaped (Session 249):
+[`.jst_jencode_lhs_render()`](https://jma61.github.io/jstats/reference/dot-jst_jencode_lhs_render.md)
+re-quotes a word holding a semicolon, an equals sign or a comma with
+double quotes, and the map is itself a double-quoted string.

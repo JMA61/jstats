@@ -109,7 +109,6 @@ community$ScaleMean <- javg(Environment1:Environment5)
 # Mix colon ranges and explicit names (e.g. after reverse-coding an item)
 community$Environment2R <- jrecode(community, Environment2,
                                    map = "1=5; 2=4; 3=3; 4=2; 5=1")
-#> 
 #> Note: This call changes community only if you assign the result:
 #>   community$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the

@@ -398,7 +398,6 @@ df5 <- clinic
 df5$Mood2 <- jrecode(df5, MoodRating,
                      map = "-99=.a; -98=.b; else=copy",
                      convention = "stata")
-#> 
 #> Note: This call changes df5 only if you assign the result:
 #>   df5$<name> <- jrecode(...)
 #> To check the recode landed correctly, compare jfreq() on the original and the

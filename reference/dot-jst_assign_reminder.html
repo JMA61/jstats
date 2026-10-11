@@ -25,7 +25,7 @@ which runs."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.225</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,7 @@ which runs.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_assign_reminder</span><span class="op">(</span><span class="va">fn_name</span>, <span class="va">data_name</span>, <span class="va">data_kind</span>, <span class="va">typed</span>, <span class="va">landed</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_assign_reminder</span><span class="op">(</span><span class="va">fn_name</span>, <span class="va">data_name</span>, <span class="va">data_kind</span>, <span class="va">typed</span>, <span class="va">landed</span>, lead <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -94,11 +94,18 @@ which runs.</p>
 <dd><p>Character(1); the noun of the closing check line
 (<code>"recode"</code>, <code>"encoding"</code>).</p></dd>
 
+
+<dt id="arg-lead">lead<a class="anchor" aria-label="anchor" href="#arg-lead"></a></dt>
+<dd><p>TRUE when a note of the same call has printed above it:
+the reminder then opens with a blank line, and otherwise does not
+(voice Rule F: a blank line between notes, none before the first).
+Until Session 353 it always opened with one, so a call whose only
+output was the reminder printed a blank first line (the S352 item).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Character(1) with a leading newline (voice Rule F) and no
-trailing one.</p>
+    <p>Character(1) with no trailing newline.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -42,3 +42,9 @@ A line that offers `modify = TRUE` on a place is first given the
 assignment form
 ([`.jst_place_lines()`](https://jma61.github.io/jstats/reference/dot-jst_place_lines.md),
 Session 345), here because every emitter passes through this function.
+Before that, a call a builder broke over lines is put back on one
+([`.jst_join_calls()`](https://jma61.github.io/jstats/reference/dot-jst_join_calls.md));
+and a printed call wider than the message is laid out in the one house
+form
+([`.jst_layout_call()`](https://jma61.github.io/jstats/reference/dot-jst_layout_call.md),
+ruling R5, Session 353) rather than passed whole.
