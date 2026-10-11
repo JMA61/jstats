@@ -73,7 +73,10 @@ to disk.
 
 **File paths:** Use forward slashes (`/`) in file paths. If you copy a
 path from Windows File Explorer, replace the backslashes with forward
-slashes. R does not accept single backslashes in file paths.
+slashes. R does not accept single backslashes in file paths: inside
+quoted text it reads a backslash and the letter after it as one special
+character. `jsave()` stops on such a path, before anything is written,
+and shows it written with forward slashes.
 
 **File location:**
 
@@ -119,6 +122,13 @@ slashes. R does not accept single backslashes in file paths.
   a range plus more than one code, on one column. No file is written
   until the problems are fixed.
 
+- SPSS (`.sav`), Stata (`.dta`), SAS interchange (`.xpt`) and CSV
+  (`.csv`) have no missing value for text: a text variable's missing
+  cells are saved as blank text, and read back as blank, not missing. A
+  note says so when it happens. R native (`.rds`) and Excel (`.xlsx`)
+  keep them missing. In a CSV file the same holds for a factor, which is
+  written as its labels.
+
 - Stata files are written as version 14 format.
 
 - Legacy Excel format (`.xls`) is not supported for saving. Use `.xlsx`
@@ -135,7 +145,7 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpebG6uc/community.sav
+#> Saved community to /tmp/RtmpiBrqBf/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{

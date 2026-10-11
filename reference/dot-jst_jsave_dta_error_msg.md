@@ -14,7 +14,7 @@ level.
 ## Usage
 
 ``` r
-.jst_jsave_dta_error_msg(spss_vars, data_name)
+.jst_jsave_dta_error_msg(spss_vars, data_name, text_vars = character(0))
 ```
 
 ## Arguments
@@ -31,6 +31,16 @@ level.
   to construct the suggested
   [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
   call.
+
+- text_vars:
+
+  The variables of `spss_vars` that are text (Session 351). When there
+  are any, the remedy is the route
+  [`.jst_text_route()`](https://jma61.github.io/jstats/reference/dot-jst_text_route.md)
+  builds – their declared values made plain NA, then the rest converted
+  – with its sentence, and at the standard and full levels a closing
+  line pointing to
+  [`jencode()`](https://jma61.github.io/jstats/reference/jencode.md).
 
 ## Value
 

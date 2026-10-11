@@ -27,7 +27,7 @@ explicit transform path for data already in the workspace."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.223</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,7 +48,7 @@ explicit transform path for data already in the workspace."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Set or display session-level package options</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.223/R/options.R" class="external-link"><code>R/options.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/options.R" class="external-link"><code>R/options.R</code></a></small>
       <div class="d-none name"><code>joptions.Rd</code></div>
     </div>
 
@@ -180,7 +180,9 @@ To clear a previously-set folder back to this default, pass
 <code>data.dir = NULL</code> or <code>data.dir = ""</code> (an empty string;
 see Call patterns). Filenames containing a directory
 separator (a forward slash, or a backslash on Windows) bypass this
-setting and are taken literally.</p></dd>
+setting and are taken literally. Write the folder with forward
+slashes: a folder typed with single backslashes, which R reads as
+special characters, stops the call with nothing set.</p></dd>
 
 <dt>corr.layout</dt>
 <dd><p>Character, length 1. One of <code>"wide"</code> or
@@ -343,11 +345,11 @@ their standard form – do not trigger the notice.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Data"</span><span class="op">)</span><span class="op">)</span> <span class="co"># set save/load folder</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Options Settings</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: /tmp/RtmpebG6uc/Data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Data folder: /tmp/RtmpiBrqBf/Data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Run joptions() to see all settings.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Created the data folder:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpebG6uc/Data</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   /tmp/RtmpiBrqBf/Data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span>                                                  <span class="co"># (created if absent)</span></span></span>
 <span class="r-in"><span><span class="fu">joptions</span><span class="op">(</span>data.dir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>                         <span class="co"># back to the working directory</span></span></span>

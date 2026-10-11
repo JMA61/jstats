@@ -19,7 +19,7 @@ are offered before the lossy jrecode() reduction."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.223</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,7 +40,7 @@ are offered before the lossy jrecode() reduction."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Internal: build jsave's error message for SPSS-form UDM columns that exceed the .sav missing-value limit</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.223/R/io.R" class="external-link"><code>R/io.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/io.R" class="external-link"><code>R/io.R</code></a></small>
       <div class="d-none name"><code>dot-jst_jsave_sav_overcap_error_msg.Rd</code></div>
     </div>
 
@@ -56,7 +56,11 @@ are offered before the lossy jrecode() reduction.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_sav_overcap_error_msg</span><span class="op">(</span><span class="va">overcap_info</span>, <span class="va">data_name</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_sav_overcap_error_msg</span><span class="op">(</span></span>
+<span>  <span class="va">overcap_info</span>,</span>
+<span>  <span class="va">data_name</span>,</span>
+<span>  text_vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -71,6 +75,14 @@ are offered before the lossy jrecode() reduction.</p>
 
 <dt id="arg-data-name">data_name<a class="anchor" aria-label="anchor" href="#arg-data-name"></a></dt>
 <dd><p>The data frame's name, used in the suggested fix code.</p></dd>
+
+
+<dt id="arg-text-vars">text_vars<a class="anchor" aria-label="anchor" href="#arg-text-vars"></a></dt>
+<dd><p>The frame's text variables with declared missing values
+(Session 351). When there are any, the Stata route is not offered: a
+.dta file cannot keep a text variable's declared missing values, so
+its "also keeping all the codes" would be false, and its jconvert()
+line stops on them (the S340 item; Jeff's lean, S351).</p></dd>
 
 </dl></div>
     <div class="section level2">

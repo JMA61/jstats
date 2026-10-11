@@ -15,7 +15,8 @@ depends on which missing-value form the frame carried and on whether
   spss_vars,
   stata_vars,
   preserve.declarations,
-  n_blanked
+  n_blanked,
+  text_udm = FALSE
 )
 ```
 
@@ -43,6 +44,13 @@ depends on which missing-value form the frame carried and on whether
 
   Integer count of SPSS-style code cells blanked when
   `preserve.declarations = FALSE`; zero otherwise.
+
+- text_udm:
+
+  Logical: is one of `spss_vars` a text variable? Its declared codes are
+  words, so "(e.g. -99) are written as literal numbers" and "ordinary
+  numbers" become "ordinary values" (Session 351, the S340 item's
+  rider).
 
 ## Value
 

@@ -35,7 +35,7 @@ juse() is used."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.223</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,7 +56,7 @@ juse() is used."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Save a data frame to a file</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.223/R/io.R" class="external-link"><code>R/io.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/io.R" class="external-link"><code>R/io.R</code></a></small>
       <div class="d-none name"><code>jsave.Rd</code></div>
     </div>
 
@@ -133,7 +133,10 @@ writing a file to disk.</p>
     <p><strong>File paths:</strong>
 Use forward slashes (<code>/</code>) in file paths. If you copy a path from
 Windows File Explorer, replace the backslashes with forward slashes.
-R does not accept single backslashes in file paths.</p>
+R does not accept single backslashes in file paths: inside quoted text
+it reads a backslash and the letter after it as one special character.
+<code>jsave()</code> stops on such a path, before anything is written, and
+shows it written with forward slashes.</p>
 <p><strong>File location:</strong></p><ul><li><p>If the path contains a directory separator, the file is saved
 to that exact location; the folder must already exist.</p></li>
 <li><p>If the path is a bare filename and the <code>data.dir</code> setting in
@@ -162,6 +165,12 @@ POSIXlt columns; missing values of a form the format cannot hold
 <code>.xpt</code>); and, for <code>.sav</code>, more than three declared codes,
 or a range plus more than one code, on one column. No file is
 written until the problems are fixed.</p></li>
+<li><p>SPSS (<code>.sav</code>), Stata (<code>.dta</code>), SAS interchange
+(<code>.xpt</code>) and CSV (<code>.csv</code>) have no missing value for text:
+a text variable's missing cells are saved as blank text, and read
+back as blank, not missing. A note says so when it happens. R native
+(<code>.rds</code>) and Excel (<code>.xlsx</code>) keep them missing. In a CSV
+file the same holds for a factor, which is written as its labels.</p></li>
 <li><p>Stata files are written as version 14 format.</p></li>
 <li><p>Legacy Excel format (<code>.xls</code>) is not supported for saving.
 Use <code>.xlsx</code> instead.</p></li>
@@ -176,7 +185,7 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A runnable save into R's session temporary folder</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpebG6uc/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpiBrqBf/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>

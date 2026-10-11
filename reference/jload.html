@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.223</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,7 @@ extension). Use the name argument to specify a different name."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Load a data file into R</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.223/R/io.R" class="external-link"><code>R/io.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/io.R" class="external-link"><code>R/io.R</code></a></small>
       <div class="d-none name"><code>jload.Rd</code></div>
     </div>
 
@@ -201,7 +201,17 @@ while the data frame still arrives under its own name.</p>
     <p><strong>File paths:</strong>
 Use forward slashes (<code>/</code>) in file paths. If you copy a path from
 Windows File Explorer, replace the backslashes with forward slashes.
-R does not accept single backslashes in file paths.</p>
+R does not accept single backslashes in file paths: inside quoted text
+it reads a backslash and the letter after it as one special character
+(a backslash before t is a tab), so the path that arrives is not the
+one typed. <code>jload()</code> stops on such a path and shows it written
+with forward slashes.</p>
+<p><strong>CSV files:</strong>
+A CSV file with one column keeps its empty lines: each is a case whose
+one cell is empty, which is how a missing value is written there. In a
+file with two or more columns an empty line is not a case. An empty
+cell in a text variable is read as blank text, never as missing (see
+<code><a href="jsave.html">jsave</a></code>).</p>
 <p><strong>File search order:</strong></p><ol><li><p>If the path contains a directory separator (<code>/</code>, or a
 backslash), the path is used directly.</p></li>
 <li><p>If the path is a bare filename, <code>jload()</code> checks:

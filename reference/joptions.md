@@ -129,7 +129,9 @@ query, or as an echo of the slots a setting call touched.
   previously-set folder back to this default, pass `data.dir = NULL` or
   `data.dir = ""` (an empty string; see Call patterns). Filenames
   containing a directory separator (a forward slash, or a backslash on
-  Windows) bypass this setting and are taken literally.
+  Windows) bypass this setting and are taken literally. Write the folder
+  with forward slashes: a folder typed with single backslashes, which R
+  reads as special characters, stops the call with nothing set.
 
 - corr.layout:
 
@@ -290,11 +292,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpebG6uc/Data
+#> Data folder: /tmp/RtmpiBrqBf/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpebG6uc/Data
+#>   /tmp/RtmpiBrqBf/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory

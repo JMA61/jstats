@@ -17,7 +17,7 @@ preserve.declarations = FALSE blanked the codes."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.223</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.224</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@ preserve.declarations = FALSE blanked the codes."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Internal: build the label / missing-value loss note for Excel and CSV saves</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.223/R/io.R" class="external-link"><code>R/io.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/io.R" class="external-link"><code>R/io.R</code></a></small>
       <div class="d-none name"><code>dot-jst_jsave_label_loss_note.Rd</code></div>
     </div>
 
@@ -58,7 +58,8 @@ depends on which missing-value form the frame carried and on whether
 <span>  <span class="va">spss_vars</span>,</span>
 <span>  <span class="va">stata_vars</span>,</span>
 <span>  <span class="va">preserve.declarations</span>,</span>
-<span>  <span class="va">n_blanked</span></span>
+<span>  <span class="va">n_blanked</span>,</span>
+<span>  text_udm <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -87,6 +88,13 @@ names, as detected before any collapse.</p></dd>
 <dt id="arg-n-blanked">n_blanked<a class="anchor" aria-label="anchor" href="#arg-n-blanked"></a></dt>
 <dd><p>Integer count of SPSS-style code cells blanked when
 <code>preserve.declarations = FALSE</code>; zero otherwise.</p></dd>
+
+
+<dt id="arg-text-udm">text_udm<a class="anchor" aria-label="anchor" href="#arg-text-udm"></a></dt>
+<dd><p>Logical: is one of <code>spss_vars</code> a text variable?
+Its declared codes are words, so "(e.g. -99) are written as literal
+numbers" and "ordinary numbers" become "ordinary values" (Session 351,
+the S340 item's rider).</p></dd>
 
 </dl></div>
     <div class="section level2">

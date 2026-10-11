@@ -12,7 +12,11 @@ reduction.
 ## Usage
 
 ``` r
-.jst_jsave_sav_overcap_error_msg(overcap_info, data_name)
+.jst_jsave_sav_overcap_error_msg(
+  overcap_info,
+  data_name,
+  text_vars = character(0)
+)
 ```
 
 ## Arguments
@@ -26,6 +30,14 @@ reduction.
 - data_name:
 
   The data frame's name, used in the suggested fix code.
+
+- text_vars:
+
+  The frame's text variables with declared missing values (Session 351).
+  When there are any, the Stata route is not offered: a .dta file cannot
+  keep a text variable's declared missing values, so its "also keeping
+  all the codes" would be false, and its jconvert() line stops on them
+  (the S340 item; Jeff's lean, S351).
 
 ## Value
 
