@@ -15,7 +15,7 @@ Warns when variables may be categorical rather than continuous."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -131,8 +131,8 @@ numeric-like here, so it behaves like <code>numeric</code>: it suppresses the
 <dt id="arg-value-id">value.id<a class="anchor" aria-label="anchor" href="#arg-value-id"></a></dt>
 <dd><p>Not supported by <code>jcorr()</code>. The function does not
 display value labels, so passing this argument is an error. It exists
-only to return a clear message rather than misreporting the token as a
-missing variable. Leave at NULL (default).</p></dd>
+only to return a clear message rather than report <code>value.id</code> as
+a variable that was not found. Leave at NULL (default).</p></dd>
 
 
 <dt id="arg-layout">layout<a class="anchor" aria-label="anchor" href="#arg-layout"></a></dt>
@@ -230,6 +230,29 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                 N=97            N=103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Note: Spearman p-values are approximate due to tied values in the data.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given by name</span></span></span>
+<span class="r-in"><span><span class="fu">jcorr</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Income</span>, <span class="va">Age</span>, <span class="va">WellbeingScore</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Pearson Bivariate Correlations</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 3 Variable Pool; 97 Complete on All</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 103   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Income</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing      6     5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Bivariate Correlations (Pearson)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 Income          Age             WellbeingScore</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------  --------------  --------------  --------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income           1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age              .289 (p=.004)   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 N=97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> WellbeingScore   .616 (p&lt;.001)   .343 (p&lt;.001)   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 N=97            N=103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>

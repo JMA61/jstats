@@ -403,6 +403,26 @@ model as written and then warns when a formula does this. A power that
 is not a number, `x^k`, stops with an error, as in
 [`lm()`](https://rdrr.io/r/stats/lm.html); write `I(x^k)`.
 
+## Interactions
+
+An interaction is entered in the formula with `*`, as in R: `y ~ x * z`
+fits `x`, `z` and their product, and the product's row in the
+coefficient table is labeled `x * z`. With a categorical predictor
+registered with
+[`jdummy`](https://jma61.github.io/jstats/reference/jdummy.md), the
+interaction rows are grouped under a header naming the reference
+category – `Region * Age (ref = 1: North)` – with one row per dummy
+variable, as the predictor's own rows are. Each row's b is the change in
+the slope of one variable per unit of the other (or, for a dummy row,
+the difference in slope between that category and the reference), and
+the main-effect rows give the slopes where the other variable is zero. A
+note under the table says that the standardized column is built from
+centered predictors, which is why a beta there can have the opposite
+sign from its b, and points to the section Comparing with other software
+for how the standardized columns are computed.
+[`jplot`](https://jma61.github.io/jstats/reference/jplot.md) on the
+result draws the effect plots.
+
 ## Comparing with other software
 
 Two conventions exist for the standardized coefficients of a model with

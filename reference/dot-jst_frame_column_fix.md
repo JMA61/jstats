@@ -8,12 +8,15 @@ The frame's other columns become bare names through
 [`.jst_strip_frame_refs()`](https://jma61.github.io/jstats/reference/dot-jst_strip_frame_refs.md),
 a named argument keeps its name, and the column goes where the function
 takes variables: straight after the frame when its second formal is
-`...`, `var`, `orig.var` or `expr`, or when nothing positional follows
-(`jconvert(d$Stress, to = "stata")`). Gives NULL – the sentence without
-a call – when the rebuild cannot be complete: the argument is not found
-in the call, a positional argument would land in the wrong slot, a
-summary of the frame is used (`mean(d$Age)`), or a data frame is still
-named after the rewrite (another frame's column, `d[, 2]`).
+`...`, `var`, `orig.var` or `expr`, or when nothing positional follows.
+A format name given to
+[`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
+where a variable goes is named `to =` in the rebuilt call (Session 354).
+Gives NULL – the sentence without a call – when the rebuild cannot be
+complete: the argument is not found in the call, a positional argument
+would land in the wrong slot, a summary of the frame is used
+(`mean(d$Age)`), or a data frame is still named after the rewrite
+(another frame's column, `d[, 2]`).
 
 ## Usage
 

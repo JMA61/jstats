@@ -73,8 +73,8 @@ jscreen(
 
   Not supported by `jscreen()`. The function does not display value
   labels, so passing this argument is an error. It exists only to return
-  a clear message rather than misreporting the token as a missing
-  variable. Leave at NULL (default).
+  a clear message rather than report `value.id` as a variable that was
+  not found. Leave at NULL (default).
 
 - types:
 
@@ -295,6 +295,48 @@ jscreen(community, outlier.sd = 2.5)
 #> Smoker              5        4.9       --
 #> Environment1       12       11.7       --
 #> Environment3       12       11.7       --
+#> 
+#> Note: SPSS-style declared missing values on: Income, Education, Smoker,
+#> Environment1, Environment3.
+#> jstats treats these as missing; base R functions do not.
+#> 
+
+# The data frame may also be given by name
+jscreen(data = community)
+#> Data Screening
+#>   Cases: 103
+#>   Variables: 15
+#>   Cases with missing data: 34
+#>   Variables with outliers: 0
+#> 
+#> Variable Types
+#> Variable        jstats Class  Sub-class   Unique Values
+#> --------------  ------------  ----------  -------------
+#> RespondentID    Categorical   identifier       103
+#> Income          Numeric                         49
+#> Education       Categorical   5-category         5
+#> Age             Numeric                         41
+#> WellbeingScore  Numeric                         41
+#> Volunteer       Categorical   dichotomy          2
+#> OwnsHome        Categorical   dichotomy*         2
+#> Smoker          Categorical   dichotomy          2
+#> CommuteTime     Numeric                         42
+#> Region          Categorical   4-category         4
+#> Environment1    Categorical   Likert             5
+#> Environment2    Categorical   Likert             5
+#> Environment3    Categorical   Likert             5
+#> Environment4    Categorical   Likert             5
+#> Environment5    Categorical   Likert             5
+#> * coded other than 0/1; mean is not a proportion
+#> 
+#> Missing Data & Outliers (outliers > 3 SD from mean)
+#> Variable      Missing  % Missing
+#> ------------  -------  ---------
+#> Income            6        5.8
+#> Education         6        5.8
+#> Smoker            5        4.9
+#> Environment1     12       11.7
+#> Environment3     12       11.7
 #> 
 #> Note: SPSS-style declared missing values on: Income, Education, Smoker,
 #> Environment1, Environment3.

@@ -93,8 +93,8 @@ jcorr(
 
   Not supported by `jcorr()`. The function does not display value
   labels, so passing this argument is an error. It exists only to return
-  a clear message rather than misreporting the token as a missing
-  variable. Leave at NULL (default).
+  a clear message rather than report `value.id` as a variable that was
+  not found. Leave at NULL (default).
 
 - layout:
 
@@ -195,6 +195,29 @@ jcorr(community, Income, Age, WellbeingScore, method = "spearman")
 #>                 N=97            N=103
 #> 
 #> Note: Spearman p-values are approximate due to tied values in the data.
+#> 
+
+# The data frame may also be given by name
+jcorr(data = community, Income, Age, WellbeingScore)
+#> Pearson Bivariate Correlations
+#> 
+#> 103 Cases in the 3 Variable Pool; 97 Complete on All
+#> 
+#> Missing data   From 103   %
+#>     Income
+#>       Missing      6     5.8
+#> ----------------------------
+#> 
+#> Bivariate Correlations (Pearson)
+#>                 Income          Age             WellbeingScore
+#> --------------  --------------  --------------  --------------
+#> Income           1
+#> 
+#> Age              .289 (p=.004)   1
+#>                 N=97
+#> 
+#> WellbeingScore   .616 (p<.001)   .343 (p<.001)   1
+#>                 N=97            N=103
 #> 
 
 # Using juse() default

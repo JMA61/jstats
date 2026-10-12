@@ -85,6 +85,25 @@ jcount(df, arrests)                 # treat as a count (here 0-12)
 #> 
 #> Next session, load that file to restore the registration:
 #>   jload("df.rds")
+jcount(data = df, arrests)          # the data frame by name
+#> Count registration set for 'arrests' in df.
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(df, "df.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("df.rds")
+juse(df); jcount(arrests); juse(NULL)  # or the juse() default
+#> Default data frame set to: df
+#> Using default data frame: df
+#> Count registration set for 'arrests' in df.
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(df, "df.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("df.rds")
+#> Default data frame cleared.
 jcount(df, arrests, remove = TRUE)
 #> Count registration removed for 'arrests' in df.
 jcount()                            # list all registrations

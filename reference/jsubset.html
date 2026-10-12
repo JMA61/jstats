@@ -54,7 +54,12 @@ removed, and every analysis of that data frame then stops until the
 filter is set aside. Nor can it be used beside a jcomplete()
 setting that drops cases, since the filter is applied to the cases
 jcomplete() keeps: the filter is refused, with the line that adds
-the object to the data frame."><meta property="og:description" content="jsubset() sets a persistent case-selection expression that is
+the object to the data frame.
+A text variable's blank cells, which jfreq() tabulates in a row
+labeled &amp;lt;blank&amp;gt;, are selected by what they hold, not by that
+label: jsubset(d, trimws(Source) == &quot;&quot;) keeps the cases whose
+Source is empty or holds only spaces, and Source != &quot;&quot; with
+trimws() drops them. Source == &quot;&amp;lt;blank&amp;gt;&quot; matches nothing."><meta property="og:description" content="jsubset() sets a persistent case-selection expression that is
 applied automatically by jstats analysis functions when the
 default data frame (set by juse()) is in use. This is analogous
 to the SPSS FILTER command.
@@ -109,7 +114,12 @@ removed, and every analysis of that data frame then stops until the
 filter is set aside. Nor can it be used beside a jcomplete()
 setting that drops cases, since the filter is applied to the cases
 jcomplete() keeps: the filter is refused, with the line that adds
-the object to the data frame."></head><body>
+the object to the data frame.
+A text variable's blank cells, which jfreq() tabulates in a row
+labeled &amp;lt;blank&amp;gt;, are selected by what they hold, not by that
+label: jsubset(d, trimws(Source) == &quot;&quot;) keeps the cases whose
+Source is empty or holds only spaces, and Source != &quot;&quot; with
+trimws() drops them. Source == &quot;&amp;lt;blank&amp;gt;&quot; matches nothing."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -117,7 +127,7 @@ the object to the data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -199,6 +209,11 @@ filter is set aside. Nor can it be used beside a <code><a href="jcomplete.html">
 setting that drops cases, since the filter is applied to the cases
 <code><a href="jcomplete.html">jcomplete()</a></code> keeps: the filter is refused, with the line that adds
 the object to the data frame.</p>
+<p>A text variable's blank cells, which <code><a href="jfreq.html">jfreq()</a></code> tabulates in a row
+labeled <code>&lt;blank&gt;</code>, are selected by what they hold, not by that
+label: <code>jsubset(d, trimws(Source) == "")</code> keeps the cases whose
+Source is empty or holds only spaces, and <code>Source != ""</code> with
+<code><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws()</a></code> drops them. <code>Source == "&lt;blank&gt;"</code> matches nothing.</p>
     </div>
 
     <div class="section level2">
@@ -290,6 +305,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">Age</span> <span class="op">&lt;</span> <span class="fl">40</span><span class="op">)</span>                        <span class="co"># Set using juse default</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset activated for community: Age &lt; 40</span>
 <span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">community</span>, <span class="va">Age</span> <span class="op">&lt;</span> <span class="fl">40</span><span class="op">)</span>             <span class="co"># Explicit dataset</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset activated for community: Age &lt; 40</span>
+<span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Age</span> <span class="op">&lt;</span> <span class="fl">40</span><span class="op">)</span>      <span class="co"># ... given by name</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset activated for community: Age &lt; 40</span>
 <span class="r-in"><span><span class="fu">jsubset</span><span class="op">(</span><span class="va">Age</span> <span class="op">&lt;</span> <span class="fl">40</span> <span class="op">&amp;</span> <span class="va">WellbeingScore</span> <span class="op">&gt;</span> <span class="fl">50</span><span class="op">)</span>  <span class="co"># Compound condition</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> jsubset replaced for community: Age &lt; 40 &amp; WellbeingScore &gt; 50 (was: Age &lt; 40)</span>

@@ -64,9 +64,14 @@ where an AI assistant finds it on its own. `setup` selects the situation
   whether they are current. Nothing is written.
 
 The file-writing situations confirm the exact destination before writing
-(or write without asking when `path` names the folder yourself). Each
-written file carries a version stamp; after updating jstats, rerun the
-same `jai()` call to refresh it.
+(or write without asking when `path` names the folder yourself). In a
+session that cannot ask – a script run with Rscript, a knitr render –
+they stop before the prompt and say so; name the folder with `path =` to
+write there, as
+[`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) and
+[`jload()`](https://jma61.github.io/jstats/reference/jload.md) do with
+their own overwrite prompts. Each written file carries a version stamp;
+after updating jstats, rerun the same `jai()` call to refresh it.
 
 ## See also
 
@@ -81,7 +86,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.7 | jstats 0.9.226 | generated 2026-10-11
+#> Orientation text v3.7 | jstats 0.9.227 | generated 2026-10-12
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial

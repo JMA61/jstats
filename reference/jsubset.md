@@ -65,6 +65,14 @@ setting that drops cases, since the filter is applied to the cases
 keeps: the filter is refused, with the line that adds the object to the
 data frame.
 
+A text variable's blank cells, which
+[`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) tabulates
+in a row labeled `<blank>`, are selected by what they hold, not by that
+label: `jsubset(d, trimws(Source) == "")` keeps the cases whose Source
+is empty or holds only spaces, and `Source != ""` with
+[`trimws()`](https://rdrr.io/r/base/trimws.html) drops them.
+`Source == "<blank>"` matches nothing.
+
 ## Usage
 
 ``` r
@@ -172,6 +180,8 @@ juse(community)
 jsubset(Age < 40)                        # Set using juse default
 #> jsubset activated for community: Age < 40
 jsubset(community, Age < 40)             # Explicit dataset
+#> jsubset activated for community: Age < 40
+jsubset(data = community, Age < 40)      # ... given by name
 #> jsubset activated for community: Age < 40
 jsubset(Age < 40 & WellbeingScore > 50)  # Compound condition
 #> jsubset replaced for community: Age < 40 & WellbeingScore > 50 (was: Age < 40)

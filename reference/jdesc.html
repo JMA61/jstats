@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -179,11 +179,15 @@ prints a formatted table to the console.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Output is structured consistently with <code><a href="jfreq.html">jfreq()</a></code>: a red title is
-printed first, followed by a block showing the type and variable label
-(or "None" if no label is present) for each variable, then a single blank
-line before the table. For multiple variables, one type/label entry is
-printed per variable before the shared table.</p>
+    <p>Output is structured consistently with <code><a href="jfreq.html">jfreq()</a></code>: a single red
+"Descriptive Statistics" title is printed first, followed by the
+default-data note (if a juse() default was used), any pipeline
+messages, and then either the Case Processing table (when a filter is
+active) or a one-line statement of the N – for several variables, the
+size of the variable pool and how many cases are complete on all of
+them. One shared table follows, a row per variable. Variable labels
+are not printed in the table; <code>variable.id</code> puts them in the row
+names or in a legend under the table.</p>
 <p>Summarizes numeric, haven-labelled, logical, numeric-coded factor, and
 numeric-looking character variables. Variables that cannot be summarized
 — text factors, text character variables, and date/time variables —
@@ -209,8 +213,10 @@ has no variable of that name, or when no default is set.</p>
 a group. Where it is a single line rather than a table (at the minimal
 output level, for example), that line counts "Grouped Cases" once the
 grouping variable has excluded any.</p>
-<p>Haven-labelled variables are reported as <code>haven_labelled (Categorical)</code>
-in the type line; the uninformative <code>vctrs_vctr</code> class is suppressed.</p>
+<p>A haven-labelled variable is summarized by its codes, like any numeric
+variable. One whose codes look like categories gets a warning that the
+statistics may not be meaningful, with <code><a href="jfreq.html">jfreq()</a></code> as the
+alternative.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -252,6 +258,17 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------  -----  -----------  ---  ---  ------  ------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 0: No        54        54       25   76  47.463  11.699</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes       49        49       29   81  54.673  10.059</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given by name</span></span></span>
+<span class="r-in"><span><span class="fu">jdesc</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Age</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Descriptive Statistics</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable  Total  Non_missing  Min  Max   Mean     SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  -----  -----------  ---  ---  ------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103       103       18   71  40.650  11.620</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>

@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -302,6 +302,26 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Cohen's d: -0.658</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">jt</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Volunteer</span>, data <span class="op">=</span> <span class="va">community</span>, full <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Independent Samples T-Test</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group Descriptives: WellbeingScore by Volunteer</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Group    N   Mean     SD</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------  --  ------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0: No   54  47.463  11.699</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: Yes  49  54.673  10.059</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Independent Samples T-Test Results (equal variances assumed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    t     df    p   Mean Difference  95% CI Lower  95% CI Upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------  ---  ----  ---------------  ------------  ------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -3.338  101  .001       -7.211         -11.496       -2.925</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cohen's d: -0.658</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given positionally</span></span></span>
+<span class="r-in"><span><span class="fu">jt</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Volunteer</span>, <span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Independent Samples T-Test</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>

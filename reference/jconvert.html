@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,8 +64,8 @@ missing values.</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jconvert</span><span class="op">(</span></span>
 <span>  <span class="va">data</span>,</span>
-<span>  to <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span>,</span>
+<span>  to <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  missing.notice <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  modify <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -80,21 +80,26 @@ missing values.</p>
 <dd><p>A data frame, or omitted to use the <code><a href="juse.html">juse()</a></code> default.</p></dd>
 
 
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Optional unquoted variable names, straight after the data
+frame, as in every data-first function:
+<code>jconvert(d, Income, Education, to = "stata")</code>. When supplied,
+only the listed variables are scanned. Mutually exclusive with
+<code>vars</code>.</p></dd>
+
+
 <dt id="arg-to">to<a class="anchor" aria-label="anchor" href="#arg-to"></a></dt>
 <dd><p>One of <code>"baseR"</code>, <code>"spss"</code>, <code>"stata"</code>, or
-<code>"sas"</code> (any capitalization is accepted). When <code>NULL</code> (the
-default), <code>jconvert()</code>
+<code>"sas"</code> (any capitalization is accepted), always named:
+<code>to = "stata"</code>. A format name given where a variable goes, as in
+<code>jconvert(d, "stata")</code>, stops and shows the named form. When
+<code>to</code> is left out, <code>jconvert()</code>
 reads the <code>missing.convention</code> setting in <code><a href="joptions.html">joptions</a></code>: if
 the slot is set to <code>"spss"</code>, <code>"stata"</code>, or <code>"sas"</code>,
 <code>to</code> resolves to that value; if the slot is at its <code>"none"</code>
 default, <code>jconvert()</code> errors with guidance naming the concrete
 options. The destructive <code>"baseR"</code> target is never auto-resolved –
 it must always be passed explicitly.</p></dd>
-
-
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Optional unquoted variable names. When supplied, only the
-listed variables are scanned. Mutually exclusive with <code>vars</code>.</p></dd>
 
 
 <dt id="arg-vars">vars<a class="anchor" aria-label="anchor" href="#arg-vars"></a></dt>
@@ -350,8 +355,8 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Scope by unquoted names:</span></span></span>
-<span class="r-in"><span><span class="va">df4</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, <span class="va">Income</span>, <span class="va">Education</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Some variables only: name them after the data frame, then the target</span></span></span>
+<span class="r-in"><span><span class="va">df4</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, <span class="va">Education</span>, to <span class="op">=</span> <span class="st">"baseR"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped the missing-value declarations from 2 variables:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     -99 ["Refused"]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>              -98 ["Don't know"]</span>
@@ -364,8 +369,8 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Scope by character vector (alternative form):</span></span></span>
-<span class="r-in"><span><span class="va">df5</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Income"</span>, <span class="st">"Education"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># The same, as a character vector:</span></span></span>
+<span class="r-in"><span><span class="va">df5</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Income"</span>, <span class="st">"Education"</span><span class="op">)</span>, to <span class="op">=</span> <span class="st">"baseR"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Stripped the missing-value declarations from 2 variables:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Income     -99 ["Refused"]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>              -98 ["Don't know"]</span>
@@ -380,6 +385,42 @@ the default convention and convention codes session-wide.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Suppress the notification (e.g. inside a script):</span></span></span>
 <span class="r-in"><span><span class="va">df6</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, to <span class="op">=</span> <span class="st">"baseR"</span>, missing.notice <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The three ways to give the data frame</span></span></span>
+<span class="r-in"><span><span class="va">df7</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, to <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span>          <span class="co"># positional</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to Stata-style missing values in 1 variable:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income  -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
+<span class="r-in"><span><span class="va">df8</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Income</span>, to <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span>   <span class="co"># named</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to Stata-style missing values in 1 variable:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income  -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
+<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span>                                           <span class="co"># juse() default</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: community</span>
+<span class="r-in"><span><span class="va">df9</span> <span class="op">&lt;-</span> <span class="fu">jconvert</span><span class="op">(</span><span class="va">Income</span>, to <span class="op">=</span> <span class="st">"stata"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Converted to Stata-style missing values in 1 variable:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Income  -99 ["Refused"]     -&gt; .a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           -98 ["Don't know"]  -&gt; .b</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This call changes community only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   community &lt;- jconvert(community, ...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To change community directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jconvert(community, ..., modify = TRUE)</span>
+<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame cleared.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># Convert with target inferred from joptions:</span></span></span>

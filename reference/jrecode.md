@@ -46,9 +46,9 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
 
   - `else=copy`: unmapped values are carried across unchanged.
 
-  - `else=.a` (or any tagged missing-value token; Stata or SAS
-    convention only): unmapped values are set to that tagged missing
-    value.
+  - `else=.a` (or any other marker, `.a` through `.z`; Stata or SAS
+    convention only): unmapped values are set to that Stata-style or
+    SAS-style missing value.
 
   Individual values can also be mapped to system NA using the same
   aliases: `"-5=NA"`, `"-5=System"`, or `"-5=SYSMIS"`.
@@ -61,10 +61,10 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   (`"NA,-99=-98"`) and may be named in at most one rule. Only plain `NA`
   cells are affected; tagged missing values are never converted by an
   `NA` rule. Under Stata or SAS convention the target may itself be a
-  token: `"NA=.a"`.
+  marker: `"NA=.a"`.
 
-  Under Stata or SAS convention, values can be mapped to tagged
-  missing-value tokens: `"-99=.a; -98=.b"`.
+  Under Stata or SAS convention, values can be mapped to Stata-style or
+  SAS-style missing values by their markers: `"-99=.a; -98=.b"`.
 
   A lettered marker can also be an OLD value, recoding the cells that
   carry it (either case: `.a` also names a SAS-style `.A`): `".a=-99"`
@@ -83,30 +83,31 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   same map string therefore works under every setting:
   `"8=missing; else=copy"`. The NA rule composes with it (`"NA=missing"`
   converts plain `NA` cells the same way), and
-  `labels = "missing=Refused"` labels whatever the token produced. If
+  `labels = "missing=Refused"` labels whatever the keyword produced. If
   the column already carries the other convention's markers while your
   `missing.convention` setting is set, the call stops and shows both
   resolutions rather than guessing.
 
-  Under the SPSS convention the code the token uses must be free: if the
-  column already declares it, discretely or inside a declared range, the
-  existing declaration is reused rather than added to; if it is an
+  Under the SPSS convention the code the keyword uses must be free: if
+  the column already declares it, discretely or inside a declared range,
+  the existing declaration is reused rather than added to; if it is an
   ordinary value in the column that the map leaves in place, or a value
   the map itself assigns, the call stops rather than sweep those cases
   into missingness; and if the declared codes the result keeps already
   fill what SPSS allows (three codes, or a range plus one code), the
   call stops and offers a declared code instead. Under the Stata or SAS
-  convention the token always uses the first marker (`.a`, or `.A`), so
-  a map that also assigns that marker itself stops rather than merge two
-  missing categories onto one marker; the message offers the next free
-  marker, or the same marker for both when that is what you mean. When
-  the variable already carries that marker – data from Stata often has
-  its own `.a` – the recoded cases join it, and a note says so and gives
-  the line that keeps them apart (the next free marker). Under every
-  convention, a `labels = "missing=..."` that differs from the label the
-  marker or code already has stops, since it would rename the cases
-  already there: the message gives the line that keeps the two apart and
-  the line that merges them on purpose, keeping the existing label.
+  convention the keyword always uses the first marker (`.a`, or `.A`),
+  so a map that also assigns that marker itself stops rather than merge
+  two missing categories onto one marker; the message offers the next
+  free marker, or the same marker for both when that is what you mean.
+  When the variable already carries that marker – data from Stata often
+  has its own `.a` – the recoded cases join it, and a note says so and
+  gives the line that keeps them apart (the next free marker). Under
+  every convention, a `labels = "missing=..."` that differs from the
+  label the marker or code already has stops, since it would rename the
+  cases already there: the message gives the line that keeps the two
+  apart and the line that merges them on purpose, keeping the existing
+  label.
 
   Examples:
 
@@ -136,11 +137,10 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   Details) ride alongside them unless the string labels the same code.
 
   The left side of each rule may be a numeric code or, under Stata or
-  SAS convention, a tagged missing-value token (`.a` through `.z`, or
-  `.A` through `.Z`). Tagged-NA labels are stored on the tag itself, not
-  on a numeric code. It may also be the word `missing`, labelling
-  whatever the map's `missing` target produced:
-  `labels = "missing=Refused"`.
+  SAS convention, a missing-value marker (`.a` through `.z`, or `.A`
+  through `.Z`). A marker's label is stored on the marker itself, not on
+  a numeric code. It may also be the word `missing`, labelling whatever
+  the map's `missing` target produced: `labels = "missing=Refused"`.
 
   If omitted, the function attempts to transfer value labels
   automatically from the original variable. This works when the original
@@ -153,13 +153,13 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
 - convention:
 
   Optional. One of `"spss"`, `"stata"`, `"sas"`, or `NULL` (default);
-  any capitalization is accepted. Controls whether missing-value tokens
+  any capitalization is accepted. Controls whether missing-value markers
   (`.a` through `.z` or `.A` through `.Z`) are accepted in the map and
-  labels arguments. Token letters are matched case-insensitively; the
+  labels arguments. Marker letters are matched case-insensitively; the
   stored markers take the convention's letter case (lowercase
   Stata-style under `"stata"`, uppercase SAS-style under `"sas"`). Also
-  decides what the `missing` keyword produces. Inert when neither tokens
-  nor `missing` appear in either argument.
+  decides what the `missing` keyword produces. Inert when neither a
+  marker nor `missing` appears in either argument.
 
   When `NULL`, the convention is resolved from the `missing.convention`
   setting in
@@ -176,9 +176,22 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
 ## Value
 
 A `haven_labelled` vector with the recoded values, variable label, and
-(if supplied or auto-transferred) value labels applied. Assign this to a
-new column in your data frame:
-`MyData$AgeGroupR <- jrecode(MyData, AgeGroup, map = "...")`
+(if supplied or auto-transferred) value labels applied. The function
+returns the values rather than changing `data`: assign the result to a
+column to keep it. Two assignment forms do that job:
+
+- Preserving (recommended):
+  `MyData$AgeGroupR <- jrecode(MyData, AgeGroup, map = "...")` adds a
+  new column and keeps the original, so the two can be compared with
+  [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) before
+  the original is retired.
+
+- Overwrite: `MyData$AgeGroup <- jrecode(MyData, AgeGroup, map = "...")`
+  replaces the variable in place. Nothing is wrong with this once the
+  recode is verified, but the original values are gone.
+
+SPSS users will recognize the pair: `RECODE ... INTO new.` is the
+preserving form and bare `RECODE` the overwrite.
 
 ## Details
 
@@ -249,7 +262,7 @@ declared codes than SPSS allows, stops the call with a message.
 
 A variable holds one convention. When the original variable's SPSS-style
 declaration survives the map (a range always does; a discrete code does
-unless the map names it), Stata-style or SAS-style tokens in the map or
+unless the map names it), Stata-style or SAS-style markers in the map or
 labels are refused with a pointer to
 [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md). A
 map that names every declared code (`"-99=.a; -98=.b; else=copy"` under
@@ -327,19 +340,18 @@ SPSS-style missing values: a map that left `-99` and `-98` in place
 (`else=.a` alone) would put a marker beside them and is refused.
 
 **SAS convention** works the same way with SAS-style missing values
-(`.A` through `.Z`). Map and labels tokens are matched
+(`.A` through `.Z`). Markers in the map and labels are matched
 case-insensitively, and the stored markers take the active convention's
 letter case: lowercase under Stata convention, uppercase under SAS
 convention.
 
-Writing these missing-value tokens while the active convention is SPSS
-raises an error naming the mismatch and the two ways out: restate the
-markers as numeric codes to stay in SPSS convention, or switch
-convention with `joptions(missing.convention = ...)` (or with this
-call's `convention` argument). The error does not rewrite the call for
-you: the SPSS-style codes would have to be taken from the
-`missing.convention.codes` setting in
-[`joptions`](https://jma61.github.io/jstats/reference/joptions.md),
+Writing these markers while the active convention is SPSS raises an
+error naming the mismatch and the two ways out: restate the markers as
+numeric codes to stay in SPSS convention, or switch convention with
+`joptions(missing.convention = ...)` (or with this call's `convention`
+argument). The error does not rewrite the call for you: the SPSS-style
+codes would have to be taken from the `missing.convention.codes` setting
+in [`joptions`](https://jma61.github.io/jstats/reference/joptions.md),
 which cannot be known to be free of collision with values already in the
 column. The two-call SPSS-style pattern is documented above.
 
@@ -366,6 +378,14 @@ listing.
 df <- community
 df$OwnsHome01 <- jrecode(df, OwnsHome,
                          map    = "1=1; 2=0",
+                         labels = "0=No; 1=Yes")
+#> Note: This call changes df only if you assign the result:
+#>   df$<name> <- jrecode(...)
+#> To check the recode landed correctly, compare jfreq() on the original and the
+#> new column.
+
+# The data frame may also be given by name
+df$OwnsHome01 <- jrecode(data = df, OwnsHome, map = "1=1; 2=0",
                          labels = "0=No; 1=Yes")
 #> Note: This call changes df only if you assign the result:
 #>   df$<name> <- jrecode(...)
@@ -442,8 +462,9 @@ df <- jdeclare_missing(df, AgeR, codes = c("Not recorded" = -98))
 #> To change df directly, rerun with modify = TRUE:
 #>   jdeclare_missing(df, AgeR, ..., modify = TRUE)
 
-# Stata convention: Stata-style missing-value tokens in map and labels
-# (single call; convention = "stata" scopes the choice to this call only).
+# Stata convention: Stata-style missing values in map and labels, named
+# by their markers (single call; convention = "stata" scopes the choice
+# to this call only).
 # Education carries SPSS-style missing values (-99, -98); naming them in
 # the map moves them to the marker in the same call.
 df$EducR4 <- jrecode(df, Education,
@@ -455,8 +476,8 @@ df$EducR4 <- jrecode(df, Education,
 #> To check the recode landed correctly, compare jfreq() on the original and the
 #> new column.
 
-# SAS convention: the same single-call pattern; tokens are matched
-# case-insensitively and the markers store in uppercase (.A)
+# SAS convention: the same single-call pattern; markers are matched
+# case-insensitively and store in uppercase (.A)
 df$EducR5 <- jrecode(df, Education,
                      map    = "1,2=1; 3,4,5=2; -99,-98=.a",
                      labels = "1=No college; 2=College; .a=Refused",

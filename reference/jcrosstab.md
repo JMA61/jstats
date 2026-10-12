@@ -206,6 +206,41 @@ jcrosstab(Education ~ Volunteer, data = community)
 #> Total                      49        48        97
 #> 
 
+# The data frame may also be given positionally
+jcrosstab(Education ~ Volunteer, community)
+#> Cross-Tabulation
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --        103
+#>     Auto-listwise         6         97
+#>     Analysis N           --         97
+#> 
+#> Missing data   From 103   %
+#>     Education
+#>       Missing      6     5.8
+#> --------------------------------------
+#> 
+#> Crosstab: Education by Volunteer
+#> Education                  0: No    1: Yes     Total
+#> -----------------------    -----    ------    ------
+#> 1: Some high school        19         4        23
+#>   (Row %)                  82.6%     17.4%    100.0%
+#> 
+#> 2: High school graduate     9         9        18
+#>   (Row %)                  50.0%     50.0%    100.0%
+#> 
+#> 3: Some college            10        15        25
+#>   (Row %)                  40.0%     60.0%    100.0%
+#> 
+#> 4: Bachelor's degree        7         6        13
+#>   (Row %)                  53.8%     46.2%    100.0%
+#> 
+#> 5: Graduate degree          4        14        18
+#>   (Row %)                  22.2%     77.8%    100.0%
+#> 
+#> Total                      49        48        97
+#> 
+
 # With chi-square test
 jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 #> Cross-Tabulation

@@ -25,7 +25,7 @@ below for the canonical patterns under each convention."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,9 +91,9 @@ values are left unmapped, so you can fix the map before proceeding.</p></li>
 <li><p><code>else=NA</code> (also <code>else=System</code> or <code>else=SYSMIS</code>):
 unmapped values are deliberately set to system NA.</p></li>
 <li><p><code>else=copy</code>: unmapped values are carried across unchanged.</p></li>
-<li><p><code>else=.a</code> (or any tagged missing-value token; Stata or
-SAS convention only): unmapped values are set to that tagged
-missing value.</p></li>
+<li><p><code>else=.a</code> (or any other marker, <code>.a</code> through
+<code>.z</code>; Stata or SAS convention only): unmapped values are set
+to that Stata-style or SAS-style missing value.</p></li>
 </ul><p>Individual values can also be mapped to system NA using the same
 aliases: <code>"-5=NA"</code>, <code>"-5=System"</code>, or <code>"-5=SYSMIS"</code>.</p>
 <p>The same aliases may also appear as an OLD value, converting plain
@@ -103,9 +103,9 @@ aliases: <code>"-5=NA"</code>, <code>"-5=System"</code>, or <code>"-5=SYSMIS"</c
 values in one rule (<code>"NA,-99=-98"</code>) and may be named in at most
 one rule. Only plain <code>NA</code> cells are affected; tagged
 missing values are never converted by an <code>NA</code> rule. Under
-Stata or SAS convention the target may itself be a token: <code>"NA=.a"</code>.</p>
-<p>Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
-<code>"-99=.a; -98=.b"</code>.</p>
+Stata or SAS convention the target may itself be a marker: <code>"NA=.a"</code>.</p>
+<p>Under Stata or SAS convention, values can be mapped to Stata-style or
+SAS-style missing values by their markers: <code>"-99=.a; -98=.b"</code>.</p>
 <p>A lettered marker can also be an OLD value, recoding the cells that
 carry it (either case: <code>.a</code> also names a SAS-style <code>.A</code>):
 <code>".a=-99"</code> gives them a number, <code>".a=NA"</code> makes them plain
@@ -123,11 +123,11 @@ under the SPSS convention, declared on the result automatically. The
 same map string therefore works under every setting:
 <code>"8=missing; else=copy"</code>. The NA rule composes with it
 (<code>"NA=missing"</code> converts plain <code>NA</code> cells the same way), and
-<code>labels = "missing=Refused"</code> labels whatever the token produced.
+<code>labels = "missing=Refused"</code> labels whatever the keyword produced.
 If the column already carries the other convention's markers while
 your <code>missing.convention</code> setting is set, the call stops and
 shows both resolutions rather than guessing.</p>
-<p>Under the SPSS convention the code the token uses must be free: if
+<p>Under the SPSS convention the code the keyword uses must be free: if
 the column already declares it, discretely or inside a declared
 range, the existing declaration is reused rather than added to; if
 it is an ordinary value in the column that the map leaves in place,
@@ -135,7 +135,7 @@ or a value the map itself assigns, the call stops rather than sweep
 those cases into missingness; and if the declared codes the result
 keeps already fill what SPSS allows (three codes, or a range plus one
 code), the call stops and offers a declared code instead. Under the
-Stata or SAS convention the token always uses the first marker
+Stata or SAS convention the keyword always uses the first marker
 (<code>.a</code>, or <code>.A</code>), so a map that also assigns that marker
 itself stops rather than merge two missing categories onto one
 marker; the message offers the next free marker, or the same marker
@@ -167,10 +167,9 @@ codes they name; the labels of declared missing values the result
 keeps (see Details) ride alongside them unless the string labels the
 same code.</p>
 <p>The left side of each rule may be a numeric code or, under Stata or
-SAS convention, a tagged missing-value token (<code>.a</code> through
-<code>.z</code>, or <code>.A</code> through <code>.Z</code>). Tagged-NA labels are
-stored on the tag itself, not on
-a numeric code. It may also be the word <code>missing</code>, labelling
+SAS convention, a missing-value marker (<code>.a</code> through <code>.z</code>,
+or <code>.A</code> through <code>.Z</code>). A marker's label is stored on the
+marker itself, not on a numeric code. It may also be the word <code>missing</code>, labelling
 whatever the map's <code>missing</code> target produced:
 <code>labels = "missing=Refused"</code>.</p>
 <p>If omitted, the function attempts to transfer value labels automatically
@@ -184,13 +183,13 @@ and a note is printed.</p>
 <dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>
 <dd><p>Optional. One of <code>"spss"</code>, <code>"stata"</code>,
 <code>"sas"</code>, or <code>NULL</code> (default); any capitalization is
-accepted. Controls whether missing-value tokens (<code>.a</code> through
+accepted. Controls whether missing-value markers (<code>.a</code> through
 <code>.z</code> or <code>.A</code> through <code>.Z</code>) are accepted in the map
-and labels arguments. Token letters are matched case-insensitively;
+and labels arguments. Marker letters are matched case-insensitively;
 the stored markers take the convention's letter case (lowercase
 Stata-style under <code>"stata"</code>, uppercase SAS-style under
 <code>"sas"</code>). Also decides what the <code>missing</code> keyword
-produces. Inert when neither tokens nor <code>missing</code> appear in
+produces. Inert when neither a marker nor <code>missing</code> appears in
 either argument.</p>
 <p>When <code>NULL</code>, the convention is resolved from
 the <code>missing.convention</code> setting in <code><a href="joptions.html">joptions</a></code>; if that
@@ -204,9 +203,19 @@ at the top of a session via <code><a href="joptions.html">joptions()</a></code> 
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>haven_labelled</code> vector with the recoded values, variable
-label, and (if supplied or auto-transferred) value labels applied. Assign
-this to a new column in your data frame:
-<code>MyData$AgeGroupR &lt;- jrecode(MyData, AgeGroup, map = "...")</code></p>
+label, and (if supplied or auto-transferred) value labels applied. The
+function returns the values rather than changing <code>data</code>: assign
+the result to a column to keep it. Two assignment forms do that job:</p>
+<ul><li><p>Preserving (recommended):
+<code>MyData$AgeGroupR &lt;- jrecode(MyData, AgeGroup, map = "...")</code>
+adds a new column and keeps the original, so the two can be
+compared with <code><a href="jfreq.html">jfreq()</a></code> before the original is retired.</p></li>
+<li><p>Overwrite:
+<code>MyData$AgeGroup &lt;- jrecode(MyData, AgeGroup, map = "...")</code>
+replaces the variable in place. Nothing is wrong with this once
+the recode is verified, but the original values are gone.</p></li>
+</ul><p>SPSS users will recognize the pair: <code>RECODE ... INTO new.</code> is
+the preserving form and bare <code>RECODE</code> the overwrite.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -268,7 +277,7 @@ a lettered marker, or more declared codes than SPSS allows, stops the
 call with a message.</p>
 <p>A variable holds one convention. When the original variable's
 SPSS-style declaration survives the map (a range always does; a discrete
-code does unless the map names it), Stata-style or SAS-style tokens in
+code does unless the map names it), Stata-style or SAS-style markers in
 the map or labels are refused with a pointer to <code><a href="jconvert.html">jconvert()</a></code>. A map
 that names every declared code (<code>"-99=.a; -98=.b; else=copy"</code>
 under Stata convention) leaves nothing SPSS-style behind and is the
@@ -330,12 +339,12 @@ codes is what makes the call legal on a column that carries SPSS-style
 missing values: a map that left <code>-99</code> and <code>-98</code> in place
 (<code>else=.a</code> alone) would put a marker beside them and is refused.</p>
 <p><strong>SAS convention</strong> works the same way with SAS-style missing
-values (<code>.A</code> through <code>.Z</code>). Map and labels tokens are
+values (<code>.A</code> through <code>.Z</code>). Markers in the map and labels are
 matched case-insensitively, and the stored markers take the active
 convention's letter case: lowercase under Stata convention, uppercase
 under SAS convention.</p>
-<p>Writing these missing-value tokens while the active convention is
-SPSS raises an error naming the mismatch and the two ways out:
+<p>Writing these markers while the active convention is SPSS raises an
+error naming the mismatch and the two ways out:
 restate the markers as numeric codes to stay in SPSS convention, or
 switch convention with <code>joptions(missing.convention = ...)</code> (or
 with this call's <code>convention</code> argument). The error does not
@@ -362,6 +371,14 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="va">community</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">OwnsHome01</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">OwnsHome</span>,</span></span>
 <span class="r-in"><span>                         map    <span class="op">=</span> <span class="st">"1=1; 2=0"</span>,</span></span>
+<span class="r-in"><span>                         labels <span class="op">=</span> <span class="st">"0=No; 1=Yes"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given by name</span></span></span>
+<span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">OwnsHome01</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span>data <span class="op">=</span> <span class="va">df</span>, <span class="va">OwnsHome</span>, map <span class="op">=</span> <span class="st">"1=1; 2=0"</span>,</span></span>
 <span class="r-in"><span>                         labels <span class="op">=</span> <span class="st">"0=No; 1=Yes"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   df$&lt;name&gt; &lt;- jrecode(...)</span>
@@ -438,8 +455,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> To change df directly, rerun with modify = TRUE:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   jdeclare_missing(df, AgeR, ..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Stata convention: Stata-style missing-value tokens in map and labels</span></span></span>
-<span class="r-in"><span><span class="co"># (single call; convention = "stata" scopes the choice to this call only).</span></span></span>
+<span class="r-in"><span><span class="co"># Stata convention: Stata-style missing values in map and labels, named</span></span></span>
+<span class="r-in"><span><span class="co"># by their markers (single call; convention = "stata" scopes the choice</span></span></span>
+<span class="r-in"><span><span class="co"># to this call only).</span></span></span>
 <span class="r-in"><span><span class="co"># Education carries SPSS-style missing values (-99, -98); naming them in</span></span></span>
 <span class="r-in"><span><span class="co"># the map moves them to the marker in the same call.</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR4</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span></span>
@@ -451,8 +469,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To check the recode landed correctly, compare jfreq() on the original and the</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># SAS convention: the same single-call pattern; tokens are matched</span></span></span>
-<span class="r-in"><span><span class="co"># case-insensitively and the markers store in uppercase (.A)</span></span></span>
+<span class="r-in"><span><span class="co"># SAS convention: the same single-call pattern; markers are matched</span></span></span>
+<span class="r-in"><span><span class="co"># case-insensitively and store in uppercase (.A)</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">EducR5</span> <span class="op">&lt;-</span> <span class="fu">jrecode</span><span class="op">(</span><span class="va">df</span>, <span class="va">Education</span>,</span></span>
 <span class="r-in"><span>                     map    <span class="op">=</span> <span class="st">"1,2=1; 3,4,5=2; -99,-98=.a"</span>,</span></span>
 <span class="r-in"><span>                     labels <span class="op">=</span> <span class="st">"1=No college; 2=College; .a=Refused"</span>,</span></span>

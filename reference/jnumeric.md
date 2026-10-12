@@ -92,6 +92,25 @@ jnumeric(community, Environment2, Environment4)  # several at once
 #> 
 #> Next session, load that file to restore the registrations:
 #>   jload("community.rds")
+jnumeric(data = community, Environment2)      # the data frame by name
+#> Numeric registration set for 'Environment2' in community.
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(community, "community.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("community.rds")
+juse(community); jnumeric(Environment2); juse(NULL)   # or the juse() default
+#> Default data frame set to: community
+#> Using default data frame: community
+#> Numeric registration set for 'Environment2' in community.
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(community, "community.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("community.rds")
+#> Default data frame cleared.
 jnumeric(community, Environment2, remove = TRUE) # unregister one
 #> Numeric registration removed for 'Environment2' in community.
 jnumeric()                          # list all registrations

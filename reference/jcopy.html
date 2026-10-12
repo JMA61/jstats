@@ -19,7 +19,7 @@ rename or copy."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,6 +116,7 @@ original.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="jdummy.html">jdummy</a></span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span>        <span class="co"># register a classification on community</span></span></span>
 <span class="r-in"><span>  <span class="fu">jcopy</span><span class="op">(</span><span class="va">community</span>, <span class="va">survey</span><span class="op">)</span>         <span class="co"># survey carries Region's registration</span></span></span>
+<span class="r-in"><span>  <span class="fu">jcopy</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">survey</span><span class="op">)</span>  <span class="co"># the data frame given by name</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu">jcopy</span><span class="op">(</span><span class="va">survey2</span><span class="op">)</span>                   <span class="co"># copy the default (community) to survey2</span></span></span>

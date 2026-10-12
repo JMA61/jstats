@@ -283,6 +283,26 @@ jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 #> Cohen's d: -0.658
 #> 
 
+# The data frame may also be given positionally
+jt(WellbeingScore ~ Volunteer, community)
+#> Independent Samples T-Test
+#> 
+#> Analysis N: 103
+#> 
+#> Group Descriptives: WellbeingScore by Volunteer
+#> Group    N   Mean     SD
+#> ------  --  ------  ------
+#> 0: No   54  47.463  11.699
+#> 1: Yes  49  54.673  10.059
+#> 
+#> Independent Samples T-Test Results (equal variances assumed)
+#>    t     df    p   Mean Difference  95% CI Lower  95% CI Upper
+#> ------  ---  ----  ---------------  ------------  ------------
+#> -3.338  101  .001       -7.211         -11.496       -2.925
+#> 
+#> Cohen's d: -0.658
+#> 
+
 # Checking the equal-variances assumption: Levene's test
 jt(WellbeingScore ~ Volunteer, data = community, diagnostics = TRUE)
 #> Independent Samples T-Test

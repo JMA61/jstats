@@ -19,7 +19,7 @@ datasets preserves each dataset's registrations independently."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -160,6 +160,34 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North (default; change with ref =)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_South, Region_East, Region_West</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: this registration is stored for this session only.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame in R format (.rds):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span>            <span class="co"># The same, naming the data frame</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North (default; change with ref =)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_South, Region_East, Region_West</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Cases: 103 (0 missing)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: this registration is stored for this session only.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To keep it across sessions, save the data frame in R format (.rds):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jsave(community, "community.rds")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Next session, load that file to restore the registration:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jload("community.rds")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu">jdummy</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Region</span><span class="op">)</span>     <span class="co"># ... or naming it as data =</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dummy Variable Registration</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Variable: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference category: Region_North (default; change with ref =)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Dummy variables: Region_South, Region_East, Region_West</span>

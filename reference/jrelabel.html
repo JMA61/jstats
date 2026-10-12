@@ -24,7 +24,7 @@ is unaffected, but re-supply its label alongside the new value labels to
 keep it. On a column with Stata-style or SAS-style missing values, a
 marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
-re-supply it as a token, e.g. labels = &quot;1=Low; .c=Refused&quot;.
+re-supply it by its marker, e.g. labels = &quot;1=Low; .c=Refused&quot;.
 Both the labels and var.label arguments are optional. If
 neither is supplied, the function returns the variable unchanged."><meta property="og:description" content="jrelabel() attaches a variable label and/or value labels to any
 variable in a data frame. It is designed as a simple label applicator —
@@ -51,7 +51,7 @@ is unaffected, but re-supply its label alongside the new value labels to
 keep it. On a column with Stata-style or SAS-style missing values, a
 marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
-re-supply it as a token, e.g. labels = &quot;1=Low; .c=Refused&quot;.
+re-supply it by its marker, e.g. labels = &quot;1=Low; .c=Refused&quot;.
 Both the labels and var.label arguments are optional. If
 neither is supplied, the function returns the variable unchanged."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -61,7 +61,7 @@ neither is supplied, the function returns the variable unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -112,7 +112,7 @@ is unaffected, but re-supply its label alongside the new value labels to
 keep it. On a column with Stata-style or SAS-style missing values, a
 marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
-re-supply it as a token, e.g. <code>labels = "1=Low; .c=Refused"</code>.</p>
+re-supply it by its marker, e.g. <code>labels = "1=Low; .c=Refused"</code>.</p>
 <p>Both the <code>labels</code> and <code>var.label</code> arguments are optional. If
 neither is supplied, the function returns the variable unchanged.</p>
     </div>
@@ -158,8 +158,18 @@ its class: haven-labelled input stays haven-labelled with any declared
 SPSS-style or Stata-style missing values intact; plain numeric and
 logical input becomes <code>haven_labelled</code> when value labels are
 applied; any other type is returned unchanged apart from the labels.
-Assign the result back to a column in your data frame:
-<code>MyData$VarName &lt;- jrelabel(MyData, VarName, ...)</code></p>
+Assign the result to a column to keep it. Two assignment forms do
+that job:</p>
+<ul><li><p>Preserving:
+<code>MyData$VarNameL &lt;- jrelabel(MyData, VarName, ...)</code> adds a
+labeled copy and keeps the original as it was.</p></li>
+<li><p>Overwrite (the usual choice here):
+<code>MyData$VarName &lt;- jrelabel(MyData, VarName, ...)</code> labels
+the variable in place. Labels change how values are shown, not
+the values, so there is normally nothing to keep a copy of.</p></li>
+</ul><p>SPSS users will recognize the pair from <code>RECODE ... INTO new.</code>
+and bare <code>RECODE</code>; for labels, SPSS's <code>VALUE LABELS</code> and
+<code>VARIABLE LABELS</code> always label in place, the overwrite form.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -176,6 +186,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">Status</span> <span class="op">==</span> <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span><span class="va">df</span>, <span class="va">StatusR</span>, labels <span class="op">=</span> <span class="st">"1=Yes; 0=No"</span>,</span></span>
 <span class="r-in"><span>                       var.label <span class="op">=</span> <span class="st">"Status (recoded)"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given by name</span></span></span>
+<span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span>data <span class="op">=</span> <span class="va">df</span>, <span class="va">StatusR</span>, labels <span class="op">=</span> <span class="st">"1=Yes; 0=No"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add just a variable label</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span><span class="va">df</span>, <span class="va">StatusR</span>, var.label <span class="op">=</span> <span class="st">"Employment Status"</span><span class="op">)</span></span></span>

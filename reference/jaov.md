@@ -299,6 +299,30 @@ jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 #> West-East         -0.135          -8.240        7.969         1.000
 #> 
 
+# The data frame may also be given positionally
+jaov(WellbeingScore ~ Region, community)
+#> One-Way ANOVA
+#> 
+#> Analysis N: 103
+#> 
+#> Group Descriptives: WellbeingScore by Region
+#> Group      N   Mean     SD    95% CI Lower  95% CI Upper
+#> --------  --  ------  ------  ------------  ------------
+#> 1: North  27  52.963  10.147     48.949        56.977
+#> 2: South  20  48.150  14.741     41.251        55.049
+#> 3: East   31  50.935   9.936     47.291        54.580
+#> 4: West   25  50.800  11.923     45.878        55.722
+#> 
+#> ANOVA: WellbeingScore by Region
+#> Source     df  Sum of Squares  Mean Square    F      p
+#> --------  ---  --------------  -----------  -----  ----
+#> Region      3       266.441       88.814    0.667  .574
+#> Residual   99     13179.384      133.125
+#> Total     102     13445.825
+#> 
+#> Eta-squared: 0.020
+#> 
+
 # Checking the equal-variances assumption: Levene's test
 jaov(WellbeingScore ~ Region, data = community, diagnostics = TRUE)
 #> One-Way ANOVA

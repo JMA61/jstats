@@ -130,6 +130,34 @@ jdummy(Region)                       # Register, first category as reference
 #> Next session, load that file to restore the registration:
 #>   jload("community.rds")
 #> 
+jdummy(community, Region)            # The same, naming the data frame
+#> Dummy Variable Registration
+#>   Variable: Region
+#>   Reference category: Region_North (default; change with ref =)
+#>   Dummy variables: Region_South, Region_East, Region_West
+#>   Cases: 103 (0 missing)
+#> 
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(community, "community.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("community.rds")
+#> 
+jdummy(data = community, Region)     # ... or naming it as data =
+#> Dummy Variable Registration
+#>   Variable: Region
+#>   Reference category: Region_North (default; change with ref =)
+#>   Dummy variables: Region_South, Region_East, Region_West
+#>   Cases: 103 (0 missing)
+#> 
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(community, "community.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("community.rds")
+#> 
 jdummy(Region, Education)            # Register several at once
 #> Dummy Variable Registration
 #> Using default data frame: community

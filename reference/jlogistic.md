@@ -308,6 +308,23 @@ the model as written and then warns when a formula does this. A power
 that is not a number, `x^k`, stops with an error, as in
 [`lm()`](https://rdrr.io/r/stats/lm.html); write `I(x^k)`.
 
+## Interactions
+
+An interaction is entered in the formula with `*`, as in R: `y ~ x * z`
+fits `x`, `z` and their product, and the product's row in the
+coefficient table is labeled `x * z`. With a categorical predictor
+registered with
+[`jdummy`](https://jma61.github.io/jstats/reference/jdummy.md), the
+interaction rows are grouped under a header naming the reference
+category, with one row per dummy variable, as the predictor's own rows
+are. Each row's b is the change in the log-odds slope of one variable
+per unit of the other (or, for a dummy row, the difference in slope
+between that category and the reference), and its Exp(B) the factor by
+which the other variable's odds ratio is multiplied per unit; the
+main-effect rows give the slopes where the other variable is zero.
+[`jplot`](https://jma61.github.io/jstats/reference/jplot.md) on the
+result draws the probability plots.
+
 ## See also
 
 [`jstats`](https://jma61.github.io/jstats/reference/jstats-package.md)
@@ -349,6 +366,83 @@ jlogistic(Volunteer ~ Income + Age, data = community)
 #> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
 #> -----------------  --------------  -------------  -------
 #>      117.260            0.158          0.211      123.260
+#> 
+#> Dependent Variable Encoding
+#>   Modeled (1):   Yes
+#>   Reference (0): No
+#> 
+
+# The data frame may also be given positionally
+jlogistic(Volunteer ~ Income + Age, community)
+#> Logistic Regression
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --        103
+#>     Auto-listwise         6         97
+#>     Analysis N           --         97
+#> 
+#> Missing data   From 103   %
+#>     Income
+#>       Missing      6     5.8
+#> --------------------------------------
+#> 
+#> Coefficients
+#>                 b      SE    Wald   df    p    Exp(B)
+#> -----------  ------  -----  ------  --  -----  ------
+#> (Intercept)  -3.824  1.049  13.287   1  <.001   0.022
+#> Income        0.000  0.000   6.683   1   .010   1.000
+#> Age           0.046  0.021   4.870   1   .027   1.047
+#> 
+#> Outcome: Volunteer
+#> 
+#> Omnibus Test of Model Coefficients
+#> Chi-Square  df    p
+#> ----------  --  -----
+#>   16.705     2  <.001
+#> 
+#> Model Summary
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
+#> -----------------  --------------  -------------  -------
+#>      117.260            0.158          0.211      123.260
+#> 
+#> Dependent Variable Encoding
+#>   Modeled (1):   Yes
+#>   Reference (0): No
+#> 
+
+# An interaction, entered in the formula with *
+jlogistic(Volunteer ~ Income * Age, data = community)
+#> Logistic Regression
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --        103
+#>     Auto-listwise         6         97
+#>     Analysis N           --         97
+#> 
+#> Missing data   From 103   %
+#>     Income
+#>       Missing      6     5.8
+#> --------------------------------------
+#> 
+#> Coefficients
+#>                  b      SE    Wald  df    p   Exp(B)
+#> ------------  ------  -----  -----  --  ----  ------
+#> (Intercept)   -7.631  3.212  5.645   1  .018   0.000
+#> Income         0.000  0.000  3.516   1  .061   1.000
+#> Age            0.142  0.078  3.308   1  .069   1.153
+#> Income * Age   0.000  0.000  1.750   1  .186   1.000
+#> 
+#> Outcome: Volunteer
+#> 
+#> Omnibus Test of Model Coefficients
+#> Chi-Square  df    p
+#> ----------  --  -----
+#>   18.580     3  <.001
+#> 
+#> Model Summary
+#> -2 Log Likelihood  Cox & Snell R²  Nagelkerke R²    AIC
+#> -----------------  --------------  -------------  -------
+#>      115.385            0.174          0.233      123.385
 #> 
 #> Dependent Variable Encoding
 #>   Modeled (1):   Yes

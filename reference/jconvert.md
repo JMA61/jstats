@@ -14,8 +14,8 @@ these user-defined missing values.
 ``` r
 jconvert(
   data,
-  to = NULL,
   ...,
+  to = NULL,
   vars = NULL,
   missing.notice = TRUE,
   modify = FALSE
@@ -29,10 +29,19 @@ jconvert(
   A data frame, or omitted to use the
   [`juse()`](https://jma61.github.io/jstats/reference/juse.md) default.
 
+- ...:
+
+  Optional unquoted variable names, straight after the data frame, as in
+  every data-first function:
+  `jconvert(d, Income, Education, to = "stata")`. When supplied, only
+  the listed variables are scanned. Mutually exclusive with `vars`.
+
 - to:
 
   One of `"baseR"`, `"spss"`, `"stata"`, or `"sas"` (any capitalization
-  is accepted). When `NULL` (the default), `jconvert()` reads the
+  is accepted), always named: `to = "stata"`. A format name given where
+  a variable goes, as in `jconvert(d, "stata")`, stops and shows the
+  named form. When `to` is left out, `jconvert()` reads the
   `missing.convention` setting in
   [`joptions`](https://jma61.github.io/jstats/reference/joptions.md): if
   the slot is set to `"spss"`, `"stata"`, or `"sas"`, `to` resolves to
@@ -40,11 +49,6 @@ jconvert(
   errors with guidance naming the concrete options. The destructive
   `"baseR"` target is never auto-resolved – it must always be passed
   explicitly.
-
-- ...:
-
-  Optional unquoted variable names. When supplied, only the listed
-  variables are scanned. Mutually exclusive with `vars`.
 
 - vars:
 
@@ -297,8 +301,8 @@ df3 <- jconvert(community, to = "baseR")
 #> To change community directly, rerun with modify = TRUE:
 #>   jconvert(community, ..., modify = TRUE)
 
-# Scope by unquoted names:
-df4 <- jconvert(community, to = "baseR", Income, Education)
+# Some variables only: name them after the data frame, then the target
+df4 <- jconvert(community, Income, Education, to = "baseR")
 #> Stripped the missing-value declarations from 2 variables:
 #>   Income     -99 ["Refused"]
 #>              -98 ["Don't know"]
@@ -311,8 +315,8 @@ df4 <- jconvert(community, to = "baseR", Income, Education)
 #> To change community directly, rerun with modify = TRUE:
 #>   jconvert(community, ..., modify = TRUE)
 
-# Scope by character vector (alternative form):
-df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
+# The same, as a character vector:
+df5 <- jconvert(community, vars = c("Income", "Education"), to = "baseR")
 #> Stripped the missing-value declarations from 2 variables:
 #>   Income     -99 ["Refused"]
 #>              -98 ["Don't know"]
@@ -327,6 +331,42 @@ df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
 
 # Suppress the notification (e.g. inside a script):
 df6 <- jconvert(community, to = "baseR", missing.notice = FALSE)
+
+# The three ways to give the data frame
+df7 <- jconvert(community, Income, to = "stata")          # positional
+#> Converted to Stata-style missing values in 1 variable:
+#>   Income  -99 ["Refused"]     -> .a
+#>           -98 ["Don't know"]  -> .b
+#> 
+#> This call changes community only if you assign the result:
+#>   community <- jconvert(community, ...)
+#> 
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
+df8 <- jconvert(data = community, Income, to = "stata")   # named
+#> Converted to Stata-style missing values in 1 variable:
+#>   Income  -99 ["Refused"]     -> .a
+#>           -98 ["Don't know"]  -> .b
+#> 
+#> This call changes community only if you assign the result:
+#>   community <- jconvert(community, ...)
+#> 
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
+juse(community)                                           # juse() default
+#> Default data frame set to: community
+df9 <- jconvert(Income, to = "stata")
+#> Converted to Stata-style missing values in 1 variable:
+#>   Income  -99 ["Refused"]     -> .a
+#>           -98 ["Don't know"]  -> .b
+#> 
+#> This call changes community only if you assign the result:
+#>   community <- jconvert(community, ...)
+#> 
+#> To change community directly, rerun with modify = TRUE:
+#>   jconvert(community, ..., modify = TRUE)
+juse(NULL)
+#> Default data frame cleared.
 
 if (FALSE) { # \dontrun{
 # Convert with target inferred from joptions:

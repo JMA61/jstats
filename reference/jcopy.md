@@ -72,6 +72,7 @@ original.
 if (FALSE) { # \dontrun{
   jdummy(community, Region)        # register a classification on community
   jcopy(community, survey)         # survey carries Region's registration
+  jcopy(data = community, survey)  # the data frame given by name
 
   juse(community)
   jcopy(survey2)                   # copy the default (community) to survey2

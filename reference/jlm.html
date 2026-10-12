@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -395,6 +395,26 @@ the model as <code>x</code> alone. Write <code>I(x^2)</code> for the square.
 <code>jlm()</code> fits the model as written and then warns when a formula
 does this. A power that is not a number, <code>x^k</code>, stops with an
 error, as in <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>; write <code>I(x^k)</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="interactions">Interactions<a class="anchor" aria-label="anchor" href="#interactions"></a></h2>
+
+
+<p>An interaction is entered in the formula with <code>*</code>, as in R:
+<code>y ~ x * z</code> fits <code>x</code>, <code>z</code> and their product, and the
+product's row in the coefficient table is labeled <code>x * z</code>. With a
+categorical predictor registered with <code><a href="jdummy.html">jdummy</a></code>, the
+interaction rows are grouped under a header naming the reference
+category – <code>Region * Age (ref = 1: North)</code> – with one row per
+dummy variable, as the predictor's own rows are. Each row's b is the
+change in the slope of one variable per unit of the other (or, for a
+dummy row, the difference in slope between that category and the
+reference), and the main-effect rows give the slopes where the other
+variable is zero. A note under the table says that the standardized
+column is built from centered predictors, which is why a beta there
+can have the opposite sign from its b, and points to the section
+Comparing with other software for how the standardized columns are
+computed. <code><a href="jplot.html">jplot</a></code> on the result draws the effect plots.</p>
     </div>
     <div class="section level2">
     <h2 id="comparing-with-other-software">Comparing with other software<a class="anchor" aria-label="anchor" href="#comparing-with-other-software"></a></h2>

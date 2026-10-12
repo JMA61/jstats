@@ -129,6 +129,28 @@ jcomplete(Income, Education, Age)
 #>   Complete cases: 91 of 103 (88.3%)
 #>   Listwise filter activated -- 12 cases will be excluded from
 #>   subsequent analyses.
+jcomplete(community, Income, Education, Age)         # Explicit dataset
+#> Listwise Case Filter
+#> Variable    N   Missing  % Missing
+#> ---------  ---  -------  ---------
+#> Income     103     6        5.8%
+#> Education  103     6        5.8%
+#> Age        103     0        0.0%
+#> 
+#>   Complete cases: 91 of 103 (88.3%)
+#>   Listwise filter activated -- 12 cases will be excluded from
+#>   subsequent analyses.
+jcomplete(data = community, Income, Education, Age)  # ... given by name
+#> Listwise Case Filter
+#> Variable    N   Missing  % Missing
+#> ---------  ---  -------  ---------
+#> Income     103     6        5.8%
+#> Education  103     6        5.8%
+#> Age        103     0        0.0%
+#> 
+#>   Complete cases: 91 of 103 (88.3%)
+#>   Listwise filter activated -- 12 cases will be excluded from
+#>   subsequent analyses.
 jdesc(Age)                     # Uses only complete cases on those 3 vars
 #> Descriptive Statistics
 #> Using default data frame: community

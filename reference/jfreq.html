@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -171,7 +171,10 @@ They are counted as valid values, not as missing: a blank is absent data
 in one file and a real answer in the next (a column coded "Y" or left
 empty), and only you know which. A short footnote under the table says
 how many there are; <code><a href="jencode.html">jencode</a></code> gives them a code or makes
-them missing.</p>
+them missing. <code>&lt;blank&gt;</code> is the row's label, not a value in the
+data: a filter selects those cells by what they hold,
+<code>subset = trimws(Source) == ""</code> (or <code>Source == ""</code> for the
+empty cells alone, leaving out those holding only spaces).</p>
 <p>A list column (a tibble's, or the geometry column of a spatial data
 frame), a raw column, and a column that is itself a data frame cannot be
 tabulated, and are refused before anything prints.</p>
@@ -253,6 +256,24 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Total missing               6     5.83</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Total                     103   100.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given by name</span></span></span>
+<span class="r-in"><span><span class="fu">jfreq</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Region</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Frequencies</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 103 Cases in the 1 Variable Pool</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           Freq  Total %  Valid %  Cum. %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------  ----  -------  -------  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: North    27    26.21   26.21    26.21</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: South    20    19.42   19.42    45.63</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: East     31    30.10   30.10    75.73</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: West     25    24.27   24.27   100.00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total      103   100.00</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>

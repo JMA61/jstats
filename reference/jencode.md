@@ -51,13 +51,13 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
   working convention's own missing form, declared automatically under
   the SPSS convention (see
   [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)'s
-  `map` for the full rule); `blank=missing` composes the two tokens.
-  Under the SPSS convention the code the token uses must be free: if the
-  map also assigns it as an ordinary value, or a number stored as text
-  is kept at that same value, the call stops rather than sweep those
-  cases into missingness. Under the Stata or SAS convention the token
-  always uses the first marker (`.a`, or `.A`), so a map that also
-  assigns that marker itself stops rather than merge two missing
+  `map` for the full rule); `blank=missing` composes the two keywords.
+  Under the SPSS convention the code the keyword uses must be free: if
+  the map also assigns it as an ordinary value, or a number stored as
+  text is kept at that same value, the call stops rather than sweep
+  those cases into missingness. Under the Stata or SAS convention the
+  keyword always uses the first marker (`.a`, or `.A`), so a map that
+  also assigns that marker itself stops rather than merge two missing
   categories onto one marker.
 
   By default an incomplete map is an error that names the unmatched
@@ -76,12 +76,12 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
 - convention:
 
   Optional. One of `"spss"`, `"stata"`, `"sas"`, or `NULL` (default);
-  any capitalization is accepted. Controls whether missing-value tokens
+  any capitalization is accepted. Controls whether missing-value markers
   (`.a` through `.z` or `.A` through `.Z`) are accepted as map targets.
-  Token letters are matched case-insensitively; the stored markers take
+  Marker letters are matched case-insensitively; the stored markers take
   the convention's letter case (lowercase Stata-style under `"stata"`,
   uppercase SAS-style under `"sas"`). Also decides what the `missing`
-  keyword produces. Inert when neither tokens nor `missing` appear in
+  keyword produces. Inert when neither a marker nor `missing` appears in
   the map.
 
   When `NULL`, the convention is resolved from the `missing.convention`
@@ -239,6 +239,38 @@ MyData$StatusR <- jencode(MyData, Status)
 #>   MyData$<name> <- jencode(...)
 #> To check the encoding landed correctly, compare jfreq() on the original and the
 #> new column.
+
+# The data frame may also be given by name, or set once with juse()
+MyData$StatusR <- jencode(data = MyData, Status)
+#> Note: 'Status' was encoded alphabetically:
+#>   "Bail"   -> 1
+#>   "Parole" -> 2
+#>   "Remand" -> 3
+#> If these categories have a natural order (like Low/Medium/High), rerun with a
+#> map to choose the numbers:
+#>   MyData$StatusR <- jencode(MyData, Status, map = "Bail=1; Parole=2; Remand=3")
+#> 
+#> Note: This call changes MyData only if you assign the result:
+#>   MyData$<name> <- jencode(...)
+#> To check the encoding landed correctly, compare jfreq() on the original and the
+#> new column.
+juse(MyData)
+#> Default data frame set to: MyData
+MyData$StatusR <- jencode(Status)
+#> Note: 'Status' was encoded alphabetically:
+#>   "Bail"   -> 1
+#>   "Parole" -> 2
+#>   "Remand" -> 3
+#> If these categories have a natural order (like Low/Medium/High), rerun with a
+#> map to choose the numbers:
+#>   MyData$StatusR <- jencode(MyData, Status, map = "Bail=1; Parole=2; Remand=3")
+#> 
+#> Note: This call changes MyData only if you assign the result:
+#>   MyData$<name> <- jencode(...)
+#> To check the encoding landed correctly, compare jfreq() on the original and the
+#> new column.
+juse(NULL)
+#> Default data frame cleared.
 
 # Map mode: choose the numbers; apostrophes need no quoting
 MyData$AnswerR <- jencode(MyData, Answer,

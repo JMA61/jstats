@@ -134,7 +134,10 @@ file and a real answer in the next (a column coded "Y" or left empty),
 and only you know which. A short footnote under the table says how many
 there are;
 [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) gives
-them a code or makes them missing.
+them a code or makes them missing. `<blank>` is the row's label, not a
+value in the data: a filter selects those cells by what they hold,
+`subset = trimws(Source) == ""` (or `Source == ""` for the empty cells
+alone, leaving out those holding only spaces).
 
 A list column (a tibble's, or the geometry column of a spatial data
 frame), a raw column, and a column that is itself a data frame cannot be
@@ -224,6 +227,24 @@ jfreq(community, Region, Education)
 #> Total missing               6     5.83
 #> 
 #> Total                     103   100.00
+#> 
+
+# The data frame may also be given by name
+jfreq(data = community, Region)
+#> Frequencies
+#> 
+#> 103 Cases in the 1 Variable Pool
+#> 
+#> Region
+#> 
+#>           Freq  Total %  Valid %  Cum. %
+#> --------  ----  -------  -------  ------
+#> 1: North    27    26.21   26.21    26.21
+#> 2: South    20    19.42   19.42    45.63
+#> 3: East     31    30.10   30.10    75.73
+#> 4: West     25    24.27   24.27   100.00
+#> 
+#> Total      103   100.00
 #> 
 
 # Using juse() default

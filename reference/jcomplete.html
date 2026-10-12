@@ -43,7 +43,7 @@ in place of the complete-case count."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -182,6 +182,28 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Listwise Case Filter</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable    N   Missing  % Missing</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ---------  ---  -------  ---------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income     103     6        5.8%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education  103     6        5.8%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103     0        0.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Complete cases: 91 of 103 (88.3%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Listwise filter activated -- 12 cases will be excluded from</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   subsequent analyses.</span>
+<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span><span class="va">community</span>, <span class="va">Income</span>, <span class="va">Education</span>, <span class="va">Age</span><span class="op">)</span>         <span class="co"># Explicit dataset</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Listwise Case Filter</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Variable    N   Missing  % Missing</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ---------  ---  -------  ---------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income     103     6        5.8%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Education  103     6        5.8%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age        103     0        0.0%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Complete cases: 91 of 103 (88.3%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Listwise filter activated -- 12 cases will be excluded from</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   subsequent analyses.</span>
+<span class="r-in"><span><span class="fu">jcomplete</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Income</span>, <span class="va">Education</span>, <span class="va">Age</span><span class="op">)</span>  <span class="co"># ... given by name</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Listwise Case Filter</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variable    N   Missing  % Missing</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------  ---  -------  ---------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Income     103     6        5.8%</span>

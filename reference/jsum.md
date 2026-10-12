@@ -121,8 +121,17 @@ community$ScaleTotal <- jsum(Environment1:Environment5,
 #>   mydata$<name> <- jsum(mydata, ...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
-# With an explicit data frame (instead of using juse default)
+# With an explicit data frame (instead of using juse default),
+# positional or named
 community$EnvTotal <- jsum(community, Environment1, Environment3,
+                           Environment4)
+#> Sum of 3 variables computed for 103 cases (19 set to NA due to missing values).
+#> Mean of the new variable: 9.524.
+#> 
+#> Note: jsum() returns the totals; assign them to a column to keep them:
+#>   community$<name> <- jsum(...)
+#> For the full distribution (min, max, SD), run jdesc() on the new column.
+community$EnvTotal <- jsum(data = community, Environment1, Environment3,
                            Environment4)
 #> Sum of 3 variables computed for 103 cases (19 set to NA due to missing values).
 #> Mean of the new variable: 9.524.

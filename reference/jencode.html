@@ -19,7 +19,7 @@ to a rank."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,12 +97,12 @@ words cannot be kept in a numeric column. A word may also be sent to
 the word <code>missing</code> – your working convention's own missing
 form, declared automatically under the SPSS convention (see
 <code><a href="jrecode.html">jrecode()</a></code>'s <code>map</code> for the full rule); <code>blank=missing</code>
-composes the two tokens. Under the SPSS convention the code the token
-uses must be free: if the map also assigns it as an ordinary value,
-or a number stored as text is kept at that same value, the call stops
-rather than sweep those cases into missingness. Under the Stata or
-SAS convention the token always uses the first marker (<code>.a</code>, or
-<code>.A</code>), so a map that also assigns that marker itself stops
+composes the two keywords. Under the SPSS convention the code the
+keyword uses must be free: if the map also assigns it as an ordinary
+value, or a number stored as text is kept at that same value, the call
+stops rather than sweep those cases into missingness. Under the Stata
+or SAS convention the keyword always uses the first marker (<code>.a</code>,
+or <code>.A</code>), so a map that also assigns that marker itself stops
 rather than merge two missing categories onto one marker.</p>
 <p>By default an incomplete map is an error that names the unmatched
 words (nothing is dropped silently); add an <code>else</code> rule to sweep
@@ -121,13 +121,13 @@ here or to <code><a href="jrelabel.html">jrelabel()</a></code>.</p></dd>
 <dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>
 <dd><p>Optional. One of <code>"spss"</code>, <code>"stata"</code>,
 <code>"sas"</code>, or <code>NULL</code> (default); any capitalization is
-accepted. Controls whether missing-value tokens (<code>.a</code> through
+accepted. Controls whether missing-value markers (<code>.a</code> through
 <code>.z</code> or <code>.A</code> through <code>.Z</code>) are accepted as map
-targets. Token letters are matched case-insensitively; the stored
+targets. Marker letters are matched case-insensitively; the stored
 markers take the convention's letter case (lowercase Stata-style
 under <code>"stata"</code>, uppercase SAS-style under <code>"sas"</code>).
 Also decides what the <code>missing</code> keyword produces. Inert when
-neither tokens nor <code>missing</code> appear in the map.</p>
+neither a marker nor <code>missing</code> appears in the map.</p>
 <p>When <code>NULL</code>, the convention is resolved from
 the <code>missing.convention</code> setting in <code><a href="joptions.html">joptions</a></code>; if that
 is also unset, the call stops with a guided error asking you to choose –
@@ -261,6 +261,38 @@ variable name is used instead.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   MyData$&lt;name&gt; &lt;- jencode(...)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> To check the encoding landed correctly, compare jfreq() on the original and the</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given by name, or set once with juse()</span></span></span>
+<span class="r-in"><span><span class="va">MyData</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jencode</span><span class="op">(</span>data <span class="op">=</span> <span class="va">MyData</span>, <span class="va">Status</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: 'Status' was encoded alphabetically:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   "Bail"   -&gt; 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   "Parole" -&gt; 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   "Remand" -&gt; 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> If these categories have a natural order (like Low/Medium/High), rerun with a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> map to choose the numbers:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   MyData$StatusR &lt;- jencode(MyData, Status, map = "Bail=1; Parole=2; Remand=3")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes MyData only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   MyData$&lt;name&gt; &lt;- jencode(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the encoding landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
+<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">MyData</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: MyData</span>
+<span class="r-in"><span><span class="va">MyData</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jencode</span><span class="op">(</span><span class="va">Status</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: 'Status' was encoded alphabetically:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   "Bail"   -&gt; 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   "Parole" -&gt; 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   "Remand" -&gt; 3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> If these categories have a natural order (like Low/Medium/High), rerun with a</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> map to choose the numbers:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   MyData$StatusR &lt;- jencode(MyData, Status, map = "Bail=1; Parole=2; Remand=3")</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes MyData only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   MyData$&lt;name&gt; &lt;- jencode(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To check the encoding landed correctly, compare jfreq() on the original and the</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> new column.</span>
+<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame cleared.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Map mode: choose the numbers; apostrophes need no quoting</span></span></span>
 <span class="r-in"><span><span class="va">MyData</span><span class="op">$</span><span class="va">AnswerR</span> <span class="op">&lt;-</span> <span class="fu">jencode</span><span class="op">(</span><span class="va">MyData</span>, <span class="va">Answer</span>,</span></span>

@@ -6,8 +6,9 @@ jcorr(d, Income, Age, method = &quot;spearman&quot;) – for
 names through .jst_strip_frame_refs(), a named argument keeps its
 name, and the column goes where the function takes variables: straight
 after the frame when its second formal is ..., var,
-orig.var or expr, or when nothing positional follows
-(jconvert(d$Stress, to = &quot;stata&quot;)). Gives NULL – the sentence
+orig.var or expr, or when nothing positional follows.
+A format name given to jconvert() where a variable goes is named
+to = in the rebuilt call (Session 354). Gives NULL – the sentence
 without a call – when the rebuild cannot be complete: the argument is not
 found in the call, a positional argument would land in the wrong slot,
 a summary of the frame is used (mean(d$Age)), or a data frame is
@@ -18,8 +19,9 @@ jcorr(d, Income, Age, method = &quot;spearman&quot;) – for
 names through .jst_strip_frame_refs(), a named argument keeps its
 name, and the column goes where the function takes variables: straight
 after the frame when its second formal is ..., var,
-orig.var or expr, or when nothing positional follows
-(jconvert(d$Stress, to = &quot;stata&quot;)). Gives NULL – the sentence
+orig.var or expr, or when nothing positional follows.
+A format name given to jconvert() where a variable goes is named
+to = in the rebuilt call (Session 354). Gives NULL – the sentence
 without a call – when the rebuild cannot be complete: the argument is not
 found in the call, a positional argument would land in the wrong slot,
 a summary of the frame is used (mean(d$Age)), or a data frame is
@@ -31,7 +33,7 @@ still named after the rewrite (another frame's column, d[, 2])."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,8 +66,9 @@ still named after the rewrite (another frame's column, d[, 2])."></head><body>
 names through <code><a href="dot-jst_strip_frame_refs.html">.jst_strip_frame_refs()</a></code>, a named argument keeps its
 name, and the column goes where the function takes variables: straight
 after the frame when its second formal is <code>...</code>, <code>var</code>,
-<code>orig.var</code> or <code>expr</code>, or when nothing positional follows
-(<code>jconvert(d$Stress, to = "stata")</code>). Gives NULL – the sentence
+<code>orig.var</code> or <code>expr</code>, or when nothing positional follows.
+A format name given to <code><a href="jconvert.html">jconvert()</a></code> where a variable goes is named
+<code>to =</code> in the rebuilt call (Session 354). Gives NULL – the sentence
 without a call – when the rebuild cannot be complete: the argument is not
 found in the call, a positional argument would land in the wrong slot,
 a summary of the frame is used (<code>mean(d$Age)</code>), or a data frame is

@@ -76,24 +76,24 @@ jdeclare_missing(
       `` codes = c(Refused = -99, `Don't know` = -98) ``.
 
   On a column that already carries Stata-style or SAS-style missing
-  values, codes may name the markers directly as quoted tokens, e.g.
-  `codes = c(Refused = ".a")` – a token `".a"` means the `.a` marker (or
-  `.A` on a SAS-style column: token case is accepted either way and
-  canonicalized to the column's convention). Tokens are refused on
-  columns with no tagged missing values to label (see the Missing-Values
-  Convention section).
+  values, codes may name the markers directly, as quoted strings, e.g.
+  `codes = c(Refused = ".a")` – the string `".a"` names the `.a` marker
+  (or `.A` on a SAS-style column: the letter case you type is accepted
+  either way and canonicalized to the column's convention). A quoted
+  marker is refused on a column with no tagged missing values to label
+  (see the Missing-Values Convention section).
 
-  A token may name a marker that no case currently carries – useful for
-  FORWARD-DECLARING a label before recoding values into it. The label
-  attaches, nothing in the data changes, and the notification says the
-  marker is not present in the data. Such a label survives a save to
+  A quoted marker may name one that no case currently carries – useful
+  for FORWARD-DECLARING a label before recoding values into it. The
+  label attaches, nothing in the data changes, and the notification says
+  the marker is not present in the data. Such a label survives a save to
   Stata format (.dta) and the load back, and `jconvert(to = "spss")`
   declares its code like any other marker's.
 
-  A token given with no label is a no-op on an already-tagged column:
-  the cells are already missing, so the only act available is naming a
-  marker, and the call reports that it changed nothing. This differs
-  from the numeric form, where a bare code IS the declaration.
+  A quoted marker given with no label is a no-op on an already-tagged
+  column: the cells are already missing, so the only act available is
+  naming a marker, and the call reports that it changed nothing. This
+  differs from the numeric form, where a bare code IS the declaration.
 
 - labels:
 
@@ -119,7 +119,7 @@ jdeclare_missing(
   `range` with the Stata or SAS convention – as a per-call argument or
   as the
   [`joptions()`](https://jma61.github.io/jstats/reference/joptions.md)
-  setting – or with tagged tokens is refused, and the refusal teaches
+  setting – or with quoted markers is refused, and the refusal teaches
   the two-step route (declare the range under SPSS convention, then
   [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
   the column) when the range covers few enough values to convert. When
@@ -154,9 +154,9 @@ jdeclare_missing(
   you to choose – the package never infers a convention for a fresh
   declaration. A `range` requires SPSS convention (see `range`). The SAS
   convention behaves as the Stata convention with uppercase markers:
-  markers are stored and labeled as `.A`-`.Z`. Token input is
-  case-insensitive under both tagged conventions; the case written to
-  the column follows the resolved convention.
+  markers are stored and labeled as `.A`-`.Z`. A quoted marker's letter
+  case is accepted either way under both tagged conventions; the case
+  written to the column follows the resolved convention.
 
 - missing.notice:
 
@@ -199,16 +199,16 @@ missing values). The data cells themselves are unchanged; only the
 metadata that flags certain values as missing is added.
 
 Under Stata or SAS convention with tagged missing-value input (quoted
-tokens such as `".a"`), the function attaches value labels to the
+markers such as `".a"`), the function attaches value labels to the
 column's existing tagged missing-value markers. This requires the column
 to already carry tagged missing values – either tagged cells, or markers
 previously declared through value labels (a marker may be labeled before
 any cases carry it, so a declaration made early in data collection is
-complete for later data). Token case is accepted either way and
-canonicalized to the resolved convention: lowercase markers under Stata
-convention, uppercase under SAS. Tokens against a column with no tagged
-missing values are refused identically under every convention source: on
-a plain column the error points at
+complete for later data). The letter case you type is accepted either
+way and canonicalized to the resolved convention: lowercase markers
+under Stata convention, uppercase under SAS. Quoted markers against a
+column with no tagged missing values are refused identically under every
+convention source: on a plain column the error points at
 [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)
 (which creates tagged cells from numeric codes); on a column carrying
 SPSS-style declarations it points at
@@ -369,6 +369,32 @@ df3 <- jdeclare_missing(clinic, MoodRating,
 #> To change clinic directly, rerun with modify = TRUE:
 #>   jdeclare_missing(clinic, MoodRating, ..., modify = TRUE)
 
+# The data frame may also be given by name, or set once with juse()
+df3 <- jdeclare_missing(data = clinic, MoodRating, codes = c(-99, -98))
+#> Declared SPSS-style missing values on MoodRating:
+#>   -99 (no label)
+#>   -98 (no label)
+#> 
+#> This call changes clinic only if you assign the result:
+#>   clinic <- jdeclare_missing(clinic, MoodRating, ...)
+#> 
+#> To change clinic directly, rerun with modify = TRUE:
+#>   jdeclare_missing(clinic, MoodRating, ..., modify = TRUE)
+juse(clinic)
+#> Default data frame set to: clinic
+df3 <- jdeclare_missing(MoodRating, codes = c(-99, -98))
+#> Declared SPSS-style missing values on MoodRating:
+#>   -99 (no label)
+#>   -98 (no label)
+#> 
+#> This call changes clinic only if you assign the result:
+#>   clinic <- jdeclare_missing(clinic, MoodRating, ...)
+#> 
+#> To change clinic directly, rerun with modify = TRUE:
+#>   jdeclare_missing(clinic, MoodRating, ..., modify = TRUE)
+juse(NULL)
+#> Default data frame cleared.
+
 # A missing-value RANGE: every value from -99 through -51 is missing.
 # SPSS parallel: MISSING VALUES MoodRating (-99 THRU -51).
 df4 <- jdeclare_missing(clinic, MoodRating, range = c(-99, -51))
@@ -393,7 +419,7 @@ jdeclare_missing(mydata, vars = c("Theft", "Assault", "Burglary"),
 
 # Stata-style: label Stata-style missing-value cells. The jrecode() call
 # turns the literal codes into tagged cells; jdeclare_missing() labels them
-# by naming the markers as quoted tokens.
+# by naming the markers as quoted strings.
 df5 <- clinic
 df5$Mood2 <- jrecode(df5, MoodRating,
                      map = "-99=.a; -98=.b; else=copy",
@@ -422,7 +448,7 @@ jdeclare_missing(df5, Mood2,
 #> Note: Mood2 uses Stata-style missing values, but other columns in df5
 #> are SPSS-style.
 #> To align Mood2 with the rest, run:
-#>   jconvert(df5, to = "spss", vars = "Mood2", modify = TRUE)
+#>   jconvert(df5, vars = "Mood2", to = "spss", modify = TRUE)
 
 if (FALSE) { # \dontrun{
 # The same neutral call -- plain numeric codes, no convention argument,

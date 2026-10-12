@@ -146,8 +146,18 @@ community$ScaleMean <- javg(Environment1:Environment5,
 #>   mydata$<name> <- javg(mydata, ...)
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 
-# With an explicit data frame (instead of using juse default)
+# With an explicit data frame (instead of using juse default),
+# positional or named
 community$EnvAvg <- javg(community, Environment1, Environment3,
+                         Environment4)
+#> Mean of 3 variables computed for 103 cases (19 set to NA due to
+#> missing values).
+#> Mean of the new variable: 3.175.
+#> 
+#> Note: javg() returns the scores; assign them to a column to keep them:
+#>   community$<name> <- javg(...)
+#> For the full distribution (min, max, SD), run jdesc() on the new column.
+community$EnvAvg <- javg(data = community, Environment1, Environment3,
                          Environment4)
 #> Mean of 3 variables computed for 103 cases (19 set to NA due to
 #> missing values).

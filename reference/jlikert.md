@@ -102,6 +102,25 @@ Clearing mirrors the other registration verbs:
 #> 
 #> Next session, load that file to restore the registrations:
 #>   jload("community.rds")
+  jlikert(data = community, Environment1)         # the data frame by name
+#> Likert registration set for 'Environment1' in community.
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(community, "community.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("community.rds")
+  juse(community); jlikert(Environment1); juse(NULL)  # or the juse() default
+#> Default data frame set to: community
+#> Using default data frame: community
+#> Likert registration set for 'Environment1' in community.
+#> Note: this registration is stored for this session only.
+#> To keep it across sessions, save the data frame in R format (.rds):
+#>   jsave(community, "community.rds")
+#> 
+#> Next session, load that file to restore the registration:
+#>   jload("community.rds")
+#> Default data frame cleared.
   jscreen(community)                              # Sub-class shows "Likert"
 #> Data Screening
 #>   Cases: 103

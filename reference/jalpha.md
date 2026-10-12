@@ -61,8 +61,8 @@ jalpha(
 
   Not supported by `jalpha()`. The function does not display value
   labels, so passing this argument is an error. It exists only to return
-  a clear message rather than misreporting the token as a missing
-  variable. Leave at NULL (default).
+  a clear message rather than report `value.id` as a variable that was
+  not found. Leave at NULL (default).
 
 - case.processing.detail:
 
@@ -111,6 +111,51 @@ listing.
 ``` r
 # With explicit data frame
 jalpha(community, Environment1, Environment2, Environment3,
+       Environment4, Environment5)
+#> Reliability Analysis
+#> 
+#> Case Processing    Excluded  Remaining
+#>     Original             --        103
+#>     Auto-listwise        19         84
+#>     Analysis N           --         84
+#> 
+#> Missing data   From 103    %
+#>     Environment1
+#>       Missing     12     11.7
+#>     Environment3
+#>       Missing     12     11.7
+#> --------------------------------------
+#> 
+#> Reliability Statistics
+#> Cronbach's Alpha  N of Items
+#> ----------------  ----------
+#>       0.348            5
+#> 
+#> Item Statistics
+#> Item           Mean    SD    N
+#> ------------  -----  -----  --
+#> Environment1  3.131  1.180  84
+#> Environment2  2.869  1.180  84
+#> Environment3  3.060  1.226  84
+#> Environment4  3.333  1.186  84
+#> Environment5  2.762  1.470  84
+#> 
+#> Warning: The following item is negatively correlated with the rest of the
+#> scale: Environment2.
+#> It may need reverse-coding, or may not belong in the scale -- check the
+#> item-total table and the item wording.
+#> Item-Total Statistics
+#> Item          Corrected Item-Total r  Alpha if Item Deleted
+#> ------------  ----------------------  ---------------------
+#> Environment1           0.510                  -0.006
+#> Environment2          -0.660                   0.783
+#> Environment3           0.539                  -0.052
+#> Environment4           0.447                   0.056
+#> Environment5           0.455                  -0.030
+#> 
+
+# The data frame may also be given by name
+jalpha(data = community, Environment1, Environment2, Environment3,
        Environment4, Environment5)
 #> Reliability Analysis
 #> 

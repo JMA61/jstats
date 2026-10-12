@@ -13,7 +13,7 @@ odds ratios (Exp(B))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.226</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -319,6 +319,23 @@ formula does this. A power that is not a number, <code>x^k</code>, stops with
 an error, as in <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>; write <code>I(x^k)</code>.</p>
     </div>
     <div class="section level2">
+    <h2 id="interactions">Interactions<a class="anchor" aria-label="anchor" href="#interactions"></a></h2>
+
+
+<p>An interaction is entered in the formula with <code>*</code>, as in R:
+<code>y ~ x * z</code> fits <code>x</code>, <code>z</code> and their product, and the
+product's row in the coefficient table is labeled <code>x * z</code>. With a
+categorical predictor registered with <code><a href="jdummy.html">jdummy</a></code>, the
+interaction rows are grouped under a header naming the reference
+category, with one row per dummy variable, as the predictor's own rows
+are. Each row's b is the change in the log-odds slope of one variable
+per unit of the other (or, for a dummy row, the difference in slope
+between that category and the reference), and its Exp(B) the factor by
+which the other variable's odds ratio is multiplied per unit; the
+main-effect rows give the slopes where the other variable is zero.
+<code><a href="jplot.html">jplot</a></code> on the result draws the probability plots.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="jstats-package.html">jstats</a></code> for the package overview,
 workflow conventions, and complete function listing.</p></div>
@@ -358,6 +375,83 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      117.260            0.158          0.211      123.260</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The data frame may also be given positionally</span></span></span>
+<span class="r-in"><span><span class="fu">jlogistic</span><span class="op">(</span><span class="va">Volunteer</span> <span class="op">~</span> <span class="va">Income</span> <span class="op">+</span> <span class="va">Age</span>, <span class="va">community</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Logistic Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         6         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N           --         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 103   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Income</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing      6     5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 b      SE    Wald   df    p    Exp(B)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------  ------  -----  ------  --  -----  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  -3.824  1.049  13.287   1  &lt;.001   0.022</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income        0.000  0.000   6.683   1   .010   1.000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age           0.046  0.021   4.870   1   .027   1.047</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   16.705     2  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      117.260            0.158          0.211      123.260</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Reference (0): No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># An interaction, entered in the formula with *</span></span></span>
+<span class="r-in"><span><span class="fu">jlogistic</span><span class="op">(</span><span class="va">Volunteer</span> <span class="op">~</span> <span class="va">Income</span> <span class="op">*</span> <span class="va">Age</span>, data <span class="op">=</span> <span class="va">community</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Logistic Regression</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Case Processing    Excluded  Remaining</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Original             --        103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Auto-listwise         6         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Analysis N           --         97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Missing data   From 103   %</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Income</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Missing      6     5.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                  b      SE    Wald  df    p   Exp(B)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ------------  ------  -----  -----  --  ----  ------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)   -7.631  3.212  5.645   1  .018   0.000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income         0.000  0.000  3.516   1  .061   1.000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Age            0.142  0.078  3.308   1  .069   1.153</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Income * Age   0.000  0.000  1.750   1  .186   1.000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Outcome: Volunteer</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Omnibus Test of Model Coefficients</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  -----</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   18.580     3  &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Model Summary</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -2 Log Likelihood  Cox &amp; Snell R²  Nagelkerke R²    AIC</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -----------------  --------------  -------------  -------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      115.385            0.174          0.233      123.385</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dependent Variable Encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Modeled (1):   Yes</span>
