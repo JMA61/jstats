@@ -90,6 +90,8 @@ in place of the complete-case count.
 \examples{
 juse(community)
 jcomplete(Income, Education, Age)
+jcomplete(community, Income, Education, Age)         # Explicit dataset
+jcomplete(data = community, Income, Education, Age)  # ... given by name
 jdesc(Age)                     # Uses only complete cases on those 3 vars
 jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)

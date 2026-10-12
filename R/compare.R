@@ -145,6 +145,9 @@
 #' jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
 #' jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 #'
+#' # The data frame may also be given positionally
+#' jt(WellbeingScore ~ Volunteer, community)
+#'
 #' # Checking the equal-variances assumption: Levene's test
 #' jt(WellbeingScore ~ Volunteer, data = community, diagnostics = TRUE)
 #'
@@ -854,6 +857,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' # With explicit data frame
 #' jaov(WellbeingScore ~ Region, data = community)
 #' jaov(WellbeingScore ~ Region, data = community, full = TRUE)
+#'
+#' # The data frame may also be given positionally
+#' jaov(WellbeingScore ~ Region, community)
 #'
 #' # Checking the equal-variances assumption: Levene's test
 #' jaov(WellbeingScore ~ Region, data = community, diagnostics = TRUE)
@@ -1682,6 +1688,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @examples
 #' # Cross-tabulation only
 #' jcrosstab(Education ~ Volunteer, data = community)
+#'
+#' # The data frame may also be given positionally
+#' jcrosstab(Education ~ Volunteer, community)
 #'
 #' # With chi-square test
 #' jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)

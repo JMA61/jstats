@@ -119,7 +119,10 @@ They are counted as valid values, not as missing: a blank is absent data
 in one file and a real answer in the next (a column coded "Y" or left
 empty), and only you know which. A short footnote under the table says
 how many there are; \code{\link{jencode}} gives them a code or makes
-them missing.
+them missing. \code{<blank>} is the row's label, not a value in the
+data: a filter selects those cells by what they hold,
+\code{subset = trimws(Source) == ""} (or \code{Source == ""} for the
+empty cells alone, leaving out those holding only spaces).
 
 A list column (a tibble's, or the geometry column of a spatial data
 frame), a raw column, and a column that is itself a data frame cannot be
@@ -150,6 +153,9 @@ frame has no variable of that name, or when no default is set.
 # With explicit data frame
 jfreq(community, Region)
 jfreq(community, Region, Education)
+
+# The data frame may also be given by name
+jfreq(data = community, Region)
 
 # Using juse() default
 juse(community)

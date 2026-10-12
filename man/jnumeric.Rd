@@ -56,6 +56,8 @@ analyzed as a continuous score.
 # Treat a labelled Likert item as a continuous score (slope-per-unit)
 jnumeric(community, Environment2)             # one labelled 1-5 item
 jnumeric(community, Environment2, Environment4)  # several at once
+jnumeric(data = community, Environment2)      # the data frame by name
+juse(community); jnumeric(Environment2); juse(NULL)   # or the juse() default
 jnumeric(community, Environment2, remove = TRUE) # unregister one
 jnumeric()                          # list all registrations
 jnumeric(community, NULL)           # clear community's numeric registrations

@@ -116,11 +116,15 @@ for one or more variables in a data frame. Prints a formatted table and
 invisibly returns the underlying results as a data frame.
 }
 \details{
-Output is structured consistently with \code{jfreq()}: a red title is
-printed first, followed by a block showing the type and variable label
-(or "None" if no label is present) for each variable, then a single blank
-line before the table. For multiple variables, one type/label entry is
-printed per variable before the shared table.
+Output is structured consistently with \code{jfreq()}: a single red
+"Descriptive Statistics" title is printed first, followed by the
+default-data note (if a juse() default was used), any pipeline
+messages, and then either the Case Processing table (when a filter is
+active) or a one-line statement of the N -- for several variables, the
+size of the variable pool and how many cases are complete on all of
+them. One shared table follows, a row per variable. Variable labels
+are not printed in the table; \code{variable.id} puts them in the row
+names or in a legend under the table.
 
 Summarizes numeric, haven-labelled, logical, numeric-coded factor, and
 numeric-looking character variables. Variables that cannot be summarized
@@ -151,14 +155,19 @@ a group. Where it is a single line rather than a table (at the minimal
 output level, for example), that line counts "Grouped Cases" once the
 grouping variable has excluded any.
 
-Haven-labelled variables are reported as \code{haven_labelled (Categorical)}
-in the type line; the uninformative \code{vctrs_vctr} class is suppressed.
+A haven-labelled variable is summarized by its codes, like any numeric
+variable. One whose codes look like categories gets a warning that the
+statistics may not be meaningful, with \code{jfreq()} as the
+alternative.
 }
 \examples{
 # With explicit data frame
 jdesc(community, Age)
 jdesc(community, Income, Age, WellbeingScore)
 jdesc(community, WellbeingScore, by = Volunteer)
+
+# The data frame may also be given by name
+jdesc(data = community, Age)
 
 # Using juse() default
 juse(community)

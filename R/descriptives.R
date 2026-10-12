@@ -13,11 +13,15 @@
 #' for one or more variables in a data frame. Prints a formatted table and
 #' invisibly returns the underlying results as a data frame.
 #'
-#' Output is structured consistently with \code{jfreq()}: a red title is
-#' printed first, followed by a block showing the type and variable label
-#' (or "None" if no label is present) for each variable, then a single blank
-#' line before the table. For multiple variables, one type/label entry is
-#' printed per variable before the shared table.
+#' Output is structured consistently with \code{jfreq()}: a single red
+#' "Descriptive Statistics" title is printed first, followed by the
+#' default-data note (if a juse() default was used), any pipeline
+#' messages, and then either the Case Processing table (when a filter is
+#' active) or a one-line statement of the N -- for several variables, the
+#' size of the variable pool and how many cases are complete on all of
+#' them. One shared table follows, a row per variable. Variable labels
+#' are not printed in the table; \code{variable.id} puts them in the row
+#' names or in a legend under the table.
 #'
 #' Summarizes numeric, haven-labelled, logical, numeric-coded factor, and
 #' numeric-looking character variables. Variables that cannot be summarized
@@ -48,8 +52,10 @@
 #' output level, for example), that line counts "Grouped Cases" once the
 #' grouping variable has excluded any.
 #'
-#' Haven-labelled variables are reported as \code{haven_labelled (Categorical)}
-#' in the type line; the uninformative \code{vctrs_vctr} class is suppressed.
+#' A haven-labelled variable is summarized by its codes, like any numeric
+#' variable. One whose codes look like categories gets a warning that the
+#' statistics may not be meaningful, with \code{jfreq()} as the
+#' alternative.
 #'
 #' @param data A data frame, or a single variable: a column of a data frame
 #'   or a numeric vector.
@@ -118,6 +124,9 @@
 #' jdesc(community, Age)
 #' jdesc(community, Income, Age, WellbeingScore)
 #' jdesc(community, WellbeingScore, by = Volunteer)
+#'
+#' # The data frame may also be given by name
+#' jdesc(data = community, Age)
 #'
 #' # Using juse() default
 #' juse(community)
@@ -822,7 +831,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' in one file and a real answer in the next (a column coded "Y" or left
 #' empty), and only you know which. A short footnote under the table says
 #' how many there are; \code{\link{jencode}} gives them a code or makes
-#' them missing.
+#' them missing. \code{<blank>} is the row's label, not a value in the
+#' data: a filter selects those cells by what they hold,
+#' \code{subset = trimws(Source) == ""} (or \code{Source == ""} for the
+#' empty cells alone, leaving out those holding only spaces).
 #'
 #' A list column (a tibble's, or the geometry column of a spatial data
 #' frame), a raw column, and a column that is itself a data frame cannot be
@@ -896,6 +908,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' # With explicit data frame
 #' jfreq(community, Region)
 #' jfreq(community, Region, Education)
+#'
+#' # The data frame may also be given by name
+#' jfreq(data = community, Region)
 #'
 #' # Using juse() default
 #' juse(community)
@@ -1760,8 +1775,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'   \code{joutput()}'s \code{variable.id} setting. Not a logical.
 #' @param value.id Not supported by \code{jscreen()}. The function does not
 #'   display value labels, so passing this argument is an error. It exists
-#'   only to return a clear message rather than misreporting the token as a
-#'   missing variable. Leave at NULL (default).
+#'   only to return a clear message rather than report \code{value.id} as
+#'   a variable that was not found. Leave at NULL (default).
 #' @param types Logical. If TRUE (default), prints the Variable Types table.
 #'   Set FALSE to suppress it.
 #' @param issues Logical. If TRUE (default), prints the Missing Data &
@@ -1803,6 +1818,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' # With explicit data frame
 #' jscreen(community)
 #' jscreen(community, outlier.sd = 2.5)
+#'
+#' # The data frame may also be given by name
+#' jscreen(data = community)
 #'
 #' # Show the Base R storage type column
 #' jscreen(community, r.type = TRUE)

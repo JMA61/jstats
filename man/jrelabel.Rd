@@ -33,8 +33,22 @@ its class: haven-labelled input stays haven-labelled with any declared
 SPSS-style or Stata-style missing values intact; plain numeric and
 logical input becomes \code{haven_labelled} when value labels are
 applied; any other type is returned unchanged apart from the labels.
-Assign the result back to a column in your data frame:
-\code{MyData$VarName <- jrelabel(MyData, VarName, ...)}
+Assign the result to a column to keep it. Two assignment forms do
+that job:
+
+\itemize{
+\item Preserving:
+\code{MyData$VarNameL <- jrelabel(MyData, VarName, ...)} adds a
+labeled copy and keeps the original as it was.
+\item Overwrite (the usual choice here):
+\code{MyData$VarName <- jrelabel(MyData, VarName, ...)} labels
+the variable in place. Labels change how values are shown, not
+the values, so there is normally nothing to keep a copy of.
+}
+
+SPSS users will recognize the pair from \code{RECODE ... INTO new.}
+and bare \code{RECODE}; for labels, SPSS's \code{VALUE LABELS} and
+\code{VARIABLE LABELS} always label in place, the overwrite form.
 }
 \description{
 \code{jrelabel()} attaches a variable label and/or value labels to any
@@ -64,7 +78,7 @@ is unaffected, but re-supply its label alongside the new value labels to
 keep it. On a column with Stata-style or SAS-style missing values, a
 marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
-re-supply it as a token, e.g. \code{labels = "1=Low; .c=Refused"}.
+re-supply it by its marker, e.g. \code{labels = "1=Low; .c=Refused"}.
 
 Both the \code{labels} and \code{var.label} arguments are optional. If
 neither is supplied, the function returns the variable unchanged.
@@ -75,6 +89,9 @@ df <- data.frame(Status = c(1, 2, 1, 2, 1, 2))
 df$StatusR <- ifelse(df$Status == 1, 1, 0)
 df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No",
                        var.label = "Status (recoded)")
+
+# The data frame may also be given by name
+df$StatusR <- jrelabel(data = df, StatusR, labels = "1=Yes; 0=No")
 
 # Add just a variable label
 df$StatusR <- jrelabel(df, StatusR, var.label = "Employment Status")

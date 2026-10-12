@@ -35,14 +35,14 @@ names are the labels. E.g.
 \code{codes = c(Refused = -99, `Don't know` = -98)}.}
 }
 On a column that already carries Stata-style or SAS-style missing
-values, codes may name the markers directly as quoted tokens, e.g.
-\code{codes = c(Refused = ".a")} -- a token \code{".a"} means the
-\code{.a} marker (or \code{.A} on a SAS-style column: token case is
-accepted either way and canonicalized to the column's convention).
-Tokens are refused on columns with no tagged missing values to
-label (see the Missing-Values Convention section).
+values, codes may name the markers directly, as quoted strings, e.g.
+\code{codes = c(Refused = ".a")} -- the string \code{".a"} names the
+\code{.a} marker (or \code{.A} on a SAS-style column: the letter case
+you type is accepted either way and canonicalized to the column's
+convention). A quoted marker is refused on a column with no tagged
+missing values to label (see the Missing-Values Convention section).
 
-A token may name a marker that no case currently carries -- useful
+A quoted marker may name one that no case currently carries -- useful
 for FORWARD-DECLARING a label before recoding values into it. The
 label attaches, nothing in the data changes, and the notification
 says the marker is not present in the data. Such a label survives a
@@ -50,7 +50,7 @@ save to Stata format (.dta) and the load back, and
 \code{jconvert(to = "spss")} declares its code like any other
 marker's.
 
-A token given with no label is a no-op on an already-tagged
+A quoted marker given with no label is a no-op on an already-tagged
 column: the cells are already missing, so the only act available
 is naming a marker, and the call reports that it changed nothing.
 This differs from the numeric form, where a bare code IS the
@@ -78,7 +78,7 @@ missing. The SPSS parallel is \code{MISSING VALUES X (-99 THRU
 missing-value range can exist only under SPSS convention:
 combining \code{range} with the Stata or SAS convention -- as a
 per-call argument or as the \code{joptions()} setting -- or with
-tagged tokens is refused, and the refusal teaches the two-step
+quoted markers is refused, and the refusal teaches the two-step
 route (declare the range under SPSS convention, then
 \code{jconvert()} the column) when the range covers few enough
 values to convert. When no convention is selected anywhere, a
@@ -110,9 +110,9 @@ neither supplies one, the call stops with a guided error asking you to
 choose -- the package never infers a convention for a fresh declaration. A
 \code{range} requires SPSS convention (see \code{range}). The SAS
 convention behaves as the Stata convention with uppercase markers: markers
-are stored and labeled as \code{.A}-\code{.Z}. Token input is
-case-insensitive under both tagged conventions; the case written to the
-column follows the resolved convention.}
+are stored and labeled as \code{.A}-\code{.Z}. A quoted marker's letter
+case is accepted either way under both tagged conventions; the case
+written to the column follows the resolved convention.}
 
 \item{missing.notice}{Logical. When \code{TRUE} (the default), the
 function prints a notification summarizing what was declared,
@@ -184,16 +184,16 @@ SPSS-style missing values). The data cells themselves are unchanged;
 only the metadata that flags certain values as missing is added.
 
 Under Stata or SAS convention with tagged missing-value input (quoted
-tokens such as \code{".a"}), the function attaches value labels to
+markers such as \code{".a"}), the function attaches value labels to
 the column's existing tagged missing-value markers. This
 requires the column to already carry tagged missing values --
 either tagged cells, or markers previously declared through value
 labels (a marker may be labeled before any cases carry it, so a
 declaration made early in data collection is complete for later
-data). Token case is accepted either way and canonicalized to the
-resolved convention: lowercase markers under Stata convention,
-uppercase under SAS. Tokens against a column with no tagged missing
-values are refused identically under every convention source: on a
+data). The letter case you type is accepted either way and canonicalized
+to the resolved convention: lowercase markers under Stata convention,
+uppercase under SAS. Quoted markers against a column with no tagged
+missing values are refused identically under every convention source: on a
 plain column the error points at \code{jrecode()} (which creates
 tagged cells from numeric codes); on a column carrying SPSS-style
 declarations it points at \code{jconvert()}.
@@ -302,6 +302,12 @@ df2 <- jdeclare_missing(df2, MoodRating,
 df3 <- jdeclare_missing(clinic, MoodRating,
                     codes = c("Refused" = -99, "Don't know" = -98))
 
+# The data frame may also be given by name, or set once with juse()
+df3 <- jdeclare_missing(data = clinic, MoodRating, codes = c(-99, -98))
+juse(clinic)
+df3 <- jdeclare_missing(MoodRating, codes = c(-99, -98))
+juse(NULL)
+
 # A missing-value RANGE: every value from -99 through -51 is missing.
 # SPSS parallel: MISSING VALUES MoodRating (-99 THRU -51).
 df4 <- jdeclare_missing(clinic, MoodRating, range = c(-99, -51))
@@ -318,7 +324,7 @@ jdeclare_missing(mydata, vars = c("Theft", "Assault", "Burglary"),
 
 # Stata-style: label Stata-style missing-value cells. The jrecode() call
 # turns the literal codes into tagged cells; jdeclare_missing() labels them
-# by naming the markers as quoted tokens.
+# by naming the markers as quoted strings.
 df5 <- clinic
 df5$Mood2 <- jrecode(df5, MoodRating,
                      map = "-99=.a; -98=.b; else=copy",

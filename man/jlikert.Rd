@@ -66,6 +66,8 @@ than clearing them all).
 }
 \examples{
   jlikert(community, Environment1, Environment2)  # declare two Likert items
+  jlikert(data = community, Environment1)         # the data frame by name
+  juse(community); jlikert(Environment1); juse(NULL)  # or the juse() default
   jscreen(community)                              # Sub-class shows "Likert"
   jlikert(community, Environment1, remove = TRUE) # undo one
   jlikert(community, NULL)                        # clear the registrations

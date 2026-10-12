@@ -2509,8 +2509,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 .jst_text_route <- function(data_name, to, text_vars, convert_rest = TRUE,
                             more_lines = FALSE) {
   n <- length(text_vars)
-  base_line <- paste0("  jconvert(", data_name, ", to = \"baseR\", vars = ",
-                      .jst_names_arg(text_vars), ", modify = TRUE)")
+  base_line <- paste0("  jconvert(", data_name, ", vars = ",
+                      .jst_names_arg(text_vars), ", to = \"baseR\", modify = TRUE)")
   conv_line <- paste0("  jconvert(", data_name, ", to = \"", to, "\"",
                       ", modify = TRUE)")
   list(
@@ -3444,6 +3444,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @examples
 #' # A runnable save into R's session temporary folder
 #' jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
+#' jsave(data = community, file.path(tempdir(), "community.sav"),
+#'       overwrite = TRUE)                   # the data frame given by name
 #'
 #' \dontrun{
 #' # The file extension determines the format ---
@@ -4115,6 +4117,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
 #' \dontrun{
 #'   jdummy(community, Region)        # register a classification on community
 #'   jcopy(community, survey)         # survey carries Region's registration
+#'   jcopy(data = community, survey)  # the data frame given by name
 #'
 #'   juse(community)
 #'   jcopy(survey2)                   # copy the default (community) to survey2

@@ -50,8 +50,8 @@ print a label legend after the tables. NULL (default) defers to
 
 \item{value.id}{Not supported by \code{jscreen()}. The function does not
 display value labels, so passing this argument is an error. It exists
-only to return a clear message rather than misreporting the token as a
-missing variable. Leave at NULL (default).}
+only to return a clear message rather than report \code{value.id} as
+a variable that was not found. Leave at NULL (default).}
 
 \item{types}{Logical. If TRUE (default), prints the Variable Types table.
 Set FALSE to suppress it.}
@@ -181,6 +181,9 @@ active.
 # With explicit data frame
 jscreen(community)
 jscreen(community, outlier.sd = 2.5)
+
+# The data frame may also be given by name
+jscreen(data = community)
 
 # Show the Base R storage type column
 jscreen(community, r.type = TRUE)

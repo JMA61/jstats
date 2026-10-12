@@ -160,6 +160,12 @@ juse <- function(data) {
 #' \code{jcomplete()} keeps: the filter is refused, with the line that adds
 #' the object to the data frame.
 #'
+#' A text variable's blank cells, which \code{jfreq()} tabulates in a row
+#' labeled \code{<blank>}, are selected by what they hold, not by that
+#' label: \code{jsubset(d, trimws(Source) == "")} keeps the cases whose
+#' Source is empty or holds only spaces, and \code{Source != ""} with
+#' \code{trimws()} drops them. \code{Source == "<blank>"} matches nothing.
+#'
 #' @param data Optional data frame. If supplied, the expression is stored
 #'   on that dataset specifically. If omitted, the dataset set by
 #'   \code{juse()} is used.
@@ -224,6 +230,7 @@ juse <- function(data) {
 #' juse(community)
 #' jsubset(Age < 40)                        # Set using juse default
 #' jsubset(community, Age < 40)             # Explicit dataset
+#' jsubset(data = community, Age < 40)      # ... given by name
 #' jsubset(Age < 40 & WellbeingScore > 50)  # Compound condition
 #' jsubset(off)                             # Deactivate
 #' jsubset(on)                              # Reactivate
@@ -1050,6 +1057,8 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' @examples
 #' juse(community)
 #' jcomplete(Income, Education, Age)
+#' jcomplete(community, Income, Education, Age)         # Explicit dataset
+#' jcomplete(data = community, Income, Education, Age)  # ... given by name
 #' jdesc(Age)                     # Uses only complete cases on those 3 vars
 #' jcomplete(Income, Education, Age, preview = TRUE)  # Set and preview together
 #' jcomplete(preview = TRUE)      # Preview the already-set filter (viewer)
@@ -1696,6 +1705,8 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 #' @examples
 #' juse(community)
 #' jdummy(Region)                       # Register, first category as reference
+#' jdummy(community, Region)            # The same, naming the data frame
+#' jdummy(data = community, Region)     # ... or naming it as data =
 #' jdummy(Region, Education)            # Register several at once
 #' jdummy(Region, ref = "last")         # Last category as reference
 #' jdummy(Region, ref = 4)              # Reference by numeric code
@@ -2168,6 +2179,8 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 #' # Treat a labelled Likert item as a continuous score (slope-per-unit)
 #' jnumeric(community, Environment2)             # one labelled 1-5 item
 #' jnumeric(community, Environment2, Environment4)  # several at once
+#' jnumeric(data = community, Environment2)      # the data frame by name
+#' juse(community); jnumeric(Environment2); juse(NULL)   # or the juse() default
 #' jnumeric(community, Environment2, remove = TRUE) # unregister one
 #' jnumeric()                          # list all registrations
 #' jnumeric(community, NULL)           # clear community's numeric registrations
@@ -2286,6 +2299,8 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' df <- data.frame(arrests = c(0, 1, 2, 0, 3, 1, 0, 12),
 #'                  age      = c(21, 34, 45, 29, 51, 38, 26, 60))
 #' jcount(df, arrests)                 # treat as a count (here 0-12)
+#' jcount(data = df, arrests)          # the data frame by name
+#' juse(df); jcount(arrests); juse(NULL)  # or the juse() default
 #' jcount(df, arrests, remove = TRUE)
 #' jcount()                            # list all registrations
 #' jcount(df, NULL)                    # clear df's count registrations
@@ -2414,6 +2429,8 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
 #' @return Invisibly NULL. Called for its side effect on the session registry.
 #' @examples
 #'   jlikert(community, Environment1, Environment2)  # declare two Likert items
+#'   jlikert(data = community, Environment1)         # the data frame by name
+#'   juse(community); jlikert(Environment1); juse(NULL)  # or the juse() default
 #'   jscreen(community)                              # Sub-class shows "Likert"
 #'   jlikert(community, Environment1, remove = TRUE) # undo one
 #'   jlikert(community, NULL)                        # clear the registrations

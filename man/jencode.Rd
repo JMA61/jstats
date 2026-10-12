@@ -37,12 +37,12 @@ words cannot be kept in a numeric column. A word may also be sent to
 the word \code{missing} -- your working convention's own missing
 form, declared automatically under the SPSS convention (see
 \code{jrecode()}'s \code{map} for the full rule); \code{blank=missing}
-composes the two tokens. Under the SPSS convention the code the token
-uses must be free: if the map also assigns it as an ordinary value,
-or a number stored as text is kept at that same value, the call stops
-rather than sweep those cases into missingness. Under the Stata or
-SAS convention the token always uses the first marker (\code{.a}, or
-\code{.A}), so a map that also assigns that marker itself stops
+composes the two keywords. Under the SPSS convention the code the
+keyword uses must be free: if the map also assigns it as an ordinary
+value, or a number stored as text is kept at that same value, the call
+stops rather than sweep those cases into missingness. Under the Stata
+or SAS convention the keyword always uses the first marker (\code{.a},
+or \code{.A}), so a map that also assigns that marker itself stops
 rather than merge two missing categories onto one marker.
 
 By default an incomplete map is an error that names the unmatched
@@ -58,13 +58,13 @@ here or to \code{jrelabel()}.}
 
 \item{convention}{Optional. One of \code{"spss"}, \code{"stata"},
 \code{"sas"}, or \code{NULL} (default); any capitalization is
-accepted. Controls whether missing-value tokens (\code{.a} through
+accepted. Controls whether missing-value markers (\code{.a} through
 \code{.z} or \code{.A} through \code{.Z}) are accepted as map
-targets. Token letters are matched case-insensitively; the stored
+targets. Marker letters are matched case-insensitively; the stored
 markers take the convention's letter case (lowercase Stata-style
 under \code{"stata"}, uppercase SAS-style under \code{"sas"}).
 Also decides what the \code{missing} keyword produces. Inert when
-neither tokens nor \code{missing} appear in the map.
+neither a marker nor \code{missing} appears in the map.
 
 When \code{NULL}, the convention is resolved from
 the \code{missing.convention} setting in \code{\link{joptions}}; if that
@@ -197,6 +197,12 @@ MyData <- data.frame(
 
 # Automatic mode: alphabetical, listing printed, words become labels
 MyData$StatusR <- jencode(MyData, Status)
+
+# The data frame may also be given by name, or set once with juse()
+MyData$StatusR <- jencode(data = MyData, Status)
+juse(MyData)
+MyData$StatusR <- jencode(Status)
+juse(NULL)
 
 # Map mode: choose the numbers; apostrophes need no quoting
 MyData$AnswerR <- jencode(MyData, Answer,

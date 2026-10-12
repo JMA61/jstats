@@ -212,9 +212,31 @@ the model as \code{x} alone. Write \code{I(x^2)} for the square.
 formula does this. A power that is not a number, \code{x^k}, stops with
 an error, as in \code{lm()}; write \code{I(x^k)}.
 }
+\section{Interactions}{
+
+An interaction is entered in the formula with \code{*}, as in R:
+\code{y ~ x * z} fits \code{x}, \code{z} and their product, and the
+product's row in the coefficient table is labeled \code{x * z}. With a
+categorical predictor registered with \code{\link{jdummy}}, the
+interaction rows are grouped under a header naming the reference
+category, with one row per dummy variable, as the predictor's own rows
+are. Each row's b is the change in the log-odds slope of one variable
+per unit of the other (or, for a dummy row, the difference in slope
+between that category and the reference), and its Exp(B) the factor by
+which the other variable's odds ratio is multiplied per unit; the
+main-effect rows give the slopes where the other variable is zero.
+\code{\link{jplot}} on the result draws the probability plots.
+}
+
 \examples{
 # With explicit data frame -- Volunteer is already coded 0/1
 jlogistic(Volunteer ~ Income + Age, data = community)
+
+# The data frame may also be given positionally
+jlogistic(Volunteer ~ Income + Age, community)
+
+# An interaction, entered in the formula with *
+jlogistic(Volunteer ~ Income * Age, data = community)
 
 # A 1/2-coded dichotomy (Yes = 1, No = 2) must be recoded to 0/1 first
 df <- community

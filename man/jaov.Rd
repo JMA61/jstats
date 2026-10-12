@@ -207,6 +207,9 @@ printed at \code{joutput("minimal")}, which prints the table alone.
 jaov(WellbeingScore ~ Region, data = community)
 jaov(WellbeingScore ~ Region, data = community, full = TRUE)
 
+# The data frame may also be given positionally
+jaov(WellbeingScore ~ Region, community)
+
 # Checking the equal-variances assumption: Levene's test
 jaov(WellbeingScore ~ Region, data = community, diagnostics = TRUE)
 

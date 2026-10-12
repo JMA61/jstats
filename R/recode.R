@@ -37,7 +37,7 @@
 #' keep it. On a column with Stata-style or SAS-style missing values, a
 #' marker that no case carries is declared only by its label, so a
 #' replacement set that leaves it out removes that declaration too;
-#' re-supply it as a token, e.g. \code{labels = "1=Low; .c=Refused"}.
+#' re-supply it by its marker, e.g. \code{labels = "1=Low; .c=Refused"}.
 #'
 #' Both the \code{labels} and \code{var.label} arguments are optional. If
 #' neither is supplied, the function returns the variable unchanged.
@@ -65,8 +65,22 @@
 #'   SPSS-style or Stata-style missing values intact; plain numeric and
 #'   logical input becomes \code{haven_labelled} when value labels are
 #'   applied; any other type is returned unchanged apart from the labels.
-#'   Assign the result back to a column in your data frame:
-#'   \code{MyData$VarName <- jrelabel(MyData, VarName, ...)}
+#'   Assign the result to a column to keep it. Two assignment forms do
+#'   that job:
+#'
+#'   \itemize{
+#'     \item Preserving:
+#'       \code{MyData$VarNameL <- jrelabel(MyData, VarName, ...)} adds a
+#'       labeled copy and keeps the original as it was.
+#'     \item Overwrite (the usual choice here):
+#'       \code{MyData$VarName <- jrelabel(MyData, VarName, ...)} labels
+#'       the variable in place. Labels change how values are shown, not
+#'       the values, so there is normally nothing to keep a copy of.
+#'   }
+#'
+#'   SPSS users will recognize the pair from \code{RECODE ... INTO new.}
+#'   and bare \code{RECODE}; for labels, SPSS's \code{VALUE LABELS} and
+#'   \code{VARIABLE LABELS} always label in place, the overwrite form.
 #'
 #' @examples
 #' # Add value labels after a recode
@@ -74,6 +88,9 @@
 #' df$StatusR <- ifelse(df$Status == 1, 1, 0)
 #' df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No",
 #'                        var.label = "Status (recoded)")
+#'
+#' # The data frame may also be given by name
+#' df$StatusR <- jrelabel(data = df, StatusR, labels = "1=Yes; 0=No")
 #'
 #' # Add just a variable label
 #' df$StatusR <- jrelabel(df, StatusR, var.label = "Employment Status")
@@ -900,9 +917,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'     \item \code{else=NA} (also \code{else=System} or \code{else=SYSMIS}):
 #'       unmapped values are deliberately set to system NA.
 #'     \item \code{else=copy}: unmapped values are carried across unchanged.
-#'     \item \code{else=.a} (or any tagged missing-value token; Stata or
-#'       SAS convention only): unmapped values are set to that tagged
-#'       missing value.
+#'     \item \code{else=.a} (or any other marker, \code{.a} through
+#'       \code{.z}; Stata or SAS convention only): unmapped values are set
+#'       to that Stata-style or SAS-style missing value.
 #'   }
 #'
 #'   Individual values can also be mapped to system NA using the same
@@ -915,10 +932,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   values in one rule (\code{"NA,-99=-98"}) and may be named in at most
 #'   one rule. Only plain \code{NA} cells are affected; tagged
 #'   missing values are never converted by an \code{NA} rule. Under
-#'   Stata or SAS convention the target may itself be a token: \code{"NA=.a"}.
+#'   Stata or SAS convention the target may itself be a marker: \code{"NA=.a"}.
 #'
-#'   Under Stata or SAS convention, values can be mapped to tagged missing-value tokens:
-#'   \code{"-99=.a; -98=.b"}.
+#'   Under Stata or SAS convention, values can be mapped to Stata-style or
+#'   SAS-style missing values by their markers: \code{"-99=.a; -98=.b"}.
 #'
 #'   A lettered marker can also be an OLD value, recoding the cells that
 #'   carry it (either case: \code{.a} also names a SAS-style \code{.A}):
@@ -938,12 +955,12 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   same map string therefore works under every setting:
 #'   \code{"8=missing; else=copy"}. The NA rule composes with it
 #'   (\code{"NA=missing"} converts plain \code{NA} cells the same way), and
-#'   \code{labels = "missing=Refused"} labels whatever the token produced.
+#'   \code{labels = "missing=Refused"} labels whatever the keyword produced.
 #'   If the column already carries the other convention's markers while
 #'   your \code{missing.convention} setting is set, the call stops and
 #'   shows both resolutions rather than guessing.
 #'
-#'   Under the SPSS convention the code the token uses must be free: if
+#'   Under the SPSS convention the code the keyword uses must be free: if
 #'   the column already declares it, discretely or inside a declared
 #'   range, the existing declaration is reused rather than added to; if
 #'   it is an ordinary value in the column that the map leaves in place,
@@ -951,7 +968,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   those cases into missingness; and if the declared codes the result
 #'   keeps already fill what SPSS allows (three codes, or a range plus one
 #'   code), the call stops and offers a declared code instead. Under the
-#'   Stata or SAS convention the token always uses the first marker
+#'   Stata or SAS convention the keyword always uses the first marker
 #'   (\code{.a}, or \code{.A}), so a map that also assigns that marker
 #'   itself stops rather than merge two missing categories onto one
 #'   marker; the message offers the next free marker, or the same marker
@@ -985,10 +1002,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   same code.
 #'
 #'   The left side of each rule may be a numeric code or, under Stata or
-#'   SAS convention, a tagged missing-value token (\code{.a} through
-#'   \code{.z}, or \code{.A} through \code{.Z}). Tagged-NA labels are
-#'   stored on the tag itself, not on
-#'   a numeric code. It may also be the word \code{missing}, labelling
+#'   SAS convention, a missing-value marker (\code{.a} through \code{.z},
+#'   or \code{.A} through \code{.Z}). A marker's label is stored on the
+#'   marker itself, not on a numeric code. It may also be the word \code{missing}, labelling
 #'   whatever the map's \code{missing} target produced:
 #'   \code{labels = "missing=Refused"}.
 #'
@@ -1002,13 +1018,13 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #' @param convention Optional. One of \code{"spss"}, \code{"stata"},
 #'   \code{"sas"}, or \code{NULL} (default); any capitalization is
-#'   accepted. Controls whether missing-value tokens (\code{.a} through
+#'   accepted. Controls whether missing-value markers (\code{.a} through
 #'   \code{.z} or \code{.A} through \code{.Z}) are accepted in the map
-#'   and labels arguments. Token letters are matched case-insensitively;
+#'   and labels arguments. Marker letters are matched case-insensitively;
 #'   the stored markers take the convention's letter case (lowercase
 #'   Stata-style under \code{"stata"}, uppercase SAS-style under
 #'   \code{"sas"}). Also decides what the \code{missing} keyword
-#'   produces. Inert when neither tokens nor \code{missing} appear in
+#'   produces. Inert when neither a marker nor \code{missing} appears in
 #'   either argument.
 #'
 #'   When \code{NULL}, the convention is resolved from
@@ -1020,9 +1036,23 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   \code{?joptions} for details.
 #'
 #' @return A \code{haven_labelled} vector with the recoded values, variable
-#'   label, and (if supplied or auto-transferred) value labels applied. Assign
-#'   this to a new column in your data frame:
-#'   \code{MyData$AgeGroupR <- jrecode(MyData, AgeGroup, map = "...")}
+#'   label, and (if supplied or auto-transferred) value labels applied. The
+#'   function returns the values rather than changing \code{data}: assign
+#'   the result to a column to keep it. Two assignment forms do that job:
+#'
+#'   \itemize{
+#'     \item Preserving (recommended):
+#'       \code{MyData$AgeGroupR <- jrecode(MyData, AgeGroup, map = "...")}
+#'       adds a new column and keeps the original, so the two can be
+#'       compared with \code{jfreq()} before the original is retired.
+#'     \item Overwrite:
+#'       \code{MyData$AgeGroup <- jrecode(MyData, AgeGroup, map = "...")}
+#'       replaces the variable in place. Nothing is wrong with this once
+#'       the recode is verified, but the original values are gone.
+#'   }
+#'
+#'   SPSS users will recognize the pair: \code{RECODE ... INTO new.} is
+#'   the preserving form and bare \code{RECODE} the overwrite.
 #'
 #' @details
 #' The function accepts haven-labelled, plain numeric, and logical variables.
@@ -1092,7 +1122,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #' A variable holds one convention. When the original variable's
 #' SPSS-style declaration survives the map (a range always does; a discrete
-#' code does unless the map names it), Stata-style or SAS-style tokens in
+#' code does unless the map names it), Stata-style or SAS-style markers in
 #' the map or labels are refused with a pointer to \code{jconvert()}. A map
 #' that names every declared code (\code{"-99=.a; -98=.b; else=copy"}
 #' under Stata convention) leaves nothing SPSS-style behind and is the
@@ -1167,13 +1197,13 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' (\code{else=.a} alone) would put a marker beside them and is refused.
 #'
 #' \strong{SAS convention} works the same way with SAS-style missing
-#' values (\code{.A} through \code{.Z}). Map and labels tokens are
+#' values (\code{.A} through \code{.Z}). Markers in the map and labels are
 #' matched case-insensitively, and the stored markers take the active
 #' convention's letter case: lowercase under Stata convention, uppercase
 #' under SAS convention.
 #'
-#' Writing these missing-value tokens while the active convention is
-#' SPSS raises an error naming the mismatch and the two ways out:
+#' Writing these markers while the active convention is SPSS raises an
+#' error naming the mismatch and the two ways out:
 #' restate the markers as numeric codes to stay in SPSS convention, or
 #' switch convention with \code{joptions(missing.convention = ...)} (or
 #' with this call's \code{convention} argument). The error does not
@@ -1187,6 +1217,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' df <- community
 #' df$OwnsHome01 <- jrecode(df, OwnsHome,
 #'                          map    = "1=1; 2=0",
+#'                          labels = "0=No; 1=Yes")
+#'
+#' # The data frame may also be given by name
+#' df$OwnsHome01 <- jrecode(data = df, OwnsHome, map = "1=1; 2=0",
 #'                          labels = "0=No; 1=Yes")
 #'
 #' # Collapse categories (must supply labels)
@@ -1214,8 +1248,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' df$AgeR <- jrecode(df, Age, map = "NA=-98; else=copy")
 #' df <- jdeclare_missing(df, AgeR, codes = c("Not recorded" = -98))
 #'
-#' # Stata convention: Stata-style missing-value tokens in map and labels
-#' # (single call; convention = "stata" scopes the choice to this call only).
+#' # Stata convention: Stata-style missing values in map and labels, named
+#' # by their markers (single call; convention = "stata" scopes the choice
+#' # to this call only).
 #' # Education carries SPSS-style missing values (-99, -98); naming them in
 #' # the map moves them to the marker in the same call.
 #' df$EducR4 <- jrecode(df, Education,
@@ -1223,8 +1258,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'                      labels = "1=No college; 2=College; .a=Refused",
 #'                      convention = "stata")
 #'
-#' # SAS convention: the same single-call pattern; tokens are matched
-#' # case-insensitively and the markers store in uppercase (.A)
+#' # SAS convention: the same single-call pattern; markers are matched
+#' # case-insensitively and store in uppercase (.A)
 #' df$EducR5 <- jrecode(df, Education,
 #'                      map    = "1,2=1; 3,4,5=2; -99,-98=.a",
 #'                      labels = "1=No college; 2=College; .a=Refused",
@@ -3713,12 +3748,12 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   the word \code{missing} -- your working convention's own missing
 #'   form, declared automatically under the SPSS convention (see
 #'   \code{jrecode()}'s \code{map} for the full rule); \code{blank=missing}
-#'   composes the two tokens. Under the SPSS convention the code the token
-#'   uses must be free: if the map also assigns it as an ordinary value,
-#'   or a number stored as text is kept at that same value, the call stops
-#'   rather than sweep those cases into missingness. Under the Stata or
-#'   SAS convention the token always uses the first marker (\code{.a}, or
-#'   \code{.A}), so a map that also assigns that marker itself stops
+#'   composes the two keywords. Under the SPSS convention the code the
+#'   keyword uses must be free: if the map also assigns it as an ordinary
+#'   value, or a number stored as text is kept at that same value, the call
+#'   stops rather than sweep those cases into missingness. Under the Stata
+#'   or SAS convention the keyword always uses the first marker (\code{.a},
+#'   or \code{.A}), so a map that also assigns that marker itself stops
 #'   rather than merge two missing categories onto one marker.
 #'
 #'   By default an incomplete map is an error that names the unmatched
@@ -3732,13 +3767,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   here or to \code{jrelabel()}.
 #' @param convention Optional. One of \code{"spss"}, \code{"stata"},
 #'   \code{"sas"}, or \code{NULL} (default); any capitalization is
-#'   accepted. Controls whether missing-value tokens (\code{.a} through
+#'   accepted. Controls whether missing-value markers (\code{.a} through
 #'   \code{.z} or \code{.A} through \code{.Z}) are accepted as map
-#'   targets. Token letters are matched case-insensitively; the stored
+#'   targets. Marker letters are matched case-insensitively; the stored
 #'   markers take the convention's letter case (lowercase Stata-style
 #'   under \code{"stata"}, uppercase SAS-style under \code{"sas"}).
 #'   Also decides what the \code{missing} keyword produces. Inert when
-#'   neither tokens nor \code{missing} appear in the map.
+#'   neither a marker nor \code{missing} appears in the map.
 #'
 #'   When \code{NULL}, the convention is resolved from
 #'   the \code{missing.convention} setting in \code{\link{joptions}}; if that
@@ -3861,6 +3896,12 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'
 #' # Automatic mode: alphabetical, listing printed, words become labels
 #' MyData$StatusR <- jencode(MyData, Status)
+#'
+#' # The data frame may also be given by name, or set once with juse()
+#' MyData$StatusR <- jencode(data = MyData, Status)
+#' juse(MyData)
+#' MyData$StatusR <- jencode(Status)
+#' juse(NULL)
 #'
 #' # Map mode: choose the numbers; apostrophes need no quoting
 #' MyData$AnswerR <- jencode(MyData, Answer,
@@ -5325,14 +5366,14 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'       \code{codes = c(Refused = -99, `Don't know` = -98)}.}
 #'   }
 #'   On a column that already carries Stata-style or SAS-style missing
-#'   values, codes may name the markers directly as quoted tokens, e.g.
-#'   \code{codes = c(Refused = ".a")} -- a token \code{".a"} means the
-#'   \code{.a} marker (or \code{.A} on a SAS-style column: token case is
-#'   accepted either way and canonicalized to the column's convention).
-#'   Tokens are refused on columns with no tagged missing values to
-#'   label (see the Missing-Values Convention section).
+#'   values, codes may name the markers directly, as quoted strings, e.g.
+#'   \code{codes = c(Refused = ".a")} -- the string \code{".a"} names the
+#'   \code{.a} marker (or \code{.A} on a SAS-style column: the letter case
+#'   you type is accepted either way and canonicalized to the column's
+#'   convention). A quoted marker is refused on a column with no tagged
+#'   missing values to label (see the Missing-Values Convention section).
 #'
-#'   A token may name a marker that no case currently carries -- useful
+#'   A quoted marker may name one that no case currently carries -- useful
 #'   for FORWARD-DECLARING a label before recoding values into it. The
 #'   label attaches, nothing in the data changes, and the notification
 #'   says the marker is not present in the data. Such a label survives a
@@ -5340,7 +5381,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   \code{jconvert(to = "spss")} declares its code like any other
 #'   marker's.
 #'
-#'   A token given with no label is a no-op on an already-tagged
+#'   A quoted marker given with no label is a no-op on an already-tagged
 #'   column: the cells are already missing, so the only act available
 #'   is naming a marker, and the call reports that it changed nothing.
 #'   This differs from the numeric form, where a bare code IS the
@@ -5366,7 +5407,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   missing-value range can exist only under SPSS convention:
 #'   combining \code{range} with the Stata or SAS convention -- as a
 #'   per-call argument or as the \code{joptions()} setting -- or with
-#'   tagged tokens is refused, and the refusal teaches the two-step
+#'   quoted markers is refused, and the refusal teaches the two-step
 #'   route (declare the range under SPSS convention, then
 #'   \code{jconvert()} the column) when the range covers few enough
 #'   values to convert. When no convention is selected anywhere, a
@@ -5396,9 +5437,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   choose -- the package never infers a convention for a fresh declaration. A
 #'   \code{range} requires SPSS convention (see \code{range}). The SAS
 #'   convention behaves as the Stata convention with uppercase markers: markers
-#'   are stored and labeled as \code{.A}-\code{.Z}. Token input is
-#'   case-insensitive under both tagged conventions; the case written to the
-#'   column follows the resolved convention.
+#'   are stored and labeled as \code{.A}-\code{.Z}. A quoted marker's letter
+#'   case is accepted either way under both tagged conventions; the case
+#'   written to the column follows the resolved convention.
 #' @param missing.notice Logical. When \code{TRUE} (the default), the
 #'   function prints a notification summarizing what was declared,
 #'   plus a reminder of how to keep the result. Under SPSS convention
@@ -5434,16 +5475,16 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' only the metadata that flags certain values as missing is added.
 #'
 #' Under Stata or SAS convention with tagged missing-value input (quoted
-#' tokens such as \code{".a"}), the function attaches value labels to
+#' markers such as \code{".a"}), the function attaches value labels to
 #' the column's existing tagged missing-value markers. This
 #' requires the column to already carry tagged missing values --
 #' either tagged cells, or markers previously declared through value
 #' labels (a marker may be labeled before any cases carry it, so a
 #' declaration made early in data collection is complete for later
-#' data). Token case is accepted either way and canonicalized to the
-#' resolved convention: lowercase markers under Stata convention,
-#' uppercase under SAS. Tokens against a column with no tagged missing
-#' values are refused identically under every convention source: on a
+#' data). The letter case you type is accepted either way and canonicalized
+#' to the resolved convention: lowercase markers under Stata convention,
+#' uppercase under SAS. Quoted markers against a column with no tagged
+#' missing values are refused identically under every convention source: on a
 #' plain column the error points at \code{jrecode()} (which creates
 #' tagged cells from numeric codes); on a column carrying SPSS-style
 #' declarations it points at \code{jconvert()}.
@@ -5550,6 +5591,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' df3 <- jdeclare_missing(clinic, MoodRating,
 #'                     codes = c("Refused" = -99, "Don't know" = -98))
 #'
+#' # The data frame may also be given by name, or set once with juse()
+#' df3 <- jdeclare_missing(data = clinic, MoodRating, codes = c(-99, -98))
+#' juse(clinic)
+#' df3 <- jdeclare_missing(MoodRating, codes = c(-99, -98))
+#' juse(NULL)
+#'
 #' # A missing-value RANGE: every value from -99 through -51 is missing.
 #' # SPSS parallel: MISSING VALUES MoodRating (-99 THRU -51).
 #' df4 <- jdeclare_missing(clinic, MoodRating, range = c(-99, -51))
@@ -5566,7 +5613,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'
 #' # Stata-style: label Stata-style missing-value cells. The jrecode() call
 #' # turns the literal codes into tagged cells; jdeclare_missing() labels them
-#' # by naming the markers as quoted tokens.
+#' # by naming the markers as quoted strings.
 #' df5 <- clinic
 #' df5$Mood2 <- jrecode(df5, MoodRating,
 #'                      map = "-99=.a; -98=.b; else=copy",
@@ -6183,8 +6230,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
             "missing-value range exists only under SPSS convention."),
           "\n",
           "To declare the range, convert the column to SPSS form first:\n",
-          "  jconvert(", data_name, ", to = \"spss\", vars = \"", vn,
-          "\", modify = TRUE)",
+          "  jconvert(", data_name, ", vars = \"", vn,
+          "\", to = \"spss\", modify = TRUE)",
           fn = "jdeclare_missing")
       }
 
@@ -6225,8 +6272,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           "\n",
           conf_alt,
           "Or convert the column first:\n",
-          "  jconvert(", data_name, ", to = \"", convention,
-          "\", vars = \"", vn, "\", modify = TRUE)")
+          "  jconvert(", data_name, ", vars = \"", vn, "\", to = \"",
+          convention, "\", modify = TRUE)")
       }
 
       # --- Resolve convention ----------------------------------------------
@@ -6504,9 +6551,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
             ") missing-value markers."),
           "\n",
           "To collapse them to one form:\n",
-          "  jconvert(", data_name,
-          ", to = \"", res$resolved_convention, "\", vars = \"", vn,
-          "\", modify = TRUE)"))
+          "  jconvert(", data_name, ", vars = \"", vn, "\", to = \"",
+          res$resolved_convention, "\", modify = TRUE)"))
       }
     }
 
@@ -6785,8 +6831,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         .jst_msg_out(
           head_line, "\n",
           "To align ", align_obj, " with the rest, run:\n",
-          "  jconvert(", data_name, ", to = \"", df_predominant,
-          "\", vars = ", vars_arg, ", modify = TRUE)")
+          "  jconvert(", data_name, ", vars = ", vars_arg, ", to = \"",
+          df_predominant, "\", modify = TRUE)")
       }
     }
   }
@@ -7864,6 +7910,67 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
 # -- jconvert -----------------------------------------------------------------
 
+#' Internal helper: a target format given where jconvert() takes variables
+#'
+#' Until v0.9.227 \code{to} was \code{jconvert()}'s second formal, so
+#' \code{jconvert(d, Education)} bound Education to \code{to}: R's
+#' "object 'Education' not found", or, with a workspace object of that
+#' name, its value taken as the target and the whole frame converted
+#' (Session 354, ruling A of the S243 item). The dots are second now, as
+#' in every data-first function, and the target is always named -- as
+#' every printed line names it. This check gives the old positional form
+#' the line to run: a format name typed in quotes or bare
+#' (\code{jconvert(d, "stata")}, \code{jconvert(d, stata)}), or a name
+#' holding one (\code{fmt <- "stata"; jconvert(d, fmt)}), stops with the
+#' call rebuilt as \code{jconvert(d, <the other variables>, to = "stata")},
+#' keeping \code{modify = TRUE} when the call had it. A name the data
+#' frame has is a variable, whatever it is called.
+#'
+#' @param variables The quosures of \code{...}, after the juse() prepend.
+#' @param data The resolved data frame.
+#' @param data_name Its name, for the line.
+#' @param modify The call's \code{modify} flag.
+#' @return Invisible NULL; stops when a target format is found.
+#' @keywords internal
+.jst_convert_target_pointer <- function(variables, data, data_name, modify) {
+  targets <- c("spss", "stata", "sas", "baser")
+  canon   <- c("spss", "stata", "sas", "baseR")
+  for (i in seq_along(variables)) {
+    q    <- variables[[i]]
+    ex   <- rlang::quo_get_expr(q)
+    word <- NULL
+    held <- FALSE
+    if (is.character(ex) && length(ex) == 1L && !is.na(ex)) {
+      if (!(ex %in% names(data))) word <- ex
+    } else if (is.symbol(ex) && !(as.character(ex) %in% names(data))) {
+      nm <- as.character(ex)
+      if (tolower(nm) %in% targets) {
+        word <- nm
+      } else {
+        v <- tryCatch(eval(ex, rlang::quo_get_env(q)), error = function(e) NULL)
+        if (is.character(v) && length(v) == 1L && !is.na(v) &&
+            tolower(v) %in% targets) {
+          word <- v
+          held <- TRUE
+        }
+      }
+    }
+    if (is.null(word) || !(tolower(word) %in% targets)) next
+    to     <- canon[match(tolower(word), targets)]
+    shown  <- if (is.symbol(ex)) as.character(ex) else paste0("\"", word, "\"")
+    if (held) shown <- paste0(shown, " holds \"", word, "\", which")
+    others <- vapply(as.list(variables)[-i], rlang::quo_name, character(1))
+    line   <- paste0("jconvert(", data_name,
+                     if (length(others) > 0L) paste0(", ", paste(others, collapse = ", ")),
+                     ", to = \"", to, "\"",
+                     if (isTRUE(modify)) ", modify = TRUE", ")")
+    .jst_stop(shown, " is a target format, not a variable.\n",
+              "Name the target with to =:\n",
+              "  ", line, fn = "jconvert")
+  }
+  invisible(NULL)
+}
+
 #' Convert missing-value declarations between formats
 #'
 #' \code{jconvert()} provides a single entry point for changing how
@@ -7877,17 +7984,22 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' missing values.
 #'
 #' @param data A data frame, or omitted to use the \code{juse()} default.
+#' @param ... Optional unquoted variable names, straight after the data
+#'   frame, as in every data-first function:
+#'   \code{jconvert(d, Income, Education, to = "stata")}. When supplied,
+#'   only the listed variables are scanned. Mutually exclusive with
+#'   \code{vars}.
 #' @param to One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
-#'   \code{"sas"} (any capitalization is accepted). When \code{NULL} (the
-#'   default), \code{jconvert()}
+#'   \code{"sas"} (any capitalization is accepted), always named:
+#'   \code{to = "stata"}. A format name given where a variable goes, as in
+#'   \code{jconvert(d, "stata")}, stops and shows the named form. When
+#'   \code{to} is left out, \code{jconvert()}
 #'   reads the \code{missing.convention} setting in \code{\link{joptions}}: if
 #'   the slot is set to \code{"spss"}, \code{"stata"}, or \code{"sas"},
 #'   \code{to} resolves to that value; if the slot is at its \code{"none"}
 #'   default, \code{jconvert()} errors with guidance naming the concrete
 #'   options. The destructive \code{"baseR"} target is never auto-resolved --
 #'   it must always be passed explicitly.
-#' @param ... Optional unquoted variable names. When supplied, only the
-#'   listed variables are scanned. Mutually exclusive with \code{vars}.
 #' @param vars Alternative scope-by-vector path: a character vector of
 #'   variable names. Mutually exclusive with \code{...}. When both
 #'   \code{...} and \code{vars} are empty, \code{jconvert()} operates on
@@ -8057,14 +8169,21 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' # Strip the declarations from every applicable variable:
 #' df3 <- jconvert(community, to = "baseR")
 #'
-#' # Scope by unquoted names:
-#' df4 <- jconvert(community, to = "baseR", Income, Education)
+#' # Some variables only: name them after the data frame, then the target
+#' df4 <- jconvert(community, Income, Education, to = "baseR")
 #'
-#' # Scope by character vector (alternative form):
-#' df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
+#' # The same, as a character vector:
+#' df5 <- jconvert(community, vars = c("Income", "Education"), to = "baseR")
 #'
 #' # Suppress the notification (e.g. inside a script):
 #' df6 <- jconvert(community, to = "baseR", missing.notice = FALSE)
+#'
+#' # The three ways to give the data frame
+#' df7 <- jconvert(community, Income, to = "stata")          # positional
+#' df8 <- jconvert(data = community, Income, to = "stata")   # named
+#' juse(community)                                           # juse() default
+#' df9 <- jconvert(Income, to = "stata")
+#' juse(NULL)
 #'
 #' \dontrun{
 #' # Convert with target inferred from joptions:
@@ -8077,7 +8196,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'   the default convention and convention codes session-wide.
 #'
 #' @export
-jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
+jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
                      modify = FALSE) {
 
   # Captured before `data` is reassigned below: substitute() on the
@@ -8196,6 +8315,12 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+
+  # A target format where a variable goes -- jconvert(d, "stata"),
+  # jconvert(d, stata), or a name holding one -- stops with the named
+  # form (Session 354: `to` moved behind the dots, so the second
+  # argument is a variable, as in every data-first function).
+  .jst_convert_target_pointer(variables, data, data_name, modify)
 
   dot_names <- if (length(variables) > 0) {
     vapply(variables, rlang::quo_name, character(1))
@@ -8563,7 +8688,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
           "  joptions(missing.convention.codes = c(...))",
           "",
           "Or convert a narrower set, leaving out all the variables above:",
-          sprintf("  jconvert(%s, to = \"spss\", vars = c(...), modify = TRUE)",
+          sprintf("  jconvert(%s, vars = c(...), to = \"spss\", modify = TRUE)",
                   data_name))
       }
       .jst_stop(paste(msg_lines, collapse = "\n"))
@@ -8611,7 +8736,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         "",
         sprintf("To convert a narrower set, leaving out the %s above:",
                 .jst_plural(n_text, "variable", "variables")),
-        sprintf("  jconvert(%s, to = \"%s\", vars = c(...), modify = TRUE)",
+        sprintf("  jconvert(%s, vars = c(...), to = \"%s\", modify = TRUE)",
                 data_name, to),
         sprintf("Or turn %s into a numeric variable first with jencode().",
                 .jst_plural(n_text, "it", "each"))),
@@ -8695,7 +8820,7 @@ jconvert <- function(data, to = NULL, ..., vars = NULL, missing.notice = TRUE,
         over_lines,
         "",
         "To convert a narrower set, leaving out those above:",
-        sprintf("  jconvert(%s, to = \"%s\", vars = c(...), modify = TRUE)",
+        sprintf("  jconvert(%s, vars = c(...), to = \"%s\", modify = TRUE)",
                 data_name, to),
         "Or reduce each variable to 26 or fewer values first.")
       .jst_stop(paste(msg_lines, collapse = "\n"))

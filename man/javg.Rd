@@ -75,8 +75,11 @@ community$EnvAvg <- javg(Environment1, Environment3, Environment4,
 community$ScaleMean <- javg(Environment1:Environment5,
                             var.label = "Environment Scale Mean")
 
-# With an explicit data frame (instead of using juse default)
+# With an explicit data frame (instead of using juse default),
+# positional or named
 community$EnvAvg <- javg(community, Environment1, Environment3,
+                         Environment4)
+community$EnvAvg <- javg(data = community, Environment1, Environment3,
                          Environment4)
 
 # juse(NULL) clears the default dataset -- not normally needed. You'd

@@ -543,6 +543,10 @@ jupdate <- function(ask = FALSE) {
 #'
 #' The file-writing situations confirm the exact destination before writing
 #' (or write without asking when \code{path} names the folder yourself).
+#' In a session that cannot ask -- a script run with Rscript, a knitr
+#' render -- they stop before the prompt and say so; name the folder with
+#' \code{path =} to write there, as \code{jsave()} and \code{jload()} do
+#' with their own overwrite prompts.
 #' Each written file carries a version stamp; after updating jstats, rerun
 #' the same \code{jai()} call to refresh it.
 #'

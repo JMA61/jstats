@@ -6,8 +6,8 @@
 \usage{
 jconvert(
   data,
-  to = NULL,
   ...,
+  to = NULL,
   vars = NULL,
   missing.notice = TRUE,
   modify = FALSE
@@ -16,18 +16,23 @@ jconvert(
 \arguments{
 \item{data}{A data frame, or omitted to use the \code{juse()} default.}
 
+\item{...}{Optional unquoted variable names, straight after the data
+frame, as in every data-first function:
+\code{jconvert(d, Income, Education, to = "stata")}. When supplied,
+only the listed variables are scanned. Mutually exclusive with
+\code{vars}.}
+
 \item{to}{One of \code{"baseR"}, \code{"spss"}, \code{"stata"}, or
-\code{"sas"} (any capitalization is accepted). When \code{NULL} (the
-default), \code{jconvert()}
+\code{"sas"} (any capitalization is accepted), always named:
+\code{to = "stata"}. A format name given where a variable goes, as in
+\code{jconvert(d, "stata")}, stops and shows the named form. When
+\code{to} is left out, \code{jconvert()}
 reads the \code{missing.convention} setting in \code{\link{joptions}}: if
 the slot is set to \code{"spss"}, \code{"stata"}, or \code{"sas"},
 \code{to} resolves to that value; if the slot is at its \code{"none"}
 default, \code{jconvert()} errors with guidance naming the concrete
 options. The destructive \code{"baseR"} target is never auto-resolved --
 it must always be passed explicitly.}
-
-\item{...}{Optional unquoted variable names. When supplied, only the
-listed variables are scanned. Mutually exclusive with \code{vars}.}
 
 \item{vars}{Alternative scope-by-vector path: a character vector of
 variable names. Mutually exclusive with \code{...}. When both
@@ -212,14 +217,21 @@ df_sas <- jconvert(community, to = "sas")
 # Strip the declarations from every applicable variable:
 df3 <- jconvert(community, to = "baseR")
 
-# Scope by unquoted names:
-df4 <- jconvert(community, to = "baseR", Income, Education)
+# Some variables only: name them after the data frame, then the target
+df4 <- jconvert(community, Income, Education, to = "baseR")
 
-# Scope by character vector (alternative form):
-df5 <- jconvert(community, to = "baseR", vars = c("Income", "Education"))
+# The same, as a character vector:
+df5 <- jconvert(community, vars = c("Income", "Education"), to = "baseR")
 
 # Suppress the notification (e.g. inside a script):
 df6 <- jconvert(community, to = "baseR", missing.notice = FALSE)
+
+# The three ways to give the data frame
+df7 <- jconvert(community, Income, to = "stata")          # positional
+df8 <- jconvert(data = community, Income, to = "stata")   # named
+juse(community)                                           # juse() default
+df9 <- jconvert(Income, to = "stata")
+juse(NULL)
 
 \dontrun{
 # Convert with target inferred from joptions:

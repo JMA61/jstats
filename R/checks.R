@@ -1326,8 +1326,9 @@
 #' names through \code{.jst_strip_frame_refs()}, a named argument keeps its
 #' name, and the column goes where the function takes variables: straight
 #' after the frame when its second formal is \code{...}, \code{var},
-#' \code{orig.var} or \code{expr}, or when nothing positional follows
-#' (\code{jconvert(d$Stress, to = "stata")}). Gives NULL -- the sentence
+#' \code{orig.var} or \code{expr}, or when nothing positional follows.
+#' A format name given to \code{jconvert()} where a variable goes is named
+#' \code{to =} in the rebuilt call (Session 354). Gives NULL -- the sentence
 #' without a call -- when the rebuild cannot be complete: the argument is not
 #' found in the call, a positional argument would land in the wrong slot,
 #' a summary of the frame is used (\code{mean(d$Age)}), or a data frame is
@@ -1349,6 +1350,23 @@
   if (!(fmls[2L] %in% c("...", "var", "orig.var", "expr")) &&
       any(!nzchar(nms[-hit]))) {
     return(NULL)
+  }
+  # jconvert(d$Age, "stata") (Session 354): the target, which its dots
+  # would refuse, is named in the rebuilt call -- jconvert(d, Age,
+  # to = "stata") -- and the dots keep only the variables.
+  if (identical(fn_name, "jconvert")) {
+    rnms <- names(rest)
+    if (is.null(rnms)) rnms <- rep("", length(rest))
+    for (k in seq_along(rest)) {
+      a <- rest[[k]]
+      if (!nzchar(rnms[k]) && is.character(a) && length(a) == 1L &&
+          tolower(a) %in% c("spss", "stata", "sas", "baser")) {
+        rest[[k]] <- c("spss", "stata", "sas", "baseR")[
+          match(tolower(a), c("spss", "stata", "sas", "baser"))]
+        rnms[k] <- "to"
+      }
+    }
+    names(rest) <- rnms
   }
   s <- .jst_strip_frame_refs(as.call(c(list(as.name(fn_name)), rest)),
                              fcol$frame)

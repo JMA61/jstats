@@ -139,6 +139,9 @@ spaces apart when it does not.
 # Cross-tabulation only
 jcrosstab(Education ~ Volunteer, data = community)
 
+# The data frame may also be given positionally
+jcrosstab(Education ~ Volunteer, community)
+
 # With chi-square test
 jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 

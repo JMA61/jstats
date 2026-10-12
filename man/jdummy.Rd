@@ -88,6 +88,8 @@ datasets preserves each dataset's registrations independently.
 \examples{
 juse(community)
 jdummy(Region)                       # Register, first category as reference
+jdummy(community, Region)            # The same, naming the data frame
+jdummy(data = community, Region)     # ... or naming it as data =
 jdummy(Region, Education)            # Register several at once
 jdummy(Region, ref = "last")         # Last category as reference
 jdummy(Region, ref = 4)              # Reference by numeric code

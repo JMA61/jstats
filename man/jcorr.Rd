@@ -64,8 +64,8 @@ numeric-like here, so it behaves like \code{numeric}: it suppresses the
 
 \item{value.id}{Not supported by \code{jcorr()}. The function does not
 display value labels, so passing this argument is an error. It exists
-only to return a clear message rather than misreporting the token as a
-missing variable. Leave at NULL (default).}
+only to return a clear message rather than report \code{value.id} as
+a variable that was not found. Leave at NULL (default).}
 
 \item{layout}{Character or NULL. How each correlation cell is laid out
 when three or more variables are given: \code{"wide"} (default) puts r
@@ -113,6 +113,9 @@ followed by variable labels (if present), then the matrix.
 # With explicit data frame
 jcorr(community, Income, Age, WellbeingScore)
 jcorr(community, Income, Age, WellbeingScore, method = "spearman")
+
+# The data frame may also be given by name
+jcorr(data = community, Income, Age, WellbeingScore)
 
 # Using juse() default
 juse(community)

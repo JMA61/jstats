@@ -56,8 +56,8 @@
 #'   "seems categorical" caution for those variables.
 #' @param value.id Not supported by \code{jcorr()}. The function does not
 #'   display value labels, so passing this argument is an error. It exists
-#'   only to return a clear message rather than misreporting the token as a
-#'   missing variable. Leave at NULL (default).
+#'   only to return a clear message rather than report \code{value.id} as
+#'   a variable that was not found. Leave at NULL (default).
 #' @param layout Character or NULL. How each correlation cell is laid out
 #'   when three or more variables are given: \code{"wide"} (default) puts r
 #'   and its p-value on one line with N on a second line beneath;
@@ -77,6 +77,9 @@
 #' # With explicit data frame
 #' jcorr(community, Income, Age, WellbeingScore)
 #' jcorr(community, Income, Age, WellbeingScore, method = "spearman")
+#'
+#' # The data frame may also be given by name
+#' jcorr(data = community, Income, Age, WellbeingScore)
 #'
 #' # Using juse() default
 #' juse(community)
@@ -2201,6 +2204,23 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
 #'
+#' @section Interactions:
+#'   An interaction is entered in the formula with \code{*}, as in R:
+#'   \code{y ~ x * z} fits \code{x}, \code{z} and their product, and the
+#'   product's row in the coefficient table is labeled \code{x * z}. With a
+#'   categorical predictor registered with \code{\link{jdummy}}, the
+#'   interaction rows are grouped under a header naming the reference
+#'   category -- \code{Region * Age (ref = 1: North)} -- with one row per
+#'   dummy variable, as the predictor's own rows are. Each row's b is the
+#'   change in the slope of one variable per unit of the other (or, for a
+#'   dummy row, the difference in slope between that category and the
+#'   reference), and the main-effect rows give the slopes where the other
+#'   variable is zero. A note under the table says that the standardized
+#'   column is built from centered predictors, which is why a beta there
+#'   can have the opposite sign from its b, and points to the section
+#'   Comparing with other software for how the standardized columns are
+#'   computed. \code{\link{jplot}} on the result draws the effect plots.
+#'
 #' @section Comparing with other software:
 #'   Two conventions exist for the standardized coefficients of a model with
 #'   an interaction or a squared term, and they give different numbers for
@@ -3812,9 +3832,29 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
 #'
+#' @section Interactions:
+#'   An interaction is entered in the formula with \code{*}, as in R:
+#'   \code{y ~ x * z} fits \code{x}, \code{z} and their product, and the
+#'   product's row in the coefficient table is labeled \code{x * z}. With a
+#'   categorical predictor registered with \code{\link{jdummy}}, the
+#'   interaction rows are grouped under a header naming the reference
+#'   category, with one row per dummy variable, as the predictor's own rows
+#'   are. Each row's b is the change in the log-odds slope of one variable
+#'   per unit of the other (or, for a dummy row, the difference in slope
+#'   between that category and the reference), and its Exp(B) the factor by
+#'   which the other variable's odds ratio is multiplied per unit; the
+#'   main-effect rows give the slopes where the other variable is zero.
+#'   \code{\link{jplot}} on the result draws the probability plots.
+#'
 #' @examples
 #' # With explicit data frame -- Volunteer is already coded 0/1
 #' jlogistic(Volunteer ~ Income + Age, data = community)
+#'
+#' # The data frame may also be given positionally
+#' jlogistic(Volunteer ~ Income + Age, community)
+#'
+#' # An interaction, entered in the formula with *
+#' jlogistic(Volunteer ~ Income * Age, data = community)
 #'
 #' # A 1/2-coded dichotomy (Yes = 1, No = 2) must be recoded to 0/1 first
 #' df <- community
@@ -5060,8 +5100,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   \code{variable.id} setting. Not a logical.
 #' @param value.id Not supported by \code{jalpha()}. The function does not
 #'   display value labels, so passing this argument is an error. It exists
-#'   only to return a clear message rather than misreporting the token as a
-#'   missing variable. Leave at NULL (default).
+#'   only to return a clear message rather than report \code{value.id} as
+#'   a variable that was not found. Leave at NULL (default).
 #'
 #' @return Invisibly returns a list of class \code{jst_alpha} containing:
 #'   \code{alpha} (Cronbach's alpha), \code{n_items}, \code{n_used},
@@ -5072,6 +5112,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 #' @examples
 #' # With explicit data frame
 #' jalpha(community, Environment1, Environment2, Environment3,
+#'        Environment4, Environment5)
+#'
+#' # The data frame may also be given by name
+#' jalpha(data = community, Environment1, Environment2, Environment3,
 #'        Environment4, Environment5)
 #'
 #' # Using juse() default

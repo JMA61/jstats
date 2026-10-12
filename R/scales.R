@@ -155,8 +155,11 @@
 #' community$ScaleTotal <- jsum(Environment1:Environment5,
 #'                              var.label = "Environment Scale Total")
 #'
-#' # With an explicit data frame (instead of using juse default)
+#' # With an explicit data frame (instead of using juse default),
+#' # positional or named
 #' community$EnvTotal <- jsum(community, Environment1, Environment3,
+#'                            Environment4)
+#' community$EnvTotal <- jsum(data = community, Environment1, Environment3,
 #'                            Environment4)
 #'
 #' # juse(NULL) clears the default dataset -- not normally needed. You'd
@@ -425,8 +428,11 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 #' community$ScaleMean <- javg(Environment1:Environment5,
 #'                             var.label = "Environment Scale Mean")
 #'
-#' # With an explicit data frame (instead of using juse default)
+#' # With an explicit data frame (instead of using juse default),
+#' # positional or named
 #' community$EnvAvg <- javg(community, Environment1, Environment3,
+#'                          Environment4)
+#' community$EnvAvg <- javg(data = community, Environment1, Environment3,
 #'                          Environment4)
 #'
 #' # juse(NULL) clears the default dataset -- not normally needed. You'd

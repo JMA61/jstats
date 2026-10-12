@@ -118,6 +118,12 @@ filter is set aside. Nor can it be used beside a \code{jcomplete()}
 setting that drops cases, since the filter is applied to the cases
 \code{jcomplete()} keeps: the filter is refused, with the line that adds
 the object to the data frame.
+
+A text variable's blank cells, which \code{jfreq()} tabulates in a row
+labeled \code{<blank>}, are selected by what they hold, not by that
+label: \code{jsubset(d, trimws(Source) == "")} keeps the cases whose
+Source is empty or holds only spaces, and \code{Source != ""} with
+\code{trimws()} drops them. \code{Source == "<blank>"} matches nothing.
 }
 \section{Writing a filter in R}{
 
@@ -140,6 +146,7 @@ and their forms translate as follows:
 juse(community)
 jsubset(Age < 40)                        # Set using juse default
 jsubset(community, Age < 40)             # Explicit dataset
+jsubset(data = community, Age < 40)      # ... given by name
 jsubset(Age < 40 & WellbeingScore > 50)  # Compound condition
 jsubset(off)                             # Deactivate
 jsubset(on)                              # Reactivate

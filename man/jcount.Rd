@@ -56,6 +56,8 @@ it across sessions.
 df <- data.frame(arrests = c(0, 1, 2, 0, 3, 1, 0, 12),
                  age      = c(21, 34, 45, 29, 51, 38, 26, 60))
 jcount(df, arrests)                 # treat as a count (here 0-12)
+jcount(data = df, arrests)          # the data frame by name
+juse(df); jcount(arrests); juse(NULL)  # or the juse() default
 jcount(df, arrests, remove = TRUE)
 jcount()                            # list all registrations
 jcount(df, NULL)                    # clear df's count registrations

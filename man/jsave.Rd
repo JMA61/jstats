@@ -116,6 +116,8 @@ Use \code{.xlsx} instead.
 \examples{
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
+jsave(data = community, file.path(tempdir(), "community.sav"),
+      overwrite = TRUE)                   # the data frame given by name
 
 \dontrun{
 # The file extension determines the format ---

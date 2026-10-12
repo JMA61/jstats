@@ -42,8 +42,8 @@ legend after the final table. NULL (default) defers to \code{joutput()}'s
 
 \item{value.id}{Not supported by \code{jalpha()}. The function does not
 display value labels, so passing this argument is an error. It exists
-only to return a clear message rather than misreporting the token as a
-missing variable. Leave at NULL (default).}
+only to return a clear message rather than report \code{value.id} as
+a variable that was not found. Leave at NULL (default).}
 
 \item{case.processing.detail}{Per-call override of the Case
 Processing Summary detail tier: one of \code{"none"},
@@ -83,6 +83,10 @@ item-total statistics.
 \examples{
 # With explicit data frame
 jalpha(community, Environment1, Environment2, Environment3,
+       Environment4, Environment5)
+
+# The data frame may also be given by name
+jalpha(data = community, Environment1, Environment2, Environment3,
        Environment4, Environment5)
 
 # Using juse() default

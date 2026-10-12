@@ -188,6 +188,9 @@ jt(WellbeingScore ~ Volunteer, data = community)
 jt(WellbeingScore ~ Volunteer, data = community, welch = TRUE)
 jt(WellbeingScore ~ Volunteer, data = community, full = TRUE)
 
+# The data frame may also be given positionally
+jt(WellbeingScore ~ Volunteer, community)
+
 # Checking the equal-variances assumption: Levene's test
 jt(WellbeingScore ~ Volunteer, data = community, diagnostics = TRUE)
 

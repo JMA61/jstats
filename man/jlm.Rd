@@ -300,6 +300,25 @@ the model as \code{x} alone. Write \code{I(x^2)} for the square.
 does this. A power that is not a number, \code{x^k}, stops with an
 error, as in \code{lm()}; write \code{I(x^k)}.
 }
+\section{Interactions}{
+
+An interaction is entered in the formula with \code{*}, as in R:
+\code{y ~ x * z} fits \code{x}, \code{z} and their product, and the
+product's row in the coefficient table is labeled \code{x * z}. With a
+categorical predictor registered with \code{\link{jdummy}}, the
+interaction rows are grouped under a header naming the reference
+category -- \code{Region * Age (ref = 1: North)} -- with one row per
+dummy variable, as the predictor's own rows are. Each row's b is the
+change in the slope of one variable per unit of the other (or, for a
+dummy row, the difference in slope between that category and the
+reference), and the main-effect rows give the slopes where the other
+variable is zero. A note under the table says that the standardized
+column is built from centered predictors, which is why a beta there
+can have the opposite sign from its b, and points to the section
+Comparing with other software for how the standardized columns are
+computed. \code{\link{jplot}} on the result draws the effect plots.
+}
+
 \section{Comparing with other software}{
 
 Two conventions exist for the standardized coefficients of a model with
