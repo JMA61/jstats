@@ -4460,7 +4460,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         label_2 <- names(dv_labels[dv_labels == 2])
         if (length(label_1) == 0) label_1 <- "1"
         if (length(label_2) == 0) label_2 <- "2"
-        recode_labels <- paste0(", labels = \"0=", label_1, "; 1=", label_2, "\"")
+        recode_labels <- paste0(", labels = \"0=", .jst_dq_escape(label_1),
+                                "; 1=", .jst_dq_escape(label_2), "\"")  # S355
       } else {
         recode_labels <- ""
       }

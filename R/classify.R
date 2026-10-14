@@ -2991,6 +2991,8 @@
 #' @param map_str Character string giving the recoding map, e.g.
 #'   \code{"1=1; 2=0; else=NA"} or \code{"1=1; 2=0; else=.a"}.
 #'
+#' @param convention The caller's per-call convention, or NULL: it
+#'   phrases a marker in an error (\code{.jst_marker_syntax()}, S355).
 #' @return Invisibly, a list with components:
 #'   \describe{
 #'     \item{mappings}{List of lists; each inner list has \code{old_vals}
@@ -3019,7 +3021,8 @@
 #'   }
 #'
 #' @keywords internal
-.jst_parse_map <- function(map_str) {
+.jst_parse_map <- function(map_str, convention = NULL) {
+  ms <- .jst_marker_syntax(convention)   # S355: markers named by the setting
 
   rules <- trimws(strsplit(map_str, ";")[[1]])
   rules <- rules[nchar(rules) > 0]
@@ -3070,15 +3073,16 @@
       } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. ",
-          "Stata-style missing-value tokens must be '.a' through '.z' ",
-          "(a single lowercase letter after the period). The NA(a) ",
+          ms$rule, " The NA(a) ",
           "longhand is not supported in the map argument."
         ), call. = FALSE)
       } else {
+        # S355: "(Stata convention only)" since S240 meant Stata or SAS;
+        # under SPSS convention a marker in a map is refused.
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. Use ",
-          "'else=NA', 'else=copy', or a Stata-style missing-value token ",
-          "such as 'else=.a' (Stata convention only)."
+          "'else=NA', 'else=copy', or ", ms$eg,
+          " (Stata or SAS convention only)."
         ), call. = FALSE)
       }
       next
@@ -3098,7 +3102,7 @@
           "Name NA (or System / SYSMIS) in at most one rule."
         ), call. = FALSE)
       }
-      na_rhs <- .jst_parse_rhs_token(rhs, rule)
+      na_rhs <- .jst_parse_rhs_token(rhs, rule, convention)
       if (is.null(na_rhs)) {
         na_val <- suppressWarnings(as.numeric(rhs))
         if (is.na(na_val)) {
@@ -3111,8 +3115,8 @@
           }
           stop(paste0(
             "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-            "New values must be numeric, a system-NA alias (NA, System, ",
-            "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
+            "New values must be numeric, the word missing, a system-NA ",
+            "alias (NA, System, or SYSMIS), or ", ms$one, "."
           ), call. = FALSE)
         }
         na_rhs <- list(new_val = na_val, tagged = NULL)
@@ -3149,12 +3153,12 @@
         .jst_and_list(paste0("'", bad, "'")),
         " in map rule '", rule, "'. ",
         "Old values must be numeric, a system-NA alias (NA, System, ",
-        "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
+        "or SYSMIS), or ", ms$one, "."
       ), call. = FALSE)
     }
 
     # new value
-    rhs_parsed <- .jst_parse_rhs_token(rhs, rule)
+    rhs_parsed <- .jst_parse_rhs_token(rhs, rule, convention)
 
     if (!is.null(rhs_parsed)) {
       new_val     <- rhs_parsed$new_val
@@ -3177,8 +3181,8 @@
         }
         stop(paste0(
           "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-          "New values must be numeric, a system-NA alias (NA, System, ",
-          "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
+          "New values must be numeric, the word missing, a system-NA ",
+          "alias (NA, System, or SYSMIS), or ", ms$one, "."
         ), call. = FALSE)
       }
     }
@@ -3214,6 +3218,8 @@
 #' @param codes Character vector of codes; each element is a Stata-style
 #'   missing-value token (\code{.a} through \code{.z}) or a numeric string.
 #'
+#' @param convention The caller's per-call convention, or NULL: it
+#'   phrases a marker in an error (\code{.jst_marker_syntax()}, S355).
 #' @return A numeric vector (with tagged-NA values for token entries),
 #'   carrying the names of \code{codes}. When any token was seen, a
 #'   \code{tagged_raw} attribute records the marker letters as the caller
@@ -3222,7 +3228,8 @@
 #'   builders that quote the call back; every other consumer ignores it.
 #'
 #' @keywords internal
-.jst_parse_code_tokens <- function(codes) {
+.jst_parse_code_tokens <- function(codes, convention = NULL) {
+  ms <- .jst_marker_syntax(convention)   # S355
   # Convert a character `codes` vector into the canonical numeric / tagged-NA
   # form, so callers can write codes = c("Refused" = ".a") or c(".a", ".b")
   # without haven::tagged_na(). ".a" -> tagged_na("a"); "-99" -> -99. Names
@@ -3248,14 +3255,12 @@
       out[i]      <- haven::tagged_na(letter)
       raw[letter] <- substr(tok, 2L, 2L)
     } else if (grepl("^\\.", low) || grepl("^na\\(", low)) {
-      stop(paste0("Invalid code '", tok, "'. Stata-style missing-value ",
-                  "tokens must be '.a' through '.z' (a single lowercase ",
-                  "letter after the period)."), call. = FALSE)
+      stop(paste0("Invalid code '", tok, "'. ", ms$rule), call. = FALSE)
     } else {
       v <- suppressWarnings(as.numeric(tok))
       if (is.na(v)) {
         stop(paste0("Invalid code '", tok, "'. Codes must be numbers (for ",
-                    "example -99) or Stata-style tokens (.a through .z)."),
+                    "example -99) or ", ms$some, "."),
              call. = FALSE)
       }
       out[i] <- v
@@ -3283,6 +3288,8 @@
 #' @param labels_str Character string of the form
 #'   \code{"value1=label1; value2=label2; ..."}.
 #'
+#' @param convention The caller's per-call convention, or NULL: it
+#'   phrases a marker in an error (\code{.jst_marker_syntax()}, S355).
 #' @return Invisibly, a named numeric vector. Names are label strings;
 #'   values are numeric codes, or Stata-style missing values for tagged entries.
 #'   When any token was seen, a \code{tagged_raw} attribute records the marker
@@ -3292,7 +3299,8 @@
 #'   below); it must never reach a column.
 #'
 #' @keywords internal
-.jst_parse_labels <- function(labels_str) {
+.jst_parse_labels <- function(labels_str, convention = NULL) {
+  ms <- .jst_marker_syntax(convention)   # S355
 
   # S249: token case is accepted either way (Decision 13) and this parse
   # normalizes to lowercase, so the letter AS TYPED is recorded on a
@@ -3363,8 +3371,7 @@
     } else if (grepl("^\\.", val_lower) || grepl("^na\\(", val_lower)) {
       stop(paste0(
         "Invalid value '", val_str, "' in label rule '", rule, "'. ",
-        "Stata-style missing-value tokens must be '.a' through '.z' ",
-        "(a single lowercase letter after the period). The NA(a) ",
+        ms$rule, " The NA(a) ",
         "longhand is not supported in the labels argument."
       ), call. = FALSE)
     } else {
@@ -3372,8 +3379,8 @@
       if (is.na(val)) {
         stop(paste0(
           "Invalid value '", val_str, "' in label rule '", rule, "'. ",
-          "The left side of each label rule must be numeric or a ",
-          "Stata-style missing-value token (.a through .z)."
+          "The left side of each label rule must be numeric or ",
+          ms$one, "."
         ), call. = FALSE)
       }
     }
@@ -3424,6 +3431,8 @@
 #' @param rule_str Character. The whole rule, quoted back in the error
 #'   message so the user can find it in the map string.
 #'
+#' @param convention The caller's per-call convention, or NULL: it
+#'   phrases a marker in an error (\code{.jst_marker_syntax()}, S355).
 #' @return A list with \code{new_val} (numeric; \code{NA_real_} for
 #'   system-NA and tagged-NA targets), \code{tagged} (\code{NULL},
 #'   or a single lowercase letter), \code{tagged_raw} (present with
@@ -3434,7 +3443,7 @@
 #'   not recognized.
 #'
 #' @keywords internal
-.jst_parse_rhs_token <- function(rhs_str, rule_str) {
+.jst_parse_rhs_token <- function(rhs_str, rule_str, convention = NULL) {
   rhs_lower <- tolower(trimws(rhs_str))
 
   # System-NA aliases.
@@ -3473,8 +3482,7 @@
   if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
     stop(paste0(
       "Invalid new value '", rhs_str, "' in map rule '", rule_str, "'. ",
-      "Stata-style missing-value tokens must be '.a' through '.z' ",
-      "(a single lowercase letter after the period). The NA(a) ",
+      .jst_marker_syntax(convention)$rule, " The NA(a) ",
       "longhand is not supported in the map argument."
     ), call. = FALSE)
   }
@@ -3688,6 +3696,8 @@
 #' @param map_str Character string giving the encoding map, e.g.
 #'   \code{"Bail=1; Parole=2; Remand=3; else=NA"}.
 #'
+#' @param convention The caller's per-call convention, or NULL: it
+#'   phrases a marker in an error (\code{.jst_marker_syntax()}, S355).
 #' @return Invisibly, a list with components:
 #'   \describe{
 #'     \item{mappings}{List of lists; each inner list has
@@ -3706,7 +3716,8 @@
 #'   }
 #'
 #' @keywords internal
-.jst_parse_text_map <- function(map_str) {
+.jst_parse_text_map <- function(map_str, convention = NULL) {
+  ms <- .jst_marker_syntax(convention)   # S355
 
   rules <- .jst_split_unquoted(map_str, ";")
   if (isTRUE(attr(rules, "unbalanced"))) {
@@ -3763,15 +3774,16 @@
       } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. ",
-          "Stata-style missing-value tokens must be '.a' through '.z' ",
-          "(a single lowercase letter after the period). The NA(a) ",
+          ms$rule, " The NA(a) ",
           "longhand is not supported in the map argument."
         ), call. = FALSE)
       } else {
+        # S355: "(Stata convention only)" since S240 meant Stata or SAS;
+        # under SPSS convention a marker in a map is refused.
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. Use ",
-          "'else=NA', 'else=copy', or a Stata-style missing-value token ",
-          "such as 'else=.a' (Stata convention only)."
+          "'else=NA', 'else=copy', or ", ms$eg,
+          " (Stata or SAS convention only)."
         ), call. = FALSE)
       }
       next
@@ -3792,11 +3804,11 @@
           "Name NA (or System / SYSMIS) in at most one rule."
         ), call. = FALSE)
       }
-      na_rhs <- .jst_parse_rhs_token(rhs, rule)
+      na_rhs <- .jst_parse_rhs_token(rhs, rule, convention)
       if (is.null(na_rhs)) {
         na_val <- suppressWarnings(as.numeric(rhs))
         if (is.na(na_val)) {
-          stop(.jst_text_map_rhs_error(rhs, rule), call. = FALSE)
+          stop(.jst_text_map_rhs_error(rhs, rule, convention), call. = FALSE)
         }
         na_rhs <- list(new_val = na_val, tagged = NULL)
       }
@@ -3834,7 +3846,7 @@
     }
 
     # --- new value ----------------------------------------------------------
-    rhs_parsed <- .jst_parse_rhs_token(rhs, rule)
+    rhs_parsed <- .jst_parse_rhs_token(rhs, rule, convention)
 
     if (!is.null(rhs_parsed)) {
       new_val     <- rhs_parsed$new_val
@@ -3847,7 +3859,7 @@
       tok_missing <- FALSE
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
-        stop(.jst_text_map_rhs_error(rhs, rule), call. = FALSE)
+        stop(.jst_text_map_rhs_error(rhs, rule, convention), call. = FALSE)
       }
     }
 
@@ -3881,10 +3893,12 @@
 #' @param rhs Character. The offending right-hand side.
 #' @param rule Character. The whole rule.
 #'
+#' @param convention The caller's per-call convention, or NULL: it
+#'   phrases a marker in an error (\code{.jst_marker_syntax()}, S355).
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
-.jst_text_map_rhs_error <- function(rhs, rule) {
+.jst_text_map_rhs_error <- function(rhs, rule, convention = NULL) {
   if (grepl(",", rhs) && grepl("=", rhs)) {
     return(paste0(
       "It looks like commas were used to separate rules in the map string. ",
@@ -3894,7 +3908,8 @@
   }
   paste0(
     "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-    "New values must be numeric, a system-NA alias (NA, System, ",
-    "or SYSMIS), or a Stata-style missing-value token (.a through .z)."
+    "New values must be numeric, the word missing, a system-NA ",
+    "alias (NA, System, or SYSMIS), or ",
+    .jst_marker_syntax(convention)$one, "."
   )
 }

@@ -674,14 +674,18 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
         paste0("  jdeclare_missing(", data_name, ", ", var_name,
                ", codes = ", codes_arg, ")"),
         "",
-        paste0("The numeric code",
-               if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
-               " above ",
-               if (sum(!is.na(letter_to_code)) > 1L) "are" else "is",
-               " ", var_name, "'s declared missing value",
-               if (sum(!is.na(letter_to_code)) > 1L) "s" else "",
-               ", matched largest magnitude first (the ordering ",
-               "jconvert() uses)."))
+        # S355 (the S219 item, finding 3): the pairing said for what it is,
+        # and only when there is one to say -- "(the ordering jconvert()
+        # uses)" read as internals in an error, and with one code there is
+        # nothing to order.
+        if (sum(!is.na(letter_to_code)) > 1L) {
+          paste0("The numeric codes above are ", var_name, "'s declared ",
+                 "missing values, paired with the markers in order of ",
+                 "magnitude, largest first.")
+        } else {
+          paste0("The numeric code above is ", var_name, "'s declared ",
+                 "missing value.")
+        })
     }
 
     if (length(unmapped) > 0L) {
@@ -1379,7 +1383,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 
   # --- Parse map string ---
   parsed_map <- tryCatch(
-    .jst_parse_map(map),
+    .jst_parse_map(map, convention),
     error = function(e) .jst_stop(
       "Error in map argument: ", conditionMessage(e))
   )
@@ -1395,7 +1399,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
       .jst_stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".")
     }
     parsed_labels <- tryCatch(
-      .jst_parse_labels(labels),
+      .jst_parse_labels(labels, convention),
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                       conditionMessage(e)))
     )
@@ -1494,12 +1498,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
 
   if (!is.null(tok_missing_label) && !has_missing_token) {
+    # S355 (the S256 item): the token quoted in all three places, so it
+    # cannot read as an adjective ("labels names missing" read as "the
+    # labels' names are absent"), and "to label" dropped.
     .jst_stop(
       paste0(
-        "labels names missing, but the map has no target for it ",
-        "to label."), "\n",
+        "labels names 'missing', but the map has no target for it."), "\n",
       paste0(
-        "Add missing to the map (for example 8=missing), or label the ",
+        "Add 'missing' to the map (for example '8=missing'), or label the ",
         "value directly."))
   }
 
@@ -1973,7 +1979,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         new_lhs, "=", trimws(sub("^[^=]*=", "", rules[lhs == "missing"])))
     }
     if (length(rules) == 0L) "" else
-      paste0(", labels = \"", paste(rules, collapse = "; "), "\"")
+      paste0(", labels = \"", .jst_dq_escape(paste(rules, collapse = "; ")),
+             "\"")                                        # S355
   }
   if (!is.null(tok_missing_label) && length(orig_vl_r8) > 0L) {
     have_lab <- character(0)
@@ -2103,6 +2110,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                                        "old_tags")))
 
   all_specified_old <- c()
+  absent_all        <- character(0)   # S355: one note for every rule
 
   for (rule in parsed_map$mappings) {
     old_vals <- rule$old_vals
@@ -2116,15 +2124,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     absent_tags       <- rule$old_tags_raw[
       !(rule$old_tags %in% orig_tags_lc[!is.na(orig_tags_lc)])]
     if (length(missing_from_data) > 0 || length(absent_tags) > 0) {
-      .note(advisory = TRUE, paste0(
-        "Note: '", orig_name, "' contained none of the map values ",
-        paste(c(if (length(missing_from_data) > 0)
-                  paste(missing_from_data, collapse = ", "),
-                if (length(absent_tags) > 0)
-                  paste0(".", absent_tags, collapse = ", ")),
-              collapse = ", "),
-        " -- nothing was recoded for them."
-      ))
+      absent_all <- c(absent_all,
+                      format(missing_from_data, trim = TRUE,
+                             scientific = FALSE),
+                      if (length(absent_tags) > 0) paste0(".", absent_tags))
     }
 
     rule_mask <- !is.na(orig_num) & orig_num %in% old_vals
@@ -2139,6 +2142,20 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
     } else {
       new_num[rule_mask] <- rule$new_val
     }
+  }
+
+  # Map values absent from the data (S355; the S352 item): ONE note naming
+  # them all, in number with them, where each rule gave its own note and
+  # one value read "contained none of the map values 7 -- nothing was
+  # recoded for them".
+  absent_all <- unique(absent_all)
+  if (length(absent_all) > 0L) {
+    .note(advisory = TRUE, paste0(
+      "Note: '", orig_name, "' ",
+      if (length(absent_all) == 1L) "did not contain the map value "
+      else "contained none of the map values ",
+      .jst_and_list(absent_all), " -- nothing was recoded for ",
+      if (length(absent_all) == 1L) "it." else "them."))
   }
 
   # --- Handle unspecified non-NA values ---
@@ -4273,7 +4290,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     # MAP MODE
     # =======================================================================
     parsed_map <- tryCatch(
-      .jst_parse_text_map(map),
+      .jst_parse_text_map(map, convention),
       error = function(e) .jst_stop(
         "Error in map argument: ", conditionMessage(e))
     )
@@ -4294,7 +4311,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     labels_tagged_raw <- NULL
     if (!is.null(labels)) {
       parsed_labels <- tryCatch(
-        .jst_parse_labels(labels),
+        .jst_parse_labels(labels, convention),
         error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                              conditionMessage(e)))
       )
@@ -4324,12 +4341,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
 
     if (!is.null(tok_missing_label) && !has_missing_token) {
-      .jst_stop(
+      .jst_stop(                                # S355, as jrecode's twin
         paste0(
-          "labels names missing, but the map has no target for ",
-          "it to label."), "\n",
+          "labels names 'missing', but the map has no target for it."), "\n",
         paste0(
-          "Add missing to the map (for example Refused=missing), or ",
+          "Add 'missing' to the map (for example 'Refused=missing'), or ",
           "label the value directly."))
     }
 
@@ -4843,19 +4859,64 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
             # A token-minted NA target (NA=missing) is confirmed by the
             # missing-token note instead.
             code_txt <- .jst_fmt_code(parsed_map$na_rule$new_val)
-            # S345 (the S251 item): the menu leads where the declare
-            # would meet the choose-first gate. With no convention
-            # selected the fresh result carries no declaration.
-            gate_lead <- .jst_declare_gate_lead("jencode", n = 1L)
-            msgs <- c(msgs, paste0(
+            na_head  <- paste0(
               "Note: ", n_plain_na, " NA value",
               if (n_plain_na == 1L) "" else "s", " in '", var_name,
               if (n_plain_na == 1L) "' was" else "' were",
-              " encoded as ", code_txt, ".\n",
-              if (!is.null(gate_lead)) paste0(gate_lead, "\nThen declare ")
-              else "Declare ",
-              code_txt, " with jdeclare_missing() so analyses ",
-              "exclude it."))
+              " encoded as ", code_txt, ".\n")
+            # S355 (the S352 item; ruling R8's offered declarations, as the
+            # D1 note below and jrecode()'s twin give them): a map that
+            # gives a word a lettered marker makes the encoded variable
+            # Stata-style or SAS-style, and on it jdeclare_missing() gives
+            # the code .a -- refused when .a is a marker the variable
+            # carries (v0.9.218). What runs is the NA rule sent to a marker
+            # the variable does not use.
+            na_tags <- unique(c(
+              {nt <- haven::na_tag(new_num); nt[!is.na(nt)]},
+              unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
+              if (is.double(parsed_labels)) {
+                lt <- haven::na_tag(parsed_labels); lt[!is.na(lt)]
+              }))
+            na_conv <- if (length(na_tags) == 0L) NA_character_
+                       else if (all(na_tags == tolower(na_tags))) "stata"
+                       else if (all(na_tags == toupper(na_tags))) "sas"
+                       else NA_character_
+            na_free <- if (!is.na(na_conv) &&
+                           (if (identical(na_conv, "sas")) "A" else "a") %in%
+                             na_tags) {
+              .jst_free_tags(c(na_tags, parsed_map$else_tag), na_conv, 1L)
+            } else character(0)
+            if (length(na_free) == 1L) {
+              msgs <- c(msgs, paste0(
+                na_head,
+                "To make ", if (n_plain_na == 1L) "that case" else "those cases",
+                " missing, map NA to a ",
+                if (identical(na_conv, "sas")) "SAS-style" else "Stata-style",
+                " marker the encoded variable does not use:\n",
+                "  ", .jst_data_name, "$", var_name, "R <- jencode(",
+                .jst_data_name, ", ", var_name, ", map = \"",
+                gsub("\"", "\\\"",
+                     .jst_render_map_string(
+                       parsed_map, lhs_render = .jst_jencode_lhs_render,
+                       targets_as = stats::setNames(paste0(".", na_free),
+                                                    code_txt)),
+                     fixed = TRUE),
+                "\"",
+                if (identical(convention, na_conv)) {
+                  paste0(", convention = \"", convention, "\"")
+                } else .jst_marker_conv_arg(na_conv), ")"))
+            } else {
+              # S345 (the S251 item): the menu leads where the declare
+              # would meet the choose-first gate. With no convention
+              # selected the fresh result carries no declaration.
+              gate_lead <- .jst_declare_gate_lead("jencode", n = 1L)
+              msgs <- c(msgs, paste0(
+                na_head,
+                if (!is.null(gate_lead)) paste0(gate_lead, "\nThen declare ")
+                else "Declare ",
+                code_txt, " with jdeclare_missing() so analyses ",
+                "exclude it."))
+            }
           }
         }
       }
@@ -5691,9 +5752,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     character(0)
   }
 
+  # Names typed bare in vars = (S355; the S351 item, ruling R18).
+  .jst_vars_bare_names(vars_sub_expr, parent.frame(), data, data_name,
+                       match.call(), "jdeclare_missing", dot_names)
   if (length(dot_names) > 0 && !is.null(vars)) {
-    .jst_stop("Use either unquoted variable names (...) or quoted names ",
-         "via vars = c(...), but not both.")
+    .jst_vars_twice_stop(match.call(), "jdeclare_missing", dot_names, vars)
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
     .jst_stop("`vars` must be one or more variable names in quotes, ",
@@ -5713,10 +5776,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     .jst_stop("specify at least one variable to declare on: unquoted names ",
          "(for example jdeclare_missing(MyData, Age, Income, ",
          "codes = c(-99))) or quoted names via vars = c(...).\n",
-         "To apply one declaration to every column, pass ",
+         # S355 (the S339 item): "variable" (Rule AG), and Rule B's
+         # "pass ... explicitly" gone from the same sentence.
+         "To apply one declaration to every variable, use ",
          "vars = names(",
          if (identical(data_kind, "expression")) "MyData" else data_name,
-         ") explicitly.",
+         ").",
          fn = "jdeclare_missing")
   }
 
@@ -5758,7 +5823,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     # need not write haven::tagged_na(): ".a" -> tagged_na("a"); "-99" -> -99.
     if (is.character(codes)) {
       codes <- tryCatch(
-        .jst_parse_code_tokens(codes),
+        .jst_parse_code_tokens(codes, convention),
         error = function(e) .jst_stop(conditionMessage(e)))
     }
     if (!is.numeric(codes) || length(codes) == 0L) {
@@ -5901,7 +5966,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
            "labels = \"-99=Refused; -98=Don't know\".")
     }
     parsed_labels <- tryCatch(
-      .jst_parse_labels(labels),
+      .jst_parse_labels(labels, convention),
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
                                        conditionMessage(e)))
     )
@@ -5922,16 +5987,21 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     has_any_names <- !is.null(codes_names) && any(nzchar(codes_names))
     partial_names <- has_any_names && !has_all_names
 
+    # S355 (the S282 item): each form said for what it is. "Option C" and
+    # "Option A" were the help page's names for them, opaque with the page
+    # closed.
     if (partial_names) {
-      .jst_stop("`codes` is partially named. Either name every ",
-                "element (Option C) or none (Option A with separate labels=).",
+      .jst_stop("`codes` names some of its codes and not others. Name ",
+                "every code, as in codes = c(Refused = -99, Unknown = -98), ",
+                "or name none and give the labels with labels =.",
                 fn = "jdeclare_missing")
     }
 
     if (has_all_names && !is.null(labels)) {
-      .jst_stop("pick one labeling form. Either name every ",
-                "element of `codes` (Option C) OR supply `labels = ...` ",
-                "separately (Option A), not both.",
+      .jst_stop("the codes are labeled twice: by their names in `codes` ",
+                "and by `labels`. Use one: the names, as in ",
+                "codes = c(Refused = -99), or labels = with codes that ",
+                "carry no names.",
                 fn = "jdeclare_missing")
     }
   } else {
@@ -6255,14 +6325,15 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           is.null(labels) && is.null(range)
         conf_alt <- if (conf_echo_ok) {
           paste0(
-            "To follow the column's form, remove the argument:\n",
+            "To follow the column's form, drop convention = \"",
+            convention, "\":\n",
             "  jdeclare_missing(", data_name, ", ", vn, ", codes = c(",
             paste(format(codes, trim = TRUE, scientific = FALSE),
                   collapse = ", "),
             ")", if (isTRUE(modify)) ", modify = TRUE" else "", ")\n")
         } else {
-          paste0("To follow the column's form, remove the convention ",
-                 "argument from the call.\n")
+          paste0("To follow the column's form, drop convention = \"",
+                 convention, "\" from the call.\n")
         }
         .jst_stop(
           paste0(
@@ -6342,9 +6413,17 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         # (plain numeric codes, no labels/range).
         mix_setting <- getOption(".jst_options_missing_convention",
                                  .jst_options_defaults$missing.convention)
+        # S355 (the S267 item): the markers the cells carry, named as the
+        # mixed-marker note names them, where this head named the two
+        # ranges (.a-.z, .A-.Z) -- one vocabulary for one column state.
+        mix_tags <- if (is.double(col)) haven::na_tag(col) else character(0)
+        mix_tags <- unique(mix_tags[!is.na(mix_tags)])
         mix_head <- paste0(
-          "'", vn, "' carries both Stata-style (.a-.z) and SAS-style ",
-          "(.A-.Z) missing values, which SPSS convention cannot act on.")
+          "'", vn, "' carries both Stata-style (",
+          paste0(".", sort(mix_tags[mix_tags %in% letters]), collapse = ", "),
+          ") and SAS-style (",
+          paste0(".", sort(mix_tags[mix_tags %in% LETTERS]), collapse = ", "),
+          ") missing values, which SPSS convention cannot act on.")
         mix_echo_ok <- is.numeric(codes) &&
           all(is.na(haven::na_tag(codes))) &&
           (is.null(names(codes)) || !any(nzchar(names(codes)))) &&
@@ -6355,7 +6434,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
             mix_head, "\n",
             "This call sets convention = \"spss\", but your ",
             "missing.convention setting is \"", mix_setting, "\". ",
-            "To use the setting, remove the argument:\n",
+            "To use the setting, drop convention = \"spss\":\n",
             "  jdeclare_missing(", data_name, ", ", vn, ", codes = c(",
             paste(format(codes, trim = TRUE, scientific = FALSE),
                   collapse = ", "),
@@ -6366,8 +6445,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
             mix_head, "\n",
             "This call sets convention = \"spss\", but your ",
             "missing.convention setting is \"", mix_setting, "\". ",
-            "To use the setting, remove the convention argument from ",
-            "the call.")
+            "To use the setting, drop convention = \"spss\" from the ",
+            "call.")
         } else {
           .jst_stop(
             mix_head, "\n",
@@ -6548,7 +6627,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
             paste0(".", lo_tags, collapse = ", "),
             ") and SAS-style (",
             paste0(".", up_tags, collapse = ", "),
-            ") missing-value markers."),
+            ") missing values."),          # S355: as the guard says it
           "\n",
           "To collapse them to one form:\n",
           "  jconvert(", data_name, ", vars = \"", vn, "\", to = \"",
@@ -7171,7 +7250,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     } else ""
     recode_line <- function(letters_to, label_mask) {
       lab_txt <- if (any(label_mask)) {
-        paste0(".", letters_to[label_mask], "=", code_lab[label_mask])
+        paste0(".", letters_to[label_mask], "=",
+               .jst_dq_escape(code_lab[label_mask]))     # S355
       } else character(0)
       paste0(
         pre, "  ", dn, "$", var_name, "R <- jrecode(", dn, ", ", var_name,
@@ -7381,7 +7461,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                                              plural = FALSE,
                                              assign_name = data_name) {
   tag1 <- haven::na_tag(parsed_codes)[1L]
-  code_arg <- paste0("codes = c(Refused = \".", tag1, "\")")
+  # S355 (the S282 item): a placeholder that reads as one. "Refused" was an
+  # invented example name, and beside a variable whose label happened to be
+  # "Refused" it read as a label the user already had.
+  code_arg <- paste0("codes = c(MyLabel = \".", tag1, "\")")
   scaffold <- if (isTRUE(modify)) {
     paste0("  jdeclare_missing(", data_name, ", ", scaffold_var, ", ",
            code_arg, ", modify = TRUE)")
@@ -7395,7 +7478,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       if (isTRUE(plural)) "Their" else "Its",
       " markers are already missing values, so a bare marker has ",
       "nothing to name."), "\n",
-    "To name one:\n",
+    "To name one, put its label in place of MyLabel:\n",
     scaffold, "\n"
   )
 }
@@ -7841,9 +7924,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         no_change_only <- c(no_change_only, TRUE)
         # Splice the variable echo under the first sentence: "no change to 3
         # variables" is not actionable without naming them.
-        nn_parts <- strsplit(nn, "\nTo name one:\n", fixed = TRUE)[[1]]
-        msg <- c(msg, paste0(nn_parts[1], "\n", var_line,
-                             "\nTo name one:\n", nn_parts[2]))
+        # S355: keyed on the intro's first words only, so a change to the
+        # rest of it cannot leave the splice unmatched (the intro became
+        # "To name one, put its label in place of MyLabel:").
+        nn_at <- regexpr("\nTo name one", nn, fixed = TRUE)
+        msg <- c(msg, paste0(substr(nn, 1L, nn_at - 1L), "\n", var_line,
+                             substring(nn, nn_at)))
         next
       }
       c_tags <- haven::na_tag(pc_grp)
@@ -7909,6 +7995,131 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 # =============================================================================
 
 # -- jconvert -----------------------------------------------------------------
+
+#' Internal helper: the call rebuilt with its variables after the data frame
+#'
+#' The line \code{jconvert()} and \code{jdeclare_missing()} offer when the
+#' variables arrived through \code{vars =} in a form that does not run there
+#' (Session 355): the call as made, \code{vars =} taken out, and the
+#' variables listed bare straight after the data frame -- the house form,
+#' \code{jconvert(d, A, B, to = "stata", modify = TRUE)}. Every other
+#' argument is kept as typed. A data frame given as an expression is
+#' named first (\code{mydata <- mk()}), as every offered line names it
+#' (S343).
+#'
+#' @param mc The call, from \code{match.call()} in the exported function.
+#' @param fn The function's name.
+#' @param vars Character; the variables, in the order they go in.
+#' @return A list: \code{pre} ("" or the naming line with its newline),
+#'   \code{line} (the call, indented), and \code{framed} (TRUE when the call
+#'   named its data frame).
+#' @keywords internal
+.jst_vars_dots_line <- function(mc, fn, vars) {
+  args <- as.list(mc)[-1L]
+  nm   <- names(args)
+  if (is.null(nm)) nm <- rep("", length(args))
+  pre    <- ""
+  data_t <- character(0)
+  if ("data" %in% nm) {
+    d <- args[["data"]]
+    if (identical(.jst_data_arg_kind(d), "expression")) {
+      pre    <- paste0("  mydata <- ", .jst_term_text(d), "\n")
+      data_t <- "mydata"
+    } else {
+      data_t <- .jst_term_text(d)
+    }
+  }
+  keep <- !(nm %in% c("data", "vars")) & nzchar(nm)
+  rest <- vapply(which(keep), function(i) {
+    paste0(nm[i], " = ", paste(deparse(args[[i]]), collapse = " "))
+  }, character(1))
+  list(pre = pre,
+       line = paste0("  ", fn, "(",
+                     paste(c(data_t, vars, rest), collapse = ", "), ")"),
+       framed = length(data_t) > 0L)
+}
+
+#' Internal helper: variable names typed without quotes in vars =
+#'
+#' \code{vars =} takes a character vector -- the stored or computed list of
+#' names, \code{vars = names(d)} or \code{vars = myvars} -- and so R
+#' evaluates it: \code{jconvert(d, vars = c(A, B), to = "stata")} stopped
+#' with R's "object 'A' not found", and a workspace object named \code{A}
+#' would have been read for its contents (the S351 item). Bare names are
+#' the house form after the data frame, and that is where this check sends
+#' them (Session 355, ruling R18): when \code{vars =} was given a name or a
+#' \code{c()} of names, and one of them is a variable of the data frame or
+#' they do not give a character vector, the call stops with the call
+#' rebuilt, the names after the data frame -- a workspace object that
+#' shares a variable's name is never read. A name the data frame lacks
+#' gets the not-found sentence instead. A name holding names
+#' (\code{myvars <- c("A", "B")}) that is not itself a variable of the data
+#' frame is the programmatic form and passes, as does every computed form.
+#'
+#' @param vars_sub The \code{vars} argument, unevaluated.
+#' @param env The caller's environment.
+#' @param data,data_name The data frame and its name.
+#' @param mc The call, from \code{match.call()}.
+#' @param fn The function's name.
+#' @param dot_names Character; variables also given in the dots.
+#' @return Invisible NULL; stops on bare names.
+#' @keywords internal
+.jst_vars_bare_names <- function(vars_sub, env, data, data_name, mc, fn,
+                                 dot_names = character(0)) {
+  if (is.null(vars_sub)) return(invisible(NULL))
+  syms <- if (is.symbol(vars_sub)) {
+    list(vars_sub)
+  } else if (is.call(vars_sub) && identical(vars_sub[[1L]], as.name("c")) &&
+             length(vars_sub) > 1L &&
+             all(vapply(as.list(vars_sub)[-1L], is.symbol, logical(1)))) {
+    as.list(vars_sub)[-1L]
+  } else {
+    return(invisible(NULL))
+  }
+  nms <- vapply(syms, as.character, character(1))
+  # A name the data frame has is its variable, whatever the workspace holds
+  # (ruling R18: jstats reads the frame's variable, never a separate object
+  # of that name) -- so vars = c(A, B) is the bare form even when A and B
+  # also exist in the workspace and give a character vector.
+  in_frame <- is.data.frame(data) && any(nms %in% names(data))
+  if (!in_frame) {
+    val <- tryCatch(eval(vars_sub, env), error = function(e) e)
+    if (!inherits(val, "error") && is.character(val) && length(val) > 0L) {
+      return(invisible(NULL))
+    }
+  }
+  .jst_check_vars(data, nms, data_name)
+  ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, nms)))
+  .jst_stop("vars = takes names in quotes. To name the variables without ",
+            "quotes, list them ",
+            if (ln$framed) "after the data frame:" else "first:", "\n",
+            ln$pre, ln$line, fn = fn)
+}
+
+#' Internal helper: variables named both after the data frame and in vars =
+#'
+#' Until Session 355 the stop read "Use either unquoted variable names
+#' (...) or quoted names via vars = c(...), but not both." -- a rule about
+#' two forms, with R's "(...)" in it. It now says what the call did and
+#' gives the call with every variable named once, after the data frame
+#' (ruling R18: the house form).
+#'
+#' @param mc The call, from \code{match.call()}.
+#' @param fn The function's name.
+#' @param dot_names Character; the variables given after the data frame.
+#' @param vars The evaluated \code{vars}.
+#' @return Does not return.
+#' @keywords internal
+.jst_vars_twice_stop <- function(mc, fn, dot_names, vars) {
+  if (is.character(vars) && length(vars) > 0L && !anyNA(vars)) {
+    ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, vars)))
+    .jst_stop("the variables are named twice: after the data frame and in ",
+              "vars =. Name them in one place:\n",
+              ln$pre, ln$line, fn = fn)
+  }
+  .jst_stop("the variables are named twice: after the data frame and in ",
+            "vars =. Name them in one place.", fn = fn)
+}
 
 #' Internal helper: a target format given where jconvert() takes variables
 #'
@@ -8263,9 +8474,11 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
           "All missing-value declarations are removed; declared values ",
           "become plain NA."),
           indent = 6L), "\n",
+        # S355 (the S337 item): the call alone on its line, so it runs as
+        # printed (Rule L); the alternatives in the sentence above it.
         "To set a session default so to = is not needed, choose a ",
-        "convention:\n",
-        "  joptions(missing.convention = \"stata\")    (or \"spss\", \"sas\")",
+        "convention (\"stata\", \"spss\" or \"sas\"):\n",
+        "  joptions(missing.convention = \"stata\")",
         fn = "jconvert")
     }
   }
@@ -8328,9 +8541,12 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
     character(0)
   }
 
+  # Names typed bare in vars = (S355; the S351 item, ruling R18): the call
+  # rebuilt with them after the data frame, before vars is evaluated.
+  .jst_vars_bare_names(substitute(vars), parent.frame(), data, data_name,
+                       match.call(), "jconvert", dot_names)
   if (length(dot_names) > 0 && !is.null(vars)) {
-    .jst_stop("Use either unquoted variable names (...) or quoted names ",
-         "via vars = c(...), but not both.")
+    .jst_vars_twice_stop(match.call(), "jconvert", dot_names, vars)
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
     .jst_stop("`vars` must be one or more variable names in quotes, ",
@@ -9372,15 +9588,50 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       for (vname in names(pattern_a)) {
         entries <- pattern_a[[vname]]
         for (e in entries) {
-          msg_lines <- c(msg_lines, sprintf(
-            "  %s: %s = \"%s\"",
-            vname, as.character(e$value), e$label))
+          msg_lines <- c(msg_lines, paste0(
+            "  ", vname, ": ",
+            .jst_udm_row_label(as.character(e$value), e$label)))
         }
       }
+      # S355 (the S319 item; voice Rule D): the fix as lines that run, one
+      # per variable, where it said "see jdeclare_missing()". A target
+      # convention the setting is not goes in the line (the declaration
+      # follows the setting); under to = "baseR" with no setting, the line
+      # takes "spss", which keeps the codes visible until the conversion
+      # makes them NA.
+      pa_set  <- getOption(".jst_options_missing_convention",
+                           .jst_options_defaults$missing.convention)
+      pa_conv <- if (to %in% c("spss", "stata", "sas")) to
+                 else if (pa_set %in% c("spss", "stata", "sas")) pa_set
+                 else "spss"
+      pa_carg <- if (identical(pa_set, pa_conv)) "" else
+        paste0(", convention = \"", pa_conv, "\"")
+      pa_expr <- identical(.jst_data_arg_kind(data_sub_expr), "expression")
+      pa_dn   <- if (pa_expr) "mydata" else data_name
+      pa_lines <- vapply(names(pattern_a), function(vname) {
+        v <- vapply(pattern_a[[vname]], function(e) {
+          format(e$value, trim = TRUE, scientific = FALSE)
+        }, character(1))
+        paste0("  jdeclare_missing(", pa_dn, ", ", vname, ", codes = ",
+               if (length(v) == 1L) v else
+                 paste0("c(", paste(v, collapse = ", "), ")"),
+               pa_carg, ", modify = TRUE)")
+      }, character(1))
       msg_lines <- c(msg_lines,
                      "",
-                     "  To declare these values as missing, see jdeclare_missing().",
-                     "  To leave them as ordinary data, no action is needed.")
+                     # Declared under the target's convention the value is
+                     # converted already; under baseR the conversion is the
+                     # step that makes it NA, so it is run again.
+                     paste0("To declare ",
+                            if (sum(lengths(pattern_a)) == 1L) "it" else "them",
+                            " as missing",
+                            if (identical(to, "baseR"))
+                              ", then run the conversion again", ":"),
+                     if (pa_expr) paste0("  mydata <- ", data_name),
+                     unname(pa_lines),
+                     paste0("To leave ",
+                            if (sum(lengths(pattern_a)) == 1L) "it" else "them",
+                            " as ordinary data, no action is needed."))
     }
 
     # Assignment-syntax reminder (only when a conversion actually

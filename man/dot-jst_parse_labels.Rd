@@ -4,11 +4,14 @@
 \alias{.jst_parse_labels}
 \title{Internal helper: parse a label-spec string into a named numeric vector}
 \usage{
-.jst_parse_labels(labels_str)
+.jst_parse_labels(labels_str, convention = NULL)
 }
 \arguments{
 \item{labels_str}{Character string of the form
 \code{"value1=label1; value2=label2; ..."}.}
+
+\item{convention}{The caller's per-call convention, or NULL: it
+phrases a marker in an error (\code{.jst_marker_syntax()}, S355).}
 }
 \value{
 Invisibly, a named numeric vector. Names are label strings;

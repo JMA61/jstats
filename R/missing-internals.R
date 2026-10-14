@@ -692,7 +692,8 @@
   fmt   <- function(v) format(v, trim = TRUE, scientific = FALSE)
   lab   <- if (!is.null(labels) && any(nzchar(labels))) {
     paste0(", labels = \"",
-           paste0(".", free[nzchar(labels)], "=", labels[nzchar(labels)],
+           paste0(".", free[nzchar(labels)], "=",
+                  .jst_dq_escape(labels[nzchar(labels)]),     # S355
                   collapse = "; "), "\"")
   } else ""
   paste0("  ", data_name, "$", var_name, "R <- jrecode(", data_name, ", ",

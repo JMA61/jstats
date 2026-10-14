@@ -4,11 +4,14 @@
 \alias{.jst_parse_map}
 \title{Internal helper: parse a recoding-map string into a structured rule list}
 \usage{
-.jst_parse_map(map_str)
+.jst_parse_map(map_str, convention = NULL)
 }
 \arguments{
 \item{map_str}{Character string giving the recoding map, e.g.
 \code{"1=1; 2=0; else=NA"} or \code{"1=1; 2=0; else=.a"}.}
+
+\item{convention}{The caller's per-call convention, or NULL: it
+phrases a marker in an error (\code{.jst_marker_syntax()}, S355).}
 }
 \value{
 Invisibly, a list with components:

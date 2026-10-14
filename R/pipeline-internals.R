@@ -2515,6 +2515,59 @@
   "stata"
 }
 
+#' Internal helper: how the map, label and code parsers name a marker
+#'
+#' The parse layer's errors about a malformed marker fire before the
+#' convention is resolved, and until Session 355 they said "Stata-style
+#' missing-value tokens must be '.a' through '.z' (a single lowercase letter
+#' after the period)" under every setting -- to a user of the sas setting,
+#' who types .A, and although a typed marker's case is never refused (the
+#' S240 item, finding F1). They are phrased as
+#' \code{.jst_phrasing_convention()} phrases the refusals that fire before
+#' resolution: the per-call convention, else a sas setting, else Stata.
+#' "Marker", not "token" (Session 354 retired "token" from the help pages;
+#' voice Rule B, S265).
+#'
+#' @param convention The caller's per-call convention, raw, or NULL.
+#' @return A list of strings: \code{rule} (the sentence naming the form),
+#'   \code{one} ("a Stata-style missing-value marker (.a through .z)"),
+#'   \code{some} ("Stata-style markers (.a through .z)") and \code{eg} ("a
+#'   Stata-style missing-value marker such as 'else=.a'").
+#' @keywords internal
+.jst_marker_syntax <- function(convention = NULL) {
+  sas   <- identical(.jst_phrasing_convention(convention), "sas")
+  style <- if (sas) "SAS-style" else "Stata-style"
+  a     <- if (sas) ".A" else ".a"
+  z     <- if (sas) ".Z" else ".z"
+  list(
+    rule = paste0(style, " missing-value markers are '", a, "' through '",
+                  z, "' (one letter after a period)."),
+    one  = paste0("a ", style, " missing-value marker (", a, " through ",
+                  z, ")"),
+    some = paste0(style, " markers (", a, " through ", z, ")"),
+    eg   = paste0("a ", style, " missing-value marker such as 'else=", a,
+                  "'"))
+}
+
+#' Internal helper: text made safe inside a double-quoted string
+#'
+#' A value label pasted into the \code{labels = "..."} of a printed call
+#' closed the string early when it held a quotation mark --
+#' \code{labels = ".b=Said "no""} does not parse (the S353 item) -- so the
+#' line the package offered did not run. Each builder that pastes a label
+#' into a printed string escapes it with this (Session 355), as the map
+#' builders escape a quoted word (S249): a backslash doubled, then each
+#' quotation mark preceded by one. The label the line gives is the label
+#' as it was. (A label holding a semicolon cannot be written in a labels
+#' string at all: ruling R17, owed.)
+#'
+#' @param x Character.
+#' @return Character, the same length.
+#' @keywords internal
+.jst_dq_escape <- function(x) {
+  gsub("\"", "\\\"", gsub("\\", "\\\\", x, fixed = TRUE), fixed = TRUE)
+}
+
 #' Internal helper: user-facing style label for a UDM convention
 #'
 #' Maps a convention token to the locked user-facing vocabulary

@@ -2202,7 +2202,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     for (i in seq_len(n_show)) {
       g <- groups[[group_keys[i]]]
       if (g$source == "label_only") {
-        vc_strs <- sprintf('%g "%s" (%d)', g$values, g$labels, g$counts)
+        # S355 (the S319 item): the value with its label in the one form
+        # every declared value takes (voice Rule AF, .jst_udm_row_label()),
+        # where these rows read -99 "Refused" (3) and jconvert()'s list
+        # of the same finding read 9 = "Not asked".
+        vc_strs <- paste0(
+          vapply(seq_along(g$values), function(k) {
+            .jst_udm_row_label(sprintf("%g", g$values[k]), g$labels[k],
+                               unlabelled = "bare")
+          }, character(1)),
+          " (", g$counts, ")")
       } else {
         vc_strs <- sprintf("%g (%d)", g$values, g$counts)
       }
@@ -2612,7 +2621,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   n            <- length(all_vars)
   is_sg        <- (n == 1)
   noun         <- if (is_sg) "variable" else "variables"
-  verb_contain <- if (is_sg) "contains" else "contain"
+  # S355 (the S282 item): "carry", the verb of the .dta refusal and of every
+  # declared-value sentence; the three refusals said "carry", "contain" and
+  # "contain".
+  verb_contain <- if (is_sg) "carries" else "carry"
 
   has_tagged <- length(vars) > 0
   has_spss   <- length(spss_vars) > 0
@@ -2696,7 +2708,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   n            <- length(vars)
   is_sg        <- (n == 1)
   noun         <- if (is_sg) "variable" else "variables"
-  verb_contain <- if (is_sg) "contains" else "contain"
+  verb_contain <- if (is_sg) "carries" else "carry"   # S355, as the .dta's
 
   # Inspect tag case across the flagged columns to pick the right
   # style phrase. Stata convention uses lowercase letters (.a, .b, ...);

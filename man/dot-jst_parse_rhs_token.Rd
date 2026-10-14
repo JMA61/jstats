@@ -4,13 +4,16 @@
 \alias{.jst_parse_rhs_token}
 \title{Internal helper: parse a map rule's right-hand side}
 \usage{
-.jst_parse_rhs_token(rhs_str, rule_str)
+.jst_parse_rhs_token(rhs_str, rule_str, convention = NULL)
 }
 \arguments{
 \item{rhs_str}{Character. The raw right-hand side of one rule.}
 
 \item{rule_str}{Character. The whole rule, quoted back in the error
 message so the user can find it in the map string.}
+
+\item{convention}{The caller's per-call convention, or NULL: it
+phrases a marker in an error (\code{.jst_marker_syntax()}, S355).}
 }
 \value{
 A list with \code{new_val} (numeric; \code{NA_real_} for

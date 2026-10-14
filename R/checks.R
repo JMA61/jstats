@@ -1194,13 +1194,27 @@
     # not evaluate was "not found"; one that evaluated to something other
     # than a data frame was found, and until 0.9.211 was called "not
     # found" too (z <- 1:3; jcorr(z)).
+    # S355 (the S352 item): an expression -- a condition such as
+    # jsubset(Age > 40) -- is not a name, so it is not called "not found"
+    # and asked whether it is a variable name; and each call runs on a line
+    # of its own (Rule L), where both sat inline after colons.
     data_str <- paste(deparse(data_sub), collapse = "")
+    head <- if (is.symbol(data_sub)) {
+      paste0("'", data_str,
+             if (eval_result$failed) "' not found." else "' is not a data frame.",
+             " Did you mean to use it as a variable name?\n",
+             "If so, name the data frame first:\n")
+    } else {
+      paste0(data_str, " needs a data frame, and none was named or set ",
+             "as the default.\n",
+             "Name the data frame first:\n")
+    }
     .jst_stop(
-      "'", data_str,
-      if (eval_result$failed) "' not found." else "' is not a data frame.",
-      " Did you mean to use it as a variable name?\n",
-      "If so, provide the data frame: ", fn_name, "(MyData, ", data_str, ")\n",
-      "Or set a default first with juse(MyData), then: ", fn_name, "(", data_str, ")",
+      head,
+      "  ", fn_name, "(MyData, ", data_str, ")\n",
+      "Or set a default first, then run the call:\n",
+      "  juse(MyData)\n",
+      "  ", fn_name, "(", data_str, ")",
     fn = fn_name)
   }
   resolved <- .jst_resolve_data(envir = envir)

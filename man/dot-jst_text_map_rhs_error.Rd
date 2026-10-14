@@ -4,12 +4,15 @@
 \alias{.jst_text_map_rhs_error}
 \title{Internal helper: text-map right-hand-side error text}
 \usage{
-.jst_text_map_rhs_error(rhs, rule)
+.jst_text_map_rhs_error(rhs, rule, convention = NULL)
 }
 \arguments{
 \item{rhs}{Character. The offending right-hand side.}
 
 \item{rule}{Character. The whole rule.}
+
+\item{convention}{The caller's per-call convention, or NULL: it
+phrases a marker in an error (\code{.jst_marker_syntax()}, S355).}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.

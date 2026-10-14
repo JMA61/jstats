@@ -4,11 +4,14 @@
 \alias{.jst_parse_text_map}
 \title{Internal helper: parse a text-map string into a list of rules}
 \usage{
-.jst_parse_text_map(map_str)
+.jst_parse_text_map(map_str, convention = NULL)
 }
 \arguments{
 \item{map_str}{Character string giving the encoding map, e.g.
 \code{"Bail=1; Parole=2; Remand=3; else=NA"}.}
+
+\item{convention}{The caller's per-call convention, or NULL: it
+phrases a marker in an error (\code{.jst_marker_syntax()}, S355).}
 }
 \value{
 Invisibly, a list with components:

@@ -718,8 +718,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       .jst_data_name <- .typed(mc_positional[[1]])
     }
     if (length(positional_dots) > 1) {
-      .jst_stop("Only one data argument is expected after ",
-           "the formula. Extra positional arguments were supplied.")
+      # S355 (the S282 item; voice Rule B): the inputs named as typed, where
+      # it read "Only one data argument is expected after the formula. Extra
+      # positional arguments were supplied."
+      .jst_stop("only one data frame goes after the formula, and this ",
+                "call gives ",
+                .jst_and_list(vapply(mc_positional, .typed, character(1))),
+                ".\n",
+                "Specify the data frame once, after the formula.",
+                fn = "jplot")
     }
   } else if (has_data_named) {
     data <- dots[["data"]]

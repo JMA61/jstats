@@ -4,11 +4,14 @@
 \alias{.jst_parse_code_tokens}
 \title{Internal helper: convert a character \code{codes} vector to canonical form}
 \usage{
-.jst_parse_code_tokens(codes)
+.jst_parse_code_tokens(codes, convention = NULL)
 }
 \arguments{
 \item{codes}{Character vector of codes; each element is a Stata-style
 missing-value token (\code{.a} through \code{.z}) or a numeric string.}
+
+\item{convention}{The caller's per-call convention, or NULL: it
+phrases a marker in an error (\code{.jst_marker_syntax()}, S355).}
 }
 \value{
 A numeric vector (with tagged-NA values for token entries),

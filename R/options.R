@@ -1264,8 +1264,24 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     x <- missing.convention.codes
     if (!is.numeric(x))
       .jst_stop_arg("joptions", "missing.convention.codes", "numeric.")
-    if (length(x) < 1L || length(x) > 3L)
-      .jst_stop("missing.convention.codes must have length 1 to 3.", fn = "joptions")
+    # S355 (the S314 item): the reason (SPSS's three) and a line to run,
+    # where it said "must have length 1 to 3".
+    if (length(x) > 3L) {
+      .jst_stop("missing.convention.codes takes at most 3 codes, the most ",
+                "SPSS allows on a variable, and this call gives ", length(x),
+                ".\n",
+                "To keep the first three:\n",
+                "  joptions(missing.convention.codes = c(",
+                paste(format(x[1:3], trim = TRUE, scientific = FALSE),
+                      collapse = ", "), "))",
+                fn = "joptions")
+    }
+    if (length(x) < 1L) {
+      .jst_stop("missing.convention.codes needs at least one code, ",
+                "for example:\n",
+                "  joptions(missing.convention.codes = c(-99, -98, -97))",
+                fn = "joptions")
+    }
     if (anyNA(x) || !all(x == round(x)))
       .jst_stop("missing.convention.codes must contain only whole numbers.")
     if (anyDuplicated(x) > 0L)
