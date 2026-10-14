@@ -23,7 +23,7 @@ leaving the caller to fall through to its own numeric-target path."></head><body
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.228</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,7 +62,7 @@ leaving the caller to fall through to its own numeric-target path.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_parse_rhs_token</span><span class="op">(</span><span class="va">rhs_str</span>, <span class="va">rule_str</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_parse_rhs_token</span><span class="op">(</span><span class="va">rhs_str</span>, <span class="va">rule_str</span>, convention <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -76,6 +76,11 @@ leaving the caller to fall through to its own numeric-target path.</p>
 <dt id="arg-rule-str">rule_str<a class="anchor" aria-label="anchor" href="#arg-rule-str"></a></dt>
 <dd><p>Character. The whole rule, quoted back in the error
 message so the user can find it in the map string.</p></dd>
+
+
+<dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>
+<dd><p>The caller's per-call convention, or NULL: it
+phrases a marker in an error (<code><a href="dot-jst_marker_syntax.html">.jst_marker_syntax()</a></code>, S355).</p></dd>
 
 </dl></div>
     <div class="section level2">

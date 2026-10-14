@@ -102,6 +102,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declared_text_vars.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_detect_suspicious_values.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_dq_escape.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_drop_formula_terms.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_category_values.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_ref_line.html</loc></url>
@@ -224,6 +225,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_marker_clash.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_marker_conv_arg.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_marker_recode_line.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_marker_syntax.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_marker_tags.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_match_binary_tokens.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_md5_of_lines.html</loc></url>
@@ -362,6 +364,9 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_use_color.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_var_kind.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_var_value_labels.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_vars_bare_names.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_vars_dots_line.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_vars_twice_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_vector_frame.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_vector_recurse.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_warn.html</loc></url>

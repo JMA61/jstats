@@ -14,7 +14,7 @@ only.
 ## Usage
 
 ``` r
-.jst_parse_map(map_str)
+.jst_parse_map(map_str, convention = NULL)
 ```
 
 ## Arguments
@@ -23,6 +23,13 @@ only.
 
   Character string giving the recoding map, e.g. `"1=1; 2=0; else=NA"`
   or `"1=1; 2=0; else=.a"`.
+
+- convention:
+
+  The caller's per-call convention, or NULL: it phrases a marker in an
+  error
+  ([`.jst_marker_syntax()`](https://jma61.github.io/jstats/reference/dot-jst_marker_syntax.md),
+  S355).
 
 ## Value
 

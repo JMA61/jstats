@@ -10,7 +10,7 @@ A token `".a"` becomes `haven::tagged_na("a")`; a numeric string such as
 ## Usage
 
 ``` r
-.jst_parse_code_tokens(codes)
+.jst_parse_code_tokens(codes, convention = NULL)
 ```
 
 ## Arguments
@@ -19,6 +19,13 @@ A token `".a"` becomes `haven::tagged_na("a")`; a numeric string such as
 
   Character vector of codes; each element is a Stata-style missing-value
   token (`.a` through `.z`) or a numeric string.
+
+- convention:
+
+  The caller's per-call convention, or NULL: it phrases a marker in an
+  error
+  ([`.jst_marker_syntax()`](https://jma61.github.io/jstats/reference/dot-jst_marker_syntax.md),
+  S355).
 
 ## Value
 

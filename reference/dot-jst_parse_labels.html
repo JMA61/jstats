@@ -15,7 +15,7 @@ sign in each rule, so label text may itself contain equals signs.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.227</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.228</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,7 +50,7 @@ sign in each rule, so label text may itself contain equals signs.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_parse_labels</span><span class="op">(</span><span class="va">labels_str</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_parse_labels</span><span class="op">(</span><span class="va">labels_str</span>, convention <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -60,6 +60,11 @@ sign in each rule, so label text may itself contain equals signs.</p>
 <dl><dt id="arg-labels-str">labels_str<a class="anchor" aria-label="anchor" href="#arg-labels-str"></a></dt>
 <dd><p>Character string of the form
 <code>"value1=label1; value2=label2; ..."</code>.</p></dd>
+
+
+<dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>
+<dd><p>The caller's per-call convention, or NULL: it
+phrases a marker in an error (<code><a href="dot-jst_marker_syntax.html">.jst_marker_syntax()</a></code>, S355).</p></dd>
 
 </dl></div>
     <div class="section level2">

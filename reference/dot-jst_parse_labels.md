@@ -9,7 +9,7 @@ signs.
 ## Usage
 
 ``` r
-.jst_parse_labels(labels_str)
+.jst_parse_labels(labels_str, convention = NULL)
 ```
 
 ## Arguments
@@ -17,6 +17,13 @@ signs.
 - labels_str:
 
   Character string of the form `"value1=label1; value2=label2; ..."`.
+
+- convention:
+
+  The caller's per-call convention, or NULL: it phrases a marker in an
+  error
+  ([`.jst_marker_syntax()`](https://jma61.github.io/jstats/reference/dot-jst_marker_syntax.md),
+  S355).
 
 ## Value
 

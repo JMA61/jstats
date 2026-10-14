@@ -17,7 +17,7 @@ numeric-target path.
 ## Usage
 
 ``` r
-.jst_parse_rhs_token(rhs_str, rule_str)
+.jst_parse_rhs_token(rhs_str, rule_str, convention = NULL)
 ```
 
 ## Arguments
@@ -30,6 +30,13 @@ numeric-target path.
 
   Character. The whole rule, quoted back in the error message so the
   user can find it in the map string.
+
+- convention:
+
+  The caller's per-call convention, or NULL: it phrases a marker in an
+  error
+  ([`.jst_marker_syntax()`](https://jma61.github.io/jstats/reference/dot-jst_marker_syntax.md),
+  S355).
 
 ## Value
 

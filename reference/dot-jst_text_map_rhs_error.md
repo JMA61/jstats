@@ -8,7 +8,7 @@ commas-instead-of-semicolons slip first.
 ## Usage
 
 ``` r
-.jst_text_map_rhs_error(rhs, rule)
+.jst_text_map_rhs_error(rhs, rule, convention = NULL)
 ```
 
 ## Arguments
@@ -20,6 +20,13 @@ commas-instead-of-semicolons slip first.
 - rule:
 
   Character. The whole rule.
+
+- convention:
+
+  The caller's per-call convention, or NULL: it phrases a marker in an
+  error
+  ([`.jst_marker_syntax()`](https://jma61.github.io/jstats/reference/dot-jst_marker_syntax.md),
+  S355).
 
 ## Value
 
