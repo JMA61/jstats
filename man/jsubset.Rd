@@ -104,20 +104,18 @@ on the wrong rows; that error names both ways out,
 
 A filter normally names only columns of the data frame, and such a
 filter can never fall out of step with the data. A filter may also
-refer to an object in your workspace, such as a cutoff
-(\code{Age < cutoff}) or a set of codes (\code{Region \%in\% keep_regions}).
-An object compared with a variable value by value must hold a single
-value or one value for every row; any other length is refused, where R
-would repeat the shorter one. If you compute a keep/drop indicator
-separately, add it to the data frame as a column and filter on that
-column (\code{clinic$Keep <- clinic$Stress > 3}, then
-\code{jsubset(clinic, Keep == TRUE)}). A separate object holding one
-value per row stops matching the data frame if rows are later added or
-removed, and every analysis of that data frame then stops until the
-filter is set aside. Nor can it be used beside a \code{jcomplete()}
-setting that drops cases, since the filter is applied to the cases
-\code{jcomplete()} keeps: the filter is refused, with the line that adds
-the object to the data frame.
+refer to a value in your workspace, such as a cutoff
+(\code{Age < cutoff}), a set of codes
+(\code{Region \%in\% keep_regions}) or a summary
+(\code{Age > mean(ages)}). It may not refer to a vector of values for the
+cases: jstats analyzes the variables of a data frame, so a keep/drop
+indicator computed separately is added to the data frame as a column
+first (\code{clinic$Keep <- clinic$Stress > 3}, then
+\code{jsubset(clinic, Keep == TRUE)}), where it stays matched to its
+rows and the data frame's other settings reach it. A filter naming such
+a vector is refused, with that line. Any other vector compared with a
+variable value by value is refused too, where R would repeat the shorter
+one.
 
 A text variable's blank cells, which \code{jfreq()} tabulates in a row
 labeled \code{<blank>}, are selected by what they hold, not by that

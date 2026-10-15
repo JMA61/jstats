@@ -30,10 +30,14 @@
 #' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 #' A data frame may not: write \code{y ~ x} with \code{data = MyData},
 #' not \code{MyData$y ~ MyData$x}.
-#' A vector used value by value with the data, as in \code{I(x * w)},
-#' must hold one value for each case -- each row of \code{data} left
-#' after filtering -- where \code{lm()} would recycle a shorter one; a
-#' set used with \code{\%in\%} may have any length.
+#' A variable may not: jstats analyzes the variables of a data frame, so
+#' a vector holding one value for each case -- \code{w} in
+#' \code{I(x * w)}, or an object reached with \code{$} such as
+#' \code{lst$w} -- is added to the data frame first
+#' (\code{MyData$w <- w}), where \code{lm()} would read it from the
+#' workspace; the stop gives that line. A vector of any other length used
+#' value by value is refused, where \code{lm()} would repeat the shorter
+#' one; a set used with \code{\%in\%} may have any length.
 #'
 #' @param formula A formula of the form \code{DV ~ Group}. A transformed
 #'   term such as \code{log(DV)} is computed automatically: the test and
@@ -734,10 +738,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #' term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 #' A data frame may not: write \code{y ~ x} with \code{data = MyData},
 #' not \code{MyData$y ~ MyData$x}.
-#' A vector used value by value with the data, as in \code{I(x * w)},
-#' must hold one value for each case -- each row of \code{data} left
-#' after filtering -- where \code{lm()} would recycle a shorter one; a
-#' set used with \code{\%in\%} may have any length.
+#' A variable may not: jstats analyzes the variables of a data frame, so
+#' a vector holding one value for each case -- \code{w} in
+#' \code{I(x * w)}, or an object reached with \code{$} such as
+#' \code{lst$w} -- is added to the data frame first
+#' (\code{MyData$w <- w}), where \code{lm()} would read it from the
+#' workspace; the stop gives that line. A vector of any other length used
+#' value by value is refused, where \code{lm()} would repeat the shorter
+#' one; a set used with \code{\%in\%} may have any length.
 #'
 #' @param formula A formula of the form \code{DV ~ Group}. A transformed
 #'   term such as \code{log(DV)} is computed automatically: the tests and
@@ -1807,6 +1815,9 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # computed-term refusal below would call d$Region a function applied to a
   # variable, and the two-sides check would name d as the shared variable.
   .jst_check_formula_frames(formula, data, .jst_data_name)
+  # A workspace object standing in for a variable (ruling R19, Session
+  # 357), named for what it is ahead of the computed-term refusal below.
+  .jst_check_formula_objects(formula, data, .jst_data_name)
   # Transformed-term front door (AUDIT-021): a cross-tabulation needs plain
   # variables. Pre-check, a term like log(x) was silently ignored -- table()
   # pulls columns by name, so the raw column was tabulated as if the

@@ -52,14 +52,13 @@ refusals come first: a power \code{terms()} cannot read (\code{y ~ x^k};
 process for any other reason falls back to \code{all.vars()}, unchanged.
 }
 \details{
-A third refusal follows them (Session 324, the second deliberate
-departure from \code{lm()} parity): a workspace vector with more than one
-value but not one per row of \code{data} -- the frame after its filters,
-before cases with missing values are set aside, the rows the resolver
-computes the term on -- used value by value inside a computed term
-(\code{.jst_formula_recycled()}). \code{lm()} recycles it. A vector with
-one value per row of the frame as given, which a filter has since cut
-down, gets the fix of adding it to the frame, where the filter reaches
-it; any other length gets the requirement.
+Two more follow them. Ruling R19 (Session 357, the third deliberate
+departure from \code{lm()} parity): a workspace object of one value per
+case read by a computed term -- one per row of the frame as given, or
+per case left after filtering -- stops with the line that adds it to the
+frame (\code{.jst_check_formula_objects()}). Then the recycling stop
+(Session 324, the second): a workspace vector with more than one value
+but not one per case, used value by value (\code{.jst_formula_recycled()};
+\code{lm()} recycles it), gets the requirement.
 }
 \keyword{internal}

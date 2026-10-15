@@ -200,10 +200,14 @@ A value or vector from your workspace may be named inside a computed
 term, as in \code{lm()}: \code{I(x > cutoff)} with \code{cutoff <- 10}.
 A data frame may not: write \code{y ~ x} with \code{data = MyData},
 not \code{MyData$y ~ MyData$x}.
-A vector used value by value with the data, as in \code{I(x * w)},
-must hold one value for each case -- each row of \code{data} left
-after filtering -- where \code{lm()} would recycle a shorter one; a
-set used with \code{\%in\%} may have any length.
+A variable may not: jstats analyzes the variables of a data frame, so
+a vector holding one value for each case -- \code{w} in
+\code{I(x * w)}, or an object reached with \code{$} such as
+\code{lst$w} -- is added to the data frame first
+(\code{MyData$w <- w}), where \code{lm()} would read it from the
+workspace; the stop gives that line. A vector of any other length used
+value by value is refused, where \code{lm()} would repeat the shorter
+one; a set used with \code{\%in\%} may have any length.
 
 In a formula, \code{^} applied to a single variable is not arithmetic: it
 is R's operator for interactions up to that order, so \code{x^2} enters

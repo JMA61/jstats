@@ -779,6 +779,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # below stopped for the wrong reason. The variable count moved below the
   # frame's resolution to make room; neither step prints anything.
   .jst_check_formula_frames(formula, data, .jst_data_name)
+  # A workspace object standing in for a variable (ruling R19, Session
+  # 357), named for what it is ahead of the computed-term refusal below.
+  .jst_check_formula_objects(formula, data, .jst_data_name)
   .jst_check_formula_transforms(formula, .jst_data_name)
 
   y_name <- all.vars(formula[[2]])

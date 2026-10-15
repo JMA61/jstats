@@ -41,9 +41,9 @@ frame; the message says it is unchanged.}
 
 \item{n_frame}{Integer or NULL. The frame's row count before the
 pipeline's filters: it tells the recycling stop's two forms apart
-(\code{"call"}), and lets a vector holding one value per case of the
-frame as given be recognized when \code{data} has fewer cases
-(\code{.jst_frame_vector()}; every origin but \code{"set"}).}
+(\code{"call"}), and lets an object holding one value per case of
+the frame as given be recognized when \code{data} has fewer cases
+(\code{.jst_frame_object()}).}
 
 \item{data_kept}{Data frame or NULL. For \code{"set"}: the frame as an
 active \code{jcomplete()} will hand it to the filter
@@ -112,10 +112,11 @@ A fifth, \code{"status"}, is the same check made for the status display:
 it never stops, and hands the reason back as the line "It cannot be
 applied: ..." (\code{.jst_filter_status_signal()}).
 
-Ahead of the evaluation, for every origin but \code{"set"}: a workspace
-vector holding one value per case of the frame as given, where the
-condition is about to run on fewer cases (\code{.jst_frame_vector()},
-Session 331) -- the add-it-to-the-frame fix. At set time the same test
-runs last, against \code{data_kept}.
+Ahead of the evaluation, for every origin: a workspace object standing
+in for a variable -- one value per case of the frame as given, or per
+case left after filtering -- read by the condition stops (ruling R19,
+Session 357; \code{.jst_frame_object()}), with the line that adds it to
+the frame where it can be added. At set time the same test runs again,
+against \code{data_kept}.
 }
 \keyword{internal}

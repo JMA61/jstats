@@ -1654,41 +1654,296 @@
   .jst_recycled_operand(as.list(vars)[-1L], data, enclos)
 }
 
-#' Internal helper: the two halves of the add-it-to-the-frame message
+#' Internal helper: a workspace object standing in for a variable
 #'
-#' One builder for what is said about a workspace vector that holds one
-#' value per case of the frame as given, where the condition runs on fewer
-#' cases: the reason ("keep12 has 12 values, one for each case in the d
-#' data frame, but jcomplete() leaves 11") and the fix ("Add keep12 to the
-#' d data frame as a variable:" and the assignment, when the operand is a
-#' plain name and the frame's name can be typed). Shared by
-#' \code{.jst_recycled_stop()} (a condition typed in this call) and the
-#' stored-filter forms in \code{.jst_filter_mask()}, so they cannot drift.
+#' Ruling R19 (Jeff, Session 356; built Session 357): jstats analyzes the
+#' variables of a data frame. A workspace object holding one value per case
+#' -- per row of the frame as given, or per case left after filtering --
+#' that a computed term or a filter condition reads is a variable kept
+#' outside its frame, read past the frame's declared missing values and its
+#' stored filters, and it stops (\code{.jst_frame_object_text()}). It
+#' replaces the Session 324 acceptance of such a vector in a computed term
+#' and the Session 331 add-it line, given only when a filter had cut the
+#' frame. A third deliberate departure from \code{lm()} parity, after the
+#' Session 322 \code{d$x} refusal and the Session 324 recycling stop.
 #'
-#' @param rec A \code{.jst_recycled_operand()}-shaped list.
-#' @param n_rows Integer; the cases the condition runs on.
-#' @param data_name Character or NULL; the data frame's name.
-#' @param cut_by Character; what cut the frame.
-#' @return A list of two strings, \code{reason} (no closing period) and
-#'   \code{fix}.
+#' A VALUE stays read as \code{lm()} reads it (Session 322): an object of
+#' one value; any length to the right of \code{\%in\%} or as the table of
+#' \code{match()}; the table of a lookup indexed by an expression
+#' (\code{w[Group]}); the argument of a summary (\code{mean(w)},
+#' \code{max(w)}), the same as a cutoff computed first. An object of any
+#' other length passes here; combined value by value, the recycling stop
+#' (\code{.jst_recycled_operand()}) has it. An object reached with
+#' \code{$}, \code{@} or \code{[[} by a literal (\code{.GlobalEnv$G},
+#' \code{lst$G}, \code{e[["G"]]}) is judged as one; a data frame's column
+#' reached that way was refused before this runs
+#' (\code{.jst_check_formula_frames()}). A bare term of a formula is never
+#' read from the workspace (Session 322) and is not visited; in a condition
+#' a bare name is. Operands are looked up, never run, so the check draws no
+#' random number and runs no call twice.
+#'
+#' @param terms A list of language objects: a formula's computed terms, or
+#'   one filter condition.
+#' @param data The data frame the expressions are evaluated against.
+#' @param enclos The environment their other names resolve in.
+#' @param n_frame Integer or NULL; the frame's row count as given. NULL is
+#'   read as \code{nrow(data)}.
+#' @param bare Logical; visit a bare name given as a whole term (TRUE for a
+#'   condition).
+#' @return NULL, or a list of \code{term} and \code{operand} (language) and
+#'   \code{n} (the object's number of values).
 #' @keywords internal
-.jst_frame_vector_parts <- function(rec, n_rows, data_name = NULL,
-                                    cut_by = "filtering") {
+.jst_frame_object <- function(terms, data, enclos, n_frame = NULL,
+                              bare = FALSE) {
+  n_rows <- nrow(data)
+  if (is.null(n_frame)) n_frame <- n_rows
+  per_case  <- unique(c(n_frame, n_rows))
+  data_vars <- names(data)
+  summaries <- c("mean", "median", "min", "max", "sum", "sd", "var",
+                 "quantile", "IQR", "range", "length", "prod", "mad",
+                 "unique", "levels", "nlevels")
+  found <- NULL
+  check <- function(term, op) {
+    if (!is.null(found)) return(invisible(NULL))
+    if (.jst_fetch_root(op) %in% data_vars) return(invisible(NULL))
+    val <- if (is.symbol(op)) {
+      nm <- as.character(op)
+      if (!nzchar(nm) || !exists(nm, envir = enclos)) return(invisible(NULL))
+      get(nm, envir = enclos)
+    } else {
+      tryCatch(eval(op, envir = enclos), error = function(e) NULL)
+    }
+    if (is.null(val) || !is.atomic(val) || length(val) < 2L) {
+      return(invisible(NULL))
+    }
+    if (length(val) %in% per_case) {
+      found <<- list(term = term, operand = op, n = length(val))
+    }
+    invisible(NULL)
+  }
+  visit <- function(e, term) {
+    if (!is.null(found)) return(invisible(NULL))
+    if (is.symbol(e)) return(check(term, e))
+    if (!is.call(e)) return(invisible(NULL))
+    if (.jst_is_fetch(e)) return(check(term, e))
+    args <- seq_along(e)[-1L]
+    if (is.symbol(e[[1L]])) {
+      h <- as.character(e[[1L]])
+      if (h %in% c("::", ":::", "function", "~") || h %in% summaries) {
+        return(invisible(NULL))
+      }
+      if (h %in% c("%in%", "match")) args <- 2L
+      if (h %in% c("[", "[[")) args <- args[-1L]
+    }
+    for (k in args) {
+      if (identical(as.list(e)[[k]], substitute())) next
+      visit(e[[k]], term)
+    }
+    invisible(NULL)
+  }
+  for (v in terms) {
+    if (is.call(v) || (isTRUE(bare) && is.symbol(v))) visit(v, v)
+    if (!is.null(found)) break
+  }
+  found
+}
+
+#' Internal helper: an element reached from a name by $, @ or a literal [[
+#'
+#' \code{.GlobalEnv$G}, \code{lst$G}, \code{e[["G"]]}, \code{l[[2]]} and a
+#' chain of them; looked up with no side effect. Used by
+#' \code{.jst_frame_object()}.
+#' @param e A language object.
+#' @return Logical.
+#' @keywords internal
+.jst_is_fetch <- function(e) {
+  if (!is.call(e) || !is.symbol(e[[1L]]) || length(e) != 3L) return(FALSE)
+  h <- as.character(e[[1L]])
+  ok_root <- function(r) is.symbol(r) || .jst_is_fetch(r)
+  if (h %in% c("$", "@")) return(ok_root(e[[2L]]))
+  if (h == "[[") {
+    return(ok_root(e[[2L]]) &&
+             (is.character(e[[3L]]) || is.numeric(e[[3L]])))
+  }
+  FALSE
+}
+
+#' Internal helper: the name a fetched element starts from
+#' @param e A symbol or a \code{.jst_is_fetch()} call.
+#' @return Character(1); "" for anything else.
+#' @keywords internal
+.jst_fetch_root <- function(e) {
+  while (is.call(e) && length(e) >= 2L) e <- e[[2L]]
+  if (is.symbol(e)) as.character(e) else ""
+}
+
+#' Internal helper: the user's call, found on the call stack
+#'
+#' The call of the first function of the package's own namespace on the
+#' stack whose name is j-prefixed -- the frame \code{.jst_caller_fn()}
+#' names -- with its head set to the function's generic name, so a line
+#' built from it reads as the user typed it.
+#' @return A call, or NULL.
+#' @keywords internal
+.jst_caller_call <- function() {
+  calls <- sys.calls()
+  if (is.null(calls)) return(NULL)
+  home <- topenv(environment(sys.function()))
+  for (i in seq_along(calls)) {
+    cl <- calls[[i]]
+    if (!is.call(cl)) next
+    head <- cl[[1L]]
+    nm <- NULL
+    if (is.symbol(head)) {
+      nm <- as.character(head)
+    } else if (is.call(head) && length(head) == 3L &&
+               as.character(head[[1L]]) %in% c("::", ":::")) {
+      nm <- as.character(head[[3L]])
+    }
+    if (!is.null(nm) && grepl("^j[a-z]", nm)) {
+      fun <- tryCatch(sys.function(i), error = function(e) NULL)
+      env <- if (is.function(fun)) environment(fun) else NULL
+      if (!is.null(env) && !identical(topenv(env), home)) next
+      cl[[1L]] <- as.name(sub("^(j[a-z]+)\\..*$", "\\1", nm))
+      return(cl)
+    }
+  }
+  NULL
+}
+
+#' Internal helper: what is said of a workspace object standing in for a
+#' variable
+#'
+#' Ruling R19's one message, for every site that finds one
+#' (\code{.jst_frame_object()}): the formula functions, jcrosstab() and
+#' jplot()'s formula path, a filter typed in the call or with jsubset(), and
+#' a stored filter. Its lines, each sentence on one:
+#' \preformatted{
+#' In I(Age * w), w is not in the d data frame; it is a separate object
+#' in your workspace.
+#' jstats analyzes the variables of a data frame.
+#' Add it to the data frame first:
+#'   d$w <- w
+#'   jlm(Score ~ I(Age * w), data = d)
+#' }
+#' An object reached with \code{$} or \code{[[} is added under its last
+#' name, the term naming that column ("then name the column"); a name the
+#' frame already has takes the next free one (G2). The lines are given when
+#' the object holds one value per row of the frame as given and the frame's
+#' name can be typed; the call when the user's call is in hand (none for a
+#' stored filter, whose condition reads the new column as it stands). An
+#' object holding one value per case left after filtering cannot be added
+#' as it is, and gets its count and the requirement instead.
+#'
+#' @param rec A \code{.jst_frame_object()} result.
+#' @param typed Character; the term or condition as typed, or NULL when it
+#'   is the operand itself.
+#' @param data The data frame (its names; the add line's free name).
+#' @param data_name Character or NULL; the data frame's name.
+#' @param n_frame Integer; the frame's row count as given.
+#' @param call The user's call, or NULL.
+#' @return A list of \code{lead} (the first sentence, without "In ...")
+#'   and \code{lines} (every line, the first included).
+#' @keywords internal
+.jst_frame_object_text <- function(rec, typed, data, data_name, n_frame,
+                                   call = NULL) {
   op <- .jst_term_text(rec$operand)
-  frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
+  named <- !is.null(data_name) && nzchar(data_name)
+  frame_ref <- if (named) {
     paste0("the ", data_name, " data frame")
   } else {
     "the data frame"
   }
-  fix <- if (is.symbol(rec$operand) && !is.null(data_name) &&
-             identical(make.names(data_name), data_name)) {
-    paste0(":\n  ", data_name, "$", op, " <- ", op)
+  lead <- paste0(op, " is not in ", frame_ref,
+                 "; it is a separate object in your workspace.")
+  first <- if (!is.null(typed) && !identical(typed, op)) {
+    paste0("In ", typed, ", ", lead)
   } else {
-    "."
+    lead
   }
-  list(reason = paste0(op, " has ", rec$n, " values, one for each case in ",
-                       frame_ref, ", but ", cut_by, " leaves ", n_rows),
-       fix    = paste0("Add ", op, " to ", frame_ref, " as a variable", fix))
+  lines <- c(first, "jstats analyzes the variables of a data frame.")
+  if (rec$n != n_frame) {
+    return(list(lead = lead, lines = c(
+      lines,
+      paste0("It has ", rec$n, " values, one for each case left after ",
+             "filtering; ", frame_ref, " has ", n_frame, "."),
+      "Use a single value, or add the values to the data frame as a variable."
+    )))
+  }
+  base <- if (is.symbol(rec$operand)) {
+    op
+  } else {
+    last <- rec$operand[[3L]]
+    if (is.symbol(last)) as.character(last)
+    else if (is.character(last)) last
+    else ""
+  }
+  col <- base
+  if (!nzchar(col) || !identical(make.names(col), col) ||
+      col %in% names(data)) {
+    stem <- if (nzchar(base) && identical(make.names(base), base)) base else "v"
+    k <- 2L
+    while (paste0(stem, k) %in% names(data)) k <- k + 1L
+    col <- paste0(stem, k)
+  }
+  if (!named || !identical(make.names(data_name), data_name)) {
+    return(list(lead = lead, lines = c(
+      lines, if (identical(col, op)) "Add it to the data frame first."
+             else "Add it to the data frame first, then name the column.")))
+  }
+  swap <- function(e) {
+    if (identical(e, rec$operand)) return(as.name(col))
+    if (is.call(e)) for (k in seq_along(e)) {
+      if (identical(as.list(e)[[k]], substitute())) next
+      e[[k]] <- swap(e[[k]])
+    }
+    e
+  }
+  call_line <- if (!is.null(call)) .jst_term_text(swap(call)) else NULL
+  intro <- if (identical(col, op)) {
+    "Add it to the data frame first:"
+  } else {
+    "Add it to the data frame first, then name the column:"
+  }
+  list(lead = lead, lines = c(
+    lines, intro,
+    paste0("  ", data_name, "$", col, " <- ", op),
+    if (!is.null(call_line)) paste0("  ", call_line)))
+}
+
+#' Internal helper: stop for a workspace object a formula reads as a
+#' variable
+#'
+#' The formula half of ruling R19 (\code{.jst_frame_object()}), shared by
+#' \code{.jst_check_formula_vars()} (jt, jaov, jlm, jlogistic) and the
+#' front doors of jcrosstab() and jplot()'s formula path, where it comes
+#' before the refusal of a computed term so a fetched object is named for
+#' what it is.
+#'
+#' @param formula The formula as typed.
+#' @param data The data frame (after the pipeline's filters, where they
+#'   have run).
+#' @param data_name Character; the data frame's name.
+#' @param enclos The environment the formula's other names resolve in.
+#' @param n_frame Integer or NULL; the frame's row count as given.
+#' @return Invisible NULL; stops when one is found.
+#' @keywords internal
+.jst_check_formula_objects <- function(formula, data, data_name,
+                                       enclos = NULL, n_frame = NULL) {
+  if (!is.data.frame(data)) return(invisible(NULL))
+  vars <- tryCatch(attr(stats::terms(formula), "variables"),
+                   error = function(e) NULL)
+  if (is.null(vars)) return(invisible(NULL))
+  if (is.null(enclos)) {
+    enclos <- environment(formula)
+    if (is.null(enclos)) enclos <- parent.frame()
+  }
+  if (is.null(n_frame)) n_frame <- nrow(data)
+  rec <- .jst_frame_object(as.list(vars)[-1L], data, enclos, n_frame)
+  if (is.null(rec)) return(invisible(NULL))
+  txt <- .jst_frame_object_text(rec, .jst_term_text(rec$term), data,
+                                data_name, n_frame, call = .jst_caller_call())
+  .jst_stop(paste(txt$lines, collapse = "\n"))
 }
 
 #' Internal helper: stop for a workspace vector that would be recycled
@@ -1696,10 +1951,15 @@
 #' The message for a \code{.jst_recycled_operand()} finding, shared by the
 #' formula front door (Session 324) and a filter condition typed in this
 #' call -- \code{jsubset()} at set time and \code{subset =} (Session 330).
-#' A vector with one value per row of the frame as given, which a filter has
-#' since cut down, gets the fix of adding it to the frame, where the filter
-#' reaches it; any other length gets the requirement. A stored filter has
-#' its own form, in \code{.jst_filter_mask()}.
+#' Since ruling R19 (Session 357) an object of one value per case stops
+#' before this is reached (\code{.jst_frame_object()}), so what is left is
+#' a length that is neither one nor one per case. A workspace object opens
+#' as R19's message does -- not in the data frame, a separate object -- and
+#' gets the requirement "Use a single value, or add the values to the data
+#' frame as a variable."; a vector written in the call (\code{c(1, 2, 3)},
+#' \code{1:5}) keeps "or one value for each case", which a vector written
+#' there may be. A stored filter has its own form, in
+#' \code{.jst_filter_mask()}.
 #'
 #' @param rec The \code{.jst_recycled_operand()} result.
 #' @param typed Character; what the user typed that holds the operand: the
@@ -1708,37 +1968,34 @@
 #' @param data_name Character or NULL; the data frame's name.
 #' @param n_frame Integer or NULL; the frame's row count before the
 #'   pipeline's filters. NULL is read as \code{n_rows}.
-#' @param tail Character; appended after the fix line (the set-time
+#' @param tail Character; appended after the requirement (the set-time
 #'   "earlier filter is unchanged" line).
-#' @param cut_by Character; what cut the frame, for the add-it-to-the-frame
-#'   form: \code{"filtering"} (a per-call condition behind the stored
-#'   settings) or \code{"jcomplete()"} (a \code{jsubset()} filter behind an
-#'   active \code{jcomplete()}, Session 331).
 #' @return Does not return; stops.
 #' @keywords internal
 .jst_recycled_stop <- function(rec, typed, n_rows, data_name = NULL,
-                               n_frame = NULL, tail = "",
-                               cut_by = "filtering") {
+                               n_frame = NULL, tail = "") {
   if (is.null(n_frame)) n_frame <- n_rows
   op   <- .jst_term_text(rec$operand)
-  lead <- paste0("In ", typed, ", ", op, " has ", rec$n, " values")
   cases <- function(k) paste0(k, if (k == 1L) " case" else " cases")
   frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
     paste0("the ", data_name, " data frame")
   } else {
     "the data frame"
   }
-  if (rec$n == n_frame && n_frame != n_rows) {
-    parts <- .jst_frame_vector_parts(rec, n_rows, data_name, cut_by)
-    .jst_stop("In ", typed, ", ", parts$reason, ".\n", parts$fix, tail)
-  }
   where <- if (n_frame != n_rows) {
     paste0("the ", cases(n_rows), " left after filtering")
   } else {
     paste0("the ", cases(n_rows), " in ", frame_ref)
   }
-  .jst_stop(lead, " for ", where, ".\n",
-            "Use a single value, or one value for each case.", tail)
+  if (is.symbol(rec$operand) || .jst_is_fetch(rec$operand)) {
+    .jst_stop("In ", typed, ", ", op, " is not in ", frame_ref,
+              "; it is a separate object in your workspace.\n",
+              "It has ", rec$n, " values for ", where, ".\n",
+              "Use a single value, or add the values to the data frame as ",
+              "a variable.", tail)
+  }
+  .jst_stop("In ", typed, ", ", op, " has ", rec$n, " values for ", where,
+            ".\n", "Use a single value, or one value for each case.", tail)
 }
 
 #' Internal helper: check a model formula's names as lm() reads them
@@ -1761,15 +2018,14 @@
 #' (\code{.jst_check_formula_frames()}). A formula \code{terms()} cannot
 #' process for any other reason falls back to \code{all.vars()}, unchanged.
 #'
-#' A third refusal follows them (Session 324, the second deliberate
-#' departure from \code{lm()} parity): a workspace vector with more than one
-#' value but not one per row of \code{data} -- the frame after its filters,
-#' before cases with missing values are set aside, the rows the resolver
-#' computes the term on -- used value by value inside a computed term
-#' (\code{.jst_formula_recycled()}). \code{lm()} recycles it. A vector with
-#' one value per row of the frame as given, which a filter has since cut
-#' down, gets the fix of adding it to the frame, where the filter reaches
-#' it; any other length gets the requirement.
+#' Two more follow them. Ruling R19 (Session 357, the third deliberate
+#' departure from \code{lm()} parity): a workspace object of one value per
+#' case read by a computed term -- one per row of the frame as given, or
+#' per case left after filtering -- stops with the line that adds it to the
+#' frame (\code{.jst_check_formula_objects()}). Then the recycling stop
+#' (Session 324, the second): a workspace vector with more than one value
+#' but not one per case, used value by value (\code{.jst_formula_recycled()};
+#' \code{lm()} recycles it), gets the requirement.
 #'
 #' @param formula The analysis formula as typed.
 #' @param data The analysis data frame (the post-pipeline copy).
@@ -1810,6 +2066,9 @@
   enclos <- environment(formula)
   if (is.null(enclos)) enclos <- parent.frame()
   .jst_check_formula_frames(formula, data, data_name, enclos = enclos)
+  # A workspace object standing in for a variable (ruling R19, Session 357).
+  .jst_check_formula_objects(formula, data, data_name, enclos = enclos,
+                             n_frame = n_frame)
 
   # A workspace vector recycled inside a computed term (Session 324).
   rec <- .jst_formula_recycled(formula, data, enclos)

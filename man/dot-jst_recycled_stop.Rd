@@ -10,8 +10,7 @@
   n_rows,
   data_name = NULL,
   n_frame = NULL,
-  tail = "",
-  cut_by = "filtering"
+  tail = ""
 )
 }
 \arguments{
@@ -27,13 +26,8 @@ computed term, the condition, or \code{subset = } and the condition.}
 \item{n_frame}{Integer or NULL; the frame's row count before the
 pipeline's filters. NULL is read as \code{n_rows}.}
 
-\item{tail}{Character; appended after the fix line (the set-time
+\item{tail}{Character; appended after the requirement (the set-time
 "earlier filter is unchanged" line).}
-
-\item{cut_by}{Character; what cut the frame, for the add-it-to-the-frame
-form: \code{"filtering"} (a per-call condition behind the stored
-settings) or \code{"jcomplete()"} (a \code{jsubset()} filter behind an
-active \code{jcomplete()}, Session 331).}
 }
 \value{
 Does not return; stops.
@@ -42,9 +36,14 @@ Does not return; stops.
 The message for a \code{.jst_recycled_operand()} finding, shared by the
 formula front door (Session 324) and a filter condition typed in this
 call -- \code{jsubset()} at set time and \code{subset =} (Session 330).
-A vector with one value per row of the frame as given, which a filter has
-since cut down, gets the fix of adding it to the frame, where the filter
-reaches it; any other length gets the requirement. A stored filter has
-its own form, in \code{.jst_filter_mask()}.
+Since ruling R19 (Session 357) an object of one value per case stops
+before this is reached (\code{.jst_frame_object()}), so what is left is
+a length that is neither one nor one per case. A workspace object opens
+as R19's message does -- not in the data frame, a separate object -- and
+gets the requirement "Use a single value, or add the values to the data
+frame as a variable."; a vector written in the call (\code{c(1, 2, 3)},
+\code{1:5}) keeps "or one value for each case", which a vector written
+there may be. A stored filter has its own form, in
+\code{.jst_filter_mask()}.
 }
 \keyword{internal}

@@ -477,51 +477,6 @@
                  list(message = text, call = NULL)))
 }
 
-#' Internal helper: a workspace vector holding one value per case of the frame
-#'
-#' Finds, in a filter condition, a workspace vector that holds one value for
-#' each case of the data frame AS GIVEN when the condition is about to run
-#' on fewer cases: behind an active \code{jcomplete()} (a stored
-#' \code{jsubset()} filter), or behind either stored setting (a per-call
-#' \code{subset =}). Such a vector lines up with the frame the user sees and
-#' with nothing the condition is evaluated on, and until Session 331 only
-#' the comparison of one with a labelled variable said so (the Session 330
-#' add-it-to-the-frame form, reached when the evaluation fails): compared
-#' with a plain variable, or with a constant (\code{keep12 == TRUE}), the
-#' result is simply too long, and the shape check answered "has 12 values
-#' for 11 rows" for a frame the user had removed nothing from. Asked BEFORE
-#' the evaluation, so every such condition gets the one message. The
-#' operand is looked up, never run (\code{.jst_recycled_operand()}'s rule);
-#' a bare name as the whole condition, which that walker does not visit, is
-#' looked up here.
-#'
-#' @param expr The unevaluated filter.
-#' @param data The data the filter is about to be evaluated on.
-#' @param envir The environment its other names resolve in.
-#' @param n_frame Integer or NULL. The frame's row count as given.
-#' @return NULL when the data has not been cut or there is no such vector;
-#'   otherwise a \code{.jst_recycled_operand()}-shaped list.
-#' @keywords internal
-.jst_frame_vector <- function(expr, data, envir, n_frame) {
-  if (is.null(n_frame) || n_frame == nrow(data)) return(NULL)
-  rec <- if (is.symbol(expr)) {
-    if (as.character(expr) %in% names(data)) {
-      NULL
-    } else {
-      val <- tryCatch(eval(expr, envir), error = function(e) NULL)
-      if (!is.null(val) && is.atomic(val) && length(val) > 1L) {
-        list(term = expr, operand = expr, n = length(val))
-      } else {
-        NULL
-      }
-    }
-  } else {
-    .jst_recycled_operand(list(expr), data, envir)
-  }
-  if (is.null(rec) || rec$n != n_frame) return(NULL)
-  rec
-}
-
 #' Internal helper: rows of a frame an active jcomplete() setting keeps
 #'
 #' The cases Step 1 of \code{.jst_apply_pipeline()} hands to a stored
@@ -648,11 +603,12 @@
 #' it never stops, and hands the reason back as the line "It cannot be
 #' applied: ..." (\code{.jst_filter_status_signal()}).
 #'
-#' Ahead of the evaluation, for every origin but \code{"set"}: a workspace
-#' vector holding one value per case of the frame as given, where the
-#' condition is about to run on fewer cases (\code{.jst_frame_vector()},
-#' Session 331) -- the add-it-to-the-frame fix. At set time the same test
-#' runs last, against \code{data_kept}.
+#' Ahead of the evaluation, for every origin: a workspace object standing
+#' in for a variable -- one value per case of the frame as given, or per
+#' case left after filtering -- read by the condition stops (ruling R19,
+#' Session 357; \code{.jst_frame_object()}), with the line that adds it to
+#' the frame where it can be added. At set time the same test runs again,
+#' against \code{data_kept}.
 #'
 #' @param expr The unevaluated filter (a language object).
 #' @param expr_str Character. The filter as typed.
@@ -668,9 +624,9 @@
 #'   frame; the message says it is unchanged.
 #' @param n_frame Integer or NULL. The frame's row count before the
 #'   pipeline's filters: it tells the recycling stop's two forms apart
-#'   (\code{"call"}), and lets a vector holding one value per case of the
-#'   frame as given be recognized when \code{data} has fewer cases
-#'   (\code{.jst_frame_vector()}; every origin but \code{"set"}).
+#'   (\code{"call"}), and lets an object holding one value per case of
+#'   the frame as given be recognized when \code{data} has fewer cases
+#'   (\code{.jst_frame_object()}).
 #' @param data_kept Data frame or NULL. For \code{"set"}: the frame as an
 #'   active \code{jcomplete()} will hand it to the filter
 #'   (\code{.jst_complete_kept()}); the same test, made once the filter has
@@ -727,24 +683,29 @@
     .jst_stop(stored_lead(), body, "\n", close)
   }
   typed <- if (origin == "call") paste0("subset = ", expr_str) else expr_str
-  # A workspace vector with one value per case of the frame as given, where
-  # the condition runs on fewer cases (S331): the add-it-to-the-frame fix.
+  # A workspace object standing in for a variable (ruling R19, Session
+  # 357): one value per case of the frame as given, or per case left after
+  # filtering, read by the condition. It stops at every origin -- set time
+  # included, where until S357 such a vector was accepted unless an active
+  # jcomplete() cut the frame (the S331 add-it line).
   frame_vector <- function(cut_data = data, n_given = n_frame) {
-    rec <- .jst_frame_vector(expr, cut_data, envir, n_given)
+    if (is.null(n_given)) n_given <- nrow(cut_data)
+    rec <- .jst_frame_object(list(expr), cut_data, envir, n_given,
+                             bare = TRUE)
     if (is.null(rec)) return(invisible(NULL))
-    cut_by <- if (origin == "call") "filtering" else "jcomplete()"
     if (is_stored) {
-      parts <- .jst_frame_vector_parts(rec, nrow(cut_data), data_name, cut_by)
+      txt <- .jst_frame_object_text(rec, NULL, cut_data, data_name, n_given)
       if (origin == "status") {
         .jst_filter_status_signal(paste0("It cannot be applied: ",
-                                         parts$reason, "."))
+                                         sub("\\.$", "", txt$lead), "."))
       }
-      .jst_stop(stored_lead(), ": ", parts$reason, ".\n",
+      .jst_stop(stored_lead(), ": ", txt$lead, "\n",
                 if (origin == "reactivate") "The filter stays off.\n",
-                parts$fix)
+                paste(txt$lines[-1L], collapse = "\n"))
     }
-    .jst_recycled_stop(rec, typed, nrow(cut_data), data_name,
-                       n_frame = n_given, tail = unchanged, cut_by = cut_by)
+    txt <- .jst_frame_object_text(rec, typed, cut_data, data_name, n_given,
+                                  call = .jst_caller_call())
+    .jst_stop(paste(txt$lines, collapse = "\n"), unchanged)
   }
   recycled <- function() {
     rec <- .jst_recycled_operand(list(expr), data, envir)
@@ -752,8 +713,14 @@
     if (is_stored) {
       # "cases" always: with one case left a longer vector gives a longer
       # result, and the shape check answers before this is reached.
-      stored_stop(paste0(.jst_term_text(rec$operand), " has ", rec$n,
-                         " values for ", n_rows, " cases"))
+      op <- .jst_term_text(rec$operand)
+      stored_stop(if (is.symbol(rec$operand) || .jst_is_fetch(rec$operand)) {
+        paste0(op, " is not in the ", data_name, " data frame; it is a ",
+               "separate object in your workspace, with ", rec$n,
+               " values for ", n_rows, " cases")
+      } else {
+        paste0(op, " has ", rec$n, " values for ", n_rows, " cases")
+      })
     }
     .jst_recycled_stop(rec, typed, n_rows, data_name,
                        n_frame = if (origin == "call") n_frame else NULL,

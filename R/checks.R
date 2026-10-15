@@ -2140,6 +2140,52 @@
     }
   }
 
+  # A condition reading another workspace object of one value per case
+  # (ruling R19, Session 357): the single vector is described on its own,
+  # and anything else goes into a data frame with it first. A column of a
+  # data frame is analyzed in its frame, where the filter's own check says
+  # so in the frame's words.
+  if (!is.null(subset_sub) && !isTRUE(wrapped$in_frame)) {
+    rec <- .jst_frame_object(list(subset_sub), wrapped$frame, user_env,
+                             bare = TRUE)
+    if (!is.null(rec)) {
+      sub_typed <- paste(deparse(subset_sub), collapse = " ")
+      op  <- .jst_term_text(rec$operand)
+      col <- if (is.symbol(rec$operand)) op else {
+        last <- rec$operand[[3L]]
+        if (is.symbol(last)) as.character(last)
+        else if (is.character(last)) last else "v"
+      }
+      if (!identical(make.names(col), col) || identical(col, var)) {
+        col <- paste0(if (identical(make.names(col), col)) col else "v", "2")
+      }
+      swap <- function(e) {
+        if (identical(e, rec$operand)) return(as.name(col))
+        if (is.call(e)) for (k in seq_along(e)) {
+          if (identical(as.list(e)[[k]], substitute())) next
+          e[[k]] <- swap(e[[k]])
+        }
+        e
+      }
+      lines <- if (computed) {
+        "Put them in a data frame first, each variable under a name."
+      } else {
+        pair <- if (identical(col, op)) paste0(var, ", ", op)
+                else paste0(var, ", ", col, " = ", op)
+        paste0("Put both in a data frame first:
+",
+               "  mydata <- data.frame(", pair, ")
+",
+               "  ", fn_name, "(mydata, ", var, ", subset = ",
+               .jst_term_text(swap(subset_sub)), ")")
+      }
+      .jst_stop("In subset = ", sub_typed, ", ", op,
+                " is a separate object in your workspace.\n",
+                "jstats analyzes the variables of a data frame.\n", lines,
+                fn = fn_name)
+    }
+  }
+
   env <- new.env(parent = user_env)
   assign(fn_name, fn, envir = env)
   # A column of a data frame is analyzed in that frame (Session 324), so its
