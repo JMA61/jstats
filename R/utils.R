@@ -3478,7 +3478,11 @@ jai <- function(setup = NULL, path = NULL) {
       cur <- c(cur, c1)
       if (c1 == q) q <- ""
     } else if (c1 %in% c("'", "\"") &&
-               !nzchar(trimws(paste(cur, collapse = "")))) {
+               (!nzchar(trimws(paste(cur, collapse = ""))) ||
+                grepl("=[ \t]*$", paste(cur, collapse = "")))) {
+      # A quotation mark opens a quoted word at the start of a word (the
+      # map side) or right after an equals sign (a quoted label; ruling
+      # R17, Session 356), so a semicolon inside either never cuts.
       q   <- c1
       cur <- c(cur, c1)
     } else if (c1 == ";") {

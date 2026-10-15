@@ -1936,7 +1936,7 @@
             bare <<- c(bare, as.character(a))
             if (op %in% cmp_ord) bare_ord <<- c(bare_ord, as.character(a))
           } else if (is.call(a)) {
-            nested <<- c(nested, all.vars(a))
+            nested <<- c(nested, .jst_expr_symbols(a))   # S356
           }
         }
         return(TRUE)
@@ -2106,7 +2106,12 @@
     # (Session 342, Jeff's ruling). The variables a comparison term names
     # that way are passed over; see .jst_comparison_exempt().
     cmp_exempt <- .jst_comparison_exempt(v, data)
-    for (vn in all.vars(v)) {
+    # The names the term READS (Session 356, ruling R18 (e)): all.vars()
+    # also listed the component after $, so jt(Score ~ .GlobalEnv$G, d)
+    # was refused for the frame's G -- a variable the term never touches
+    # -- with a registration offered that changed nothing about it. The
+    # object the term reads is checked by what it gives, below.
+    for (vn in .jst_expr_symbols(v)) {
       if (!vn %in% names(data)) next
       if (vn %in% cmp_exempt) next
       if (identical(.jst_jstats_class(data[[vn]], vn, data_name)$class,
@@ -3315,8 +3320,12 @@
   # attribute on the line after the parse; jdeclare_missing harvests it and drops
   # it at the same point it harvests the codes-side record.
 
-  rules <- trimws(strsplit(labels_str, ";")[[1]])
-  rules <- rules[nchar(rules) > 0]
+  # Ruling R17 (Jeff, Session 356): a label may be quoted, with either
+  # mark, right after its equals sign -- 9="Refused; not asked" -- and a
+  # semicolon or an equals sign inside the quotes is part of the label, as
+  # a quoted word is read on the map side. An unquoted label reads as it
+  # always did, a quotation mark partway through it included.
+  rules <- .jst_split_label_rules(labels_str)
 
   if (length(rules) == 0) {
     stop("The labels argument is empty. Provide at least one label, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
@@ -3337,7 +3346,7 @@
 
     eq_pos    <- regexpr("=", rule)[1]
     val_str   <- trimws(substr(rule, 1, eq_pos - 1))
-    label_str <- trimws(substr(rule, eq_pos + 1, nchar(rule)))
+    label_str <- .jst_unquote_label(substr(rule, eq_pos + 1, nchar(rule)))
 
     val_lower <- tolower(val_str)
 

@@ -60,7 +60,8 @@
 #' @param data A data frame, or a single variable: a column of a data frame
 #'   or a numeric vector.
 #' @param ... Unquoted variable names within \code{data}. None when
-#'   \code{data} is a single variable.
+#'   \code{data} is a single variable. A \code{c()} of names, bare
+#'   or quoted, is read as the names.
 #' @param by An optional unquoted grouping variable name. When provided,
 #'   descriptives are computed separately for each group, with a separate
 #'   titled table per dependent variable. Each table's \code{Total} is the
@@ -163,6 +164,11 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
                   numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, case.processing.detail = NULL,
                   digits = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 .jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                 "jdesc")
 
   digits_n <- .jst_resolve_digits(digits)
 
@@ -182,6 +188,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # checked here, not in the helper, so the detector reads jdesc's formals.
   if (arg1$mode == "vector_input") {
     wrapped    <- .jst_vector_frame(arg1)
+    wrapped    <- .jst_vector_collision(wrapped, parent.frame(), "jdesc")
     dots       <- rlang::enquos(...)
     .jst_check_named_variables(dots, wrapped$frame, "jdesc")
     subset_sub <- substitute(subset)
@@ -210,6 +217,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
   by_quo         <- rlang::enquo(by)
@@ -226,7 +234,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # Check all variables exist before any processing
   check_names <- variable_names
   if (!rlang::quo_is_null(by_quo)) {
-    check_names <- c(check_names, rlang::quo_name(by_quo))
+    check_names <- c(check_names, .jst_one_var_name(by_quo, "jdesc", "by ="))
   }
   .jst_check_vars(data, check_names, .jst_data_name, default_used = .jst_default_used)
 
@@ -308,7 +316,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
   # -- Grouped descriptives ---------------------------------------------------
   if (!rlang::quo_is_null(by_quo)) {
-    by_name <- rlang::quo_name(by_quo)
+    by_name <- .jst_one_var_name(by_quo, "jdesc", "by =")
 
     # The grouping variable cannot also be described (Session 316): the
     # column is converted to group labels below before the per-variable
@@ -574,6 +582,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   if (.jst_default_used) .jst_default_note(.jst_data_name,
                                          vars = variable_names,
                                          envir = parent.frame())
+  .jst_vector_note(data)   # the vector path's collision line (R18, S356)
 
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
@@ -864,7 +873,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' @param data A data frame, or a single variable: a column of a data frame
 #'   or a vector.
 #' @param ... Unquoted variable name(s) within \code{data}. None when
-#'   \code{data} is a single variable.
+#'   \code{data} is a single variable. A \code{c()} of names, bare
+#'   or quoted, is read as the names.
 #' @param subset An optional unquoted logical expression (e.g.
 #'   \code{Group == 1}) to subset cases for this call only. Applied after
 #'   jcomplete and jsubset. Does not affect other function calls.
@@ -946,6 +956,13 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                   value.id = NULL, missing.detail = NULL,
                   case.processing.detail = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                   list(missing.detail = .jst_word_spec(c("totals", "per_code",
+                                                          "all"), "a detail level"))),
+                 "jfreq")
 
   # Resolve the first argument: explicit data frame, juse default,
   # vector input, or bare-symbol-as-variable-name (leading comma omitted).
@@ -961,6 +978,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   # forwarding every argument (AUDIT-008; see jdesc and .jst_vector_recurse).
   if (arg1$mode == "vector_input") {
     wrapped    <- .jst_vector_frame(arg1)
+    wrapped    <- .jst_vector_collision(wrapped, parent.frame(), "jfreq")
     dots       <- rlang::enquos(...)
     .jst_check_named_variables(dots, wrapped$frame, "jfreq")
     subset_sub <- substitute(subset)
@@ -991,6 +1009,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   results <- list()
 
@@ -1030,6 +1049,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   .cat_red("Frequencies\n")
   if (.jst_default_used) .jst_default_note(.jst_data_name, vars = var_names_check,
                                          envir = parent.frame())
+  .jst_vector_note(data)   # the vector path's collision line (R18, S356)
 
   # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
   subset_expr <- substitute(subset)
@@ -1753,7 +1773,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #'   or a vector.
 #' @param ... Optional unquoted variable names to screen. If omitted,
 #'   all variables in the data frame are screened. None when \code{data} is
-#'   a single variable.
+#'   a single variable. A \code{c()} of names, bare
+#'   or quoted, is read as the names.
 #' @param outlier.sd Numeric. Number of standard deviations from the mean
 #'   to flag as potential outliers (Numeric-class variables only). Default
 #'   is 3.
@@ -1847,6 +1868,13 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL,
                     value.id = NULL, types = TRUE, issues = TRUE, r.type = FALSE,
                     stats = FALSE, digits = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id"),
+                   list(stats = .jst_word_spec(c("none", "mean", "median",
+                                                 "both"), "a statistic name"))),
+                 "jscreen")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(types, "types")
   .jst_check_flag(issues, "issues")
@@ -1901,6 +1929,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   # value.id has already stopped above, and stats is passed resolved.
   if (arg1$mode == "vector_input") {
     wrapped    <- .jst_vector_frame(arg1)
+    wrapped    <- .jst_vector_collision(wrapped, parent.frame(), "jscreen")
     dots       <- rlang::enquos(...)
     .jst_check_named_variables(dots, wrapped$frame, "jscreen")
     subset_sub <- substitute(subset)
@@ -1930,6 +1959,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   if (length(variables) > 0) {
     var_names <- vapply(variables, rlang::quo_name, character(1))
@@ -1941,6 +1971,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   if (.jst_default_used) .jst_default_note(.jst_data_name,
                       vars = if (length(variables) > 0) var_names else NULL,
                       envir = parent.frame())
+  .jst_vector_note(data)   # the vector path's collision line (R18, S356)
 
   # Apply data pipeline (jcomplete, jsubset, subset) to the WHOLE frame, and
   # only then narrow to the named variables. Narrowing first (before S317)

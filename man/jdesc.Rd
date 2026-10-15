@@ -23,7 +23,8 @@ jdesc(
 or a numeric vector.}
 
 \item{...}{Unquoted variable names within \code{data}. None when
-\code{data} is a single variable.}
+\code{data} is a single variable. A \code{c()} of names, bare
+or quoted, is read as the names.}
 
 \item{by}{An optional unquoted grouping variable name. When provided,
 descriptives are computed separately for each group, with a separate

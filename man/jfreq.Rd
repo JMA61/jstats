@@ -19,7 +19,8 @@ jfreq(
 or a vector.}
 
 \item{...}{Unquoted variable name(s) within \code{data}. None when
-\code{data} is a single variable.}
+\code{data} is a single variable. A \code{c()} of names, bare
+or quoted, is read as the names.}
 
 \item{subset}{An optional unquoted logical expression (e.g.
 \code{Group == 1}) to subset cases for this call only. Applied after

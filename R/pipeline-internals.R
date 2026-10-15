@@ -2558,14 +2558,141 @@
 #' into a printed string escapes it with this (Session 355), as the map
 #' builders escape a quoted word (S249): a backslash doubled, then each
 #' quotation mark preceded by one. The label the line gives is the label
-#' as it was. (A label holding a semicolon cannot be written in a labels
-#' string at all: ruling R17, owed.)
+#' as it was. A label holding a semicolon is quoted first, by
+#' \code{.jst_label_text()} (ruling R17, Session 356).
 #'
 #' @param x Character.
 #' @return Character, the same length.
 #' @keywords internal
 .jst_dq_escape <- function(x) {
   gsub("\"", "\\\"", gsub("\\", "\\\\", x, fixed = TRUE), fixed = TRUE)
+}
+
+#' Internal helper: the rules of a labels string, read quote-aware
+#'
+#' Ruling R17 (Jeff, Session 356). A labels string is split after the
+#' semicolons between its rules; a semicolon inside a quoted label -- a
+#' quotation mark of either kind right after a rule's equals sign, closed
+#' by the same mark -- does not split. Until then
+#' \code{.jst_parse_labels()} split on every semicolon, so a label such as
+#' "Refused; not asked" could be written in no labels string, by the user
+#' or by a line the package offered (the S353 item). The rules come
+#' trimmed, empty ones dropped, the quotation marks still in place for
+#' \code{.jst_unquote_label()}. A quote opened and never closed stops.
+#'
+#' @param labels_str Character(1).
+#' @return Character; the rules.
+#' @keywords internal
+.jst_split_label_rules <- function(labels_str) {
+  chars <- strsplit(labels_str, "", fixed = TRUE)[[1]]
+  out   <- character(0)
+  cur   <- character(0)
+  q     <- ""
+  for (ch in chars) {
+    if (nzchar(q)) {
+      cur <- c(cur, ch)
+      if (identical(ch, q)) q <- ""
+    } else if (ch %in% c("\"", "'") &&
+               grepl("=[ \t]*$", paste(cur, collapse = ""))) {
+      q   <- ch
+      cur <- c(cur, ch)
+    } else if (identical(ch, ";")) {
+      out <- c(out, paste(cur, collapse = ""))
+      cur <- character(0)
+    } else {
+      cur <- c(cur, ch)
+    }
+  }
+  if (nzchar(q)) {
+    stop(paste0("Unbalanced quotation mark in the labels argument. A ",
+                "quoted label must open and close with the same mark, as ",
+                "in 9=\"Refused; not asked\"."), call. = FALSE)
+  }
+  out <- trimws(c(out, paste(cur, collapse = "")))
+  out[nzchar(out)]
+}
+
+#' @rdname dot-jst_split_label_rules
+#' @param label_str Character(1): the text after a rule's equals sign.
+#' @return For \code{.jst_unquote_label()}: the label, its enclosing
+#'   quotation marks removed when the trimmed text opens and closes with
+#'   the same mark; otherwise the trimmed text as it is.
+#' @keywords internal
+.jst_unquote_label <- function(label_str) {
+  s <- trimws(label_str)
+  n <- nchar(s)
+  if (n >= 2L) {
+    a <- substr(s, 1L, 1L); z <- substr(s, n, n)
+    if ((a == "\"" && z == "\"") || (a == "'" && z == "'")) {
+      return(trimws(substr(s, 2L, n - 1L)))
+    }
+  }
+  s
+}
+
+#' Internal helper: a label as a printed labels string carries it
+#'
+#' Ruling R17 (Jeff, Session 356). Every line the package offers with a
+#' \code{labels = "..."} string writes each label through this: quoted,
+#' with the mark the label does not hold, when it holds a semicolon or
+#' opens with a quotation mark (the parser would read either wrongly
+#' unquoted), and otherwise as it is; then escaped for the R string
+#' literal it sits in (\code{.jst_dq_escape()}). A label that holds a
+#' semicolon and both marks, or opens with a mark and holds the other,
+#' can be written in no labels string: \code{NA}, which the builder leaves
+#' out, saying so.
+#'
+#' @param x Character.
+#' @return Character, the same length; \code{NA} where a label cannot be
+#'   written.
+#' @keywords internal
+.jst_label_text <- function(x) {
+  vapply(x, function(lab) {
+    if (is.na(lab)) return(NA_character_)
+    needs <- grepl(";", lab, fixed = TRUE) || grepl("^[\"']", lab)
+    if (!needs) return(.jst_dq_escape(lab))
+    has_dq <- grepl("\"", lab, fixed = TRUE)
+    has_sq <- grepl("'", lab, fixed = TRUE)
+    if (!has_dq) return(paste0("\\\"", .jst_dq_escape(lab), "\\\""))
+    if (!has_sq) return(paste0("'", .jst_dq_escape(lab), "'"))
+    NA_character_
+  }, character(1), USE.NAMES = FALSE)
+}
+
+#' Internal helper: the labels = argument of an offered line
+#'
+#' Builds \code{, labels = "..."} from parallel left sides and labels,
+#' each label through \code{.jst_label_text()} (ruling R17, Session 356),
+#' and the sentence that names any label the string cannot carry, which
+#' the caller prints after the line. An empty or missing label gets no
+#' rule; with no rule left the argument is empty.
+#'
+#' @param lhs Character; the left sides (".b", "0").
+#' @param labels Character; the labels, parallel to \code{lhs}.
+#' @return A list: \code{arg}, the argument text or ""; \code{note}, the
+#'   sentence or "".
+#' @keywords internal
+.jst_labels_arg <- function(lhs, labels) {
+  keep <- !is.na(labels) & nzchar(labels)
+  lhs  <- lhs[keep]
+  labs <- labels[keep]
+  txt  <- .jst_label_text(labs)
+  ok   <- !is.na(txt)
+  arg  <- if (any(ok)) {
+    paste0(", labels = \"", paste0(lhs[ok], "=", txt[ok], collapse = "; "),
+           "\"")
+  } else ""
+  note <- if (any(!ok)) {
+    bad <- labs[!ok]
+    # Quoted with the mark the label lacks; with both, bare.
+    q   <- ifelse(!grepl("\"", bad, fixed = TRUE), "\"",
+                  ifelse(!grepl("'", bad, fixed = TRUE), "'", ""))
+    paste0(if (length(bad) == 1L) "The label " else "The labels ",
+           .jst_and_list(paste0(q, bad, q)),
+           " cannot be written in a labels string, so the line leaves ",
+           if (length(bad) == 1L) "it" else "them", " out.")
+  } else ""
+  list(arg = arg, note = note)
 }
 
 #' Internal helper: user-facing style label for a UDM convention

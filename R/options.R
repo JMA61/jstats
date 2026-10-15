@@ -292,6 +292,17 @@ joutput <- function(level, effect.size = NULL,
                     variable.id = NULL, value.id = NULL,
                     ref.categories = NULL, missing.notice = NULL,
                     digits = NULL, quiet = FALSE) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "value.id",
+                                   "case.processing.detail", "diagnostics"),
+                   list(level = .jst_word_spec(c("minimal", "standard", "full",
+                                                 .jst_output_toggle_names),
+                                               "a level or setting name"),
+                        case.processing.filter = .jst_word_spec(
+                          c("auto", "list", "collapse"), "a row form"))),
+                 "joutput")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(quiet, "quiet")
@@ -1127,6 +1138,21 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                      data.dir = NULL, corr.layout = NULL,
                      missing.detail = NULL, message.width = NULL,
                      quiet = FALSE) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 list(missing.convention = .jst_word_spec(c("none", "spss", "stata",
+                                                           "sas"),
+                                                         "a convention name",
+                                                         name_it = TRUE),
+                      corr.layout    = .jst_word_spec(c("wide", "stacked"),
+                                                      "a layout name"),
+                      missing.detail = .jst_word_spec(c("totals", "per_code",
+                                                        "all"), "a detail level")),
+                 "joptions")
+  # A folder typed bare in data.dir = (the same ruling).
+  .jst_free_text_arg(substitute(data.dir), parent.frame(), sys.call(),
+                     match.call(), "data.dir", "a folder name", "joptions")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(quiet, "quiet")
 
@@ -1479,6 +1505,9 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
 #' }
 #' @export
 jdata_dir <- function(default = ".") {
+  # A folder typed bare (ruling R18, Session 356).
+  .jst_free_text_arg(substitute(default), parent.frame(), sys.call(),
+                     match.call(), "default", "a folder name", "jdata_dir")
   dir <- getOption(".jst_options_data_dir", .jst_options_defaults$data.dir)
   if (is.null(dir)) default else dir
 }

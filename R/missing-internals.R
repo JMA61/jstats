@@ -690,14 +690,14 @@
   free  <- .jst_free_tags(used, conv, length(codes))
   if (length(free) < length(codes)) return(NULL)
   fmt   <- function(v) format(v, trim = TRUE, scientific = FALSE)
-  lab   <- if (!is.null(labels) && any(nzchar(labels))) {
-    paste0(", labels = \"",
-           paste0(".", free[nzchar(labels)], "=",
-                  .jst_dq_escape(labels[nzchar(labels)]),     # S355
-                  collapse = "; "), "\"")
-  } else ""
+  # Each label through the labels-string renderer (ruling R17, S356): a
+  # label holding a semicolon is quoted; one no string can carry is left
+  # out, with the sentence that says so after the line.
+  lab   <- if (!is.null(labels)) .jst_labels_arg(paste0(".", free), labels) else
+    list(arg = "", note = "")
   paste0("  ", data_name, "$", var_name, "R <- jrecode(", data_name, ", ",
          var_name, ", map = \"",
          paste0(fmt(codes), "=.", free, collapse = "; "), "; else=copy\"",
-         lab, .jst_marker_conv_arg(conv), ")")
+         lab$arg, .jst_marker_conv_arg(conv), ")",
+         if (nzchar(lab$note)) paste0("\n", lab$note) else "")
 }

@@ -213,6 +213,28 @@ jplot <- function(x, which = "core", ...) {
   # refuses it, and forcing it first printed a tibble's "Unknown or
   # uninitialised column" warning ahead of that stop. It takes route 3.
   mc       <- match.call(expand.dots = TRUE)
+  # A bare word where a quoted value goes (ruling R18, Session 356), before
+  # anything is evaluated. `which` is read only when the user named it:
+  # jplot(Region, Volunteer) binds a second variable to it by position.
+  .jst_word_args(sys.call(), mc, parent.frame(),
+                 c(if (!is.null(names(sys.call())) &&
+                       "which" %in% names(sys.call()))
+                     list(which = .jst_word_spec(
+                       c("core", "all", "fit", "predicted", "effects", "coef",
+                         "vif", "residuals", "qq", "scale", "cooks",
+                         "leverage", "probability", "roc", "calibration",
+                         "binned", "box", "heatmap", "scatter", "bar"),
+                       "a plot name")),
+                   list(type = .jst_word_spec(c("histogram", "bar", "scatter",
+                                                "box", "grouped_bar"),
+                                              "a plot type"),
+                        line = .jst_word_spec(c("lm", "loess", "connect"),
+                                              "a line type"),
+                        band = .jst_word_spec(c("ci", "pi", "see", "none"),
+                                              "a band type"),
+                        at   = .jst_word_spec(c("zero", "mean", "mixed"),
+                                              "a choice"))),
+                 "jplot")
   has_data <- "data" %in% names(mc)
   x_col    <- !missing(x) &&
                 !is.null(.jst_frame_column(substitute(x), parent.frame()))
@@ -335,11 +357,12 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
   by_quo         <- rlang::enquo(by)
   has_by         <- !rlang::quo_is_null(by_quo)
-  by_name        <- if (has_by) rlang::quo_name(by_quo) else NULL
+  by_name        <- if (has_by) .jst_one_var_name(by_quo, "jplot", "by =") else NULL
 
   n_vars <- length(variable_names)
   if (n_vars == 0) {
@@ -664,6 +687,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                                parent_env) {
 
   # -- Parse formula ---------------------------------------------------------
+  .jst_formula_quoted_stop(formula, jplot_call, "jplot")   # R18, S356
   formula_vars <- all.vars(formula)
   if (length(formula) < 3) {
     .jst_stop("A two-sided formula is required: DV ~ IV.\n",

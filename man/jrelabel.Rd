@@ -9,11 +9,16 @@ jrelabel(data, var, labels = NULL, var.label = NULL)
 \arguments{
 \item{data}{A data frame containing the variable.}
 
-\item{var}{The variable to label (unquoted, e.g. \code{StatusR}).}
+\item{var}{The variable to label (unquoted, e.g. \code{StatusR}; a
+quoted name is accepted).}
 
 \item{labels}{Optional. A quoted string specifying value labels using the
 format \code{"code=Label Text"} with rules separated by semicolons.
 Accepted on haven-labelled, plain numeric, and logical variables only.
+A label may be written in quotes, with either mark, right after its
+equals sign, and a semicolon inside the quotes is then part of the
+label: \code{"1=Yes; 9=\"Refused; not asked\""}. An unquoted label
+reads as it is written.
 
 Examples:
 \itemize{

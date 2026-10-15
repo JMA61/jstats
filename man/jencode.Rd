@@ -10,7 +10,8 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
 \item{data}{A data frame containing the variable to encode. Can be
 omitted if a default data frame has been set with \code{juse()}.}
 
-\item{var}{The text or factor variable to encode (unquoted name).
+\item{var}{The text or factor variable to encode (unquoted name; a
+quoted name is accepted).
 Character variables and factors are accepted; numeric, logical, and
 date/time variables are refused with a message naming the right tool
 (for numeric variables, that is \code{jrecode()}).}
@@ -54,7 +55,11 @@ the remainder deliberately, and the note then names the words it swept.}
 example \code{"1=Low; 2=Medium; 3=High"}. If omitted, each word
 becomes the label of its own code. When several words collapse to one
 code, no label can be chosen automatically and a note directs you
-here or to \code{jrelabel()}.}
+here or to \code{jrelabel()}.
+A label may be written in quotes, with either mark, right after its
+equals sign, and a semicolon inside the quotes is then part of the
+label: \code{"1=Yes; 9=\"Refused; not asked\""}. An unquoted label
+reads as it is written.}
 
 \item{convention}{Optional. One of \code{"spss"}, \code{"stata"},
 \code{"sas"}, or \code{NULL} (default); any capitalization is

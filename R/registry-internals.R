@@ -1395,6 +1395,14 @@
       ref_idx <- which(code_as_str == ref)
     }
     if (length(ref_idx) == 0) {
+      # A label matched without regard to case (Session 356): the pointer
+      # for a category typed bare prints it as typed, and the line must
+      # run; a match is taken only when it is one category.
+      cands <- which(tolower(raw_labels) == tolower(ref) |
+                     tolower(final_labels) == tolower(ref))
+      if (length(cands) == 1L) ref_idx <- cands
+    }
+    if (length(ref_idx) == 0) {
       .jst_stop("Reference '", ref, "' not found in '", var_name,
            "'. Available labels: ", paste(final_labels, collapse = ", "))
     }

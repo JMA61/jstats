@@ -179,6 +179,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                subset = NULL, variable.id = NULL, value.id = NULL,
                case.processing.detail = NULL, full = FALSE, digits = NULL,
                ...) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                   list(diagnostics = .jst_word_spec(.jst_diagnostic_sets$jt,
+                                                     "a diagnostic name"))),
+                 "jt")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(paired, "paired")
@@ -902,6 +909,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                  subset = NULL, variable.id = NULL, value.id = NULL,
                  case.processing.detail = NULL, full = FALSE, digits = NULL,
                  ...) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                   list(diagnostics = .jst_word_spec(.jst_diagnostic_sets$jaov,
+                                                     "a diagnostic name"))),
+                 "jaov")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(welch, "welch")
@@ -1731,6 +1745,13 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                       subset = NULL,
                       variable.id = NULL, value.id = NULL,
                       case.processing.detail = NULL, digits = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                   list(residuals = .jst_word_spec(c("none", "adjusted"),
+                                                   "a residual type"))),
+                 "jcrosstab")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(chisq, "chisq")
   .jst_check_flag(expected, "expected")

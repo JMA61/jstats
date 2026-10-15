@@ -200,6 +200,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     quos_list <- c(list(extra_quo), quos_list)
     class(quos_list) <- "quosures"
   }
+  quos_list <- .jst_expand_vars(quos_list)   # c() of names (ruling R18, S356)
 
   resolved    <- .jst_resolve_varrange(quos_list, data, "jsum", .jst_data_name,
                                        default_used = .jst_default_used)
@@ -475,6 +476,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     quos_list <- c(list(extra_quo), quos_list)
     class(quos_list) <- "quosures"
   }
+  quos_list <- .jst_expand_vars(quos_list)   # c() of names (ruling R18, S356)
 
   resolved    <- .jst_resolve_varrange(quos_list, data, "javg", .jst_data_name,
                                        default_used = .jst_default_used)

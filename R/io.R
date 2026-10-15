@@ -274,6 +274,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     .jst_jload_file_value(file_sub, file)
   }
+  # The name a loaded data frame is given, and a sheet name, typed bare
+  # (ruling R18, Session 356): jload("f.rds", name = mydata) met R's
+  # "object 'mydata' not found". Read before either is forced.
+  .jst_free_text_arg(substitute(name), parent.frame(), sys.call(),
+                     match.call(), "name", "a name", "jload")
+  .jst_free_text_arg(substitute(sheet), parent.frame(), sys.call(),
+                     match.call(), "sheet", "a sheet name", "jload")
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
     .jst_stop("Provide a filename, e.g. jload(\"mydata.sav\")")

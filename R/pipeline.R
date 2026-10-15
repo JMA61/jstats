@@ -72,6 +72,11 @@ juse <- function(data) {
 
   # Check it exists and is a data frame.
   calling_env <- parent.frame()
+  # juse("d") (ruling R18, Session 356): the name without its quotes.
+  if (is.character(data_sub) && length(data_sub) == 1L && !is.na(data_sub)) {
+    .jst_quoted_frame_stop(data_sub, list(value = data_sub, failed = FALSE),
+                           "juse", calling_env, cl = sys.call())
+  }
   if (!exists(data_name, envir = calling_env)) {
     .jst_stop(paste0(data_name, " not found."))
   }
@@ -1453,6 +1458,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -1731,6 +1737,12 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
 jdummy <- function(data, ..., ref = "auto", show = FALSE,
                    remove = FALSE, clear.all = FALSE,
                    max.categories = 20L) {
+  # A category typed bare in ref = (ruling R18, Session 356): the
+  # categories are the variable's own, so the test is the free-text one,
+  # a bare symbol that resolves to nothing. Before ref is forced.
+  .jst_free_text_arg(substitute(ref), parent.frame(), sys.call(),
+                     match.call(expand.dots = TRUE), "ref",
+                     "a category's code or label", "jdummy")
   # Validate flags up front. `show` is a hybrid: TRUE/FALSE, or "all"
   # (any case) for the untruncated coding scheme.
   .jst_check_flag(remove, "remove")
@@ -1890,6 +1902,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
   var_names <- if (length(variables) > 0L) {
     unname(vapply(variables, rlang::quo_name, character(1)))
   } else {
@@ -2239,6 +2252,7 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
   # jnumeric(data, NULL): clear this frame's numeric registrations (mirrors
   # jdummy(data, NULL); the lone NULL sits in the variable slot).
   if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
@@ -2359,6 +2373,7 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
   # jcount(data, NULL): clear this frame's count registrations.
   if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
     return(.jst_handle_clear("count", explicit_frame = data_name))
@@ -2490,6 +2505,7 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
   # jlikert(data, NULL): clear this frame's Likert registrations.
   if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
     return(.jst_handle_clear("likert", explicit_frame = data_name))

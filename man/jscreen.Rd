@@ -24,7 +24,8 @@ or a vector.}
 
 \item{...}{Optional unquoted variable names to screen. If omitted,
 all variables in the data frame are screened. None when \code{data} is
-a single variable.}
+a single variable. A \code{c()} of names, bare
+or quoted, is read as the names.}
 
 \item{outlier.sd}{Numeric. Number of standard deviations from the mean
 to flag as potential outliers (Numeric-class variables only). Default

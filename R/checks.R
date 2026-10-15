@@ -30,9 +30,11 @@
   # -- First: confirm `data` is actually a data frame ----------------------
   if (!is.data.frame(data)) {
     if (is.character(data) && length(data) == 1) {
+      # Ruling R18's sentence (Session 356); the front doors give the
+      # call as typed with it when the string names a data frame.
       .jst_stop(
-        "'", data, "' (passed as a character string) is not a data frame. ",
-        "Remove the quotes -- e.g., ", data, " instead of \"", data, "\"."
+        "\"", data, "\" is in quotes.\n",
+        "A data frame's name goes without them."
       )
     }
     if (is.null(data)) {
@@ -138,6 +140,8 @@
                                     example, fn) {
 
   if (inherits(formula, "formula")) {
+    # A variable in quotes inside the formula (ruling R18, Session 356).
+    .jst_formula_quoted_stop(formula, sys.call(sys.parent()), fn)
     # Formula slot is fine. If data was supplied but is NULL, fail fast with
     # a clear message: the caller collapses a missing data argument to NULL
     # too, but only a SUPPLIED data argument carries a data_name, so
@@ -159,6 +163,13 @@
         "Rebuild or reload '", data_name, "', then rerun.",
         fn = fn
       )
+    }
+    # A data frame's name in quotes (ruling R18, Session 356): the call as
+    # typed without them, when the string names a data frame the caller
+    # can see.
+    if (is.character(data) && length(data) == 1L && !is.na(data)) {
+      .jst_quoted_frame_stop(data, list(value = data, failed = FALSE), fn,
+                             parent.frame(2L), cl = sys.call(sys.parent()))
     }
     # If data was supplied but is not a data frame, fail fast with
     # .jst_check_vars's existing data-frame messages instead of crashing
@@ -927,6 +938,522 @@
   .jst_check_args(quos[nms %in% named], aliases = character(0), fn_name)
 }
 
+#' Internal helper: the vector path's collision with a data frame's variable
+#'
+#' Ruling R18 (Session 355; built Session 356), ruling R12's other half.
+#' \code{jdesc(Age)} with no data frame named and none set -- or a default
+#' that has no Age -- reads the workspace object Age and says nothing,
+#' while a data frame in the workspace holds the variable the user may
+#' have meant. When the expression read is a name (\code{Age},
+#' \code{(Age)}, \code{.GlobalEnv$Age}) and a data frame the caller can
+#' see has a variable of that name, a note is attached to the one-column
+#' frame the re-call analyzes, and \code{.jst_vector_note()} prints it
+#' under the title: which object was read, and the call that reads the
+#' variable, naming the one frame that has it, or MyData when several
+#' do. A copy of the column is read as it is: the frame's stored
+#' settings and registrations do not reach a copy. Declined (Jeff, S355):
+#' a scan at load time; a note on every vector analysis.
+#'
+#' @param wrapped The \code{.jst_vector_frame()} result.
+#' @param envir The caller's environment.
+#' @param fn_name Character(1); the user-facing function's name.
+#' @return \code{wrapped}, its frame carrying the note when one applies.
+#' @keywords internal
+.jst_vector_collision <- function(wrapped, envir, fn_name) {
+  if (isTRUE(wrapped$in_frame)) return(wrapped)
+  e  <- wrapped$expr
+  nm <- NULL
+  repeat {
+    if (is.symbol(e)) { nm <- as.character(e); break }
+    if (is.call(e) && is.symbol(e[[1L]])) {
+      h <- as.character(e[[1L]])
+      if (h == "(" && length(e) == 2L) { e <- e[[2L]]; next }
+      if (h %in% c("$", "[[") && length(e) == 3L) {
+        holder <- tryCatch(eval(e[[2L]], envir = envir), error = function(err) NULL)
+        part   <- e[[3L]]
+        if (is.environment(holder) && identical(holder, globalenv()) &&
+            (is.symbol(part) || (is.character(part) && length(part) == 1L))) {
+          nm <- as.character(part)
+        }
+      }
+    }
+    break
+  }
+  if (is.null(nm) || !nzchar(nm)) return(wrapped)
+  frames <- .jst_frames_holding(nm, envir)
+  if (length(frames) == 0L) return(wrapped)
+  attr(wrapped$frame, ".jst_vector_note") <-
+    list(var = nm, frames = frames, fn = fn_name)
+  wrapped
+}
+
+#' @rdname dot-jst_vector_collision
+#' @param data The data frame the re-call received.
+#' @keywords internal
+.jst_vector_note <- function(data) {
+  note <- attr(data, ".jst_vector_note", exact = TRUE)
+  if (is.null(note)) return(invisible(NULL))
+  fr   <- note$frames
+  line <- paste0(note$var, " is a separate object in your workspace, not ",
+                 "the variable in ", .jst_or_list(fr), ".")
+  .cat_yellow(.jst_wrap_message(line))
+  cat("\n")
+  .cat_yellow(.jst_wrap_message(paste0(
+    "To analyze the variable, name the data frame:\n",
+    "  ", note$fn, "(", if (length(fr) == 1L) fr else "MyData", ", ",
+    note$var, ")")))
+  cat("\n")
+  invisible(NULL)
+}
+
+#' Internal helper: the names a c() of names holds
+#'
+#' A call \code{c(Age, "Score")} whose items are all bare names or strings
+#' (ruling R18, Session 356) gives their names; anything else gives NULL.
+#'
+#' @param e A language object.
+#' @return Character, or NULL.
+#' @keywords internal
+.jst_c_of_names <- function(e) {
+  if (!(is.call(e) && is.symbol(e[[1L]]) &&
+        identical(as.character(e[[1L]]), "c") && length(e) > 1L)) return(NULL)
+  items <- as.list(e)[-1L]
+  if (!is.null(names(items))) return(NULL)
+  ok <- vapply(items, function(a) (is.symbol(a) && nzchar(as.character(a))) ||
+                 (is.character(a) && length(a) == 1L && !is.na(a)), logical(1))
+  if (!all(ok)) return(NULL)
+  vapply(items, as.character, character(1))
+}
+
+#' Internal helper: the data frames in the workspace that hold a variable
+#'
+#' Walks from \code{envir} to the global environment, as
+#' \code{.jst_loose_twins()} does, and names every data frame (a tibble
+#' and an sf frame are data frames) that has every one of \code{vars} as a
+#' column. Objects a package supplies are not seen: the walk stops at the
+#' global environment. Ruling R18 (Session 356): the vector-path line and
+#' the fix lines that named MyData read this.
+#'
+#' @param vars Character; variable names.
+#' @param envir The caller's environment.
+#' @return Character; the frames' names, sorted; empty when none. A
+#'   hidden object (a name starting with a dot) is not seen.
+#' @keywords internal
+.jst_frames_holding <- function(vars, envir) {
+  out <- character(0)
+  e   <- envir
+  repeat {
+    if (isNamespace(e) || identical(e, baseenv()) || identical(e, emptyenv()))
+      break
+    for (nm in ls(e, all.names = FALSE)) {
+      if (nm %in% out) next
+      obj <- tryCatch(get(nm, envir = e, inherits = FALSE),
+                      error = function(err) NULL)
+      if (is.data.frame(obj) && all(vars %in% names(obj))) out <- c(out, nm)
+    }
+    if (identical(e, globalenv())) break
+    e <- parent.env(e)
+  }
+  sort(out)
+}
+
+#' @rdname dot-jst_frames_holding
+#' @return For \code{.jst_frame_holding()}: the one frame's name, or NULL
+#'   when none or several hold the variables.
+#' @keywords internal
+.jst_frame_holding <- function(vars, envir) {
+  fr <- .jst_frames_holding(vars, envir)
+  if (length(fr) == 1L) fr else NULL
+}
+
+#' Internal helper: a data frame's name typed in quotes where the frame goes
+#'
+#' Ruling R18 (Session 356): \code{jdesc("d", Age)}, \code{jsave("d",
+#' "f.rds")}, \code{juse("d")}. When the string names a data frame in the
+#' caller's workspace, the stop gives the call as typed without the
+#' quotes; the formula functions' front door says the same of
+#' \code{jt(Score ~ Gender, "d")}. Any other string is left to the caller.
+#'
+#' @param data_sub The first argument as typed.
+#' @param eval_result Its evaluation, \code{list(value, failed)}.
+#' @param fn_name Character(1); the user-facing function's name.
+#' @param envir The caller's environment.
+#' @param cl The caller's call, as typed.
+#' @return Invisible NULL; stops on a quoted frame name.
+#' @keywords internal
+.jst_quoted_frame_stop <- function(data_sub, eval_result, fn_name, envir, cl) {
+  if (!(is.character(data_sub) && length(data_sub) == 1L && !is.na(data_sub)))
+    return(invisible(NULL))
+  if (eval_result$failed) return(invisible(NULL))
+  nm <- data_sub
+  if (!exists(nm, envir = envir)) return(invisible(NULL))
+  obj <- tryCatch(get(nm, envir = envir), error = function(e) NULL)
+  if (!is.data.frame(obj)) return(invisible(NULL))
+  items <- as.list(cl)
+  items[[1L]] <- as.name(fn_name)   # the user-facing name, never a method's
+  for (i in seq_along(items)[-1L]) {
+    if (identical(items[[i]], data_sub)) { items[[i]] <- as.name(nm); break }
+  }
+  .jst_stop("\"", nm, "\" is in quotes.\n",
+            "A data frame's name goes without them:\n",
+            "  ", .jst_term_text(as.call(items)), fn = fn_name)
+}
+
+#' Internal helper: a variable named in quotes inside a formula
+#'
+#' \code{jt(Score ~ "Gender", d)} printed its title and stopped on R's
+#' "missing value where TRUE/FALSE needed"; \code{jlm(Score ~ Age +
+#' "Region", d)} on "invalid model formula in ExtractVars"; the plot form
+#' said NA was not found (ruling R18, Session 355; built Session 356). A
+#' string standing as a term -- an operand of the formula's own operators,
+#' \code{~ + - * : / | ^} and parentheses -- is the sibling of "The
+#' formula should not be in quotes": the stop names the first such term
+#' and gives the call as typed with every quoted term's quotes removed. A
+#' string inside a computed term (\code{I(Source == "web")}) is R code and
+#' is left alone.
+#'
+#' @param formula The formula.
+#' @param cl The call as typed, for the line.
+#' @param fn Character(1); the user-facing function's name.
+#' @return Invisible NULL; stops when a quoted term is found.
+#' @keywords internal
+.jst_formula_quoted_stop <- function(formula, cl, fn) {
+  ops   <- c("~", "+", "-", "*", ":", "/", "|", "^", "(")
+  found <- character(0)
+  fix <- function(e) {
+    if (is.character(e) && length(e) == 1L && !is.na(e)) {
+      found <<- c(found, e)
+      return(as.name(e))
+    }
+    if (is.call(e) && is.symbol(e[[1L]]) && as.character(e[[1L]]) %in% ops) {
+      for (k in seq_along(e)[-1L]) e[[k]] <- fix(e[[k]])
+    }
+    e
+  }
+  fixed <- fix(formula)
+  if (length(found) == 0L) return(invisible(NULL))
+  # The formula's place in the call: the first element that is a formula
+  # as typed, else the first positional element.
+  items <- as.list(cl)
+  at <- 0L
+  for (i in seq_along(items)[-1L]) {
+    it <- items[[i]]
+    if (is.call(it) && is.symbol(it[[1L]]) && identical(as.character(it[[1L]]), "~")) {
+      at <- i; break
+    }
+  }
+  if (at == 0L) {
+    cn <- names(items)
+    for (i in seq_along(items)[-1L]) {
+      if (is.null(cn) || !nzchar(cn[i])) { at <- i; break }
+    }
+  }
+  if (at > 0L) {
+    attributes(fixed) <- NULL
+    items[[at]] <- fixed
+    cn <- names(items)
+    if (!is.null(cn)) { cn[at] <- ""; names(items) <- cn }
+  }
+  items[[1L]] <- as.name(fn)   # the user-facing name, never a method's
+  cl <- as.call(items)
+  .jst_stop("\"", found[1L], "\" is in quotes.\n",
+            "A variable in a formula is named without quotes:\n",
+            "  ", .jst_term_text(cl), fn = fn)
+}
+
+#' Internal helper: c() of names in a variable list
+#'
+#' Ruling R18 (Session 355; built Session 356): a variable list takes a
+#' \code{c()} of names, bare or quoted -- \code{jdesc(d, c(Age, Score))},
+#' \code{jdesc(d, c("Age", "Score"))} -- as the tidyverse does, where it
+#' read "c(Age, Score) was not found". Each item becomes a variable of its
+#' own, in place, in the \code{c()}'s environment; a quoted item stays the
+#' string it was, which every list already reads as a name. Only a
+#' \code{c()} whose items are all names or strings is opened: a range
+#' (\code{Age:Score}), a helper, or an item computed inside the \code{c()}
+#' keeps the not-found stop, as decided. A named item (a misspelled
+#' argument, a condition) is left to \code{.jst_check_named_variables()}.
+#'
+#' @param quos The captured variable list, after any \code{juse()}
+#'   prepend.
+#' @return The list with each such \code{c()} opened, class kept.
+#' @keywords internal
+.jst_expand_vars <- function(quos) {
+  if (length(quos) == 0L) return(quos)
+  qn  <- names(quos)
+  if (is.null(qn)) qn <- rep("", length(quos))
+  out <- list()
+  nms <- character(0)
+  for (i in seq_along(quos)) {
+    q  <- quos[[i]]
+    ex <- if (rlang::is_quosure(q)) rlang::quo_get_expr(q) else q
+    if (!nzchar(qn[i]) && is.call(ex) && is.symbol(ex[[1L]]) &&
+        identical(as.character(ex[[1L]]), "c") && length(ex) > 1L) {
+      items <- as.list(ex)[-1L]
+      plain <- all(vapply(items, function(a) {
+        (is.symbol(a) && nzchar(as.character(a))) ||
+          (is.character(a) && length(a) == 1L && !is.na(a))
+      }, logical(1))) && is.null(names(items))
+      if (plain) {
+        env <- if (rlang::is_quosure(q)) rlang::quo_get_env(q) else
+          parent.frame()
+        for (a in items) {
+          out <- c(out, list(rlang::new_quosure(a, env = env)))
+          nms <- c(nms, "")
+        }
+        next
+      }
+    }
+    out <- c(out, list(q))
+    nms <- c(nms, qn[i])
+  }
+  names(out) <- nms
+  class(out) <- "quosures"
+  out
+}
+
+#' Internal helper: the one variable a single-variable slot names
+#'
+#' \code{jrecode()}, \code{jrelabel()} and \code{jencode()} take ONE
+#' variable, and read it with \code{deparse(substitute())}, so a name in
+#' quotes was refused as not found: \code{'"Gender" was not found'}, where
+#' the thirteen other slots took it (ruling R18, Session 355; built Session
+#' 356). This reads the slot as the lists do: a bare name, a quoted name,
+#' or a \code{c()} of one; a \code{c()} of several stops, naming them, since
+#' the function takes one. Anything else is deparsed as before and meets
+#' the not-found check.
+#'
+#' @param sub The slot as typed (\code{substitute()}), or a quosure.
+#' @param fn Character(1); the user-facing function's name.
+#' @param slot Character(1); how the sentence names the slot:
+#'   "after the data frame" (the default), or "by =".
+#' @return Character(1), the name.
+#' @keywords internal
+.jst_one_var_name <- function(sub, fn, slot = "after the data frame") {
+  ex <- if (rlang::is_quosure(sub)) rlang::quo_get_expr(sub) else sub
+  if (is.character(ex) && length(ex) == 1L && !is.na(ex)) return(ex)
+  if (is.symbol(ex)) return(as.character(ex))
+  if (is.call(ex) && is.symbol(ex[[1L]]) &&
+      identical(as.character(ex[[1L]]), "c") && length(ex) > 1L) {
+    items <- as.list(ex)[-1L]
+    plain <- all(vapply(items, function(a) {
+      is.symbol(a) || (is.character(a) && length(a) == 1L && !is.na(a))
+    }, logical(1)))
+    if (plain) {
+      nms <- vapply(items, as.character, character(1))
+      if (length(nms) == 1L) return(nms)
+      .jst_stop(if (identical(slot, "after the data frame"))
+                  "only one variable goes after the data frame"
+                else paste0(slot, " takes one variable"),
+                ", and this call gives ", .jst_and_list(nms), ".\n",
+                "Name one variable",
+                if (identical(slot, "after the data frame"))
+                  ", and run the call once for each." else ".",
+                fn = fn)
+    }
+  }
+  paste(deparse(ex, width.cutoff = 500L), collapse = " ")
+}
+
+#' Internal helper: the word arguments and what each takes
+#'
+#' The values and the sentence noun of every argument that takes a fixed
+#' word, for \code{.jst_word_args()}. The shared ones (the display modes,
+#' the Case Processing detail) are read from here by every function that
+#' has them; a function adds its own (\code{to}, \code{method},
+#' \code{std}, \code{which}) at its front door with
+#' \code{.jst_word_spec()}. A value list changed anywhere is changed here
+#' as well, or the pointer prints a word the function will refuse.
+#'
+#' @keywords internal
+.jst_word_spec <- function(values, noun, name_it = FALSE) {
+  list(values = values, noun = noun, name_it = name_it)
+}
+
+#' @rdname dot-jst_word_spec
+#' @keywords internal
+.jst_word_specs <- function(...) {
+  # A function, not a constant: the package's files load in alphabetical
+  # order, and .jst_diagnostic_sets is defined in a later one.
+  all <- list(
+    variable.id = .jst_word_spec(c("both", "names", "labels", "legend",
+                                   "legend.bottom"), "a display mode"),
+    value.id    = .jst_word_spec(c("both", "values", "labels", "legend",
+                                   "legend.bottom"), "a display mode"),
+    case.processing.detail = .jst_word_spec(c("none", "totals", "per_code"),
+                                            "a detail level"),
+    convention  = .jst_word_spec(c("spss", "stata", "sas"),
+                                 "a convention name"),
+    diagnostics = .jst_word_spec(unique(unlist(.jst_diagnostic_sets,
+                                               use.names = FALSE)),
+                                 "a diagnostic name")
+  )
+  want <- c(...)
+  if (length(want) == 0L) all else all[want]
+}
+
+#' Internal helper: a bare word typed where a quoted value goes
+#'
+#' Ruling R18 (Session 355; built Session 356): a variable is named without
+#' quotes, and anything that is not a variable -- a format, a convention, a
+#' method, a level, a plot name -- goes in quotes. A user who types
+#' \code{jconvert(d, to = stata)} or \code{jplot(r, which = effects)} meets
+#' R's own lookup of the word: "object 'stata' not found", or, when R finds
+#' a function of that name (\code{effects}, \code{lm}, \code{mean}), an
+#' error from deeper in that has nothing to do with the call. This check
+#' runs at the function's front door, before anything is evaluated, and
+#' stops with jload()'s form: the word, that it is not in quotes, and the
+#' call to run.
+#'
+#' It fires on a bare symbol -- or a \code{c()} of symbols and strings --
+#' that spells one of the argument's own values (compared without regard
+#' to case; the printed line spells the value as the function takes it)
+#' and does not evaluate to a character value. A name holding a value
+#' still works (\code{fmt <- "stata"; to = fmt}), and a word that is not one
+#' of the values is left to R and to the argument's own choice error, as
+#' before.
+#'
+#' The line to run is the call as typed (\code{sys.call()}), with the one
+#' argument quoted: a named argument stays named, a positional one stays
+#' in its place unless its spec says \code{name_it}, for a function whose
+#' first position is read several ways (\code{joptions(spss)} is given as
+#' \code{joptions(missing.convention = "spss")}). The line is built on one
+#' line; the wrapper layer lays it out (ruling R5).
+#'
+#' @param cl The call as typed (\code{sys.call()}).
+#' @param mc The matched call (\code{match.call(expand.dots = TRUE)}).
+#' @param env The caller's environment, where a symbol is looked up.
+#' @param specs A named list, one entry per argument checked: a list with
+#'   \code{values} (the accepted words, in the spelling the function takes),
+#'   \code{noun} (what the argument takes, for the sentence: "a format
+#'   name") and, optionally, \code{name_it = TRUE}; the shared entries
+#'   come from \code{.jst_word_specs()}.
+#' @param fn Character(1); the user-facing function's name, for the prefix.
+#' @return Invisible NULL; stops when a bare word is found.
+#' @keywords internal
+.jst_word_args <- function(cl, mc, env, specs, fn) {
+  mnames <- names(mc)
+  for (arg in names(specs)) {
+    if (is.null(mnames) || !arg %in% mnames) next
+    expr <- mc[[arg]]
+    sp   <- specs[[arg]]
+    # The words typed, and which of them are bare symbols.
+    if (is.symbol(expr)) {
+      words <- as.character(expr)
+      bare  <- TRUE
+    } else if (is.call(expr) && identical(expr[[1L]], as.name("c")) &&
+               length(expr) > 1L) {
+      items <- as.list(expr)[-1L]
+      ok <- vapply(items, function(a) is.symbol(a) ||
+                     (is.character(a) && length(a) == 1L && !is.na(a)),
+                   logical(1))
+      if (!all(ok)) next
+      words <- vapply(items, as.character, character(1))
+      bare  <- vapply(items, is.symbol, logical(1))
+    } else {
+      next
+    }
+    if (!any(bare) || !any(nzchar(words))) next
+    m <- match(tolower(words[bare]), tolower(sp$values))
+    if (anyNA(m)) next
+    # A name holding a value still works.
+    val <- tryCatch(eval(expr, envir = env), error = function(e) NULL)
+    if (is.character(val)) next
+    canon <- words
+    canon[bare] <- sp$values[m]
+    new <- if (length(canon) == 1L) canon else
+      as.call(c(list(as.name("c")), as.list(canon)))
+    named_in_call <- !is.null(names(cl)) && arg %in% names(cl)
+    line  <- .jst_call_with(cl, mc, arg, new,
+                            name_it = isTRUE(sp$name_it) && !named_in_call)
+    typed <- words[bare]
+    noun  <- if (is.null(sp$noun)) "a value" else sp$noun
+    second <- if (named_in_call) {
+      paste0(arg, " = takes ", noun, " in quotes:")
+    } else {
+      paste0(toupper(substr(noun, 1L, 1L)), substr(noun, 2L, nchar(noun)),
+             " goes in quotes:")
+    }
+    .jst_stop(.jst_and_list(typed), if (length(typed) == 1L) " is" else " are",
+              " not in quotes.\n", second, "\n",
+              "  ", line, fn = fn)
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: the call as typed, with one argument replaced
+#'
+#' Rebuilds \code{cl} (the call as typed) with the argument \code{arg} --
+#' found by name when the user named it, else by its matched expression
+#' among the positional items -- replaced by \code{new}, and returns the
+#' one-line text. Used by \code{.jst_word_args()}; the layout is the
+#' wrapper layer's.
+#'
+#' @param cl The call as typed.
+#' @param mc The matched call.
+#' @param arg Character(1); the argument's name.
+#' @param new The replacement (a string, or a call).
+#' @param name_it Logical; name a positional argument in the rebuilt call.
+#' @return Character(1).
+#' @keywords internal
+.jst_call_with <- function(cl, mc, arg, new, name_it = FALSE) {
+  cn <- names(cl)
+  if (!is.null(cn) && arg %in% cn) {
+    cl[[arg]] <- new
+    return(.jst_term_text(cl))
+  }
+  items <- as.list(cl)
+  hit   <- 0L
+  for (i in seq_along(items)[-1L]) {
+    if (!is.null(cn) && nzchar(cn[i])) next
+    if (identical(items[[i]], mc[[arg]])) { hit <- i; break }
+  }
+  if (hit == 0L) {
+    cl[[arg]] <- new
+    return(.jst_term_text(cl))
+  }
+  if (name_it) {
+    items[[hit]] <- new
+    nm <- if (is.null(cn)) rep("", length(items)) else cn
+    nm[hit] <- arg
+    names(items) <- nm
+    return(.jst_term_text(as.call(items)))
+  }
+  cl[[hit]] <- new
+  .jst_term_text(cl)
+}
+
+#' Internal helper: a free-text slot typed without its quotes
+#'
+#' Ruling R18 (Session 356): a file name, a sheet name, a folder, the name a
+#' loaded data frame is given, all go in quotes. A bare symbol in such a
+#' slot that resolves to nothing -- \code{jload("f.rds", name = mydata)},
+#' \code{joptions(data.dir = Data)} -- met R's "object 'Data' not found";
+#' it gets jload()'s form, the call as typed with the word quoted. A symbol
+#' that resolves is a name holding the value and is left alone, as is any
+#' other expression. The check reads the unevaluated argument, so it runs
+#' before the slot is forced.
+#'
+#' @param sub The argument as typed (\code{substitute(arg)}).
+#' @param env The caller's environment.
+#' @param cl,mc The call as typed and the matched call.
+#' @param arg Character(1); the argument's name.
+#' @param noun Character(1); what the slot takes ("a file name").
+#' @param fn Character(1); the user-facing function's name.
+#' @return Invisible NULL; stops on a bare word that resolves to nothing.
+#' @keywords internal
+.jst_free_text_arg <- function(sub, env, cl, mc, arg, noun, fn) {
+  if (!is.symbol(sub)) return(invisible(NULL))
+  word <- as.character(sub)
+  if (!nzchar(word) || exists(word, envir = env)) return(invisible(NULL))
+  named_in_call <- !is.null(names(cl)) && arg %in% names(cl)
+  line   <- .jst_call_with(cl, mc, arg, word)
+  second <- if (named_in_call) paste0(arg, " = takes ", noun, " in quotes:") else
+    paste0(toupper(substr(noun, 1L, 1L)), substr(noun, 2L, nchar(noun)),
+           " goes in quotes:")
+  .jst_stop(word, " is not in quotes.\n", second, "\n", "  ", line, fn = fn)
+}
+
 #' Internal helper: resolve which data frame to use when none is explicitly given
 #'
 #' Looks up the data frame name set by \code{juse()} via the
@@ -1139,6 +1666,15 @@
     )
   }
 
+  # -- A data frame's name in quotes (ruling R18, Session 356) --------------
+  # jdesc("d", Age) read the string as a single column ("Age needs the data
+  # frame, not the single column "d""); jsave("d", "f.rds") called it not
+  # found. A string that is the name of a data frame in the caller's
+  # workspace gets the pointer, the call as typed without the quotes. Any
+  # other string stays what it is: a text vector on the vector path.
+  .jst_quoted_frame_stop(data_sub, eval_result, fn_name, envir,
+                         cl = sys.call(sys.parent()))
+
   # -- Case 3: evaluated to a data frame ------------------------------------
   if (!eval_result$failed && is.data.frame(eval_result$value)) {
     return(list(mode = "explicit",
@@ -1157,11 +1693,17 @@
   # workspace described the vector and said nothing. The object is read only
   # when the default frame has no variable of that name, or with no default.
   # The caller's default note says which was read (.jst_default_note()).
-  if (accept_vector && !eval_result$failed && is.symbol(data_sub) &&
+  # A c() of names is read the same way (Session 356, ruling R18): under a
+  # default that has every name, jdesc(c(Age, Score)) is the frame's two
+  # variables, not the two vectors joined.
+  c_names <- .jst_c_of_names(data_sub)
+  if (accept_vector && !eval_result$failed &&
+      (is.symbol(data_sub) || !is.null(c_names)) &&
       !is.null(default_name) && is.null(frame_col)) {
     dflt <- if (exists(default_name, envir = envir))
               get(default_name, envir = envir) else NULL
-    if (is.data.frame(dflt) && as.character(data_sub) %in% names(dflt)) {
+    want <- if (is.symbol(data_sub)) as.character(data_sub) else c_names
+    if (is.data.frame(dflt) && all(want %in% names(dflt))) {
       return(list(mode = "symbol_with_default",
                   data = dflt, name = default_name,
                   first_arg_sub = data_sub, first_arg_value = NULL))
@@ -1209,11 +1751,17 @@
              "as the default.\n",
              "Name the data frame first:\n")
     }
+    # The one data frame in the workspace that has the variable is named
+    # in the lines, so they run as printed (Session 356, ruling R18); with
+    # none or several, the placeholder stays.
+    fr <- if (is.symbol(data_sub))
+      .jst_frame_holding(data_str, envir) else NULL
+    if (is.null(fr)) fr <- "MyData"
     .jst_stop(
       head,
-      "  ", fn_name, "(MyData, ", data_str, ")\n",
+      "  ", fn_name, "(", fr, ", ", data_str, ")\n",
       "Or set a default first, then run the call:\n",
-      "  juse(MyData)\n",
+      "  juse(", fr, ")\n",
       "  ", fn_name, "(", data_str, ")",
     fn = fn_name)
   }
@@ -1448,7 +1996,7 @@
     frame$x <- val
   }
   names(frame) <- var
-  list(frame = frame, typed = typed, var = var,
+  list(frame = frame, typed = typed, var = var, expr = e,
        frame_nm = if (!is.null(fc)) fc$frame
                   else if (!is.null(last))
                     paste(deparse(e[[2L]]), collapse = "")
@@ -1521,21 +2069,31 @@
   first    <- if (computed)
     "Name the data frame first, and each variable on its own." else
     "Name the data frame first:\n"
-  fix      <- function(tail) {
+  # The placeholder frame gives way to the one data frame in the caller's
+  # workspace that has every variable the line names (Session 356, ruling
+  # R18), so the line runs as printed; with none or several, MyData stays.
+  fix      <- function(tail, vars = character(0)) {
     if (computed) return("")
-    paste0("  ", fn_name, "(", wrapped$frame_nm, ", ", var, ", ", tail, ")")
+    fr <- wrapped$frame_nm
+    if (identical(fr, "MyData")) {
+      one <- .jst_frame_holding(c(var, vars), user_env)
+      if (!is.null(one)) fr <- one
+    }
+    paste0("  ", fn_name, "(", fr, ", ", var, ", ", tail, ")")
   }
 
   if (length(dots) > 0L) {
     extra <- vapply(dots, rlang::quo_name, character(1), USE.NAMES = FALSE)
     .jst_stop(.jst_format_var_list(extra, and = TRUE),
               if (length(extra) == 1L) " needs" else " need", lead, first,
-              fix(paste(no_frame(extra), collapse = ", ")), fn = fn_name)
+              fix(paste(no_frame(extra), collapse = ", "), no_frame(extra)),
+              fn = fn_name)
   }
   if (!is.null(by_quo) && !rlang::quo_is_null(by_quo)) {
     by_typed <- paste(deparse(rlang::quo_get_expr(by_quo)), collapse = "")
     .jst_stop("by = ", by_typed, " needs", lead, first,
-              fix(paste0("by = ", no_frame(by_typed))), fn = fn_name)
+              fix(paste0("by = ", no_frame(by_typed)), no_frame(by_typed)),
+              fn = fn_name)
   }
   if (!is.null(subset_sub)) {
     # A data frame named in the condition (Session 323): the re-call would

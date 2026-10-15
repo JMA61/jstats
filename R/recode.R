@@ -43,10 +43,15 @@
 #' neither is supplied, the function returns the variable unchanged.
 #'
 #' @param data A data frame containing the variable.
-#' @param var The variable to label (unquoted, e.g. \code{StatusR}).
+#' @param var The variable to label (unquoted, e.g. \code{StatusR}; a
+#'   quoted name is accepted).
 #' @param labels Optional. A quoted string specifying value labels using the
 #'   format \code{"code=Label Text"} with rules separated by semicolons.
 #'   Accepted on haven-labelled, plain numeric, and logical variables only.
+#'   A label may be written in quotes, with either mark, right after its
+#'   equals sign, and a semicolon inside the quotes is then part of the
+#'   label: \code{"1=Yes; 9=\"Refused; not asked\""}. An unquoted label
+#'   reads as it is written.
 #'
 #'   Examples:
 #'   \itemize{
@@ -114,6 +119,7 @@
 #'
 #' @export
 jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
+  .fn <- "jrelabel"
 
   # --- Resolve first argument -----------------------------------------------
   arg1 <- .jst_resolve_first_arg(
@@ -136,9 +142,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
                 "Use jrelabel(", deparse(arg1$first_arg_sub), ", labels = ", displaced, ")",
                 fn = "jrelabel")
     }
-    var_name <- deparse(arg1$first_arg_sub)
+    var_name <- .jst_one_var_name(arg1$first_arg_sub, .fn)   # R18, S356
   } else {
-    var_name <- deparse(substitute(var))
+    var_name <- if (missing(var)) "" else
+      .jst_one_var_name(substitute(var), .fn)              # R18, S356
   }
 
   # --- Input checks ---
@@ -907,7 +914,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #' below for the canonical patterns under each convention.
 #'
 #' @param data     A data frame containing the original variable.
-#' @param orig.var The variable to recode (unquoted, e.g. \code{AgeGroup}).
+#' @param orig.var The variable to recode (unquoted, e.g. \code{AgeGroup};
+#'   a quoted name is accepted).
 #' @param map      A quoted string specifying the recode rules, using the
 #'   format \code{"old=new"} with rules separated by semicolons. Multiple old
 #'   values mapping to the same new value are separated by commas on the left
@@ -1004,6 +1012,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   codes they name; the labels of declared missing values the result
 #'   keeps (see Details) ride alongside them unless the string labels the
 #'   same code.
+#'   A label may be written in quotes, with either mark, right after its
+#'   equals sign, and a semicolon inside the quotes is then part of the
+#'   label: \code{"1=Yes; 9=\"Refused; not asked\""}. An unquoted label
+#'   reads as it is written.
 #'
 #'   The left side of each rule may be a numeric code or, under Stata or
 #'   SAS convention, a missing-value marker (\code{.a} through \code{.z},
@@ -1285,6 +1297,11 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'
 #' @export
 jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 .jst_word_specs("convention"),
+                 "jrecode")
 
   # --- Resolve first argument -----------------------------------------------
   data_sub <- substitute(data)
@@ -1309,9 +1326,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                 "Use jrecode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
                 fn = "jrecode")
     }
-    orig_name <- deparse(arg1$first_arg_sub)
+    orig_name <- .jst_one_var_name(arg1$first_arg_sub, "jrecode")   # R18, S356
   } else {
-    orig_name <- deparse(substitute(orig.var))
+    orig_name <- if (missing(orig.var)) "" else
+      .jst_one_var_name(substitute(orig.var), "jrecode")   # R18, S356
   }
 
   # --- Input checks ---
@@ -1969,8 +1987,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # dropped (NULL); the user's other rules as typed.
   r8_labels_arg <- function(new_lhs) {
     if (is.null(labels)) return("")
-    rules <- trimws(strsplit(labels, ";", fixed = TRUE)[[1]])
-    rules <- rules[nzchar(rules)]
+    rules <- .jst_split_label_rules(labels)   # quote-aware (R17, S356)
     lhs   <- tolower(trimws(sub("=.*$", "", rules)))
     if (is.null(new_lhs)) {
       rules <- rules[lhs != "missing"]
@@ -3476,6 +3493,16 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   paste0(paste(x[-n], collapse = ", "), ", and ", x[n])
 }
 
+#' @rdname dot-jst_and_list
+#' @keywords internal
+.jst_or_list <- function(x) {
+  n <- length(x)
+  if (n == 0L) return("")
+  if (n == 1L) return(x)
+  if (n == 2L) return(paste0(x[1L], " or ", x[2L]))
+  paste0(paste(x[-n], collapse = ", "), ", or ", x[n])
+}
+
 
 #' Internal helper: the first lettered marker a call typed, as typed
 #'
@@ -3739,7 +3766,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'
 #' @param data A data frame containing the variable to encode. Can be
 #'   omitted if a default data frame has been set with \code{juse()}.
-#' @param var The text or factor variable to encode (unquoted name).
+#' @param var The text or factor variable to encode (unquoted name; a
+#'   quoted name is accepted).
 #'   Character variables and factors are accepted; numeric, logical, and
 #'   date/time variables are refused with a message naming the right tool
 #'   (for numeric variables, that is \code{jrecode()}).
@@ -3782,6 +3810,10 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   becomes the label of its own code. When several words collapse to one
 #'   code, no label can be chosen automatically and a note directs you
 #'   here or to \code{jrelabel()}.
+#'   A label may be written in quotes, with either mark, right after its
+#'   equals sign, and a semicolon inside the quotes is then part of the
+#'   label: \code{"1=Yes; 9=\"Refused; not asked\""}. An unquoted label
+#'   reads as it is written.
 #' @param convention Optional. One of \code{"spss"}, \code{"stata"},
 #'   \code{"sas"}, or \code{NULL} (default); any capitalization is
 #'   accepted. Controls whether missing-value markers (\code{.a} through
@@ -3939,6 +3971,12 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'
 #' @export
 jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
+  .fn <- "jencode"
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 .jst_word_specs("convention"),
+                 "jencode")
 
   # --- Resolve first argument -----------------------------------------------
   data_sub <- substitute(data)
@@ -3963,9 +4001,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
                 "Use jencode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
                 fn = "jencode")
     }
-    var_name <- deparse(arg1$first_arg_sub)
+    var_name <- .jst_one_var_name(arg1$first_arg_sub, .fn)   # R18, S356
   } else {
-    var_name <- deparse(substitute(var))
+    var_name <- if (missing(var)) "" else
+      .jst_one_var_name(substitute(var), .fn)              # R18, S356
   }
 
   # --- Input checks ---------------------------------------------------------
@@ -5454,7 +5493,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   values named in the string are then the codes declared, so
 #'   \code{labels = "-99=Refused; -98=Don't know"} declares and labels
 #'   both codes in one argument (and \code{labels = ".a=Refused"} names
-#'   a marker on a tagged column). When a \code{range} is in effect
+#'   a marker on a tagged column). A label may be written in quotes,
+#'   with either mark, right after its equals sign, and a semicolon
+#'   inside the quotes is then part of the label. When a \code{range} is in effect
 #'   (supplied in this call, or already on the column), entries may also
 #'   name values inside the range: those attach as value labels on the
 #'   in-range values without becoming discrete declared codes (see the
@@ -5699,6 +5740,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                          range = NULL, vars = NULL, convention = NULL,
                          missing.notice = TRUE, modify = FALSE) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 .jst_word_specs("convention"),
+                 "jdeclare_missing")
 
   # Captured before `data` is reassigned below: substitute() on the
   # rebound variable would return the value, not the caller's expression.
@@ -5745,6 +5791,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   dot_names <- if (length(variables) > 0) {
     vapply(variables, rlang::quo_name, character(1))
@@ -7249,23 +7296,24 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       paste0("  mydata <- ", data_name, "\n")
     } else ""
     recode_line <- function(letters_to, label_mask) {
-      lab_txt <- if (any(label_mask)) {
-        paste0(".", letters_to[label_mask], "=",
-               .jst_dq_escape(code_lab[label_mask]))     # S355
-      } else character(0)
+      # Each label through the labels-string renderer (ruling R17, S356).
+      lab <- if (any(label_mask)) {
+        .jst_labels_arg(paste0(".", letters_to[label_mask]),
+                        code_lab[label_mask])
+      } else list(arg = "", note = "")
       paste0(
         pre, "  ", dn, "$", var_name, "R <- jrecode(", dn, ", ", var_name,
         ", map = \"",
         paste0(fmt(sorted_codes), "=.", letters_to, collapse = "; "),
         "; else=copy\"",
-        if (length(lab_txt) > 0L) paste0(
-          ", labels = \"", paste(lab_txt, collapse = "; "), "\"") else "",
+        lab$arg,
         # The variable's form decided this call's convention; a marker in a
         # jrecode() map is resolved from the call and the setting, so the
         # line carries it unless the setting is already it (Session 352):
         # under no setting the line stopped at the choose-first gate.
         .jst_marker_conv_arg(convention),
-        ")")
+        ")",
+        if (nzchar(lab$note)) paste0("\n", lab$note) else "")
     }
     n_clash <- sum(clash)
     n_codes <- length(sorted_codes)
@@ -8409,6 +8457,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' @export
 jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
                      modify = FALSE) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 list(to = .jst_word_spec(c("spss", "stata", "sas", "baseR"),
+                                         "a format name")),
+                 "jconvert")
 
   # Captured before `data` is reassigned below: substitute() on the
   # rebound variable would return the value, not the caller's expression.
@@ -8528,6 +8582,7 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   # A target format where a variable goes -- jconvert(d, "stata"),
   # jconvert(d, stata), or a name holding one -- stops with the named

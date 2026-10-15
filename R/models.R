@@ -21,7 +21,8 @@
 #' followed by variable labels (if present), then the matrix.
 #'
 #' @param data A data frame.
-#' @param ... Unquoted variable names within \code{data}.
+#' @param ... Unquoted variable names within \code{data}. A \code{c()} of names, bare
+#'   or quoted, is read as the names.
 #' @param method Character. Correlation method: "pearson" (default),
 #'   "spearman", or "kendall".
 #' @param subset An optional unquoted logical expression (e.g.
@@ -107,6 +108,15 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                   numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, layout = NULL, case.processing.detail = NULL,
                   digits = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "case.processing.detail"),
+                   list(method = .jst_word_spec(c("pearson", "spearman",
+                                                  "kendall"), "a method name"),
+                        layout = .jst_word_spec(c("wide", "stacked"),
+                                                "a layout name"))),
+                 "jcorr")
 
   digits_n <- .jst_resolve_digits(digits)
 
@@ -145,6 +155,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -2368,6 +2379,15 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...,
                 value.id = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                   list(std = .jst_word_spec(c("regular", "all", "gelman",
+                                               "product", "none"), "a choice"),
+                        diagnostics = .jst_word_spec(.jst_diagnostic_sets$jlm,
+                                                     "a diagnostic name"))),
+                 "jlm")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(full, "full")
@@ -3923,6 +3943,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                       diagnostics = NULL, ref.categories = NULL, full = FALSE,
                       case.processing.detail = NULL, digits = NULL, ...,
                       value.id = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 c(.jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                   list(diagnostics = .jst_word_spec(
+                     .jst_diagnostic_sets$jlogistic, "a diagnostic name"))),
+                 "jlogistic")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(classification, "classification")
@@ -4460,16 +4487,16 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         label_2 <- names(dv_labels[dv_labels == 2])
         if (length(label_1) == 0) label_1 <- "1"
         if (length(label_2) == 0) label_2 <- "2"
-        recode_labels <- paste0(", labels = \"0=", .jst_dq_escape(label_1),
-                                "; 1=", .jst_dq_escape(label_2), "\"")  # S355
+        recode_labels <- .jst_labels_arg(c("0", "1"), c(label_1, label_2))  # R17, S356
       } else {
-        recode_labels <- ""
+        recode_labels <- list(arg = "", note = "")
       }
       .jst_stop(paste0(
         "'", dv_name, "' is coded 1/2. Logistic regression requires 0/1 coding.\n",
         "Recode before running jlogistic():\n",
         "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ", dv_name,
-        ", map = \"1=0; 2=1\"", recode_labels, ")\n",
+        ", map = \"1=0; 2=1\"", recode_labels$arg, ")\n",
+        if (nzchar(recode_labels$note)) paste0(recode_labels$note, "\n"),
         "Then use ", dv_name, "R as your dependent variable.\n",
         "(jlogistic models the category coded 1; to model the other category ",
         "instead, reverse the map and labels.)"
@@ -5144,6 +5171,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    value.id = NULL, case.processing.detail = NULL,
                    digits = NULL) {
+  # A bare word where a quoted value goes (ruling R18, Session 356): the
+  # front door, before anything is evaluated.
+  .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
+                 .jst_word_specs("variable.id", "value.id", "case.processing.detail"),
+                 "jalpha")
 
   digits_n <- .jst_resolve_digits(digits)
 
@@ -5182,6 +5214,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     variables <- c(list(extra_quo), variables)
     class(variables) <- "quosures"
   }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
 
   # Resolve variable names, expanding colon ranges (e.g. Item1:Item6) the same
   # way jsum()/javg() do via .jst_resolve_varrange(); plain names pass through

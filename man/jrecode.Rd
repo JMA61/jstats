@@ -9,7 +9,8 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
 \arguments{
 \item{data}{A data frame containing the original variable.}
 
-\item{orig.var}{The variable to recode (unquoted, e.g. \code{AgeGroup}).}
+\item{orig.var}{The variable to recode (unquoted, e.g. \code{AgeGroup};
+a quoted name is accepted).}
 
 \item{map}{A quoted string specifying the recode rules, using the
 format \code{"old=new"} with rules separated by semicolons. Multiple old
@@ -107,6 +108,10 @@ separated by semicolons. If supplied, these labels are used for the
 codes they name; the labels of declared missing values the result
 keeps (see Details) ride alongside them unless the string labels the
 same code.
+A label may be written in quotes, with either mark, right after its
+equals sign, and a semicolon inside the quotes is then part of the
+label: \code{"1=Yes; 9=\"Refused; not asked\""}. An unquoted label
+reads as it is written.
 
 The left side of each rule may be a numeric code or, under Stata or
 SAS convention, a missing-value marker (\code{.a} through \code{.z},

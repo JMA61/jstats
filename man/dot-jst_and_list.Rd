@@ -2,9 +2,12 @@
 % Please edit documentation in R/recode.R
 \name{.jst_and_list}
 \alias{.jst_and_list}
+\alias{.jst_or_list}
 \title{Internal helper: render a vector as a natural "a, b, and c" list}
 \usage{
 .jst_and_list(x)
+
+.jst_or_list(x)
 }
 \arguments{
 \item{x}{Character vector.}

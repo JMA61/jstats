@@ -22,7 +22,8 @@ jcorr(
 \arguments{
 \item{data}{A data frame.}
 
-\item{...}{Unquoted variable names within \code{data}.}
+\item{...}{Unquoted variable names within \code{data}. A \code{c()} of names, bare
+or quoted, is read as the names.}
 
 \item{method}{Character. Correlation method: "pearson" (default),
 "spearman", or "kendall".}
