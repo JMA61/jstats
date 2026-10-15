@@ -1,11 +1,11 @@
 # Internal helper: note that registrations are not kept in a non-rds format
 
 Builds the loss-of-fidelity note emitted when a frame that has active
-classification registrations is saved to a format other than R native
-format (.rds). Parallels the label and missing-value loss notes: the
-data write succeeds, but the registrations are dropped because only the
-.rds format carries them. Returns NULL when the frame has no
-registrations, so the note fires only when there is something to lose.
+classification registrations is saved to a format other than R format
+(.rds). Parallels the label and missing-value loss notes: the data write
+succeeds, but the registrations are dropped because only the .rds format
+carries them. Returns NULL when the frame has no registrations, so the
+note fires only when there is something to lose.
 
 ## Usage
 

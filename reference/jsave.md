@@ -102,10 +102,10 @@ and shows it written with forward slashes.
 - Excel (`.xlsx`) and CSV (`.csv`) do not preserve variable or value
   labels.
 
-- R native (`.rds`) preserves the data frame exactly as it exists in R,
+- R format (`.rds`) preserves the data frame exactly as it exists in R,
   including all attributes.
 
-- R native (`.rds`) also carries the active classification registrations
+- R format (`.rds`) also carries the active classification registrations
   (see [`jdummy`](https://jma61.github.io/jstats/reference/jdummy.md),
   [`jnumeric`](https://jma61.github.io/jstats/reference/jnumeric.md),
   [`jcount`](https://jma61.github.io/jstats/reference/jcount.md), and
@@ -125,7 +125,7 @@ and shows it written with forward slashes.
 - SPSS (`.sav`), Stata (`.dta`), SAS interchange (`.xpt`) and CSV
   (`.csv`) have no missing value for text: a text variable's missing
   cells are saved as blank text, and read back as blank, not missing. A
-  note says so when it happens. R native (`.rds`) and Excel (`.xlsx`)
+  note says so when it happens. R format (`.rds`) and Excel (`.xlsx`)
   keep them missing. In a CSV file the same holds for a factor, which is
   written as its labels.
 
@@ -145,11 +145,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpMIUok9/community.sav
+#> Saved community to /tmp/RtmpFSjBrG/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpMIUok9/community.sav
+#> Saved community to /tmp/RtmpFSjBrG/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
@@ -158,7 +158,7 @@ if (FALSE) { # \dontrun{
 jsave(community, "community.sav")         # SPSS
 jsave(community, "community.xlsx")        # Excel
 jsave(community, "community.csv")         # CSV
-jsave(community, "community.rds")         # R native
+jsave(community, "community.rds")         # R format
 
 # Using juse() default
 juse(community)
