@@ -40,6 +40,8 @@ jscreen(
 
   Optional unquoted variable names to screen. If omitted, all variables
   in the data frame are screened. None when `data` is a single variable.
+  A [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
+  read as the names.
 
 - outlier.sd:
 

@@ -6,9 +6,10 @@ the string early when it held a quotation mark –
 the package offered did not run. Each builder that pastes a label into a
 printed string escapes it with this (Session 355), as the map builders
 escape a quoted word (S249): a backslash doubled, then each quotation
-mark preceded by one. The label the line gives is the label as it was.
-(A label holding a semicolon cannot be written in a labels string at
-all: ruling R17, owed.)
+mark preceded by one. The label the line gives is the label as it was. A
+label holding a semicolon is quoted first, by
+[`.jst_label_text()`](https://jma61.github.io/jstats/reference/dot-jst_label_text.md)
+(ruling R17, Session 356).
 
 ## Usage
 

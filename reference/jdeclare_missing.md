@@ -103,10 +103,13 @@ jdeclare_missing(
   values named in the string are then the codes declared, so
   `labels = "-99=Refused; -98=Don't know"` declares and labels both
   codes in one argument (and `labels = ".a=Refused"` names a marker on a
-  tagged column). When a `range` is in effect (supplied in this call, or
-  already on the column), entries may also name values inside the range:
-  those attach as value labels on the in-range values without becoming
-  discrete declared codes (see the Missing-value ranges section).
+  tagged column). A label may be written in quotes, with either mark,
+  right after its equals sign, and a semicolon inside the quotes is then
+  part of the label. When a `range` is in effect (supplied in this call,
+  or already on the column), entries may also name values inside the
+  range: those attach as value labels on the in-range values without
+  becoming discrete declared codes (see the Missing-value ranges
+  section).
 
 - range:
 

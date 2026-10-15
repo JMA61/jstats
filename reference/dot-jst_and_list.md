@@ -6,6 +6,8 @@ Internal helper: render a vector as a natural "a, b, and c" list
 
 ``` r
 .jst_and_list(x)
+
+.jst_or_list(x)
 ```
 
 ## Arguments

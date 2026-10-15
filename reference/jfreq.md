@@ -28,7 +28,8 @@ jfreq(
 - ...:
 
   Unquoted variable name(s) within `data`. None when `data` is a single
-  variable.
+  variable. A [`c()`](https://rdrr.io/r/base/c.html) of names, bare or
+  quoted, is read as the names.
 
 - subset:
 

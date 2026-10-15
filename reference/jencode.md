@@ -23,10 +23,10 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
 
 - var:
 
-  The text or factor variable to encode (unquoted name). Character
-  variables and factors are accepted; numeric, logical, and date/time
-  variables are refused with a message naming the right tool (for
-  numeric variables, that is
+  The text or factor variable to encode (unquoted name; a quoted name is
+  accepted). Character variables and factors are accepted; numeric,
+  logical, and date/time variables are refused with a message naming the
+  right tool (for numeric variables, that is
   [`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)).
 
 - map:
@@ -72,6 +72,10 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
   of its own code. When several words collapse to one code, no label can
   be chosen automatically and a note directs you here or to
   [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md).
+  A label may be written in quotes, with either mark, right after its
+  equals sign, and a semicolon inside the quotes is then part of the
+  label: `"1=Yes; 9=\"Refused; not asked\""`. An unquoted label reads as
+  it is written.
 
 - convention:
 

@@ -19,7 +19,7 @@ to a rank."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.228</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.229</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,8 @@ omitted if a default data frame has been set with <code><a href="juse.html">juse
 
 
 <dt id="arg-var">var<a class="anchor" aria-label="anchor" href="#arg-var"></a></dt>
-<dd><p>The text or factor variable to encode (unquoted name).
+<dd><p>The text or factor variable to encode (unquoted name; a
+quoted name is accepted).
 Character variables and factors are accepted; numeric, logical, and
 date/time variables are refused with a message naming the right tool
 (for numeric variables, that is <code><a href="jrecode.html">jrecode()</a></code>).</p></dd>
@@ -115,7 +116,11 @@ the remainder deliberately, and the note then names the words it swept.</p></dd>
 example <code>"1=Low; 2=Medium; 3=High"</code>. If omitted, each word
 becomes the label of its own code. When several words collapse to one
 code, no label can be chosen automatically and a note directs you
-here or to <code><a href="jrelabel.html">jrelabel()</a></code>.</p></dd>
+here or to <code><a href="jrelabel.html">jrelabel()</a></code>.
+A label may be written in quotes, with either mark, right after its
+equals sign, and a semicolon inside the quotes is then part of the
+label: <code>"1=Yes; 9=\"Refused; not asked\""</code>. An unquoted label
+reads as it is written.</p></dd>
 
 
 <dt id="arg-convention">convention<a class="anchor" aria-label="anchor" href="#arg-convention"></a></dt>

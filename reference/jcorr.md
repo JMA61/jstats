@@ -33,7 +33,9 @@ jcorr(
 
 - ...:
 
-  Unquoted variable names within `data`.
+  Unquoted variable names within `data`. A
+  [`c()`](https://rdrr.io/r/base/c.html) of names, bare or quoted, is
+  read as the names.
 
 - method:
 
