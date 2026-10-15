@@ -77,7 +77,7 @@ true. The per-call evaluation message is the one it has always been."></head><bo
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.230</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -200,9 +200,9 @@ frame; the message says it is unchanged.</p></dd>
 <dt id="arg-n-frame">n_frame<a class="anchor" aria-label="anchor" href="#arg-n-frame"></a></dt>
 <dd><p>Integer or NULL. The frame's row count before the
 pipeline's filters: it tells the recycling stop's two forms apart
-(<code>"call"</code>), and lets a vector holding one value per case of the
-frame as given be recognized when <code>data</code> has fewer cases
-(<code><a href="dot-jst_frame_vector.html">.jst_frame_vector()</a></code>; every origin but <code>"set"</code>).</p></dd>
+(<code>"call"</code>), and lets an object holding one value per case of
+the frame as given be recognized when <code>data</code> has fewer cases
+(<code><a href="dot-jst_frame_object.html">.jst_frame_object()</a></code>).</p></dd>
 
 
 <dt id="arg-data-kept">data_kept<a class="anchor" aria-label="anchor" href="#arg-data-kept"></a></dt>
@@ -237,11 +237,12 @@ nothing is analyzed, so warnings and messages from the filter are dropped
 A fifth, <code>"status"</code>, is the same check made for the status display:
 it never stops, and hands the reason back as the line "It cannot be
 applied: ..." (<code><a href="dot-jst_filter_status_signal.html">.jst_filter_status_signal()</a></code>).</p>
-<p>Ahead of the evaluation, for every origin but <code>"set"</code>: a workspace
-vector holding one value per case of the frame as given, where the
-condition is about to run on fewer cases (<code><a href="dot-jst_frame_vector.html">.jst_frame_vector()</a></code>,
-Session 331) – the add-it-to-the-frame fix. At set time the same test
-runs last, against <code>data_kept</code>.</p>
+<p>Ahead of the evaluation, for every origin: a workspace object standing
+in for a variable – one value per case of the frame as given, or per
+case left after filtering – read by the condition stops (ruling R19,
+Session 357; <code><a href="dot-jst_frame_object.html">.jst_frame_object()</a></code>), with the line that adds it to
+the frame where it can be added. At set time the same test runs again,
+against <code>data_kept</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

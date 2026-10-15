@@ -107,11 +107,10 @@ true. The per-call evaluation message is the one it has always been.
 - n_frame:
 
   Integer or NULL. The frame's row count before the pipeline's filters:
-  it tells the recycling stop's two forms apart (`"call"`), and lets a
-  vector holding one value per case of the frame as given be recognized
+  it tells the recycling stop's two forms apart (`"call"`), and lets an
+  object holding one value per case of the frame as given be recognized
   when `data` has fewer cases
-  ([`.jst_frame_vector()`](https://jma61.github.io/jstats/reference/dot-jst_frame_vector.md);
-  every origin but `"set"`).
+  ([`.jst_frame_object()`](https://jma61.github.io/jstats/reference/dot-jst_frame_object.md)).
 
 - data_kept:
 
@@ -147,9 +146,10 @@ check made for the status display: it never stops, and hands the reason
 back as the line "It cannot be applied: ..."
 ([`.jst_filter_status_signal()`](https://jma61.github.io/jstats/reference/dot-jst_filter_status_signal.md)).
 
-Ahead of the evaluation, for every origin but `"set"`: a workspace
-vector holding one value per case of the frame as given, where the
-condition is about to run on fewer cases
-([`.jst_frame_vector()`](https://jma61.github.io/jstats/reference/dot-jst_frame_vector.md),
-Session 331) – the add-it-to-the-frame fix. At set time the same test
-runs last, against `data_kept`.
+Ahead of the evaluation, for every origin: a workspace object standing
+in for a variable – one value per case of the frame as given, or per
+case left after filtering – read by the condition stops (ruling R19,
+Session 357;
+[`.jst_frame_object()`](https://jma61.github.io/jstats/reference/dot-jst_frame_object.md)),
+with the line that adds it to the frame where it can be added. At set
+time the same test runs again, against `data_kept`.

@@ -5,10 +5,15 @@ The message for a
 finding, shared by the formula front door (Session 324) and a filter
 condition typed in this call –
 [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md) at
-set time and `subset =` (Session 330). A vector with one value per row
-of the frame as given, which a filter has since cut down, gets the fix
-of adding it to the frame, where the filter reaches it; any other length
-gets the requirement. A stored filter has its own form, in
+set time and `subset =` (Session 330). Since ruling R19 (Session 357) an
+object of one value per case stops before this is reached
+([`.jst_frame_object()`](https://jma61.github.io/jstats/reference/dot-jst_frame_object.md)),
+so what is left is a length that is neither one nor one per case. A
+workspace object opens as R19's message does – not in the data frame, a
+separate object – and gets the requirement "Use a single value, or add
+the values to the data frame as a variable."; a vector written in the
+call (`c(1, 2, 3)`, `1:5`) keeps "or one value for each case", which a
+vector written there may be. A stored filter has its own form, in
 [`.jst_filter_mask()`](https://jma61.github.io/jstats/reference/dot-jst_filter_mask.md).
 
 ## Usage
@@ -20,8 +25,7 @@ gets the requirement. A stored filter has its own form, in
   n_rows,
   data_name = NULL,
   n_frame = NULL,
-  tail = "",
-  cut_by = "filtering"
+  tail = ""
 )
 ```
 
@@ -53,18 +57,8 @@ gets the requirement. A stored filter has its own form, in
 
 - tail:
 
-  Character; appended after the fix line (the set-time "earlier filter
-  is unchanged" line).
-
-- cut_by:
-
-  Character; what cut the frame, for the add-it-to-the-frame form:
-  `"filtering"` (a per-call condition behind the stored settings) or
-  `"jcomplete()"` (a
-  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
-  filter behind an active
-  [`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md),
-  Session 331).
+  Character; appended after the requirement (the set-time "earlier
+  filter is unchanged" line).
 
 ## Value
 

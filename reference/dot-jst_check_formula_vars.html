@@ -39,7 +39,7 @@ process for any other reason falls back to all.vars(), unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.230</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -131,15 +131,14 @@ workspace vector would be recycled.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>A third refusal follows them (Session 324, the second deliberate
-departure from <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> parity): a workspace vector with more than one
-value but not one per row of <code>data</code> – the frame after its filters,
-before cases with missing values are set aside, the rows the resolver
-computes the term on – used value by value inside a computed term
-(<code><a href="dot-jst_formula_recycled.html">.jst_formula_recycled()</a></code>). <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> recycles it. A vector with
-one value per row of the frame as given, which a filter has since cut
-down, gets the fix of adding it to the frame, where the filter reaches
-it; any other length gets the requirement.</p>
+    <p>Two more follow them. Ruling R19 (Session 357, the third deliberate
+departure from <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> parity): a workspace object of one value per
+case read by a computed term – one per row of the frame as given, or
+per case left after filtering – stops with the line that adds it to the
+frame (<code><a href="dot-jst_check_formula_objects.html">.jst_check_formula_objects()</a></code>). Then the recycling stop
+(Session 324, the second): a workspace vector with more than one value
+but not one per case, used value by value (<code><a href="dot-jst_formula_recycled.html">.jst_formula_recycled()</a></code>;
+<code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> recycles it), gets the requirement.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

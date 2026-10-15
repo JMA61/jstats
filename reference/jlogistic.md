@@ -295,11 +295,15 @@ its codes are meant as numbers. A value or vector from your workspace
 may be named inside a computed term, as in
 [`lm()`](https://rdrr.io/r/stats/lm.html): `I(x > cutoff)` with
 `cutoff <- 10`. A data frame may not: write `y ~ x` with
-`data = MyData`, not `MyData$y ~ MyData$x`. A vector used value by value
-with the data, as in `I(x * w)`, must hold one value for each case –
-each row of `data` left after filtering – where
-[`lm()`](https://rdrr.io/r/stats/lm.html) would recycle a shorter one; a
-set used with `%in%` may have any length.
+`data = MyData`, not `MyData$y ~ MyData$x`. A variable may not: jstats
+analyzes the variables of a data frame, so a vector holding one value
+for each case – `w` in `I(x * w)`, or an object reached with `$` such as
+`lst$w` – is added to the data frame first (`MyData$w <- w`), where
+[`lm()`](https://rdrr.io/r/stats/lm.html) would read it from the
+workspace; the stop gives that line. A vector of any other length used
+value by value is refused, where
+[`lm()`](https://rdrr.io/r/stats/lm.html) would repeat the shorter one;
+a set used with `%in%` may have any length.
 
 In a formula, `^` applied to a single variable is not arithmetic: it is
 R's operator for interactions up to that order, so `x^2` enters the

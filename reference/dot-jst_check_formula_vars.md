@@ -72,14 +72,14 @@ would be recycled.
 
 ## Details
 
-A third refusal follows them (Session 324, the second deliberate
+Two more follow them. Ruling R19 (Session 357, the third deliberate
 departure from [`lm()`](https://rdrr.io/r/stats/lm.html) parity): a
-workspace vector with more than one value but not one per row of `data`
-– the frame after its filters, before cases with missing values are set
-aside, the rows the resolver computes the term on – used value by value
-inside a computed term
-([`.jst_formula_recycled()`](https://jma61.github.io/jstats/reference/dot-jst_formula_recycled.md)).
-[`lm()`](https://rdrr.io/r/stats/lm.html) recycles it. A vector with one
-value per row of the frame as given, which a filter has since cut down,
-gets the fix of adding it to the frame, where the filter reaches it; any
-other length gets the requirement.
+workspace object of one value per case read by a computed term – one per
+row of the frame as given, or per case left after filtering – stops with
+the line that adds it to the frame
+([`.jst_check_formula_objects()`](https://jma61.github.io/jstats/reference/dot-jst_check_formula_objects.md)).
+Then the recycling stop (Session 324, the second): a workspace vector
+with more than one value but not one per case, used value by value
+([`.jst_formula_recycled()`](https://jma61.github.io/jstats/reference/dot-jst_formula_recycled.md);
+[`lm()`](https://rdrr.io/r/stats/lm.html) recycles it), gets the
+requirement.

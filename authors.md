@@ -10,13 +10,13 @@ Source:
 [`DESCRIPTION`](https://github.com/JMA61/jstats/blob/main/DESCRIPTION)
 
 Ackerman J (2026). *jstats: Simplified Statistical Analysis Tools for
-Social Science*. R package version 0.9.230,
+Social Science*. R package version 0.9.231,
 <https://JMA61.github.io/jstats/>.
 
     @Manual{,
       title = {jstats: Simplified Statistical Analysis Tools for Social Science},
       author = {Jeff Ackerman},
       year = {2026},
-      note = {R package version 0.9.230},
+      note = {R package version 0.9.231},
       url = {https://JMA61.github.io/jstats/},
     }

@@ -48,22 +48,16 @@ ways out, `jsubset(d, off)` and `jsubset(d, NULL)`.
 
 A filter normally names only columns of the data frame, and such a
 filter can never fall out of step with the data. A filter may also refer
-to an object in your workspace, such as a cutoff (`Age < cutoff`) or a
-set of codes (`Region %in% keep_regions`). An object compared with a
-variable value by value must hold a single value or one value for every
-row; any other length is refused, where R would repeat the shorter one.
-If you compute a keep/drop indicator separately, add it to the data
-frame as a column and filter on that column
+to a value in your workspace, such as a cutoff (`Age < cutoff`), a set
+of codes (`Region %in% keep_regions`) or a summary (`Age > mean(ages)`).
+It may not refer to a vector of values for the cases: jstats analyzes
+the variables of a data frame, so a keep/drop indicator computed
+separately is added to the data frame as a column first
 (`clinic$Keep <- clinic$Stress > 3`, then
-`jsubset(clinic, Keep == TRUE)`). A separate object holding one value
-per row stops matching the data frame if rows are later added or
-removed, and every analysis of that data frame then stops until the
-filter is set aside. Nor can it be used beside a
-[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
-setting that drops cases, since the filter is applied to the cases
-[`jcomplete()`](https://jma61.github.io/jstats/reference/jcomplete.md)
-keeps: the filter is refused, with the line that adds the object to the
-data frame.
+`jsubset(clinic, Keep == TRUE)`), where it stays matched to its rows and
+the data frame's other settings reach it. A filter naming such a vector
+is refused, with that line. Any other vector compared with a variable
+value by value is refused too, where R would repeat the shorter one.
 
 A text variable's blank cells, which
 [`jfreq()`](https://jma61.github.io/jstats/reference/jfreq.md) tabulates

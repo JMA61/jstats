@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.230</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -212,10 +212,14 @@ A value or vector from your workspace may be named inside a computed
 term, as in <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>: <code>I(x &gt; cutoff)</code> with <code>cutoff &lt;- 10</code>.
 A data frame may not: write <code>y ~ x</code> with <code>data = MyData</code>,
 not <code>MyData$y ~ MyData$x</code>.
-A vector used value by value with the data, as in <code>I(x * w)</code>,
-must hold one value for each case – each row of <code>data</code> left
-after filtering – where <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would recycle a shorter one; a
-set used with <code>%in%</code> may have any length.</p>
+A variable may not: jstats analyzes the variables of a data frame, so
+a vector holding one value for each case – <code>w</code> in
+<code>I(x * w)</code>, or an object reached with <code>$</code> such as
+<code>lst$w</code> – is added to the data frame first
+(<code>MyData$w &lt;- w</code>), where <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would read it from the
+workspace; the stop gives that line. A vector of any other length used
+value by value is refused, where <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would repeat the shorter
+one; a set used with <code>%in%</code> may have any length.</p>
     </div>
     <div class="section level2">
     <h2 id="unequal-variances">Unequal variances<a class="anchor" aria-label="anchor" href="#unequal-variances"></a></h2>
