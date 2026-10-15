@@ -6313,21 +6313,43 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         # carry an explicit convention =, so pasting them verbatim survives
         # the unset state under the Decision 11 choose-first gate
         # (shipped S244).
-        phr       <- .jst_phrasing_convention(convention)
-        tok_style <- .jst_convention_label(phr)
-        tok_range <- if (identical(phr, "sas")) ".A-.Z" else ".a-.z"
-        tok_ex    <- .jst_canonical_tag("a", phr)
+        # The family the advice names (the S355 item; Session 357, Jeff:
+        # a typed .A gets SAS-style advice). A governing convention -- a
+        # per-call stata or sas, else a stata or sas setting -- decides,
+        # as it decides the case of what is produced (Decision 13's token
+        # case rule: input case is ignored). With none (unset, or spss)
+        # the case of the letters typed, when they agree, is the only
+        # evidence of the family meant; else Stata-style. "-style"
+        # attaches to missing values, never to markers, and "token" left
+        # runtime text at S355.
+        typed_letters <- gsub("[^A-Za-z]", "",
+                              as.character(unname(codes_tagged_raw)))
+        typed_letters <- typed_letters[nzchar(typed_letters)]
+        pc  <- if (is.character(convention) && length(convention) == 1L &&
+                   !is.na(convention)) tolower(convention) else ""
+        opt <- getOption(".jst_options_missing_convention",
+                         .jst_options_defaults$missing.convention)
+        phr <- if (pc %in% c("stata", "sas")) {
+          pc
+        } else if (identical(opt, "stata") || identical(opt, "sas")) {
+          opt
+        } else if (length(typed_letters) > 0L &&
+                   all(typed_letters == toupper(typed_letters))) {
+          "sas"
+        } else if (length(typed_letters) > 0L &&
+                   all(typed_letters == tolower(typed_letters))) {
+          "stata"
+        } else {
+          .jst_phrasing_convention(convention)
+        }
+        tok_ex <- .jst_canonical_tag("a", phr)
         .jst_stop(
-          paste0(
-            "'", vn, "' has no lettered markers to label, so ",
-            tok_style, " tokens (", tok_range, ") cannot be applied ",
-            "here."),
-          "\n",
-          paste0(
-            "To turn numeric codes into tagged missings, use jrecode() ",
-            "(for example map = \"-99=.", tok_ex, "\", convention = \"",
-            phr, "\"); or declare the numbers directly with ",
-            "codes = c(-99), convention = \"", phr, "\"."))
+          vn, " has no lettered markers to label.\n",
+          "To turn numeric codes into ", .jst_convention_label(phr),
+          " missing values, use jrecode() (for example map = \"-99=.",
+          tok_ex, "\", convention = \"", phr, "\"); or declare the ",
+          "numbers directly with codes = c(-99), convention = \"", phr,
+          "\".")
       }
 
       # A range cannot land on a tagged-form column: the band is an

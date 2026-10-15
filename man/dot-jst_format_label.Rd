@@ -9,7 +9,7 @@
 \description{
 Returns the format-name parenthetical used in jload and jsave
 success messages -- e.g. \code{"Stata format"} for \code{.dta},
-\code{"R native format"} for \code{.rds}. Centralises the mapping
+\code{"R format"} for \code{.rds}. Centralises the mapping
 so both functions stay in sync, and so the labels can be edited
 in one place if the wording is later refined.
 }

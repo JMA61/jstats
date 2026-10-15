@@ -87,9 +87,9 @@ working directory.
 labels and value labels.
 \item Excel (\code{.xlsx}) and CSV (\code{.csv}) do not preserve
 variable or value labels.
-\item R native (\code{.rds}) preserves the data frame exactly as it
+\item R format (\code{.rds}) preserves the data frame exactly as it
 exists in R, including all attributes.
-\item R native (\code{.rds}) also carries the active classification
+\item R format (\code{.rds}) also carries the active classification
 registrations (see \code{\link{jdummy}}, \code{\link{jnumeric}},
 \code{\link{jcount}}, and \code{\link{jlikert}}), which
 \code{\link{jload}} restores. Other formats cannot store them, and
@@ -105,7 +105,7 @@ written until the problems are fixed.
 \item SPSS (\code{.sav}), Stata (\code{.dta}), SAS interchange
 (\code{.xpt}) and CSV (\code{.csv}) have no missing value for text:
 a text variable's missing cells are saved as blank text, and read
-back as blank, not missing. A note says so when it happens. R native
+back as blank, not missing. A note says so when it happens. R format
 (\code{.rds}) and Excel (\code{.xlsx}) keep them missing. In a CSV
 file the same holds for a factor, which is written as its labels.
 \item Stata files are written as version 14 format.
@@ -125,7 +125,7 @@ jsave(data = community, file.path(tempdir(), "community.sav"),
 jsave(community, "community.sav")         # SPSS
 jsave(community, "community.xlsx")        # Excel
 jsave(community, "community.csv")         # CSV
-jsave(community, "community.rds")         # R native
+jsave(community, "community.rds")         # R format
 
 # Using juse() default
 juse(community)

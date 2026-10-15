@@ -229,7 +229,7 @@ jload("community.xlsx")
 jload("community.xlsx", sheet = "Wave2")
 jload("community.xlsx", sheet = 2)
 
-# CSV and R native
+# CSV and R format
 jload("community.csv")
 jload("community.rds")
 

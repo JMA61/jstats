@@ -16,7 +16,7 @@ A character note, or NULL when the frame has no registrations.
 }
 \description{
 Builds the loss-of-fidelity note emitted when a frame that has active
-classification registrations is saved to a format other than R native
+classification registrations is saved to a format other than R
 format (.rds). Parallels the label and missing-value loss notes: the data
 write succeeds, but the registrations are dropped because only the .rds
 format carries them. Returns NULL when the frame has no registrations, so

@@ -196,7 +196,7 @@
 #' jload("community.xlsx", sheet = "Wave2")
 #' jload("community.xlsx", sheet = 2)
 #'
-#' # CSV and R native
+#' # CSV and R format
 #' jload("community.csv")
 #' jload("community.rds")
 #'
@@ -301,14 +301,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- Handle .RData/.rda redirect -------------------------------------------
   if (ext %in% c("rdata", "rda")) {
+    # One voice with the bare-name redirect below (the S219 item's finding
+    # 6; Session 357): the fact, then the base R line on its own. The file
+    # is named as typed, slashes swapped so the line pastes back into R.
+    shown <- gsub("\\", "/", file, fixed = TRUE)
     .jst_stop(
-      # "can contain" (Session 351, the S219 item's finding 7): an .RData
-      # file MAY hold several objects -- community.rda holds one.
-      ".RData files can contain multiple named objects. ",
-      # Slash-swap for the same reason as the leading-digit recipe:
-      # the echoed call must paste back into R.
-      "Use load(\"", gsub("\\", "/", file, fixed = TRUE),
-      "\") to load these directly."
+      shown, " is an .RData file, which jstats does not load.\n",
+      "Load it with base R:\n",
+      "  load(\"", shown, "\")"
     )
   }
 
@@ -355,8 +355,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         # sitting there under this stem: the file the user meant plainly
         # exists, and "no file found" would send them looking for a typo.
         # Same redirect as the typed-extension path above.
+        # The extension in each case R writes and users type: on a
+        # case-sensitive file system (Linux) "rdata" alone missed x.RData,
+        # the form save() is usually given (Session 357).
         rdata_hit <- .jst_search_no_extension(file, has_dir,
-                                              exts = c("rdata", "rda"))
+                                              exts = c("RData", "rdata",
+                                                       "Rdata", "rda", "RDA"))
         if (length(rdata_hit) > 0) {
           shown <- sub("^\\./", "", rdata_hit[1])
           .jst_stop(
@@ -419,7 +423,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "  .xlsx      Excel\n",
       "  .xls       Excel (legacy)\n",
       "  .csv       Comma-separated values\n",
-      "  .rds       R native"
+      "  .rds       R"
     )
   }
 
@@ -644,7 +648,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # whatever quiet is (a guard on it was dead code: the S351 mutant round).
   if (.jst_note_fired) say("")
   if (from_package) {
-    say("Loaded the jstats example dataset '", file, "'.")
+    # No closing period, as on the file branch below and jsave()'s Saved
+    # line: a status line (the S206 item, candidate 2; Session 357).
+    say("Loaded the jstats example dataset '", file, "'")
   } else {
     say(
       "Loaded ", obj_name,
@@ -954,7 +960,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'
 #' Returns the format-name parenthetical used in jload and jsave
 #' success messages -- e.g. \code{"Stata format"} for \code{.dta},
-#' \code{"R native format"} for \code{.rds}. Centralises the mapping
+#' \code{"R format"} for \code{.rds}. Centralises the mapping
 #' so both functions stay in sync, and so the labels can be edited
 #' in one place if the wording is later refined.
 #'
@@ -972,7 +978,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
          xlsx     = "Excel format",
          xls      = "Excel (legacy) format",
          csv      = "CSV format",
-         rds      = "R native format",
+         rds      = "R format",
          paste0(ext, " format"))
 }
 
@@ -1686,8 +1692,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # neither recommended -- which is right depends on whether the user
       # regards the data or the setting as the truth.
       note_lines <- c(
+        # The subject agrees with the count (S347 item, Session 357):
+        # the header above has just said "1 variable has ...".
         sprintf(
-          "Note: these variables are %s, but your missing.convention setting is \"%s\".",
+          "Note: %s %s, but your missing.convention setting is \"%s\".",
+          .jst_plural(n_vars, "this variable is", "these variables are"),
           disp_label(st), opt),
         sprintf("To use %s missing values, run:", disp_label(st)),
         sprintf("  joptions(missing.convention = \"%s\")", st),
@@ -1777,7 +1786,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # lines; Case 1's jconvert line answers a different question
       # ("make them missing in base R") and is deliberately left alone.
       note_lines <- c(
-        sprintf("Note: %s mixes %s missing values.", call_name, mix_str),
+        # Rule T (S230 item, Session 357): a message never opens on a
+        # bare frame name.
+        sprintf("Note: the %s data frame mixes %s missing values.",
+                call_name, mix_str),
         unlist(lapply(styles_present, function(g) {
           conv_block(sprintf("To use %s throughout,", disp_label(g)),
                      g, rider = TRUE)
@@ -3254,9 +3266,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # preserve.declarations = FALSE that blanked SPSS-style codes -> confirm.
   if (!preserve.declarations && has_spss && n_blanked > 0) {
     return(.jst_wrap_message(paste0(
-      "Note: ", fmt, " does not store variable labels or value labels. ",
-      n_blanked, " missing-value codes were blanked to empty cells ",
-      "(preserve.declarations = FALSE).")))
+      # Rule E and the count's number (the Session 123 sweep; Session 357).
+      "Note: ", fmt, " does not store variable labels or value labels.\n",
+      n_blanked, " ",
+      .jst_plural(n_blanked, "cell holding a declared missing value was",
+                  "cells holding declared missing values were"),
+      " blanked (preserve.declarations = FALSE).")))
   }
 
   # Both forms present: one generic note, no platform names.
@@ -3264,7 +3279,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
       "missing-value metadata.\n",
-      "Declared missing-value codes lose their missing status, which may ",
+      "Declared missing values lose their missing status, which may ",
       "result in them being written as ordinary ",
       if (isTRUE(text_udm)) "values" else "numbers", ".\n",
       "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
@@ -3277,10 +3292,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "Note: ", fmt, " does not store variable labels, value labels, or ",
       "missing-value metadata.\n",
       if (isTRUE(text_udm)) {
-        paste0("Any SPSS-style missing-value codes are written as ordinary ",
+        paste0("Any SPSS-style missing values are written as ordinary ",
                "values and will read back as valid data.\n")
       } else {
-        paste0("Any SPSS-style missing-value codes (e.g. -99) are written as ",
+        paste0("Any SPSS-style missing values (e.g. -99) are written as ",
                "literal numbers and will read back as ordinary values.\n")
       },
       "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
@@ -3291,7 +3306,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (has_stata) {
     return(.jst_wrap_message(paste0(
       "Note: ", fmt, " does not store variable labels, value labels, or ",
-      "missing-value metadata. Stata-style missing values (.a, .b, ...) are ",
+      "missing-value metadata.\n",
+      "Stata-style missing values (.a, .b, ...) are ",
       "written as blank cells; the distinction between them is not preserved.")))
   }
 
@@ -3434,9 +3450,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     labels and value labels.
 #'   \item Excel (\code{.xlsx}) and CSV (\code{.csv}) do not preserve
 #'     variable or value labels.
-#'   \item R native (\code{.rds}) preserves the data frame exactly as it
+#'   \item R format (\code{.rds}) preserves the data frame exactly as it
 #'     exists in R, including all attributes.
-#'   \item R native (\code{.rds}) also carries the active classification
+#'   \item R format (\code{.rds}) also carries the active classification
 #'     registrations (see \code{\link{jdummy}}, \code{\link{jnumeric}},
 #'     \code{\link{jcount}}, and \code{\link{jlikert}}), which
 #'     \code{\link{jload}} restores. Other formats cannot store them, and
@@ -3452,7 +3468,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \item SPSS (\code{.sav}), Stata (\code{.dta}), SAS interchange
 #'     (\code{.xpt}) and CSV (\code{.csv}) have no missing value for text:
 #'     a text variable's missing cells are saved as blank text, and read
-#'     back as blank, not missing. A note says so when it happens. R native
+#'     back as blank, not missing. A note says so when it happens. R format
 #'     (\code{.rds}) and Excel (\code{.xlsx}) keep them missing. In a CSV
 #'     file the same holds for a factor, which is written as its labels.
 #'   \item Stata files are written as version 14 format.
@@ -3472,7 +3488,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' jsave(community, "community.sav")         # SPSS
 #' jsave(community, "community.xlsx")        # Excel
 #' jsave(community, "community.csv")         # CSV
-#' jsave(community, "community.rds")         # R native
+#' jsave(community, "community.rds")         # R format
 #'
 #' # Using juse() default
 #' juse(community)
@@ -3668,7 +3684,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       "  .xpt       SAS interchange\n",
       "  .xlsx      Excel\n",
       "  .csv       Comma-separated values\n",
-      "  .rds       R native"
+      "  .rds       R"
     )
   }
   # A path typed with single backslashes (S343; Session 351): checked
@@ -3704,7 +3720,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       "  .xpt       SAS interchange\n",
       "  .xlsx      Excel\n",
       "  .csv       Comma-separated values\n",
-      "  .rds       R native",
+      "  .rds       R",
       xls_msg
     )))
   }

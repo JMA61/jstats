@@ -197,7 +197,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 
   if (length(variable_names) < 2) {
     .jst_stop(paste0(
-      "At least 2 variables are required. ",
+      # Rule E: one sentence per line (the Session 123 sweep; Session 357).
+      "At least 2 variables are required.\n",
       if (length(variable_names) == 0) "None were provided."
       else "Only 1 was provided."
     ))
@@ -5230,7 +5231,8 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
 
   if (length(variable_names) < 2) {
     .jst_stop(paste0(
-      "At least 2 items are required. ",
+      # Rule E: one sentence per line (the Session 123 sweep; Session 357).
+      "At least 2 items are required.\n",
       if (length(variable_names) == 0) "None were provided."
       else "Only 1 was provided."
     ))

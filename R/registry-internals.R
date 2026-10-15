@@ -235,7 +235,7 @@
 #' the jnumeric/jcount intent records (the .jst_registry notebook) and the
 #' jdummy registrations (the .jst_dummy registry) -- and attaches them to the
 #' data frame as a single list-valued attribute (".jst_registrations") so they
-#' travel inside an R native format (.rds) save. The original frame name is
+#' travel inside an R format (.rds) save. The original frame name is
 #' recorded alongside as provenance only; it is informational and is NOT used
 #' as the lookup key on load (jload re-keys under the name the frame is loaded
 #' as, which is the name later analysis calls will reference). The attribute is
@@ -421,7 +421,7 @@
 #' Internal helper: note that registrations are not kept in a non-rds format
 #'
 #' Builds the loss-of-fidelity note emitted when a frame that has active
-#' classification registrations is saved to a format other than R native
+#' classification registrations is saved to a format other than R
 #' format (.rds). Parallels the label and missing-value loss notes: the data
 #' write succeeds, but the registrations are dropped because only the .rds
 #' format carries them. Returns NULL when the frame has no registrations, so

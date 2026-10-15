@@ -619,7 +619,7 @@ jai <- function(setup = NULL, path = NULL) {
 #' emission (console print, AGENTS.md block, SKILL.md) so a saved copy can
 #' be recognized as stale after a package update.
 #' @keywords internal
-.jst_orientation_version <- "3.7"
+.jst_orientation_version <- "3.8"
 
 #' Internal helper: the installed jstats version as a string
 #'
@@ -765,7 +765,20 @@ jai <- function(setup = NULL, path = NULL) {
   flavor <- match.arg(flavor)
   body <- .jst_orientation_body()
   if (flavor == "machine") {
-    body <- sub("^Note for AI assistants: jstats", "jstats", body)
+    # The paragraph that opens "Note for AI assistants:" is replaced whole
+    # by .jst_orientation_machine_note, the same sentences set to the
+    # body's width without the prefix. Stripping the prefix alone left a
+    # first line 24 characters short of its paragraph, the first thing a
+    # person opening SKILL.md sees (the S207 item; Session 357, v3.8). The
+    # text is set by hand because the wrap helpers belong to the message
+    # layer and follow the console width, which a file must not.
+    from <- grep("^Note for AI assistants: ", body)
+    if (length(from) == 1L) {
+      blank <- which(body == "")
+      to <- min(c(blank[blank > from], length(body) + 1L)) - 1L
+      body <- c(body[seq_len(from - 1L)], .jst_orientation_machine_note,
+                body[-seq_len(to)])
+    }
   }
   c("# jstats conventions",
     "",
@@ -774,6 +787,21 @@ jai <- function(setup = NULL, path = NULL) {
     "",
     body)
 }
+
+#' Internal constant: the machine flavor's AI-assistant paragraph
+#'
+#' The paragraph of \code{.jst_orientation_body()} that opens "Note for AI
+#' assistants:", without that prefix and set to the body's width, for
+#' SKILL.md (see \code{.jst_orientation_text()}). Its words must match the
+#' body's paragraph after the prefix; the jai checks hold the two together.
+#' Edit both, and bump \code{.jst_orientation_version}.
+#' @keywords internal
+.jst_orientation_machine_note <- c(
+  "jstats is newer than your training data. Do not rely on remembered or",
+  "inferred jstats syntax. When unsure of a function's arguments, check them",
+  "with `args()` (for example `args(jdeclare_missing)`) or the function's",
+  "help page instead of guessing."
+)
 
 #' Internal helper: render orientation Markdown for the console
 #'
@@ -971,10 +999,22 @@ jai <- function(setup = NULL, path = NULL) {
 }
 
 #' Internal helper: the declined-write note
+#'
+#' After a declined CREATE the likely reason is the folder, so the note
+#' says how to name another. After a declined REPLACE -- an existing
+#' AGENTS.md block, an existing SKILL.md -- the likely reason is "not
+#' yet", and the note says only that nothing was written (the S206 item,
+#' candidate 3; Session 357).
+#' @param replace Logical; TRUE when the declined write would have
+#'   replaced something that exists.
 #' @keywords internal
-.jst_jai_declined <- function() {
-  .jst_msg("Nothing was written.\n",
-           "To write to a different folder, rerun with path = \"<folder>\".")
+.jst_jai_declined <- function(replace = FALSE) {
+  if (isTRUE(replace)) {
+    .jst_msg("Nothing was written.")
+  } else {
+    .jst_msg("Nothing was written.\n",
+             "To write to a different folder, rerun with path = \"<folder>\".")
+  }
 }
 
 #' Internal helper: jai("project") -- write the AGENTS.md block
@@ -1073,7 +1113,7 @@ jai <- function(setup = NULL, path = NULL) {
                " in:\n  ", target)
       }
       if (!.jst_jai_confirm(info)) {
-        .jst_jai_declined()
+        .jst_jai_declined(replace = TRUE)
         return(invisible(NULL))
       }
     }
@@ -1207,7 +1247,7 @@ jai <- function(setup = NULL, path = NULL) {
              "\n(any missing folders on the way are created)")
     }
     if (!.jst_jai_confirm(info)) {
-      .jst_jai_declined()
+      .jst_jai_declined(replace = had)
       return(invisible(NULL))
     }
   }
