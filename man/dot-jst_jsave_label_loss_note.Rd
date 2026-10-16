@@ -10,7 +10,10 @@
   stata_vars,
   preserve.declarations,
   n_blanked,
-  text_udm = FALSE
+  text_udm = FALSE,
+  data = NULL,
+  code_name = NULL,
+  path = NULL
 )
 }
 \arguments{
@@ -28,9 +31,17 @@ names, as detected before any collapse.}
 \code{preserve.declarations = FALSE}; zero otherwise.}
 
 \item{text_udm}{Logical: is one of \code{spss_vars} a text variable?
-Its declared codes are words, so "(e.g. -99) are written as literal
-numbers" and "ordinary numbers" become "ordinary values" (Session 351,
-the S340 item's rider).}
+Its declared codes are words, so "ordinary numbers" becomes "ordinary
+values" (Session 351, the S340 item's rider).}
+
+\item{data}{The data frame as given, before any collapse: its labels
+and declarations.}
+
+\item{code_name}{Character; the data as the printed line names it
+(\code{mydata} for an expression, whose line the caller opens with
+"mydata <- ...").}
+
+\item{path}{Character; the path written, normalized.}
 }
 \value{
 A single message string, or \code{NULL} if no note applies.
@@ -44,18 +55,28 @@ depends on which missing-value form the frame carried and on whether
 \code{preserve.declarations = FALSE} blanked the codes.
 }
 \details{
-Branching (SPSS-style codes write as literal numbers, while Stata-style
-tagged NAs write as blank cells):
+Since Session 359 (the S357 item, Jeff's walk of
+missing_convention_walk.R Section 30) the note says only what the frame
+had to lose and names what the package knows:
 \itemize{
-\item \code{preserve.declarations = FALSE} and SPSS-style codes were
-blanked: a confirmation giving the count of blanked cells.
-\item both forms present (\code{preserve.declarations = TRUE}): a
-generic note that names neither platform, plus the
-\code{preserve.declarations = FALSE} suggestion.
-\item SPSS-style only: the literal-numbers warning plus the suggestion.
-\item Stata-style only: a brief note that the tags write as blank cells
-and the distinction between them is not preserved.
-\item neither: a plain labels-only note.
+\item The first line names labels only when a variable carries a
+variable label or value labels (the registration note's rule: it
+fires only on registrations), and missing-value metadata only when a
+variable declares missing values. A frame with neither gets no note.
+\item SPSS-style codes write as literal numbers. The variables and the
+declared codes their cells hold are named -- "Income's declared
+missing value -99 is written as an ordinary number and will read
+back as valid data." -- where the note said "Any SPSS-style missing
+values (e.g. -99)". A declared code no cell holds writes nothing,
+and is not named.
+\item The way to write them as empty cells is the jsave() call to
+run, with the data's name and the path just written, where the note
+gave "jsave(..., preserve.declarations = FALSE)", which does not run
+as printed (the S343 rule).
+\item Stata-style missing values write as blank cells; the
+distinction between them is not preserved.
+\item \code{preserve.declarations = FALSE} that blanked SPSS-style
+codes: a confirmation giving the count of blanked cells.
 }
 The note is a loss-of-fidelity warning per the locked jsave design; it is
 not gated to the joutput verbosity tiers.

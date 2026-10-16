@@ -2129,7 +2129,21 @@
       unlist(lapply(as.list(e)[-1L], syms), use.names = FALSE)
     }
     other <- setdiff(unique(syms(subset_sub)), var)
-    known <- vapply(other, function(nm) exists(nm, envir = user_env) &&
+    # A column of a data frame is re-called in that frame, where a name the
+    # frame holds is read as its variable (ruling R18), so such a name is
+    # refused whatever the workspace holds (Session 359; the S342 item's
+    # dirty entry): with a separate Keep01 in the workspace,
+    # jdesc(d$Age, subset = Keep01 == 1) passed this check and was then
+    # analyzed on d's own Keep01, where with none it was refused.
+    frame_vars <- if (isTRUE(wrapped$in_frame)) {
+      fr <- tryCatch(get(wrapped$frame_nm, envir = user_env),
+                     error = function(e) NULL)
+      if (is.data.frame(fr)) names(fr) else character(0)
+    } else {
+      character(0)
+    }
+    known <- vapply(other, function(nm) !(nm %in% frame_vars) &&
+                      exists(nm, envir = user_env) &&
                       !is.function(get(nm, envir = user_env)), logical(1))
     other <- other[!known]
     if (length(other) > 0L) {

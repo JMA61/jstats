@@ -59,6 +59,15 @@
 #' The shortcut keyword \code{core} (default) produces a curated default
 #' set for the class; \code{all} produces every plot the class supports.
 #'
+#' For a \code{jst_lm} result, \code{effects} draws one plot per variable
+#' of the model: a term computed from a variable (\code{I(x^2)},
+#' \code{log(x + 1)}, \code{I(x * z)}) is drawn in that variable's plot,
+#' following it along the axis, with the other variables held as \code{at}
+#' sets them. A variable the fit dropped as an exact linear combination of
+#' the others has no effect to draw. For a model with no predictors
+#' (\code{y ~ 1}), the plots that need a predictor, or that are drawn
+#' against the fitted values or the leverage, are left out with a note.
+#'
 #' Valid plot types for the data-first form: \code{histogram}, \code{bar},
 #' \code{scatter}, \code{box}, \code{grouped_bar}.
 #'
@@ -427,7 +436,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr,
-                                  envir = parent.frame())
+                                  envir = parent.frame(),
+                                  vars = c(variable_names, by_name))
   # A text variable's blank cells plot as one category, <blank> (S340).
   data <- .jst_label_blank_text(pipeline$data)
   # Pipeline messages are printed below, after the red title
@@ -866,7 +876,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # -- Apply pipeline --------------------------------------------------------
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr,
-                                  envir = parent_env)
+                                  envir = parent_env,
+                                  vars = c(all.vars(formula), by_name))
   # A text variable's blank cells plot as one category, <blank> (S340).
   data <- .jst_label_blank_text(pipeline$data)
 
@@ -1555,6 +1566,83 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   invisible(plots)
 }
 
+#' Internal helper: predict from a model, without the rank-deficient warning
+#'
+#' A model whose fit dropped a term as an exact linear combination of the
+#' others (an NA coefficient) predicts from the terms it kept, and
+#' \code{predict.lm()} -- which \code{predict.glm()} calls -- warns
+#' "prediction from rank-deficient fit; attr(*, "non-estim") has doubtful
+#' cases" whenever the grid holds the dropped term at a value the kept
+#' terms do not imply: once for the fit plot and once per effect plot
+#' (Session 359; the S347 item). jlm() and jlogistic() have already said
+#' which term the fit dropped (\code{.jst_warn_aliased()}), and the line
+#' drawn is the kept terms' prediction, so that one warning is muffled
+#' here. Any other warning passes.
+#'
+#' @param ... Passed to \code{stats::predict()}.
+#' @return What \code{stats::predict()} returns.
+#' @keywords internal
+.jst_predict_kept <- function(...) {
+  rank_msg <- gettext(paste0("prediction from rank-deficient fit; ",
+                             "attr(*, \"non-estim\") has doubtful cases"),
+                      domain = "R-stats")
+  withCallingHandlers(
+    stats::predict(...),
+    warning = function(w) {
+      msg <- conditionMessage(w)
+      if (identical(msg, rank_msg) ||
+          grepl("rank-deficient", msg, fixed = TRUE)) {
+        invokeRestart("muffleWarning")
+      }
+    })
+}
+
+#' Internal helper: the plots a model with no predictors cannot draw
+#'
+#' The intercept-only model (\code{y ~ 1}, supported since Session 359)
+#' gives every case the same fitted value and the same leverage, and has
+#' no predictor to put on an axis: a fit line, an effect plot, a
+#' coefficient or VIF plot, and the plots drawn against the fitted values
+#' or the leverage have nothing to show. Those named in \code{skip} are
+#' left out of \code{plot_set}, and one note names them.
+#'
+#' @param plot_set Character; the plots asked for.
+#' @param model The fitted model.
+#' @param skip Character; the plots of \code{plot_set} such a model cannot
+#'   draw.
+#' @param labels Named character; each plot's name as the note gives it.
+#' @param note Logical; emit the note here (FALSE returns the names and
+#'   leaves the note to the caller, \code{.jst_no_predictor_note()}).
+#' @return \code{plot_set} without the plots left out, with the left-out
+#'   names as the attribute \code{"dropped"}.
+#' @keywords internal
+.jst_no_predictor_plots <- function(plot_set, model, skip, labels,
+                                    note = TRUE) {
+  if (!identical(names(stats::coef(model)), "(Intercept)")) {
+    return(plot_set)
+  }
+  drop <- intersect(plot_set, skip)
+  if (length(drop) > 0L && note) .jst_no_predictor_note(labels[drop])
+  structure(setdiff(plot_set, drop), dropped = drop)
+}
+
+#' Internal helper: the note for the plots a model with no predictors
+#' cannot draw
+#'
+#' The note \code{.jst_no_predictor_plots()} emits, and jlm()'s
+#' diagnostics emit under their plot list (Session 359).
+#'
+#' @param dropped_labels Character; the left-out plots, named as the note
+#'   gives them.
+#' @return Invisible NULL; emits the note.
+#' @keywords internal
+.jst_no_predictor_note <- function(dropped_labels) {
+  one <- length(dropped_labels) == 1L
+  .jst_msg("Note: The model has no predictors, so ",
+           .jst_and_list(unname(dropped_labels)),
+           if (one) " is" else " are", " not drawn.")
+}
+
 #' Internal helper: compute the terms built from the focal variable on a
 #' plot's grid
 #'
@@ -1774,8 +1862,22 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
   dv_name <- all.vars(x$formula_used)[1]
   iv_names <- setdiff(colnames(mf), dv_name)
 
+  # The intercept-only model (Session 359): the plots that need a
+  # predictor, or that are drawn against the fitted values or the
+  # leverage, are left out with one note.
+  plot_set <- .jst_no_predictor_plots(
+    plot_set, model,
+    skip   = c("fit", "predicted", "effects", "coef", "vif", "residuals",
+               "scale", "leverage"),
+    labels = c(fit = "the fit plot", predicted = "Observed vs Predicted",
+               effects = "the effect plots",
+               coef = "Coefficients (95% CI)",
+               vif = "Variance Inflation Factors",
+               residuals = "Residuals vs Fitted", scale = "Scale-Location",
+               leverage = "Residuals vs Leverage"))
+
   if (is.null(focal_name)) focal_name <- iv_names[1]
-  if (!focal_name %in% iv_names) {
+  if (length(iv_names) > 0L && !focal_name %in% iv_names) {
     .jst_stop("`focal` must be one of the independent variables in the model: ",
          paste(iv_names, collapse = ", "))
   }
@@ -1801,8 +1903,8 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     newdata <- on_grid$newdata
     at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
 
-    pred <- stats::predict(model, newdata = newdata, interval = "confidence",
-                           level = 0.95)
+    pred <- .jst_predict_kept(model, newdata = newdata,
+                              interval = "confidence", level = 0.95)
     line_df <- data.frame(
       x   = grid_x,
       fit = pred[, "fit"],
@@ -1900,10 +2002,40 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     plots$predicted <- p
   }
 
-  # ---- effects plot (one per IV) -------------------------------------------
+  # ---- effects plot (one per variable) -------------------------------------
+  # One plot per VARIABLE (Session 359; the S347 item, Jeff's lean at
+  # S358): a term computed from a variable of the model -- I(x^2),
+  # log(x + 1), I(x * z) -- is drawn in that variable's plot, computed
+  # along its axis by .jst_terms_on_grid() (a product in each of its
+  # variables' plots, the other held), and has no plot of its own; until
+  # v0.9.232 "Effect: I(x^2)" moved the square with x held at 0. A
+  # computed term none of whose variables is in the model by itself
+  # (y ~ log(x)) keeps its own plot, as the only way to show it. A
+  # variable whose coefficient the fit dropped (an exact linear
+  # combination of the others) has no effect to draw, and the count line
+  # says so.
   if ("effects" %in% plot_set) {
+    is_term <- vapply(iv_names, function(v) {
+      ex <- tryCatch(str2lang(v), error = function(e) NULL)
+      is.call(ex)
+    }, logical(1))
+    plain    <- iv_names[!is_term]
+    term_var <- lapply(iv_names[is_term], function(v) all.vars(str2lang(v)))
+    names(term_var) <- iv_names[is_term]
+    own      <- names(term_var)[vapply(term_var, function(vs) {
+      length(intersect(vs, plain)) == 0L
+    }, logical(1))]
+    fit_b <- stats::coef(model)
+    names(fit_b) <- .jst_unbacktick(names(fit_b))
+    dropped <- plain[vapply(plain, function(v) {
+      v %in% names(fit_b) && is.na(fit_b[[v]]) &&
+        !any(vapply(names(term_var), function(t) {
+          v %in% term_var[[t]] && t %in% names(fit_b) && !is.na(fit_b[[t]])
+        }, logical(1)))
+    }, logical(1))]
+    effect_vars <- iv_names[iv_names %in% c(setdiff(plain, dropped), own)]
     n_effects <- 0
-    for (iv in iv_names) {
+    for (iv in effect_vars) {
       at_vals <- .jst_resolve_at(at, mf, dv_name, iv, x$dummy_coef_names)
       iv_range <- range(mf[[iv]], na.rm = TRUE)
       grid_x   <- seq(iv_range[1], iv_range[2], length.out = 80)
@@ -1913,8 +2045,8 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       newdata <- .jst_terms_on_grid(newdata, iv, at_vals,
                                     environment(x$formula_used))$newdata
 
-      pred <- stats::predict(model, newdata = newdata,
-                             interval = "confidence", level = 0.95)
+      pred <- .jst_predict_kept(model, newdata = newdata,
+                                interval = "confidence", level = 0.95)
       line_df <- data.frame(x = grid_x,
                             fit = pred[, "fit"],
                             lwr = pred[, "lwr"],
@@ -1934,10 +2066,22 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       n_effects <- n_effects + 1
     }
     # In number (Session 347): it read "(1 effect plots produced, one per
-    # predictor)".
-    .jst_msg_out("\n(", .jst_plural(n_effects, "1 effect plot produced",
-                                     paste0(n_effects, " effect plots produced, ",
-                                            "one per predictor")), ")")
+    # predictor)". Counted in variables since Session 359, and laid out as
+    # an output's last line: none above it, one blank line after it (the
+    # S347 item; it opened on a blank line and ended without one, so two
+    # stood together under jlm()'s output and the next output began
+    # directly beneath it).
+    gone <- if (length(dropped) > 0L) {
+      paste0("; none for ", .jst_and_list(dropped), ", which ",
+             if (length(dropped) == 1L) "was" else "were",
+             " removed from the model")
+    } else {
+      ""
+    }
+    .jst_msg_out("(", .jst_plural(n_effects, "1 effect plot produced",
+                                  paste0(n_effects, " effect plots produced, ",
+                                         "one per variable")), gone, ")")
+    cat("\n")
   }
 
   # ---- coef forest plot ----------------------------------------------------
@@ -2000,7 +2144,10 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
   diag_plots <- intersect(plot_set, c("residuals", "qq", "scale", "cooks",
                                       "leverage"))
   if (length(diag_plots) > 0) {
-    diag_result <- .jst_plot_lm_diagnostics(model, which = diag_plots)
+    # No blank line ahead of a note here (Session 359): in jlm() the note
+    # follows the plot list, which ends without one; jplot() prints none.
+    diag_result <- .jst_plot_lm_diagnostics(model, which = diag_plots,
+                                            lead = FALSE)
     if (is.list(diag_result)) {
       for (nm in names(diag_result)) plots[[nm]] <- diag_result[[nm]]
     }
@@ -2044,8 +2191,21 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   dv_name <- names(mf)[1]
   iv_names <- setdiff(colnames(mf), dv_name)
 
+  # The intercept-only model (Session 359), as in jplot.jst_lm(): every
+  # case has the same predicted probability and leverage.
+  plot_set <- .jst_no_predictor_plots(
+    plot_set, model,
+    skip   = c("probability", "roc", "calibration", "binned", "leverage",
+               "coef", "vif"),
+    labels = c(probability = "the probability plot", roc = "ROC Curve",
+               calibration = "Calibration Plot",
+               binned = "Binned Residuals",
+               leverage = "Residuals vs Leverage",
+               coef = "Odds Ratios (95% CI)",
+               vif = "Variance Inflation Factors"))
+
   if (is.null(focal_name)) focal_name <- iv_names[1]
-  if (!focal_name %in% iv_names) {
+  if (length(iv_names) > 0L && !focal_name %in% iv_names) {
     .jst_stop("`focal` must be one of the independent variables in the model: ",
          paste(iv_names, collapse = ", "))
   }
@@ -2070,8 +2230,8 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
     newdata <- on_grid$newdata
     at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
 
-    pred_link <- stats::predict(model, newdata = newdata, type = "link",
-                                se.fit = TRUE)
+    pred_link <- .jst_predict_kept(model, newdata = newdata, type = "link",
+                                   se.fit = TRUE)
     t_crit <- 1.96
     line_df <- data.frame(
       x   = grid_x,

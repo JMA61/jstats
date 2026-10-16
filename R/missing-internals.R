@@ -323,11 +323,18 @@
 
 #' Internal helper: mask declared UDM cells to NA on the analysis copy
 #'
+#' @param data The data frame.
+#' @param cols Character; the columns to mask. Every column by default.
+#'   \code{.jst_apply_pipeline()} passes the analysis variables and the
+#'   columns its active settings read, when its caller names them (Session
+#'   359, the S217 item's fix 2): on a 1.9-million-row frame with ten
+#'   declared columns the whole-frame pass cost about 2.4 seconds on every
+#'   analysis call, and the two analysis variables 0.17.
 #' @keywords internal
-.jst_apply_declared_udms_as_na <- function(data) {
+.jst_apply_declared_udms_as_na <- function(data, cols = names(data)) {
   converted <- list()
 
-  for (vname in names(data)) {
+  for (vname in intersect(names(data), cols)) {
     col  <- data[[vname]]
     # observed = TRUE: this pass already scans every column's data to build
     # the mask, so enumerating in-band values here costs nothing extra and

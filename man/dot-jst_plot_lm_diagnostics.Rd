@@ -4,7 +4,7 @@
 \alias{.jst_plot_lm_diagnostics}
 \title{Internal helper: produce diagnostic plots for a fitted linear model}
 \usage{
-.jst_plot_lm_diagnostics(model, which, n_label = 3)
+.jst_plot_lm_diagnostics(model, which, n_label = 3, lead = TRUE)
 }
 \arguments{
 \item{model}{A fitted \code{lm} object.}
@@ -15,6 +15,10 @@
 "leverage" (residuals vs leverage).}
 
 \item{n_label}{Integer. Number of extreme points to label on each plot.}
+
+\item{lead}{Logical; a blank line ahead of the notes under the plots.
+jlm() prints its plot list just above them, ending without one;
+jplot() prints no list (Session 359).}
 }
 \description{
 Generates five diagnostic plots using ggplot2. Each plot is printed

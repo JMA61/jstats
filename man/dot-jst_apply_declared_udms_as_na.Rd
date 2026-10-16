@@ -4,7 +4,17 @@
 \alias{.jst_apply_declared_udms_as_na}
 \title{Internal helper: mask declared UDM cells to NA on the analysis copy}
 \usage{
-.jst_apply_declared_udms_as_na(data)
+.jst_apply_declared_udms_as_na(data, cols = names(data))
+}
+\arguments{
+\item{data}{The data frame.}
+
+\item{cols}{Character; the columns to mask. Every column by default.
+\code{.jst_apply_pipeline()} passes the analysis variables and the
+columns its active settings read, when its caller names them (Session
+359, the S217 item's fix 2): on a 1.9-million-row frame with ten
+declared columns the whole-frame pass cost about 2.4 seconds on every
+analysis call, and the two analysis variables 0.17.}
 }
 \description{
 Internal helper: mask declared UDM cells to NA on the analysis copy

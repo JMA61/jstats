@@ -13,7 +13,9 @@
   data_name = NULL,
   named_frame = FALSE,
   prior = FALSE,
-  data_names = NULL
+  data_names = NULL,
+  object = NULL,
+  n_frame = NULL
 )
 }
 \arguments{
@@ -45,6 +47,18 @@ frame; the message says it is unchanged.}
 \item{data_names}{Character or NULL. The variables of the frame the
 filter ran on; on a one-row frame a single value passes only when the
 condition names one of them.}
+
+\item{object}{NULL, or the workspace object a result of the wrong
+length came from: a list of \code{operand} (as written) and \code{n}
+(its number of values), from \code{.jst_recycled_operand()} or a bare
+name (Session 359). The message then names it as ruling R19's stop
+names an object a condition reads -- not in the data frame, a separate
+object in the workspace -- and counts cases, keeping its own fix line:
+a vector of the wrong length cannot be added to the data frame.}
+
+\item{n_frame}{Integer or NULL. The frame's row count before the
+pipeline's filters; when it differs from \code{n_rows} the count is
+of "the N cases left after filtering".}
 }
 \value{
 \code{invisible(NULL)} when the result is well-shaped; otherwise
@@ -102,7 +116,7 @@ gives the delete exit alone.}
 display (\code{jsubset()} with no arguments, Session 331). Nothing
 stops: the finding is handed back through
 \code{.jst_filter_status_signal()} as the status line "It cannot be
-applied: it has 12 values for 11 rows."}
+applied: it has 12 values for 11 cases."}
 }
 }
 \keyword{internal}

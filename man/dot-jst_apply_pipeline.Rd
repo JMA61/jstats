@@ -9,7 +9,8 @@
   data_name,
   is_default,
   subset_expr = NULL,
-  envir = parent.frame()
+  envir = parent.frame(),
+  vars = NULL
 )
 }
 \arguments{
@@ -22,6 +23,14 @@
 \item{subset_expr}{An unevaluated expression for one-off subsetting, or NULL.}
 
 \item{envir}{The environment in which to evaluate expressions.}
+
+\item{vars}{Character or NULL. The variables the caller reads from the
+returned data. Given, Step 0 masks declared missing values only in
+them and in the columns an active jcomplete(), an active jsubset() or
+\code{subset =} reads (Session 359, the S217 item's fix 2); NULL masks
+every column, as before. Every column is returned either way; a column
+outside that set keeps its declared codes, so a caller that reads one
+must name it.}
 }
 \value{
 A list with components:

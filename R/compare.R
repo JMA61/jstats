@@ -253,7 +253,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = all.vars(formula))
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
@@ -988,7 +989,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = all.vars(formula))
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
@@ -1849,7 +1851,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = terms)
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 

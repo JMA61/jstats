@@ -225,7 +225,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = variable_names)
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
@@ -1166,6 +1167,46 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   out
 }
 
+#' Internal helper: warn that the fit dropped a term, naming it
+#'
+#' A predictor that is an exact linear combination of the others gets an
+#' NA coefficient from \code{lm()} and \code{glm()}, and the coefficient
+#' table has no row for it. Until Session 359 jlm() and jlogistic() said
+#' only "One or more variables have been removed from the model due to
+#' collinearity.", and the reader had to find the missing row (the S347
+#' item; voice Rule AI: a cause the package knows is stated). The warning
+#' now names each dropped term as the table would have named it -- a
+#' factor level and a numeric dichotomy cleaned by
+#' \code{.jst_clean_coef_names()}, an interaction with \code{" * "} -- and
+#' says why it was dropped.
+#'
+#' @param model The fitted \code{lm} or \code{glm} object.
+#' @param data The data frame the model was fitted on.
+#' @param formula The formula as fitted.
+#' @param dummy_coef_names Character; the generated dummy columns, left
+#'   unchanged by the cleaning, as at the table.
+#' @return Invisible NULL; warns when a coefficient is NA.
+#' @keywords internal
+.jst_warn_aliased <- function(model, data, formula,
+                              dummy_coef_names = character(0)) {
+  cf <- stats::coef(model)
+  if (!any(is.na(cf))) return(invisible(NULL))
+  raw <- .jst_unbacktick(names(cf)[is.na(cf)])
+  shown <- tryCatch(
+    .jst_clean_coef_names(raw, data, all.vars(formula)[-1],
+                          skip = dummy_coef_names),
+    error = function(e) raw)
+  shown <- unique(.jst_interaction_label(shown))
+  one <- length(shown) == 1L
+  .jst_warn(.jst_and_list(shown), if (one) " was" else " were",
+            " removed from the model: ",
+            if (one) "it is" else "each is",
+            " an exact linear combination of the other predictors, so ",
+            if (one) "its coefficient" else "their coefficients",
+            " cannot be estimated.")
+  invisible(NULL)
+}
+
 #' Internal helper: show interaction names with " * " in place of ":"
 #'
 #' For display: splits each name on the colons OUTSIDE parentheses (so a
@@ -1231,9 +1272,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   "leverage" (residuals vs leverage).
 #' @param n_label Integer. Number of extreme points to label on each plot.
 #'
+#' @param lead Logical; a blank line ahead of the notes under the plots.
+#'   jlm() prints its plot list just above them, ending without one;
+#'   jplot() prints no list (Session 359).
+#'
 #' @importFrom rlang .data
 #' @keywords internal
-.jst_plot_lm_diagnostics <- function(model, which, n_label = 3) {
+.jst_plot_lm_diagnostics <- function(model, which, n_label = 3,
+                                     lead = TRUE) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
@@ -1277,6 +1323,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   # note under the plots says which trend lines they concern. Only the
   # smoother's warnings are caught; any other passes as before.
   smoothed <- integer(0)
+  # ggplot2's own warnings are caught the same way (Session 359; what was
+  # left of the warnings item): a point it cannot draw -- the standardized
+  # residual of a case with a leverage of 1, the only case in its category
+  # -- raised "Removed 1 rows containing missing values (`geom_point()`)"
+  # once per layer, six times under jlm(diagnostics = TRUE), away from the
+  # plots they concerned. One note under the plots counts the cases.
+  removed <- .jst_gg_removed_tracker()
   smooth_print <- function(p, title) {
     n <- 0L
     withCallingHandlers(print(p), warning = function(w) {
@@ -1285,8 +1338,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
         n <<- n + 1L
         invokeRestart("muffleWarning")
       }
+      if (removed$take(w, title)) invokeRestart("muffleWarning")
     })
     if (n > 0L) smoothed[[title]] <<- n
+  }
+  plain_print <- function(p, title) {
+    withCallingHandlers(print(p), warning = function(w) {
+      if (removed$take(w, title)) invokeRestart("muffleWarning")
+    })
   }
 
   # -- 1. Residuals vs Fitted -----------------------------------------------
@@ -1329,7 +1388,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                     x = "Theoretical Quantiles",
                     y = "Standardized Residuals") +
       ggplot2::theme_minimal()
-    print(p)
+    plain_print(p, "Normal Q-Q")
     plots$qq <- p
   }
 
@@ -1366,7 +1425,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       ggplot2::labs(title = "Cook's Distance",
                     x = "Observation", y = "Cook's Distance") +
       ggplot2::theme_minimal()
-    print(p)
+    plain_print(p, "Cook's Distance")
     plots$cooks <- p
   }
 
@@ -1393,18 +1452,73 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     plots$leverage <- p
   }
 
+  notes <- character(0)
   if (length(smoothed) > 0L) {
     one <- length(smoothed) == 1L
     n   <- sum(smoothed)
-    cat("\n")
-    .jst_msg("Note: The trend ", if (one) "line" else "lines", " in ",
-             .jst_and_list(names(smoothed)), " may not be reliable.\n",
-             "R's smoother reported ", .jst_fmt_n(n), " numerical ",
-             .jst_plural(n, "problem", "problems"), " while drawing ",
-             if (one) "it" else "them", ".")
+    notes <- c(notes, paste0(
+      "Note: The trend ", if (one) "line" else "lines", " in ",
+      .jst_and_list(names(smoothed)), " may not be reliable.\n",
+      "R's smoother reported ", .jst_fmt_n(n), " numerical ",
+      .jst_plural(n, "problem", "problems"), " while drawing ",
+      if (one) "it" else "them", "."))
+  }
+  notes <- c(notes, removed$note(leverage))
+  # Rule F: one blank line between two notes, and ahead of the first only
+  # under jlm()'s plot list (lead).
+  for (i in seq_along(notes)) {
+    if (i > 1L || lead) cat("\n")
+    .jst_msg(notes[[i]])
   }
 
   invisible(plots)
+}
+
+#' Internal helper: count the points ggplot2 leaves out of each plot
+#'
+#' ggplot2 warns, as each plot is drawn, when a layer cannot draw a row --
+#' "Removed 1 rows containing missing values (`geom_point()`)" (3.4), "...
+#' or values outside the scale range" (3.5) -- once per layer, so one case
+#' the diagnostic plots cannot place gave six raw warnings, held to the end
+#' of the output at R's default warn = 0 (Session 359; the S347 warnings
+#' item's last part). The tracker takes those warnings as each plot is
+#' printed and builds one note naming the plots and the cases they leave
+#' out, the cause stated when every one of them has a leverage of 1 (its
+#' standardized residual and Cook's distance are undefined: the only case
+#' in its category). Any other warning passes.
+#'
+#' @return A list of two functions: \code{take(w, title)}, TRUE when
+#'   \code{w} is a removal warning (recorded under the plot's title), and
+#'   \code{note(leverage)}, the note or \code{character(0)}.
+#' @keywords internal
+.jst_gg_removed_tracker <- function() {
+  seen <- integer(0)
+  take <- function(w, title) {
+    msg <- gsub("\033\\[[0-9;]*m", "", conditionMessage(w))
+    m <- regmatches(msg, regexec("Removed ([0-9]+) rows? containing", msg))[[1L]]
+    if (length(m) < 2L) return(FALSE)
+    k <- as.integer(m[2L])
+    seen[[title]] <<- max(c(if (title %in% names(seen)) seen[[title]], k))
+    TRUE
+  }
+  note <- function(leverage = NULL) {
+    if (length(seen) == 0L) return(character(0))
+    n   <- max(seen)
+    lev <- if (is.null(leverage)) 0L else
+      sum(is.finite(leverage) & leverage > 1 - 1e-8)
+    plots <- .jst_and_list(names(seen))
+    cases <- paste0(.jst_fmt_n(n), " ", .jst_plural(n, "case", "cases"))
+    if (lev >= n) {
+      paste0("Note: ", plots, " ", if (length(seen) == 1L) "leaves" else
+               "leave", " out ", cases, " with a leverage of 1, whose ",
+             "standardized residual is undefined.")
+    } else {
+      paste0("Note: ", plots, " ", if (length(seen) == 1L) "leaves" else
+               "leave", " out ", cases, " whose values are missing or ",
+             "infinite.")
+    }
+  }
+  list(take = take, note = note)
 }
 
 
@@ -1455,6 +1569,16 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     order(abs(x), decreasing = TRUE)[seq_len(n)]
   }
 
+  # ggplot2's "Removed N rows" warnings, taken as each plot is drawn and
+  # summed up in one note under the list (Session 359), as in
+  # .jst_plot_lm_diagnostics().
+  removed  <- .jst_gg_removed_tracker()
+  gg_print <- function(p, title) {
+    withCallingHandlers(print(p), warning = function(w) {
+      if (removed$take(w, title)) invokeRestart("muffleWarning")
+    })
+  }
+
   plots <- list()
 
   # -- 1. Binned residuals --------------------------------------------------
@@ -1487,7 +1611,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                     y = "Mean Residual (bin)",
                     subtitle = "Dotted lines: approximate 95% bounds under a well-fit model") +
       ggplot2::theme_minimal()
-    print(p)
+    gg_print(p, "Binned Residuals")
     plots$binned <- p
   }
 
@@ -1520,7 +1644,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                     x = "False Positive Rate (1 \u2013 Specificity)",
                     y = "True Positive Rate (Sensitivity)") +
       ggplot2::theme_minimal()
-    print(p)
+    gg_print(p, "ROC Curve")
     plots$roc <- p
   }
 
@@ -1551,7 +1675,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                     y = "Observed Proportion",
                     subtitle = "Points on the diagonal = well-calibrated") +
       ggplot2::theme_minimal()
-    print(p)
+    gg_print(p, "Calibration Plot")
     plots$calibration <- p
   }
 
@@ -1576,7 +1700,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                     x = "Observation Index",
                     y = "Cook's Distance") +
       ggplot2::theme_minimal()
-    print(p)
+    gg_print(p, "Cook's Distance")
     plots$cooks <- p
   }
 
@@ -1602,7 +1726,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                     x = "Leverage",
                     y = "Pearson Residuals") +
       ggplot2::theme_minimal()
-    print(p)
+    gg_print(p, "Residuals vs Leverage")
     plots$leverage <- p
   }
 
@@ -1616,16 +1740,22 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   )
   produced <- plot_names_pretty[which]
   produced <- produced[!is.na(produced)]
+  # The list is jplot()'s own output (this helper's only caller): none
+  # above it and one blank line after it, as the effect plots' count line
+  # (Session 359; the many-plot form opened on a blank line and ended
+  # without one).
   if (length(produced) == 1) {
     cat("(Diagnostic plot produced: ", produced, ")\n", sep = "")
   } else if (length(produced) > 1) {
-    .jst_msg_out("\n", length(produced), " diagnostic plots produced ",
+    .jst_msg_out(length(produced), " diagnostic plots produced ",
                  "(use the arrow buttons in RStudio's Plots pane to ",
                  "navigate):")
     for (i in seq_along(produced)) {
       cat("  ", i, ". ", produced[i], "\n", sep = "")
     }
   }
+  if (length(produced) > 0) cat("\n")
+  for (nt in removed$note(leverage)) .jst_msg(nt)
 
   invisible(plots)
 }
@@ -1982,9 +2112,13 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' blank for the intercept and for dummy-coded categorical terms.
 #'
 #' Also prints key model summary information (R-squared, adjusted R-squared,
-#' residual standard error, F-test, sums of squares, and N). If any
-#' coefficients are dropped due to perfect collinearity, a warning message
-#' is printed.
+#' residual standard error, F-test, sums of squares, and N). If a predictor
+#' is dropped because it is an exact linear combination of the others
+#' (perfect collinearity), a warning names it.
+#'
+#' A model with no predictors, \code{y ~ 1}, is fitted too: its one
+#' coefficient is the mean of the outcome, tested against 0, R-squared is
+#' 0, and the F line reads "none (the model has no predictors to test)".
 #'
 #' A red "Linear Regression" title is printed first, followed by variable
 #' labels (if present), then the coefficient table and model fit statistics.
@@ -2209,7 +2343,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'     \item{r_squared}{R-squared value.}
 #'     \item{adj_r_squared}{Adjusted R-squared value.}
 #'     \item{residual_se}{Residual standard error.}
-#'     \item{f_statistic}{Named numeric vector with F value, df1, df2, and p.}
+#'     \item{f_statistic}{Named numeric vector with F value, df1, df2, and p.
+#'       For a model with no predictors, F and p are \code{NA} and df1 is 0.}
 #'     \item{sums_of_squares}{Named numeric vector (regression, residual, total).}
 #'     \item{n}{Number of observations used in the model.}
 #'     \item{dummy_coef_names}{Names of dummy variable columns created by
@@ -2482,7 +2617,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = all.vars(formula))
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
@@ -3075,6 +3211,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   model         <- stats::lm(formula, data = mf)
   model_summary <- summary(model)
   .jst_warn_bare_powers(bare_powers)
+  # The intercept-only model, y ~ 1 (Session 359; the S355 item, Jeff's
+  # lean "yes, support both"): one coefficient row, the mean of the outcome
+  # tested against 0, no standardized column, and no F test -- R-squared is
+  # 0 by construction. summary.lm() gives no fstatistic for it, and the F
+  # line's arithmetic stopped on "Non-numeric argument to mathematical
+  # function" after the title.
+  no_predictors <- identical(names(stats::coef(model)), "(Intercept)")
 
   coefs <- as.data.frame(model_summary$coefficients, stringsAsFactors = FALSE)
   colnames(coefs)[1:4] <- c("b", "StdErr", "t", "P")
@@ -3252,7 +3395,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   if (identical(std, "regular")) {
     disp_beta[names(disp_beta) %in% regular_blank] <- NA_real_
   }
-  show_beta_col <- !identical(std, "none")
+  # A model with no predictors has no standardized coefficient to show: the
+  # column is left out, as under std = "none" (Session 359).
+  show_beta_col <- !identical(std, "none") && !no_predictors
 
   p_num <- suppressWarnings(as.numeric(coefs$P))
   p_fmt <- .jst_fmt_p(p_num)
@@ -3302,11 +3447,17 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   residual_se   <- round(model_summary$sigma, digits_n)
 
   f_stat  <- model_summary$fstatistic
+  # No predictors: no F test (summary.lm() gives none); the return carries
+  # NA for F and p, 0 and the residual df for the two df (Session 359).
+  if (is.null(f_stat)) {
+    f_stat <- c(value = NA_real_, numdf = 0, dendf = model$df.residual)
+  }
   df1     <- unname(f_stat[2])
   df2     <- unname(f_stat[3])
   # Compute the F p-value from the full-precision F (NOT the display-rounded
   # value) so it never depends on the digits setting.
-  f_p     <- stats::pf(unname(f_stat[1]), df1, df2, lower.tail = FALSE)
+  f_p     <- if (is.na(f_stat[1])) NA_real_ else
+    stats::pf(unname(f_stat[1]), df1, df2, lower.tail = FALSE)
   f_p_fmt <- .jst_fmt_p(f_p)
   f_value <- round(unname(f_stat[1]), digits_n)
 
@@ -3325,10 +3476,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   ss_regression <- round(ss_regression_raw, digits_n)
   ss_residual   <- round(ss_residual_raw, digits_n)
 
-  if (any(is.na(stats::coef(model)))) {
-    .jst_warn("One or more variables have been removed from the model ",
-              "due to collinearity.")
-  }
+  .jst_warn_aliased(model, data, formula, dummy_coef_names)
 
   # Perfect-fit guard: when R-squared is 1 and the residual standard error is
   # 0, the t and F statistics blow up to scientific-notation scale and the
@@ -3518,10 +3666,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # The two df are whole numbers and print whole (Session 328): cat()
   # abbreviates a double of exactly 100000, so a model with 100,000 residual
   # degrees of freedom read "on 1 and 1e+05 DF".
-  cat("\nF-statistic: ", sprintf(paste0("%.", digits_n, "f"), f_value),
-      " on ", format(df1, scientific = FALSE),
-      " and ", format(df2, scientific = FALSE),
-      " DF, p-value: ", f_p_fmt, "\n", sep = "")
+  if (no_predictors) {
+    cat("\nF-statistic: none (the model has no predictors to test)\n")
+  } else {
+    cat("\nF-statistic: ", sprintf(paste0("%.", digits_n, "f"), f_value),
+        " on ", format(df1, scientific = FALSE),
+        " and ", format(df2, scientific = FALSE),
+        " DF, p-value: ", f_p_fmt, "\n", sep = "")
+  }
   cat("Sum of Squares:\n")
   cat("  Regression: ", sprintf(paste0("%.", digits_n, "f"), ss_regression), "\n", sep = "")
   cat("  Residual:   ", sprintf(paste0("%.", digits_n, "f"), ss_residual),   "\n", sep = "")
@@ -3578,10 +3730,18 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     # Diagnostic plots
     plot_which <- intersect(diag_which,
                             c("residuals", "qq", "scale", "cooks", "leverage"))
+    plot_labels <- c(residuals = "Residuals vs Fitted", qq = "Normal Q-Q",
+                     scale = "Scale-Location", cooks = "Cook's Distance",
+                     leverage = "Residuals vs Leverage")
+    # The intercept-only model (Session 359): every case has the same
+    # fitted value and leverage, so the three plots drawn against them are
+    # left out, and a note under the list names them.
+    plot_which <- .jst_no_predictor_plots(
+      plot_which, model, skip = c("residuals", "scale", "leverage"),
+      labels = plot_labels, note = FALSE)
+    no_pred_dropped <- attr(plot_which, "dropped")
+    plot_which <- as.vector(plot_which)
     if (length(plot_which) > 0) {
-      plot_labels <- c(residuals = "Residuals vs Fitted", qq = "Normal Q-Q",
-                       scale = "Scale-Location", cooks = "Cook's Distance",
-                       leverage = "Residuals vs Leverage")
       if (length(plot_which) == 1) {
         cat("\n(Diagnostic plot produced: ",
             plot_labels[plot_which[1]], ")\n", sep = "")
@@ -3597,6 +3757,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         }
       }
       .jst_plot_lm_diagnostics(model, which = plot_which)
+    }
+    if (length(no_pred_dropped) > 0L) {
+      cat("\n")
+      .jst_no_predictor_note(plot_labels[no_pred_dropped])
     }
   }
 
@@ -3717,6 +3881,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' Handles haven-labelled variables, registered dummy variables via
 #' \code{jdummy()}, and the \code{numeric}/\code{categorical} overrides
 #' in the same way as \code{jlm()}.
+#'
+#' A predictor dropped because it is an exact linear combination of the
+#' others is named in a warning, as in \code{jlm()}. A model with no
+#' predictors, \code{y ~ 1}, is fitted too: its one coefficient is the log
+#' odds of the modeled category, the pseudo R-squared values are 0, and the
+#' Omnibus Test, which compares the model with that one, reads "None: the
+#' model has no predictors to test." (its p is \code{NA} in the returned
+#' object).
 #'
 #' @details
 #' Transformed predictor terms in \code{formula} are computed
@@ -4060,7 +4232,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   data_in <- data
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = all.vars(formula))
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
@@ -4455,7 +4628,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         dv_name, ", map = \"", map_side(u_norm[zero]), "=0; ",
         map_side(u_norm[3L - zero]), "=1\")\n",
         "Then use ", dv_name, "R as your dependent variable (the category mapped ",
-        "to 1 is the one jlogistic models)."
+        "to 1 is the one jlogistic() models)."
       ))
     }
 
@@ -4702,13 +4875,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   model_summary <- summary(model)
   n_obs         <- stats::nobs(model)
   .jst_warn_bare_powers(bare_powers)
+  # The intercept-only model, y ~ 1 (Session 359; as in jlm()).
+  no_predictors <- identical(names(stats::coef(model)), "(Intercept)")
 
   # A predictor the fit dropped as an exact linear combination of the
-  # others has no coefficient row; say so, as jlm does (Session 305).
-  if (any(is.na(stats::coef(model)))) {
-    .jst_warn("One or more variables have been removed from the model ",
-              "due to collinearity.")
-  }
+  # others has no coefficient row; say so, as jlm does (Session 305),
+  # naming it (Session 359).
+  .jst_warn_aliased(model, data, formula, dummy_coef_names)
 
   # The modeled (event) category is reported in the Dependent Variable Encoding
   # block at the end of the output, not as an up-front line. predicts_str feeds
@@ -4728,7 +4901,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   ll_model    <- -model$deviance / 2
   chi_sq      <- model$null.deviance - model$deviance
   omnibus_df  <- model$df.null - model$df.residual
-  omnibus_p   <- stats::pchisq(chi_sq, df = omnibus_df, lower.tail = FALSE)
+  omnibus_p   <- if (omnibus_df > 0) {
+    stats::pchisq(chi_sq, df = omnibus_df, lower.tail = FALSE)
+  } else {
+    NA_real_
+  }
   omnibus_fmt <- .jst_fmt_p(omnibus_p)
 
   omnibus_table <- data.frame(
@@ -4814,6 +4991,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # A profiling failure (e.g. separation) degrades to NA rather than erroring.
   ci_raw <- tryCatch(suppressMessages(stats::confint(model)),
                      error = function(e) NULL)
+  # One coefficient (the intercept-only model, Session 359): confint()
+  # returns its two bounds as a plain vector, and the matrix indexing below
+  # stopped on "incorrect number of dimensions".
+  if (!is.null(ci_raw) && is.null(dim(ci_raw))) {
+    ci_raw <- matrix(ci_raw, nrow = 1L,
+                     dimnames = list(names(stats::coef(model)), names(ci_raw)))
+  }
   if (is.null(ci_raw)) {
     exp_ci_lower_raw <- rep(NA_real_, nrow(coefs))
     exp_ci_upper_raw <- rep(NA_real_, nrow(coefs))
@@ -4895,12 +5079,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # trimmed (Session 327): each value sits under the middle of its header,
   # where the default alignment put it at the header's right edge and
   # left-justified p.
-  .jst_print_table(omnibus_table,
-                   caption = "Omnibus Test of Model Coefficients",
-                   col.names = c("Chi-Square", "df", "p"),
-                   row.names = FALSE,
-                   align = rep("bc", 3L),
-                   digits = c(Chi_Square = digits_n))
+  # The intercept-only model (Session 359): the Omnibus Test compares the
+  # model with the intercept-only model, so there is nothing to test, and
+  # one line takes the table's place, as jlm()'s F line does.
+  if (no_predictors) {
+    cat("Omnibus Test of Model Coefficients\n",
+        "None: the model has no predictors to test.\n", sep = "")
+  } else {
+    .jst_print_table(omnibus_table,
+                     caption = "Omnibus Test of Model Coefficients",
+                     col.names = c("Chi-Square", "df", "p"),
+                     row.names = FALSE,
+                     align = rep("bc", 3L),
+                     digits = c(Chi_Square = digits_n))
+  }
   cat("\n")
   .jst_print_table(summary_table,
                    caption = "Model Summary",
@@ -5253,7 +5445,8 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = variable_names)
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 

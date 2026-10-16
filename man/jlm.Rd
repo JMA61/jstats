@@ -209,7 +209,8 @@ df, and N).}
 \item{r_squared}{R-squared value.}
 \item{adj_r_squared}{Adjusted R-squared value.}
 \item{residual_se}{Residual standard error.}
-\item{f_statistic}{Named numeric vector with F value, df1, df2, and p.}
+\item{f_statistic}{Named numeric vector with F value, df1, df2, and p.
+For a model with no predictors, F and p are \code{NA} and df1 is 0.}
 \item{sums_of_squares}{Named numeric vector (regression, residual, total).}
 \item{n}{Number of observations used in the model.}
 \item{dummy_coef_names}{Names of dummy variable columns created by
@@ -228,9 +229,13 @@ blank for the intercept and for dummy-coded categorical terms.
 }
 \details{
 Also prints key model summary information (R-squared, adjusted R-squared,
-residual standard error, F-test, sums of squares, and N). If any
-coefficients are dropped due to perfect collinearity, a warning message
-is printed.
+residual standard error, F-test, sums of squares, and N). If a predictor
+is dropped because it is an exact linear combination of the others
+(perfect collinearity), a warning names it.
+
+A model with no predictors, \code{y ~ 1}, is fitted too: its one
+coefficient is the mean of the outcome, tested against 0, R-squared is
+0, and the F line reads "none (the model has no predictors to test)".
 
 A red "Linear Regression" title is printed first, followed by variable
 labels (if present), then the coefficient table and model fit statistics.

@@ -3220,18 +3220,28 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \code{preserve.declarations = FALSE} blanked the codes.
 #'
 #' @details
-#' Branching (SPSS-style codes write as literal numbers, while Stata-style
-#' tagged NAs write as blank cells):
+#' Since Session 359 (the S357 item, Jeff's walk of
+#' missing_convention_walk.R Section 30) the note says only what the frame
+#' had to lose and names what the package knows:
 #' \itemize{
-#'   \item \code{preserve.declarations = FALSE} and SPSS-style codes were
-#'     blanked: a confirmation giving the count of blanked cells.
-#'   \item both forms present (\code{preserve.declarations = TRUE}): a
-#'     generic note that names neither platform, plus the
-#'     \code{preserve.declarations = FALSE} suggestion.
-#'   \item SPSS-style only: the literal-numbers warning plus the suggestion.
-#'   \item Stata-style only: a brief note that the tags write as blank cells
-#'     and the distinction between them is not preserved.
-#'   \item neither: a plain labels-only note.
+#'   \item The first line names labels only when a variable carries a
+#'     variable label or value labels (the registration note's rule: it
+#'     fires only on registrations), and missing-value metadata only when a
+#'     variable declares missing values. A frame with neither gets no note.
+#'   \item SPSS-style codes write as literal numbers. The variables and the
+#'     declared codes their cells hold are named -- "Income's declared
+#'     missing value -99 is written as an ordinary number and will read
+#'     back as valid data." -- where the note said "Any SPSS-style missing
+#'     values (e.g. -99)". A declared code no cell holds writes nothing,
+#'     and is not named.
+#'   \item The way to write them as empty cells is the jsave() call to
+#'     run, with the data's name and the path just written, where the note
+#'     gave "jsave(..., preserve.declarations = FALSE)", which does not run
+#'     as printed (the S343 rule).
+#'   \item Stata-style missing values write as blank cells; the
+#'     distinction between them is not preserved.
+#'   \item \code{preserve.declarations = FALSE} that blanked SPSS-style
+#'     codes: a confirmation giving the count of blanked cells.
 #' }
 #' The note is a loss-of-fidelity warning per the locked jsave design; it is
 #' not gated to the joutput verbosity tiers.
@@ -3245,16 +3255,22 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param n_blanked Integer count of SPSS-style code cells blanked when
 #'   \code{preserve.declarations = FALSE}; zero otherwise.
 #' @param text_udm Logical: is one of \code{spss_vars} a text variable?
-#'   Its declared codes are words, so "(e.g. -99) are written as literal
-#'   numbers" and "ordinary numbers" become "ordinary values" (Session 351,
-#'   the S340 item's rider).
+#'   Its declared codes are words, so "ordinary numbers" becomes "ordinary
+#'   values" (Session 351, the S340 item's rider).
+#' @param data The data frame as given, before any collapse: its labels
+#'   and declarations.
+#' @param code_name Character; the data as the printed line names it
+#'   (\code{mydata} for an expression, whose line the caller opens with
+#'   "mydata <- ...").
+#' @param path Character; the path written, normalized.
 #'
 #' @return A single message string, or \code{NULL} if no note applies.
 #'
 #' @keywords internal
 .jst_jsave_label_loss_note <- function(ext, spss_vars, stata_vars,
                                        preserve.declarations, n_blanked,
-                                       text_udm = FALSE) {
+                                       text_udm = FALSE, data = NULL,
+                                       code_name = NULL, path = NULL) {
   fmt <- if (identical(ext, "xlsx")) {
     "Excel format (.xlsx)"
   } else {
@@ -3262,57 +3278,118 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
   has_spss  <- length(spss_vars)  > 0
   has_stata <- length(stata_vars) > 0
+  has_labels <- if (is.null(data)) TRUE else {
+    any(vapply(data, function(x) {
+      vl <- attr(x, "label", exact = TRUE)
+      length(attr(x, "labels", exact = TRUE)) > 0L ||
+        (!is.null(vl) && any(nzchar(vl)))
+    }, logical(1)))
+  }
+  labels_line <- function(meta) {
+    if (has_labels && meta) {
+      paste0(fmt, " does not store variable labels, value labels, or ",
+             "missing-value metadata.")
+    } else if (has_labels) {
+      paste0(fmt, " does not store variable labels or value labels.")
+    } else if (meta) {
+      paste0(fmt, " does not store missing-value metadata.")
+    } else {
+      NULL
+    }
+  }
 
   # preserve.declarations = FALSE that blanked SPSS-style codes -> confirm.
   if (!preserve.declarations && has_spss && n_blanked > 0) {
-    return(.jst_wrap_message(paste0(
-      # Rule E and the count's number (the Session 123 sweep; Session 357).
-      "Note: ", fmt, " does not store variable labels or value labels.\n",
+    blanked <- paste0(
       n_blanked, " ",
       .jst_plural(n_blanked, "cell holding a declared missing value was",
                   "cells holding declared missing values were"),
-      " blanked (preserve.declarations = FALSE).")))
-  }
-
-  # Both forms present: one generic note, no platform names.
-  if (has_spss && has_stata) {
+      " blanked (preserve.declarations = FALSE).")
+    ll <- labels_line(FALSE)
     return(.jst_wrap_message(paste0(
-      "Note: ", fmt, " does not store variable labels, value labels, or ",
-      "missing-value metadata.\n",
-      "Declared missing values lose their missing status, which may ",
-      "result in them being written as ordinary ",
-      if (isTRUE(text_udm)) "values" else "numbers", ".\n",
-      "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
-      "empty cells instead.")))
+      # Rule E and the count's number (the Session 123 sweep; Session 357).
+      "Note: ", if (!is.null(ll)) paste0(ll, "\n"), blanked)))
   }
 
-  # SPSS-style only: literal-numbers warning + suggestion.
+  ll <- labels_line(has_spss || has_stata)
+  if (is.null(ll)) return(NULL)
+  body    <- character(0)
+  pointer <- NULL
+
+  # SPSS-style: the variables and the declared codes their cells hold.
   if (has_spss) {
-    return(.jst_wrap_message(paste0(
-      "Note: ", fmt, " does not store variable labels, value labels, or ",
-      "missing-value metadata.\n",
-      if (isTRUE(text_udm)) {
-        paste0("Any SPSS-style missing values are written as ordinary ",
-               "values and will read back as valid data.\n")
+    held <- list()
+    for (v in spss_vars) {
+      x  <- data[[v]]
+      if (is.null(x)) next
+      vals <- unclass(x)
+      attributes(vals) <- NULL
+      nv <- attr(x, "na_values", exact = TRUE)
+      nr <- attr(x, "na_range", exact = TRUE)
+      hit <- !is.na(vals) & vals %in% nv
+      if (length(nr) == 2L && is.numeric(vals)) {
+        hit <- hit | (!is.na(vals) & vals >= nr[1L] & vals <= nr[2L])
+      }
+      codes <- sort(unique(vals[hit]))
+      if (length(codes) > 0L) held[[v]] <- codes
+    }
+    if (length(held) > 0L) {
+      show_code <- function(z) {
+        if (is.character(z)) paste0("\"", z, "\"")
+        else if (z == floor(z)) format(z, scientific = FALSE, trim = TRUE)
+        else format(z, trim = TRUE)
+      }
+      code_list <- function(cs) {
+        sh <- vapply(cs, show_code, character(1))
+        if (length(sh) > 4L) {
+          sh <- c(sh[1:3], paste0(length(sh) - 3L, " more"))
+        }
+        .jst_and_list(sh)
+      }
+      n_codes <- sum(lengths(held))
+      plural  <- n_codes > 1L
+      kind    <- if (isTRUE(text_udm)) "value" else "number"
+      subject <- if (length(held) == 1L) {
+        paste0(names(held), "'s declared missing ",
+               if (plural) "values " else "value ", code_list(held[[1L]]))
+      } else if (length(held) <= 3L) {
+        paste0("The declared missing values of ",
+               .jst_and_list(vapply(names(held), function(v) {
+                 paste0(v, " (", code_list(held[[v]]), ")")
+               }, character(1))))
       } else {
-        paste0("Any SPSS-style missing values (e.g. -99) are written as ",
-               "literal numbers and will read back as ordinary values.\n")
-      },
-      "Alternatively, use jsave(..., preserve.declarations = FALSE) to blank them to ",
-      "empty cells instead.")))
+        paste0("The declared missing values of ", length(held),
+               " variables (", .jst_format_var_list(names(held),
+                                                     max_show = 3L), ")")
+      }
+      body <- c(body, paste0(
+        subject, if (plural) " are" else " is", " written as ",
+        if (plural) paste0("ordinary ", kind, "s") else
+          paste0("an ordinary ", kind),
+        " and will read back as valid data."))
+      if (!is.null(code_name) && !is.null(path)) {
+        pointer <- paste0(
+          "To write ", if (plural) "them as empty cells" else
+            "it as an empty cell", " instead, save with:\n",
+          "  jsave(", code_name, ", \"", path, "\", overwrite = TRUE, ",
+          "preserve.declarations = FALSE)")
+      }
+    }
   }
 
-  # Stata-style only: brief flatten note.
+  # The way out directly under the fact it answers: "it" is the SPSS-style
+  # code, so the Stata-style sentence follows it.
+  body <- c(body, pointer)
+
+  # Stata-style: brief flatten note.
   if (has_stata) {
-    return(.jst_wrap_message(paste0(
-      "Note: ", fmt, " does not store variable labels, value labels, or ",
-      "missing-value metadata.\n",
+    body <- c(body, paste0(
       "Stata-style missing values (.a, .b, ...) are ",
-      "written as blank cells; the distinction between them is not preserved.")))
+      "written as blank cells; the distinction between them is not ",
+      "preserved."))
   }
 
-  # Neither: labels-only.
-  paste0("Note: ", fmt, " does not store variable labels or value labels.")
+  .jst_wrap_message(paste0("Note: ", paste(c(ll, body), collapse = "\n")))
 }
 
 
@@ -3903,6 +3980,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   stata_udm_vars <- character(0)
   text_udm       <- FALSE
   n_udm_blanked  <- 0L
+  # The frame as given, for the Excel/CSV note's labels and declared codes
+  # (Session 359): preserve.declarations = FALSE replaces data below.
+  data_given     <- data
   if (ext %in% c("xlsx", "csv") || !preserve.declarations) {
     spss_udm_vars  <- .jst_has_spss_udm(data)
     stata_udm_vars <- .jst_has_tagged_na(data)
@@ -4025,8 +4105,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   if (ext %in% c("xlsx", "csv")) {
     label_note <- .jst_jsave_label_loss_note(
       ext, spss_udm_vars, stata_udm_vars, preserve.declarations, n_udm_blanked,
-      text_udm = text_udm)
-    if (!is.null(label_note)) loss_notes <- c(loss_notes, label_note)
+      text_udm = text_udm, data = data_given, code_name = code_name,
+      path = .jst_norm_path(out_path))
+    if (!is.null(label_note)) loss_notes <- c(loss_notes, expr_lines(label_note))
   }
 
   # A text variable's missing cells (ruling R13, Jeff, S345; built Session

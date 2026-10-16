@@ -202,6 +202,15 @@ exactly 2 variables in the correlation)
 The shortcut keyword \code{core} (default) produces a curated default
 set for the class; \code{all} produces every plot the class supports.
 
+For a \code{jst_lm} result, \code{effects} draws one plot per variable
+of the model: a term computed from a variable (\code{I(x^2)},
+\code{log(x + 1)}, \code{I(x * z)}) is drawn in that variable's plot,
+following it along the axis, with the other variables held as \code{at}
+sets them. A variable the fit dropped as an exact linear combination of
+the others has no effect to draw. For a model with no predictors
+(\code{y ~ 1}), the plots that need a predictor, or that are drawn
+against the fitted values or the leverage, are left out with a note.
+
 Valid plot types for the data-first form: \code{histogram}, \code{bar},
 \code{scatter}, \code{box}, \code{grouped_bar}.
 

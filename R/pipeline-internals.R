@@ -50,7 +50,7 @@
 #'     display (\code{jsubset()} with no arguments, Session 331). Nothing
 #'     stops: the finding is handed back through
 #'     \code{.jst_filter_status_signal()} as the status line "It cannot be
-#'     applied: it has 12 values for 11 rows."}
+#'     applied: it has 12 values for 11 cases."}
 #' }
 #'
 #' @param mask The evaluated filter result.
@@ -73,6 +73,16 @@
 #' @param data_names Character or NULL. The variables of the frame the
 #'   filter ran on; on a one-row frame a single value passes only when the
 #'   condition names one of them.
+#' @param object NULL, or the workspace object a result of the wrong
+#'   length came from: a list of \code{operand} (as written) and \code{n}
+#'   (its number of values), from \code{.jst_recycled_operand()} or a bare
+#'   name (Session 359). The message then names it as ruling R19's stop
+#'   names an object a condition reads -- not in the data frame, a separate
+#'   object in the workspace -- and counts cases, keeping its own fix line:
+#'   a vector of the wrong length cannot be added to the data frame.
+#' @param n_frame Integer or NULL. The frame's row count before the
+#'   pipeline's filters; when it differs from \code{n_rows} the count is
+#'   of "the N cases left after filtering".
 #'
 #' @return \code{invisible(NULL)} when the result is well-shaped; otherwise
 #'   stops via \code{.jst_stop()}, which supplies the "<fn>(): " prefix
@@ -82,7 +92,8 @@
 #' @keywords internal
 .jst_check_mask_shape <- function(mask, n_rows, expr, expr_str, origin,
                                   data_name = NULL, named_frame = FALSE,
-                                  prior = FALSE, data_names = NULL) {
+                                  prior = FALSE, data_names = NULL,
+                                  object = NULL, n_frame = NULL) {
   origin <- match.arg(origin, c("set", "call", "stored", "reactivate",
                                 "status"))
 
@@ -99,9 +110,13 @@
   # ("null" is text, TRUE is a single value) and kept when it was
   # computed (mean(Age) > 40 is a single value (FALSE)).
   # The lead reads "<typed> is text" / "is numeric" / "is a single value" /
-  # "has 3 values for 12 rows" / "has no values at all" -- a plain verb
+  # "has 3 values for 12 cases" / "has no values at all" -- a plain verb
   # describing what was typed, never "gives", which read as a non sequitur
   # to the FILTER BY user these messages are for (S290, Jeff's review).
+  # The count is of CASES (Session 359; the S357 item): ruling R19's stop
+  # on the same mistake counted cases, and a vector has no rows -- rows
+  # and columns belong to the data frame, and the count is about the data
+  # (Jeff, S357).
   what <- if (length(mask) == 0L) {
     "has no values at all"
   } else if (is.character(mask)) {
@@ -113,7 +128,7 @@
     else paste0("is a single value (", as.character(mask), ")")
   } else if (length(mask) != n_rows) {
     paste0("has ", length(mask), " values for ", n_rows,
-           if (n_rows == 1L) " row" else " rows")
+           if (n_rows == 1L) " case" else " cases")
   } else {
     NULL
   }
@@ -128,6 +143,63 @@
     NULL
   }
 
+  # A result of the wrong length that came from a workspace object --
+  # keep5 == TRUE, keep5 holding 5 values for 12 cases -- names the object
+  # as ruling R19's stop names one a condition reads (Session 359; the S357
+  # item and Jeff's S358 okay): not in the data frame, a separate object.
+  # The stored forms read as the stored recycling stop does.
+  if (is_count && !is.null(object)) {
+    op <- .jst_term_text(object$operand)
+    frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
+      paste0("the ", data_name, " data frame")
+    } else {
+      "the data frame"
+    }
+    obj_lead <- paste0(op, " is not in ", frame_ref,
+                       "; it is a separate object in your workspace")
+    if (origin %in% c("stored", "reactivate", "status")) {
+      reason <- paste0(obj_lead, ", with ", object$n, " values for ",
+                       n_rows, if (n_rows == 1L) " case" else " cases")
+      if (origin == "status") {
+        .jst_filter_status_signal(paste0("It cannot be applied: ", reason,
+                                         "."))
+      }
+      .jst_stop("the jsubset filter for the ", data_name, " data frame, ",
+                expr_str, ", cannot be applied: ", reason, ".\n",
+                .jst_filter_exits(data_name, origin))
+    }
+    typed <- if (origin == "call") paste0("subset = ", expr_str) else expr_str
+    first <- if (identical(expr_str, op)) {
+      paste0(obj_lead, ".")
+    } else {
+      paste0("In ", typed, ", ", obj_lead, ".")
+    }
+    where <- if (!is.null(n_frame) && n_frame != n_rows) {
+      paste0("the ", n_rows, if (n_rows == 1L) " case" else " cases",
+             " left after filtering")
+    } else {
+      paste0("the ", n_rows, if (n_rows == 1L) " case" else " cases",
+             " in ", frame_ref)
+    }
+    second <- paste0("It has ", object$n, " values for ", where,
+                     ", not one TRUE or FALSE for every case.")
+    if (origin == "call") {
+      .jst_stop(first, "\n", second, "\n",
+                "In your ", .jst_caller_fn(), "() call, compare a variable ",
+                "to a value, for example subset = Age < 40.")
+    }
+    unchanged_obj <- if (isTRUE(prior) && !is.null(data_name)) {
+      paste0("\nYour earlier filter for the ", data_name,
+             " data frame is unchanged.")
+    } else {
+      ""
+    }
+    .jst_stop(first, "\n", second, "\n",
+              "Build the filter from the data frame's own columns, ",
+              "for example:\n",
+              "  jsubset(Age < 40)", unchanged_obj)
+  }
+
   if (origin == "status") {
     .jst_filter_status_signal(paste0("It cannot be applied: it ", what, "."))
   }
@@ -135,7 +207,7 @@
     .jst_stop(
       "the jsubset filter for the ", data_name, " data frame, ", expr_str,
       ", ", what, ".\n",
-      "A filter must give one TRUE or FALSE for every row.\n",
+      "A filter must give one TRUE or FALSE for every case.\n",
       .jst_filter_exits(data_name, origin)
     )
   }
@@ -159,7 +231,7 @@
                   "for example subset = Age < 40.")
     .jst_stop(
       "subset = ", expr_str, " ", what,
-      ", not one TRUE or FALSE for every row.\n",
+      ", not one TRUE or FALSE for every case.\n",
       fix
     )
   }
@@ -201,7 +273,7 @@
     )
   }
   .jst_stop(
-    expr_str, " ", what, ", not one TRUE or FALSE for every row.\n",
+    expr_str, " ", what, ", not one TRUE or FALSE for every case.\n",
     fix, unchanged
   )
 }
@@ -778,11 +850,26 @@
                 "  ", r_msg, unchanged)
     }
   )
+  # A result of the wrong length: the workspace object it came from, if
+  # one did, so the message can name it (Session 359). A bare name is the
+  # object itself; otherwise the operand .jst_recycled_operand() finds.
+  shape_obj <- NULL
+  if (is.logical(mask) && length(mask) > 1L && length(mask) != n_rows) {
+    shape_obj <- if (is.symbol(expr)) {
+      if (!(as.character(expr) %in% names(data))) {
+        list(operand = expr, n = length(mask))
+      }
+    } else {
+      .jst_recycled_operand(list(expr), data, envir)
+    }
+  }
   .jst_check_mask_shape(mask, n_rows, expr, expr_str, origin,
                         data_name   = data_name,
                         named_frame = named_frame,
                         prior       = prior,
-                        data_names  = names(data))
+                        data_names  = names(data),
+                        object      = shape_obj,
+                        n_frame     = n_frame)
   recycled()
   # When set, the filter passed on the frame as given; an active
   # jcomplete() will hand it fewer cases at every analysis (S331).
@@ -951,6 +1038,13 @@
 #' @param is_default Logical. TRUE if the data frame came from juse().
 #' @param subset_expr An unevaluated expression for one-off subsetting, or NULL.
 #' @param envir The environment in which to evaluate expressions.
+#' @param vars Character or NULL. The variables the caller reads from the
+#'   returned data. Given, Step 0 masks declared missing values only in
+#'   them and in the columns an active jcomplete(), an active jsubset() or
+#'   \code{subset =} reads (Session 359, the S217 item's fix 2); NULL masks
+#'   every column, as before. Every column is returned either way; a column
+#'   outside that set keeps its declared codes, so a caller that reads one
+#'   must name it.
 #'
 #' @return A list with components:
 #'   \describe{
@@ -964,7 +1058,8 @@
 #'
 #' @keywords internal
 .jst_apply_pipeline <- function(data, data_name, is_default,
-                                subset_expr = NULL, envir = parent.frame()) {
+                                subset_expr = NULL, envir = parent.frame(),
+                                vars = NULL) {
 
   # An sf data frame is read as an ordinary one (Session 349): sf's own `[`
   # keeps the geometry column whatever columns are asked for, so the
@@ -1040,7 +1135,40 @@
   # dropped in v0.9.6 — the information is now surfaced per-variable via
   # jfreq's Missing section and via the Case Processing Summary, scoped to
   # the variables the analysis actually touches.
-  udm_result <- .jst_apply_declared_udms_as_na(data)
+  #
+  # Narrowed when the caller names its variables (Session 359, the S217
+  # item's fix 2): those, and every column a setting that will run reads --
+  # a filter can name any column of the frame, and its condition must see
+  # the declared codes as missing. A name in a condition is any name in it,
+  # function position included, and any quoted word (get("Age")), so the
+  # set errs wide.
+  # A name the caller gives that is not a column -- a constant named in a
+  # formula (I(x > cutoff)), a list typed as c(a, b) -- means the set is
+  # not certain, and the whole frame is masked, as before.
+  mask_cols <- names(data)
+  if (!is.null(vars) && length(vars) > 0L && all(vars %in% names(data))) {
+    reads <- function(e) {
+      if (is.null(e)) return(character(0))
+      strs <- character(0)
+      walk <- function(x) {
+        if (is.character(x)) strs <<- c(strs, x)
+        if (is.call(x)) for (k in seq_along(x)) {
+          if (identical(as.list(x)[[k]], substitute())) next
+          walk(x[[k]])
+        }
+      }
+      walk(e)
+      unique(c(all.names(e), strs))
+    }
+    cs0 <- .jst_get_complete(data_name)
+    fs0 <- .jst_get_filter(data_name)
+    mask_cols <- intersect(names(data), unique(c(
+      vars,
+      if (!is.null(cs0) && isTRUE(cs0$active)) cs0$vars,
+      if (!is.null(fs0) && isTRUE(fs0$active)) reads(fs0$expr),
+      if (is.language(subset_expr)) reads(subset_expr))))
+  }
+  udm_result <- .jst_apply_declared_udms_as_na(data, cols = mask_cols)
   data       <- udm_result$data
 
   # Temporary survival-tracking id (removed before this function returns).

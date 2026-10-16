@@ -174,6 +174,14 @@ Handles haven-labelled variables, registered dummy variables via
 \code{jdummy()}, and the \code{numeric}/\code{categorical} overrides
 in the same way as \code{jlm()}.
 
+A predictor dropped because it is an exact linear combination of the
+others is named in a warning, as in \code{jlm()}. A model with no
+predictors, \code{y ~ 1}, is fitted too: its one coefficient is the log
+odds of the modeled category, the pseudo R-squared values are 0, and the
+Omnibus Test, which compares the model with that one, reads "None: the
+model has no predictors to test." (its p is \code{NA} in the returned
+object).
+
 Transformed predictor terms in \code{formula} are computed
 automatically. A term that applies a function to a variable --
 \code{log(x)}, \code{sqrt(x)}, \code{exp(x)}, \code{I(x^2)},

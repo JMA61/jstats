@@ -335,7 +335,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # intact codes the CPS per-code detail needs.
     subset_expr <- substitute(subset)
     pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                    subset_expr = subset_expr, envir = parent.frame())
+                                    subset_expr = subset_expr, envir = parent.frame(),
+                                    vars = c(variable_names, by_name))
     data     <- pipeline$data
 
     # A text grouping variable's blank cells are one group, <blank> (S340).
@@ -587,7 +588,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = variable_names)
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
@@ -1054,7 +1056,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   # Apply data pipeline (jcomplete, jsubset, subset) — once before per-variable loop
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = var_names_check)
   data     <- pipeline$data
 
   # Variable label display mode. jfreq is a distinct layout: under "labels"
@@ -1982,7 +1985,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   # whole frame in hand it needs no such help, so only the named variables
   # are screened, as in every other function.
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame())
+                                  subset_expr = subset_expr, envir = parent.frame(),
+                                  vars = if (length(variables) > 0) var_names else NULL)
   data     <- pipeline$data
   .jst_print_msgs(pipeline$msgs)
 
