@@ -1724,6 +1724,17 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' a blank is absent data or a real answer depends on the file; see
 #' \code{\link{jfreq}}.
 #'
+#' A text variable whose every value is a date written in one form -- as
+#' 2015-04-01, 1-Apr-15, 28NOV2007 or 01/02/2015 -- has the sub-class
+#' "date (unparsed)": a CSV file stores dates as text, and as text each
+#' date is a category. A footnote under the Variable Types table gives the
+#' \code{as.Date()} line that makes it a date (two lines when its values
+#' could be day/month or month/day). When the dates have two-digit years,
+#' a note says so: \code{as.Date()} puts 69 to 99 in the 1900s and 00 to
+#' 68 in the 2000s without a warning, so a birth date written 03-Jul-68
+#' becomes 2068. The note gives the \code{range()} line that shows the
+#' years. Month names are read as R reads them in an English locale.
+#'
 #' When at least one variable's class comes from a registration (jnumeric,
 #' jcount, or jdummy) rather than the structural guess, a Source column
 #' appears. It reads as an exception-marker: "registered" is shown against
@@ -2179,6 +2190,27 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 
   screen_table <- do.call(rbind, screen_rows)
 
+  # Dates stored as text (Session 361; the S222 item, E3, on its lean): a
+  # text variable whose every value has one date shape -- 2015-04-01,
+  # 1-Apr-15, 28NOV2007 -- is Categorical with thousands of categories,
+  # which is true and useless. Its Sub-class says what it is, a footnote
+  # under the table gives the as.Date() line, and a two-digit year gets a
+  # note: R puts 69-99 in the 1900s and 00-68 in the 2000s without a word.
+  # Read on the column as given (blank cells set aside), for a structural
+  # Categorical text or factor variable only.
+  date_info <- list()
+  for (i in seq_len(nrow(screen_table))) {
+    v <- screen_table$Variable[i]
+    if (!identical(screen_table$Class[i], "Categorical") ||
+        !identical(screen_table$Source[i], "structural")) next
+    col <- data[[v]]
+    if (!(is.character(col) || is.factor(col)) || haven::is.labelled(col)) next
+    di <- .jst_date_text_format(col)
+    if (is.null(di)) next
+    screen_table$SubClass[i] <- "date (unparsed)"
+    date_info[[v]] <- di
+  }
+
   # -- Header block ----------------------------------------------------------
   # "Cases with missing data" = rows with >= 1 missing value (the listwise-
   # deletion magnitude). "Variables with outliers" = columns with >= 1 flagged
@@ -2340,6 +2372,12 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       cat("* coded other than 0/1; mean is not a proportion\n")
     }
 
+    # Dates stored as text (Session 361, E3): the footnote under the table,
+    # then the two-digit-year note.
+    if (length(date_info) > 0L) {
+      .jst_date_text_report(date_info, .jst_data_name)
+    }
+
     # Conditional "Unusual declaration" note: one line per variable whose
     # registered class is an implausible fit for its data. The "!" in the
     # Source column points to the row; this spells out the reason. The
@@ -2457,4 +2495,106 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   screen_table$Star <- NULL
   screen_table$Plausibility <- NULL
   invisible(screen_table)
+}
+
+#' Internal: the date shapes jscreen() recognizes in text
+#'
+#' Session 361 (the S222 item, E3). Each entry is a pattern every value
+#' must match and the as.Date() format (or two, where day/month and
+#' month/day read alike) that must parse every value. Ordered so that no
+#' earlier pattern matches a later one's values. The month-name forms read
+#' English names, as R's month-name format does in an English locale: "1-Apr-15",
+#' "28NOV2007" (SAS DATE9.), "28NOV07", "1 April 2015", "April 1, 2015".
+#' @keywords internal
+.jst_date_shapes <- list(
+  list(re = "^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$",       fmt = "%Y-%m-%d"),
+  list(re = "^[0-9]{4}/[0-9]{1,2}/[0-9]{1,2}$",       fmt = "%Y/%m/%d"),
+  list(re = "^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$",       fmt = c("%d/%m/%Y", "%m/%d/%Y")),
+  list(re = "^[0-9]{1,2}-[0-9]{1,2}-[0-9]{4}$",       fmt = c("%d-%m-%Y", "%m-%d-%Y")),
+  list(re = "^[0-9]{1,2}[.][0-9]{1,2}[.][0-9]{4}$",   fmt = "%d.%m.%Y"),
+  list(re = "^[0-9]{1,2}/[0-9]{1,2}/[0-9]{2}$",       fmt = c("%d/%m/%y", "%m/%d/%y")),
+  list(re = "^[0-9]{1,2}-[0-9]{1,2}-[0-9]{2}$",       fmt = c("%d-%m-%y", "%m-%d-%y")),
+  list(re = "^[0-9]{1,2}-[A-Za-z]{3,9}-[0-9]{4}$",    fmt = "%d-%b-%Y"),
+  list(re = "^[0-9]{1,2}-[A-Za-z]{3,9}-[0-9]{2}$",    fmt = "%d-%b-%y"),
+  list(re = "^[0-9]{1,2}[A-Za-z]{3}[0-9]{4}$",        fmt = "%d%b%Y"),
+  list(re = "^[0-9]{1,2}[A-Za-z]{3}[0-9]{2}$",        fmt = "%d%b%y"),
+  list(re = "^[0-9]{1,2} [A-Za-z]{3,9} [0-9]{4}$",    fmt = "%d %b %Y"),
+  list(re = "^[A-Za-z]{3,9} [0-9]{1,2}, [0-9]{4}$",   fmt = "%b %d, %Y")
+)
+
+#' Internal: the date format a text variable's values share
+#'
+#' Session 361 (the S222 item, E3). Every distinct value, blank cells set
+#' aside, must match one shape's pattern and parse under its format; for
+#' the day/month shapes each order is tried, and both kept when the values
+#' fit both (no part above 12).
+#' @param x A character or factor vector.
+#' @return NULL, or a list: \code{fmt}, one format or two (day/month first);
+#'   \code{yy}, TRUE for a two-digit year; \code{example}, the first value.
+#' @keywords internal
+.jst_date_text_format <- function(x) {
+  v <- as.character(x)
+  v <- trimws(v[!is.na(v)])
+  v <- unique(v[nzchar(v)])
+  if (length(v) == 0L) return(NULL)
+  for (sh in .jst_date_shapes) {
+    if (!all(grepl(sh$re, v))) next
+    ok <- vapply(sh$fmt, function(f) {
+      d <- suppressWarnings(as.Date(v, format = f))
+      all(!is.na(d))
+    }, logical(1))
+    if (!any(ok)) next
+    fmt <- sh$fmt[ok]
+    return(list(fmt = unname(fmt), yy = grepl("%y", fmt[1L], fixed = TRUE),
+                example = v[1L]))
+  }
+  NULL
+}
+
+#' Internal: jscreen()'s footnote and note for dates stored as text
+#'
+#' Session 361 (the S222 item, E3, on its lean): under the Variable Types
+#' table, the as.Date() line for each variable whose Sub-class is "date
+#' (unparsed)" -- two lines when its values fit day/month and month/day --
+#' then, for a two-digit year, a consequential note with the range() line
+#' that shows the years as.Date() gives.
+#' @param date_info Named list of \code{.jst_date_text_format()} results.
+#' @param data_name The data frame's name, for the printed lines; one that
+#'   is not a name gives \code{mydata}.
+#' @keywords internal
+.jst_date_text_report <- function(date_info, data_name) {
+  dn <- if (is.character(data_name) && length(data_name) == 1L &&
+            identical(make.names(data_name), data_name)) data_name else "mydata"
+  conv <- function(v, f) {
+    paste0("  ", dn, "$", v, " <- as.Date(", dn, "$", v, ", format = \"", f,
+           "\")")
+  }
+  one   <- names(date_info)[lengths(lapply(date_info, `[[`, "fmt")) == 1L]
+  two   <- setdiff(names(date_info), one)
+  lines <- "date (unparsed): text in a date format, which as.Date() makes a date:"
+  for (v in one) lines <- c(lines, conv(v, date_info[[v]]$fmt))
+  for (v in two) {
+    lines <- c(lines,
+               paste0(v, "'s values fit day/month and month/day; ",
+                      "run the line that fits:"),
+               conv(v, date_info[[v]]$fmt[1L]), conv(v, date_info[[v]]$fmt[2L]))
+  }
+  cat("\n")
+  .jst_msg_out(paste(lines, collapse = "\n"))
+
+  yy <- names(date_info)[vapply(date_info, `[[`, logical(1), "yy")]
+  if (length(yy) > 0L) {
+    rng <- vapply(yy, function(v) {
+      paste0("  range(as.Date(", dn, "$", v, ", format = \"",
+             date_info[[v]]$fmt[1L], "\"))")
+    }, character(1))
+    cat("\n")
+    .jst_msg(
+      "Note: ", .jst_and_list(yy), " ", .jst_plural(length(yy), "has", "have"),
+      " two-digit years (as in ", date_info[[yy[1L]]]$example, ").\n",
+      "as.Date() puts 69-99 in the 1900s and 00-68 in the 2000s, so check ",
+      "the years it gives:\n",
+      paste(rng, collapse = "\n"))
+  }
+  invisible(NULL)
 }

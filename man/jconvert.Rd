@@ -140,9 +140,13 @@ rather than by convention: each column's own declared
 consulted for this direction;
 they only govern the reverse (Stata to SPSS) mapping. Round-trip
 conversions are not guaranteed to preserve the original numeric
-codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.a, .b} -> SPSS
-\code{c(-99, -98)} loses the original numbers), but the value
+codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.b, .a} -> SPSS
+\code{c(-98, -99)} loses the original numbers), but the value
 labels survive intact and the missingness semantics are preserved.
+The notification says so whenever the trip back under the
+\code{missing.convention.codes} setting would give other codes:
+"converting Score back to SPSS-style missing values would give its
+codes -99, -98, not 9, -1."
 Range-based SPSS missings (\code{na_range}) are enumerated:
 Stata-style missing values have no range concept, so the distinct
 range values present in the column's data, plus any range values

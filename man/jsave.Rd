@@ -26,14 +26,17 @@ RStudio's Run button, the call stops with an error.}
 \item{preserve.declarations}{Logical. If \code{TRUE} (the default),
 missing-value declarations are written as they stand; formats that
 cannot store them (notably Excel and CSV) drop the metadata, and
-SPSS-style codes such as -99 then read back as ordinary numbers. If
-\code{FALSE}, those codes are blanked to plain NA before writing, so
-they become empty cells. Mirrors the \code{preserve.declarations}
-argument of \code{\link{jload}}. The pre-flight checks for the .sav,
-.dta, and .xpt formats run before this step, so a missing-value form
-a target format cannot represent is still reported and blocked
-rather than silently dropped. The haven package and its
-documentation call these user-defined missing values.}
+SPSS-style codes such as -99 then read back as ordinary numbers, while
+a missing-value form that .sav, .dta, or .xpt cannot represent stops
+the save before anything is written. If \code{FALSE}, every declared
+missing value -- an SPSS-style code, or a Stata-style or SAS-style
+marker -- is made plain NA before writing, in the file only (the data
+frame is not changed), and a note gives the number of cells. This
+happens before the .sav, .dta, and .xpt checks, so a form those
+formats cannot represent no longer stops the save. Mirrors the
+\code{preserve.declarations} argument of \code{\link{jload}}. The
+haven package and its documentation call these user-defined missing
+values.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect of
@@ -101,7 +104,10 @@ POSIXlt columns; missing values of a form the format cannot hold
 (Stata-style in \code{.sav}, SPSS-style in \code{.dta}, either in
 \code{.xpt}); and, for \code{.sav}, more than three declared codes,
 or a range plus more than one code, on one column. No file is
-written until the problems are fixed.
+written until the problems are fixed. A missing-value form the
+format cannot hold can also be saved as plain NA with
+\code{preserve.declarations = FALSE}, which the message offers
+beside the conversion.
 \item SPSS (\code{.sav}), Stata (\code{.dta}), SAS interchange
 (\code{.xpt}) and CSV (\code{.csv}) have no missing value for text:
 a text variable's missing cells are saved as blank text, and read

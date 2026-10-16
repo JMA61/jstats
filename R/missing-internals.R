@@ -549,6 +549,49 @@
   result
 }
 
+#' Internal: the SPSS-style codes a column's markers take in jconvert()
+#'
+#' @description
+#' The Stata-to-SPSS mapping of \code{jconvert(to = "spss")}, in one place
+#' (Session 361): a column's markers, sorted, take the convention codes in
+#' letter order (\code{.jst_tag_letters_to_codes()}); a column with more
+#' markers than codes takes a missing-value RANGE instead (Session 319),
+#' starting at the first code and running one integer per marker in the
+#' direction the codes run, from the first toward the second. A single
+#' code gives no direction, and a range that would reach or cross zero is
+#' refused. jconvert()'s pre-flight builds its plan here, and the
+#' SPSS-to-Stata branch asks it what the trip back would give (the
+#' return-trip note, the S354 item), so the two cannot disagree.
+#'
+#' @param tags Character vector of the column's distinct lowercase marker
+#'   letters, sorted.
+#' @param convention_codes The \code{missing.convention.codes} setting.
+#' @return A list: \code{plan}, a numeric vector of codes named by letter
+#'   (the mappable subset when refused); \code{band}, the range's two ends
+#'   or NULL; \code{refused}, TRUE when the markers outnumber the codes and
+#'   no range can be formed.
+#' @keywords internal
+.jst_spss_marker_plan <- function(tags, convention_codes) {
+  plan    <- .jst_tag_letters_to_codes(tags, convention_codes)
+  band    <- NULL
+  refused <- FALSE
+  if (length(attr(plan, "unmapped")) > 0L) {
+    band_dir <- if (length(convention_codes) >= 2L) {
+      sign(convention_codes[2] - convention_codes[1])
+    } else 0
+    cand <- as.numeric(convention_codes[1]) + band_dir * (seq_along(tags) - 1L)
+    if (band_dir != 0 && convention_codes[1] != 0 &&
+        all(sign(cand) == sign(convention_codes[1]))) {
+      plan <- stats::setNames(cand, tags)
+      band <- c(min(cand), max(cand))
+    } else {
+      refused <- TRUE
+    }
+  }
+  attr(plan, "unmapped") <- NULL
+  list(plan = plan, band = band, refused = refused)
+}
+
 #' Internal: the lettered markers a column carries, in cells and labels
 #'
 #' @description

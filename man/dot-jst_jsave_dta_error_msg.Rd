@@ -4,7 +4,12 @@
 \alias{.jst_jsave_dta_error_msg}
 \title{Internal: build jsave's .dta pre-flight error message}
 \usage{
-.jst_jsave_dta_error_msg(spss_vars, data_name, text_vars = character(0))
+.jst_jsave_dta_error_msg(
+  spss_vars,
+  data_name,
+  text_vars = character(0),
+  pd_line = NULL
+)
 }
 \arguments{
 \item{spss_vars}{Character vector of variable names carrying
@@ -20,6 +25,11 @@ suggested \code{jconvert()} call.}
 \code{.jst_text_route()} builds -- their declared values made plain
 NA, then the rest converted -- with its sentence, and at the standard
 and full levels a closing line pointing to \code{jencode()}.}
+
+\item{pd_line}{The offered jsave() call with
+\code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+the S218 item): the save that makes every declared missing value
+plain NA in the file, offered beside the conversion.}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.

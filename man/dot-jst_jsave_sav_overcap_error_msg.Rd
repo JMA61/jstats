@@ -10,7 +10,8 @@ the .sav missing-value limit}
   data_name,
   text_vars = character(0),
   prose_name = data_name,
-  stem = data_name
+  stem = data_name,
+  pd_line = NULL
 )
 }
 \arguments{
@@ -33,6 +34,11 @@ lines name mydata (Session 352).}
 \item{stem}{The name the offered files take; by default
 \code{data_name}. Until Session 352 the data argument as typed,
 which for an expression gave a file name that does not parse.}
+
+\item{pd_line}{The offered jsave() call with
+\code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+the S218 item): the save that makes every declared missing value
+plain NA in the file, offered beside the conversion.}
 }
 \value{
 Character scalar suitable as a \code{.jst_jsave_combined_error_msg}

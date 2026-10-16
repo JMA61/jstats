@@ -4,7 +4,12 @@
 \alias{.jst_jsave_xpt_error_msg}
 \title{Internal: build jsave's .xpt pre-flight error message}
 \usage{
-.jst_jsave_xpt_error_msg(vars, data_name, spss_vars = character(0))
+.jst_jsave_xpt_error_msg(
+  vars,
+  data_name,
+  spss_vars = character(0),
+  pd_line = NULL
+)
 }
 \arguments{
 \item{vars}{Character vector of variable names containing
@@ -20,6 +25,12 @@ SPSS-form UDM declarations (\code{na_values} and/or
 these either; \code{haven::write_xpt} would strip them
 silently. Default \code{character(0)} keeps the pre-extension
 call signature working unchanged.}
+
+\item{pd_line}{The offered jsave() call with
+\code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+the S218 item): the save that makes every declared missing value
+plain NA in the file, which replaces the jconvert(to = "baseR") line as
+the drop route (it leaves the data frame as it is).}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.

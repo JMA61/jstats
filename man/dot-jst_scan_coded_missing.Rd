@@ -7,11 +7,14 @@
 .jst_scan_coded_missing(df, obj_name)
 }
 \description{
-Classifies findings two ways: label-only (a value label suggesting
-missingness, per the package wordlist, with no formal declaration) and
-suspected (a suspicious sentinel value with no metadata at all).
-Values formally declared in \code{na_values} or \code{na_range} are
-excluded from both classifications -- declared UDMs are reported by
-jload's narrative (\code{.jst_handle_udms}), not here.
+Classifies findings three ways, most specific first: label-only (a value
+label suggesting missingness, per the package wordlist, with no formal
+declaration); convention-matched (Session 361; the Session 23 item,
+Decision 5A: a value in the \code{missing.convention.codes} setting,
+found whether or not the heuristic flags it); and suspected (a
+suspicious sentinel value with no metadata at all). Values formally
+declared in \code{na_values} or \code{na_range} are excluded from every
+classification -- declared UDMs are reported by jload's narrative
+(\code{.jst_handle_udms}), not here.
 }
 \keyword{internal}

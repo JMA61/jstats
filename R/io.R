@@ -41,11 +41,13 @@
 #'   error.
 #' @param package Logical. If \code{TRUE}, loads a jstats example dataset
 #'   shipped in the package (e.g. \code{community}, \code{clinic}) by bare
-#'   name, bypassing the disk search. Use this when a same-named file in the
-#'   working directory or data folder would otherwise shadow the shipped
-#'   dataset. If \code{FALSE} (default), a matching disk file takes precedence
-#'   and the shipped dataset is used only when no file matches. \code{file}
-#'   must be a bare name with no path or extension when \code{package = TRUE}.
+#'   name, or a shipped example file by its file name
+#'   (\code{"community_spss.sav"}), bypassing the disk search. Use this when
+#'   a same-named file in the working directory or data folder would
+#'   otherwise shadow the shipped copy. If \code{FALSE} (default), a
+#'   matching disk file takes precedence and the shipped copy is used only
+#'   when no file matches. \code{file} must be a name with no path when
+#'   \code{package = TRUE}, and a dataset's name has no extension.
 #' @param check.missing Logical. If \code{TRUE} (default), scans numeric
 #'   variables for values that look like coded missing values (e.g. -99, 999)
 #'   and reports them. Set to \code{FALSE} to skip this check.
@@ -154,9 +156,12 @@
 #'   \item at least five times the size of every other value in the
 #'     variable (999 on a 1-to-7 scale).
 #' }
-#' A flagged value whose value label suggests missingness (such as
-#' "Refused" or "Don't know") is reported as label-only; the rest are
-#' reported as suspected. Flagged values are reported but not changed. If
+#' A value in the \code{missing.convention.codes} setting of
+#' \code{\link{joptions}} (-99, -98 and -97 by default) is flagged as
+#' well, whatever its size. A flagged value whose value label suggests
+#' missingness (such as "Refused" or "Don't know") is reported as
+#' label-only; one of the setting's codes, as convention-matched; the rest
+#' as suspected. Flagged values are reported but not changed. If
 #' they are missing values, declare them with
 #' \code{\link{jdeclare_missing}}, which keeps the codes and their labels;
 #' the report shows the call.
@@ -176,6 +181,24 @@
 #' in the working directory or data.dir folder is opened instead of
 #' the shipped copy. Use \code{package = TRUE} to force the shipped
 #' dataset.
+#'
+#' \strong{Example files:}
+#' jstats also ships the \code{community} data as files, the kind a
+#' collaborator might send: \code{community_spss.sav},
+#' \code{community_stata.dta} and \code{community_excel.xlsx}. When no
+#' file of that name is in the data.dir folder or the working directory,
+#' \code{jload("community_spss.sav")} reads the shipped one, and says so;
+#' the name without its extension works too
+#' (\code{jload("community_spss")}). A file of the same name on disk is
+#' read instead, with a note giving the call that reads the shipped file:
+#' \code{jload("community_spss.sav", package = TRUE)}.
+#'
+#' \strong{Variables named T or F:}
+#' At \code{joutput("full")} a note names a variable called \code{T} or
+#' \code{F}. jstats reads it as the variable, but in base R \code{T} and
+#' \code{F} also stand for \code{TRUE} and \code{FALSE}, and code run
+#' inside the data frame -- \code{with()}, \code{subset()} -- reads the
+#' variable in their place.
 #'
 #' @examples
 #' \dontrun{
@@ -202,6 +225,10 @@
 #'
 #' # Extension omitted -- jload searches for a matching file automatically
 #' jload("community")
+#'
+#' # The example files shipped with jstats, read by name
+#' jload("community_spss.sav")
+#' jload("community_excel.xlsx", package = TRUE)   # even beside a local copy
 #'
 #' # Full file path
 #' jload("C:/Projects/Data/community.dta")
@@ -317,25 +344,53 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # set here when package = TRUE forces the shipped copy, or in the no-extension
   # search below when nothing matches on disk.
   from_package <- FALSE
+  # An example file shipped in inst/extdata (Session 361, the Session 74
+  # item's second half): read as a file is, from its place in the
+  # installed package, and said so before the Loaded line.
+  from_extdata <- FALSE
   if (isTRUE(package)) {
-    if (has_dir || ext != "") {
+    # Since Session 361 package = TRUE also forces an example file, named
+    # with its extension (jload("community_spss.sav", package = TRUE)) or
+    # by its name alone when no dataset has that name; a path is still
+    # refused, and a dataset's name with an extension gets the name alone.
+    if (has_dir) {
+      b <- basename(file)
       .jst_stop(
-        "package = TRUE loads a shipped jstats dataset by bare name.\n",
-        "Drop the path and extension:\n",
-        "  jload(\"", tools::file_path_sans_ext(basename(file)),
+        "package = TRUE loads a jstats example dataset or file by its ",
+        "name alone.\n",
+        "Drop the path:\n",
+        "  jload(\"",
+        if (b %in% .jst_extdata_files()) b else tools::file_path_sans_ext(b),
         "\", package = TRUE)"
       )
     }
-    pkg_df <- .jst_get_package_dataset(file)
-    if (is.null(pkg_df)) {
-      .jst_stop(
-        "No jstats example dataset named '", file, "'.\n",
-        "Shipped datasets: ",
-        paste(.jst_package_datasets(), collapse = ", "), "."
-      )
+    if (ext != "") {
+      ex <- .jst_extdata_path(file)
+      if (length(ex) == 0L) {
+        stem <- tools::file_path_sans_ext(file)
+        if (.jst_is_package_dataset(stem)) {
+          .jst_stop(
+            "package = TRUE loads a jstats example dataset by its name ",
+            "alone.\n",
+            "Drop the extension:\n",
+            "  jload(\"", stem, "\", package = TRUE)"
+          )
+        }
+        .jst_package_not_found(file)
+      }
+      file <- ex; has_dir <- TRUE; from_extdata <- TRUE
+    } else {
+      pkg_df <- .jst_get_package_dataset(file)
+      if (!is.null(pkg_df)) {
+        from_package <- TRUE
+        df           <- pkg_df
+      } else {
+        ex <- .jst_extdata_path(file, stem = TRUE)
+        if (length(ex) != 1L) .jst_package_not_found(file)
+        file <- ex; ext <- tolower(tools::file_ext(ex))
+        has_dir <- TRUE; from_extdata <- TRUE
+      }
     }
-    from_package <- TRUE
-    df           <- pkg_df
   }
 
   # --- No extension: search for matching files -------------------------------
@@ -346,9 +401,23 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # Disk files win: only when nothing matches on disk do we fall back to
       # a package-shipped dataset of this name (e.g. jload("community")).
       pkg_df <- .jst_get_package_dataset(file)
+      ex_hit <- if (is.null(pkg_df) && !has_dir) {
+        .jst_extdata_path(file, stem = TRUE)
+      } else character(0)
       if (!is.null(pkg_df)) {
         from_package <- TRUE
         df <- pkg_df
+      } else if (length(ex_hit) == 1L) {
+        # Then a shipped example file of this name (Session 361):
+        # jload("community_spss") reads community_spss.sav.
+        file <- ex_hit; ext <- tolower(tools::file_ext(ex_hit))
+        has_dir <- TRUE; from_extdata <- TRUE
+      } else if (length(ex_hit) > 1L) {
+        .jst_stop(
+          "Multiple jstats example files match '", file, "':\n",
+          paste0("  ", basename(ex_hit), collapse = "\n"), "\n",
+          "Include the file extension to specify which one."
+        )
       } else {
         # Nothing loadable, and no shipped dataset of this name. Before
         # reporting a bare not-found, check whether an .RData-family file is
@@ -398,6 +467,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           "To load the example dataset instead, use:\n",
           "  jload(\"", requested_name, "\", package = TRUE)"
         )
+      } else if (!has_dir &&
+                 length(.jst_extdata_path(requested_name, stem = TRUE)) == 1L) {
+        # The same for a shipped example file (Session 361).
+        .jst_msg(
+          "A local file and a jstats example file are both named '",
+          requested_name, "'.\n",
+          "The local file was loaded.\n",
+          "To load the example file instead, use:\n",
+          "  jload(\"", requested_name, "\", package = TRUE)"
+        )
       }
       file    <- found
       ext     <- tolower(tools::file_ext(file))
@@ -438,9 +517,30 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       .jst_stop("File not found: ", .jst_norm_path(resolved_path))
     }
   } else {
-    # Bare filename — search the data.dir folder (if set), then the working directory
-    resolved_path <- .jst_find_file(file, quiet = quiet)
+    # Bare filename — search the data.dir folder (if set), then the working
+    # directory, then (Session 361) the example files shipped with jstats:
+    # jload("community_spss.sav") with no such file on disk reads the
+    # shipped one. A file on disk wins, and is said to.
+    ex <- .jst_extdata_path(file)
+    resolved_path <- .jst_find_file(file, quiet = quiet,
+                                    fallback = if (length(ex)) ex else NULL)
+    if (length(ex) == 1L) {
+      if (identical(resolved_path, ex)) {
+        from_extdata <- TRUE
+      } else {
+        .jst_msg(
+          "A local file and a jstats example file are both named '",
+          file, "'.\n",
+          "The local file was loaded.\n",
+          "To load the example file instead, use:\n",
+          "  jload(\"", file, "\", package = TRUE)"
+        )
+      }
+    }
   }
+  # Where an example file was read from, in the form a data.dir read takes
+  # ("Reading from <folder>"), before the Loaded line.
+  if (from_extdata) say("Reading from the jstats example files")
 
   # --- Determine object name -------------------------------------------------
   if (!is.null(name)) {
@@ -697,12 +797,46 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
   }
 
+  # --- Variables named T or F (Session 361, the S289 item) --------------------
+  # T and F are base R's overwritable stand-ins for TRUE and FALSE. jstats
+  # reads a variable of either name as the variable (ruling R18: the data
+  # frame's variable wins), but base R code run inside the data -- with(),
+  # subset(), transform() -- reads the variable where T or F meant TRUE or
+  # FALSE. An advisory note (joutput("full") only), as the item has it; a
+  # blank line sets it off from a note above it (Rule F).
+  tf_vars <- intersect(c("T", "F"), names(df))
+  if (length(tf_vars) > 0L && !quiet &&
+      identical(getOption(".jst_output_level", "standard"), "full")) {
+    n_tf <- length(tf_vars)
+    if (.jst_note_fired) say("")
+    .jst_advisory_note(
+      "Note: ", .jst_and_list(tf_vars), " ", .jst_plural(n_tf, "is a variable",
+                                                         "are variables"),
+      " in ", obj_name, ".\n",
+      "jstats reads ", .jst_plural(n_tf, "it", "them"), " as the ",
+      .jst_plural(n_tf, "variable", "variables"), ", but in base R ",
+      .jst_and_list(tf_vars), " also ", .jst_plural(n_tf, "stands", "stand"),
+      " for ", .jst_and_list(c(T = "TRUE", F = "FALSE")[tf_vars]),
+      ", and code run inside ", obj_name, " (with(), subset()) reads the ",
+      .jst_plural(n_tf, "variable", "variables"), " in ",
+      .jst_plural(n_tf, "its", "their"), " place.\n",
+      "To rename ", .jst_plural(n_tf, "it", "them"), ", replacing ",
+      .jst_plural(n_tf, "newname", "the new names"), ":\n",
+      paste0("  names(", obj_name, ")[names(", obj_name, ") == \"", tf_vars,
+             "\"] <- \"",
+             if (n_tf == 1L) "newname" else paste0("newname", seq_len(n_tf)),
+             "\"", collapse = "\n"))
+    .jst_note_fired <- TRUE
+  }
+
   # --- Coded missing value scan ----------------------------------------------
   # Formally declared UDMs are the narrative's job (.jst_handle_udms,
   # above); the scan reports only what the narrative cannot -- values
   # whose labels look like missing-value codes without a declaration
-  # (label-only), and suspicious sentinel values with no metadata at all
-  # (suspected). Declared codes are excluded from both classifications.
+  # (label-only), values in the missing.convention.codes setting with no
+  # declaration (convention-matched, Session 361), and suspicious sentinel
+  # values with no metadata at all (suspected). Declared codes are
+  # excluded from every classification.
   # (The scan's formal-UDM branch, unreachable from this call by
   # construction, was removed at S233 -- see the changelog.)
   if (check.missing) {
@@ -745,6 +879,63 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # data() item names can carry a parenthetical alias (e.g. "x (y)"); keep the
   # leading token only.
   sub("\\s.*$", "", avail)
+}
+
+#' Internal: the example files shipped in the package's inst/extdata
+#'
+#' @description
+#' Session 361 (the Session 74 item's extdata half, decided S77 and S107):
+#' the files jload() finds by name when no file of that name is on disk --
+#' \code{community_spss.sav}, \code{community_stata.dta} and
+#' \code{community_excel.xlsx}. Resolved through the package's own
+#' namespace, as \code{.jst_package_datasets()} is, and empty when the
+#' package is not installed as a namespace.
+#'
+#' @return A sorted character vector of file names, possibly empty.
+#'
+#' @keywords internal
+.jst_extdata_files <- function() {
+  pkg <- utils::packageName(environment())
+  if (is.null(pkg)) return(character(0))
+  dir <- system.file("extdata", package = pkg)
+  if (!nzchar(dir)) return(character(0))
+  sort(list.files(dir))
+}
+
+#' Internal: the full path of a shipped example file
+#'
+#' @param name A file name, with its extension; or, with \code{stem =
+#'   TRUE}, a name without one.
+#' @param stem Logical: match \code{name} against the files' names without
+#'   their extensions (the loadable extensions only).
+#' @return Character vector of full paths -- one, none, or (by stem)
+#'   several.
+#' @keywords internal
+.jst_extdata_path <- function(name, stem = FALSE) {
+  files <- .jst_extdata_files()
+  hits <- if (isTRUE(stem)) {
+    files[tools::file_path_sans_ext(files) == name &
+            tolower(tools::file_ext(files)) %in%
+              c("sav", "dta", "csv", "rds", "sas7bdat", "xpt", "xlsx", "xls")]
+  } else files[files == name]
+  if (length(hits) == 0L) return(character(0))
+  pkg <- utils::packageName(environment())
+  vapply(hits, function(f) system.file("extdata", f, package = pkg),
+         character(1), USE.NAMES = FALSE)
+}
+
+#' Internal: the not-found stop of jload(package = TRUE)
+#' @param file What was asked for.
+#' @keywords internal
+.jst_package_not_found <- function(file) {
+  ex <- .jst_extdata_files()
+  .jst_stop(
+    "No jstats example dataset or file named '", file, "'.\n",
+    "Shipped datasets: ",
+    paste(.jst_package_datasets(), collapse = ", "), ".",
+    if (length(ex) > 0L) paste0("\nExample files: ",
+                                paste(ex, collapse = ", "), ".")
+  )
 }
 
 #' Internal: is a bare name a package-shipped dataset?
@@ -2010,8 +2201,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param quiet Logical; default FALSE. When TRUE, suppresses the
 #'   "Reading from <dir>" note (propagated from jload()'s quiet argument).
 #'   The not-found error is unaffected.
+#' @param fallback A path returned, in place of the not-found stop, when no
+#'   file of that name is on disk: the shipped example file of that name
+#'   (Session 361), or NULL.
 #' @keywords internal
-.jst_find_file <- function(filename, quiet = FALSE) {
+.jst_find_file <- function(filename, quiet = FALSE, fallback = NULL) {
   search_dirs <- .jst_get_search_dirs()
   for (d in search_dirs) {
     candidate <- file.path(d, filename)
@@ -2022,6 +2216,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       return(candidate)
     }
   }
+  # A shipped example file of this name (Session 361): returned when no
+  # file on disk matched; the caller says where it was read from.
+  if (!is.null(fallback)) return(fallback)
   .jst_stop(
     "File '", filename, "' not found.\n",
     "Searched in: ",
@@ -2035,18 +2232,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
 #' Internal: scan for coded missing values and report findings
 #'
-#' Classifies findings two ways: label-only (a value label suggesting
-#' missingness, per the package wordlist, with no formal declaration) and
-#' suspected (a suspicious sentinel value with no metadata at all).
-#' Values formally declared in \code{na_values} or \code{na_range} are
-#' excluded from both classifications -- declared UDMs are reported by
-#' jload's narrative (\code{.jst_handle_udms}), not here.
+#' Classifies findings three ways, most specific first: label-only (a value
+#' label suggesting missingness, per the package wordlist, with no formal
+#' declaration); convention-matched (Session 361; the Session 23 item,
+#' Decision 5A: a value in the \code{missing.convention.codes} setting,
+#' found whether or not the heuristic flags it); and suspected (a
+#' suspicious sentinel value with no metadata at all). Values formally
+#' declared in \code{na_values} or \code{na_range} are excluded from every
+#' classification -- declared UDMs are reported by jload's narrative
+#' (\code{.jst_handle_udms}), not here.
 #'
 #' @keywords internal
 .jst_scan_coded_missing <- function(df, obj_name) {
 
   max_report <- 10L  # Maximum number of rows to display (harmonized with
                      # the narrative cap in .jst_format_udm_narrative)
+
+  # The codes the package recommends (the missing.convention.codes
+  # setting), for the convention-matched category (Session 361).
+  conv_codes <- as.numeric(getOption(
+    ".jst_options_missing_convention_codes",
+    .jst_options_defaults$missing.convention.codes))
+  conv_show  <- paste(vapply(conv_codes, .jst_fmt_code, character(1)),
+                      collapse = ", ")
 
   # Collect findings: list of lists with var, value, count, source
   findings <- list()
@@ -2082,8 +2290,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # --- Heuristic scan using existing detection function ---
     # Only scan whole-number values — coded missings are always integers
     whole_vals <- num_vals[!is.na(num_vals) & num_vals == round(num_vals)]
-    if (length(whole_vals) >= 2) {
-      suspicious <- .jst_detect_suspicious_values(whole_vals, vname)
+    # Convention-matched values (Session 361; the Session 23 item, as
+    # Decision 5A locked it): a value in the missing.convention.codes
+    # setting is a candidate whatever the heuristic thinks of it -- a -99
+    # beside ages of 18 to 80 is one the heuristic leaves alone by design.
+    # Most specific wins below: a missing-suggestive label makes it
+    # label-only, else it is convention-matched, else suspected.
+    conv_hits <- sort(unique(whole_vals[whole_vals %in% conv_codes]))
+    if (length(whole_vals) >= 2 || length(conv_hits) > 0) {
+      suspicious <- if (length(whole_vals) >= 2) {
+        .jst_detect_suspicious_values(whole_vals, vname)
+      } else numeric(0)
+      suspicious <- sort(unique(c(suspicious, conv_hits)))
       for (sv in suspicious) {
         # Skip if formally declared as UDM on this variable: declared
         # codes are covered by the load narrative, and without this
@@ -2133,7 +2351,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         } else {
           findings[[length(findings) + 1]] <- list(
             var = vname, value = sv, count = n_cases,
-            source = "suspected"
+            source = if (sv %in% conv_codes) "convention_matched"
+                     else "suspected"
           )
         }
       }
@@ -2150,12 +2369,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # hazard, and the tag text itself is now ASCII-only per the
     # runtime-string punctuation convention.)
     src_display <- c(
-      label_only = "label-only -- not formally declared",
-      suspected  = "suspected -- not formally defined"
+      label_only         = "label-only -- not formally declared",
+      convention_matched = "convention-matched -- not formally declared",
+      suspected          = "suspected -- not formally defined"
     )
 
     sources_present <- unique(vapply(findings, function(f) f$source, character(1)))
     has_label_only <- "label_only" %in% sources_present
+    has_conv       <- "convention_matched" %in% sources_present
     has_heur       <- "suspected"  %in% sources_present
 
     # Single-source rendering: when exactly ONE source type is present,
@@ -2168,8 +2389,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # Heading: telegraph "Suspected" only when ALL findings are pure
     # heuristic (no label-only). Label-only findings represent real
     # metadata that earns the neutral wording even when heuristic
-    # findings are mixed in.
-    heading <- if (has_heur && !has_label_only) {
+    # findings are mixed in; a convention-matched value (Session 361) is
+    # the code the package itself recommends, and earns it too.
+    heading <- if (has_heur && !has_label_only && !has_conv) {
       "Suspected missing-value codes detected:"
     } else {
       "Missing-value codes detected:"
@@ -2259,14 +2481,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       hidden_sources <- vapply(groups[group_keys[(max_report + 1):n_groups]],
                                function(g) g$source, character(1))
       hidden_label_only <- sum(hidden_sources == "label_only")
+      hidden_conv       <- sum(hidden_sources == "convention_matched")
       hidden_heur       <- sum(hidden_sources == "suspected")
 
-      mixed <- (hidden_label_only > 0) + (hidden_heur > 0) > 1
+      mixed <- (hidden_label_only > 0) + (hidden_conv > 0) +
+        (hidden_heur > 0) > 1
       if (mixed) {
         cat(sprintf("  ... and %d more:\n", n_groups - max_report))
         if (hidden_label_only > 0) {
           cat(sprintf("    %d with [%s]\n", hidden_label_only,
                       src_display[["label_only"]]))
+        }
+        if (hidden_conv > 0) {
+          cat(sprintf("    %d with [%s]\n", hidden_conv,
+                      src_display[["convention_matched"]]))
         }
         if (hidden_heur > 0) {
           cat(sprintf("    %d with [%s]\n", hidden_heur,
@@ -2291,6 +2519,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           "as missing, but the value labels suggest they mark missing ",
           "values. Declare them as missing if they are; leave ",
           "as-is if real.")
+      } else if (has_conv) {
+        .jst_msg_out(
+          "These codes match the missing.convention.codes setting (",
+          conv_show, ") but are not formally declared, so they are not ",
+          "treated as missing. Declare them as missing if they are; leave ",
+          "as-is if real.")
       } else {
         .jst_msg_out(
           "These codes are not formally defined, so they are not treated ",
@@ -2312,6 +2546,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           "suggest they mark missing values.\n",
           "  Declare them as missing if they are; leave as-is if real.")
       }
+      if (has_conv) {
+        .jst_msg_out(
+          "[", src_display[["convention_matched"]], "]:\n",
+          "  not automatically treated as NA, but they match the ",
+          "missing.convention.codes setting (", conv_show, ").\n",
+          "  Declare them as missing if they are; leave as-is if real.")
+      }
       if (has_heur) {
         .jst_msg_out(
           "[", src_display[["suspected"]], "]:\n",
@@ -2325,10 +2566,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # message-suggestion convention (Session-113 addendum in the missing-
     # values reference). Target preference: label-only first (it
     # typically has several labelled codes, the most informative
-    # example), then suspected.
+    # example), then convention-matched (Session 361), then suspected.
+    # A convention-matched target carries no missing-value label, so it
+    # is offered as a suspected one is, the placeholder labels included.
     ex_var <- NULL
     ex_src <- NULL
-    for (src in c("label_only", "suspected")) {
+    for (src in c("label_only", "convention_matched", "suspected")) {
       idx <- which(vapply(findings, function(f) f$source == src, logical(1)))
       if (length(idx) > 0) {
         ex_var <- findings[[idx[1]]]$var
@@ -2365,7 +2608,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         # prose around them does, so a line wider than the message gets
         # ruling R5's layout; a bare cat() printed it whole.
         .jst_msg_out(ex_route)
-        if (identical(ex_src, "suspected")) {
+        if (ex_src %in% c("suspected", "convention_matched")) {
           .jst_msg_out("To recode and label them in one call, replacing ",
                        "the placeholder names:")
           .jst_msg_out(.jst_marker_recode_line(
@@ -2398,7 +2641,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         # strings, not guessed meanings -- the scan does not know what the
         # codes signify (Session 115). Omitted for a label-only target,
         # where the codes already carry labels and bare codes preserve them.
-        if (identical(ex_src, "suspected")) {
+        if (ex_src %in% c("suspected", "convention_matched")) {
           lbl_parts <- paste0("\"label", seq_along(ex_codes), "\" = ",
                               format(ex_codes, trim = TRUE))
           lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
@@ -2440,12 +2683,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{.jst_text_route()} builds -- their declared values made plain
 #'   NA, then the rest converted -- with its sentence, and at the standard
 #'   and full levels a closing line pointing to \code{jencode()}.
+#' @param pd_line The offered jsave() call with
+#'   \code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+#'   the S218 item): the save that makes every declared missing value
+#'   plain NA in the file, offered beside the conversion.
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
 .jst_jsave_dta_error_msg <- function(spss_vars, data_name,
-                                     text_vars = character(0)) {
+                                     text_vars = character(0),
+                                     pd_line = NULL) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n_total      <- length(spss_vars)
@@ -2473,7 +2721,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
              " SPSS-style missing values, incompatible with the .dta format."),
       "Convert first, then save again:",
       calls,
-      if (!is.null(route)) route$note), collapse = "\n"))
+      if (!is.null(route)) route$note,
+      if (!is.null(pd_line)) c("Or save every declared missing value as plain NA instead:", pd_line)), collapse = "\n"))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -2493,7 +2742,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     calls,
     if (!is.null(route)) c(route$note,
       paste0("Or turn ", .jst_plural(length(text_vars), "it", "each"),
-             " into a numeric variable first with jencode()."))),
+             " into a numeric variable first with jencode().")),
+    # Session 361 (the S218 item): the save that blanks them instead.
+    if (!is.null(pd_line)) c("Or save every declared missing value as plain NA instead:", pd_line)),
     collapse = "\n")
 }
 
@@ -2628,12 +2879,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   these either; \code{haven::write_xpt} would strip them
 #'   silently. Default \code{character(0)} keeps the pre-extension
 #'   call signature working unchanged.
+#' @param pd_line The offered jsave() call with
+#'   \code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+#'   the S218 item): the save that makes every declared missing value
+#'   plain NA in the file, which replaces the jconvert(to = "baseR") line as
+#'   the drop route (it leaves the data frame as it is).
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
 .jst_jsave_xpt_error_msg <- function(vars, data_name,
-                                     spss_vars = character(0)) {
+                                     spss_vars = character(0),
+                                     pd_line = NULL) {
 
   output_level <- getOption(".jst_output_level", "standard")
   all_vars     <- unique(c(vars, spss_vars))
@@ -2647,6 +2904,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   has_tagged <- length(vars) > 0
   has_spss   <- length(spss_vars) > 0
+
+  # The drop route (Session 361, the S218 item): the save that makes every
+  # declared missing value plain NA in the file and leaves the data frame
+  # as it is (voice Rule G), where the message offered jconvert(to =
+  # "baseR", modify = TRUE), which made them NA in the data frame too.
+  drop_line <- if (!is.null(pd_line)) pd_line else
+    paste0("  jconvert(", data_name, ", to = \"baseR\", modify = TRUE)")
 
   # The preserve-path advice depends on which missing-value form is
   # present: tagged NAs round-trip via .dta, SPSS-form declarations via
@@ -2666,8 +2930,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     return(paste0(
       n, " ", noun, " ", verb_contain,
       " missing-value codes, incompatible with the .xpt format.\n",
-      preserve, " To drop them:\n",
-      "  jconvert(", data_name, ", to = \"baseR\", modify = TRUE)"))
+      preserve, " To drop them:\n", drop_line))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -2686,8 +2949,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     n, " ", noun, " ", verb_contain,
     " missing-value codes, incompatible with the .xpt format:\n",
     "  ", .jst_format_var_list(all_vars), "\n\n",
-    "To save as .xpt, drop these by running:\n",
-    "  jconvert(", data_name, ", to = \"baseR\", modify = TRUE)\n\n",
+    if (!is.null(pd_line)) {
+      "To save as .xpt with every declared missing value as plain NA, run:\n"
+    } else "To save as .xpt, drop these by running:\n",
+    drop_line, "\n\n",
     preserve_advice
   )
 }
@@ -2717,11 +2982,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param data_name Character. Name of the data frame argument in
 #'   the user's call to \code{jsave()}, used to construct the
 #'   suggested \code{jconvert()} call.
+#' @param pd_line The offered jsave() call with
+#'   \code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+#'   the S218 item): the save that makes every declared missing value
+#'   plain NA in the file, offered beside the conversion.
 #'
 #' @return Character scalar suitable for passing to \code{stop()}.
 #'
 #' @keywords internal
-.jst_jsave_sav_error_msg <- function(vars, data, data_name) {
+.jst_jsave_sav_error_msg <- function(vars, data, data_name, pd_line = NULL) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n            <- length(vars)
@@ -2757,7 +3026,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       n, " ", noun, " ", verb_contain, " ",
       style_phrase, ", incompatible with the .sav format.\n",
       "Convert first, then save again:\n",
-      "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)"))
+      "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)",
+      if (!is.null(pd_line)) paste0("\n", "Or save every declared missing value as plain NA instead:", "\n", pd_line)))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -2767,7 +3037,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "  ", .jst_format_var_list(vars), "\n\n",
     "Before saving to SPSS format, convert to SPSS-style missing values ",
     "with:\n",
-    "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)"
+    "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)",
+    # Session 361 (the S218 item): the save that blanks them instead.
+    if (!is.null(pd_line)) paste0("\n", "Or save every declared missing value as plain NA instead:", "\n", pd_line)
   )
 }
 
@@ -2798,6 +3070,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param stem The name the offered files take; by default
 #'   \code{data_name}. Until Session 352 the data argument as typed,
 #'   which for an expression gave a file name that does not parse.
+#' @param pd_line The offered jsave() call with
+#'   \code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+#'   the S218 item): the save that makes every declared missing value
+#'   plain NA in the file, offered beside the conversion.
 #'
 #' @return Character scalar suitable as a \code{.jst_jsave_combined_error_msg}
 #'   section (no \code{jsave():} prefix; that is added on emission).
@@ -2805,7 +3081,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 .jst_jsave_sav_overcap_error_msg <- function(overcap_info, data_name,
                                              text_vars = character(0),
                                              prose_name = data_name,
-                                             stem = data_name) {
+                                             stem = data_name,
+                                             pd_line = NULL) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n     <- length(overcap_info)
@@ -2825,7 +3102,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                "them first.")
       } else {
         "Save as R format (.rds) to keep all the codes, or reduce them first."
-      }
+      },
+      if (!is.null(pd_line)) paste0("\n", "Or save every declared missing value as plain NA instead:", "\n", pd_line)
     ))
   }
 
@@ -2852,6 +3130,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "To convert to Stata and save as Stata format (.dta), also keeping all the codes:",
       sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
       sprintf("  jsave(%s, \"%s.dta\")", data_name, stem)),
+    # Session 361 (the S218 item): SPSS format, every declared missing
+    # value saved as plain NA.
+    if (!is.null(pd_line)) c(
+      "To save as SPSS format (.sav) with every declared missing value as plain NA:",
+      pd_line),
     "Or reduce each variable's declared missing values to fit."
   ), collapse = "\n")
 }
@@ -3209,6 +3492,31 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
 
 
+#' Internal: jsave()'s note on declared missing values saved as plain NA
+#'
+#' Session 361 (the S218 item). \code{preserve.declarations = FALSE} makes
+#' every declared missing value plain NA before the write, and since this
+#' session it does so ahead of the .sav, .dta and .xpt pre-flight. After a
+#' write to any format but Excel and CSV (whose loss note gives the same
+#' count), this note says what happened: the cells that held a declared
+#' value -- an SPSS-style code, or a Stata-style or SAS-style marker -- or,
+#' when none did, that the declarations were dropped.
+#' @param n Integer, the cells blanked.
+#' @return Character scalar.
+#' @keywords internal
+.jst_jsave_blanked_note <- function(n) {
+  if (n > 0L) {
+    paste0("Note: ", n, " ",
+           .jst_plural(n, "cell holding a declared missing value was",
+                       "cells holding declared missing values were"),
+           " blanked (preserve.declarations = FALSE).")
+  } else {
+    paste0("Note: no cell held a declared missing value; the declarations ",
+           "were dropped (preserve.declarations = FALSE).")
+  }
+}
+
+
 #' Internal: build the label / missing-value loss note for Excel and CSV saves
 #'
 #' @description
@@ -3487,14 +3795,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param preserve.declarations Logical. If \code{TRUE} (the default),
 #'   missing-value declarations are written as they stand; formats that
 #'   cannot store them (notably Excel and CSV) drop the metadata, and
-#'   SPSS-style codes such as -99 then read back as ordinary numbers. If
-#'   \code{FALSE}, those codes are blanked to plain NA before writing, so
-#'   they become empty cells. Mirrors the \code{preserve.declarations}
-#'   argument of \code{\link{jload}}. The pre-flight checks for the .sav,
-#'   .dta, and .xpt formats run before this step, so a missing-value form
-#'   a target format cannot represent is still reported and blocked
-#'   rather than silently dropped. The haven package and its
-#'   documentation call these user-defined missing values.
+#'   SPSS-style codes such as -99 then read back as ordinary numbers, while
+#'   a missing-value form that .sav, .dta, or .xpt cannot represent stops
+#'   the save before anything is written. If \code{FALSE}, every declared
+#'   missing value -- an SPSS-style code, or a Stata-style or SAS-style
+#'   marker -- is made plain NA before writing, in the file only (the data
+#'   frame is not changed), and a note gives the number of cells. This
+#'   happens before the .sav, .dta, and .xpt checks, so a form those
+#'   formats cannot represent no longer stops the save. Mirrors the
+#'   \code{preserve.declarations} argument of \code{\link{jload}}. The
+#'   haven package and its documentation call these user-defined missing
+#'   values.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect of
 #'   writing a file to disk.
@@ -3541,7 +3852,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     (Stata-style in \code{.sav}, SPSS-style in \code{.dta}, either in
 #'     \code{.xpt}); and, for \code{.sav}, more than three declared codes,
 #'     or a range plus more than one code, on one column. No file is
-#'     written until the problems are fixed.
+#'     written until the problems are fixed. A missing-value form the
+#'     format cannot hold can also be saved as plain NA with
+#'     \code{preserve.declarations = FALSE}, which the message offers
+#'     beside the conversion.
 #'   \item SPSS (\code{.sav}), Stata (\code{.dta}), SAS interchange
 #'     (\code{.xpt}) and CSV (\code{.csv}) have no missing value for text:
 #'     a text variable's missing cells are saved as blank text, and read
@@ -3851,6 +4165,60 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
     }
   }
 
+  # --- Detect UDM forms and apply preserve.declarations (collapse) --------------------
+  # Detection is captured here, on the frame as given, so the post-write
+  # notes can describe what was present. The collapse runs BEFORE the
+  # ReadStat pre-flight below (Session 361; decided in principle S218, where
+  # until then "Option Y" ran it after): preserve.declarations = FALSE is an
+  # explicit instruction to save every declared missing value as plain NA,
+  # which satisfies the no-silent-loss rule, so a .sav, .dta or .xpt write
+  # that the pre-flight refuses for a missing-value form the format cannot
+  # hold now proceeds with the values blanked -- and says so, with the count,
+  # after the write. The default, TRUE, is unchanged: nothing collapses, and
+  # the pre-flight blocks what the format cannot represent. The
+  # .jst_handle_udms() call is shared with jload's preserve.declarations
+  # path, so collapse semantics stay identical both ways.
+  spss_udm_vars  <- character(0)
+  stata_udm_vars <- character(0)
+  text_udm       <- FALSE
+  n_udm_blanked  <- 0L
+  n_tag_blanked  <- 0L   # cells holding a lettered marker (Session 361)
+  # The frame as given, for the Excel/CSV note's labels and declared codes
+  # (Session 359): preserve.declarations = FALSE replaces data below.
+  data_given     <- data
+  if (ext %in% c("xlsx", "csv") || !preserve.declarations) {
+    spss_udm_vars  <- .jst_has_spss_udm(data)
+    stata_udm_vars <- .jst_has_tagged_na(data)
+    # A text variable's declared codes are words, not -99 (the S340
+    # item's rider, Session 351): the loss note says "values" then.
+    text_udm <- length(.jst_declared_text_vars(data, spss_udm_vars)) > 0L
+    if (!preserve.declarations &&
+        (length(spss_udm_vars) > 0 || length(stata_udm_vars) > 0)) {
+      collapsed <- .jst_handle_udms(data, preserve.declarations = FALSE)
+      if (length(spss_udm_vars) > 0) {
+        n_udm_blanked <- sum(vapply(spss_udm_vars, function(v) {
+          # Count on the underlying values: is.na() on a labelled_spss column
+          # treats the declared codes as missing, so a raw is.na() diff would
+          # see no change. unclass() exposes the stored numerics, letting us
+          # tell a blanked code cell from a pre-existing system-missing.
+          before <- unclass(data[[v]])
+          after  <- unclass(collapsed$df[[v]])
+          sum(is.na(after) & !is.na(before))
+        }, integer(1)))
+      }
+      # A marker's cell was NA already; what the collapse drops is which
+      # marker it was. Counted for the note the other formats get.
+      if (length(stata_udm_vars) > 0) {
+        n_tag_blanked <- sum(vapply(stata_udm_vars, function(v) {
+          x <- data[[v]]
+          if (!is.double(x)) return(0L)
+          sum(!is.na(haven::na_tag(x)))
+        }, integer(1)))
+      }
+      data <- collapsed$df
+    }
+  }
+
   # --- Pre-flight for the ReadStat formats (.sav / .dta / .xpt) --------------
   # Two independent classes of problem can block a write to these formats:
   #   (1) column types the format cannot store -- complex, list, and raw have
@@ -3892,12 +4260,25 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
         names(data)[unsup_vars], unname(type_of[unsup_vars]), ext, code_name)
     }
 
-    # (2) Missing-value incompatibilities -- format-specific.
+    # (2) Missing-value incompatibilities -- format-specific. Each refusal
+    # offers the save that blanks them (Session 361, the S218 item), the
+    # call as given with preserve.declarations = FALSE: the conversion keeps
+    # the declared values in the target's form, this saves them as plain NA
+    # -- two remedies in opposite directions, named side by side (Rule D's
+    # equal-standing carve-out). overwrite = TRUE rides when it was given.
+    # The file as typed, slashes swapped (jload()'s leading-digit line does
+    # the same, S241): a bare name resolved through data.dir stays bare, so
+    # the line saves where this call would have.
+    pd_line <- paste0("  jsave(", code_name, ", \"",
+                      .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)),
+                      "\"", if (isTRUE(overwrite)) ", overwrite = TRUE",
+                      ", preserve.declarations = FALSE)")
     if (ext == "sav") {
       tagged_vars <- .jst_has_tagged_na(data)
       if (length(tagged_vars) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_sav_error_msg(tagged_vars, data, code_name)
+          .jst_jsave_sav_error_msg(tagged_vars, data, code_name,
+                                   pd_line = pd_line)
       }
       # SPSS-form columns exceeding the .sav missing-value limit (at most 3
       # discrete codes, or a range plus 1). haven::write_sav() enforces SPSS's
@@ -3918,7 +4299,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
           .jst_jsave_sav_overcap_error_msg(overcap_info, code_name,
                                            .jst_declared_text_vars(data),
                                            prose_name = data_name,
-                                           stem       = code_stem)
+                                           stem       = code_stem,
+                                           pd_line    = pd_line)
       }
     } else if (ext == "dta") {
       # Any SPSS-form column blocks the write; since S218 the remedy is
@@ -3931,7 +4313,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       if (length(spss_vars) > 0) {
         sections[[length(sections) + 1L]] <-
           .jst_jsave_dta_error_msg(spss_vars, code_name,
-                                   .jst_declared_text_vars(data, spss_vars))
+                                   .jst_declared_text_vars(data, spss_vars),
+                                   pd_line = pd_line)
       }
     } else if (ext == "xpt") {
       # Both missing-value forms are unrepresentable in .xpt: tagged NAs
@@ -3942,7 +4325,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       spss_vars   <- .jst_has_spss_udm(data)
       if (length(tagged_vars) > 0 || length(spss_vars) > 0) {
         sections[[length(sections) + 1L]] <-
-          .jst_jsave_xpt_error_msg(tagged_vars, code_name, spss_vars)
+          .jst_jsave_xpt_error_msg(tagged_vars, code_name, spss_vars,
+                                   pd_line = pd_line)
       }
     }
 
@@ -3963,47 +4347,6 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
         note <- .jst_jsave_dta_case_correction_note(conv$n_changed)
         if (!is.null(note)) .jst_msg(note)
       }
-    }
-  }
-
-  # --- Detect UDM forms and apply preserve.declarations (collapse) --------------------
-  # Detection is captured here, on the frame as it stands after the ReadStat
-  # pre-flight, so the post-write note (Excel/CSV) can describe what was
-  # present. Option Y: the collapse runs AFTER the pre-flight, so a
-  # missing-value form a target format cannot represent is blocked above
-  # rather than silently dropped here. preserve.declarations = FALSE then bites on the
-  # ungated formats (Excel, CSV, rds) and on same-platform codes that passed
-  # the pre-flight; on Excel/CSV it converts the post-write note from a
-  # warning to a confirmation. The .jst_handle_udms() call is shared with
-  # jload's preserve.declarations path, so collapse semantics stay identical both ways.
-  spss_udm_vars  <- character(0)
-  stata_udm_vars <- character(0)
-  text_udm       <- FALSE
-  n_udm_blanked  <- 0L
-  # The frame as given, for the Excel/CSV note's labels and declared codes
-  # (Session 359): preserve.declarations = FALSE replaces data below.
-  data_given     <- data
-  if (ext %in% c("xlsx", "csv") || !preserve.declarations) {
-    spss_udm_vars  <- .jst_has_spss_udm(data)
-    stata_udm_vars <- .jst_has_tagged_na(data)
-    # A text variable's declared codes are words, not -99 (the S340
-    # item's rider, Session 351): the loss note says "values" then.
-    text_udm <- length(.jst_declared_text_vars(data, spss_udm_vars)) > 0L
-    if (!preserve.declarations &&
-        (length(spss_udm_vars) > 0 || length(stata_udm_vars) > 0)) {
-      collapsed <- .jst_handle_udms(data, preserve.declarations = FALSE)
-      if (length(spss_udm_vars) > 0) {
-        n_udm_blanked <- sum(vapply(spss_udm_vars, function(v) {
-          # Count on the underlying values: is.na() on a labelled_spss column
-          # treats the declared codes as missing, so a raw is.na() diff would
-          # see no change. unclass() exposes the stored numerics, letting us
-          # tell a blanked code cell from a pre-existing system-missing.
-          before <- unclass(data[[v]])
-          after  <- unclass(collapsed$df[[v]])
-          sum(is.na(after) & !is.na(before))
-        }, integer(1)))
-      }
-      data <- collapsed$df
     }
   }
 
@@ -4108,6 +4451,17 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
       text_udm = text_udm, data = data_given, code_name = code_name,
       path = .jst_norm_path(out_path))
     if (!is.null(label_note)) loss_notes <- c(loss_notes, expr_lines(label_note))
+  }
+
+  # preserve.declarations = FALSE on the other formats (Session 361, the
+  # S218 item): what the collapse did, said after the write, as the
+  # Excel/CSV note above says it -- the count of cells, or that no cell
+  # held one and the declarations were dropped. Until then only Excel and
+  # CSV said it, and a .rds or .sav save blanked them without a word.
+  if (!preserve.declarations && !ext %in% c("xlsx", "csv") &&
+      (length(spss_udm_vars) > 0 || length(stata_udm_vars) > 0)) {
+    loss_notes <- c(loss_notes,
+                    .jst_jsave_blanked_note(n_udm_blanked + n_tag_blanked))
   }
 
   # A text variable's missing cells (ruling R13, Jeff, S345; built Session

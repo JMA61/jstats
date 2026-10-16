@@ -8373,9 +8373,13 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     consulted for this direction;
 #'     they only govern the reverse (Stata to SPSS) mapping. Round-trip
 #'     conversions are not guaranteed to preserve the original numeric
-#'     codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.a, .b} -> SPSS
-#'     \code{c(-99, -98)} loses the original numbers), but the value
+#'     codes (e.g. SPSS \code{c(-1, 9)} -> Stata \code{.b, .a} -> SPSS
+#'     \code{c(-98, -99)} loses the original numbers), but the value
 #'     labels survive intact and the missingness semantics are preserved.
+#'     The notification says so whenever the trip back under the
+#'     \code{missing.convention.codes} setting would give other codes:
+#'     "converting Score back to SPSS-style missing values would give its
+#'     codes -99, -98, not 9, -1."
 #'     Range-based SPSS missings (\code{na_range}) are enumerated:
 #'     Stata-style missing values have no range concept, so the distinct
 #'     range values present in the column's data, plus any range values
@@ -8795,12 +8799,9 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
     # would span every real value with codes on both sides of the data
     # (c(-99, -98, 100)). Until S319 more markers than codes was refused
     # outright, and a Stata-style column with four or more markers had no
-    # route to SPSS form in the package.
-    n_conv   <- length(convention_codes)
-    band_dir <- if (n_conv >= 2L) {
-      sign(convention_codes[2] - convention_codes[1])
-    } else 0
-
+    # route to SPSS form in the package. The mapping is
+    # .jst_spss_marker_plan()'s (Session 361), which the SPSS-to-Stata
+    # branch also asks what the trip back would give.
     for (vname in names(info_list)) {
       info <- info_list[[vname]]
       if (info$representation != "stata") next
@@ -8808,22 +8809,14 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       col  <- data[[vname]]
       mk   <- .jst_marker_tags(col)
       tags <- sort(unique(mk$all), method = "radix")
-      plan <- .jst_tag_letters_to_codes(tags, convention_codes)
-      band <- NULL
-      if (length(attr(plan, "unmapped")) > 0L) {
-        cand <- as.numeric(convention_codes[1]) +
-          band_dir * (seq_along(tags) - 1L)
-        if (band_dir != 0 && convention_codes[1] != 0 &&
-            all(sign(cand) == sign(convention_codes[1]))) {
-          plan <- stats::setNames(cand, tags)
-          band <- c(min(cand), max(cand))
-        } else {
-          over_vars[[length(over_vars) + 1L]] <- list(
-            var = vname, tags = tags, label_only = mk$label_only,
-            sas = vname %in% sas_corrected_vars)
-        }
+      mp   <- .jst_spss_marker_plan(tags, convention_codes)
+      plan <- mp$plan
+      band <- mp$band
+      if (mp$refused) {
+        over_vars[[length(over_vars) + 1L]] <- list(
+          var = vname, tags = tags, label_only = mk$label_only,
+          sas = vname %in% sas_corrected_vars)
       }
-      attr(plan, "unmapped") <- NULL
       spss_plan[[vname]] <- plan
       if (!is.null(band)) spss_band[[vname]] <- band
       if (length(plan) > 0L) {
@@ -9138,6 +9131,7 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
   skipped_already  <- character(0)   # in target format already (user_specified only)
   banded_converted <- character(0)   # converted vars that carried an na_range
   reletter_notes   <- list()         # to = "spss": marker sets not .a, .b, ...
+  return_notes     <- list()         # to = "stata"/"sas": codes the trip back changes
   banded_spss      <- character(0)   # to = "spss": declared with a range (S319)
 
   for (vname in names(info_list)) {
@@ -9437,6 +9431,27 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       }
       converted_vars          <- c(converted_vars, vname)
       converted_info[[vname]] <- list(src = disp_src, dst = disp_dst)
+
+      # Return-trip note, the SPSS-to-Stata direction (Session 361, the
+      # S354 item; the mirror of the S314 note above). The trip back takes
+      # the convention codes in letter order -- .jst_spss_marker_plan(),
+      # the mapping to = "spss" itself uses -- so codes other than those
+      # come back as other numbers: na_values = c(-1, 9) goes out as 9 ->
+      # .a, -1 -> .b and returns as -99, -98. Recorded when any code would
+      # change. A trip back that would be refused (more markers than a
+      # single code, or a range reaching zero) is said by that refusal.
+      if (length(sorted_values) > 0L) {
+        back <- .jst_spss_marker_plan(tolower(plan_letters), convention_codes)
+        if (!back$refused &&
+            !isTRUE(all(unname(back$plan[tolower(plan_letters)]) ==
+                        sorted_values))) {
+          return_notes[[vname]] <- list(
+            var  = vname,
+            from = vapply(sorted_values, .jst_fmt_code, character(1)),
+            to   = vapply(unname(back$plan[tolower(plan_letters)]),
+                          .jst_fmt_code, character(1)))
+        }
+      }
     }
   }
 
@@ -9612,6 +9627,27 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
                            "labels."),
                     .jst_and_list(vnames), style_phrase)
           }
+        }
+        msg_lines <- c(msg_lines, "", note)
+      }
+
+      # Return-trip note, the SPSS-to-Stata direction (Session 361, the
+      # S354 item): the S314 note's form and gate. One variable names its
+      # codes both ways, in the report's order above, so each code reads
+      # against the one it would become; several share one note.
+      if (length(return_notes) > 0L) {
+        note <- if (length(return_notes) == 1L) {
+          rn <- return_notes[[1L]]
+          sprintf(paste0("Note: converting %s back to SPSS-style missing ",
+                         "values would give its codes %s, not %s."),
+                  rn$var, paste(rn$to, collapse = ", "),
+                  paste(rn$from, collapse = ", "))
+        } else {
+          vnames <- vapply(return_notes, `[[`, character(1), "var")
+          sprintf(paste0("Note: converting %s back to SPSS-style missing ",
+                         "values would give them other codes than those ",
+                         "above."),
+                  .jst_and_list(vnames))
         }
         msg_lines <- c(msg_lines, "", note)
       }

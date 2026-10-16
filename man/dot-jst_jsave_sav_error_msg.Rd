@@ -4,7 +4,7 @@
 \alias{.jst_jsave_sav_error_msg}
 \title{Internal: build jsave's .sav pre-flight error message}
 \usage{
-.jst_jsave_sav_error_msg(vars, data, data_name)
+.jst_jsave_sav_error_msg(vars, data, data_name, pd_line = NULL)
 }
 \arguments{
 \item{vars}{Character vector of variable names containing tagged-NA
@@ -16,6 +16,11 @@ on each flagged variable so the message names the right style.}
 \item{data_name}{Character. Name of the data frame argument in
 the user's call to \code{jsave()}, used to construct the
 suggested \code{jconvert()} call.}
+
+\item{pd_line}{The offered jsave() call with
+\code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
+the S218 item): the save that makes every declared missing value
+plain NA in the file, offered beside the conversion.}
 }
 \value{
 Character scalar suitable for passing to \code{stop()}.

@@ -4,12 +4,16 @@
 \alias{.jst_find_file}
 \title{Internal: find a bare filename in the data.dir folder or the working directory}
 \usage{
-.jst_find_file(filename, quiet = FALSE)
+.jst_find_file(filename, quiet = FALSE, fallback = NULL)
 }
 \arguments{
 \item{quiet}{Logical; default FALSE. When TRUE, suppresses the
 "Reading from \if{html}{\out{<dir>}}" note (propagated from jload()'s quiet argument).
 The not-found error is unaffected.}
+
+\item{fallback}{A path returned, in place of the not-found stop, when no
+file of that name is on disk: the shipped example file of that name
+(Session 361), or NULL.}
 }
 \description{
 Internal: find a bare filename in the data.dir folder or the working directory
