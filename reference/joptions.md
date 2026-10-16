@@ -292,11 +292,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/Rtmp1WRsVQ/Data
+#> Data folder: /tmp/RtmpPHiSQl/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/Rtmp1WRsVQ/Data
+#>   /tmp/RtmpPHiSQl/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory

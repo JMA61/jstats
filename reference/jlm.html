@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.232</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.233</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -320,6 +320,12 @@ For a model with no predictors, F and p are <code>NA</code> and df1 is 0.</p></d
 <dt>ref_cats</dt>
 <dd><p>Reference category descriptions for all categorical
 variables in the model.</p></dd>
+
+<dt>dummy_groups</dt>
+<dd><p>Named list, one element per dummy-coded
+variable: <code>labels</code>, its categories as the coefficient table
+labels them, and <code>dummy</code>, the dummy column of each
+(<code>NA</code> for the reference). Used by <code><a href="jplot.html">jplot()</a></code>.</p></dd>
 
 <dt>vif</dt>
 <dd><p>Named numeric vector of VIF values, or NULL for bivariate.</p></dd>

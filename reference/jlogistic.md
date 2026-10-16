@@ -250,6 +250,13 @@ Invisibly returns a list of class `jst_logistic` containing:
 
   Reference category descriptions.
 
+- dummy_groups:
+
+  Named list, one element per dummy-coded variable: `labels`, its
+  categories as the coefficient table labels them, and `dummy`, the
+  dummy column of each (`NA` for the reference). Used by
+  [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md).
+
 - vif:
 
   Named numeric vector of VIF values, or NULL.

@@ -164,7 +164,12 @@ jplot(x, which = "core", ...)
 
   Unquoted name of the independent variable to place on the x-axis for
   `jst_lm` / `jst_logistic` `fit` and `probability` plots. Defaults to
-  the first IV in the model.
+  the first independent variable in the model that is not dummy-coded,
+  since a fitted line needs a numeric axis. A dummy-coded categorical
+  variable is named as the formula names it (`focal = Region`), and is
+  drawn with its categories along the axis: the predicted outcome (or
+  probability) at each with its 95% confidence interval, the cases
+  behind them.
 
 - at:
 
@@ -239,11 +244,14 @@ the class; `all` produces every plot the class supports.
 For a `jst_lm` result, `effects` draws one plot per variable of the
 model: a term computed from a variable (`I(x^2)`, `log(x + 1)`,
 `I(x * z)`) is drawn in that variable's plot, following it along the
-axis, with the other variables held as `at` sets them. A variable the
-fit dropped as an exact linear combination of the others has no effect
-to draw. For a model with no predictors (`y ~ 1`), the plots that need a
-predictor, or that are drawn against the fitted values or the leverage,
-are left out with a note.
+axis, with the other variables held as `at` sets them. A dummy-coded
+categorical variable is one variable, drawn as one plot: its categories
+along the axis, labeled as the coefficient table labels them, with the
+predicted outcome at each and its 95% confidence interval. A variable
+the fit dropped as an exact linear combination of the others has no
+effect to draw. For a model with no predictors (`y ~ 1`), the plots that
+need a predictor, or that are drawn against the fitted values or the
+leverage, are left out with a note.
 
 Valid plot types for the data-first form: `histogram`, `bar`, `scatter`,
 `box`, `grouped_bar`.

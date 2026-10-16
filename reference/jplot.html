@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.232</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.233</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -199,7 +199,12 @@ it is provided for symmetry with the other analysis functions.</p></dd>
 <dt id="arg-focal">focal<a class="anchor" aria-label="anchor" href="#arg-focal"></a></dt>
 <dd><p>Unquoted name of the independent variable to place on the
 x-axis for <code>jst_lm</code> / <code>jst_logistic</code> <code>fit</code> and
-<code>probability</code> plots. Defaults to the first IV in the model.</p></dd>
+<code>probability</code> plots. Defaults to the first independent variable
+in the model that is not dummy-coded, since a fitted line needs a
+numeric axis. A dummy-coded categorical variable is named as the
+formula names it (<code>focal = Region</code>), and is drawn with its
+categories along the axis: the predicted outcome (or probability) at
+each with its 95% confidence interval, the cases behind them.</p></dd>
 
 
 <dt id="arg-at">at<a class="anchor" aria-label="anchor" href="#arg-at"></a></dt>
@@ -266,8 +271,12 @@ set for the class; <code>all</code> produces every plot the class supports.</p>
 of the model: a term computed from a variable (<code>I(x^2)</code>,
 <code>log(x + 1)</code>, <code>I(x * z)</code>) is drawn in that variable's plot,
 following it along the axis, with the other variables held as <code>at</code>
-sets them. A variable the fit dropped as an exact linear combination of
-the others has no effect to draw. For a model with no predictors
+sets them. A dummy-coded categorical variable is one variable, drawn as
+one plot: its categories along the axis, labeled as the coefficient
+table labels them, with the predicted outcome at each and its 95%
+confidence interval. A variable the fit dropped as an exact linear
+combination of the others has no effect to draw. For a model with no
+predictors
 (<code>y ~ 1</code>), the plots that need a predictor, or that are drawn
 against the fitted values or the leverage, are left out with a note.</p>
 <p>Valid plot types for the data-first form: <code>histogram</code>, <code>bar</code>,
