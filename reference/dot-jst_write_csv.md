@@ -1,0 +1,35 @@
+# Internal: write a CSV file that Excel opens as written
+
+jsave()'s CSV writer (Session 362). R writes a CSV file in UTF-8, and
+Excel on Windows opens one that does not start with the UTF-8 byte-order
+mark in Windows-1252, so every accented letter, curly apostrophe or dash
+came up as two or three other characters (Jeff's check of the import
+audit's item 21). When the file holds a byte beyond ASCII and every line
+of it is valid UTF-8, the three bytes of the mark (EF BB BF) go first,
+as Excel's own "CSV UTF-8" writes them. A file of ASCII alone is written
+as before, byte for byte, and so is one holding text that is not UTF-8
+(a string read in another encoding and never converted), which the mark
+would misdescribe. The file is written as write.csv() writes it, with no
+re-encoding: asking R for UTF-8 output in a session that is not UTF-8
+cut each accented word short. jload() reads the mark as the start of a
+UTF-8 file (.jst_csv_encoding(); read.csv() discards it).
+
+## Usage
+
+``` r
+.jst_write_csv(data, path)
+```
+
+## Arguments
+
+- data:
+
+  The data frame, as jsave() writes it.
+
+- path:
+
+  The file to write (jsave()'s temporary file).
+
+## Value
+
+The path, invisibly.

@@ -176,6 +176,15 @@ and shows it written with forward slashes.
 - Inside an `.xpt` file the SAS dataset is named after the file, changed
   to a SAS name when the file's name is not one (a note says so).
 
+- A CSV file is written in UTF-8. When it holds a character beyond plain
+  ASCII (an accented letter, a curly apostrophe, a dash), it starts with
+  the UTF-8 byte-order mark, as Excel's own "CSV UTF-8" does, so that
+  Excel opens it with those characters intact: without the mark, Excel
+  on Windows reads a CSV file in Windows-1252. A file of plain ASCII has
+  no mark.
+  [`jload()`](https://jma61.github.io/jstats/reference/jload.md) reads
+  the mark as the start of a UTF-8 file.
+
 - Stata files are written as version 14 format.
 
 - Legacy Excel format (`.xls`) is not supported for saving. Use `.xlsx`
@@ -192,11 +201,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/Rtmp2dRbTY/community.sav
+#> Saved community to /tmp/RtmpNCFwxA/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/Rtmp2dRbTY/community.sav
+#> Saved community to /tmp/RtmpNCFwxA/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
