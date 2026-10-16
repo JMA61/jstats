@@ -4,10 +4,14 @@
 \alias{.jst_csv_one_column}
 \title{Internal: does a CSV file have exactly one column?}
 \usage{
-.jst_csv_one_column(path)
+.jst_csv_one_column(path, skip = 0L, enc = NULL)
 }
 \arguments{
 \item{path}{Path to the file.}
+
+\item{skip}{Lines above the names.}
+
+\item{enc}{NULL, or the encoding the file is read in.}
 }
 \value{
 TRUE or FALSE.
@@ -18,6 +22,7 @@ uses, so a quoted name holding a comma is one field -- and counts its
 fields. jload() reads a one-column file without skipping empty lines
 (Session 351), since there an empty line is a case with an empty cell.
 A file that cannot be read this way answers FALSE, leaving read.csv()'s
-default and its own error.
+default and its own error. Since Session 362 the header line is the one
+after skip = lines, read in the file's encoding.
 }
 \keyword{internal}

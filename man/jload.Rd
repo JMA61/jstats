@@ -12,6 +12,7 @@ jload(
   package = FALSE,
   check.missing = TRUE,
   sheet = NULL,
+  skip = 0,
   preserve.declarations = TRUE,
   missing.notice = NULL,
   quiet = FALSE
@@ -58,6 +59,12 @@ name (character) or sheet number (integer). Defaults to the first sheet.
 If the file has multiple sheets and \code{sheet} is not specified,
 a message lists the available sheets.}
 
+\item{skip}{For Excel and CSV files. The number of rows of the sheet, or
+lines of the file, above the variable names: a title, a blank row, a
+note. Default 0. When the first row of a sheet looks like a title, a
+note shows the call with the \code{skip} it needs; a CSV file in that
+shape stops with the same call.}
+
 \item{preserve.declarations}{Logical. If \code{TRUE} (default), declared
 missing values arriving with the file are preserved: SPSS-style
 codes such as -99, and declared ranges, keep their original numeric
@@ -88,10 +95,11 @@ informational messages (the directory-resolution note, file found,
 load summary, default-data note, registration notes, and the
 narrative about declared missing values, overriding missing.notice).
 Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
-note that a local file shadowed a shipped dataset, and the note that
-an existing object was replaced are still shown, as is the
-coded-missing scan report; turn that off with
-\code{check.missing = FALSE}.}
+note that a local file shadowed a shipped dataset, the note that an
+existing object was replaced, and the notes on what the read changed
+or found (variable names changed, a title row, a CSV file's encoding)
+are still shown, as is the coded-missing scan report; turn that off
+with \code{check.missing = FALSE}.}
 }
 \value{
 Invisibly returns \code{NULL}; jload() is called for its side
@@ -138,6 +146,34 @@ file with two or more columns an empty line is not a case. An empty
 cell in a text variable is read as blank text, never as missing (see
 \code{\link{jsave}}).
 
+Before a CSV file is read, every line's values are counted. A first line
+with fewer values than the lines below it (a title above the names, or a
+name missing), and a later line with more values than the first, stop
+the load with the line and what to do: read as they are, R would turn
+the first values of every line into row names, or split the long line
+into two cases, and say nothing. A file whose values are separated by
+semicolons, as Excel saves them in many European settings, stops with
+the base R line that reads it. A file that is not in UTF-8 (one saved by
+Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
+in Windows-1252, and a note says so.
+
+\strong{Variable names from other software:}
+A file from outside R can hold names R cannot use as they are:
+\code{2024 score}, \code{Age (years)}, an empty header, two columns
+with the same name, a word R reserves (\code{if}, \code{TRUE}), an SPSS
+name such as \code{Q1@A}, a Stata name such as \code{_merge}. For every
+format but \code{.rds}, each such name is changed: spaces and symbols at
+either end are dropped, any other run of characters that are not
+letters, digits or underscores becomes one underscore, a name that
+starts with a digit or an underscore or is a reserved word gets an
+\code{X} in front, an empty name becomes \code{V} and its column's
+position, a repeated name gets \code{_2}, and a changed name is kept to
+32 characters. So \code{2024 score} becomes \code{X2024_score} and
+\code{Age (years)} becomes \code{Age_years}. A name R can use as it is
+is never changed. The original name becomes the variable's label, unless
+the variable has a label of its own, and a note lists every change. An
+\code{.rds} file is returned as it was saved.
+
 \strong{File search order:}
 \enumerate{
 \item If the path contains a directory separator (\code{/}, or a
@@ -158,14 +194,17 @@ The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
 allow as a variable name), you must supply the \code{name} argument.
 Other characters R does not allow in a name, such as spaces and
-hyphens, become dots: \code{"my data-1.sav"} loads as
-\code{my.data.1}.
+hyphens, are changed as variable names are (see above):
+\code{"my data-1.sav"} loads as \code{my_data_1}.
 
 \strong{Excel files:}
 Excel files (\code{.xlsx}, \code{.xls}) do not contain variable or
 value labels. The data will be loaded as plain numeric, character, or
-logical columns. Use \code{jrelabel()} to add labels after loading
-if needed.
+logical columns; a variable whose name was changed has its original
+name as its label. Use \code{jrelabel()} to add labels after loading
+if needed. Row 1 of the sheet is read as the variable names; when the
+names are lower down, \code{skip} gives the number of rows above them.
+Each variable's type is read from every row of the sheet.
 
 \strong{Missing-value declarations:}
 Missing-value declarations are stored in the file itself, but they
@@ -251,6 +290,7 @@ jload("community.xpt")
 jload("community.xlsx")
 jload("community.xlsx", sheet = "Wave2")
 jload("community.xlsx", sheet = 2)
+jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
 
 # CSV and R format
 jload("community.csv")

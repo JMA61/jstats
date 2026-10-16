@@ -55,6 +55,11 @@
 #'   name (character) or sheet number (integer). Defaults to the first sheet.
 #'   If the file has multiple sheets and \code{sheet} is not specified,
 #'   a message lists the available sheets.
+#' @param skip For Excel and CSV files. The number of rows of the sheet, or
+#'   lines of the file, above the variable names: a title, a blank row, a
+#'   note. Default 0. When the first row of a sheet looks like a title, a
+#'   note shows the call with the \code{skip} it needs; a CSV file in that
+#'   shape stops with the same call.
 #' @param preserve.declarations Logical. If \code{TRUE} (default), declared
 #'   missing values arriving with the file are preserved: SPSS-style
 #'   codes such as -99, and declared ranges, keep their original numeric
@@ -105,6 +110,34 @@
 #' cell in a text variable is read as blank text, never as missing (see
 #' \code{\link{jsave}}).
 #'
+#' Before a CSV file is read, every line's values are counted. A first line
+#' with fewer values than the lines below it (a title above the names, or a
+#' name missing), and a later line with more values than the first, stop
+#' the load with the line and what to do: read as they are, R would turn
+#' the first values of every line into row names, or split the long line
+#' into two cases, and say nothing. A file whose values are separated by
+#' semicolons, as Excel saves them in many European settings, stops with
+#' the base R line that reads it. A file that is not in UTF-8 (one saved by
+#' Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
+#' in Windows-1252, and a note says so.
+#'
+#' \strong{Variable names from other software:}
+#' A file from outside R can hold names R cannot use as they are:
+#' \code{2024 score}, \code{Age (years)}, an empty header, two columns
+#' with the same name, a word R reserves (\code{if}, \code{TRUE}), an SPSS
+#' name such as \code{Q1@A}, a Stata name such as \code{_merge}. For every
+#' format but \code{.rds}, each such name is changed: spaces and symbols at
+#' either end are dropped, any other run of characters that are not
+#' letters, digits or underscores becomes one underscore, a name that
+#' starts with a digit or an underscore or is a reserved word gets an
+#' \code{X} in front, an empty name becomes \code{V} and its column's
+#' position, a repeated name gets \code{_2}, and a changed name is kept to
+#' 32 characters. So \code{2024 score} becomes \code{X2024_score} and
+#' \code{Age (years)} becomes \code{Age_years}. A name R can use as it is
+#' is never changed. The original name becomes the variable's label, unless
+#' the variable has a label of its own, and a note lists every change. An
+#' \code{.rds} file is returned as it was saved.
+#'
 #' \strong{File search order:}
 #' \enumerate{
 #'   \item If the path contains a directory separator (\code{/}, or a
@@ -125,14 +158,17 @@
 #' extension. If the resulting name starts with a digit (which R does not
 #' allow as a variable name), you must supply the \code{name} argument.
 #' Other characters R does not allow in a name, such as spaces and
-#' hyphens, become dots: \code{"my data-1.sav"} loads as
-#' \code{my.data.1}.
+#' hyphens, are changed as variable names are (see above):
+#' \code{"my data-1.sav"} loads as \code{my_data_1}.
 #'
 #' \strong{Excel files:}
 #' Excel files (\code{.xlsx}, \code{.xls}) do not contain variable or
 #' value labels. The data will be loaded as plain numeric, character, or
-#' logical columns. Use \code{jrelabel()} to add labels after loading
-#' if needed.
+#' logical columns; a variable whose name was changed has its original
+#' name as its label. Use \code{jrelabel()} to add labels after loading
+#' if needed. Row 1 of the sheet is read as the variable names; when the
+#' names are lower down, \code{skip} gives the number of rows above them.
+#' Each variable's type is read from every row of the sheet.
 #'
 #' \strong{Missing-value declarations:}
 #' Missing-value declarations are stored in the file itself, but they
@@ -218,6 +254,7 @@
 #' jload("community.xlsx")
 #' jload("community.xlsx", sheet = "Wave2")
 #' jload("community.xlsx", sheet = 2)
+#' jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
 #'
 #' # CSV and R format
 #' jload("community.csv")
@@ -247,13 +284,15 @@
 #'   load summary, default-data note, registration notes, and the
 #'   narrative about declared missing values, overriding missing.notice).
 #'   Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
-#'   note that a local file shadowed a shipped dataset, and the note that
-#'   an existing object was replaced are still shown, as is the
-#'   coded-missing scan report; turn that off with
-#'   \code{check.missing = FALSE}.
+#'   note that a local file shadowed a shipped dataset, the note that an
+#'   existing object was replaced, and the notes on what the read changed
+#'   or found (variable names changed, a title row, a CSV file's encoding)
+#'   are still shown, as is the coded-missing scan report; turn that off
+#'   with \code{check.missing = FALSE}.
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
-                  preserve.declarations = TRUE, missing.notice = NULL, quiet = FALSE) {
+                  skip = 0, preserve.declarations = TRUE, missing.notice = NULL,
+                  quiet = FALSE) {
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(use, "use")
@@ -263,6 +302,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   .jst_check_flag(preserve.declarations, "preserve.declarations")
   .jst_check_flag(quiet, "quiet")
   .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
+  # skip = (ruling R9 part (2), Session 362): the rows of an Excel sheet,
+  # or the lines of a CSV file, above the variable names.
+  if (!is.numeric(skip) || length(skip) != 1L || is.na(skip) || skip < 0 ||
+      skip != round(skip)) {
+    .jst_stop("`skip` must be a whole number, 0 or more: the number of rows ",
+              "above the variable names.")
+  }
+  skip <- as.integer(skip)
 
   # quiet = TRUE mutes informational messages (the directory-resolution
   # note, file found, load summary, default-data note, and the UDM
@@ -315,6 +362,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # A path typed with single backslashes (S343, Jeff's decision; built
   # S351): R made "\t" and "\n" a tab and a new line before jload() saw it.
   .jst_check_path_chars(file)
+  # The file as typed, for the lines a message offers (Session 362): the
+  # resolution below replaces file with the path it found.
+  file_typed <- gsub("\\", "/", file, fixed = TRUE)
 
   # --- Determine if file has a directory component ---------------------------
   has_dir <- grepl("[/\\\\]", file)  # forward slash or Windows-native backslash
@@ -571,8 +621,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     )
   }
 
-  # Make syntactically valid (replace spaces, hyphens, etc.)
-  obj_name <- make.names(obj_name)
+  # A name R cannot use as it is gets the cleaner the variables get (the
+  # import audit's lean 10, Session 362): "My Survey (final)" becomes
+  # My_Survey_final, where make.names() gave My.Survey..final.
+  obj_name <- .jst_clean_object_name(obj_name)
 
   # --- Overwrite check -------------------------------------------------------
   target_env <- parent.frame()
@@ -599,6 +651,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     .jst_warn(
       "`sheet` is only used for Excel format (.xlsx, .xls). ",
       "Ignoring it for this .", ext, " file."
+    )
+  }
+  if (skip > 0L && !ext %in% c("xlsx", "xls", "csv")) {
+    .jst_warn(
+      "`skip` is only used for Excel format (.xlsx, .xls) and CSV format ",
+      "(.csv). Ignoring it for this .", ext, " file."
     )
   }
 
@@ -643,44 +701,132 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   }
 
   # --- Read the file ---------------------------------------------------------
+  # A reader's own error is relayed in the house form (Rule AH; the import
+  # audit, Session 362): until then R's "no lines available in input" or
+  # readxl's "Sheet 'Nope' not found" reached the user with no jload() in
+  # front of it and nothing said of the file.
+  shown <- basename(file)
+  read_or_stop <- function(expr) {
+    tryCatch(expr, error = function(e) {
+      .jst_stop(shown, " could not be read.\nR reported:\n  ",
+                gsub("\\s*\n\\s*", " ",
+                     gsub("\033\\[[0-9;]*m", "", conditionMessage(e))),
+                fn = "jload")
+    })
+  }
+  # The call a fix line offers: the file as typed, the name, overwrite =
+  # and the sheet the call gave, and the argument the fix adds. A line
+  # offered after the file WAS loaded (the title note) carries overwrite =
+  # TRUE whatever the call gave: the name now holds what was just read, and
+  # without it the line stops in a script (the overwrite question, which
+  # source() answers with an empty line) -- a printed call runs as printed.
+  line_for <- function(arg, loaded = FALSE) {
+    paste0("  jload(\"", .jst_dq_escape(file_typed), "\"",
+           if (!is.null(name)) paste0(", name = \"", .jst_dq_escape(name), "\""),
+           if (isTRUE(overwrite) || loaded) ", overwrite = TRUE",
+           if (!is.null(sheet)) paste0(", sheet = ", deparse(sheet)),
+           ", ", arg, ")")
+  }
+
+  # A CSV file is checked before it is read (the import audit, Session
+  # 362): empty; its encoding (Windows-1252 from Excel on Windows read as
+  # such); a first line shorter than the lines below it, or a line longer
+  # than the first, which read.csv() turns into row names or a second case
+  # without a word (.jst_csv_check_shape()).
+  csv_enc <- NULL
+  if (!from_package && ext == "csv") {
+    if (isTRUE(file.size(resolved_path) == 0)) {
+      .jst_stop(shown, " is empty: it holds no lines.")
+    }
+    csv_enc <- .jst_csv_encoding(resolved_path)
+    .jst_csv_check_shape(resolved_path, skip, csv_enc, shown, line_for,
+                         obj_name)
+  }
+
+  # An Excel file's sheets, and a sheet = that names none of them (Session
+  # 362: readxl's "Sheet 'Nope' not found" had come through raw).
+  if (!from_package && ext %in% c("xlsx", "xls")) {
+    all_sheets <- read_or_stop(readxl::excel_sheets(resolved_path))
+    if (!is.null(sheet)) {
+      missing_sheet <- if (is.character(sheet)) {
+        !sheet %in% all_sheets
+      } else {
+        !is.numeric(sheet) || length(sheet) != 1L || is.na(sheet) ||
+          sheet != round(sheet) || sheet < 1 || sheet > length(all_sheets)
+      }
+      if (missing_sheet) {
+        n_sh <- length(all_sheets)
+        q_sh <- paste0("\"", all_sheets, "\"")
+        .jst_stop(
+          if (is.character(sheet)) {
+            paste0(shown, " has no sheet named \"", sheet, "\".\n")
+          } else {
+            paste0(shown, " has ", n_sh, " ", .jst_plural(n_sh, "sheet", "sheets"),
+                   ", so there is no sheet ", paste(deparse(sheet), collapse = ""),
+                   ".\n")
+          },
+          if (n_sh == 1L) paste0("Its only sheet is ", q_sh, ":\n")
+          else paste0("Its sheets are ", .jst_and_list(q_sh), ".\n",
+                      "To read one, name it:\n"),
+          "  jload(\"", .jst_dq_escape(file_typed), "\"",
+          if (!is.null(name)) paste0(", name = \"", .jst_dq_escape(name), "\""),
+          if (isTRUE(overwrite)) ", overwrite = TRUE",
+          ", sheet = ", q_sh[1L], ")")
+      }
+    }
+    # Multi-sheet message (only when sheet not specified)
+    if (is.null(sheet) && length(all_sheets) > 1) {
+      .jst_msg(
+        "This file has ", length(all_sheets), " sheets: ",
+        paste(all_sheets, collapse = ", "), "\n",
+        "Reading the first sheet (\"", all_sheets[1], "\"). ",
+        "To read a different sheet, use:\n",
+        "  jload(\"", basename(file), "\", sheet = \"",
+        all_sheets[2], "\")"
+      )
+    }
+  }
+
   # For .sav: always pass user_na = TRUE so UDM metadata is available for
   # the .jst_handle_udms step below, regardless of preserve.declarations. The package
   # then decides whether to preserve or convert based on preserve.declarations.
   df <- if (from_package) df else switch(ext,
-               sav      = haven::read_sav(resolved_path, user_na = TRUE),
-               dta      = haven::read_dta(resolved_path),
-               sas7bdat = haven::read_sas(resolved_path),
-               xpt      = haven::read_xpt(resolved_path),
+               sav      = read_or_stop(haven::read_sav(resolved_path, user_na = TRUE)),
+               dta      = read_or_stop(haven::read_dta(resolved_path)),
+               sas7bdat = read_or_stop(haven::read_sas(resolved_path)),
+               xpt      = read_or_stop(haven::read_xpt(resolved_path)),
                # A one-column file keeps its empty lines (Session 351, the
                # S345 item): each is a case whose one cell is empty -- how
                # jsave(), write.csv(na = "") and Excel all write a missing
                # cell there -- and read.csv() skipped them, so 8 cases saved
                # came back as 6. A file of two or more columns is read as
                # before: an empty line in it is not a case.
-               csv      = utils::read.csv(resolved_path, stringsAsFactors = FALSE,
-                                          blank.lines.skip =
-                                            !.jst_csv_one_column(resolved_path)),
-               rds      = readRDS(resolved_path),
+               # Since Session 362: the names as the file has them
+               # (check.names = FALSE; the cleaner below renames), never a
+               # column taken as row names (row.names = NULL), skip = lines
+               # above the names, and the file's encoding.
+               csv      = read_or_stop(utils::read.csv(
+                 resolved_path, stringsAsFactors = FALSE, check.names = FALSE,
+                 row.names = NULL, skip = skip,
+                 fileEncoding = if (is.null(csv_enc)) "" else csv_enc,
+                 blank.lines.skip =
+                   !.jst_csv_one_column(resolved_path, skip, csv_enc))),
+               rds      = read_or_stop(readRDS(resolved_path)),
                xlsx     = ,
                xls      = {
-                 # List available sheets
-                 all_sheets <- readxl::excel_sheets(resolved_path)
-
-                 # Multi-sheet message (only when sheet not specified)
-                 if (is.null(sheet) && length(all_sheets) > 1) {
-                   .jst_msg(
-                     "This file has ", length(all_sheets), " sheets: ",
-                     paste(all_sheets, collapse = ", "), "\n",
-                     "Reading the first sheet (\"", all_sheets[1], "\"). ",
-                     "To read a different sheet, use:\n",
-                     "  jload(\"", basename(file), "\", sheet = \"",
-                     all_sheets[2], "\")"
-                   )
-                 }
-
-                 read_args <- list(path = resolved_path)
+                 # Since Session 362: the names as the sheet has them
+                 # (.name_repair = "minimal": readxl's "New names:" message
+                 # is gone, the cleaner below renames and says so), skip =,
+                 # and a column's type guessed from every row, not the first
+                 # 1,000 -- readxl turned 100 text cells after row 1,100 into
+                 # missing values with 100 warnings, and 100 numbers below
+                 # 1,100 empty cells into TRUE with none (1,048,576 is
+                 # Excel's row limit).
+                 read_args <- list(path = resolved_path, skip = skip,
+                                   guess_max = 1048576L,
+                                   .name_repair = "minimal")
                  if (!is.null(sheet)) read_args$sheet <- sheet
-                 do.call(readxl::read_excel, read_args)
+                 read_or_stop(do.call(readxl::read_excel, read_args))
                }
   )
 
@@ -693,6 +839,32 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       )
     }
     df <- as.data.frame(df)
+  }
+
+  # --- Variable names from outside R (ruling R9 part (1), ruling R20) --------
+  # Session 362. A file from outside R -- every format but .rds -- can hold
+  # names R cannot read bare. Each such name is cleaned, one rule for every
+  # format, the old name kept as the variable's label where it has none,
+  # and a note lists every change; a name R takes as it is is never
+  # touched (.jst_clean_import_names()). A package dataset and an .rds file
+  # come back as they were made. An Excel sheet whose first row may be a
+  # title is found here too, before the names change (.jst_excel_title_row()).
+  rename_note <- NULL
+  title_rows  <- NULL
+  title_named <- 0L
+  if (!from_package && ext != "rds") {
+    if (ext %in% c("xlsx", "xls")) {
+      title_rows  <- .jst_excel_title_row(resolved_path, sheet, skip, names(df))
+      title_named <- sum(nzchar(trimws(names(df))))
+    }
+    cl <- .jst_clean_import_names(names(df))
+    if (any(cl$changed)) {
+      old_nm <- names(df)
+      ap <- .jst_apply_new_names(df, cl$names, cl$changed)
+      df <- ap$df
+      rename_note <- .jst_import_names_note(old_nm[cl$changed],
+                                            cl$names[cl$changed], ap$had)
+    }
   }
 
   # --- Capture baked classification registrations ----------------------------
@@ -762,6 +934,38 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     )
   }
   .jst_note_fired <- TRUE
+
+  # --- What the read found, and the names it changed (Session 362) ------------
+  # Consequential notes, shown under quiet = TRUE as well: the file's
+  # encoding when it was not UTF-8, an Excel title row and the skip = call
+  # that reads past it (ruling R9 part (2)), and the names changed (part
+  # (1)). Each is set off by a blank line (Rule F).
+  emit_note <- function(...) {
+    if (.jst_note_fired) .jst_msg("")
+    .jst_msg(...)
+    .jst_note_fired <<- TRUE
+  }
+  if (!is.null(csv_enc)) {
+    emit_note("Note: ", shown, " is not in UTF-8, the encoding R reads, so ",
+              "it was read as ",
+              if (identical(csv_enc, "CP1252")) {
+                "Windows-1252, the encoding Excel on Windows saves a CSV file in."
+              } else "Latin-1.",
+              "\nCheck its accented letters and symbols.")
+  }
+  if (!is.null(title_rows)) {
+    k_cols <- ncol(df)
+    above  <- title_rows$names - 1L
+    emit_note("Note: row ", title_rows$title, " of ", shown, " has a name in ",
+              "only ", title_named, " of its ", k_cols, " ",
+              .jst_plural(k_cols, "column", "columns"), ", so it may be a ",
+              "title rather than the variable names.\n",
+              "The names seem to be in row ", title_rows$names, ".\n",
+              "To read from there, skip the ", above, " ",
+              .jst_plural(above, "row", "rows"), " above them:\n",
+              line_for(paste0("skip = ", above), loaded = TRUE))
+  }
+  if (!is.null(rename_note)) emit_note(rename_note)
 
   # --- UDM narrative notification --------------------------------------------
   # Toggle resolution: per-call missing.notice arg > joutput global toggle >
@@ -1021,15 +1225,670 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' fields. jload() reads a one-column file without skipping empty lines
 #' (Session 351), since there an empty line is a case with an empty cell.
 #' A file that cannot be read this way answers FALSE, leaving read.csv()'s
-#' default and its own error.
+#' default and its own error. Since Session 362 the header line is the one
+#' after skip = lines, read in the file's encoding.
 #' @param path Path to the file.
+#' @param skip Lines above the names.
+#' @param enc NULL, or the encoding the file is read in.
 #' @return TRUE or FALSE.
 #' @keywords internal
-.jst_csv_one_column <- function(path) {
-  hdr <- tryCatch(scan(path, what = "", sep = ",", quote = "\"",
+.jst_csv_one_column <- function(path, skip = 0L, enc = NULL) {
+  con <- if (is.null(enc)) path else file(path, encoding = enc)
+  hdr <- tryCatch(scan(con, what = "", sep = ",", quote = "\"", skip = skip,
                        nlines = 1L, quiet = TRUE, na.strings = character(0)),
                   error = function(e) character(0))
   length(hdr) == 1L
+}
+
+# -- Names from outside R (ruling R9, ruling R20; Session 362) -----------------
+#
+# A file made outside R can hold variable names R cannot read bare: "2024
+# score", "Age (years)", "Agree?", an empty header, a duplicate, a word R
+# reserves, an SPSS name such as Q1@A, a Stata name such as _merge. Until
+# Session 362 Excel kept them as typed (backticks in every call) and
+# read.csv() rewrote them its own way (X2024.score, Age..years.), and
+# jload() said nothing of either. Ruling R9 (Jeff, S345): one rule for every
+# outside format, letters, digits and underscores, the header kept as the
+# variable label, a note listing each change, and never for .rds or .RData.
+# Ruling R20 (Jeff, S362, on the import audit's recommendation): a name R
+# accepts is never touched; only a name R cannot read bare is rewritten,
+# and a rewritten name is kept to 32 characters (64 bytes), since it is new
+# anyway. What each SAVE format refuses beyond that -- a Stata reserved
+# word, a name longer than SPSS's 64 bytes, two names that differ only in
+# case -- is jsave()'s check, .jst_save_name_problems(), with its own
+# message and clean.names = TRUE.
+
+#' Internal: the words R reserves
+#'
+#' A name equal to one of these cannot be used bare in R code (?Reserved),
+#' although it passes the letters-digits-underscores test. make.names()
+#' also catches them; the list is kept for the cleaner, which must not
+#' produce one.
+#' @keywords internal
+.jst_r_reserved <- c("if", "else", "repeat", "while", "function", "for",
+                     "in", "next", "break", "TRUE", "FALSE", "NULL", "Inf",
+                     "NaN", "NA", "NA_integer_", "NA_real_", "NA_character_",
+                     "NA_complex_")
+
+#' Internal: can R read each name bare?
+#'
+#' TRUE for a name R code can use as it is: syntactic (make.names() leaves
+#' it unchanged), not a reserved word, not "..." or "..1". Empty and NA are
+#' FALSE. Duplicates are the caller's test.
+#' @param x Character vector of names.
+#' @return Logical vector of the same length.
+#' @keywords internal
+.jst_name_valid_r <- function(x) {
+  ok <- !is.na(x) & nzchar(x)
+  ok[ok] <- make.names(x[ok]) == x[ok] & !x[ok] %in% .jst_r_reserved &
+    !grepl("^\\.\\.(\\.|[0-9]+)$", x[ok])
+  ok
+}
+
+#' Internal: shorten a name to a character and a byte budget
+#'
+#' Cuts at a character, never inside one, then drops the underscores the
+#' cut leaves at the end.
+#' @param s Character(1).
+#' @param max_chars,max_bytes The budgets.
+#' @return Character(1).
+#' @keywords internal
+.jst_trunc_name <- function(s, max_chars = 32L, max_bytes = 64L) {
+  if (nchar(s) > max_chars) s <- substr(s, 1L, max_chars)
+  while (nchar(s, type = "bytes") > max_bytes) {
+    s <- substr(s, 1L, nchar(s) - 1L)
+  }
+  sub("_+$", "", s)
+}
+
+#' Internal: one cleaned name
+#'
+#' The R9 rule: spaces and symbols at either end are dropped; any other run
+#' of characters that are not letters, digits or underscores becomes one
+#' underscore; nothing left gives V and the column's position (read.table's
+#' form for an unnamed column); a name starting with a digit or an
+#' underscore, or equal to a reserved word, gets an X; the result is kept
+#' to the length budget. Letters are letters of any script (R, SPSS and
+#' Stata take them); \code{ascii = TRUE} keeps A to Z alone, for SAS.
+#'
+#' @param x Character(1): the name as the file has it.
+#' @param pos Its column position, for an empty result.
+#' @param reserved A function of one name: TRUE when the target reserves it.
+#' @param ascii Logical: letters A to Z only.
+#' @param max_chars,max_bytes Length budget.
+#' @return Character(1).
+#' @keywords internal
+.jst_clean_name <- function(x, pos, reserved = function(s) s %in% .jst_r_reserved,
+                            ascii = FALSE, max_chars = 32L, max_bytes = 64L) {
+  keep <- if (ascii) "A-Za-z0-9_" else "\\p{L}\\p{Nd}_"
+  s <- if (is.na(x)) "" else x
+  s <- gsub(paste0("^[^", keep, "]+|[^", keep, "]+$"), "", s, perl = TRUE)
+  s <- gsub(paste0("[^", keep, "]+"), "_", s, perl = TRUE)
+  s <- gsub("_{2,}", "_", s)
+  if (!nzchar(s)) s <- paste0("V", pos)
+  if (grepl("^[\\p{Nd}_]", s, perl = TRUE)) s <- paste0("X", s)
+  if (reserved(s) || s %in% .jst_r_reserved) s <- paste0("X", s)
+  s <- .jst_trunc_name(s, max_chars, max_bytes)
+  # A letter R itself does not take in a name (rare scripts, or a locale
+  # that is not UTF-8): fall back to A to Z, which every target takes.
+  if (!.jst_name_valid_r(s) && !ascii) {
+    return(.jst_clean_name(x, pos, reserved, ascii = TRUE, max_chars, max_bytes))
+  }
+  s
+}
+
+#' Internal: make a new name unique among names already taken
+#'
+#' Compared ignoring case, since SPSS and SAS fold case and a new name
+#' costs nothing to keep clear of both: a taken name gets _2, _3 and so on,
+#' the base shortened to leave room for the suffix.
+#' @param s Character(1).
+#' @param taken Character vector.
+#' @param max_chars,max_bytes Length budget.
+#' @return Character(1).
+#' @keywords internal
+.jst_unique_name <- function(s, taken, max_chars = 32L, max_bytes = 64L) {
+  low <- tolower(taken)
+  if (!tolower(s) %in% low) return(s)
+  k <- 2L
+  repeat {
+    suf  <- paste0("_", k)
+    cand <- paste0(.jst_trunc_name(s, max_chars - nchar(suf),
+                                   max_bytes - nchar(suf)), suf)
+    if (!tolower(cand) %in% low) return(cand)
+    k <- k + 1L
+  }
+}
+
+#' Internal: the names jload() gives the variables of a file from outside R
+#'
+#' Ruling R20: a name R can read bare, and not a repeat of an earlier one,
+#' is never touched; every other name is cleaned (.jst_clean_name()) and
+#' made unique among all the names. Used for every outside format, never
+#' for .rds.
+#' @param nm Character vector: the names as the file has them.
+#' @return list(names, changed): the new names and which of them changed.
+#' @keywords internal
+.jst_clean_import_names <- function(nm) {
+  nm[is.na(nm)] <- ""
+  touched <- !.jst_name_valid_r(nm) | duplicated(nm)
+  new   <- nm
+  taken <- nm[!touched]
+  for (i in which(touched)) {
+    s <- .jst_unique_name(.jst_clean_name(nm[i], i), taken)
+    new[i] <- s
+    taken  <- c(taken, s)
+  }
+  list(names = new, changed = new != nm | touched)
+}
+
+#' Internal: the arrow lines of a rename note
+#'
+#' One line per changed name: the old name in double quotes (so an outer
+#' space shows), padded to a column, then the new name, and an optional
+#' third column. Two spaces always sit before the arrow, so the wrapper
+#' reads each line as a layout line and passes it whole
+#' (.jst_seg_category()).
+#' @param old,new Character vectors.
+#' @param why Optional character vector, a third column.
+#' @return Character vector.
+#' @keywords internal
+.jst_rename_lines <- function(old, new, why = NULL) {
+  q  <- paste0("\"", .jst_dq_escape(old), "\"")
+  # The column fits the longest old name of up to 30 characters; a longer
+  # one runs past it.
+  w  <- max(c(0L, nchar(q)[nchar(q) <= 30L]))
+  pad <- function(x, w) paste0(x, strrep(" ", pmax(0L, w - nchar(x))))
+  out <- paste0("  ", pad(q, w), "  -> ", new)
+  if (!is.null(why)) {
+    w2  <- max(nchar(new))
+    out <- paste0("  ", pad(q, w), "  -> ", pad(new, w2), "  (", why, ")")
+  }
+  out
+}
+
+#' Internal: the label sentence under a rename note
+#' @param had Character vector, one per renamed variable: "own" (it had a
+#'   label and keeps it), "given" (its old name is now its label) or "none"
+#'   (its old name was empty, so it has no label).
+#' @param where "" for jload(), " in the file" for jsave().
+#' @return Character(1), possibly empty: no sentence when no renamed
+#'   variable has a label.
+#' @keywords internal
+.jst_rename_label_line <- function(had, where = "") {
+  had <- had[had != "none"]
+  n   <- length(had)
+  if (n == 0L) return("")
+  if (!any(had == "own")) {
+    if (n == 1L) paste0("The original name is the variable's label", where, ".")
+    else paste0("The original names are the variables' labels", where, ".")
+  } else if (all(had == "own")) {
+    if (n == 1L) "The variable keeps the label it had."
+    else "The variables keep the labels they had."
+  } else {
+    paste0("A variable with no label of its own has its original name as ",
+           "its label", where, ".")
+  }
+}
+
+#' Internal: rename a frame's variables, keeping each old name as a label
+#'
+#' A renamed variable with no label of its own is given its old name as its
+#' variable label (the header kept, ruling R9); one with a label keeps it,
+#' and the old name is in the note only. An empty old name gives no label.
+#' @param df A data frame.
+#' @param new The new names, one per variable.
+#' @param changed Logical: which changed.
+#' @return list(df, had): the renamed frame, and for each changed variable
+#'   "own" (it had a label of its own), "given" (its old name is its label)
+#'   or "none" (its old name was empty).
+#' @keywords internal
+.jst_apply_new_names <- function(df, new, changed) {
+  old <- names(df)
+  had <- character(0)
+  for (i in which(changed)) {
+    x   <- df[[i]]
+    lab <- attr(x, "label", exact = TRUE)
+    has <- is.character(lab) && length(lab) == 1L && !is.na(lab) &&
+      nzchar(lab)
+    kind <- "own"
+    if (!has) {
+      o <- trimws(old[i], whitespace = "[\\h\\v]")
+      kind <- if (nzchar(o)) "given" else "none"
+      if (nzchar(o)) {
+        attr(x, "label") <- o
+        df[[i]] <- x
+      }
+    }
+    had <- c(had, kind)
+  }
+  names(df) <- new
+  list(df = df, had = had)
+}
+
+#' Internal: jload()'s note on the names it changed
+#' @param old,new The changed names, before and after.
+#' @param had From .jst_apply_new_names().
+#' @return Character(1).
+#' @keywords internal
+.jst_import_names_note <- function(old, new, had) {
+  n <- length(old)
+  lab <- .jst_rename_label_line(had)
+  paste0("Note: ", n, " variable ", .jst_plural(n, "name was", "names were"),
+         " changed to ", .jst_plural(n, "a valid R name", "valid R names"), ":\n",
+         paste(.jst_rename_lines(old, new), collapse = "\n"),
+         if (nzchar(lab)) paste0("\n", lab))
+}
+
+#' Internal: the names a save format refuses
+#'
+#' jsave()'s check before writing .sav, .dta or .xpt (the import audit's
+#' third finding; Session 362). haven checks some rules and ReadStat others,
+#' one name at a time, in haven's own words: a Stata save named only a long
+#' name, then, fixed, "2024 score", then "Age (years)". This one check holds
+#' each format's rules and reports every name at once, with the name it
+#' would be given and why:
+#' \describe{
+#'   \item{sav}{haven's own test: a letter or @ first; letters, digits and
+#'     . _ $ # @ after, not ending in a period; at most 64 bytes; not ALL AND
+#'     BY EQ GE GT LE LT NE NOT OR TO WITH in any case; unique ignoring
+#'     case.}
+#'   \item{dta}{a letter or underscore first, letters, digits and
+#'     underscores after; at most 32 characters; not a word Stata reserves
+#'     (ReadStat's list, probed S362, and str followed by digits).}
+#'   \item{xpt}{A to Z, digits and underscores, not a digit first; at most
+#'     32 characters; not _N_, _ERROR_, _ALL_, _NUMERIC_ or _CHARACTER_;
+#'     unique ignoring case (SAS folds case; haven writes both names).}
+#' }
+#' @param nm Character vector of names.
+#' @param ext "sav", "dta" or "xpt".
+#' @return data.frame(pos, old, new, why), one row per refused name; zero
+#'   rows when every name can be written.
+#' @keywords internal
+.jst_save_name_problems <- function(nm, ext) {
+  spss_res <- c("ALL", "AND", "BY", "EQ", "GE", "GT", "LE", "LT", "NE",
+                "NOT", "OR", "TO", "WITH")
+  stata_res <- c("_all", "_b", "byte", "_coef", "_cons", "double", "float",
+                 "if", "in", "int", "long", "_n", "_N", "_pi", "_pred", "_rc",
+                 "_skip", "strL", "using", "with")
+  sas_res <- c("_N_", "_ERROR_", "_ALL_", "_NUMERIC_", "_CHARACTER_")
+  fmt <- switch(ext, sav = "SPSS", dta = "Stata", xpt = "SAS")
+  why <- rep(NA_character_, length(nm))
+  for (i in seq_along(nm)) {
+    s <- nm[i]
+    why[i] <- switch(ext,
+      sav = if (nchar(s, type = "bytes") > 64L) "longer than 64 bytes"
+        else if (toupper(s) %in% spss_res) "a word SPSS reserves"
+        else if (!grepl("^[\\p{L}@]", s, perl = TRUE)) "does not start with a letter"
+        else if (grepl("\\.$", s)) "ends in a period"
+        else if (!grepl("^[\\p{L}@][\\p{L}\\p{N}\\p{Sc}._$#@]*$", s, perl = TRUE))
+          "holds a character SPSS does not take"
+        else NA_character_,
+      dta = if (nchar(s) > 32L) "longer than 32 characters"
+        else if (s %in% stata_res || grepl("^str[0-9]+$", s)) "a word Stata reserves"
+        else if (!grepl("^[\\p{L}_]", s, perl = TRUE))
+          "does not start with a letter or underscore"
+        else if (!grepl("^[\\p{L}_][\\p{L}\\p{N}_]*$", s, perl = TRUE))
+          "holds a character Stata does not take"
+        else NA_character_,
+      xpt = if (nchar(s) > 32L) "longer than 32 characters"
+        else if (toupper(s) %in% sas_res) "a name SAS reserves"
+        else if (!grepl("^[A-Za-z_]", s)) "does not start with a letter or underscore"
+        else if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", s))
+          "holds a character SAS does not take"
+        else NA_character_)
+  }
+  # SPSS and SAS fold case: of two names that differ only in case, the
+  # later is refused.
+  if (ext %in% c("sav", "xpt")) {
+    low <- tolower(nm)
+    dup <- duplicated(low) & is.na(why)
+    for (i in which(dup)) {
+      why[i] <- paste0(fmt, " reads it as ", nm[match(low[i], low)])
+    }
+  }
+  bad <- which(!is.na(why))
+  if (length(bad) == 0L) {
+    return(data.frame(pos = integer(0), old = character(0), new = character(0),
+                      why = character(0), stringsAsFactors = FALSE))
+  }
+  is_res <- switch(ext,
+    sav = function(s) toupper(s) %in% spss_res,
+    dta = function(s) s %in% stata_res || grepl("^str[0-9]+$", s),
+    xpt = function(s) toupper(s) %in% sas_res)
+  taken <- nm[-bad]
+  new   <- character(length(bad))
+  for (k in seq_along(bad)) {
+    s <- .jst_clean_name(nm[bad[k]], bad[k], reserved = is_res,
+                         ascii = identical(ext, "xpt"))
+    s <- .jst_unique_name(s, taken)
+    new[k] <- s
+    taken  <- c(taken, s)
+  }
+  data.frame(pos = bad, old = nm[bad], new = new, why = why[bad],
+             stringsAsFactors = FALSE)
+}
+
+#' Internal: jsave()'s pre-flight section for refused names
+#' @param probs From .jst_save_name_problems().
+#' @param ext The target.
+#' @param data_name The data frame's name, for the prose.
+#' @param line The jsave() call that saves with clean.names = TRUE.
+#' @return Character(1).
+#' @keywords internal
+.jst_save_names_error_msg <- function(probs, ext, data_name, line) {
+  fmt <- switch(ext, sav = "SPSS format (.sav)", dta = "Stata format (.dta)",
+                xpt = "SAS interchange format (.xpt)")
+  n <- nrow(probs)
+  lines <- .jst_rename_lines(probs$old, probs$new, probs$why)
+  if (length(lines) > 10L) {
+    lines <- c(lines[1:10], paste0("  ...and ", length(lines) - 10L, " more"))
+  }
+  paste0(n, " variable ", .jst_plural(n, "name", "names"), " in the ",
+         data_name, " data frame cannot be used in ", fmt, ":\n",
+         paste(lines, collapse = "\n"), "\n",
+         "To save the file with ", .jst_plural(n, "this name", "these names"),
+         " (the ", data_name, " data frame keeps its own):\n",
+         line)
+}
+
+#' Internal: jsave()'s note after clean.names = TRUE renamed in the file
+#' @keywords internal
+.jst_save_names_note <- function(old, new, had, ext, data_name) {
+  fmt <- switch(ext, sav = "SPSS format (.sav)", dta = "Stata format (.dta)",
+                xpt = "SAS interchange format (.xpt)")
+  n <- length(old)
+  lab <- .jst_rename_label_line(had, " in the file")
+  paste0("Note: ", n, " variable ", .jst_plural(n, "name was", "names were"),
+         " changed in the file to ", .jst_plural(n, "a name", "names"), " ",
+         fmt, " takes; the ", data_name, " data frame keeps its own:\n",
+         paste(.jst_rename_lines(old, new), collapse = "\n"),
+         if (nzchar(lab)) paste0("\n", lab))
+}
+
+#' Internal: the SAS name of the dataset inside an .xpt file
+#'
+#' haven::write_xpt() names the dataset after the file it writes, and
+#' jsave() writes a temporary file first, so every .xpt jsave() made until
+#' Session 362 named its dataset jsave_<stem>_<hex>, and a file name over
+#' about 13 characters stopped the save ("`name` must be 32 characters or
+#' fewer"). The dataset is named after the file the user asked for, cleaned
+#' to a SAS name: A to Z, digits and underscores, a letter or underscore
+#' first, at most 32 characters.
+#' @param stem The file name without its extension.
+#' @return Character(1).
+#' @keywords internal
+.jst_sas_member_name <- function(stem) {
+  if (grepl("^[A-Za-z_][A-Za-z0-9_]*$", stem) && nchar(stem) <= 32L) return(stem)
+  .jst_clean_name(stem, 1L, reserved = function(s) FALSE, ascii = TRUE)
+}
+
+#' Internal: labels a save format would shorten
+#'
+#' Measured S362 through haven 2.5.4: .sav keeps 256 bytes of a variable
+#' label and 120 of a value label, cutting between characters; .dta writes
+#' 321 bytes of a variable label and can cut INSIDE a character, leaving
+#' text that is not valid UTF-8, while Stata's documented limit is 80
+#' characters; .xpt keeps them whole. A data frame's own label is refused
+#' by haven past 80 characters (.dta) and 40 (.xpt). So jsave() shortens
+#' itself, between characters, what .dta and the frame labels need, lets
+#' .sav cut, and says what was shortened in either case.
+#' @param data The data frame as it will be written.
+#' @param ext The target.
+#' @return list(data, vars, values, frame): the data with what jsave()
+#'   shortens itself shortened; the variables whose variable label is cut;
+#'   the variables with a value label cut; whether the frame's label is.
+#' @keywords internal
+.jst_save_label_limits <- function(data, ext) {
+  cut_chars <- function(s, n) if (nchar(s) > n) substr(s, 1L, n) else s
+  vars <- character(0); values <- character(0); frame <- FALSE
+  if (!ext %in% c("sav", "dta", "xpt")) {
+    return(list(data = data, vars = vars, values = values, frame = frame))
+  }
+  for (v in names(data)) {
+    x   <- data[[v]]
+    lab <- attr(x, "label", exact = TRUE)
+    if (is.character(lab) && length(lab) == 1L && !is.na(lab)) {
+      if (ext == "sav" && nchar(lab, type = "bytes") > 256L) vars <- c(vars, v)
+      if (ext == "dta" && nchar(lab) > 80L) {
+        vars <- c(vars, v)
+        attr(x, "label") <- cut_chars(lab, 80L)
+        data[[v]] <- x
+      }
+    }
+    if (ext == "sav") {
+      vl <- names(attr(x, "labels", exact = TRUE))
+      if (length(vl) && any(nchar(vl, type = "bytes") > 120L)) {
+        values <- c(values, v)
+      }
+    }
+  }
+  flab <- attr(data, "label", exact = TRUE)
+  lim  <- switch(ext, dta = 80L, xpt = 40L, NA_integer_)
+  if (!is.na(lim) && is.character(flab) && length(flab) == 1L &&
+      !is.na(flab) && nchar(flab) > lim) {
+    attr(data, "label") <- cut_chars(flab, lim)
+    frame <- TRUE
+  }
+  list(data = data, vars = vars, values = values, frame = frame)
+}
+
+#' Internal: jsave()'s note on labels shortened in the file
+#' @keywords internal
+.jst_save_labels_note <- function(lim, ext, data_name) {
+  fmt <- switch(ext, sav = "SPSS format (.sav)", dta = "Stata format (.dta)",
+                xpt = "SAS interchange format (.xpt)")
+  rule <- switch(ext,
+    sav = "keeps 256 bytes of a variable label and 120 of a value label (fewer letters when they are accented)",
+    dta = "keeps 80 characters of a variable label and of the data frame's label",
+    xpt = "keeps 40 characters of the data frame's label")
+  parts <- character(0)
+  if (length(lim$vars)) {
+    parts <- c(parts, paste0("the variable ",
+                             .jst_plural(length(lim$vars), "label", "labels"),
+                             " of ", .jst_format_var_list(lim$vars, and = TRUE)))
+  }
+  if (length(lim$values)) {
+    parts <- c(parts, paste0("value labels of ",
+                             .jst_format_var_list(lim$values, and = TRUE)))
+  }
+  if (isTRUE(lim$frame)) parts <- c(parts, "the data frame's own label")
+  n_lab <- length(lim$vars) + length(lim$values) + isTRUE(lim$frame)
+  paste0("Note: ", fmt, " ", rule, ".\n",
+         "Shortened in the file: ", .jst_and_list(parts), ".\n",
+         "The ", data_name, " data frame keeps ",
+         .jst_plural(n_lab, "it", "them"), " whole.")
+}
+
+#' Internal: the shape of a CSV file, checked before it is read
+#'
+#' read.csv() decides how many variables a file has from its first line and
+#' its first five lines, and two shapes go wrong without a word (the import
+#' audit, Session 362): a first line with FEWER fields than the lines below
+#' it -- a title above the names, a missing name, a semicolon file from
+#' European Excel -- makes the first values of every line row names, which
+#' jload() then drops, or stops on R's "more columns than column names"; and
+#' a line further down with MORE fields than the first is split into two
+#' cases. Every line's fields are counted first (count.fields(), quoting as
+#' read.csv() quotes), and those shapes stop here, saying what the file
+#' holds and what to do. A line with fewer fields than the first is read as
+#' it always was, its last cells empty.
+#'
+#' @param path The file.
+#' @param skip Lines skipped above the names.
+#' @param enc NULL, or the encoding the file is read in.
+#' @param shown The file's name for the prose.
+#' @param line_for A function of one argument string ("skip = 2"): the
+#'   jload() call that reads the file with it.
+#' @param obj_name The data frame's name, for the read.csv2() line.
+#' @return Invisibly NULL, or stops.
+#' @keywords internal
+.jst_csv_check_shape <- function(path, skip, enc, shown, line_for, obj_name) {
+  open_con <- function() if (is.null(enc)) file(path) else file(path, encoding = enc)
+  # count.fields() gives NULL when skip = passes the last line; a file it
+  # cannot read at all is left to read.csv() and its own message.
+  cf <- tryCatch(utils::count.fields(open_con(), sep = ",", quote = "\"",
+                                     skip = skip, blank.lines.skip = FALSE,
+                                     comment.char = ""),
+                 error = function(e) FALSE)
+  if (identical(cf, FALSE)) return(invisible(NULL))
+  if (length(cf) == 0L || all(cf %in% 0L)) {
+    .jst_stop("skip = ", skip, " skips every line of ", shown, ".")
+  }
+  first <- which(!is.na(cf) & cf > 0L)[1L]
+  hdr   <- cf[first]
+  body  <- cf[seq_along(cf) > first]
+  known <- body[!is.na(body) & body > 0L]
+  lines <- tryCatch(readLines(open_con(), n = skip + first + 20L, warn = FALSE),
+                    error = function(e) character(0))
+  hdr_text <- if (length(lines) >= skip + first) lines[skip + first] else ""
+  # A semicolon file (European Excel): its names line counts more fields
+  # split at semicolons than at commas, quoted names read as read.csv2()
+  # reads them, so a semicolon inside a quoted name is not a separator.
+  n_semi <- length(tryCatch(scan(text = hdr_text, what = "", sep = ";",
+                                 quote = "\"", quiet = TRUE,
+                                 na.strings = character(0)),
+                            error = function(e) character(0)))
+  if (n_semi >= 2L && n_semi > hdr) {
+    path_shown <- sub("^\\./", "", gsub("\\", "/", path, fixed = TRUE))
+    .jst_stop(shown, " separates its values with semicolons, as Excel does ",
+              "in many European settings.\n",
+              "jload() reads files whose values are separated by commas.\n",
+              "Save it from Excel as an .xlsx file and load that, or read it ",
+              "with base R:\n",
+              "  ", obj_name, " <- read.csv2(\"", .jst_dq_escape(path_shown), "\")")
+  }
+  if (length(known) == 0L || !any(known > hdr)) return(invisible(NULL))
+  tab   <- table(known)
+  modal <- as.integer(names(tab)[which.max(tab)])
+  line_no <- function(i) skip + first + i
+  if (hdr < modal) {
+    # A title above the names: a later line, among the first twenty, with
+    # the common count and words in every field.
+    cand <- NA_integer_
+    for (i in seq_len(min(20L, length(body)))) {
+      if (is.na(body[i]) || body[i] != modal) next
+      txt <- lines[line_no(i)]
+      if (is.na(txt)) next
+      f <- tryCatch(scan(text = txt, what = "", sep = ",", quote = "\"",
+                         quiet = TRUE, na.strings = character(0)),
+                    error = function(e) character(0))
+      f <- trimws(f)
+      if (length(f) == modal && all(nzchar(f)) &&
+          all(is.na(suppressWarnings(as.numeric(f))))) {
+        cand <- i
+        break
+      }
+    }
+    if (!is.na(cand)) {
+      at <- line_no(cand)
+      .jst_stop("the first line of ", shown, " holds ", hdr, " ",
+                .jst_plural(hdr, "value", "values"), ", but most lines below ",
+                "it hold ", modal, ".\n",
+                "The variable names seem to be on line ", at, ".\n",
+                "To read from there, skip the ", at - 1L, " ",
+                .jst_plural(at - 1L, "line", "lines"), " above them:\n",
+                line_for(paste0("skip = ", at - 1L)))
+    }
+    .jst_stop("the first line of ", shown, " has ", hdr, " ",
+              .jst_plural(hdr, "name", "names"), ", but most lines below it ",
+              "hold ", modal, " values.\n",
+              "Add the missing ", .jst_plural(modal - hdr, "name", "names"),
+              " to the first line of the file, then run jload() again.")
+  }
+  long <- which(!is.na(body) & body > hdr)
+  at   <- line_no(long)
+  n    <- length(at)
+  shown_at <- if (n > 5L) {
+    paste0(paste(at[1:5], collapse = ", "), " and ", n - 5L, " more")
+  } else .jst_and_list(as.character(at))
+  if (n == 1L) {
+    .jst_stop("line ", at, " of ", shown, " holds ", body[long], " values, but ",
+              "the first line has ", hdr, " ", .jst_plural(hdr, "name", "names"),
+              ", so R would split it into two cases.\n",
+              "Correct that line of the file, then run jload() again.")
+  }
+  .jst_stop("lines ", shown_at, " of ", shown, " hold more values than the ",
+            "first line has names (", hdr, "), so R would split each into ",
+            "two cases.\n",
+            "Correct those lines of the file, then run jload() again.")
+}
+
+#' Internal: the encoding a CSV file is read in
+#'
+#' R reads a CSV file as UTF-8. One saved by Excel on Windows as "CSV (Comma
+#' delimited)" is in Windows-1252, and a single accented letter or curly
+#' apostrophe in it stopped jload() on R's "invalid multibyte string" (the
+#' import audit, Session 362). A file whose bytes are valid UTF-8 (a mark at
+#' the start included) is read as R reads it; any other is read as
+#' Windows-1252, or, when even that cannot read it, as Latin-1, which
+#' reads every byte.
+#' @param path The file.
+#' @return NULL for UTF-8, else "CP1252" or "latin1".
+#' @keywords internal
+.jst_csv_encoding <- function(path) {
+  b <- tryCatch(readBin(path, "raw", file.size(path)), error = function(e) raw(0))
+  if (length(b) == 0L) return(NULL)
+  if (!is.na(iconv(list(b), "UTF-8", "UTF-8"))) return(NULL)
+  if (!is.na(iconv(list(b), "CP1252", "UTF-8"))) "CP1252" else "latin1"
+}
+
+#' Internal: a title row above an Excel sheet's names
+#'
+#' Ruling R9 part (2): a sheet whose first row is a title loads the title as
+#' a variable name, the real names as a case and every column as text, and
+#' readxl said only "New names:". When at most half the columns of the
+#' first row read have a name, the first twenty rows are read again as
+#' they stand (range =, which keeps empty rows, so the row numbers are the
+#' sheet's) and, when a later row holds words in at least half the columns
+#' and in every cell it fills, it is offered as the names: the row, and the
+#' skip = call that reads from it. A note, not a stop: one unnamed column
+#' is common and legitimate, and nothing is offered then.
+#' @param path,sheet,skip As jload() reads the sheet.
+#' @param nm The names read.
+#' @return NULL, or list(title, names): the sheet rows of the title and of
+#'   the names.
+#' @keywords internal
+.jst_excel_title_row <- function(path, sheet, skip, nm) {
+  k <- length(nm)
+  if (k < 2L || sum(nzchar(trimws(nm))) * 2L > k) return(NULL)
+  rows <- tryCatch(suppressMessages(suppressWarnings(readxl::read_excel(
+    path, sheet = if (is.null(sheet)) 1L else sheet, col_names = FALSE,
+    col_types = "list", range = readxl::cell_rows(c(skip + 1L, skip + 21L)),
+    .name_repair = "minimal"))), error = function(e) NULL)
+  if (is.null(rows) || nrow(rows) < 2L) return(NULL)
+  filled <- function(r) {
+    vals <- lapply(rows, function(col) col[[r]])
+    ok   <- !vapply(vals, function(v) is.null(v) || length(v) == 0L ||
+                      (length(v) == 1L && is.na(v)), logical(1))
+    list(n = sum(ok), text = all(vapply(vals[ok], function(v)
+      is.character(v) && nzchar(trimws(v)) &&
+        is.na(suppressWarnings(as.numeric(v))), logical(1))))
+  }
+  firsts <- which(vapply(seq_len(nrow(rows)), function(r) filled(r)$n > 0L,
+                         logical(1)))
+  if (length(firsts) < 2L) return(NULL)
+  for (r in firsts[-1L]) {
+    f <- filled(r)
+    if (f$n * 2L >= ncol(rows) && f$n >= 2L && f$text) {
+      return(list(title = skip + firsts[1L], names = skip + r))
+    }
+  }
+  NULL
+}
+
+#' Internal: a data frame's name made from a file's name
+#'
+#' The same cleaner as a variable's name (lean 10 of the import audit,
+#' Session 362), with no length budget: "My Survey (final).xlsx" loads as
+#' My_Survey_final, where make.names() gave My.Survey..final. A name R
+#' takes as it is stays as it is.
+#' @param x Character(1).
+#' @return Character(1).
+#' @keywords internal
+.jst_clean_object_name <- function(x) {
+  if (.jst_name_valid_r(x)) return(x)
+  .jst_clean_name(x, 1L, max_chars = 10000L, max_bytes = 40000L)
 }
 
 #' Internal: stop on a path holding characters R made from single backslashes
@@ -3806,6 +4665,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{preserve.declarations} argument of \code{\link{jload}}. The
 #'   haven package and its documentation call these user-defined missing
 #'   values.
+#' @param clean.names Logical. For \code{.sav}, \code{.dta} and \code{.xpt}.
+#'   If \code{FALSE} (the default), a variable name the format cannot hold
+#'   stops the save, listing every such name, why, and the name it would be
+#'   given. If \code{TRUE}, those names are changed in the file only, the
+#'   way \code{\link{jload}} changes names R cannot use; the data frame
+#'   keeps its own names, each old name becomes the variable's label in the
+#'   file where it has none, and a note lists the changes.
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect of
 #'   writing a file to disk.
@@ -3862,6 +4728,28 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     back as blank, not missing. A note says so when it happens. R format
 #'     (\code{.rds}) and Excel (\code{.xlsx}) keep them missing. In a CSV
 #'     file the same holds for a factor, which is written as its labels.
+#'   \item Variable names each format can hold: SPSS (\code{.sav}), a
+#'     letter or @ first, then letters, digits and . _ $ # @, not ending in
+#'     a period, at most 64 bytes, not a word SPSS reserves (ALL, AND, BY,
+#'     EQ, GE, GT, LE, LT, NE, NOT, OR, TO, WITH), and no two that differ
+#'     only in case; Stata (\code{.dta}), a letter or underscore first, then
+#'     letters, digits and underscores, at most 32 characters, not a word
+#'     Stata reserves (such as \code{long}, \code{in}, \code{byte}); SAS
+#'     (\code{.xpt}), the letters A to Z, digits and underscores, not a digit
+#'     first, at most 32 characters, and no two that differ only in case.
+#'     A name outside these rules stops the save, naming every one at once,
+#'     unless \code{clean.names = TRUE}.
+#'   \item Labels each format shortens: SPSS keeps 256 bytes of a variable
+#'     label and 120 of a value label; Stata keeps 80 characters of a
+#'     variable label and of the data frame's label; SAS interchange keeps
+#'     40 characters of the data frame's label. A note says what was
+#'     shortened in the file; the data frame keeps its labels whole.
+#'   \item An Excel sheet holds 1,048,575 cases below the names row and
+#'     16,384 variables; a larger data frame stops with lines that save it
+#'     in another format.
+#'   \item Inside an \code{.xpt} file the SAS dataset is named after the
+#'     file, changed to a SAS name when the file's name is not one (a note
+#'     says so).
 #'   \item Stata files are written as version 14 format.
 #'   \item Legacy Excel format (\code{.xls}) is not supported for saving.
 #'     Use \code{.xlsx} instead.
@@ -3900,10 +4788,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
+jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
+                  clean.names = FALSE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(overwrite, "overwrite")
   .jst_check_flag(preserve.declarations, "preserve.declarations")
+  .jst_check_flag(clean.names, "clean.names")
 
   # --- Pre-check: first argument must be a data frame -----------------------
   # The shared resolver (.jst_resolve_first_arg) frames a non-evaluating
@@ -4239,6 +5129,41 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   if (ext %in% c("sav", "dta", "xpt")) {
     sections <- list()
 
+    # (0) Variable names the format refuses (the import audit's third
+    # finding, Session 362). haven and ReadStat checked them in their own
+    # words and one at a time; .jst_save_name_problems() holds each
+    # format's rules and names every refused name at once, with the name
+    # clean.names = TRUE would give it in the file.
+    name_probs <- .jst_save_name_problems(names(data), ext)
+    if (nrow(name_probs) > 0L && !clean.names) {
+      cn_line <- paste0("  jsave(", code_name, ", \"",
+                        .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)),
+                        "\"", if (isTRUE(overwrite)) ", overwrite = TRUE",
+                        if (!preserve.declarations) ", preserve.declarations = FALSE",
+                        ", clean.names = TRUE)")
+      sections[[length(sections) + 1L]] <-
+        .jst_save_names_error_msg(name_probs, ext, data_name, cn_line)
+    }
+    # A factor whose category is longer than 120 characters (.sav): haven
+    # writes a factor's categories as value labels, which SPSS holds to 120
+    # characters, and refused it in its own words (Session 362).
+    if (ext == "sav") {
+      long_lv <- names(data)[vapply(data, function(col) {
+        is.factor(col) && any(nchar(levels(col)) > 120L, na.rm = TRUE)
+      }, logical(1))]
+      if (length(long_lv) > 0L) {
+        n_lv <- length(long_lv)
+        sections[[length(sections) + 1L]] <- paste0(
+          .jst_and_list(long_lv), " ", .jst_plural(n_lv, "has", "have"),
+          " a category longer than 120 characters, which SPSS format ",
+          "(.sav) cannot store as a value label.\n",
+          "Save ", .jst_plural(n_lv, "it", "them"), " as text, which SPSS ",
+          "keeps whole:\n",
+          paste0("  ", code_name, "$", long_lv, " <- as.character(",
+                 code_name, "$", long_lv, ")", collapse = "\n"))
+      }
+    }
+
     # (1) Unsupported column types -- shared across the three formats.
     type_of <- vapply(data, function(col) {
       if (is.complex(col)) {
@@ -4350,6 +5275,51 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
     }
   }
 
+  # --- Excel's sheet size (Session 362) ---------------------------------------
+  # A sheet holds 1,048,576 rows and 16,384 columns. writexl stopped one row
+  # past the limit in its own words ("the xlsx format does not support
+  # tables with 1M+ rows") and AT it in libxlsxwriter's ("Worksheet row or
+  # column index out of range."), since the names take a row.
+  if (ext == "xlsx" && (nrow(data) > 1048575L || ncol(data) > 16384L)) {
+    stem_typed <- sub("\\.xlsx$", "", gsub("\\", "/", file, fixed = TRUE),
+                      ignore.case = TRUE)
+    over <- c(
+      if (nrow(data) > 1048575L) paste0(
+        format(nrow(data), big.mark = ","), " cases, and Excel format ",
+        "(.xlsx) holds at most 1,048,575.\n",
+        "A sheet has 1,048,576 rows, one of them for the variable names."),
+      if (ncol(data) > 16384L) paste0(
+        format(ncol(data), big.mark = ","), " variables, and Excel format ",
+        "(.xlsx) holds at most 16,384."))
+    .jst_stop(expr_lines(paste0(
+      "the ", data_name, " data frame has ", paste(over, collapse = "\nIt has "),
+      "\nSave it in another format, for example:\n",
+      "  jsave(", code_name, ", \"", .jst_dq_escape(stem_typed), ".rds\")\n",
+      "  jsave(", code_name, ", \"", .jst_dq_escape(stem_typed), ".csv\")")))
+  }
+
+  # --- What the file gets in place of what the format cannot hold -------------
+  # Session 362. clean.names = TRUE: the names .jst_save_name_problems()
+  # refused are changed in the file only, each old name the variable's
+  # label there where it had none. Labels: .dta's variable labels and the
+  # frame labels of .dta and .xpt shortened here, between characters
+  # (ReadStat cut a .dta label inside a character), and .sav's long labels
+  # noted, which ReadStat shortens cleanly (.jst_save_label_limits()).
+  names_changed <- NULL
+  if (ext %in% c("sav", "dta", "xpt") && isTRUE(clean.names)) {
+    probs <- .jst_save_name_problems(names(data), ext)
+    if (nrow(probs) > 0L) {
+      new_nm <- names(data)
+      new_nm[probs$pos] <- probs$new
+      ap <- .jst_apply_new_names(data, new_nm,
+                                 seq_along(new_nm) %in% probs$pos)
+      data <- ap$df
+      names_changed <- list(old = probs$old, new = probs$new, had = ap$had)
+    }
+  }
+  lab_lim <- .jst_save_label_limits(data, ext)
+  data    <- lab_lim$data
+
   # --- Write the file (atomic: write to temp, then rename) -------------------
   # Issue 6: writes go to a temporary path adjacent to the target. On
   # success we rename the temp to the target; on any error we delete the
@@ -4384,6 +5354,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
               "Choose a folder you can write to and run jsave() again.")
   }
 
+  xpt_member <- .jst_sas_member_name(basename_no_ext)
   temp_path <- tempfile(
     pattern = paste0("jsave_", basename_no_ext, "_"),
     tmpdir  = dirname(out_path),
@@ -4409,7 +5380,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
     switch(ext,
            sav  = haven::write_sav(data, temp_path),
            dta  = haven::write_dta(data, temp_path, version = 14),
-           xpt  = haven::write_xpt(data, temp_path),
+           # The dataset inside is named after the file asked for, not the
+           # temporary one (Session 362; .jst_sas_member_name()).
+           xpt  = haven::write_xpt(data, temp_path, name = xpt_member),
            xlsx = writexl::write_xlsx(data, temp_path),
            csv  = utils::write.csv(data, temp_path, row.names = FALSE,
                                     na = ""),
@@ -4441,6 +5414,24 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE) {
   # blank line. Not joutput-gated -- these are loss-of-fidelity warnings
   # (Decision 6B), not verbosity-tier detail.
   loss_notes <- character(0)
+
+  # What the file holds in place of what the format could not (Session
+  # 362): the names clean.names = TRUE changed, the labels shortened, and
+  # an .xpt dataset's SAS name when the file's name is not one.
+  if (!is.null(names_changed)) {
+    loss_notes <- c(loss_notes, .jst_save_names_note(
+      names_changed$old, names_changed$new, names_changed$had, ext, data_name))
+  }
+  if (length(lab_lim$vars) || length(lab_lim$values) || isTRUE(lab_lim$frame)) {
+    loss_notes <- c(loss_notes, .jst_save_labels_note(lab_lim, ext, data_name))
+  }
+  if (ext == "xpt" && !identical(xpt_member, basename_no_ext)) {
+    loss_notes <- c(loss_notes, paste0(
+      "Note: inside ", basename(out_path), " the dataset is named ",
+      xpt_member, ".\n",
+      "A SAS dataset name holds only the letters A to Z, digits and ",
+      "underscores, up to 32 characters."))
+  }
 
   # Excel and CSV cannot store labels or missing-value metadata; the note
   # describes the loss (and, when preserve.declarations = FALSE blanked SPSS-style

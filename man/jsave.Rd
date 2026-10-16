@@ -4,7 +4,13 @@
 \alias{jsave}
 \title{Save a data frame to a file}
 \usage{
-jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
+jsave(
+  data,
+  file,
+  overwrite = FALSE,
+  preserve.declarations = TRUE,
+  clean.names = FALSE
+)
 }
 \arguments{
 \item{data}{A data frame (unquoted). If omitted, uses the default set by
@@ -37,6 +43,14 @@ formats cannot represent no longer stops the save. Mirrors the
 \code{preserve.declarations} argument of \code{\link{jload}}. The
 haven package and its documentation call these user-defined missing
 values.}
+
+\item{clean.names}{Logical. For \code{.sav}, \code{.dta} and \code{.xpt}.
+If \code{FALSE} (the default), a variable name the format cannot hold
+stops the save, listing every such name, why, and the name it would be
+given. If \code{TRUE}, those names are changed in the file only, the
+way \code{\link{jload}} changes names R cannot use; the data frame
+keeps its own names, each old name becomes the variable's label in the
+file where it has none, and a note lists the changes.}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect of
@@ -114,6 +128,28 @@ a text variable's missing cells are saved as blank text, and read
 back as blank, not missing. A note says so when it happens. R format
 (\code{.rds}) and Excel (\code{.xlsx}) keep them missing. In a CSV
 file the same holds for a factor, which is written as its labels.
+\item Variable names each format can hold: SPSS (\code{.sav}), a
+letter or @ first, then letters, digits and . _ $ # @, not ending in
+a period, at most 64 bytes, not a word SPSS reserves (ALL, AND, BY,
+EQ, GE, GT, LE, LT, NE, NOT, OR, TO, WITH), and no two that differ
+only in case; Stata (\code{.dta}), a letter or underscore first, then
+letters, digits and underscores, at most 32 characters, not a word
+Stata reserves (such as \code{long}, \code{in}, \code{byte}); SAS
+(\code{.xpt}), the letters A to Z, digits and underscores, not a digit
+first, at most 32 characters, and no two that differ only in case.
+A name outside these rules stops the save, naming every one at once,
+unless \code{clean.names = TRUE}.
+\item Labels each format shortens: SPSS keeps 256 bytes of a variable
+label and 120 of a value label; Stata keeps 80 characters of a
+variable label and of the data frame's label; SAS interchange keeps
+40 characters of the data frame's label. A note says what was
+shortened in the file; the data frame keeps its labels whole.
+\item An Excel sheet holds 1,048,575 cases below the names row and
+16,384 variables; a larger data frame stops with lines that save it
+in another format.
+\item Inside an \code{.xpt} file the SAS dataset is named after the
+file, changed to a SAS name when the file's name is not one (a note
+says so).
 \item Stata files are written as version 14 format.
 \item Legacy Excel format (\code{.xls}) is not supported for saving.
 Use \code{.xlsx} instead.
