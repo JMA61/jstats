@@ -150,6 +150,13 @@ in another format.
 \item Inside an \code{.xpt} file the SAS dataset is named after the
 file, changed to a SAS name when the file's name is not one (a note
 says so).
+\item A CSV file is written in UTF-8. When it holds a character
+beyond plain ASCII (an accented letter, a curly apostrophe, a
+dash), it starts with the UTF-8 byte-order mark, as Excel's own
+"CSV UTF-8" does, so that Excel opens it with those characters
+intact: without the mark, Excel on Windows reads a CSV file in
+Windows-1252. A file of plain ASCII has no mark. \code{jload()}
+reads the mark as the start of a UTF-8 file.
 \item Stata files are written as version 14 format.
 \item Legacy Excel format (\code{.xls}) is not supported for saving.
 Use \code{.xlsx} instead.

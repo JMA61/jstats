@@ -1833,6 +1833,62 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (!is.na(iconv(list(b), "CP1252", "UTF-8"))) "CP1252" else "latin1"
 }
 
+#' Internal: write a CSV file that Excel opens as written
+#'
+#' jsave()'s CSV writer (Session 362). R writes a CSV file in UTF-8, and
+#' Excel on Windows opens one that does not start with the UTF-8 byte-order
+#' mark in Windows-1252, so every accented letter, curly apostrophe or dash
+#' came up as two or three other characters (Jeff's check of the import
+#' audit's item 21). When the file holds a byte beyond ASCII and every line
+#' of it is valid UTF-8, the three bytes of the mark (EF BB BF) go first,
+#' as Excel's own "CSV UTF-8" writes them. A file of ASCII alone is written
+#' as before, byte for byte, and so is one holding text that is not UTF-8
+#' (a string read in another encoding and never converted), which the mark
+#' would misdescribe. The file is written as write.csv() writes it, with no
+#' re-encoding: asking R for UTF-8 output in a session that is not UTF-8
+#' cut each accented word short. jload() reads the mark as the start of a
+#' UTF-8 file (.jst_csv_encoding(); read.csv() discards it).
+#' @param data The data frame, as jsave() writes it.
+#' @param path The file to write (jsave()'s temporary file).
+#' @return The path, invisibly.
+#' @keywords internal
+.jst_write_csv <- function(data, path) {
+  utils::write.csv(data, path, row.names = FALSE, na = "")
+  if (identical(.jst_file_text_kind(path), "utf8")) {
+    marked <- paste0(path, ".bom")
+    on.exit(unlink(marked))
+    writeBin(as.raw(c(0xef, 0xbb, 0xbf)), marked)
+    if (!isTRUE(file.append(marked, path)) || !file.remove(path) ||
+        !file.rename(marked, path)) {
+      stop("Could not finish writing the file.", call. = FALSE)
+    }
+  }
+  invisible(path)
+}
+
+#' Internal: what kind of text a file holds
+#'
+#' Read 50,000 lines at a time, so a large CSV file is never held whole, and
+#' by lines, so no character is split between two pieces (Session 362;
+#' .jst_write_csv()).
+#' @param path The file.
+#' @return "ascii" (no byte above 0x7F), "utf8" (some, and every line valid
+#'   UTF-8) or "other".
+#' @keywords internal
+.jst_file_text_kind <- function(path) {
+  con <- file(path, "rb")
+  on.exit(close(con))
+  beyond <- FALSE
+  repeat {
+    ln <- readLines(con, n = 50000L, warn = FALSE)
+    if (!length(ln)) break
+    if (!all(validUTF8(ln))) return("other")
+    if (!beyond) beyond <- any(grepl("[\\x80-\\xff]", ln, perl = TRUE,
+                                     useBytes = TRUE))
+  }
+  if (beyond) "utf8" else "ascii"
+}
+
 #' Internal: a title row above an Excel sheet's names
 #'
 #' Ruling R9 part (2): a sheet whose first row is a title loads the title as
@@ -4750,6 +4806,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \item Inside an \code{.xpt} file the SAS dataset is named after the
 #'     file, changed to a SAS name when the file's name is not one (a note
 #'     says so).
+#'   \item A CSV file is written in UTF-8. When it holds a character
+#'     beyond plain ASCII (an accented letter, a curly apostrophe, a
+#'     dash), it starts with the UTF-8 byte-order mark, as Excel's own
+#'     "CSV UTF-8" does, so that Excel opens it with those characters
+#'     intact: without the mark, Excel on Windows reads a CSV file in
+#'     Windows-1252. A file of plain ASCII has no mark. \code{jload()}
+#'     reads the mark as the start of a UTF-8 file.
 #'   \item Stata files are written as version 14 format.
 #'   \item Legacy Excel format (\code{.xls}) is not supported for saving.
 #'     Use \code{.xlsx} instead.
@@ -5384,8 +5447,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
            # temporary one (Session 362; .jst_sas_member_name()).
            xpt  = haven::write_xpt(data, temp_path, name = xpt_member),
            xlsx = writexl::write_xlsx(data, temp_path),
-           csv  = utils::write.csv(data, temp_path, row.names = FALSE,
-                                    na = ""),
+           # In UTF-8, with the byte-order mark when the file holds a
+           # character beyond ASCII (Session 362; .jst_write_csv()).
+           csv  = .jst_write_csv(data, temp_path),
            rds  = saveRDS(data, temp_path)
     )
   }, error = function(e) {
