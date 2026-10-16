@@ -154,6 +154,19 @@ the Missing Data & Outliers table a Blank and a % Blank column. Whether
 a blank is absent data or a real answer depends on the file; see
 [`jfreq`](https://jma61.github.io/jstats/reference/jfreq.md).
 
+A text variable whose every value is a date written in one form – as
+2015-04-01, 1-Apr-15, 28NOV2007 or 01/02/2015 – has the sub-class "date
+(unparsed)": a CSV file stores dates as text, and as text each date is a
+category. A footnote under the Variable Types table gives the
+[`as.Date()`](https://rdrr.io/r/base/as.Date.html) line that makes it a
+date (two lines when its values could be day/month or month/day). When
+the dates have two-digit years, a note says so:
+[`as.Date()`](https://rdrr.io/r/base/as.Date.html) puts 69 to 99 in the
+1900s and 00 to 68 in the 2000s without a warning, so a birth date
+written 03-Jul-68 becomes 2068. The note gives the
+[`range()`](https://rdrr.io/r/base/range.html) line that shows the
+years. Month names are read as R reads them in an English locale.
+
 When at least one variable's class comes from a registration (jnumeric,
 jcount, or jdummy) rather than the structural guess, a Source column
 appears. It reads as an exception-marker: "registered" is shown against

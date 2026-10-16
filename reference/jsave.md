@@ -55,14 +55,17 @@ jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
   Logical. If `TRUE` (the default), missing-value declarations are
   written as they stand; formats that cannot store them (notably Excel
   and CSV) drop the metadata, and SPSS-style codes such as -99 then read
-  back as ordinary numbers. If `FALSE`, those codes are blanked to plain
-  NA before writing, so they become empty cells. Mirrors the
-  `preserve.declarations` argument of
+  back as ordinary numbers, while a missing-value form that .sav, .dta,
+  or .xpt cannot represent stops the save before anything is written. If
+  `FALSE`, every declared missing value – an SPSS-style code, or a
+  Stata-style or SAS-style marker – is made plain NA before writing, in
+  the file only (the data frame is not changed), and a note gives the
+  number of cells. This happens before the .sav, .dta, and .xpt checks,
+  so a form those formats cannot represent no longer stops the save.
+  Mirrors the `preserve.declarations` argument of
   [`jload`](https://jma61.github.io/jstats/reference/jload.md). The
-  pre-flight checks for the .sav, .dta, and .xpt formats run before this
-  step, so a missing-value form a target format cannot represent is
-  still reported and blocked rather than silently dropped. The haven
-  package and its documentation call these user-defined missing values.
+  haven package and its documentation call these user-defined missing
+  values.
 
 ## Value
 
@@ -120,7 +123,10 @@ and shows it written with forward slashes.
   the format cannot hold (Stata-style in `.sav`, SPSS-style in `.dta`,
   either in `.xpt`); and, for `.sav`, more than three declared codes, or
   a range plus more than one code, on one column. No file is written
-  until the problems are fixed.
+  until the problems are fixed. A missing-value form the format cannot
+  hold can also be saved as plain NA with
+  `preserve.declarations = FALSE`, which the message offers beside the
+  conversion.
 
 - SPSS (`.sav`), Stata (`.dta`), SAS interchange (`.xpt`) and CSV
   (`.csv`) have no missing value for text: a text variable's missing
@@ -145,11 +151,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpPHiSQl/community.sav
+#> Saved community to /tmp/RtmpnB5our/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpPHiSQl/community.sav
+#> Saved community to /tmp/RtmpnB5our/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{

@@ -21,7 +21,7 @@ numeric codes that .sav can carry natively.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.233</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.234</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,7 @@ numeric codes that <code>.sav</code> can carry natively.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_sav_error_msg</span><span class="op">(</span><span class="va">vars</span>, <span class="va">data</span>, <span class="va">data_name</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_sav_error_msg</span><span class="op">(</span><span class="va">vars</span>, <span class="va">data</span>, <span class="va">data_name</span>, pd_line <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -80,6 +80,13 @@ on each flagged variable so the message names the right style.</p></dd>
 <dd><p>Character. Name of the data frame argument in
 the user's call to <code><a href="jsave.html">jsave()</a></code>, used to construct the
 suggested <code><a href="jconvert.html">jconvert()</a></code> call.</p></dd>
+
+
+<dt id="arg-pd-line">pd_line<a class="anchor" aria-label="anchor" href="#arg-pd-line"></a></dt>
+<dd><p>The offered jsave() call with
+<code>preserve.declarations = FALSE</code>, indented, or NULL (Session 361,
+the S218 item): the save that makes every declared missing value
+plain NA in the file, offered beside the conversion.</p></dd>
 
 </dl></div>
     <div class="section level2">

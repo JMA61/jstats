@@ -67,12 +67,13 @@ jload(
 - package:
 
   Logical. If `TRUE`, loads a jstats example dataset shipped in the
-  package (e.g. `community`, `clinic`) by bare name, bypassing the disk
-  search. Use this when a same-named file in the working directory or
-  data folder would otherwise shadow the shipped dataset. If `FALSE`
-  (default), a matching disk file takes precedence and the shipped
-  dataset is used only when no file matches. `file` must be a bare name
-  with no path or extension when `package = TRUE`.
+  package (e.g. `community`, `clinic`) by bare name, or a shipped
+  example file by its file name (`"community_spss.sav"`), bypassing the
+  disk search. Use this when a same-named file in the working directory
+  or data folder would otherwise shadow the shipped copy. If `FALSE`
+  (default), a matching disk file takes precedence and the shipped copy
+  is used only when no file matches. `file` must be a name with no path
+  when `package = TRUE`, and a dataset's name has no extension.
 
 - check.missing:
 
@@ -203,10 +204,13 @@ values are considered. A value is flagged when it is
 - at least five times the size of every other value in the variable (999
   on a 1-to-7 scale).
 
-A flagged value whose value label suggests missingness (such as
-"Refused" or "Don't know") is reported as label-only; the rest are
-reported as suspected. Flagged values are reported but not changed. If
-they are missing values, declare them with
+A value in the `missing.convention.codes` setting of
+[`joptions`](https://jma61.github.io/jstats/reference/joptions.md) (-99,
+-98 and -97 by default) is flagged as well, whatever its size. A flagged
+value whose value label suggests missingness (such as "Refused" or
+"Don't know") is reported as label-only; one of the setting's codes, as
+convention-matched; the rest as suspected. Flagged values are reported
+but not changed. If they are missing values, declare them with
 [`jdeclare_missing`](https://jma61.github.io/jstats/reference/jdeclare_missing.md),
 which keeps the codes and their labels; the report shows the call.
 
@@ -224,6 +228,23 @@ one-data-frame contract. Note also that the shipped dataset is a
 fallback: a file with a matching name in the working directory or
 data.dir folder is opened instead of the shipped copy. Use
 `package = TRUE` to force the shipped dataset.
+
+**Example files:** jstats also ships the `community` data as files, the
+kind a collaborator might send: `community_spss.sav`,
+`community_stata.dta` and `community_excel.xlsx`. When no file of that
+name is in the data.dir folder or the working directory,
+`jload("community_spss.sav")` reads the shipped one, and says so; the
+name without its extension works too (`jload("community_spss")`). A file
+of the same name on disk is read instead, with a note giving the call
+that reads the shipped file:
+`jload("community_spss.sav", package = TRUE)`.
+
+**Variables named T or F:** At `joutput("full")` a note names a variable
+called `T` or `F`. jstats reads it as the variable, but in base R `T`
+and `F` also stand for `TRUE` and `FALSE`, and code run inside the data
+frame – [`with()`](https://rdrr.io/r/base/with.html),
+[`subset()`](https://rdrr.io/r/base/subset.html) – reads the variable in
+their place.
 
 ## See also
 
@@ -258,6 +279,10 @@ jload("community.rds")
 
 # Extension omitted -- jload searches for a matching file automatically
 jload("community")
+
+# The example files shipped with jstats, read by name
+jload("community_spss.sav")
+jload("community_excel.xlsx", package = TRUE)   # even beside a local copy
 
 # Full file path
 jload("C:/Projects/Data/community.dta")

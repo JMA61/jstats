@@ -159,9 +159,12 @@ The four target formats:
   that order. Convention codes are NOT consulted for this direction;
   they only govern the reverse (Stata to SPSS) mapping. Round-trip
   conversions are not guaranteed to preserve the original numeric codes
-  (e.g. SPSS `c(-1, 9)` -\> Stata `.a, .b` -\> SPSS `c(-99, -98)` loses
+  (e.g. SPSS `c(-1, 9)` -\> Stata `.b, .a` -\> SPSS `c(-98, -99)` loses
   the original numbers), but the value labels survive intact and the
-  missingness semantics are preserved. Range-based SPSS missings
+  missingness semantics are preserved. The notification says so whenever
+  the trip back under the `missing.convention.codes` setting would give
+  other codes: "converting Score back to SPSS-style missing values would
+  give its codes -99, -98, not 9, -1." Range-based SPSS missings
   (`na_range`) are enumerated: Stata-style missing values have no range
   concept, so the distinct range values present in the column's data,
   plus any range values carrying a value label, are translated

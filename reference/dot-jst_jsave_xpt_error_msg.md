@@ -17,7 +17,12 @@ level.
 ## Usage
 
 ``` r
-.jst_jsave_xpt_error_msg(vars, data_name, spss_vars = character(0))
+.jst_jsave_xpt_error_msg(
+  vars,
+  data_name,
+  spss_vars = character(0),
+  pd_line = NULL
+)
 ```
 
 ## Arguments
@@ -43,6 +48,14 @@ level.
   [`haven::write_xpt`](https://haven.tidyverse.org/reference/read_xpt.html)
   would strip them silently. Default `character(0)` keeps the
   pre-extension call signature working unchanged.
+
+- pd_line:
+
+  The offered jsave() call with `preserve.declarations = FALSE`,
+  indented, or NULL (Session 361, the S218 item): the save that makes
+  every declared missing value plain NA in the file, which replaces the
+  jconvert(to = "baseR") line as the drop route (it leaves the data
+  frame as it is).
 
 ## Value
 

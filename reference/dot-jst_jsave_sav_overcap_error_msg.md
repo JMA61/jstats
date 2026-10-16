@@ -17,7 +17,8 @@ reduction.
   data_name,
   text_vars = character(0),
   prose_name = data_name,
-  stem = data_name
+  stem = data_name,
+  pd_line = NULL
 )
 ```
 
@@ -52,6 +53,13 @@ reduction.
   The name the offered files take; by default `data_name`. Until Session
   352 the data argument as typed, which for an expression gave a file
   name that does not parse.
+
+- pd_line:
+
+  The offered jsave() call with `preserve.declarations = FALSE`,
+  indented, or NULL (Session 361, the S218 item): the save that makes
+  every declared missing value plain NA in the file, offered beside the
+  conversion.
 
 ## Value
 

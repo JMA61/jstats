@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.233</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.234</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -124,11 +124,13 @@ error.</p></dd>
 <dt id="arg-package">package<a class="anchor" aria-label="anchor" href="#arg-package"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, loads a jstats example dataset
 shipped in the package (e.g. <code>community</code>, <code>clinic</code>) by bare
-name, bypassing the disk search. Use this when a same-named file in the
-working directory or data folder would otherwise shadow the shipped
-dataset. If <code>FALSE</code> (default), a matching disk file takes precedence
-and the shipped dataset is used only when no file matches. <code>file</code>
-must be a bare name with no path or extension when <code>package = TRUE</code>.</p></dd>
+name, or a shipped example file by its file name
+(<code>"community_spss.sav"</code>), bypassing the disk search. Use this when
+a same-named file in the working directory or data folder would
+otherwise shadow the shipped copy. If <code>FALSE</code> (default), a
+matching disk file takes precedence and the shipped copy is used only
+when no file matches. <code>file</code> must be a name with no path when
+<code>package = TRUE</code>, and a dataset's name has no extension.</p></dd>
 
 
 <dt id="arg-check-missing">check.missing<a class="anchor" aria-label="anchor" href="#arg-check-missing"></a></dt>
@@ -253,9 +255,12 @@ considered. A value is flagged when it is</p><ul><li><p>a negative number at lea
 variable's largest non-negative value (-99 on a 1-to-5 scale), or</p></li>
 <li><p>at least five times the size of every other value in the
 variable (999 on a 1-to-7 scale).</p></li>
-</ul><p>A flagged value whose value label suggests missingness (such as
-"Refused" or "Don't know") is reported as label-only; the rest are
-reported as suspected. Flagged values are reported but not changed. If
+</ul><p>A value in the <code>missing.convention.codes</code> setting of
+<code><a href="joptions.html">joptions</a></code> (-99, -98 and -97 by default) is flagged as
+well, whatever its size. A flagged value whose value label suggests
+missingness (such as "Refused" or "Don't know") is reported as
+label-only; one of the setting's codes, as convention-matched; the rest
+as suspected. Flagged values are reported but not changed. If
 they are missing values, declare them with
 <code><a href="jdeclare_missing.html">jdeclare_missing</a></code>, which keeps the codes and their labels;
 the report shows the call.</p>
@@ -274,6 +279,22 @@ that the shipped dataset is a fallback: a file with a matching name
 in the working directory or data.dir folder is opened instead of
 the shipped copy. Use <code>package = TRUE</code> to force the shipped
 dataset.</p>
+<p><strong>Example files:</strong>
+jstats also ships the <code>community</code> data as files, the kind a
+collaborator might send: <code>community_spss.sav</code>,
+<code>community_stata.dta</code> and <code>community_excel.xlsx</code>. When no
+file of that name is in the data.dir folder or the working directory,
+<code>jload("community_spss.sav")</code> reads the shipped one, and says so;
+the name without its extension works too
+(<code>jload("community_spss")</code>). A file of the same name on disk is
+read instead, with a note giving the call that reads the shipped file:
+<code>jload("community_spss.sav", package = TRUE)</code>.</p>
+<p><strong>Variables named T or F:</strong>
+At <code>joutput("full")</code> a note names a variable called <code>T</code> or
+<code>F</code>. jstats reads it as the variable, but in base R <code>T</code> and
+<code>F</code> also stand for <code>TRUE</code> and <code>FALSE</code>, and code run
+inside the data frame – <code><a href="https://rdrr.io/r/base/with.html" class="external-link">with()</a></code>, <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code> – reads the
+variable in their place.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -307,6 +328,10 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Extension omitted -- jload searches for a matching file automatically</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The example files shipped with jstats, read by name</span></span></span>
+<span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community_spss.sav"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community_excel.xlsx"</span>, package <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>   <span class="co"># even beside a local copy</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Full file path</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"C:/Projects/Data/community.dta"</span><span class="op">)</span></span></span>

@@ -19,7 +19,7 @@ are offered before the lossy jrecode() reduction."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.233</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.234</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,7 +61,8 @@ are offered before the lossy jrecode() reduction.</p>
 <span>  <span class="va">data_name</span>,</span>
 <span>  text_vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
 <span>  prose_name <span class="op">=</span> <span class="va">data_name</span>,</span>
-<span>  stem <span class="op">=</span> <span class="va">data_name</span></span>
+<span>  stem <span class="op">=</span> <span class="va">data_name</span>,</span>
+<span>  pd_line <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,6 +98,13 @@ lines name mydata (Session 352).</p></dd>
 <dd><p>The name the offered files take; by default
 <code>data_name</code>. Until Session 352 the data argument as typed,
 which for an expression gave a file name that does not parse.</p></dd>
+
+
+<dt id="arg-pd-line">pd_line<a class="anchor" aria-label="anchor" href="#arg-pd-line"></a></dt>
+<dd><p>The offered jsave() call with
+<code>preserve.declarations = FALSE</code>, indented, or NULL (Session 361,
+the S218 item): the save that makes every declared missing value
+plain NA in the file, offered beside the conversion.</p></dd>
 
 </dl></div>
     <div class="section level2">

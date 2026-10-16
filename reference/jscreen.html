@@ -25,7 +25,7 @@ and date/time variables gracefully.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.233</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.234</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -204,6 +204,16 @@ variables hold any, the header gains a "Cases with blank text" line and
 the Missing Data &amp; Outliers table a Blank and a % Blank column. Whether
 a blank is absent data or a real answer depends on the file; see
 <code><a href="jfreq.html">jfreq</a></code>.</p>
+<p>A text variable whose every value is a date written in one form – as
+2015-04-01, 1-Apr-15, 28NOV2007 or 01/02/2015 – has the sub-class
+"date (unparsed)": a CSV file stores dates as text, and as text each
+date is a category. A footnote under the Variable Types table gives the
+<code><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date()</a></code> line that makes it a date (two lines when its values
+could be day/month or month/day). When the dates have two-digit years,
+a note says so: <code><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date()</a></code> puts 69 to 99 in the 1900s and 00 to
+68 in the 2000s without a warning, so a birth date written 03-Jul-68
+becomes 2068. The note gives the <code><a href="https://rdrr.io/r/base/range.html" class="external-link">range()</a></code> line that shows the
+years. Month names are read as R reads them in an English locale.</p>
 <p>When at least one variable's class comes from a registration (jnumeric,
 jcount, or jdummy) rather than the structural guess, a Source column
 appears. It reads as an exception-marker: "registered" is shown against

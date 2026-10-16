@@ -14,7 +14,12 @@ level.
 ## Usage
 
 ``` r
-.jst_jsave_dta_error_msg(spss_vars, data_name, text_vars = character(0))
+.jst_jsave_dta_error_msg(
+  spss_vars,
+  data_name,
+  text_vars = character(0),
+  pd_line = NULL
+)
 ```
 
 ## Arguments
@@ -41,6 +46,13 @@ level.
   – with its sentence, and at the standard and full levels a closing
   line pointing to
   [`jencode()`](https://jma61.github.io/jstats/reference/jencode.md).
+
+- pd_line:
+
+  The offered jsave() call with `preserve.declarations = FALSE`,
+  indented, or NULL (Session 361, the S218 item): the save that makes
+  every declared missing value plain NA in the file, offered beside the
+  conversion.
 
 ## Value
 

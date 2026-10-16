@@ -13,7 +13,7 @@ natively.
 ## Usage
 
 ``` r
-.jst_jsave_sav_error_msg(vars, data, data_name)
+.jst_jsave_sav_error_msg(vars, data, data_name, pd_line = NULL)
 ```
 
 ## Arguments
@@ -35,6 +35,13 @@ natively.
   to construct the suggested
   [`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)
   call.
+
+- pd_line:
+
+  The offered jsave() call with `preserve.declarations = FALSE`,
+  indented, or NULL (Session 361, the S218 item): the save that makes
+  every declared missing value plain NA in the file, offered beside the
+  conversion.
 
 ## Value
 
