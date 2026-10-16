@@ -63,8 +63,12 @@
 #' of the model: a term computed from a variable (\code{I(x^2)},
 #' \code{log(x + 1)}, \code{I(x * z)}) is drawn in that variable's plot,
 #' following it along the axis, with the other variables held as \code{at}
-#' sets them. A variable the fit dropped as an exact linear combination of
-#' the others has no effect to draw. For a model with no predictors
+#' sets them. A dummy-coded categorical variable is one variable, drawn as
+#' one plot: its categories along the axis, labeled as the coefficient
+#' table labels them, with the predicted outcome at each and its 95%
+#' confidence interval. A variable the fit dropped as an exact linear
+#' combination of the others has no effect to draw. For a model with no
+#' predictors
 #' (\code{y ~ 1}), the plots that need a predictor, or that are drawn
 #' against the fitted values or the leverage, are left out with a note.
 #'
@@ -89,7 +93,12 @@
 #'   unquoted variable names (1 or 2).
 #' @param focal Unquoted name of the independent variable to place on the
 #'   x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
-#'   \code{probability} plots. Defaults to the first IV in the model.
+#'   \code{probability} plots. Defaults to the first independent variable
+#'   in the model that is not dummy-coded, since a fitted line needs a
+#'   numeric axis. A dummy-coded categorical variable is named as the
+#'   formula names it (\code{focal = Region}), and is drawn with its
+#'   categories along the axis: the predicted outcome (or probability) at
+#'   each with its 95% confidence interval, the cases behind them.
 #' @param at Character string or named list specifying where non-focal
 #'   independent variables are held when drawing the fitted line in
 #'   \code{jst_lm} / \code{jst_logistic} methods. One of \code{zero}
@@ -1143,7 +1152,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   coefs     <- stats::coef(model)
   intercept <- coefs[1]
   slope     <- coefs[2]
-  sign_char <- if (slope >= 0) "+" else "\u2212"
+  # A plain hyphen for a negative slope (Session 360): pdf() on macOS and
+  # Linux, whose character set is Latin-1, warned and dropped the minus
+  # sign; ggplot2's own axis labels use the hyphen too.
+  sign_char <- if (slope >= 0) "+" else "-"
   eq <- sprintf("%s = %.2f %s %.2f\u00b7%s",
                 y_name, intercept, sign_char, abs(slope), x_name)
   if (include_r2) {
@@ -1707,6 +1719,176 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   list(newdata = newdata, computed = done)
 }
 
+#' Internal helper: a model's variables as its plots name them
+#'
+#' A dummy-coded predictor is fit as one column per category but is ONE
+#' variable (Session 360; the S359 item). The model frame of
+#' \code{y ~ x + g}, g with four categories, has the columns \code{x},
+#' \code{g_b}, \code{g_c} and \code{g_d}; until v0.9.232 \code{jplot()}
+#' drew an effect plot for each column, took \code{g_b} as the fit plot's
+#' default focal variable when g came first, and refused \code{focal = g}
+#' with the four columns listed. Here each group of dummy columns is
+#' replaced by its variable, at the place of its first column.
+#'
+#' @param x A \code{jst_lm} or \code{jst_logistic} result.
+#' @param iv_names Character; the model frame's predictor columns.
+#' @return A list: \code{vars}, the variables in model order;
+#'   \code{groups}, the result's \code{dummy_groups} whose dummy columns
+#'   are all in the model frame (a result made before Session 360 has
+#'   none, and its columns are drawn as before); and \code{owner}, the
+#'   variable of each dummy column, named by column.
+#' @keywords internal
+.jst_plot_variables <- function(x, iv_names) {
+  groups <- x$dummy_groups
+  if (!is.list(groups)) groups <- list()
+  groups <- groups[vapply(groups, function(g) {
+    d <- g$dummy[!is.na(g$dummy)]
+    length(d) > 0L && all(d %in% iv_names)
+  }, logical(1))]
+  owner <- character(0)
+  for (v in names(groups)) {
+    d <- groups[[v]]$dummy
+    d <- d[!is.na(d)]
+    owner[d] <- v
+  }
+  vars <- vapply(iv_names, function(col) {
+    if (col %in% names(owner)) owner[[col]] else col
+  }, character(1), USE.NAMES = FALSE)
+  list(vars = unique(vars), groups = groups, owner = owner)
+}
+
+#' Internal helper: the focal variable of a fit or probability plot
+#'
+#' \code{focal} names a VARIABLE of the model (Session 360): a
+#' dummy-coded one by its own name, and a dummy column by the variable it
+#' belongs to, so \code{focal = g_b}, which the old refusal listed,
+#' draws g. With no \code{focal}, the first predictor that is not
+#' dummy-coded, since a fitted line needs a numeric axis; a model whose
+#' predictors are all dummy-coded takes its first. A name that is not a
+#' variable of the model stops, the model's variables listed.
+#'
+#' @param focal_name Character(1) or NULL, as deparsed from the call.
+#' @param pv The list \code{.jst_plot_variables()} returns.
+#' @return Character(1): the focal variable (\code{NA} for a model with no
+#'   predictors).
+#' @keywords internal
+.jst_plot_focal <- function(focal_name, pv) {
+  vars <- pv$vars
+  if (is.null(focal_name)) {
+    num <- setdiff(vars, names(pv$groups))
+    return(if (length(num) > 0L) num[1L] else vars[1L])
+  }
+  if (focal_name %in% names(pv$owner)) return(pv$owner[[focal_name]])
+  if (length(vars) > 0L && !focal_name %in% vars) {
+    .jst_stop("`focal` must be one of the independent variables in the model: ",
+              paste(vars, collapse = ", "))
+  }
+  focal_name
+}
+
+#' Internal helper: the cases' categories of a dummy-coded variable
+#'
+#' Read back from the model frame's dummy columns: a case marked by none
+#' is in the reference category.
+#'
+#' @param mf The result's model frame.
+#' @param group One element of \code{.jst_plot_variables()$groups}.
+#' @return A factor, its levels the categories in code order.
+#' @keywords internal
+.jst_case_category <- function(mf, group) {
+  d   <- group$dummy
+  idx <- rep(which(is.na(d))[1L], nrow(mf))
+  for (j in which(!is.na(d))) idx[mf[[d[j]]] == 1] <- j
+  factor(group$labels[idx], levels = group$labels)
+}
+
+#' Internal helper: the prediction at each category of a dummy-coded
+#' variable
+#'
+#' One row per category (Session 360): its dummy columns set as the
+#' category's cases have them, every other predictor held where
+#' \code{at_vals} puts it, and the prediction with its 95% interval --
+#' the confidence interval of the mean for a linear model, the interval on
+#' the logit scale carried to the probability scale for a logistic one,
+#' as the fitted line and the S-curve compute theirs.
+#'
+#' @param model The fitted \code{lm} or \code{glm}.
+#' @param group One element of \code{.jst_plot_variables()$groups}.
+#' @param at_vals The held values, by model column.
+#' @param logistic Logical; TRUE for a \code{glm} on the logit link.
+#' @return A data frame: \code{x} (a factor of the categories),
+#'   \code{fit}, \code{lwr}, \code{upr}.
+#' @keywords internal
+.jst_category_predictions <- function(model, group, at_vals,
+                                      logistic = FALSE) {
+  k  <- length(group$labels)
+  d  <- group$dummy
+  nd <- data.frame(row.names = seq_len(k))
+  for (dn in d[!is.na(d)]) nd[[dn]] <- as.integer(!is.na(d) & d == dn)
+  for (v in names(at_vals)) nd[[v]] <- at_vals[[v]]
+  if (logistic) {
+    p   <- .jst_predict_kept(model, newdata = nd, type = "link",
+                             se.fit = TRUE)
+    fit <- stats::plogis(p$fit)
+    lwr <- stats::plogis(p$fit - 1.96 * p$se.fit)
+    upr <- stats::plogis(p$fit + 1.96 * p$se.fit)
+  } else {
+    p   <- .jst_predict_kept(model, newdata = nd, interval = "confidence",
+                             level = 0.95)
+    fit <- p[, "fit"]
+    lwr <- p[, "lwr"]
+    upr <- p[, "upr"]
+  }
+  data.frame(x = factor(group$labels, levels = group$labels),
+             fit = unname(fit), lwr = unname(lwr), upr = unname(upr))
+}
+
+#' Internal helper: the layers that draw a prediction at each category
+#'
+#' A point at the prediction and a bar for its 95% interval, in the
+#' fitted line's color (Session 360).
+#'
+#' @param pred_df The data frame \code{.jst_category_predictions()}
+#'   returns.
+#' @return A list of ggplot2 layers.
+#' @keywords internal
+.jst_category_layers <- function(pred_df) {
+  list(
+    ggplot2::geom_errorbar(data = pred_df,
+                           ggplot2::aes(x = .data$x, ymin = .data$lwr,
+                                        ymax = .data$upr),
+                           width = 0.15, color = "#3366FF",
+                           linewidth = 0.8),
+    ggplot2::geom_point(data = pred_df,
+                        ggplot2::aes(x = .data$x, y = .data$fit),
+                        color = "#3366FF", size = 2.8)
+  )
+}
+
+#' Internal helper: the note naming where the other predictors are held
+#'
+#' "(line shown at x = 0, g_b = 0)" under a fitted line; under the
+#' predictions at a dummy-coded variable's categories, what is shown is
+#' named instead of the line ("(means shown at x = 0)", Session 360). A
+#' dummy column keeps its name, as in the equation (Session 347).
+#'
+#' @param at_vals The held values, by model column.
+#' @param what Character(1): "line", "means" or "probabilities".
+#' @return Character(1), or NULL when nothing is held.
+#' @keywords internal
+.jst_held_note <- function(at_vals, what = "line") {
+  if (length(at_vals) == 0L) return(NULL)
+  at_parts <- vapply(names(at_vals), function(v) {
+    val <- at_vals[[v]]
+    paste0(v, " = ", if (abs(val - round(val)) < 1e-8) {
+      as.character(round(val))
+    } else {
+      sprintf("%.2f", val)
+    })
+  }, character(1))
+  paste0("(", what, " shown at ", paste(at_parts, collapse = ", "), ")")
+}
+
 #' Internal helper: resolve the `at` argument for regression-line plots
 #'
 #' Computes the values at which non-focal predictors should be held when
@@ -1816,7 +1998,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   eq <- sprintf("%s = %.2f", dv_name, intercept)
   for (i in seq_along(slopes)) {
     b <- slopes[i]
-    sign_char <- if (b >= 0) "+" else "\u2212"
+    # A plain hyphen (Session 360), as in .jst_format_bivar_equation().
+    sign_char <- if (b >= 0) "+" else "-"
     eq <- paste0(eq, " ", sign_char, " ", sprintf("%.2f", abs(b)),
                  "\u00b7",
                  .jst_interaction_label(.jst_unbacktick(names(slopes)[i])))
@@ -1876,10 +2059,18 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
                residuals = "Residuals vs Fitted", scale = "Scale-Location",
                leverage = "Residuals vs Leverage"))
 
-  if (is.null(focal_name)) focal_name <- iv_names[1]
-  if (length(iv_names) > 0L && !focal_name %in% iv_names) {
-    .jst_stop("`focal` must be one of the independent variables in the model: ",
-         paste(iv_names, collapse = ", "))
+  # The model's variables (Session 360): a dummy-coded variable is one
+  # variable, its dummy columns drawn together. focal names a variable;
+  # with none given, the first predictor that is not dummy-coded.
+  pv          <- .jst_plot_variables(x, iv_names)
+  focal_name  <- .jst_plot_focal(focal_name, pv)
+  focal_group <- if (isTRUE(focal_name %in% names(pv$groups))) {
+    pv$groups[[focal_name]]
+  }
+  focal_cols  <- if (is.null(focal_group)) {
+    focal_name
+  } else {
+    focal_group$dummy[!is.na(focal_group$dummy)]
   }
 
   plots <- list()
@@ -1887,34 +2078,43 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
 
   # ---- fit plot ------------------------------------------------------------
   if ("fit" %in% plot_set) {
-    at_vals <- .jst_resolve_at(at, mf, dv_name, focal_name,
+    at_vals <- .jst_resolve_at(at, mf, dv_name, focal_cols,
                                x$dummy_coef_names)
 
-    focal_range <- range(mf[[focal_name]], na.rm = TRUE)
-    grid_x <- seq(focal_range[1], focal_range[2], length.out = 120)
-    newdata <- data.frame(grid_x)
-    names(newdata) <- focal_name
-    for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
-    # A term computed from the focal variable follows it along the axis
-    # (Session 347): I(x^2) was held at 0 while x varied, so the line was
-    # straight and the subtitle said "(line shown at I(x^2) = 0)".
-    on_grid <- .jst_terms_on_grid(newdata, focal_name, at_vals,
-                                  environment(x$formula_used))
-    newdata <- on_grid$newdata
-    at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
+    if (!is.null(focal_group)) {
+      # A dummy-coded focal variable (Session 360): its categories along
+      # the axis, the predicted mean at each with its 95% interval, the
+      # cases behind them.
+      pred_df  <- .jst_category_predictions(model, focal_group, at_vals)
+      point_df <- data.frame(x = .jst_case_category(mf, focal_group),
+                             y = mf[[dv_name]])
+    } else {
+      focal_range <- range(mf[[focal_name]], na.rm = TRUE)
+      grid_x <- seq(focal_range[1], focal_range[2], length.out = 120)
+      newdata <- data.frame(grid_x)
+      names(newdata) <- focal_name
+      for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
+      # A term computed from the focal variable follows it along the axis
+      # (Session 347): I(x^2) was held at 0 while x varied, so the line was
+      # straight and the subtitle said "(line shown at I(x^2) = 0)".
+      on_grid <- .jst_terms_on_grid(newdata, focal_name, at_vals,
+                                    environment(x$formula_used))
+      newdata <- on_grid$newdata
+      at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
 
-    pred <- .jst_predict_kept(model, newdata = newdata,
-                              interval = "confidence", level = 0.95)
-    line_df <- data.frame(
-      x   = grid_x,
-      fit = pred[, "fit"],
-      lwr = pred[, "lwr"],
-      upr = pred[, "upr"]
-    )
-    point_df <- data.frame(
-      x = mf[[focal_name]],
-      y = mf[[dv_name]]
-    )
+      pred <- .jst_predict_kept(model, newdata = newdata,
+                                interval = "confidence", level = 0.95)
+      line_df <- data.frame(
+        x   = grid_x,
+        fit = pred[, "fit"],
+        lwr = pred[, "lwr"],
+        upr = pred[, "upr"]
+      )
+      point_df <- data.frame(
+        x = mf[[focal_name]],
+        y = mf[[dv_name]]
+      )
+    }
 
     eq_text <- if (equation) .jst_format_equation(coefs, dv_name,
                                                   max_terms = 3) else NULL
@@ -1929,17 +2129,9 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       subtitle_parts <- r2_text
     }
 
-    if (length(at_vals) > 0) {
-      at_parts <- vapply(names(at_vals), function(v) {
-        val <- at_vals[[v]]
-        paste0(v, " = ", if (abs(val - round(val)) < 1e-8) {
-          as.character(round(val))
-        } else {
-          sprintf("%.2f", val)
-        })
-      }, character(1))
-      held_note <- paste0("(line shown at ",
-                          paste(at_parts, collapse = ", "), ")")
+    held_note <- .jst_held_note(at_vals,
+                                if (is.null(focal_group)) "line" else "means")
+    if (!is.null(held_note)) {
       if (length(subtitle_parts) > 0) {
         subtitle_parts <- paste0(subtitle_parts, "\n", held_note)
       } else {
@@ -1948,9 +2140,19 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     }
 
     if (equation && is.null(eq_text)) {
-      note <- paste0("(equation omitted: model has ",
-                     length(iv_names),
-                     " predictors; see jlm() output for coefficients)")
+      # The count was of model-frame columns (Session 360): y ~ x + g, g
+      # with four categories, read "model has 4 predictors". Where the
+      # predictors and the terms differ in number -- a dummy-coded
+      # variable, an interaction -- the note names the terms, which are
+      # what leaves the equation out (more than 3).
+      n_vars <- length(pv$vars)
+      n_coef <- sum(!is.na(coefs[-1]))
+      note   <- if (n_vars == n_coef) {
+        paste0("(equation omitted: model has ", n_vars,
+               " predictors; see jlm() output for coefficients)")
+      } else {
+        "(equation omitted: more than 3 terms; see jlm() output for coefficients)"
+      }
       subtitle_parts <- if (length(subtitle_parts) > 0) {
         paste0(subtitle_parts, "\n", note)
       } else {
@@ -1958,18 +2160,29 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       }
     }
 
-    p <- ggplot2::ggplot() +
-      ggplot2::geom_ribbon(data = line_df,
-                           ggplot2::aes(x = .data$x,
-                                        ymin = .data$lwr,
-                                        ymax = .data$upr),
-                           fill = "#3366FF", alpha = 0.18) +
-      ggplot2::geom_point(data = point_df,
-                          ggplot2::aes(x = .data$x, y = .data$y),
-                          alpha = 0.55, color = "#222222") +
-      ggplot2::geom_line(data = line_df,
-                         ggplot2::aes(x = .data$x, y = .data$fit),
-                         color = "#3366FF", linewidth = 0.9) +
+    p <- if (!is.null(focal_group)) {
+      ggplot2::ggplot() +
+        ggplot2::geom_point(data = point_df,
+                            ggplot2::aes(x = .data$x, y = .data$y),
+                            alpha = 0.55, color = "#222222",
+                            position = ggplot2::position_jitter(
+                              width = 0.12, height = 0, seed = 1)) +
+        .jst_category_layers(pred_df)
+    } else {
+      ggplot2::ggplot() +
+        ggplot2::geom_ribbon(data = line_df,
+                             ggplot2::aes(x = .data$x,
+                                          ymin = .data$lwr,
+                                          ymax = .data$upr),
+                             fill = "#3366FF", alpha = 0.18) +
+        ggplot2::geom_point(data = point_df,
+                            ggplot2::aes(x = .data$x, y = .data$y),
+                            alpha = 0.55, color = "#222222") +
+        ggplot2::geom_line(data = line_df,
+                           ggplot2::aes(x = .data$x, y = .data$fit),
+                           color = "#3366FF", linewidth = 0.9)
+    }
+    p <- p +
       ggplot2::labs(
         x        = focal_name,
         y        = dv_name,
@@ -2014,14 +2227,22 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
   # variable whose coefficient the fit dropped (an exact linear
   # combination of the others) has no effect to draw, and the count line
   # says so.
+  # A dummy-coded variable is one variable here too (Session 360; the S359
+  # item, Jeff's okay of the lean): ONE plot, its categories along the
+  # axis, the predicted outcome at each with its 95% interval, the other
+  # variables held as `at` sets them -- where v0.9.232 drew a line across
+  # 0 to 1 for each dummy column (Effect: g_b, g_c, g_d) under a count of
+  # "one per variable". It is dropped when the fit dropped every one of
+  # its dummy columns.
   if ("effects" %in% plot_set) {
-    is_term <- vapply(iv_names, function(v) {
+    cols    <- setdiff(iv_names, names(pv$owner))
+    is_term <- vapply(cols, function(v) {
       ex <- tryCatch(str2lang(v), error = function(e) NULL)
       is.call(ex)
     }, logical(1))
-    plain    <- iv_names[!is_term]
-    term_var <- lapply(iv_names[is_term], function(v) all.vars(str2lang(v)))
-    names(term_var) <- iv_names[is_term]
+    plain    <- cols[!is_term]
+    term_var <- lapply(cols[is_term], function(v) all.vars(str2lang(v)))
+    names(term_var) <- cols[is_term]
     own      <- names(term_var)[vapply(term_var, function(vs) {
       length(intersect(vs, plain)) == 0L
     }, logical(1))]
@@ -2033,9 +2254,32 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
           v %in% term_var[[t]] && t %in% names(fit_b) && !is.na(fit_b[[t]])
         }, logical(1)))
     }, logical(1))]
-    effect_vars <- iv_names[iv_names %in% c(setdiff(plain, dropped), own)]
+    grp_dropped <- names(pv$groups)[vapply(pv$groups, function(g) {
+      d <- g$dummy[!is.na(g$dummy)]
+      all(d %in% names(fit_b)) && all(is.na(fit_b[d]))
+    }, logical(1))]
+    effect_vars <- pv$vars[pv$vars %in% c(setdiff(plain, dropped), own,
+                                          setdiff(names(pv$groups),
+                                                  grp_dropped))]
+    dropped <- pv$vars[pv$vars %in% c(dropped, grp_dropped)]
     n_effects <- 0
     for (iv in effect_vars) {
+      grp <- pv$groups[[iv]]
+      if (!is.null(grp)) {
+        at_vals <- .jst_resolve_at(at, mf, dv_name,
+                                   grp$dummy[!is.na(grp$dummy)],
+                                   x$dummy_coef_names)
+        pred_df <- .jst_category_predictions(model, grp, at_vals)
+        p <- ggplot2::ggplot() +
+          .jst_category_layers(pred_df) +
+          ggplot2::labs(title = paste0("Effect: ", iv),
+                        x = iv, y = dv_name) +
+          ggplot2::theme_minimal()
+        print(p)
+        plots[[paste0("effect_", iv)]] <- p
+        n_effects <- n_effects + 1
+        next
+      }
       at_vals <- .jst_resolve_at(at, mf, dv_name, iv, x$dummy_coef_names)
       iv_range <- range(mf[[iv]], na.rm = TRUE)
       grid_x   <- seq(iv_range[1], iv_range[2], length.out = 80)
@@ -2204,74 +2448,94 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                coef = "Odds Ratios (95% CI)",
                vif = "Variance Inflation Factors"))
 
-  if (is.null(focal_name)) focal_name <- iv_names[1]
-  if (length(iv_names) > 0L && !focal_name %in% iv_names) {
-    .jst_stop("`focal` must be one of the independent variables in the model: ",
-         paste(iv_names, collapse = ", "))
+  # The model's variables and the focal one, as in jplot.jst_lm()
+  # (Session 360).
+  pv          <- .jst_plot_variables(x, iv_names)
+  focal_name  <- .jst_plot_focal(focal_name, pv)
+  focal_group <- if (isTRUE(focal_name %in% names(pv$groups))) {
+    pv$groups[[focal_name]]
+  }
+  focal_cols  <- if (is.null(focal_group)) {
+    focal_name
+  } else {
+    focal_group$dummy[!is.na(focal_group$dummy)]
   }
 
   plots <- list()
 
   # ---- probability plot (S-curve) ------------------------------------------
   if ("probability" %in% plot_set) {
-    at_vals <- .jst_resolve_at(at, mf, dv_name, focal_name,
+    at_vals <- .jst_resolve_at(at, mf, dv_name, focal_cols,
                                x$dummy_coef_names)
 
-    focal_range <- range(mf[[focal_name]], na.rm = TRUE)
-    grid_x <- seq(focal_range[1], focal_range[2], length.out = 120)
-    newdata <- data.frame(grid_x)
-    names(newdata) <- focal_name
-    for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
-    # A term computed from the focal variable follows it along the axis
-    # (Session 347): I(x^2) was held at 0 while x varied, so the line was
-    # straight and the subtitle said "(line shown at I(x^2) = 0)".
-    on_grid <- .jst_terms_on_grid(newdata, focal_name, at_vals,
-                                  environment(x$formula_used))
-    newdata <- on_grid$newdata
-    at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
+    if (!is.null(focal_group)) {
+      # A dummy-coded focal variable (Session 360): the predicted
+      # probability at each category with its 95% interval, the cases
+      # behind them at 0 and 1.
+      pred_df  <- .jst_category_predictions(model, focal_group, at_vals,
+                                            logistic = TRUE)
+      point_df <- data.frame(x = .jst_case_category(mf, focal_group),
+                             y = as.numeric(mf[[dv_name]]))
+    } else {
+      focal_range <- range(mf[[focal_name]], na.rm = TRUE)
+      grid_x <- seq(focal_range[1], focal_range[2], length.out = 120)
+      newdata <- data.frame(grid_x)
+      names(newdata) <- focal_name
+      for (v in names(at_vals)) newdata[[v]] <- at_vals[[v]]
+      # A term computed from the focal variable follows it along the axis
+      # (Session 347): I(x^2) was held at 0 while x varied, so the line was
+      # straight and the subtitle said "(line shown at I(x^2) = 0)".
+      on_grid <- .jst_terms_on_grid(newdata, focal_name, at_vals,
+                                    environment(x$formula_used))
+      newdata <- on_grid$newdata
+      at_vals <- at_vals[setdiff(names(at_vals), on_grid$computed)]
 
-    pred_link <- .jst_predict_kept(model, newdata = newdata, type = "link",
-                                   se.fit = TRUE)
-    t_crit <- 1.96
-    line_df <- data.frame(
-      x   = grid_x,
-      fit = stats::plogis(pred_link$fit),
-      lwr = stats::plogis(pred_link$fit - t_crit * pred_link$se.fit),
-      upr = stats::plogis(pred_link$fit + t_crit * pred_link$se.fit)
-    )
-    point_df <- data.frame(
-      x = mf[[focal_name]],
-      y = as.numeric(mf[[dv_name]])
-    )
+      pred_link <- .jst_predict_kept(model, newdata = newdata, type = "link",
+                                     se.fit = TRUE)
+      t_crit <- 1.96
+      line_df <- data.frame(
+        x   = grid_x,
+        fit = stats::plogis(pred_link$fit),
+        lwr = stats::plogis(pred_link$fit - t_crit * pred_link$se.fit),
+        upr = stats::plogis(pred_link$fit + t_crit * pred_link$se.fit)
+      )
+      point_df <- data.frame(
+        x = mf[[focal_name]],
+        y = as.numeric(mf[[dv_name]])
+      )
+    }
 
     predicts_label <- if (!is.null(x$predicts)) x$predicts else "1"
 
-    held_note <- NULL
-    if (length(at_vals) > 0) {
-      at_parts <- vapply(names(at_vals), function(v) {
-        val <- at_vals[[v]]
-        paste0(v, " = ", if (abs(val - round(val)) < 1e-8) {
-          as.character(round(val))
-        } else {
-          sprintf("%.2f", val)
-        })
-      }, character(1))
-      held_note <- paste0("(line shown at ",
-                          paste(at_parts, collapse = ", "), ")")
-    }
+    held_note <- .jst_held_note(at_vals, if (is.null(focal_group)) {
+      "line"
+    } else {
+      "probabilities"
+    })
 
-    p <- ggplot2::ggplot() +
-      ggplot2::geom_ribbon(data = line_df,
-                           ggplot2::aes(x = .data$x,
-                                        ymin = .data$lwr,
-                                        ymax = .data$upr),
-                           fill = "#3366FF", alpha = 0.18) +
-      ggplot2::geom_point(data = point_df,
-                          ggplot2::aes(x = .data$x, y = .data$y),
-                          alpha = 0.35, color = "#222222") +
-      ggplot2::geom_line(data = line_df,
-                         ggplot2::aes(x = .data$x, y = .data$fit),
-                         color = "#3366FF", linewidth = 0.9) +
+    p <- if (!is.null(focal_group)) {
+      ggplot2::ggplot() +
+        ggplot2::geom_point(data = point_df,
+                            ggplot2::aes(x = .data$x, y = .data$y),
+                            alpha = 0.35, color = "#222222",
+                            position = ggplot2::position_jitter(
+                              width = 0.12, height = 0, seed = 1)) +
+        .jst_category_layers(pred_df)
+    } else {
+      ggplot2::ggplot() +
+        ggplot2::geom_ribbon(data = line_df,
+                             ggplot2::aes(x = .data$x,
+                                          ymin = .data$lwr,
+                                          ymax = .data$upr),
+                             fill = "#3366FF", alpha = 0.18) +
+        ggplot2::geom_point(data = point_df,
+                            ggplot2::aes(x = .data$x, y = .data$y),
+                            alpha = 0.35, color = "#222222") +
+        ggplot2::geom_line(data = line_df,
+                           ggplot2::aes(x = .data$x, y = .data$fit),
+                           color = "#3366FF", linewidth = 0.9)
+    }
+    p <- p +
       ggplot2::labs(
         title    = paste0("Predicted Probability: ", dv_name,
                           " = ", predicts_label),

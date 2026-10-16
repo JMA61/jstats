@@ -569,6 +569,65 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   out
 }
 
+#' Internal helper: the categories of each dummy-coded predictor, for plots
+#'
+#' The map \code{jplot()} needs to draw a dummy-coded variable as ONE
+#' variable (Session 360; the S359 item): each variable's categories in
+#' the order of their codes, the label each carries in the coefficient
+#' table, and the dummy column that marks it (\code{NA} for the
+#' reference). Built from the same registrations and the same label
+#' lookup the table uses (\code{.jst_reg_value_labels()},
+#' \code{.jst_format_value_labels()}), so the plot and the table cannot
+#' label a category two ways, and after
+#' \code{.jst_prune_absent_categories()}, so a category with no case in
+#' the analysis sample is not drawn. Unlike
+#' \code{.jst_collect_multicat_regs()} it keeps a two-category variable
+#' (one dummy column): a plot of it has two categories along the axis.
+#'
+#' @param dummy_regs List of jdummy registrations, or NULL.
+#' @param auto_cat_regs Named list of in-flight registrations, keyed by
+#'   variable name.
+#' @param dummy_coef_names Character vector of dummy column names in the
+#'   fitted model.
+#' @param lab_src Pre-conversion data frame used as the label source.
+#' @param value_mode Resolved value.id mode for the labels, as the
+#'   coefficient table uses it.
+#'
+#' @return A named list, one element per dummy-coded variable in the
+#'   model, each a list of \code{labels} (character) and \code{dummy}
+#'   (character, \code{NA} for the reference), in code order. Empty when
+#'   the model has no dummy-coded predictor.
+#'
+#' @keywords internal
+.jst_dummy_groups <- function(dummy_regs, auto_cat_regs, dummy_coef_names,
+                              lab_src, value_mode) {
+  regs <- list()
+  for (reg in dummy_regs) regs[[length(regs) + 1L]] <- reg
+  for (vn in names(auto_cat_regs)) {
+    reg <- auto_cat_regs[[vn]]
+    reg$var_name <- vn
+    regs[[length(regs) + 1L]] <- reg
+  }
+  out <- list()
+  for (reg in regs) {
+    v <- reg$var_name
+    if (is.null(v) || !nzchar(v) || v %in% names(out)) next
+    keep <- reg$dummy_names %in% dummy_coef_names
+    if (!any(keep)) next
+    col <- if (v %in% names(lab_src)) lab_src[[v]] else NULL
+    vl  <- .jst_reg_value_labels(reg, col)
+    idx <- c(reg$ref_idx, reg$non_ref_idx[keep])
+    dum <- c(NA_character_, reg$dummy_names[keep])
+    ord <- order(idx)
+    out[[v]] <- list(
+      labels = vapply(idx[ord], function(i) {
+        .jst_format_value_labels(reg$codes[i], vl, value_mode)
+      }, character(1)),
+      dummy  = dum[ord])
+  }
+  out
+}
+
 #' Internal helper: drop the dummies of categories absent from the analysis sample
 #'
 #' A dummy registration describes the categories a variable HAD when it
@@ -1640,8 +1699,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       ggplot2::annotate("text", x = 0.7, y = 0.1, label = auc_text,
                         hjust = 0, size = 4.2, color = "#333333") +
       ggplot2::coord_equal() +
+      # A plain hyphen (Session 360): pdf() on macOS and Linux, whose
+      # character set is Latin-1, warned and dropped the en dash.
       ggplot2::labs(title = "ROC Curve",
-                    x = "False Positive Rate (1 \u2013 Specificity)",
+                    x = "False Positive Rate (1 - Specificity)",
                     y = "True Positive Rate (Sensitivity)") +
       ggplot2::theme_minimal()
     gg_print(p, "ROC Curve")
@@ -2351,6 +2412,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'       \code{jdummy()} registrations.}
 #'     \item{ref_cats}{Reference category descriptions for all categorical
 #'       variables in the model.}
+#'     \item{dummy_groups}{Named list, one element per dummy-coded
+#'       variable: \code{labels}, its categories as the coefficient table
+#'       labels them, and \code{dummy}, the dummy column of each
+#'       (\code{NA} for the reference). Used by \code{jplot()}.}
 #'     \item{vif}{Named numeric vector of VIF values, or NULL for bivariate.}
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
@@ -3856,6 +3921,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     n               = n_obs,
     dummy_coef_names = dummy_coef_names,
     ref_cats        = c(ref_cats, auto_ref_cats),
+    # Each dummy-coded variable's categories, labels and dummy columns, so
+    # jplot() draws it as one variable (Session 360).
+    dummy_groups    = .jst_dummy_groups(dummy_regs, auto_cat_regs,
+                                        dummy_coef_names, lab_src,
+                                        value_mode_coef),
     vif             = vif_values,
     sample_info     = sample_info
   )
@@ -4029,6 +4099,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'     \item{predicts}{Character string describing what the model predicts.}
 #'     \item{dummy_coef_names}{Names of dummy variable columns.}
 #'     \item{ref_cats}{Reference category descriptions.}
+#'     \item{dummy_groups}{Named list, one element per dummy-coded
+#'       variable: \code{labels}, its categories as the coefficient table
+#'       labels them, and \code{dummy}, the dummy column of each
+#'       (\code{NA} for the reference). Used by \code{jplot()}.}
 #'     \item{vif}{Named numeric vector of VIF values, or NULL.}
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
@@ -5271,6 +5345,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     predicts        = predicts_str,
     dummy_coef_names = dummy_coef_names,
     ref_cats        = all_ref_cats,
+    # Each dummy-coded variable's categories, labels and dummy columns, so
+    # jplot() draws it as one variable (Session 360).
+    dummy_groups    = .jst_dummy_groups(dummy_regs, auto_cat_regs,
+                                        dummy_coef_names, lab_src,
+                                        value_mode_coef),
     vif             = vif_values,
     sample_info     = sample_info
   )

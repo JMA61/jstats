@@ -217,6 +217,10 @@ For a model with no predictors, F and p are \code{NA} and df1 is 0.}
 \code{jdummy()} registrations.}
 \item{ref_cats}{Reference category descriptions for all categorical
 variables in the model.}
+\item{dummy_groups}{Named list, one element per dummy-coded
+variable: \code{labels}, its categories as the coefficient table
+labels them, and \code{dummy}, the dummy column of each
+(\code{NA} for the reference). Used by \code{jplot()}.}
 \item{vif}{Named numeric vector of VIF values, or NULL for bivariate.}
 \item{sample_info}{Pipeline and missing data counts.}
 }

@@ -155,6 +155,10 @@ the omnibus likelihood-ratio test (\code{chi_sq}, \code{omnibus_df},
 \item{predicts}{Character string describing what the model predicts.}
 \item{dummy_coef_names}{Names of dummy variable columns.}
 \item{ref_cats}{Reference category descriptions.}
+\item{dummy_groups}{Named list, one element per dummy-coded
+variable: \code{labels}, its categories as the coefficient table
+labels them, and \code{dummy}, the dummy column of each
+(\code{NA} for the reference). Used by \code{jplot()}.}
 \item{vif}{Named numeric vector of VIF values, or NULL.}
 \item{sample_info}{Pipeline and missing data counts.}
 }

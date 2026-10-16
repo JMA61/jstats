@@ -132,7 +132,12 @@ it is provided for symmetry with the other analysis functions.}
 
 \item{focal}{Unquoted name of the independent variable to place on the
 x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
-\code{probability} plots. Defaults to the first IV in the model.}
+\code{probability} plots. Defaults to the first independent variable
+in the model that is not dummy-coded, since a fitted line needs a
+numeric axis. A dummy-coded categorical variable is named as the
+formula names it (\code{focal = Region}), and is drawn with its
+categories along the axis: the predicted outcome (or probability) at
+each with its 95\% confidence interval, the cases behind them.}
 
 \item{at}{Character string or named list specifying where non-focal
 independent variables are held when drawing the fitted line in
@@ -206,8 +211,12 @@ For a \code{jst_lm} result, \code{effects} draws one plot per variable
 of the model: a term computed from a variable (\code{I(x^2)},
 \code{log(x + 1)}, \code{I(x * z)}) is drawn in that variable's plot,
 following it along the axis, with the other variables held as \code{at}
-sets them. A variable the fit dropped as an exact linear combination of
-the others has no effect to draw. For a model with no predictors
+sets them. A dummy-coded categorical variable is one variable, drawn as
+one plot: its categories along the axis, labeled as the coefficient
+table labels them, with the predicted outcome at each and its 95\%
+confidence interval. A variable the fit dropped as an exact linear
+combination of the others has no effect to draw. For a model with no
+predictors
 (\code{y ~ 1}), the plots that need a predictor, or that are drawn
 against the fitted values or the leverage, are left out with a note.
 
