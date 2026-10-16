@@ -39,7 +39,7 @@ once per 1 and reported it with a case-processing table that added up
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.232</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -95,7 +95,9 @@ once per 1 and reported it with a case-processing table that added up
 <span>  data_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  named_frame <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  prior <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  data_names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  data_names <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  object <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  n_frame <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -149,6 +151,22 @@ frame; the message says it is unchanged.</p></dd>
 filter ran on; on a one-row frame a single value passes only when the
 condition names one of them.</p></dd>
 
+
+<dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
+<dd><p>NULL, or the workspace object a result of the wrong
+length came from: a list of <code>operand</code> (as written) and <code>n</code>
+(its number of values), from <code><a href="dot-jst_recycled_operand.html">.jst_recycled_operand()</a></code> or a bare
+name (Session 359). The message then names it as ruling R19's stop
+names an object a condition reads – not in the data frame, a separate
+object in the workspace – and counts cases, keeping its own fix line:
+a vector of the wrong length cannot be added to the data frame.</p></dd>
+
+
+<dt id="arg-n-frame">n_frame<a class="anchor" aria-label="anchor" href="#arg-n-frame"></a></dt>
+<dd><p>Integer or NULL. The frame's row count before the
+pipeline's filters; when it differs from <code>n_rows</code> the count is
+of "the N cases left after filtering".</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -195,7 +213,7 @@ gives the delete exit alone.</p></dd>
 display (<code><a href="jsubset.html">jsubset()</a></code> with no arguments, Session 331). Nothing
 stops: the finding is handed back through
 <code><a href="dot-jst_filter_status_signal.html">.jst_filter_status_signal()</a></code> as the status line "It cannot be
-applied: it has 12 values for 11 rows."</p></dd>
+applied: it has 12 values for 11 cases."</p></dd>
 
 
 </dl></div>

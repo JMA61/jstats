@@ -17,7 +17,7 @@ preserve.declarations = FALSE blanked the codes."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.232</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,10 @@ depends on which missing-value form the frame carried and on whether
 <span>  <span class="va">stata_vars</span>,</span>
 <span>  <span class="va">preserve.declarations</span>,</span>
 <span>  <span class="va">n_blanked</span>,</span>
-<span>  text_udm <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  text_udm <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  code_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  path <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -92,9 +95,23 @@ names, as detected before any collapse.</p></dd>
 
 <dt id="arg-text-udm">text_udm<a class="anchor" aria-label="anchor" href="#arg-text-udm"></a></dt>
 <dd><p>Logical: is one of <code>spss_vars</code> a text variable?
-Its declared codes are words, so "(e.g. -99) are written as literal
-numbers" and "ordinary numbers" become "ordinary values" (Session 351,
-the S340 item's rider).</p></dd>
+Its declared codes are words, so "ordinary numbers" becomes "ordinary
+values" (Session 351, the S340 item's rider).</p></dd>
+
+
+<dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
+<dd><p>The data frame as given, before any collapse: its labels
+and declarations.</p></dd>
+
+
+<dt id="arg-code-name">code_name<a class="anchor" aria-label="anchor" href="#arg-code-name"></a></dt>
+<dd><p>Character; the data as the printed line names it
+(<code>mydata</code> for an expression, whose line the caller opens with
+"mydata &lt;- ...").</p></dd>
+
+
+<dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>
+<dd><p>Character; the path written, normalized.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -103,16 +120,26 @@ the S340 item's rider).</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Branching (SPSS-style codes write as literal numbers, while Stata-style
-tagged NAs write as blank cells):</p><ul><li><p><code>preserve.declarations = FALSE</code> and SPSS-style codes were
-blanked: a confirmation giving the count of blanked cells.</p></li>
-<li><p>both forms present (<code>preserve.declarations = TRUE</code>): a
-generic note that names neither platform, plus the
-<code>preserve.declarations = FALSE</code> suggestion.</p></li>
-<li><p>SPSS-style only: the literal-numbers warning plus the suggestion.</p></li>
-<li><p>Stata-style only: a brief note that the tags write as blank cells
-and the distinction between them is not preserved.</p></li>
-<li><p>neither: a plain labels-only note.</p></li>
+    <p>Since Session 359 (the S357 item, Jeff's walk of
+missing_convention_walk.R Section 30) the note says only what the frame
+had to lose and names what the package knows:</p><ul><li><p>The first line names labels only when a variable carries a
+variable label or value labels (the registration note's rule: it
+fires only on registrations), and missing-value metadata only when a
+variable declares missing values. A frame with neither gets no note.</p></li>
+<li><p>SPSS-style codes write as literal numbers. The variables and the
+declared codes their cells hold are named – "Income's declared
+missing value -99 is written as an ordinary number and will read
+back as valid data." – where the note said "Any SPSS-style missing
+values (e.g. -99)". A declared code no cell holds writes nothing,
+and is not named.</p></li>
+<li><p>The way to write them as empty cells is the jsave() call to
+run, with the data's name and the path just written, where the note
+gave "jsave(..., preserve.declarations = FALSE)", which does not run
+as printed (the S343 rule).</p></li>
+<li><p>Stata-style missing values write as blank cells; the
+distinction between them is not preserved.</p></li>
+<li><p><code>preserve.declarations = FALSE</code> that blanked SPSS-style
+codes: a confirmation giving the count of blanked cells.</p></li>
 </ul><p>The note is a loss-of-fidelity warning per the locked jsave design; it is
 not gated to the joutput verbosity tiers.</p>
     </div>

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.232</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -262,6 +262,14 @@ exactly 2 variables in the correlation)</p></li>
 <li><p><code>jst_crosstab</code>: <code>bar</code></p></li>
 </ul><p>The shortcut keyword <code>core</code> (default) produces a curated default
 set for the class; <code>all</code> produces every plot the class supports.</p>
+<p>For a <code>jst_lm</code> result, <code>effects</code> draws one plot per variable
+of the model: a term computed from a variable (<code>I(x^2)</code>,
+<code>log(x + 1)</code>, <code>I(x * z)</code>) is drawn in that variable's plot,
+following it along the axis, with the other variables held as <code>at</code>
+sets them. A variable the fit dropped as an exact linear combination of
+the others has no effect to draw. For a model with no predictors
+(<code>y ~ 1</code>), the plots that need a predictor, or that are drawn
+against the fitted values or the leverage, are left out with a note.</p>
 <p>Valid plot types for the data-first form: <code>histogram</code>, <code>bar</code>,
 <code>scatter</code>, <code>box</code>, <code>grouped_bar</code>.</p>
 <p>Valid <code>line</code> values: <code>FALSE</code> (default), <code>TRUE</code> (alias for

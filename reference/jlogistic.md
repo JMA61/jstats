@@ -270,6 +270,15 @@ Handles haven-labelled variables, registered dummy variables via
 the `numeric`/`categorical` overrides in the same way as
 [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md).
 
+A predictor dropped because it is an exact linear combination of the
+others is named in a warning, as in
+[`jlm()`](https://jma61.github.io/jstats/reference/jlm.md). A model with
+no predictors, `y ~ 1`, is fitted too: its one coefficient is the log
+odds of the modeled category, the pseudo R-squared values are 0, and the
+Omnibus Test, which compares the model with that one, reads "None: the
+model has no predictors to test." (its p is `NA` in the returned
+object).
+
 Transformed predictor terms in `formula` are computed automatically. A
 term that applies a function to a variable – `log(x)`, `sqrt(x)`,
 `exp(x)`, `I(x^2)`, `scale(x)`, an arithmetic expression, or a logical

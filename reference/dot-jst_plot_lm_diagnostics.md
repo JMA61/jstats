@@ -6,7 +6,7 @@ sequentially and appears in the RStudio Plots pane.
 ## Usage
 
 ``` r
-.jst_plot_lm_diagnostics(model, which, n_label = 3)
+.jst_plot_lm_diagnostics(model, which, n_label = 3, lead = TRUE)
 ```
 
 ## Arguments
@@ -24,3 +24,9 @@ sequentially and appears in the RStudio Plots pane.
 - n_label:
 
   Integer. Number of extreme points to label on each plot.
+
+- lead:
+
+  Logical; a blank line ahead of the notes under the plots. jlm() prints
+  its plot list just above them, ending without one; jplot() prints no
+  list (Session 359).

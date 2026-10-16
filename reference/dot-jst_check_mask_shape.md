@@ -30,7 +30,9 @@ table that added up (the Session 289 workstation reproduction).
   data_name = NULL,
   named_frame = FALSE,
   prior = FALSE,
-  data_names = NULL
+  data_names = NULL,
+  object = NULL,
+  n_frame = NULL
 )
 ```
 
@@ -80,6 +82,23 @@ table that added up (the Session 289 workstation reproduction).
   Character or NULL. The variables of the frame the filter ran on; on a
   one-row frame a single value passes only when the condition names one
   of them.
+
+- object:
+
+  NULL, or the workspace object a result of the wrong length came from:
+  a list of `operand` (as written) and `n` (its number of values), from
+  [`.jst_recycled_operand()`](https://jma61.github.io/jstats/reference/dot-jst_recycled_operand.md)
+  or a bare name (Session 359). The message then names it as ruling
+  R19's stop names an object a condition reads – not in the data frame,
+  a separate object in the workspace – and counts cases, keeping its own
+  fix line: a vector of the wrong length cannot be added to the data
+  frame.
+
+- n_frame:
+
+  Integer or NULL. The frame's row count before the pipeline's filters;
+  when it differs from `n_rows` the count is of "the N cases left after
+  filtering".
 
 ## Value
 
@@ -139,4 +158,4 @@ Three origins share the check and differ only in wording:
   back through
   [`.jst_filter_status_signal()`](https://jma61.github.io/jstats/reference/dot-jst_filter_status_signal.md)
   as the status line "It cannot be applied: it has 12 values for 11
-  rows."
+  cases."

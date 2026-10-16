@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.232</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -304,7 +304,8 @@ df, and N).</p></dd>
 <dd><p>Residual standard error.</p></dd>
 
 <dt>f_statistic</dt>
-<dd><p>Named numeric vector with F value, df1, df2, and p.</p></dd>
+<dd><p>Named numeric vector with F value, df1, df2, and p.
+For a model with no predictors, F and p are <code>NA</code> and df1 is 0.</p></dd>
 
 <dt>sums_of_squares</dt>
 <dd><p>Named numeric vector (regression, residual, total).</p></dd>
@@ -331,9 +332,12 @@ variables in the model.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Also prints key model summary information (R-squared, adjusted R-squared,
-residual standard error, F-test, sums of squares, and N). If any
-coefficients are dropped due to perfect collinearity, a warning message
-is printed.</p>
+residual standard error, F-test, sums of squares, and N). If a predictor
+is dropped because it is an exact linear combination of the others
+(perfect collinearity), a warning names it.</p>
+<p>A model with no predictors, <code>y ~ 1</code>, is fitted too: its one
+coefficient is the mean of the outcome, tested against 0, R-squared is
+0, and the F line reads "none (the model has no predictors to test)".</p>
 <p>A red "Linear Regression" title is printed first, followed by variable
 labels (if present), then the coefficient table and model fit statistics.</p>
 <p><strong>Handling of variables:</strong></p><ul><li><p>Variables registered with <code><a href="jdummy.html">jdummy()</a></code> are expanded into dummy

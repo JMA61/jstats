@@ -13,7 +13,7 @@ odds ratios (Exp(B))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.231</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.232</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -281,6 +281,13 @@ stops with a clear error message and suggests the appropriate
 <p>Handles haven-labelled variables, registered dummy variables via
 <code><a href="jdummy.html">jdummy()</a></code>, and the <code>numeric</code>/<code>categorical</code> overrides
 in the same way as <code><a href="jlm.html">jlm()</a></code>.</p>
+<p>A predictor dropped because it is an exact linear combination of the
+others is named in a warning, as in <code><a href="jlm.html">jlm()</a></code>. A model with no
+predictors, <code>y ~ 1</code>, is fitted too: its one coefficient is the log
+odds of the modeled category, the pseudo R-squared values are 0, and the
+Omnibus Test, which compares the model with that one, reads "None: the
+model has no predictors to test." (its p is <code>NA</code> in the returned
+object).</p>
 <p>Transformed predictor terms in <code>formula</code> are computed
 automatically. A term that applies a function to a variable –
 <code>log(x)</code>, <code>sqrt(x)</code>, <code>exp(x)</code>, <code>I(x^2)</code>,
