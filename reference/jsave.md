@@ -25,7 +25,13 @@ If the `data` argument is omitted, the default data frame set by
 ## Usage
 
 ``` r
-jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
+jsave(
+  data,
+  file,
+  overwrite = FALSE,
+  preserve.declarations = TRUE,
+  clean.names = FALSE
+)
 ```
 
 ## Arguments
@@ -66,6 +72,17 @@ jsave(data, file, overwrite = FALSE, preserve.declarations = TRUE)
   [`jload`](https://jma61.github.io/jstats/reference/jload.md). The
   haven package and its documentation call these user-defined missing
   values.
+
+- clean.names:
+
+  Logical. For `.sav`, `.dta` and `.xpt`. If `FALSE` (the default), a
+  variable name the format cannot hold stops the save, listing every
+  such name, why, and the name it would be given. If `TRUE`, those names
+  are changed in the file only, the way
+  [`jload`](https://jma61.github.io/jstats/reference/jload.md) changes
+  names R cannot use; the data frame keeps its own names, each old name
+  becomes the variable's label in the file where it has none, and a note
+  lists the changes.
 
 ## Value
 
@@ -135,6 +152,30 @@ and shows it written with forward slashes.
   keep them missing. In a CSV file the same holds for a factor, which is
   written as its labels.
 
+- Variable names each format can hold: SPSS (`.sav`), a letter or @
+  first, then letters, digits and . \_ \$ \# @, not ending in a period,
+  at most 64 bytes, not a word SPSS reserves (ALL, AND, BY, EQ, GE, GT,
+  LE, LT, NE, NOT, OR, TO, WITH), and no two that differ only in case;
+  Stata (`.dta`), a letter or underscore first, then letters, digits and
+  underscores, at most 32 characters, not a word Stata reserves (such as
+  `long`, `in`, `byte`); SAS (`.xpt`), the letters A to Z, digits and
+  underscores, not a digit first, at most 32 characters, and no two that
+  differ only in case. A name outside these rules stops the save, naming
+  every one at once, unless `clean.names = TRUE`.
+
+- Labels each format shortens: SPSS keeps 256 bytes of a variable label
+  and 120 of a value label; Stata keeps 80 characters of a variable
+  label and of the data frame's label; SAS interchange keeps 40
+  characters of the data frame's label. A note says what was shortened
+  in the file; the data frame keeps its labels whole.
+
+- An Excel sheet holds 1,048,575 cases below the names row and 16,384
+  variables; a larger data frame stops with lines that save it in
+  another format.
+
+- Inside an `.xpt` file the SAS dataset is named after the file, changed
+  to a SAS name when the file's name is not one (a note says so).
+
 - Stata files are written as version 14 format.
 
 - Legacy Excel format (`.xls`) is not supported for saving. Use `.xlsx`
@@ -151,11 +192,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpnB5our/community.sav
+#> Saved community to /tmp/Rtmp2dRbTY/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpnB5our/community.sav
+#> Saved community to /tmp/Rtmp2dRbTY/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{

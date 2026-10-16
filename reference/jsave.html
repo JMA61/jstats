@@ -35,7 +35,7 @@ juse() is used."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.234</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.235</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,7 +80,13 @@ are taken literally.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jsave</span><span class="op">(</span><span class="va">data</span>, <span class="va">file</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span>, preserve.declarations <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jsave</span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
+<span>  <span class="va">file</span>,</span>
+<span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  preserve.declarations <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  clean.names <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -124,6 +130,16 @@ formats cannot represent no longer stops the save. Mirrors the
 <code>preserve.declarations</code> argument of <code><a href="jload.html">jload</a></code>. The
 haven package and its documentation call these user-defined missing
 values.</p></dd>
+
+
+<dt id="arg-clean-names">clean.names<a class="anchor" aria-label="anchor" href="#arg-clean-names"></a></dt>
+<dd><p>Logical. For <code>.sav</code>, <code>.dta</code> and <code>.xpt</code>.
+If <code>FALSE</code> (the default), a variable name the format cannot hold
+stops the save, listing every such name, why, and the name it would be
+given. If <code>TRUE</code>, those names are changed in the file only, the
+way <code><a href="jload.html">jload</a></code> changes names R cannot use; the data frame
+keeps its own names, each old name becomes the variable's label in the
+file where it has none, and a note lists the changes.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -177,6 +193,28 @@ a text variable's missing cells are saved as blank text, and read
 back as blank, not missing. A note says so when it happens. R format
 (<code>.rds</code>) and Excel (<code>.xlsx</code>) keep them missing. In a CSV
 file the same holds for a factor, which is written as its labels.</p></li>
+<li><p>Variable names each format can hold: SPSS (<code>.sav</code>), a
+letter or @ first, then letters, digits and . _ $ # @, not ending in
+a period, at most 64 bytes, not a word SPSS reserves (ALL, AND, BY,
+EQ, GE, GT, LE, LT, NE, NOT, OR, TO, WITH), and no two that differ
+only in case; Stata (<code>.dta</code>), a letter or underscore first, then
+letters, digits and underscores, at most 32 characters, not a word
+Stata reserves (such as <code>long</code>, <code>in</code>, <code>byte</code>); SAS
+(<code>.xpt</code>), the letters A to Z, digits and underscores, not a digit
+first, at most 32 characters, and no two that differ only in case.
+A name outside these rules stops the save, naming every one at once,
+unless <code>clean.names = TRUE</code>.</p></li>
+<li><p>Labels each format shortens: SPSS keeps 256 bytes of a variable
+label and 120 of a value label; Stata keeps 80 characters of a
+variable label and of the data frame's label; SAS interchange keeps
+40 characters of the data frame's label. A note says what was
+shortened in the file; the data frame keeps its labels whole.</p></li>
+<li><p>An Excel sheet holds 1,048,575 cases below the names row and
+16,384 variables; a larger data frame stops with lines that save it
+in another format.</p></li>
+<li><p>Inside an <code>.xpt</code> file the SAS dataset is named after the
+file, changed to a SAS name when the file's name is not one (a note
+says so).</p></li>
 <li><p>Stata files are written as version 14 format.</p></li>
 <li><p>Legacy Excel format (<code>.xls</code>) is not supported for saving.
 Use <code>.xlsx</code> instead.</p></li>
@@ -191,11 +229,11 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A runnable save into R's session temporary folder</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpnB5our/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/Rtmp2dRbTY/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>      overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>                   <span class="co"># the data frame given by name</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpnB5our/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/Rtmp2dRbTY/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>

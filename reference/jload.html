@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.234</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.235</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,6 +82,7 @@ extension). Use the <code>name</code> argument to specify a different name.</p>
 <span>  package <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  check.missing <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  sheet <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  skip <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  preserve.declarations <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  missing.notice <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -146,6 +147,14 @@ If the file has multiple sheets and <code>sheet</code> is not specified,
 a message lists the available sheets.</p></dd>
 
 
+<dt id="arg-skip">skip<a class="anchor" aria-label="anchor" href="#arg-skip"></a></dt>
+<dd><p>For Excel and CSV files. The number of rows of the sheet, or
+lines of the file, above the variable names: a title, a blank row, a
+note. Default 0. When the first row of a sheet looks like a title, a
+note shows the call with the <code>skip</code> it needs; a CSV file in that
+shape stops with the same call.</p></dd>
+
+
 <dt id="arg-preserve-declarations">preserve.declarations<a class="anchor" aria-label="anchor" href="#arg-preserve-declarations"></a></dt>
 <dd><p>Logical. If <code>TRUE</code> (default), declared
 missing values arriving with the file are preserved: SPSS-style
@@ -181,10 +190,11 @@ informational messages (the directory-resolution note, file found,
 load summary, default-data note, registration notes, and the
 narrative about declared missing values, overriding missing.notice).
 Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
-note that a local file shadowed a shipped dataset, and the note that
-an existing object was replaced are still shown, as is the
-coded-missing scan report; turn that off with
-<code>check.missing = FALSE</code>.</p></dd>
+note that a local file shadowed a shipped dataset, the note that an
+existing object was replaced, and the notes on what the read changed
+or found (variable names changed, a title row, a CSV file's encoding)
+are still shown, as is the coded-missing scan report; turn that off
+with <code>check.missing = FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -214,6 +224,32 @@ one cell is empty, which is how a missing value is written there. In a
 file with two or more columns an empty line is not a case. An empty
 cell in a text variable is read as blank text, never as missing (see
 <code><a href="jsave.html">jsave</a></code>).</p>
+<p>Before a CSV file is read, every line's values are counted. A first line
+with fewer values than the lines below it (a title above the names, or a
+name missing), and a later line with more values than the first, stop
+the load with the line and what to do: read as they are, R would turn
+the first values of every line into row names, or split the long line
+into two cases, and say nothing. A file whose values are separated by
+semicolons, as Excel saves them in many European settings, stops with
+the base R line that reads it. A file that is not in UTF-8 (one saved by
+Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
+in Windows-1252, and a note says so.</p>
+<p><strong>Variable names from other software:</strong>
+A file from outside R can hold names R cannot use as they are:
+<code>2024 score</code>, <code>Age (years)</code>, an empty header, two columns
+with the same name, a word R reserves (<code>if</code>, <code>TRUE</code>), an SPSS
+name such as <code>Q1@A</code>, a Stata name such as <code>_merge</code>. For every
+format but <code>.rds</code>, each such name is changed: spaces and symbols at
+either end are dropped, any other run of characters that are not
+letters, digits or underscores becomes one underscore, a name that
+starts with a digit or an underscore or is a reserved word gets an
+<code>X</code> in front, an empty name becomes <code>V</code> and its column's
+position, a repeated name gets <code>_2</code>, and a changed name is kept to
+32 characters. So <code>2024 score</code> becomes <code>X2024_score</code> and
+<code>Age (years)</code> becomes <code>Age_years</code>. A name R can use as it is
+is never changed. The original name becomes the variable's label, unless
+the variable has a label of its own, and a note lists every change. An
+<code>.rds</code> file is returned as it was saved.</p>
 <p><strong>File search order:</strong></p><ol><li><p>If the path contains a directory separator (<code>/</code>, or a
 backslash), the path is used directly.</p></li>
 <li><p>If the path is a bare filename, <code>jload()</code> checks:
@@ -230,13 +266,16 @@ The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
 allow as a variable name), you must supply the <code>name</code> argument.
 Other characters R does not allow in a name, such as spaces and
-hyphens, become dots: <code>"my data-1.sav"</code> loads as
-<code>my.data.1</code>.</p>
+hyphens, are changed as variable names are (see above):
+<code>"my data-1.sav"</code> loads as <code>my_data_1</code>.</p>
 <p><strong>Excel files:</strong>
 Excel files (<code>.xlsx</code>, <code>.xls</code>) do not contain variable or
 value labels. The data will be loaded as plain numeric, character, or
-logical columns. Use <code><a href="jrelabel.html">jrelabel()</a></code> to add labels after loading
-if needed.</p>
+logical columns; a variable whose name was changed has its original
+name as its label. Use <code><a href="jrelabel.html">jrelabel()</a></code> to add labels after loading
+if needed. Row 1 of the sheet is read as the variable names; when the
+names are lower down, <code>skip</code> gives the number of rows above them.
+Each variable's type is read from every row of the sheet.</p>
 <p><strong>Missing-value declarations:</strong>
 Missing-value declarations are stored in the file itself, but they
 only survive the trip back if the reader requests them.
@@ -321,6 +360,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.xlsx"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.xlsx"</span>, sheet <span class="op">=</span> <span class="st">"Wave2"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.xlsx"</span>, sheet <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"survey.xlsx"</span>, skip <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>   <span class="co"># a title and a blank row above the names</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># CSV and R format</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.csv"</span><span class="op">)</span></span></span>

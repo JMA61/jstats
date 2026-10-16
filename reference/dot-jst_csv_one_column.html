@@ -4,12 +4,14 @@ uses, so a quoted name holding a comma is one field – and counts its
 fields. jload() reads a one-column file without skipping empty lines
 (Session 351), since there an empty line is a case with an empty cell.
 A file that cannot be read this way answers FALSE, leaving read.csv()'s
-default and its own error."><meta property="og:description" content="Reads the header line alone – the separator and quoting read.csv()
+default and its own error. Since Session 362 the header line is the one
+after skip = lines, read in the file's encoding."><meta property="og:description" content="Reads the header line alone – the separator and quoting read.csv()
 uses, so a quoted name holding a comma is one field – and counts its
 fields. jload() reads a one-column file without skipping empty lines
 (Session 351), since there an empty line is a case with an empty cell.
 A file that cannot be read this way answers FALSE, leaving read.csv()'s
-default and its own error."></head><body>
+default and its own error. Since Session 362 the header line is the one
+after skip = lines, read in the file's encoding."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -17,7 +19,7 @@ default and its own error."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.234</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.235</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,12 +50,13 @@ uses, so a quoted name holding a comma is one field – and counts its
 fields. jload() reads a one-column file without skipping empty lines
 (Session 351), since there an empty line is a case with an empty cell.
 A file that cannot be read this way answers FALSE, leaving read.csv()'s
-default and its own error.</p>
+default and its own error. Since Session 362 the header line is the one
+after skip = lines, read in the file's encoding.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_csv_one_column</span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_csv_one_column</span><span class="op">(</span><span class="va">path</span>, skip <span class="op">=</span> <span class="fl">0L</span>, enc <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -62,6 +65,14 @@ default and its own error.</p>
 
 <dl><dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>
 <dd><p>Path to the file.</p></dd>
+
+
+<dt id="arg-skip">skip<a class="anchor" aria-label="anchor" href="#arg-skip"></a></dt>
+<dd><p>Lines above the names.</p></dd>
+
+
+<dt id="arg-enc">enc<a class="anchor" aria-label="anchor" href="#arg-enc"></a></dt>
+<dd><p>NULL, or the encoding the file is read in.</p></dd>
 
 </dl></div>
     <div class="section level2">

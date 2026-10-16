@@ -27,6 +27,7 @@ jload(
   package = FALSE,
   check.missing = TRUE,
   sheet = NULL,
+  skip = 0,
   preserve.declarations = TRUE,
   missing.notice = NULL,
   quiet = FALSE
@@ -88,6 +89,14 @@ jload(
   the file has multiple sheets and `sheet` is not specified, a message
   lists the available sheets.
 
+- skip:
+
+  For Excel and CSV files. The number of rows of the sheet, or lines of
+  the file, above the variable names: a title, a blank row, a note.
+  Default 0. When the first row of a sheet looks like a title, a note
+  shows the call with the `skip` it needs; a CSV file in that shape
+  stops with the same call.
+
 - preserve.declarations:
 
   Logical. If `TRUE` (default), declared missing values arriving with
@@ -124,9 +133,11 @@ jload(
   default-data note, registration notes, and the narrative about
   declared missing values, overriding missing.notice). Errors, warnings,
   the multi-sheet advisory, the overwrite prompt, the note that a local
-  file shadowed a shipped dataset, and the note that an existing object
-  was replaced are still shown, as is the coded-missing scan report;
-  turn that off with `check.missing = FALSE`.
+  file shadowed a shipped dataset, the note that an existing object was
+  replaced, and the notes on what the read changed or found (variable
+  names changed, a title row, a CSV file's encoding) are still shown, as
+  is the coded-missing scan report; turn that off with
+  `check.missing = FALSE`.
 
 ## Value
 
@@ -154,6 +165,33 @@ there. In a file with two or more columns an empty line is not a case.
 An empty cell in a text variable is read as blank text, never as missing
 (see [`jsave`](https://jma61.github.io/jstats/reference/jsave.md)).
 
+Before a CSV file is read, every line's values are counted. A first line
+with fewer values than the lines below it (a title above the names, or a
+name missing), and a later line with more values than the first, stop
+the load with the line and what to do: read as they are, R would turn
+the first values of every line into row names, or split the long line
+into two cases, and say nothing. A file whose values are separated by
+semicolons, as Excel saves them in many European settings, stops with
+the base R line that reads it. A file that is not in UTF-8 (one saved by
+Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
+in Windows-1252, and a note says so.
+
+**Variable names from other software:** A file from outside R can hold
+names R cannot use as they are: `2024 score`, `Age (years)`, an empty
+header, two columns with the same name, a word R reserves (`if`,
+`TRUE`), an SPSS name such as `Q1@A`, a Stata name such as `_merge`. For
+every format but `.rds`, each such name is changed: spaces and symbols
+at either end are dropped, any other run of characters that are not
+letters, digits or underscores becomes one underscore, a name that
+starts with a digit or an underscore or is a reserved word gets an `X`
+in front, an empty name becomes `V` and its column's position, a
+repeated name gets `_2`, and a changed name is kept to 32 characters. So
+`2024 score` becomes `X2024_score` and `Age (years)` becomes
+`Age_years`. A name R can use as it is is never changed. The original
+name becomes the variable's label, unless the variable has a label of
+its own, and a note lists every change. An `.rds` file is returned as it
+was saved.
+
 **File search order:**
 
 1.  If the path contains a directory separator (`/`, or a backslash),
@@ -174,13 +212,18 @@ dataset of that name (see below).
 stripping the extension. If the resulting name starts with a digit
 (which R does not allow as a variable name), you must supply the `name`
 argument. Other characters R does not allow in a name, such as spaces
-and hyphens, become dots: `"my data-1.sav"` loads as `my.data.1`.
+and hyphens, are changed as variable names are (see above):
+`"my data-1.sav"` loads as `my_data_1`.
 
 **Excel files:** Excel files (`.xlsx`, `.xls`) do not contain variable
 or value labels. The data will be loaded as plain numeric, character, or
-logical columns. Use
+logical columns; a variable whose name was changed has its original name
+as its label. Use
 [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) to
-add labels after loading if needed.
+add labels after loading if needed. Row 1 of the sheet is read as the
+variable names; when the names are lower down, `skip` gives the number
+of rows above them. Each variable's type is read from every row of the
+sheet.
 
 **Missing-value declarations:** Missing-value declarations are stored in
 the file itself, but they only survive the trip back if the reader
@@ -272,6 +315,7 @@ jload("community.xpt")
 jload("community.xlsx")
 jload("community.xlsx", sheet = "Wave2")
 jload("community.xlsx", sheet = 2)
+jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
 
 # CSV and R format
 jload("community.csv")
