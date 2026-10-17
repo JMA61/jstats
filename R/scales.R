@@ -208,7 +208,11 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   label_parts <- resolved$label_parts
 
   if (length(var_names) < 2) {
-    .jst_stop("At least 2 variables are required.")
+    # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
+    # no-variables stop gives: never the call's data frame (Session 338).
+    .jst_stop("At least 2 variables are required.\n",
+              "Provide two or more variable names, for example:\n",
+              "  community$EnvTotal <- jsum(community, Environment1, Environment3)")
   }
 
   .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
@@ -484,7 +488,11 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   label_parts <- resolved$label_parts
 
   if (length(var_names) < 2) {
-    .jst_stop("At least 2 variables are required.")
+    # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
+    # no-variables stop gives: never the call's data frame (Session 338).
+    .jst_stop("At least 2 variables are required.\n",
+              "Provide two or more variable names, for example:\n",
+              "  community$EnvAvg <- javg(community, Environment1, Environment3)")
   }
 
   .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)

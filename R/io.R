@@ -400,7 +400,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                      match.call(), "sheet", "a sheet name", "jload")
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
-    .jst_stop("Provide a filename, e.g. jload(\"mydata.sav\")")
+    .jst_stop("Provide a filename, for example:\n",
+              "  jload(\"mydata.sav\")")
   }
   # A path typed with single backslashes (S343, Jeff's decision; built
   # S351): R made "\t" and "\n" a tab and a new line before jload() saw it.
@@ -2663,7 +2664,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     .jst_stop(paste(deparse(file_sub), collapse = " "),
               " is a data frame, not a file name.\n",
-              "Provide a filename, e.g. jload(\"mydata.sav\")")
+              "Provide a filename, for example:\n",
+              "  jload(\"mydata.sav\")")
   }
   if (is.character(value) && length(value) == 1L && !is.na(value) &&
       identical(value, "") && !is.character(file_sub)) {
@@ -5735,8 +5737,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # argument into the file slot.
   if (arg1$mode == "symbol_with_default") {
     if (!missing(file)) {
-      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
-                "Use jsave(file = \"yourfile.ext\")",
+      .jst_stop("when the data argument is omitted, all subsequent arguments must be named.\n",
+                "Name them, for example:\n",
+                "  jsave(file = \"mydata.sav\", overwrite = TRUE)",
                 fn = "jsave")
     }
     file <- if (!is.null(pre_eval)) pre_eval$value else
@@ -6425,13 +6428,15 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
       .jst_stop("Provide a destination name, e.g. jcopy(mydata, newdata).")
     }
     dest_sub <- substitute(data)
-    src <- tryCatch(
-      .jst_resolve_data(envir = parent.frame()),
-      error = function(e)
-        .jst_stop("No source given and no juse() default set. Either name the ",
-             "source -- jcopy(mydata, ", paste(deparse(dest_sub),
-             collapse = ""), ") -- or set a default with juse(mydata).")
-    )
+    # No default: the no-data-frame stop's two routes (Session 369, Fix
+    # Slate 16), the one name being the destination, not a variable. A
+    # default that is set keeps the resolver's own stops: a tryCatch
+    # here once turned "the default data frame d was not found" into "no
+    # juse() default set".
+    if (is.null(getOption(".jst_default_data", default = NULL))) {
+      .jst_no_frame_stop(parent.frame(), vars = character(0))
+    }
+    src <- .jst_resolve_data(envir = parent.frame())
     src_data <- src$data
     src_name <- src$name
   } else {

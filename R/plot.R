@@ -254,6 +254,23 @@ jplot <- function(x, which = "core", ...) {
                                               "a choice"))),
                  "jplot")
   has_data <- "data" %in% names(mc)
+  # A call forwarded through a wrapper's ... (Session 369, Fix Slate 16):
+  # match.call() gives each forwarded argument as ..1, ..2, which point at
+  # the wrapper's promises. Each argument's quosure is taken here, before
+  # the test below forces x -- R drops a forced promise's environment, and
+  # rlang, reaching x again through ..N, captured its VALUE (a workspace
+  # object of the variable's name) and stopped on it. Everything else is
+  # done in the helper. With its matching loop here, ahead of UseMethod()
+  # (which carries this frame's local variables into the method's), the
+  # INSTALLED generic -- byte-compiled at install, as load_all() does not --
+  # stopped on "bad binding access" whenever `which` was given; R CMD
+  # check's examples found it (S369; not traced further).
+  q_x <- if (missing(x)) NULL else rlang::enquo(x)
+  fw  <- .jst_forwarded_args(mc,
+                             q_x,
+                             if ("which" %in% names(mc)) rlang::enquo(which),
+                             rlang::enquos(...),
+                             parent.frame())
   x_col    <- !missing(x) &&
                 !is.null(.jst_frame_column(substitute(x), parent.frame()))
   x_ok     <- if (missing(x) || x_col) FALSE else
@@ -262,8 +279,9 @@ jplot <- function(x, which = "core", ...) {
   if (!rewrite) {
     if (has_data && is.data.frame(x)) {
       .typed <- function(e) paste(deparse(e), collapse = "")
-      .jst_stop("data = ", .typed(mc[["data"]]),
-                " is a second data frame alongside ", .typed(mc[["x"]]), ".\n",
+      .jst_stop("data = ", .typed(fw$typed[[match("data", fw$names)]]),
+                " is a second data frame alongside ",
+                .typed(fw$typed[[match("x", fw$names)]]), ".\n",
                 "Specify the data frame once, before the variable names.",
                 fn = "jplot")
     }
@@ -271,8 +289,14 @@ jplot <- function(x, which = "core", ...) {
   }
   sc_names    <- names(sys.call())
   which_typed <- !is.null(sc_names) && "which" %in% sc_names
-  args <- as.list(mc)[-1L]
-  nm   <- names(args)
+  args <- fw$args
+  # Arguments from more than one environment (a wrapper that passes its
+  # own data frame and forwards the variables) keep their ..N; a forced x
+  # among them goes in as its quosure, which jplot.default's rlang capture
+  # takes as it is.
+  ix <- match("x", fw$names)
+  if (fw$mixed && x_ok && !is.na(ix) && !is.null(q_x)) args[ix] <- list(q_x)
+  nm   <- fw$names
   nm[nm == "x"] <- ""
   if (!which_typed) nm[nm == "which"] <- ""
   names(args) <- nm
@@ -280,9 +304,96 @@ jplot <- function(x, which = "core", ...) {
     i    <- match("data", nm)
     args <- c(list(args[[i]]), args[-i])
   }
-  env <- new.env(parent = parent.frame())
+  env <- new.env(parent = fw$env)
   env$jplot.default <- jplot.default
   eval(as.call(c(list(quote(jplot.default)), args)), env)
+}
+
+#' Internal helper: a call forwarded through a wrapper's \code{...}, as typed
+#'
+#' \code{.wrap <- function(...) jplot(...)}: inside jplot()'s generic,
+#' \code{match.call()} gives every argument the wrapper forwarded as
+#' \code{..1}, \code{..2}, names that point at the wrapper's promises. Until
+#' Session 369 (Fix Slate 16) the generic passed those names on, so
+#' jplot.default read them in its own terms: \code{.wrap(data = h, Scor)}
+#' said "the ..1 data frame", \code{.wrap(Score)} under a juse() default
+#' stopped on a variable named "..1", and \code{.wrap(data = h, Score)} with
+#' a separate \code{Score} in the workspace stopped on rlang's error, the
+#' generic having forced the promise. Each \code{..N} is replaced here by
+#' the expression it forwards, read from the argument's quosure, which
+#' carries the environment the expression was typed in.
+#'
+#' The direct call has no \code{..N} and comes back unchanged, to be
+#' evaluated where it was made. A forwarded call is evaluated where the
+#' forwarded expressions were typed, as the direct call would be -- but only
+#' when every argument that needs an environment shares that one. A
+#' wrapper that passes an object of its own beside the forwarded ones
+#' (\code{function(dat, ...) jplot(data = dat, ...)}) mixes two, and its
+#' arguments keep their \code{..N} (\code{mixed}); the generic then passes
+#' a forced \code{x} as its quosure.
+#'
+#' The quosures are taken in the generic's own frame, before anything
+#' forces an argument, and matched here to the call's arguments: \code{x}
+#' and \code{which} by name, the rest in order to the dots'. When the counts
+#' disagree, none is used and the call comes back unchanged.
+#'
+#' @param mc The generic's \code{match.call(expand.dots = TRUE)}.
+#' @param q_x,q_which The quosures of \code{x} and \code{which}, or NULL
+#'   where the call does not give them.
+#' @param q_dots The dots' quosures, \code{rlang::enquos(...)}.
+#' @param caller_env The environment the call was made from.
+#' @return A list: \code{names}, the arguments' names ("" where unnamed);
+#'   \code{typed}, the arguments with each \code{..N} replaced by the
+#'   expression it forwards (for messages); \code{args} and \code{env}, what
+#'   to evaluate and where; \code{forwarded}, whether any argument was
+#'   forwarded; \code{mixed}, whether the arguments came from more than one
+#'   environment.
+#' @keywords internal
+.jst_forwarded_args <- function(mc, q_x, q_which, q_dots, caller_env) {
+  args <- as.list(mc)[-1L]
+  nms  <- names(args)
+  if (is.null(nms)) nms <- rep("", length(args))
+  quos <- vector("list", length(args))
+  k    <- 0L
+  for (i in seq_along(args)) {
+    if (identical(nms[i], "x")) {
+      quos[i] <- list(q_x)
+    } else if (identical(nms[i], "which")) {
+      quos[i] <- list(q_which)
+    } else {
+      k <- k + 1L
+      quos[i] <- list(if (k <= length(q_dots)) q_dots[[k]] else NULL)
+    }
+  }
+  if (k != length(q_dots)) quos <- vector("list", length(args))
+  is_dd <- function(e) {
+    is.symbol(e) && grepl("^\\.\\.[0-9]+$", as.character(e))
+  }
+  typed <- args
+  envs  <- list()
+  fwd   <- FALSE
+  for (i in seq_along(args)) {
+    e <- args[[i]]
+    if (is_dd(e) && !is.null(quos[[i]])) {
+      typed[i] <- list(rlang::quo_get_expr(quos[[i]]))
+      envs     <- c(envs, list(rlang::quo_get_env(quos[[i]])))
+      fwd      <- TRUE
+    } else if (is.language(e)) {
+      envs <- c(envs, list(caller_env))
+    }
+  }
+  if (!fwd) {
+    return(list(names = nms, typed = typed, args = args, env = caller_env,
+                forwarded = FALSE, mixed = FALSE))
+  }
+  one <- all(vapply(envs, identical, logical(1), envs[[1L]]))
+  if (one) {
+    list(names = nms, typed = typed, args = typed, env = envs[[1L]],
+         forwarded = TRUE, mixed = FALSE)
+  } else {
+    list(names = nms, typed = typed, args = args, env = caller_env,
+         forwarded = TRUE, mixed = TRUE)
+  }
 }
 
 #' @describeIn jplot the default method: a scatter or box plot from a formula (\code{DV ~ IV}), or a histogram or bar chart from a data frame and one or more variables.

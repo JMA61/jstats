@@ -1481,8 +1481,9 @@
   data_name <- getOption(".jst_default_data", default = NULL)
   if (is.null(data_name)) .jst_no_frame_stop(envir)
   if (!exists(data_name, envir = envir)) {
-    .jst_stop(paste0("Default data frame ", data_name,
-                " not found. It may have been removed or renamed."))
+    .jst_stop(paste0("the default data frame ", data_name,
+                " was not found.\n",
+                "It may have been removed or renamed."))
   }
   data <- get(data_name, envir = envir)
   if (!is.data.frame(data)) {
@@ -1513,11 +1514,18 @@
 #' frame counts, as in jsave(). With none or several, MyData. The rest of
 #' the call is kept as typed; the second route runs the call as typed.
 #'
+#' A caller whose unnamed arguments are not variables says so with
+#' \code{vars}: jcopy()'s one name is the copy's destination
+#' (\code{jcopy(newdata)}), so it passes \code{character(0)}, and any one
+#' data frame counts (Session 369, Fix Slate 16).
+#'
 #' @param envir The caller's environment, where the data frames are looked
 #'   for.
+#' @param vars Character or NULL. The variables the data frame named must
+#'   hold; NULL (the default) reads them from the call.
 #' @return Does not return; stops.
 #' @keywords internal
-.jst_no_frame_stop <- function(envir) {
+.jst_no_frame_stop <- function(envir, vars = NULL) {
   lead <- "no data frame was named or set as the default.\n"
   cl <- tryCatch(.jst_caller_call(), error = function(e) NULL)
   if (is.null(cl)) {
@@ -1549,7 +1557,9 @@
       named_fml <- TRUE
     }
   }
-  vars <- if (at > 0L) {
+  vars <- if (!is.null(vars)) {
+    vars
+  } else if (at > 0L) {
     all.vars(items[[at]])
   } else {
     keep <- unnamed[!vapply(unnamed, is_empty, logical(1))]

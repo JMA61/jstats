@@ -199,8 +199,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     .jst_stop(paste0(
       # Rule E: one sentence per line (the Session 123 sweep; Session 357).
       "At least 2 variables are required.\n",
-      if (length(variable_names) == 0) "None were provided."
-      else "Only 1 was provided."
+      if (length(variable_names) == 0) "None were provided.\n"
+      else "Only 1 was provided.\n",
+      # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
+      # no-variables stop gives: never the call's data frame (Session 338).
+      "Provide two or more variable names, for example:\n",
+      "  jcorr(community, Income, Age, WellbeingScore)"
     ))
   }
 
@@ -5512,8 +5516,12 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
     .jst_stop(paste0(
       # Rule E: one sentence per line (the Session 123 sweep; Session 357).
       "At least 2 items are required.\n",
-      if (length(variable_names) == 0) "None were provided."
-      else "Only 1 was provided."
+      if (length(variable_names) == 0) "None were provided.\n"
+      else "Only 1 was provided.\n",
+      # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
+      # no-variables stop gives: never the call's data frame (Session 338).
+      "Provide two or more item names, for example:\n",
+      "  jalpha(community, Environment1, Environment3, Environment4)"
     ))
   }
 

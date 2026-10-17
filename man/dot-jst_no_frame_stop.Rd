@@ -4,11 +4,14 @@
 \alias{.jst_no_frame_stop}
 \title{Internal helper: the stop for a call with no data frame and no default}
 \usage{
-.jst_no_frame_stop(envir)
+.jst_no_frame_stop(envir, vars = NULL)
 }
 \arguments{
 \item{envir}{The caller's environment, where the data frames are looked
 for.}
+
+\item{vars}{Character or NULL. The variables the data frame named must
+hold; NULL (the default) reads them from the call.}
 }
 \value{
 Does not return; stops.
@@ -34,5 +37,10 @@ variables to match are those of the call's unnamed arguments; a call with
 none, such as \code{jscreen()}, has no variable to match, so any one data
 frame counts, as in jsave(). With none or several, MyData. The rest of
 the call is kept as typed; the second route runs the call as typed.
+
+A caller whose unnamed arguments are not variables says so with
+\code{vars}: jcopy()'s one name is the copy's destination
+(\code{jcopy(newdata)}), so it passes \code{character(0)}, and any one
+data frame counts (Session 369, Fix Slate 16).
 }
 \keyword{internal}
