@@ -28,6 +28,7 @@ jload(
   check.missing = TRUE,
   sheet = NULL,
   skip = 0,
+  header = TRUE,
   preserve.declarations = TRUE,
   missing.notice = NULL,
   quiet = FALSE
@@ -97,6 +98,17 @@ jload(
   shows the call with the `skip` it needs; a CSV file in that shape
   stops with the same call.
 
+- header:
+
+  For Excel and CSV files. `TRUE` (default) reads the first row of the
+  sheet, or line of the file, as the variable names. `FALSE` reads it as
+  the first case, for a file with no names row, and names the variables
+  `V1`, `V2`, and so on, as base R's `read.csv(header = FALSE)` does.
+  Every other format carries its own variable names, so `header = FALSE`
+  stops there. When every name read is a number, a note shows the call
+  with `header = FALSE`; writing `header = TRUE` in the call says the
+  numbers are the names (years, say), and the note is not shown.
+
 - preserve.declarations:
 
   Logical. If `TRUE` (default), declared missing values arriving with
@@ -135,8 +147,9 @@ jload(
   the multi-sheet advisory, the overwrite prompt, the note that a local
   file shadowed a shipped dataset, the note that an existing object was
   replaced, and the notes on what the read changed or found (variable
-  names changed, a title row, a CSV file's encoding) are still shown, as
-  is the coded-missing scan report; turn that off with
+  names changed, a title row, names that are all numbers, rows and
+  columns that may not be data, a CSV file's encoding) are still shown,
+  as is the coded-missing scan report; turn that off with
   `check.missing = FALSE`.
 
 ## Value
@@ -174,7 +187,29 @@ into two cases, and say nothing. A file whose values are separated by
 semicolons, as Excel saves them in many European settings, stops with
 the base R line that reads it. A file that is not in UTF-8 (one saved by
 Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
-in Windows-1252, and a note says so.
+in Windows-1252, and a note says so. Read with `header = FALSE`, a file
+has no names line, so each line is measured against the number of values
+most lines hold: a line holding more stops the load, and one holding
+fewer is read with its last cells empty.
+
+**A file with no names row:** A CSV file or a sheet whose first row is
+data loses that case to the variable names, which are then numbers (`1`
+becomes `X1`). When every name read is a number, or empty, a note says
+the row they came from may be the first case and shows the call that
+reads it as one: `jload("scores.csv", header = FALSE)`, the variables
+named `V1`, `V2`, and so on.
+
+**Rows and columns that may not be data:** A sheet can hold rows with
+nothing in them, a column with no name and nothing in it, and lines of
+text below the data, such as a source or a footnote; a CSV file can hold
+a line of commas alone, an empty column from a comma at the end of each
+line, and the row numbers R's
+[`write.csv()`](https://rdrr.io/r/utils/write.table.html) writes in a
+first column with no name. Each is read as data, as a case or a
+variable, and a note names them by their place in the file, with the
+case numbers or the variable names; when footnotes turned a variable of
+numbers into text, it says so. Nothing is removed. An empty line in a
+CSV file of one column is a case with a missing value, and is not named.
 
 **Variable names from other software:** A file from outside R can hold
 names R cannot use as they are: `2024 score`, `Age (years)`, an empty
@@ -222,8 +257,8 @@ as its label. Use
 [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) to
 add labels after loading if needed. Row 1 of the sheet is read as the
 variable names; when the names are lower down, `skip` gives the number
-of rows above them. Each variable's type is read from every row of the
-sheet.
+of rows above them, and when there are none, `header = FALSE` reads row
+1 as data. Each variable's type is read from every row of the sheet.
 
 **Missing-value declarations:** Missing-value declarations are stored in
 the file itself, but they only survive the trip back if the reader
@@ -316,6 +351,7 @@ jload("community.xlsx")
 jload("community.xlsx", sheet = "Wave2")
 jload("community.xlsx", sheet = 2)
 jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
+jload("scores.csv", header = FALSE)   # no names row: V1, V2, ...
 
 # CSV and R format
 jload("community.csv")

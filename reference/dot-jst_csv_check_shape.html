@@ -27,7 +27,7 @@ it always was, its last cells empty."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.236</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.237</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,7 +68,7 @@ it always was, its last cells empty.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_csv_check_shape</span><span class="op">(</span><span class="va">path</span>, <span class="va">skip</span>, <span class="va">enc</span>, <span class="va">shown</span>, <span class="va">line_for</span>, <span class="va">obj_name</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_csv_check_shape</span><span class="op">(</span><span class="va">path</span>, <span class="va">skip</span>, <span class="va">enc</span>, <span class="va">shown</span>, <span class="va">line_for</span>, <span class="va">obj_name</span>, header <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -92,17 +92,34 @@ it always was, its last cells empty.</p>
 
 
 <dt id="arg-line-for">line_for<a class="anchor" aria-label="anchor" href="#arg-line-for"></a></dt>
-<dd><p>A function of one argument string ("skip = 2"): the
-jload() call that reads the file with it.</p></dd>
+<dd><p>jload()'s line builder: <code>line_for(skip = 2)</code> gives
+the jload() call that reads the file with skip = 2.</p></dd>
 
 
 <dt id="arg-obj-name">obj_name<a class="anchor" aria-label="anchor" href="#arg-obj-name"></a></dt>
 <dd><p>The data frame's name, for the read.csv2() line.</p></dd>
 
+
+<dt id="arg-header">header<a class="anchor" aria-label="anchor" href="#arg-header"></a></dt>
+<dd><p>As jload() reads the file.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly NULL, or stops.</p>
+    <p>Invisibly: with header = FALSE the number of values most lines
+hold (NULL when the lines could not be counted); otherwise NULL. Or
+stops.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Read with header = FALSE (ruling R21, Session 365) a file has no names
+line to measure the others against: every line is a case, measured
+against the count most lines hold. A line holding more stops, as a line
+longer than the names line does; a shorter one is read with its last
+cells empty; the title search, which looks for a names line, is not
+made. The count is returned, and jload() reads that many variables
+(col.names), so a long line past the first five – the lines read.csv()
+counts – could not be split even if one got through.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

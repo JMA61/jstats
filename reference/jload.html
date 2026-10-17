@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.236</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.237</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -83,6 +83,7 @@ extension). Use the <code>name</code> argument to specify a different name.</p>
 <span>  check.missing <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  sheet <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  skip <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  header <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  preserve.declarations <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  missing.notice <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -155,6 +156,18 @@ note shows the call with the <code>skip</code> it needs; a CSV file in that
 shape stops with the same call.</p></dd>
 
 
+<dt id="arg-header">header<a class="anchor" aria-label="anchor" href="#arg-header"></a></dt>
+<dd><p>For Excel and CSV files. <code>TRUE</code> (default) reads the
+first row of the sheet, or line of the file, as the variable names.
+<code>FALSE</code> reads it as the first case, for a file with no names row,
+and names the variables <code>V1</code>, <code>V2</code>, and so on, as base R's
+<code>read.csv(header = FALSE)</code> does. Every other format carries its
+own variable names, so <code>header = FALSE</code> stops there. When every
+name read is a number, a note shows the call with
+<code>header = FALSE</code>; writing <code>header = TRUE</code> in the call says the
+numbers are the names (years, say), and the note is not shown.</p></dd>
+
+
 <dt id="arg-preserve-declarations">preserve.declarations<a class="anchor" aria-label="anchor" href="#arg-preserve-declarations"></a></dt>
 <dd><p>Logical. If <code>TRUE</code> (default), declared
 missing values arriving with the file are preserved: SPSS-style
@@ -192,7 +205,8 @@ narrative about declared missing values, overriding missing.notice).
 Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
 note that a local file shadowed a shipped dataset, the note that an
 existing object was replaced, and the notes on what the read changed
-or found (variable names changed, a title row, a CSV file's encoding)
+or found (variable names changed, a title row, names that are all
+numbers, rows and columns that may not be data, a CSV file's encoding)
 are still shown, as is the coded-missing scan report; turn that off
 with <code>check.missing = FALSE</code>.</p></dd>
 
@@ -233,7 +247,28 @@ into two cases, and say nothing. A file whose values are separated by
 semicolons, as Excel saves them in many European settings, stops with
 the base R line that reads it. A file that is not in UTF-8 (one saved by
 Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
-in Windows-1252, and a note says so.</p>
+in Windows-1252, and a note says so. Read with <code>header = FALSE</code>, a
+file has no names line, so each line is measured against the number of
+values most lines hold: a line holding more stops the load, and one
+holding fewer is read with its last cells empty.</p>
+<p><strong>A file with no names row:</strong>
+A CSV file or a sheet whose first row is data loses that case to the
+variable names, which are then numbers (<code>1</code> becomes <code>X1</code>).
+When every name read is a number, or empty, a note says the row they
+came from may be the first case and shows the call that reads it as one:
+<code>jload("scores.csv", header = FALSE)</code>, the variables named
+<code>V1</code>, <code>V2</code>, and so on.</p>
+<p><strong>Rows and columns that may not be data:</strong>
+A sheet can hold rows with nothing in them, a column with no name and
+nothing in it, and lines of text below the data, such as a source or a
+footnote; a CSV file can hold a line of commas alone, an empty column
+from a comma at the end of each line, and the row numbers R's
+<code><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv()</a></code> writes in a first column with no name. Each is read
+as data, as a case or a variable, and a note names them by their place
+in the file, with the case numbers or the variable names; when footnotes
+turned a variable of numbers into text, it says so. Nothing is removed.
+An empty line in a CSV file of one column is a case with a missing value,
+and is not named.</p>
 <p><strong>Variable names from other software:</strong>
 A file from outside R can hold names R cannot use as they are:
 <code>2024 score</code>, <code>Age (years)</code>, an empty header, two columns
@@ -274,7 +309,8 @@ value labels. The data will be loaded as plain numeric, character, or
 logical columns; a variable whose name was changed has its original
 name as its label. Use <code><a href="jrelabel.html">jrelabel()</a></code> to add labels after loading
 if needed. Row 1 of the sheet is read as the variable names; when the
-names are lower down, <code>skip</code> gives the number of rows above them.
+names are lower down, <code>skip</code> gives the number of rows above them,
+and when there are none, <code>header = FALSE</code> reads row 1 as data.
 Each variable's type is read from every row of the sheet.</p>
 <p><strong>Missing-value declarations:</strong>
 Missing-value declarations are stored in the file itself, but they
@@ -361,6 +397,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.xlsx"</span>, sheet <span class="op">=</span> <span class="st">"Wave2"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.xlsx"</span>, sheet <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"survey.xlsx"</span>, skip <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>   <span class="co"># a title and a blank row above the names</span></span></span>
+<span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"scores.csv"</span>, header <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>   <span class="co"># no names row: V1, V2, ...</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># CSV and R format</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.csv"</span><span class="op">)</span></span></span>

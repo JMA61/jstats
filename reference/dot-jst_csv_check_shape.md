@@ -15,7 +15,7 @@ is read as it always was, its last cells empty.
 ## Usage
 
 ``` r
-.jst_csv_check_shape(path, skip, enc, shown, line_for, obj_name)
+.jst_csv_check_shape(path, skip, enc, shown, line_for, obj_name, header = TRUE)
 ```
 
 ## Arguments
@@ -38,13 +38,29 @@ is read as it always was, its last cells empty.
 
 - line_for:
 
-  A function of one argument string ("skip = 2"): the jload() call that
-  reads the file with it.
+  jload()'s line builder: `line_for(skip = 2)` gives the jload() call
+  that reads the file with skip = 2.
 
 - obj_name:
 
   The data frame's name, for the read.csv2() line.
 
+- header:
+
+  As jload() reads the file.
+
 ## Value
 
-Invisibly NULL, or stops.
+Invisibly: with header = FALSE the number of values most lines hold
+(NULL when the lines could not be counted); otherwise NULL. Or stops.
+
+## Details
+
+Read with header = FALSE (ruling R21, Session 365) a file has no names
+line to measure the others against: every line is a case, measured
+against the count most lines hold. A line holding more stops, as a line
+longer than the names line does; a shorter one is read with its last
+cells empty; the title search, which looks for a names line, is not
+made. The count is returned, and jload() reads that many variables
+(col.names), so a long line past the first five – the lines read.csv()
+counts – could not be split even if one got through.
