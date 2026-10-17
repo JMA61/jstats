@@ -6425,7 +6425,13 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
     # source is the juse() default. `data` is the destination promise and must
     # not be forced.
     if (missing(data)) {
-      .jst_stop("Provide a destination name, e.g. jcopy(mydata, newdata).")
+      # One sentence a line, the call on a line of its own (Session 369,
+      # Fix Slate 17), naming the one data frame in the workspace, else
+      # MyData, as jsave()'s stops do.
+      fr0 <- .jst_frame_holding(character(0), parent.frame())
+      .jst_stop("no name was given for the copy.\n",
+                "Name the data frame, then the copy, for example:\n",
+                "  jcopy(", if (is.null(fr0)) "MyData" else fr0, ", newdata)")
     }
     dest_sub <- substitute(data)
     # No default: the no-data-frame stop's two routes (Session 369, Fix
@@ -6449,10 +6455,26 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
     } else {
       # jcopy(mydata, newdata): explicit source then destination.
       src_sub  <- substitute(data)
+      # A name found nowhere (Session 369, found building Fix Slate 17):
+      # forcing it gave R's own "object 'nofr' not found". jsave()'s form.
+      if (is.symbol(src_sub) &&
+          !exists(as.character(src_sub), envir = parent.frame())) {
+        fr0 <- .jst_frame_holding(character(0), parent.frame())
+        .jst_stop("'", as.character(src_sub), "' not found.\n",
+                  "Name a data frame to copy, for example:\n",
+                  "  jcopy(", if (is.null(fr0)) "MyData" else fr0, ", ",
+                  paste(deparse(substitute(name)), collapse = ""), ")")
+      }
       src_data <- data
       if (!is.data.frame(src_data)) {
-        .jst_stop("The source must be a data frame. ",
-             "Provide one, e.g. jcopy(mydata, newdata).")
+        # What was typed is the subject (Rule AD); the call on a line of
+        # its own, the destination kept (Session 369, Fix Slate 17).
+        fr0 <- .jst_frame_holding(character(0), parent.frame())
+        .jst_stop(paste(deparse(src_sub), collapse = " "),
+                  " is not a data frame.\n",
+                  "Name a data frame to copy, for example:\n",
+                  "  jcopy(", if (is.null(fr0)) "MyData" else fr0, ", ",
+                  paste(deparse(substitute(name)), collapse = ""), ")")
       }
       src_name <- paste(deparse(src_sub), collapse = "")
     }

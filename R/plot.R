@@ -464,9 +464,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
   if (!is.data.frame(data)) {
-    .jst_stop("the first argument must be a data frame. ",
-              "To plot a result object (e.g. from jlm()), pass it as the first ",
-              "argument: jplot(my_result).",
+    .jst_stop("the first argument must be a data frame.\n",
+              "To plot a result, such as a model from jlm(), give it first:\n",
+              "  jplot(my_result)",
               fn = "jplot")
   }
 
@@ -494,15 +494,21 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   by_name        <- if (has_by) .jst_one_var_name(by_quo, "jplot", "by =") else NULL
 
   n_vars <- length(variable_names)
+  # One sentence a line, each example on a line of its own (Session 369,
+  # Fix Slate 17). The over-two example had been jplot(community, Age,
+  # Income, by = Region), which stops: two numeric variables want the
+  # formula form.
   if (n_vars == 0) {
-    .jst_stop("no variables specified. Provide one or more variable ",
-              "names, e.g. jplot(community, Age).", fn = "jplot")
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jplot(community, Age)", fn = "jplot")
   }
   if (n_vars > 2) {
-    .jst_stop("only 1 or 2 variables can be plotted at once. ",
-              "For more variables, use `by =` to add a grouping variable ",
-              "(e.g. jplot(community, Age, Income, by = Region)) or call ",
-              "jplot() multiple times.", fn = "jplot")
+    .jst_stop("only 1 or 2 variables can be plotted at once.\n",
+              "To show a variable by the groups of another, use by =, ",
+              "for example:\n",
+              "  jplot(community, Age, by = Region)\n",
+              "Or call jplot() once for each variable.", fn = "jplot")
   }
 
   # Check all variables exist

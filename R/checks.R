@@ -1519,6 +1519,17 @@
 #' (\code{jcopy(newdata)}), so it passes \code{character(0)}, and any one
 #' data frame counts (Session 369, Fix Slate 16).
 #'
+#' A call that names neither a data frame nor a variable, to a function
+#' that needs variables -- jdesc(), jfreq(), jcorr(), jalpha(), jsum(),
+#' javg(), jplot() -- gets ONE stop instead (ruling R22, Session 369; Fix
+#' Slate 17): either route above, run, stopped again for want of
+#' variables. It says both are missing and gives the function's own example
+#' on community, keeping the call's display options (method =, digits = and
+#' the like), which hold on any data, and leaving out the arguments that
+#' name the user's variables (by =, subset =, numeric = ...) or depend on
+#' them (min.valid =, type =). jscreen() keeps the two routes: given a data
+#' frame alone it screens every column.
+#'
 #' @param envir The caller's environment, where the data frames are looked
 #'   for.
 #' @param vars Character or NULL. The variables the data frame named must
@@ -1526,6 +1537,7 @@
 #' @return Does not return; stops.
 #' @keywords internal
 .jst_no_frame_stop <- function(envir, vars = NULL) {
+  vars_given <- vars
   lead <- "no data frame was named or set as the default.\n"
   cl <- tryCatch(.jst_caller_call(), error = function(e) NULL)
   if (is.null(cl)) {
@@ -1566,6 +1578,47 @@
     as.character(unique(unlist(lapply(keep, function(i) all.vars(items[[i]])))))
   }
   vars <- setdiff(vars, ".")
+  # Ruling R22 (Session 369): no data frame and no variable, in a function
+  # that needs variables. The example is the one the function's own
+  # no-variables stop gives.
+  if (at == 0L && is.null(vars_given) &&
+      !any(!vapply(unnamed, is_empty, logical(1)))) {
+    ex <- switch(fn,
+      jdesc  = list(quote(jdesc(community, Age, Income)), "one or more"),
+      jfreq  = list(quote(jfreq(community, Region)), "one or more"),
+      jcorr  = list(quote(jcorr(community, Income, Age, WellbeingScore)),
+                    "two or more"),
+      jalpha = list(quote(jalpha(community, Environment1, Environment3,
+                                 Environment4)), "two or more"),
+      jsum   = list(quote(jsum(community, Environment1, Environment3)),
+                    "two or more", "community$EnvTotal"),
+      javg   = list(quote(javg(community, Environment1, Environment3)),
+                    "two or more", "community$EnvAvg"),
+      jplot  = list(quote(jplot(community, Age)), "one or two"),
+      NULL)
+    if (!is.null(ex)) {
+      keep_opts <- c("method", "layout", "digits", "variable.id", "value.id",
+                     "case.processing.detail", "missing.detail", "var.label",
+                     "fixed", "labels")
+      is_const <- function(e) {
+        (is.atomic(e) && length(e) == 1L) ||
+          (is.call(e) && identical(e[[1L]], as.name("c")) &&
+             all(vapply(as.list(e)[-1L],
+                        function(a) is.atomic(a) && length(a) == 1L,
+                        logical(1))))
+      }
+      opt_i <- which(cn %in% keep_opts)
+      opt_i <- opt_i[vapply(opt_i, function(i) is_const(items[[i]]),
+                            logical(1))]
+      line <- .jst_term_text(as.call(c(as.list(ex[[1L]]), items[opt_i])))
+      if (length(ex) >= 3L) line <- paste0(ex[[3L]], " <- ", line)
+      .jst_stop("no data frame and no variables were named.\n",
+                "Name a data frame and ", ex[[2L]],
+                " of its variables, for example:\n",
+                "  ", line,
+                fn = fn)
+    }
+  }
   fr <- .jst_frame_holding(vars, envir)
   if (is.null(fr)) fr <- "MyData"
   frame <- as.name(fr)
@@ -1859,12 +1912,41 @@
     fr <- if (is.symbol(data_sub))
       .jst_frame_holding(data_str, envir) else NULL
     if (is.null(fr)) fr <- "MyData"
+    line1 <- paste0(fn_name, "(", fr, ", ", data_str, ")")
+    line2 <- paste0(fn_name, "(", data_str, ")")
+    # The whole call, not its first argument (Session 369, found building
+    # Fix Slate 17): jcorr(Score, Age) was offered jcorr(ab1, Score), which
+    # stopped again for want of a second variable. When the name is the
+    # call's first unnamed argument and no argument is named data or x, the
+    # data frame goes in front of the call as typed -- the one in the
+    # workspace holding every variable the call names -- and the second
+    # route is the call as typed.
+    if (is.symbol(data_sub)) {
+      ucl <- tryCatch(.jst_caller_call(), error = function(e) NULL)
+      if (!is.null(ucl)) {
+        it <- as.list(ucl)
+        nn <- names(it)
+        if (is.null(nn)) nn <- rep("", length(it))
+        un <- which(!nzchar(nn))
+        un <- un[un > 1L]
+        if (length(un) > 0L && identical(it[[un[1L]]], data_sub) &&
+            !any(nn %in% c("data", "x"))) {
+          typed <- unique(unlist(lapply(un, function(i) all.vars(it[[i]]))))
+          fr <- .jst_frame_holding(typed, envir)
+          if (is.null(fr)) fr <- "MyData"
+          new <- c(it[1L], list(as.name(fr)), it[-1L])
+          names(new) <- c(nn[1L], "", nn[-1L])
+          line1 <- .jst_term_text(as.call(new))
+          line2 <- .jst_term_text(ucl)
+        }
+      }
+    }
     .jst_stop(
       head,
-      "  ", fn_name, "(", fr, ", ", data_str, ")\n",
+      "  ", line1, "\n",
       "Or set a default first, then run the call:\n",
       "  juse(", fr, ")\n",
-      "  ", fn_name, "(", data_str, ")",
+      "  ", line2,
     fn = fn_name)
   }
   resolved <- .jst_resolve_data(envir = envir)

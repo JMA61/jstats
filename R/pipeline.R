@@ -1461,7 +1461,12 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   variable_names <- vapply(variables, rlang::quo_name, character(1))
 
   if (length(variable_names) == 0) {
-    .jst_stop("Provide at least one variable name, e.g. jcomplete(DV, IV1, IV2).")
+    # One sentence a line, the example on a line of its own (Session 369,
+    # Fix Slate 17): a generic line on community, never the call's data
+    # frame (Session 338).
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jcomplete(community, Age, Income)")
   }
 
   .jst_check_vars(data, variable_names, .jst_data_name, default_used = .jst_default_used)

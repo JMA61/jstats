@@ -42,5 +42,16 @@ A caller whose unnamed arguments are not variables says so with
 \code{vars}: jcopy()'s one name is the copy's destination
 (\code{jcopy(newdata)}), so it passes \code{character(0)}, and any one
 data frame counts (Session 369, Fix Slate 16).
+
+A call that names neither a data frame nor a variable, to a function
+that needs variables -- jdesc(), jfreq(), jcorr(), jalpha(), jsum(),
+javg(), jplot() -- gets ONE stop instead (ruling R22, Session 369; Fix
+Slate 17): either route above, run, stopped again for want of
+variables. It says both are missing and gives the function's own example
+on community, keeping the call's display options (method =, digits = and
+the like), which hold on any data, and leaving out the arguments that
+name the user's variables (by =, subset =, numeric = ...) or depend on
+them (min.valid =, type =). jscreen() keeps the two routes: given a data
+frame alone it screens every column.
 }
 \keyword{internal}
