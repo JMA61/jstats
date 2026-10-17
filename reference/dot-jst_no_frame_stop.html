@@ -21,7 +21,7 @@ the data frame named, or a default set and the call run again."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.240</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.241</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,7 @@ the data frame named, or a default set and the call run again.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_no_frame_stop</span><span class="op">(</span><span class="va">envir</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_no_frame_stop</span><span class="op">(</span><span class="va">envir</span>, vars <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -69,6 +69,11 @@ the data frame named, or a default set and the call run again.</p>
 <dl><dt id="arg-envir">envir<a class="anchor" aria-label="anchor" href="#arg-envir"></a></dt>
 <dd><p>The caller's environment, where the data frames are looked
 for.</p></dd>
+
+
+<dt id="arg-vars">vars<a class="anchor" aria-label="anchor" href="#arg-vars"></a></dt>
+<dd><p>Character or NULL. The variables the data frame named must
+hold; NULL (the default) reads them from the call.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -87,6 +92,10 @@ variables to match are those of the call's unnamed arguments; a call with
 none, such as <code><a href="jscreen.html">jscreen()</a></code>, has no variable to match, so any one data
 frame counts, as in jsave(). With none or several, MyData. The rest of
 the call is kept as typed; the second route runs the call as typed.</p>
+<p>A caller whose unnamed arguments are not variables says so with
+<code>vars</code>: jcopy()'s one name is the copy's destination
+(<code>jcopy(newdata)</code>), so it passes <code>character(0)</code>, and any one
+data frame counts (Session 369, Fix Slate 16).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

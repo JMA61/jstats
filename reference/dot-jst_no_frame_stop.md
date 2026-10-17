@@ -18,7 +18,7 @@ again.
 ## Usage
 
 ``` r
-.jst_no_frame_stop(envir)
+.jst_no_frame_stop(envir, vars = NULL)
 ```
 
 ## Arguments
@@ -26,6 +26,11 @@ again.
 - envir:
 
   The caller's environment, where the data frames are looked for.
+
+- vars:
+
+  Character or NULL. The variables the data frame named must hold; NULL
+  (the default) reads them from the call.
 
 ## Value
 
@@ -46,3 +51,8 @@ arguments; a call with none, such as
 no variable to match, so any one data frame counts, as in jsave(). With
 none or several, MyData. The rest of the call is kept as typed; the
 second route runs the call as typed.
+
+A caller whose unnamed arguments are not variables says so with `vars`:
+jcopy()'s one name is the copy's destination (`jcopy(newdata)`), so it
+passes `character(0)`, and any one data frame counts (Session 369, Fix
+Slate 16).
