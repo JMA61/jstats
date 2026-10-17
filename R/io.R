@@ -60,6 +60,15 @@
 #'   note. Default 0. When the first row of a sheet looks like a title, a
 #'   note shows the call with the \code{skip} it needs; a CSV file in that
 #'   shape stops with the same call.
+#' @param header For Excel and CSV files. \code{TRUE} (default) reads the
+#'   first row of the sheet, or line of the file, as the variable names.
+#'   \code{FALSE} reads it as the first case, for a file with no names row,
+#'   and names the variables \code{V1}, \code{V2}, and so on, as base R's
+#'   \code{read.csv(header = FALSE)} does. Every other format carries its
+#'   own variable names, so \code{header = FALSE} stops there. When every
+#'   name read is a number, a note shows the call with
+#'   \code{header = FALSE}; writing \code{header = TRUE} in the call says the
+#'   numbers are the names (years, say), and the note is not shown.
 #' @param preserve.declarations Logical. If \code{TRUE} (default), declared
 #'   missing values arriving with the file are preserved: SPSS-style
 #'   codes such as -99, and declared ranges, keep their original numeric
@@ -119,7 +128,30 @@
 #' semicolons, as Excel saves them in many European settings, stops with
 #' the base R line that reads it. A file that is not in UTF-8 (one saved by
 #' Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
-#' in Windows-1252, and a note says so.
+#' in Windows-1252, and a note says so. Read with \code{header = FALSE}, a
+#' file has no names line, so each line is measured against the number of
+#' values most lines hold: a line holding more stops the load, and one
+#' holding fewer is read with its last cells empty.
+#'
+#' \strong{A file with no names row:}
+#' A CSV file or a sheet whose first row is data loses that case to the
+#' variable names, which are then numbers (\code{1} becomes \code{X1}).
+#' When every name read is a number, or empty, a note says the row they
+#' came from may be the first case and shows the call that reads it as one:
+#' \code{jload("scores.csv", header = FALSE)}, the variables named
+#' \code{V1}, \code{V2}, and so on.
+#'
+#' \strong{Rows and columns that may not be data:}
+#' A sheet can hold rows with nothing in them, a column with no name and
+#' nothing in it, and lines of text below the data, such as a source or a
+#' footnote; a CSV file can hold a line of commas alone, an empty column
+#' from a comma at the end of each line, and the row numbers R's
+#' \code{write.csv()} writes in a first column with no name. Each is read
+#' as data, as a case or a variable, and a note names them by their place
+#' in the file, with the case numbers or the variable names; when footnotes
+#' turned a variable of numbers into text, it says so. Nothing is removed.
+#' An empty line in a CSV file of one column is a case with a missing value,
+#' and is not named.
 #'
 #' \strong{Variable names from other software:}
 #' A file from outside R can hold names R cannot use as they are:
@@ -167,7 +199,8 @@
 #' logical columns; a variable whose name was changed has its original
 #' name as its label. Use \code{jrelabel()} to add labels after loading
 #' if needed. Row 1 of the sheet is read as the variable names; when the
-#' names are lower down, \code{skip} gives the number of rows above them.
+#' names are lower down, \code{skip} gives the number of rows above them,
+#' and when there are none, \code{header = FALSE} reads row 1 as data.
 #' Each variable's type is read from every row of the sheet.
 #'
 #' \strong{Missing-value declarations:}
@@ -255,6 +288,7 @@
 #' jload("community.xlsx", sheet = "Wave2")
 #' jload("community.xlsx", sheet = 2)
 #' jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
+#' jload("scores.csv", header = FALSE)   # no names row: V1, V2, ...
 #'
 #' # CSV and R format
 #' jload("community.csv")
@@ -286,19 +320,27 @@
 #'   Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
 #'   note that a local file shadowed a shipped dataset, the note that an
 #'   existing object was replaced, and the notes on what the read changed
-#'   or found (variable names changed, a title row, a CSV file's encoding)
+#'   or found (variable names changed, a title row, names that are all
+#'   numbers, rows and columns that may not be data, a CSV file's encoding)
 #'   are still shown, as is the coded-missing scan report; turn that off
 #'   with \code{check.missing = FALSE}.
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
-                  skip = 0, preserve.declarations = TRUE, missing.notice = NULL,
-                  quiet = FALSE) {
+                  skip = 0, header = TRUE, preserve.declarations = TRUE,
+                  missing.notice = NULL, quiet = FALSE) {
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(use, "use")
   .jst_check_flag(overwrite, "overwrite")
   .jst_check_flag(package, "package")
   .jst_check_flag(check.missing, "check.missing")
+  # header = (ruling R21, Jeff, S364; built Session 365): FALSE reads the
+  # first row of a sheet, or line of a CSV file, as data, the variables
+  # named V1, V2, ...; every other format carries its own names. Written
+  # out as TRUE it says the names are names, which silences the note on a
+  # first row of numbers (the S362 audit's item 14).
+  .jst_check_flag(header, "header")
+  header_given <- !missing(header)
   .jst_check_flag(preserve.declarations, "preserve.declarations")
   .jst_check_flag(quiet, "quiet")
   .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
@@ -365,6 +407,35 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # The file as typed, for the lines a message offers (Session 362): the
   # resolution below replaces file with the path it found.
   file_typed <- gsub("\\", "/", file, fixed = TRUE)
+
+  # The call a fix line offers (Session 362; widened Session 365): the file
+  # as typed, the name, and every reading argument the call gave --
+  # package = TRUE, sheet =, skip =, header = FALSE -- in the order of the
+  # signature, the one the fix changes given by name (skip = 2, sheet =
+  # "B", header = TRUE to leave it out). A line offered after the file WAS
+  # loaded (the title note, the no-header note, the multi-sheet note)
+  # carries overwrite = TRUE whatever the call gave: the name now holds what
+  # was just read, and without it the line stops in a script (the
+  # overwrite question, which source() answers with an empty line) -- a
+  # printed call runs as printed. Until Session 365 the multi-sheet note
+  # built its own line from basename(file), which dropped a typed folder,
+  # and the sheet stop's and the leading-digit stop's lines dropped skip =.
+  line_for <- function(..., loaded = FALSE, shown_file = file_typed) {
+    set  <- list(...)
+    pick <- function(key, own) if (key %in% names(set)) set[[key]] else own
+    nm <- pick("name", name)
+    sh <- pick("sheet", sheet)
+    sk <- pick("skip", skip)
+    hd <- pick("header", header)
+    a <- paste0("\"", .jst_dq_escape(shown_file), "\"")
+    if (!is.null(nm)) a <- c(a, paste0("name = \"", .jst_dq_escape(nm), "\""))
+    if (isTRUE(overwrite) || loaded) a <- c(a, "overwrite = TRUE")
+    if (isTRUE(package)) a <- c(a, "package = TRUE")
+    if (!is.null(sh)) a <- c(a, paste0("sheet = ", paste(deparse(sh), collapse = "")))
+    if (!is.null(sk) && sk > 0L) a <- c(a, paste0("skip = ", sk))
+    if (isFALSE(hd)) a <- c(a, "header = FALSE")
+    paste0("  jload(", paste(a, collapse = ", "), ")")
+  }
 
   # --- Determine if file has a directory component ---------------------------
   has_dir <- grepl("[/\\\\]", file)  # forward slash or Windows-native backslash
@@ -588,6 +659,25 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       }
     }
   }
+  # header = FALSE on a format that carries its own variable names (ruling
+  # R21): a stop, before the overwrite question and the read, with the call
+  # to run without it. header = TRUE written out passes, as skip = 0 does.
+  if (!header && (from_package || !ext %in% c("csv", "xlsx", "xls"))) {
+    .jst_stop(
+      "header = FALSE is only for Excel format (.xlsx, .xls) and CSV format ",
+      "(.csv).\n",
+      if (from_package) {
+        paste0(file, " is a jstats example dataset, which carries its own ",
+               "variable names.\n")
+      } else {
+        paste0(basename(file), " is in ", .jst_format_label(ext), " (.", ext,
+               "), which carries its own variable names.\n")
+      },
+      "To load it, drop header = FALSE:\n",
+      line_for(header = TRUE, sheet = NULL, skip = 0L)
+    )
+  }
+
   # Where an example file was read from, in the form a data.dir read takes
   # ("Reading from <folder>"), before the Loaded line.
   if (from_extdata) say("Reading from the jstats example files")
@@ -615,9 +705,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # Slash-swap, not normalizePath: a bare data.dir-resolved name
       # must stay bare so the rerun resolves the same way; only the
       # backslashes are unpasteable (S241 walk finding, D6 sibling).
-      "  jload(\"", gsub("\\", "/", file, fixed = TRUE),
-      "\", name = \"",
-      gsub("^[0-9]+", "", obj_name), "\")"
+      # Since Session 365 the line keeps the call's reading arguments
+      # (sheet =, skip =, header = FALSE), through line_for().
+      line_for(name = gsub("^[0-9]+", "", obj_name),
+               shown_file = gsub("\\", "/", file, fixed = TRUE))
     )
   }
 
@@ -627,7 +718,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   obj_name <- .jst_clean_object_name(obj_name)
 
   # --- Overwrite check -------------------------------------------------------
+  # The question is asked before the read, so a "no" costs no read. The
+  # note of a session that cannot ask waits for the assignment (Session
+  # 365): printed here, it said "has been replaced" over a call that then
+  # stopped on a CSV file's shape or a sheet = naming no sheet.
   target_env <- parent.frame()
+  replaced <- FALSE
   if (exists(obj_name, envir = target_env, inherits = FALSE) && !overwrite) {
     if (interactive()) {
       ok <- .jst_confirm(
@@ -640,9 +736,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         return(invisible(NULL))
       }
     } else {
-      .jst_msg(
-        "'", obj_name, "' already existed and has been replaced."
-      )
+      replaced <- TRUE
     }
   }
 
@@ -714,33 +808,23 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 fn = "jload")
     })
   }
-  # The call a fix line offers: the file as typed, the name, overwrite =
-  # and the sheet the call gave, and the argument the fix adds. A line
-  # offered after the file WAS loaded (the title note) carries overwrite =
-  # TRUE whatever the call gave: the name now holds what was just read, and
-  # without it the line stops in a script (the overwrite question, which
-  # source() answers with an empty line) -- a printed call runs as printed.
-  line_for <- function(arg, loaded = FALSE) {
-    paste0("  jload(\"", .jst_dq_escape(file_typed), "\"",
-           if (!is.null(name)) paste0(", name = \"", .jst_dq_escape(name), "\""),
-           if (isTRUE(overwrite) || loaded) ", overwrite = TRUE",
-           if (!is.null(sheet)) paste0(", sheet = ", deparse(sheet)),
-           ", ", arg, ")")
-  }
-
   # A CSV file is checked before it is read (the import audit, Session
   # 362): empty; its encoding (Windows-1252 from Excel on Windows read as
   # such); a first line shorter than the lines below it, or a line longer
   # than the first, which read.csv() turns into row names or a second case
-  # without a word (.jst_csv_check_shape()).
-  csv_enc <- NULL
+  # without a word (.jst_csv_check_shape()). Read with header = FALSE
+  # (Session 365) a file has no names line, so each line is measured
+  # against the count most lines hold, which the read then takes as the
+  # number of variables (csv_cols).
+  csv_enc  <- NULL
+  csv_cols <- NULL
   if (!from_package && ext == "csv") {
     if (isTRUE(file.size(resolved_path) == 0)) {
       .jst_stop(shown, " is empty: it holds no lines.")
     }
-    csv_enc <- .jst_csv_encoding(resolved_path)
-    .jst_csv_check_shape(resolved_path, skip, csv_enc, shown, line_for,
-                         obj_name)
+    csv_enc  <- .jst_csv_encoding(resolved_path)
+    csv_cols <- .jst_csv_check_shape(resolved_path, skip, csv_enc, shown,
+                                     line_for, obj_name, header = header)
   }
 
   # An Excel file's sheets, and a sheet = that names none of them (Session
@@ -768,21 +852,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           if (n_sh == 1L) paste0("Its only sheet is ", q_sh, ":\n")
           else paste0("Its sheets are ", .jst_and_list(q_sh), ".\n",
                       "To read one, name it:\n"),
-          "  jload(\"", .jst_dq_escape(file_typed), "\"",
-          if (!is.null(name)) paste0(", name = \"", .jst_dq_escape(name), "\""),
-          if (isTRUE(overwrite)) ", overwrite = TRUE",
-          ", sheet = ", q_sh[1L], ")")
+          line_for(sheet = all_sheets[1L]))
       }
     }
-    # Multi-sheet message (only when sheet not specified)
+    # Multi-sheet message (only when sheet not specified). Its line is the
+    # call's own since Session 365 (the folder as typed, name =, skip =,
+    # header = FALSE), with overwrite = TRUE: the first sheet is read under
+    # the name before anyone runs it. It was built from basename(file),
+    # which read another file, or none, when a folder was typed.
     if (is.null(sheet) && length(all_sheets) > 1) {
       .jst_msg(
         "This file has ", length(all_sheets), " sheets: ",
         paste(all_sheets, collapse = ", "), "\n",
         "Reading the first sheet (\"", all_sheets[1], "\"). ",
         "To read a different sheet, use:\n",
-        "  jload(\"", basename(file), "\", sheet = \"",
-        all_sheets[2], "\")"
+        line_for(sheet = all_sheets[2L], loaded = TRUE)
       )
     }
   }
@@ -805,12 +889,24 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                # (check.names = FALSE; the cleaner below renames), never a
                # column taken as row names (row.names = NULL), skip = lines
                # above the names, and the file's encoding.
-               csv      = read_or_stop(utils::read.csv(
-                 resolved_path, stringsAsFactors = FALSE, check.names = FALSE,
-                 row.names = NULL, skip = skip,
-                 fileEncoding = if (is.null(csv_enc)) "" else csv_enc,
-                 blank.lines.skip =
-                   !.jst_csv_one_column(resolved_path, skip, csv_enc))),
+               # Since Session 365 (ruling R21): header = FALSE reads the
+               # first line as a case, the variables V1, V2, ... for the
+               # count most lines hold (col.names), so a long line past the
+               # first five -- the lines read.csv() counts -- is never
+               # split, and a one-column file is known by that count.
+               csv      = {
+                 csv_args <- list(
+                   resolved_path, header = header, stringsAsFactors = FALSE,
+                   check.names = FALSE, row.names = NULL, skip = skip,
+                   fileEncoding = if (is.null(csv_enc)) "" else csv_enc,
+                   blank.lines.skip = if (header) {
+                     !.jst_csv_one_column(resolved_path, skip, csv_enc)
+                   } else !identical(csv_cols, 1L))
+                 if (!header && !is.null(csv_cols)) {
+                   csv_args$col.names <- paste0("V", seq_len(csv_cols))
+                 }
+                 read_or_stop(do.call(utils::read.csv, csv_args))
+               },
                rds      = read_or_stop(readRDS(resolved_path)),
                xlsx     = ,
                xls      = {
@@ -822,11 +918,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                  # missing values with 100 warnings, and 100 numbers below
                  # 1,100 empty cells into TRUE with none (1,048,576 is
                  # Excel's row limit).
+                 # Since Session 365 (ruling R21): header = FALSE reads row
+                 # 1 as data (col_names = FALSE, which gives every column
+                 # an empty name under "minimal"), the variables named V1,
+                 # V2, ... as read.csv(header = FALSE) names them.
                  read_args <- list(path = resolved_path, skip = skip,
+                                   col_names = header,
                                    guess_max = 1048576L,
                                    .name_repair = "minimal")
                  if (!is.null(sheet)) read_args$sheet <- sheet
-                 read_or_stop(do.call(readxl::read_excel, read_args))
+                 xl <- read_or_stop(do.call(readxl::read_excel, read_args))
+                 if (!header) names(xl) <- paste0("V", seq_len(ncol(xl)))
+                 xl
                }
   )
 
@@ -852,18 +955,63 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   rename_note <- NULL
   title_rows  <- NULL
   title_named <- 0L
+  nohead_note <- NULL
+  stray_note  <- NULL
   if (!from_package && ext != "rds") {
-    if (ext %in% c("xlsx", "xls")) {
-      title_rows  <- .jst_excel_title_row(resolved_path, sheet, skip, names(df))
-      title_named <- sum(nzchar(trimws(names(df))))
+    sheet_file <- ext %in% c("xlsx", "xls")
+    raw_nm <- names(df)
+    # The title note reads the names row; with header = FALSE there is none.
+    if (sheet_file && header) {
+      title_rows  <- .jst_excel_title_row(resolved_path, sheet, skip, raw_nm)
+      title_named <- sum(nzchar(trimws(raw_nm)))
     }
-    cl <- .jst_clean_import_names(names(df))
+    # Session 365: names that are all numbers (the no-header note), and
+    # rows and columns that may not be data (the stray-parts note), found
+    # on the names as the file has them. Neither beside a title note, whose
+    # skip = call reads the sheet again: one thing at a time.
+    no_head <- FALSE
+    parts   <- NULL
+    if ((sheet_file || ext == "csv") && is.null(title_rows)) {
+      no_head <- header && !header_given && .jst_names_all_numbers(raw_nm)
+      parts   <- .jst_import_stray_parts(df, raw_nm, header)
+    }
+    cl <- .jst_clean_import_names(raw_nm)
     if (any(cl$changed)) {
-      old_nm <- names(df)
       ap <- .jst_apply_new_names(df, cl$names, cl$changed)
       df <- ap$df
-      rename_note <- .jst_import_names_note(old_nm[cl$changed],
+      rename_note <- .jst_import_names_note(raw_nm[cl$changed],
                                             cl$names[cl$changed], ap$had)
+    }
+    if (no_head) {
+      nohead_note <- .jst_no_header_note(shown, raw_nm, sheet_file,
+                                         line_for(header = FALSE, loaded = TRUE))
+    }
+    if (!is.null(parts) && length(parts$rows) + length(parts$notes) +
+        length(parts$cols) + parts$rownum > 0L) {
+      # Where each case and variable is in the file, counted only when
+      # there is something to say (a second, light read).
+      case_pos <- NULL
+      col_pos  <- NULL
+      if (sheet_file) {
+        og <- .jst_excel_origin(resolved_path, sheet, skip)
+        if (!is.null(og)) {
+          case_pos <- og$row - 1L + (if (header) 1L else 0L) + seq_len(nrow(df))
+          col_pos  <- .jst_excel_col_letters(og$col - 1L + seq_len(ncol(df)))
+          # A column holding numbers and the footnotes' text is read as
+          # text; numbers stored as text in Excel are too, and only the
+          # cells say which.
+          if (isTRUE(parts$text_col)) {
+            parts$text_col <- .jst_excel_cells_numeric(
+              resolved_path, sheet, case_pos[parts$rest], og$col)
+          }
+        } else parts$text_col <- FALSE
+      } else {
+        ln <- .jst_csv_case_lines(resolved_path, skip, csv_enc, header)
+        if (length(ln) == nrow(df)) case_pos <- ln
+        col_pos <- as.character(seq_len(ncol(df)))
+      }
+      stray_note <- .jst_stray_parts_note(parts, names(df), shown, sheet_file,
+                                          case_pos, col_pos, header, obj_name)
     }
   }
 
@@ -891,6 +1039,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   udm_info   <- udm_result$udm_info
 
   # --- Assign to environment -------------------------------------------------
+  # The non-interactive overwrite note, at the replacement itself (see the
+  # overwrite check); a note, so a blank line sets the Loaded line off from
+  # it (ruling R6).
+  if (replaced) {
+    .jst_msg("'", obj_name, "' already existed and has been replaced.")
+    .jst_note_fired <- TRUE
+  }
   assign(obj_name, df, envir = target_env)
 
   # --- Refresh classification registrations ----------------------------------
@@ -963,8 +1118,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
               "The names seem to be in row ", title_rows$names, ".\n",
               "To read from there, skip the ", above, " ",
               .jst_plural(above, "row", "rows"), " above them:\n",
-              line_for(paste0("skip = ", above), loaded = TRUE))
+              line_for(skip = above, loaded = TRUE))
   }
+  # Session 365: the no-header note and the stray-parts note, after the
+  # title note and before the names changed, which list what was read.
+  if (!is.null(nohead_note)) emit_note(nohead_note)
+  if (!is.null(stray_note)) emit_note(stray_note)
   if (!is.null(rename_note)) emit_note(rename_note)
 
   # --- UDM narrative notification --------------------------------------------
@@ -1714,16 +1873,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' holds and what to do. A line with fewer fields than the first is read as
 #' it always was, its last cells empty.
 #'
+#' Read with header = FALSE (ruling R21, Session 365) a file has no names
+#' line to measure the others against: every line is a case, measured
+#' against the count most lines hold. A line holding more stops, as a line
+#' longer than the names line does; a shorter one is read with its last
+#' cells empty; the title search, which looks for a names line, is not
+#' made. The count is returned, and jload() reads that many variables
+#' (col.names), so a long line past the first five -- the lines read.csv()
+#' counts -- could not be split even if one got through.
+#'
 #' @param path The file.
 #' @param skip Lines skipped above the names.
 #' @param enc NULL, or the encoding the file is read in.
 #' @param shown The file's name for the prose.
-#' @param line_for A function of one argument string ("skip = 2"): the
-#'   jload() call that reads the file with it.
+#' @param line_for jload()'s line builder: \code{line_for(skip = 2)} gives
+#'   the jload() call that reads the file with skip = 2.
 #' @param obj_name The data frame's name, for the read.csv2() line.
-#' @return Invisibly NULL, or stops.
+#' @param header As jload() reads the file.
+#' @return Invisibly: with header = FALSE the number of values most lines
+#'   hold (NULL when the lines could not be counted); otherwise NULL. Or
+#'   stops.
 #' @keywords internal
-.jst_csv_check_shape <- function(path, skip, enc, shown, line_for, obj_name) {
+.jst_csv_check_shape <- function(path, skip, enc, shown, line_for, obj_name,
+                                 header = TRUE) {
   open_con <- function() if (is.null(enc)) file(path) else file(path, encoding = enc)
   # count.fields() gives NULL when skip = passes the last line; a file it
   # cannot read at all is left to read.csv() and its own message.
@@ -1756,7 +1928,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
               "jload() reads files whose values are separated by commas.\n",
               "Save it from Excel as an .xlsx file and load that, or read it ",
               "with base R:\n",
-              "  ", obj_name, " <- read.csv2(\"", .jst_dq_escape(path_shown), "\")")
+              "  ", obj_name, " <- read.csv2(\"", .jst_dq_escape(path_shown), "\"",
+              # Since Session 365 the call's skip = and header = FALSE.
+              if (skip > 0L) paste0(", skip = ", skip),
+              if (!header) ", header = FALSE", ")")
+  }
+  if (!header) {
+    every <- cf[!is.na(cf) & cf > 0L]
+    tab   <- table(every)
+    modal <- as.integer(names(tab)[which.max(tab)])
+    long  <- which(!is.na(cf) & cf > modal)
+    if (length(long) == 1L) {
+      .jst_stop("line ", skip + long, " of ", shown, " holds ", cf[long],
+                " values, but most lines hold ", modal, ", so R would split ",
+                "it into two cases.\n",
+                "Correct that line of the file, then run jload() again.")
+    }
+    if (length(long) > 1L) {
+      .jst_stop("lines ", .jst_short_list(skip + long), " of ", shown,
+                " hold more values than most lines (", modal, "), so R would ",
+                "split each into two cases.\n",
+                "Correct those lines of the file, then run jload() again.")
+    }
+    return(invisible(modal))
   }
   if (length(known) == 0L || !any(known > hdr)) return(invisible(NULL))
   tab   <- table(known)
@@ -1788,7 +1982,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 "The variable names seem to be on line ", at, ".\n",
                 "To read from there, skip the ", at - 1L, " ",
                 .jst_plural(at - 1L, "line", "lines"), " above them:\n",
-                line_for(paste0("skip = ", at - 1L)))
+                line_for(skip = at - 1L))
     }
     .jst_stop("the first line of ", shown, " has ", hdr, " ",
               .jst_plural(hdr, "name", "names"), ", but most lines below it ",
@@ -1931,6 +2125,398 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
   }
   NULL
+}
+
+# -- What a file holds that may not be data (Session 365) ----------------------
+#
+# Fix Slate 12, the import audit's items 14 and 17 (S362), with ruling R21.
+# A CSV file or a sheet with no names row lost its first case to the names,
+# which were then numbers ("1" -> X1), and a sheet's blank rows, blank
+# columns and footnote lines -- and a CSV file's line of commas, trailing
+# comma and write.csv() row numbers -- loaded as cases and variables; jload()
+# said nothing of either. Each now gets a consequential note; nothing is
+# dropped (Jeff's S362 lean: "a note naming them; nothing dropped").
+
+#' Internal: does each string read as a number?
+#'
+#' TRUE for text that is a number as written: digits with an optional sign,
+#' decimal point and exponent ("7", "-2.5", "1e3", ".5"), spaces around it
+#' allowed. "Inf", "NA", "1,000" and "50\%" are not. Used by the no-header
+#' note and the stray-parts note (Session 365).
+#' @param x Character vector.
+#' @return Logical vector; NA and "" are FALSE.
+#' @keywords internal
+.jst_is_number_text <- function(x) {
+  x <- trimws(as.character(x))
+  !is.na(x) & grepl("^[-+]?([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][-+]?[0-9]+)?$", x)
+}
+
+#' Internal: are the names read from a file all numbers?
+#'
+#' The S362 import audit's item 14: a CSV file or a sheet with no names row
+#' loses its first case to the names, which are then numbers. TRUE when
+#' every name that is not empty reads as a number and at least one does. An
+#' empty name does not count against it: a first case with a missing value
+#' has one (1,,3).
+#' @param nm Character vector: the names as read.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_names_all_numbers <- function(nm) {
+  nm <- trimws(ifelse(is.na(nm), "", nm), whitespace = "[\\h\\v]")
+  full <- nzchar(nm)
+  any(full) && all(.jst_is_number_text(nm[full]))
+}
+
+#' Internal: a list of at most five, then a count
+#'
+#' "4", "4 and 7", "4, 7, and 9" up to \code{max_show}; past it, "4, 7, 9,
+#' 12, 15 and 3 more" -- the CSV shape check's form for the lines it names.
+#' @param x A vector.
+#' @param max_show How many to name.
+#' @return Character(1).
+#' @keywords internal
+.jst_short_list <- function(x, max_show = 5L) {
+  x <- as.character(x)
+  n <- length(x)
+  if (n <= max_show) return(.jst_and_list(x))
+  paste0(paste(x[seq_len(max_show)], collapse = ", "), " and ", n - max_show,
+         " more")
+}
+
+#' Internal: jload()'s note on names that are all numbers
+#'
+#' Session 365 (the S362 audit's item 14; ruling R21): the names read from
+#' the file are all numbers, so the line or row they came from may be the
+#' first case. The names as read, then the jload() call with header =
+#' FALSE, which reads that line as a case.
+#' @param shown The file's name.
+#' @param nm The names as read.
+#' @param sheet_file TRUE for an Excel file ("row"), FALSE for CSV ("line").
+#' @param line The jload() call with header = FALSE.
+#' @return Character(1).
+#' @keywords internal
+.jst_no_header_note <- function(shown, nm, sheet_file, line) {
+  nm  <- trimws(ifelse(is.na(nm), "", nm), whitespace = "[\\h\\v]")
+  k   <- length(nm)
+  shw <- ifelse(nzchar(nm), nm, "\"\"")
+  shw <- if (k <= 6L) paste(shw, collapse = ", ") else {
+    paste0(paste(shw[1:6], collapse = ", "), " and ", k - 6L, " more")
+  }
+  v   <- paste0("V", seq_len(k))
+  unit <- if (sheet_file) "row" else "line"
+  paste0("Note: ", if (k == 1L) "the variable name" else "every variable name",
+         " read from ", shown, " is a number",
+         if (any(!nzchar(nm))) " or empty", " (", shw,
+         "), so the ", unit, " ", if (k == 1L) "it" else "they",
+         " came from may be the first case rather than ",
+         if (k == 1L) "a name" else "the names", ".\n",
+         "To read that ", unit, " as a case, with the ",
+         if (k == 1L) "variable" else "variables", " named ",
+         if (k <= 3L) .jst_and_list(v) else paste0("V1 to V", k), ":\n",
+         line)
+}
+
+#' Internal: an Excel column's letters
+#' @param j Column numbers.
+#' @return Character vector: "A", "Z", "AA", ...
+#' @keywords internal
+.jst_excel_col_letters <- function(j) {
+  vapply(j, function(x) {
+    s <- ""
+    while (x > 0) {
+      r <- (x - 1) %% 26
+      s <- paste0(LETTERS[r + 1], s)
+      x <- (x - 1) %/% 26
+    }
+    s
+  }, character(1), USE.NAMES = FALSE)
+}
+
+#' Internal: where an Excel sheet's data begin
+#'
+#' readxl starts at the first row after skip = that holds anything and at
+#' the leftmost column that does, so a case's row and a variable's column
+#' in the sheet are counted from there (Session 365, for the stray-parts
+#' note). The first 200 rows after skip = are read as cells (col_types =
+#' "list", as .jst_excel_title_row() reads them); the columns left of the
+#' one they start in are then read down the whole sheet, since one cell
+#' there moves readxl's start.
+#' @param path,sheet,skip As jload() read the sheet.
+#' @return list(row, col): the sheet row and column of the first cell
+#'   readxl read; NULL when it cannot be found.
+#' @keywords internal
+.jst_excel_origin <- function(path, sheet, skip) {
+  sh <- if (is.null(sheet)) 1L else sheet
+  rd <- function(range) {
+    tryCatch(suppressMessages(suppressWarnings(readxl::read_excel(
+      path, sheet = sh, col_names = FALSE, col_types = "list", range = range,
+      .name_repair = "minimal"))), error = function(e) NULL)
+  }
+  full <- function(v) !(is.null(v) || length(v) == 0L ||
+                          (length(v) == 1L && is.na(v)))
+  cells <- function(tb) {
+    matrix(vapply(tb, function(col) vapply(col, full, logical(1)),
+                  logical(nrow(tb))), nrow = nrow(tb))
+  }
+  win <- rd(readxl::cell_limits(c(skip + 1L, 1L), c(skip + 200L, NA)))
+  if (is.null(win) || nrow(win) == 0L || ncol(win) == 0L) return(NULL)
+  m  <- cells(win)
+  r0 <- which(rowSums(m) > 0L)[1L]
+  if (is.na(r0)) return(NULL)
+  c0 <- which(colSums(m) > 0L)[1L]
+  if (c0 > 1L) {
+    left <- rd(readxl::cell_limits(c(skip + 1L, 1L), c(NA, c0 - 1L)))
+    if (!is.null(left) && nrow(left) > 0L && ncol(left) > 0L) {
+      cl <- which(colSums(cells(left)) > 0L)
+      if (length(cl)) c0 <- cl[1L]
+    }
+  }
+  list(row = skip + r0, col = c0)
+}
+
+#' Internal: are some cells of an Excel column numbers?
+#'
+#' A column holding numbers and one text cell is read as text, and readxl
+#' gives its numbers back as their digits; so are numbers stored as text in
+#' Excel. Only the cells say which (Session 365: the stray-parts note says
+#' the footnotes made a variable text only when its other cells are
+#' numbers).
+#' @param path,sheet As jload() read the sheet.
+#' @param rows,col The sheet rows and the column.
+#' @return TRUE when every one is a number cell.
+#' @keywords internal
+.jst_excel_cells_numeric <- function(path, sheet, rows, col) {
+  if (!length(rows)) return(FALSE)
+  tb <- tryCatch(suppressMessages(suppressWarnings(readxl::read_excel(
+    path, sheet = if (is.null(sheet)) 1L else sheet, col_names = FALSE,
+    col_types = "list",
+    range = readxl::cell_limits(c(min(rows), col), c(max(rows), col)),
+    .name_repair = "minimal"))), error = function(e) NULL)
+  if (is.null(tb) || ncol(tb) != 1L) return(FALSE)
+  v <- tb[[1L]][rows - min(rows) + 1L]
+  all(vapply(v, function(x) is.numeric(x) && length(x) == 1L && !is.na(x),
+             logical(1)))
+}
+
+#' Internal: the line of a CSV file each case starts on
+#'
+#' count.fields() gives each line's number of values: NA for a line whose
+#' quoted value carries on to the next, the count on the line a case ends
+#' on, and 0 for an empty line, which read.csv() skips between cases. A
+#' case starts on the first line after the last case ended that is not
+#' empty (Session 365, for the stray-parts note).
+#' @param path,skip,enc As jload() read the file.
+#' @param header TRUE when the first case is the names line.
+#' @return Integer vector: the line of the file each case starts on; NULL
+#'   when the lines cannot be counted.
+#' @keywords internal
+.jst_csv_case_lines <- function(path, skip, enc, header) {
+  con <- if (is.null(enc)) file(path) else file(path, encoding = enc)
+  cf <- tryCatch(utils::count.fields(con, sep = ",", quote = "\"", skip = skip,
+                                     blank.lines.skip = FALSE,
+                                     comment.char = ""),
+                 error = function(e) NULL)
+  if (is.null(cf) || !length(cf)) return(NULL)
+  ends <- which(!is.na(cf) & cf > 0L)
+  if (!length(ends)) return(NULL)
+  used <- which(is.na(cf) | cf > 0L)
+  prev <- c(0L, ends[-length(ends)])
+  starts <- used[findInterval(prev, used) + 1L]
+  if (header) starts <- starts[-1L]
+  skip + starts
+}
+
+#' Internal: rows and columns of a file that may not be data
+#'
+#' Session 365 (the S362 audit's item 17): an Excel sheet's blank rows,
+#' blank columns and footnote lines, and their CSV kin -- a line of commas,
+#' a trailing comma's column, the row numbers write.csv() writes -- loaded
+#' as cases and variables, and nothing said so. Found here on the data as
+#' read and the names as the file has them; nothing is dropped. A cell is
+#' empty when it is NA, or text of nothing but spaces.
+#' \describe{
+#'   \item{rows}{cases with nothing in them, in data of two or more
+#'     variables (in a one-column file an empty line is a case with a
+#'     missing value, Session 351); with row numbers, the other variables}
+#'   \item{notes}{the last cases, below the data, with text that is not a
+#'     number in the first variable and nothing in the others}
+#'   \item{cols}{variables with no name and nothing in them (with header =
+#'     FALSE, nothing in them)}
+#'   \item{rownum}{1 when the first variable has no name and holds 1 to n
+#'     in order, n of 2 or more, as write.csv()'s row names do}
+#'   \item{rest}{the other cases with something in the first variable}
+#'   \item{text_col}{TRUE when every one of those reads as a number, so the
+#'     notes are why the first variable is text}
+#' }
+#' @param df The data frame as read.
+#' @param nm The names as the file has them.
+#' @param header As jload() read the file.
+#' @return list(rows, notes, cols, rownum, rest, text_col, n), n the number
+#'   of cases.
+#' @keywords internal
+.jst_import_stray_parts <- function(df, nm, header = TRUE) {
+  n <- nrow(df); k <- ncol(df)
+  out <- list(rows = integer(0), notes = integer(0), cols = integer(0),
+              rownum = 0L, rest = integer(0), text_col = FALSE, n = n)
+  if (n == 0L || k == 0L) return(out)
+  ws <- "[\\h\\v]"
+  # Which cells are empty. Text is tested for spaces only where it starts
+  # with one, since this runs on every CSV and Excel load (a 1.9-million-
+  # row file: a second when every cell went through trimws()).
+  empty <- function(x) {
+    if (is.list(x)) return(rep(FALSE, length(x)))
+    e <- is.na(x)
+    if (is.character(x)) {
+      e <- e | !nzchar(x)
+      s <- which(!e)
+      if (length(s)) {
+        sp <- s[grepl("^[\\h\\v]", x[s], perl = TRUE)]
+        if (length(sp)) e[sp] <- !nzchar(trimws(x[sp], whitespace = ws))
+      }
+    }
+    as.vector(e)
+  }
+  all_empty <- function(x) {
+    head_n <- min(length(x), 50L)
+    all(empty(x[seq_len(head_n)])) && all(empty(x))
+  }
+  nm <- trimws(ifelse(is.na(nm), "", nm), whitespace = ws)
+  no_name <- if (header) which(!nzchar(nm)) else seq_len(k)
+  out$cols <- no_name[vapply(no_name, function(j) all_empty(df[[j]]),
+                             logical(1))]
+  x1 <- df[[1L]]
+  if (header && 1L %in% no_name && n >= 2L && k >= 2L) {
+    in_order <- if (is.numeric(x1)) {
+      !anyNA(x1) && x1[n] == n && all(x1 == seq_len(n))
+    } else if (is.character(x1)) {
+      identical(trimws(x1[n]), as.character(n)) &&
+        identical(trimws(x1), as.character(seq_len(n)))
+    } else FALSE
+    if (isTRUE(in_order)) out$rownum <- 1L
+  }
+  if (k < 2L) return(out)
+  # Empty rows: the candidates narrowed one variable at a time, those that
+  # are not text first, so the first variable with data rules out nearly
+  # every row.
+  use  <- if (out$rownum == 1L) seq_len(k)[-1L] else seq_len(k)
+  use  <- use[order(vapply(df[use], is.character, logical(1)))]
+  cand <- seq_len(n)
+  for (j in use) {
+    cand <- cand[empty(df[[j]][cand])]
+    if (!length(cand)) break
+  }
+  out$rows <- cand
+  if (out$rownum == 1L || !is.character(x1)) return(out)
+  # Footnotes: from the last case up, past empty cases, while the first
+  # variable holds text that is not a number and the others hold nothing.
+  is_blank <- logical(n)
+  is_blank[cand] <- TRUE
+  others <- df[-1L]
+  note_like <- function(i) {
+    !empty(x1[i]) && !.jst_is_number_text(x1[i]) &&
+      all(vapply(others, function(x) empty(x[i]), logical(1)))
+  }
+  notes <- integer(0)
+  i <- n
+  while (i >= 1L) {
+    if (is_blank[i]) { i <- i - 1L; next }
+    if (note_like(i)) { notes <- c(i, notes); i <- i - 1L; next }
+    break
+  }
+  if (i >= 1L && length(notes)) {
+    out$notes <- notes
+    out$rest  <- setdiff(which(!empty(x1)), notes)
+    out$text_col <- length(out$rest) > 0L &&
+      all(.jst_is_number_text(x1[out$rest]))
+  }
+  out
+}
+
+#' Internal: jload()'s note on rows and columns that may not be data
+#'
+#' Session 365 (the S362 audit's item 17). One sentence for each kind found
+#' (Rule E): the empty rows, the footnotes (and the variable they made
+#' text), the empty columns, the row numbers; each by its place in the file
+#' (an Excel row or column letter, a CSV line or column number) with the
+#' case numbers or the variable names in parentheses, or, when the place
+#' cannot be counted, by the cases and variables alone. Then that they were
+#' read as data and nothing was removed, and the way to leave them out.
+#' @param parts From .jst_import_stray_parts(), text_col settled.
+#' @param vars The variables' names, as loaded.
+#' @param shown The file's name.
+#' @param sheet_file TRUE for an Excel file, FALSE for CSV.
+#' @param case_pos NULL, or each case's row or line in the file.
+#' @param col_pos NULL, or each variable's column in the file.
+#' @param header As jload() read the file.
+#' @param data_name The data frame's name, for the fallback.
+#' @return Character(1), or NULL when nothing was found.
+#' @keywords internal
+.jst_stray_parts_note <- function(parts, vars, shown, sheet_file, case_pos,
+                                  col_pos, header, data_name) {
+  n_items <- length(parts$rows) + length(parts$notes) + length(parts$cols) +
+    parts$rownum
+  if (n_items == 0L) return(NULL)
+  unit  <- if (sheet_file) "row" else "line"
+  first <- TRUE
+  cap1  <- function(s) paste0(toupper(substr(s, 1L, 1L)), substring(s, 2L))
+  where <- function(idx, kind) {
+    m <- length(idx)
+    at <- if (identical(kind, "case")) case_pos else col_pos
+    own <- if (identical(kind, "case")) {
+      paste0(.jst_plural(m, "case", "cases"), " ", .jst_short_list(idx))
+    } else .jst_short_list(vars[idx])
+    s <- if (!is.null(at)) {
+      paste0(.jst_plural(m, if (identical(kind, "case")) unit else "column",
+                         if (identical(kind, "case")) paste0(unit, "s") else "columns"),
+             " ", .jst_short_list(at[idx]),
+             if (first) paste0(" of ", shown), " (", own, ")")
+    } else {
+      paste0(own, if (first) paste0(" of the ", data_name, " data frame"))
+    }
+    s <- if (first) s else cap1(s)
+    first <<- FALSE
+    s
+  }
+  out <- character(0)
+  if (length(parts$rows)) {
+    m <- length(parts$rows)
+    out <- c(out, paste0(where(parts$rows, "case"), " ",
+                         if (m == 1L) "is" else "are", " empty."))
+  }
+  if (length(parts$notes)) {
+    m <- length(parts$notes)
+    out <- c(out, paste0(where(parts$notes, "case"), " ",
+                         if (m == 1L) "has" else "have",
+                         " text in the first column only, below the data, so ",
+                         if (m == 1L) "it may be a footnote." else "they may be footnotes."))
+    if (isTRUE(parts$text_col)) {
+      out <- c(out, paste0("Because of ", if (m == 1L) "it" else "them", ", ",
+                           vars[1L], " was read as text."))
+    }
+  }
+  if (length(parts$cols)) {
+    m <- length(parts$cols)
+    out <- c(out, paste0(where(parts$cols, "col"), " ",
+                         if (!header) {
+                           if (m == 1L) "is empty." else "are empty."
+                         } else if (m == 1L) {
+                           "has no name and is empty."
+                         } else "have no names and are empty."))
+  }
+  if (parts$rownum == 1L) {
+    out <- c(out, paste0(where(1L, "col"),
+                         " has no name and holds the numbers 1 to ", parts$n,
+                         " in order, so it may be row numbers, as R's ",
+                         "write.csv() writes them."))
+  }
+  one <- n_items == 1L
+  out <- c(out,
+           paste0(if (one) "It was" else "They were", " read as data, and ",
+                  "nothing was removed."),
+           paste0("To leave ", if (one) "it" else "them", " out, delete ",
+                  if (one) "it" else "them",
+                  " from the file and load the file again."))
+  paste0("Note: ", paste(out, collapse = "\n"))
 }
 
 #' Internal: a data frame's name made from a file's name

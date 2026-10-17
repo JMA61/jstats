@@ -4,7 +4,7 @@
 \alias{.jst_csv_check_shape}
 \title{Internal: the shape of a CSV file, checked before it is read}
 \usage{
-.jst_csv_check_shape(path, skip, enc, shown, line_for, obj_name)
+.jst_csv_check_shape(path, skip, enc, shown, line_for, obj_name, header = TRUE)
 }
 \arguments{
 \item{path}{The file.}
@@ -15,13 +15,17 @@
 
 \item{shown}{The file's name for the prose.}
 
-\item{line_for}{A function of one argument string ("skip = 2"): the
-jload() call that reads the file with it.}
+\item{line_for}{jload()'s line builder: \code{line_for(skip = 2)} gives
+the jload() call that reads the file with skip = 2.}
 
 \item{obj_name}{The data frame's name, for the read.csv2() line.}
+
+\item{header}{As jload() reads the file.}
 }
 \value{
-Invisibly NULL, or stops.
+Invisibly: with header = FALSE the number of values most lines
+hold (NULL when the lines could not be counted); otherwise NULL. Or
+stops.
 }
 \description{
 read.csv() decides how many variables a file has from its first line and
@@ -35,5 +39,15 @@ cases. Every line's fields are counted first (count.fields(), quoting as
 read.csv() quotes), and those shapes stop here, saying what the file
 holds and what to do. A line with fewer fields than the first is read as
 it always was, its last cells empty.
+}
+\details{
+Read with header = FALSE (ruling R21, Session 365) a file has no names
+line to measure the others against: every line is a case, measured
+against the count most lines hold. A line holding more stops, as a line
+longer than the names line does; a shorter one is read with its last
+cells empty; the title search, which looks for a names line, is not
+made. The count is returned, and jload() reads that many variables
+(col.names), so a long line past the first five -- the lines read.csv()
+counts -- could not be split even if one got through.
 }
 \keyword{internal}

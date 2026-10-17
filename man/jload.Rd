@@ -13,6 +13,7 @@ jload(
   check.missing = TRUE,
   sheet = NULL,
   skip = 0,
+  header = TRUE,
   preserve.declarations = TRUE,
   missing.notice = NULL,
   quiet = FALSE
@@ -65,6 +66,16 @@ note. Default 0. When the first row of a sheet looks like a title, a
 note shows the call with the \code{skip} it needs; a CSV file in that
 shape stops with the same call.}
 
+\item{header}{For Excel and CSV files. \code{TRUE} (default) reads the
+first row of the sheet, or line of the file, as the variable names.
+\code{FALSE} reads it as the first case, for a file with no names row,
+and names the variables \code{V1}, \code{V2}, and so on, as base R's
+\code{read.csv(header = FALSE)} does. Every other format carries its
+own variable names, so \code{header = FALSE} stops there. When every
+name read is a number, a note shows the call with
+\code{header = FALSE}; writing \code{header = TRUE} in the call says the
+numbers are the names (years, say), and the note is not shown.}
+
 \item{preserve.declarations}{Logical. If \code{TRUE} (default), declared
 missing values arriving with the file are preserved: SPSS-style
 codes such as -99, and declared ranges, keep their original numeric
@@ -97,7 +108,8 @@ narrative about declared missing values, overriding missing.notice).
 Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
 note that a local file shadowed a shipped dataset, the note that an
 existing object was replaced, and the notes on what the read changed
-or found (variable names changed, a title row, a CSV file's encoding)
+or found (variable names changed, a title row, names that are all
+numbers, rows and columns that may not be data, a CSV file's encoding)
 are still shown, as is the coded-missing scan report; turn that off
 with \code{check.missing = FALSE}.}
 }
@@ -155,7 +167,30 @@ into two cases, and say nothing. A file whose values are separated by
 semicolons, as Excel saves them in many European settings, stops with
 the base R line that reads it. A file that is not in UTF-8 (one saved by
 Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
-in Windows-1252, and a note says so.
+in Windows-1252, and a note says so. Read with \code{header = FALSE}, a
+file has no names line, so each line is measured against the number of
+values most lines hold: a line holding more stops the load, and one
+holding fewer is read with its last cells empty.
+
+\strong{A file with no names row:}
+A CSV file or a sheet whose first row is data loses that case to the
+variable names, which are then numbers (\code{1} becomes \code{X1}).
+When every name read is a number, or empty, a note says the row they
+came from may be the first case and shows the call that reads it as one:
+\code{jload("scores.csv", header = FALSE)}, the variables named
+\code{V1}, \code{V2}, and so on.
+
+\strong{Rows and columns that may not be data:}
+A sheet can hold rows with nothing in them, a column with no name and
+nothing in it, and lines of text below the data, such as a source or a
+footnote; a CSV file can hold a line of commas alone, an empty column
+from a comma at the end of each line, and the row numbers R's
+\code{write.csv()} writes in a first column with no name. Each is read
+as data, as a case or a variable, and a note names them by their place
+in the file, with the case numbers or the variable names; when footnotes
+turned a variable of numbers into text, it says so. Nothing is removed.
+An empty line in a CSV file of one column is a case with a missing value,
+and is not named.
 
 \strong{Variable names from other software:}
 A file from outside R can hold names R cannot use as they are:
@@ -203,7 +238,8 @@ value labels. The data will be loaded as plain numeric, character, or
 logical columns; a variable whose name was changed has its original
 name as its label. Use \code{jrelabel()} to add labels after loading
 if needed. Row 1 of the sheet is read as the variable names; when the
-names are lower down, \code{skip} gives the number of rows above them.
+names are lower down, \code{skip} gives the number of rows above them,
+and when there are none, \code{header = FALSE} reads row 1 as data.
 Each variable's type is read from every row of the sheet.
 
 \strong{Missing-value declarations:}
@@ -291,6 +327,7 @@ jload("community.xlsx")
 jload("community.xlsx", sheet = "Wave2")
 jload("community.xlsx", sheet = 2)
 jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
+jload("scores.csv", header = FALSE)   # no names row: V1, V2, ...
 
 # CSV and R format
 jload("community.csv")
