@@ -67,3 +67,16 @@ the like), which hold on any data, and leaving out the arguments that
 name the user's variables (by =, subset =, numeric = ...) or depend on
 them (min.valid =, type =). jscreen() keeps the two routes: given a data
 frame alone it screens every column.
+
+Since Session 370 (Fix Slate 18) the same stop serves jrecode(),
+jencode(), jrelabel() and jdeclare_missing(), each with the example its
+own no-variable stop gives
+([`.jst_no_var_example()`](https://jma61.github.io/jstats/reference/dot-jst_no_var_example.md)),
+and jconvert(), which needs a target rather than variables: "no data
+frame and no target format were named." with jconvert(community, to =
+"stata"). A call that names its variables or the target by argument
+(orig.var =, var =, vars =, to =) lacks only the data frame and keeps
+the two routes, as does jconvert() under a session convention, which
+supplies the target. These keep only modify = and missing.notice = from
+the call (jdeclare_missing() and jconvert()); their labels =, map = and
+codes = depend on the user's variables.
