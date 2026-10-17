@@ -21,7 +21,7 @@ the data frame named, or a default set and the call run again."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.241</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.242</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -96,6 +96,16 @@ the call is kept as typed; the second route runs the call as typed.</p>
 <code>vars</code>: jcopy()'s one name is the copy's destination
 (<code>jcopy(newdata)</code>), so it passes <code>character(0)</code>, and any one
 data frame counts (Session 369, Fix Slate 16).</p>
+<p>A call that names neither a data frame nor a variable, to a function
+that needs variables – jdesc(), jfreq(), jcorr(), jalpha(), jsum(),
+javg(), jplot() – gets ONE stop instead (ruling R22, Session 369; Fix
+Slate 17): either route above, run, stopped again for want of
+variables. It says both are missing and gives the function's own example
+on community, keeping the call's display options (method =, digits = and
+the like), which hold on any data, and leaving out the arguments that
+name the user's variables (by =, subset =, numeric = ...) or depend on
+them (min.valid =, type =). jscreen() keeps the two routes: given a data
+frame alone it screens every column.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
