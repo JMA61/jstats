@@ -227,7 +227,8 @@ dataset of that name (see below).
 \strong{Auto-naming:}
 The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
-allow as a variable name), you must supply the \code{name} argument.
+allow as a variable name), you must supply the \code{name} argument;
+the error offers one (\code{2024.csv} is offered \code{name = "X2024"}).
 Other characters R does not allow in a name, such as spaces and
 hyphens, are changed as variable names are (see above):
 \code{"my data-1.sav"} loads as \code{my_data_1}.

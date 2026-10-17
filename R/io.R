@@ -188,7 +188,8 @@
 #' \strong{Auto-naming:}
 #' The data frame name is derived from the filename by stripping the
 #' extension. If the resulting name starts with a digit (which R does not
-#' allow as a variable name), you must supply the \code{name} argument.
+#' allow as a variable name), you must supply the \code{name} argument;
+#' the error offers one (\code{2024.csv} is offered \code{name = "X2024"}).
 #' Other characters R does not allow in a name, such as spaces and
 #' hyphens, are changed as variable names are (see above):
 #' \code{"my data-1.sav"} loads as \code{my_data_1}.
@@ -706,8 +707,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       # must stay bare so the rerun resolves the same way; only the
       # backslashes are unpasteable (S241 walk finding, D6 sibling).
       # Since Session 365 the line keeps the call's reading arguments
-      # (sheet =, skip =, header = FALSE), through line_for().
-      line_for(name = gsub("^[0-9]+", "", obj_name),
+      # (sheet =, skip =, header = FALSE), through line_for(). Since Session
+      # 366 (Fix Slate 13) the name offered is the one the cleaner below
+      # gives -- X2024 for 2024.csv, X2024_wave for "2024 wave.csv" -- so
+      # the stop and the cleaner agree: the digits stripped, a file named
+      # only with digits was offered name = "", which loaded as V1.
+      line_for(name = .jst_clean_object_name(obj_name),
                shown_file = gsub("\\", "/", file, fixed = TRUE))
     )
   }
@@ -718,27 +723,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   obj_name <- .jst_clean_object_name(obj_name)
 
   # --- Overwrite check -------------------------------------------------------
-  # The question is asked before the read, so a "no" costs no read. The
-  # note of a session that cannot ask waits for the assignment (Session
-  # 365): printed here, it said "has been replaced" over a call that then
-  # stopped on a CSV file's shape or a sheet = naming no sheet.
+  # Whether there is a question to ask is known here; the question itself
+  # waits for the checks below that can stop the load (Session 366, Fix
+  # Slate 13): asked here, it took an answer for a load that then stopped
+  # on a sheet = naming no sheet or a CSV file's shape. It still comes
+  # before the read, so a "no" costs no read -- only the checks' pass over
+  # the file. The note of a session that cannot ask waits for the
+  # assignment (Session 365): printed here, it said "has been replaced"
+  # over a call that then stopped.
   target_env <- parent.frame()
-  replaced <- FALSE
-  if (exists(obj_name, envir = target_env, inherits = FALSE) && !overwrite) {
-    if (interactive()) {
-      ok <- .jst_confirm(
-        paste0("'", obj_name, "' already exists in your environment. ",
-               "Overwrite? (y/n): "),
-        "Add overwrite = TRUE to the call, then run it again."
-      )
-      if (!ok) {
-        .jst_msg("Load cancelled.")
-        return(invisible(NULL))
-      }
-    } else {
-      replaced <- TRUE
-    }
-  }
+  clash    <- exists(obj_name, envir = target_env, inherits = FALSE) && !overwrite
+  ask      <- clash && interactive()
+  replaced <- clash && !ask
 
   # --- Validate sheet argument for non-Excel files ----------------------------
   if (!is.null(sheet) && !ext %in% c("xlsx", "xls")) {
@@ -777,7 +773,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # message. Retuning upward would be fitting a constant to one SSD. A
   # companion post-read gate on cell count was added and retired in the same
   # session: with the scan fixed there was no wait left for it to announce.
-  if (!from_package) {
+  # Where the overwrite question is asked, the line follows the answer
+  # (Session 366): ahead of the question it would announce a load the
+  # answer can still cancel. Otherwise it comes first, as before, so a large
+  # CSV file's checks below run under it too.
+  loading_line <- function() {
+    if (from_package) return(invisible(NULL))
     fsize <- suppressWarnings(file.size(resolved_path))
     big   <- !is.na(fsize) && fsize >= 15 * 1024^2
     # Bare-line floor (S230): since the D1 reorder put "Loaded ..." first,
@@ -792,7 +793,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       say("Loading ", obj_name, " ...",
           if (big) " (large file; this may take a moment)" else "")
     }
+    invisible(NULL)
   }
+  if (!ask) loading_line()
 
   # --- Read the file ---------------------------------------------------------
   # A reader's own error is relayed in the house form (Rule AH; the import
@@ -829,6 +832,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # An Excel file's sheets, and a sheet = that names none of them (Session
   # 362: readxl's "Sheet 'Nope' not found" had come through raw).
+  all_sheets <- NULL
   if (!from_package && ext %in% c("xlsx", "xls")) {
     all_sheets <- read_or_stop(readxl::excel_sheets(resolved_path))
     if (!is.null(sheet)) {
@@ -855,20 +859,40 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           line_for(sheet = all_sheets[1L]))
       }
     }
-    # Multi-sheet message (only when sheet not specified). Its line is the
-    # call's own since Session 365 (the folder as typed, name =, skip =,
-    # header = FALSE), with overwrite = TRUE: the first sheet is read under
-    # the name before anyone runs it. It was built from basename(file),
-    # which read another file, or none, when a folder was typed.
-    if (is.null(sheet) && length(all_sheets) > 1) {
-      .jst_msg(
-        "This file has ", length(all_sheets), " sheets: ",
-        paste(all_sheets, collapse = ", "), "\n",
-        "Reading the first sheet (\"", all_sheets[1], "\"). ",
-        "To read a different sheet, use:\n",
-        line_for(sheet = all_sheets[2L], loaded = TRUE)
-      )
+  }
+
+  # --- The overwrite question, after every check that can stop ---------------
+  # (Session 366; see the overwrite check above.) What is left to stop the
+  # load needs the read itself: an .rds file holding something other than a
+  # data frame, or a reader's own error.
+  if (ask) {
+    ok <- .jst_confirm(
+      paste0("'", obj_name, "' already exists in your environment. ",
+             "Overwrite? (y/n): "),
+      "Add overwrite = TRUE to the call, then run it again."
+    )
+    if (!ok) {
+      .jst_msg("Load cancelled.")
+      return(invisible(NULL))
     }
+    loading_line()
+  }
+
+  # Multi-sheet message (only when sheet not specified), after the question:
+  # it says the first sheet is being read. Its line is the call's own since
+  # Session 365 (the folder as typed, name =, skip =, header = FALSE), with
+  # overwrite = TRUE: the first sheet is read under the name before anyone
+  # runs it. It was built from basename(file), which read another file, or
+  # none, when a folder was typed. One sentence a line since Session 366
+  # (Rule E; Fix Slate 13).
+  if (is.null(sheet) && length(all_sheets) > 1L) {
+    .jst_msg(
+      "This file has ", length(all_sheets), " sheets: ",
+      paste(all_sheets, collapse = ", "), "\n",
+      "Reading the first sheet (\"", all_sheets[1], "\").\n",
+      "To read a different sheet, use:\n",
+      line_for(sheet = all_sheets[2L], loaded = TRUE)
+    )
   }
 
   # For .sav: always pass user_na = TRUE so UDM metadata is available for
