@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.237</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.238</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -299,7 +299,8 @@ dataset of that name (see below).</p>
 <p><strong>Auto-naming:</strong>
 The data frame name is derived from the filename by stripping the
 extension. If the resulting name starts with a digit (which R does not
-allow as a variable name), you must supply the <code>name</code> argument.
+allow as a variable name), you must supply the <code>name</code> argument;
+the error offers one (<code>2024.csv</code> is offered <code>name = "X2024"</code>).
 Other characters R does not allow in a name, such as spaces and
 hyphens, are changed as variable names are (see above):
 <code>"my data-1.sav"</code> loads as <code>my_data_1</code>.</p>

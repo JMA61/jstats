@@ -246,9 +246,10 @@ dataset of that name (see below).
 **Auto-naming:** The data frame name is derived from the filename by
 stripping the extension. If the resulting name starts with a digit
 (which R does not allow as a variable name), you must supply the `name`
-argument. Other characters R does not allow in a name, such as spaces
-and hyphens, are changed as variable names are (see above):
-`"my data-1.sav"` loads as `my_data_1`.
+argument; the error offers one (`2024.csv` is offered `name = "X2024"`).
+Other characters R does not allow in a name, such as spaces and hyphens,
+are changed as variable names are (see above): `"my data-1.sav"` loads
+as `my_data_1`.
 
 **Excel files:** Excel files (`.xlsx`, `.xls`) do not contain variable
 or value labels. The data will be loaded as plain numeric, character, or
