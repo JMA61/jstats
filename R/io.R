@@ -737,16 +737,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   replaced <- clash && !ask
 
   # --- Validate sheet argument for non-Excel files ----------------------------
+  # One sentence a line since Session 367 (Rule E; Fix Slate 14). A jstats
+  # example dataset is named as one: it has no extension, so each warning
+  # had said "Ignoring it for this . file."
+  ignored_in <- if (from_package) "this jstats example dataset" else
+    paste0("this .", ext, " file")
   if (!is.null(sheet) && !ext %in% c("xlsx", "xls")) {
     .jst_warn(
-      "`sheet` is only used for Excel format (.xlsx, .xls). ",
-      "Ignoring it for this .", ext, " file."
+      "`sheet` is only used for Excel format (.xlsx, .xls).\n",
+      "Ignoring it for ", ignored_in, "."
     )
   }
   if (skip > 0L && !ext %in% c("xlsx", "xls", "csv")) {
     .jst_warn(
       "`skip` is only used for Excel format (.xlsx, .xls) and CSV format ",
-      "(.csv). Ignoring it for this .", ext, " file."
+      "(.csv).\nIgnoring it for ", ignored_in, "."
     )
   }
 
@@ -5281,6 +5286,46 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     .jst_plural(total, "it", "them"), " missing.")
 }
 
+#' Internal helper: jsave()'s stop for a file with no data frame to save
+#'
+#' \code{jsave("t13.rds")} with no \code{juse()} default names the file and
+#' writes nothing (Session 351); \code{jsave(file = "t13.rds")} joins it
+#' (Session 367). Since Session 367 (Fix Slate 14) the stop offers both
+#' routes, as the analysis functions' stop for the same condition does: the
+#' call with a data frame named first, or a default set and the call run
+#' again. The data frame named is the one data frame in the workspace
+#' (\code{.jst_frame_holding()} with no variables to match: jsave() has no
+#' variable to look for, so any data frame counts), or MyData when there is
+#' none or there are several. Both lines keep the call's other arguments,
+#' and file = when the call named the file with it.
+#'
+#' @param lead Character(1); the stop's first sentence, ending in a newline.
+#' @param file_val Character(1); the file name the call gave.
+#' @param mc The call, matched (\code{match.call()} in jsave()).
+#' @param envir The caller's environment, where the data frames are looked
+#'   for.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_jsave_no_frame_stop <- function(lead, file_val, mc, envir) {
+  fr <- .jst_frame_holding(character(0), envir)
+  if (is.null(fr)) fr <- "MyData"
+  args   <- as.list(mc)[-1L]
+  others <- args[setdiff(names(args), c("data", "file"))]
+  rest   <- if (length(others) > 0L) {
+    paste0(", ", paste0(names(others), " = ",
+                        vapply(others, .jst_term_text, character(1)),
+                        collapse = ", "))
+  } else ""
+  file_arg <- paste0(if ("file" %in% names(args)) "file = ", deparse(file_val))
+  .jst_stop(lead,
+            "Name the data frame first:\n",
+            "  jsave(", fr, ", ", file_arg, rest, ")\n",
+            "Or set a default first, then run the call:\n",
+            "  juse(", fr, ")\n",
+            "  jsave(", file_arg, rest, ")",
+            fn = "jsave")
+}
+
 
 #' Save a data frame to a file
 #'
@@ -5536,13 +5581,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     # A file name alone with no default set (the Session 40 item, Session
     # 351): the resolver asked "Did you mean to use it as a variable
     # name?" of a quoted file name. A string here is the file; what is
-    # missing is the data frame.
+    # missing is the data frame. Both routes since Session 367
+    # (.jst_jsave_no_frame_stop()).
     if (is.character(val) && length(val) == 1L && missing(file) &&
         is.null(getOption(".jst_default_data", default = NULL))) {
-      .jst_stop(deparse(val), " is a file name, and no data frame was ",
-                "given to save.\n",
-                "Name the data frame first:\n",
-                "  jsave(MyData, ", deparse(val), ")")
+      .jst_jsave_no_frame_stop(
+        paste0(deparse(val), " is a file name, and no data frame was ",
+               "given to save.\n"),
+        val, match.call(), parent.frame())
     }
   }
 
@@ -5572,6 +5618,20 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
         .jst_stop("'", file_str, "' is not quoted. Filenames must be in quotes, ",
              "e.g. jsave(", ex_data, ", \"", file_str, "\")")
       }
+    }
+  }
+
+  # --- Pre-check: a file named with file =, no data frame, no default -------
+  # jsave(file = "t.rds") with no juse() default (Session 367, Fix Slate 14)
+  # reached the resolver's "No data frame specified and no default set. Use
+  # juse() to set a default.", the one route the file-name stop above had
+  # lacked. It gets that stop's two routes, file = kept.
+  if (missing(data) && !missing(file) &&
+      is.null(getOption(".jst_default_data", default = NULL))) {
+    file_val <- tryCatch(file, error = function(e) NULL)
+    if (is.character(file_val) && length(file_val) == 1L) {
+      .jst_jsave_no_frame_stop("no data frame was given to save.\n",
+                               file_val, match.call(), parent.frame())
     }
   }
 
@@ -5709,23 +5769,20 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   }
 
   # --- Overwrite check -------------------------------------------------------
-  if (file.exists(out_path) && !overwrite) {
-    if (interactive()) {
-      ok <- .jst_confirm(
-        paste0("File '", .jst_norm_path(out_path),
-               "' already exists. Overwrite? (y/n): "),
-        "Add overwrite = TRUE to the call, then run it again."
-      )
-      if (!ok) {
-        .jst_msg("Save cancelled.")
-        return(invisible(NULL))
-      }
-    } else {
-      .jst_stop(
-        "File '", .jst_norm_path(out_path), "' already exists. ",
-        "Use overwrite = TRUE to replace it."
-      )
-    }
+  # Whether there is a question to ask is known here; the question itself
+  # waits for the checks below that can stop the save (Session 367, Fix
+  # Slate 14), as jload()'s has since Session 366: asked here, it took an
+  # answer for a save that then stopped -- on a name the format refuses, a
+  # declared missing value it cannot hold, Excel's sheet size, a folder R
+  # cannot write to -- the file untouched. A session that cannot ask stops
+  # here, as before: the file that exists is the first thing it reports.
+  clash <- file.exists(out_path) && !overwrite
+  ask   <- clash && interactive()
+  if (clash && !ask) {
+    .jst_stop(
+      "File '", .jst_norm_path(out_path), "' already exists. ",
+      "Use overwrite = TRUE to replace it."
+    )
   }
 
   # --- Detect UDM forms and apply preserve.declarations (collapse) --------------------
@@ -5933,19 +5990,6 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
       .jst_stop(expr_lines(
         .jst_jsave_combined_error_msg(sections, data_name, ext)))
     }
-
-    # .dta only, once we know there are no blocking issues: lowercase any
-    # SAS-style tagged NAs (.A, .B, ...) to Stata convention (.a, .b, ...),
-    # which haven::write_dta() requires. Transparent fix with a note (full
-    # tier only), per Decision 6B.
-    if (ext == "dta") {
-      conv <- .jst_lowercase_tagged_na_df(data)
-      data <- conv$data
-      if (conv$n_changed > 0) {
-        note <- .jst_jsave_dta_case_correction_note(conv$n_changed)
-        if (!is.null(note)) .jst_msg(note)
-      }
-    }
   }
 
   # --- Excel's sheet size (Session 362) ---------------------------------------
@@ -5969,6 +6013,55 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
       "\nSave it in another format, for example:\n",
       "  jsave(", code_name, ", \"", .jst_dq_escape(stem_typed), ".rds\")\n",
       "  jsave(", code_name, ", \"", .jst_dq_escape(stem_typed), ".csv\")")))
+  }
+
+  # A folder R cannot write to (Session 340): a read-only or protected
+  # folder, or one an AI assistant's sandbox mode keeps writes out of. Probed
+  # before the write, by the attempt itself (.jst_lib_writable(), R core's
+  # own test), because each writer fails in its own words and two of them
+  # are R's: saveRDS() warned "cannot open compressed file
+  # './jsave_d_22e05de3092d.rds', probable reason 'Permission denied'" --
+  # the temporary name below, which the user never typed -- and stopped on
+  # "cannot open the connection"; write_xlsx() printed a C-level "[ERROR]
+  # workbook_close()" that R cannot catch. A write that is REDIRECTED rather
+  # than refused cannot be detected from here: the file is written, and
+  # where it went is the sandbox's to say. Since Session 367 the probe
+  # comes before the overwrite question, the last check that can stop.
+  if (!.jst_lib_writable(dirname(out_path))) {
+    .jst_stop("R cannot write to this folder:\n",
+              "  ", .jst_norm_path(dirname(out_path)), "\n",
+              "Nothing was saved.\n",
+              "Choose a folder you can write to and run jsave() again.")
+  }
+
+  # --- The overwrite question, after every check that can stop ---------------
+  # (Session 367; see the overwrite check above.) What is left to stop the
+  # save needs the write itself: a writer's own error, or a file that cannot
+  # be replaced or renamed into place.
+  if (ask) {
+    ok <- .jst_confirm(
+      paste0("File '", .jst_norm_path(out_path),
+             "' already exists. Overwrite? (y/n): "),
+      "Add overwrite = TRUE to the call, then run it again."
+    )
+    if (!ok) {
+      .jst_msg("Save cancelled.")
+      return(invisible(NULL))
+    }
+  }
+
+  # .dta only, once we know there are no blocking issues: lowercase any
+  # SAS-style tagged NAs (.A, .B, ...) to Stata convention (.a, .b, ...),
+  # which haven::write_dta() requires. Transparent fix with a note (full
+  # tier only), per Decision 6B. After the question since Session 367: the
+  # note says what this save does, so it waits for the answer.
+  if (ext == "dta") {
+    conv <- .jst_lowercase_tagged_na_df(data)
+    data <- conv$data
+    if (conv$n_changed > 0) {
+      note <- .jst_jsave_dta_case_correction_note(conv$n_changed)
+      if (!is.null(note)) .jst_msg(note)
+    }
   }
 
   # --- What the file gets in place of what the format cannot hold -------------
@@ -6008,24 +6101,6 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # character." Adjacent placement (tmpdir = dirname(out_path)) keeps
   # file.rename() within one filesystem so the rename is atomic.
   basename_no_ext <- tools::file_path_sans_ext(basename(out_path))
-
-  # A folder R cannot write to (Session 340): a read-only or protected
-  # folder, or one an AI assistant's sandbox mode keeps writes out of. Probed
-  # before the write, by the attempt itself (.jst_lib_writable(), R core's
-  # own test), because each writer fails in its own words and two of them
-  # are R's: saveRDS() warned "cannot open compressed file
-  # './jsave_d_22e05de3092d.rds', probable reason 'Permission denied'" --
-  # the temporary name below, which the user never typed -- and stopped on
-  # "cannot open the connection"; write_xlsx() printed a C-level "[ERROR]
-  # workbook_close()" that R cannot catch. A write that is REDIRECTED rather
-  # than refused cannot be detected from here: the file is written, and
-  # where it went is the sandbox's to say.
-  if (!.jst_lib_writable(dirname(out_path))) {
-    .jst_stop("R cannot write to this folder:\n",
-              "  ", .jst_norm_path(dirname(out_path)), "\n",
-              "Nothing was saved.\n",
-              "Choose a folder you can write to and run jsave() again.")
-  }
 
   xpt_member <- .jst_sas_member_name(basename_no_ext)
   temp_path <- tempfile(
