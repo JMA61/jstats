@@ -17,7 +17,14 @@ named the file with it.
 ## Usage
 
 ``` r
-.jst_jsave_no_frame_stop(lead, file_val, mc, envir)
+.jst_jsave_no_frame_stop(
+  lead,
+  file_val,
+  mc,
+  envir,
+  first = "Name the data frame first:",
+  second = "Or set a default first, then run the call:"
+)
 ```
 
 ## Arguments
@@ -39,6 +46,20 @@ named the file with it.
 
   The caller's environment, where the data frames are looked for.
 
+- first, second:
+
+  Character(1); the headings of the two routes.
+
 ## Value
 
 Does not return; stops.
+
+## Details
+
+Since Session 368 (Fix Slate 15)
+[`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) given
+neither a data frame nor a file, with no default, comes here too, where
+it reached the resolver's stop and would have been offered `jsave(d)`,
+which stops again for want of a file: the lines give the example file
+the other front-door stops give, "mydata.sav", under headings that say
+the file is to be named as well.

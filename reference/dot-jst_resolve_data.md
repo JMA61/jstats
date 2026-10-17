@@ -36,4 +36,6 @@ A list with two components:
 
 Errors with a clear message if no default has been set, if the named
 object cannot be found in the supplied environment, or if it is not a
-data frame.
+data frame. The first of these is
+[`.jst_no_frame_stop()`](https://jma61.github.io/jstats/reference/dot-jst_no_frame_stop.md)'s
+two routes (Session 368, Fix Slate 15).
