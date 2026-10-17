@@ -1464,7 +1464,8 @@
 #'
 #' Errors with a clear message if no default has been set, if the named
 #' object cannot be found in the supplied environment, or if it is not a
-#' data frame.
+#' data frame. The first of these is \code{.jst_no_frame_stop()}'s two
+#' routes (Session 368, Fix Slate 15).
 #'
 #' @param envir Environment in which to look up the default data frame.
 #'   Defaults to the parent frame so the caller's environment is searched.
@@ -1478,9 +1479,7 @@
 #' @keywords internal
 .jst_resolve_data <- function(envir = parent.frame()) {
   data_name <- getOption(".jst_default_data", default = NULL)
-  if (is.null(data_name)) {
-    .jst_stop("No data frame specified and no default set. Use juse() to set a default.")
-  }
+  if (is.null(data_name)) .jst_no_frame_stop(envir)
   if (!exists(data_name, envir = envir)) {
     .jst_stop(paste0("Default data frame ", data_name,
                 " not found. It may have been removed or renamed."))
@@ -1490,6 +1489,99 @@
     .jst_stop(paste0(data_name, " is not a data frame."))
   }
   list(data = data, name = data_name)
+}
+
+#' Internal helper: the stop for a call with no data frame and no default
+#'
+#' \code{jt(Score ~ Gender)}, \code{jscreen()} or \code{jcorr()} with no
+#' data frame named and no \code{juse()} default. Until Session 368 (Fix
+#' Slate 15) every function reaching \code{.jst_resolve_data()} this way
+#' stopped with "No data frame specified and no default set. Use juse() to
+#' set a default.": one route, two sentences on one line. It now offers
+#' both routes, as the resolver's stop for a name not found and jsave()'s
+#' since Session 367 do (\code{.jst_jsave_no_frame_stop()}): the call with
+#' the data frame named, or a default set and the call run again.
+#'
+#' The call is the user's (\code{.jst_caller_call()}). In a formula call
+#' the data frame goes after the formula -- \code{jt(Score ~ Gender, d)},
+#' or \code{data = d} after a formula given as \code{formula =} -- and the
+#' data frame named is the one data frame in the workspace that holds every
+#' variable the formula names. In any other call it goes first, in place of
+#' an empty first argument (\code{jdesc(, Age)}) when there is one, and the
+#' variables to match are those of the call's unnamed arguments; a call with
+#' none, such as \code{jscreen()}, has no variable to match, so any one data
+#' frame counts, as in jsave(). With none or several, MyData. The rest of
+#' the call is kept as typed; the second route runs the call as typed.
+#'
+#' @param envir The caller's environment, where the data frames are looked
+#'   for.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_no_frame_stop <- function(envir) {
+  lead <- "no data frame was named or set as the default.\n"
+  cl <- tryCatch(.jst_caller_call(), error = function(e) NULL)
+  if (is.null(cl)) {
+    .jst_stop(lead, "Name the data frame in the call, or set a default ",
+              "first with juse().")
+  }
+  fn    <- as.character(cl[[1L]])
+  items <- as.list(cl)
+  cn    <- names(items)
+  if (is.null(cn)) cn <- rep("", length(items))
+  is_empty <- function(i) {
+    is.symbol(items[[i]]) && !nzchar(as.character(items[[i]]))
+  }
+  is_formula <- function(i) {
+    is.call(items[[i]]) && identical(items[[i]][[1L]], as.name("~"))
+  }
+  unnamed <- which(!nzchar(cn))
+  unnamed <- unnamed[unnamed > 1L]
+  at <- 0L          # the formula's position, when there is one
+  named_fml <- FALSE
+  if (length(unnamed) > 0L && !is_empty(unnamed[1L]) &&
+      is_formula(unnamed[1L])) {
+    at <- unnamed[1L]
+  } else {
+    hit <- which(cn %in% c("formula", "x"))
+    hit <- hit[vapply(hit, is_formula, logical(1))]
+    if (length(hit) > 0L) {
+      at <- hit[1L]
+      named_fml <- TRUE
+    }
+  }
+  vars <- if (at > 0L) {
+    all.vars(items[[at]])
+  } else {
+    keep <- unnamed[!vapply(unnamed, is_empty, logical(1))]
+    as.character(unique(unlist(lapply(keep, function(i) all.vars(items[[i]])))))
+  }
+  vars <- setdiff(vars, ".")
+  fr <- .jst_frame_holding(vars, envir)
+  if (is.null(fr)) fr <- "MyData"
+  frame <- as.name(fr)
+  if (at > 0L) {
+    new   <- c(items[seq_len(at)], list(frame), items[-seq_len(at)])
+    nn    <- c(cn[seq_len(at)], if (named_fml) "data" else "",
+               cn[-seq_len(at)])
+    first <- "Name the data frame after the formula:"
+  } else if (length(unnamed) > 0L && is_empty(unnamed[1L])) {
+    new <- items
+    new[[unnamed[1L]]] <- frame
+    nn    <- cn
+    first <- "Name the data frame first:"
+  } else {
+    new   <- c(items[1L], list(frame), items[-1L])
+    nn    <- c(cn[1L], "", cn[-1L])
+    first <- "Name the data frame first:"
+  }
+  names(new) <- nn
+  .jst_stop(lead,
+            first, "\n",
+            "  ", .jst_term_text(as.call(new)), "\n",
+            "Or set a default first, then run the call:\n",
+            "  juse(", fr, ")\n",
+            "  ", .jst_term_text(cl),
+            fn = fn)
 }
 
 #' Internal helper: resolve the first positional argument of a data-first function

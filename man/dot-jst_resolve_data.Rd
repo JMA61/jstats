@@ -27,6 +27,7 @@ data frame: X)".
 \details{
 Errors with a clear message if no default has been set, if the named
 object cannot be found in the supplied environment, or if it is not a
-data frame.
+data frame. The first of these is \code{.jst_no_frame_stop()}'s two
+routes (Session 368, Fix Slate 15).
 }
 \keyword{internal}

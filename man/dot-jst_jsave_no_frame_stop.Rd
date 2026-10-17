@@ -4,7 +4,14 @@
 \alias{.jst_jsave_no_frame_stop}
 \title{Internal helper: jsave()'s stop for a file with no data frame to save}
 \usage{
-.jst_jsave_no_frame_stop(lead, file_val, mc, envir)
+.jst_jsave_no_frame_stop(
+  lead,
+  file_val,
+  mc,
+  envir,
+  first = "Name the data frame first:",
+  second = "Or set a default first, then run the call:"
+)
 }
 \arguments{
 \item{lead}{Character(1); the stop's first sentence, ending in a newline.}
@@ -15,6 +22,8 @@
 
 \item{envir}{The caller's environment, where the data frames are looked
 for.}
+
+\item{first, second}{Character(1); the headings of the two routes.}
 }
 \value{
 Does not return; stops.
@@ -30,5 +39,13 @@ again. The data frame named is the one data frame in the workspace
 variable to look for, so any data frame counts), or MyData when there is
 none or there are several. Both lines keep the call's other arguments,
 and file = when the call named the file with it.
+}
+\details{
+Since Session 368 (Fix Slate 15) \code{jsave()} given neither a data frame
+nor a file, with no default, comes here too, where it reached the
+resolver's stop and would have been offered \code{jsave(d)}, which stops
+again for want of a file: the lines give the example file the other
+front-door stops give, "mydata.sav", under headings that say the file is
+to be named as well.
 }
 \keyword{internal}

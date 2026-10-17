@@ -5299,14 +5299,24 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' none or there are several. Both lines keep the call's other arguments,
 #' and file = when the call named the file with it.
 #'
+#' Since Session 368 (Fix Slate 15) \code{jsave()} given neither a data frame
+#' nor a file, with no default, comes here too, where it reached the
+#' resolver's stop and would have been offered \code{jsave(d)}, which stops
+#' again for want of a file: the lines give the example file the other
+#' front-door stops give, "mydata.sav", under headings that say the file is
+#' to be named as well.
+#'
 #' @param lead Character(1); the stop's first sentence, ending in a newline.
 #' @param file_val Character(1); the file name the call gave.
 #' @param mc The call, matched (\code{match.call()} in jsave()).
 #' @param envir The caller's environment, where the data frames are looked
 #'   for.
+#' @param first,second Character(1); the headings of the two routes.
 #' @return Does not return; stops.
 #' @keywords internal
-.jst_jsave_no_frame_stop <- function(lead, file_val, mc, envir) {
+.jst_jsave_no_frame_stop <- function(lead, file_val, mc, envir,
+                                     first = "Name the data frame first:",
+                                     second = "Or set a default first, then run the call:") {
   fr <- .jst_frame_holding(character(0), envir)
   if (is.null(fr)) fr <- "MyData"
   args   <- as.list(mc)[-1L]
@@ -5318,12 +5328,45 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   } else ""
   file_arg <- paste0(if ("file" %in% names(args)) "file = ", deparse(file_val))
   .jst_stop(lead,
-            "Name the data frame first:\n",
+            first, "\n",
             "  jsave(", fr, ", ", file_arg, rest, ")\n",
-            "Or set a default first, then run the call:\n",
+            second, "\n",
             "  juse(", fr, ")\n",
             "  jsave(", file_arg, rest, ")",
             fn = "jsave")
+}
+
+#' Internal helper: the example line under jsave()'s front-door stops
+#'
+#' The stops for a data argument that is not found, cannot be evaluated, is
+#' NULL or is not a data frame each gave "Provide a data frame, e.g.
+#' jsave(MyData, "mydata.sav")" on the line of the sentence before it. Since
+#' Session 368 (Fix Slate 15) each gives "Provide a data frame, for
+#' example:" and the call on a line of its own (Rules E and L), the call
+#' naming the one data frame in the workspace, as the no-default stop has
+#' since Session 367 (MyData when there is none or there are several). The
+#' file is "mydata.sav", except under the stop for a name not found -- most
+#' often a misspelled data frame -- where the file the call gave is kept
+#' when it is a quoted name: \code{jsave(communty, "community.sav")} is
+#' offered \code{jsave(community, "community.sav")}. An object that exists
+#' but is not a data frame keeps the example file, since the file the call
+#' named was meant for that object.
+#'
+#' @param mc The call, matched (\code{match.call()} in jsave()).
+#' @param envir The caller's environment, where the data frames are looked
+#'   for.
+#' @param keep_file Logical; keep the call's file name in the example.
+#' @return Character(1); the "Provide a data frame, for example:" heading
+#'   and the call, two lines.
+#' @keywords internal
+.jst_jsave_example_lines <- function(mc, envir, keep_file = FALSE) {
+  fr <- .jst_frame_holding(character(0), envir)
+  if (is.null(fr)) fr <- "MyData"
+  f  <- if (keep_file && "file" %in% names(mc)) mc[["file"]] else NULL
+  f  <- if (is.character(f) && length(f) == 1L && !is.na(f) && nzchar(f))
+          f else "mydata.sav"
+  paste0("Provide a data frame, for example:\n",
+         "  jsave(", fr, ", ", deparse(f), ")")
 }
 
 
@@ -5540,13 +5583,18 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # dedicated message for that case.
   data_sub <- substitute(data)
   pre_eval <- NULL
+  # The four stops below end on an example call on a line of its own, the
+  # one data frame in the workspace named (Session 368, Fix Slate 15;
+  # .jst_jsave_example_lines()), where each gave "e.g. jsave(MyData,
+  # "mydata.sav")" on the line of the sentence before it.
   if (!missing(data) && !is.null(data_sub)) {
 
     # Case 1: bare symbol that doesn't exist
     if (is.symbol(data_sub) &&
         !exists(as.character(data_sub), envir = parent.frame())) {
-      .jst_stop("'", as.character(data_sub), "' not found. ",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
+      .jst_stop("'", as.character(data_sub), "' not found.\n",
+                .jst_jsave_example_lines(match.call(), parent.frame(),
+                                         keep_file = TRUE))
     }
 
     # Cases 2-4: evaluate the first argument and inspect the value
@@ -5557,8 +5605,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
 
     if (eval_result$failed) {
       data_str <- paste(deparse(data_sub), collapse = "")
-      .jst_stop("'", data_str, "' could not be evaluated. ",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
+      .jst_stop("'", data_str, "' could not be evaluated.\n",
+                .jst_jsave_example_lines(match.call(), parent.frame()))
     }
 
     # Handed to the resolver below so the expression is not evaluated a
@@ -5568,15 +5616,15 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     val <- eval_result$value
     if (is.null(val)) {
       data_str <- paste(deparse(data_sub), collapse = "")
-      .jst_stop("'", data_str, "' is NULL. ",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
+      .jst_stop("'", data_str, "' is NULL.\n",
+                .jst_jsave_example_lines(match.call(), parent.frame()))
     }
     # The resolver's sentence for the same input (S334 item, Session 351):
     # "'z' is a integer" pasted an article before the class.
     if (!is.data.frame(val) && !is.character(val)) {
       data_str   <- paste(deparse(data_sub), collapse = "")
       .jst_stop("'", data_str, "' is not a data frame.\n",
-           "Provide a data frame, e.g. jsave(MyData, \"mydata.sav\")")
+                .jst_jsave_example_lines(match.call(), parent.frame()))
     }
     # A file name alone with no default set (the Session 40 item, Session
     # 351): the resolver asked "Did you mean to use it as a variable
@@ -5603,6 +5651,12 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # left for the downstream "provide a filename" check) and deparses to a
   # name ending in a supported extension (so unrelated undefined symbols are
   # not misreported as missing quotes).
+  # Since Session 368 (Fix Slate 15) the stop is ruling R18's pointer, as
+  # jload()'s for the same slip -- "community.rds is not in quotes." / "A
+  # file name goes in quotes:" and the call as typed with the name quoted
+  # (.jst_free_text_arg()) -- where it gave "'community.rds' is not quoted.
+  # Filenames must be in quotes, e.g. jsave(community, "community.rds")"
+  # on one line, the call rebuilt from the data and the file alone.
   if (!missing(file)) {
     file_sub <- substitute(file)
     if (is.symbol(file_sub)) {
@@ -5610,15 +5664,24 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
       if (!exists(file_str, envir = parent.frame()) &&
           tolower(tools::file_ext(file_str)) %in%
             c("sav", "dta", "csv", "rds", "xpt", "xlsx", "xls")) {
-        ex_data <- if (!missing(data) && is.symbol(data_sub)) {
-          as.character(data_sub)
-        } else {
-          "MyData"
-        }
-        .jst_stop("'", file_str, "' is not quoted. Filenames must be in quotes, ",
-             "e.g. jsave(", ex_data, ", \"", file_str, "\")")
+        .jst_free_text_arg(file_sub, parent.frame(), sys.call(),
+                           match.call(), "file", "a file name", "jsave")
       }
     }
+  }
+
+  # --- Pre-check: no data frame and no file, no default ---------------------
+  # jsave() given neither, with no juse() default (Session 368, Fix Slate
+  # 15), reached the resolver's stop, whose first route would have been
+  # jsave(d) -- a call that stops again for want of a file. Both routes
+  # with the example file the front-door stops give.
+  if (missing(data) && missing(file) &&
+      is.null(getOption(".jst_default_data", default = NULL))) {
+    .jst_jsave_no_frame_stop(
+      "no data frame or file name was given.\n", "mydata.sav",
+      match.call(), parent.frame(),
+      first  = "Name the data frame first, then the file:",
+      second = "Or set a default first, then name the file:")
   }
 
   # --- Pre-check: a file named with file =, no data frame, no default -------
@@ -5688,10 +5751,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   }
 
   # --- Validate file argument ------------------------------------------------
+  # The example call on a line of its own, naming the data frame being saved
+  # (Session 368, Fix Slate 15), where it sat after "e.g." on the sentence's
+  # line and named MyData.
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
     .jst_stop(
-      "Provide a filename with extension, e.g. jsave(MyData, \"mydata.sav\")\n",
+      expr_lines(paste0("Provide a filename with extension, for example:\n",
+                        "  jsave(", code_name, ", \"mydata.sav\")")), "\n",
       "Supported formats:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
@@ -5776,11 +5843,16 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # declared missing value it cannot hold, Excel's sheet size, a folder R
   # cannot write to -- the file untouched. A session that cannot ask stops
   # here, as before: the file that exists is the first thing it reports.
+  # Since Session 368 (Fix Slate 15) one sentence a line and the path on a
+  # line of its own (Rules E and Z), where "File '<path>' already exists.
+  # Use overwrite = TRUE to replace it." put both sentences and the path on
+  # one line, so a long path made a long line.
   clash <- file.exists(out_path) && !overwrite
   ask   <- clash && interactive()
   if (clash && !ask) {
     .jst_stop(
-      "File '", .jst_norm_path(out_path), "' already exists. ",
+      "this file already exists:\n",
+      "  ", .jst_norm_path(out_path), "\n",
       "Use overwrite = TRUE to replace it."
     )
   }
