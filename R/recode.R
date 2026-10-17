@@ -152,6 +152,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   if (!is.data.frame(data)) {
     .jst_stop("The first argument must be a data frame.")
   }
+  # No variable named (Session 370, Fix Slate 18), as jrecode().
+  if (!nzchar(var_name)) .jst_no_var_stop("jrelabel")
   if (!var_name %in% names(data)) {
     # The package's one not-found sentence (S338; S343 here).
     .jst_check_vars(data, var_name, arg1$name,
@@ -1336,6 +1338,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   if (!is.data.frame(data)) {
     .jst_stop("The first argument must be a data frame.")
   }
+  # No variable named (Session 370, Fix Slate 18): it had reached the
+  # blank-name guard, "Variable names cannot be blank."
+  if (!nzchar(orig_name)) .jst_no_var_stop("jrecode")
   if (!orig_name %in% names(data)) {
     # The package's one not-found sentence (S338), with the juse() default
     # hint. Until Session 343: "Variable 'Agee' not found in 'd'."
@@ -4011,6 +4016,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   if (!is.data.frame(data)) {
     .jst_stop("The first argument must be a data frame.")
   }
+  # No variable named (Session 370, Fix Slate 18), as jrecode().
+  if (!nzchar(var_name)) .jst_no_var_stop("jencode")
   if (!var_name %in% names(data)) {
     # The package's one not-found sentence (S338; S343 here), as jrecode().
     .jst_check_vars(data, var_name, .jst_data_name,
@@ -5815,21 +5822,18 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   } else if (!is.null(vars)) {
     target_vars <- vars
   } else {
-    # The example names MyData: its variables are placeholders, not the
-    # caller's (voice Rule AC). The names() line is built from the call and
-    # keeps the data frame it named -- unless that was an expression, which
-    # would be evaluated a second time to give a throwaway copy's names
-    # (S339; the S219 item, finding 5).
-    .jst_stop("specify at least one variable to declare on: unquoted names ",
-         "(for example jdeclare_missing(MyData, Age, Income, ",
-         "codes = c(-99))) or quoted names via vars = c(...).\n",
-         # S355 (the S339 item): "variable" (Rule AG), and Rule B's
-         # "pass ... explicitly" gone from the same sentence.
-         "To apply one declaration to every variable, use ",
-         "vars = names(",
-         if (identical(data_kind, "expression")) "MyData" else data_name,
-         ").",
-         fn = "jdeclare_missing")
+    # Laid out as jrecode()'s (Session 370, Fix Slate 18): what is missing,
+    # then a line on community that runs, on a line of its own; until then
+    # the example sat inside a sentence and named MyData beside invented
+    # variables. The names() line is built from the call and keeps the
+    # data frame it named -- unless that was an expression, which would be
+    # evaluated a second time to give a throwaway copy's names (S339; the
+    # S219 item, finding 5).
+    .jst_no_var_stop("jdeclare_missing",
+      extra = paste0(
+        "\nTo apply one declaration to every variable, use vars = names(",
+        if (identical(data_kind, "expression")) "MyData" else data_name,
+        ")."))
   }
 
   if (anyDuplicated(target_vars) > 0L) {

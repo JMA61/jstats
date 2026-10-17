@@ -1530,6 +1530,18 @@
 #' them (min.valid =, type =). jscreen() keeps the two routes: given a data
 #' frame alone it screens every column.
 #'
+#' Since Session 370 (Fix Slate 18) the same stop serves jrecode(),
+#' jencode(), jrelabel() and jdeclare_missing(), each with the example its
+#' own no-variable stop gives (\code{.jst_no_var_example()}), and
+#' jconvert(), which needs a target rather than variables: "no data frame
+#' and no target format were named." with jconvert(community, to =
+#' "stata"). A call that names its variables or the target by argument
+#' (orig.var =, var =, vars =, to =) lacks only the data frame and keeps
+#' the two routes, as does jconvert() under a session convention, which
+#' supplies the target. These keep only modify = and missing.notice =
+#' from the call (jdeclare_missing() and jconvert()); their labels =,
+#' map = and codes = depend on the user's variables.
+#'
 #' @param envir The caller's environment, where the data frames are looked
 #'   for.
 #' @param vars Character or NULL. The variables the data frame named must
@@ -1580,26 +1592,58 @@
   vars <- setdiff(vars, ".")
   # Ruling R22 (Session 369): no data frame and no variable, in a function
   # that needs variables. The example is the one the function's own
-  # no-variables stop gives.
+  # no-variables stop gives. Since Session 370 (Fix Slate 18) the recode
+  # family and jconvert() too: jrecode(), jencode(), jrelabel() and
+  # jdeclare_missing() take their example from .jst_no_var_example(), which
+  # their own no-variable stops give; jconvert(), which needs a target
+  # rather than variables, gets jconvert(community, to = "stata").
   if (at == 0L && is.null(vars_given) &&
       !any(!vapply(unnamed, is_empty, logical(1)))) {
     ex <- switch(fn,
-      jdesc  = list(quote(jdesc(community, Age, Income)), "one or more"),
-      jfreq  = list(quote(jfreq(community, Region)), "one or more"),
-      jcorr  = list(quote(jcorr(community, Income, Age, WellbeingScore)),
-                    "two or more"),
-      jalpha = list(quote(jalpha(community, Environment1, Environment3,
-                                 Environment4)), "two or more"),
-      jsum   = list(quote(jsum(community, Environment1, Environment3)),
-                    "two or more", "community$EnvTotal"),
-      javg   = list(quote(javg(community, Environment1, Environment3)),
-                    "two or more", "community$EnvAvg"),
-      jplot  = list(quote(jplot(community, Age)), "one or two"),
-      NULL)
+      jdesc  = list(call = quote(jdesc(community, Age, Income)),
+                    n = "one or more"),
+      jfreq  = list(call = quote(jfreq(community, Region)), n = "one or more"),
+      jcorr  = list(call = quote(jcorr(community, Income, Age,
+                                       WellbeingScore)),
+                    n = "two or more"),
+      jalpha = list(call = quote(jalpha(community, Environment1, Environment3,
+                                        Environment4)),
+                    n = "two or more"),
+      jsum   = list(call = quote(jsum(community, Environment1, Environment3)),
+                    n = "two or more", lhs = "community$EnvTotal"),
+      javg   = list(call = quote(javg(community, Environment1, Environment3)),
+                    n = "two or more", lhs = "community$EnvAvg"),
+      jplot  = list(call = quote(jplot(community, Age)), n = "one or two"),
+      jconvert = list(call = quote(jconvert(community, to = "stata")),
+                      what = "target format",
+                      line2 = "Name a data frame and a target format",
+                      named = c("vars", "to"),
+                      keep = c("missing.notice", "modify")),
+      .jst_no_var_example(fn))
+    # A call that names its variables, or jconvert()'s target, by argument
+    # -- jrecode(orig.var = Age, ...), jdeclare_missing(vars = "Age", ...),
+    # jconvert(to = "stata") -- lacks only the data frame, so it keeps the
+    # two routes below. A name typed short (orig = Age) counts as well.
+    typed <- cn[nzchar(cn)]
+    if (!is.null(ex) && !is.null(ex$named) &&
+        any(vapply(typed, function(a) any(startsWith(ex$named, a)),
+                   logical(1)))) {
+      ex <- NULL
+    }
+    # jconvert() with no to = takes its target from the session's
+    # missing-value convention, so with one set only the data frame is
+    # missing: jconvert(MyData) runs.
+    if (!is.null(ex) && identical(fn, "jconvert") &&
+        getOption(".jst_options_missing_convention",
+                  .jst_options_defaults$missing.convention) %in%
+          c("spss", "stata", "sas")) {
+      ex <- NULL
+    }
     if (!is.null(ex)) {
-      keep_opts <- c("method", "layout", "digits", "variable.id", "value.id",
-                     "case.processing.detail", "missing.detail", "var.label",
-                     "fixed", "labels")
+      keep_opts <- if (!is.null(ex$keep)) ex$keep else
+        c("method", "layout", "digits", "variable.id", "value.id",
+          "case.processing.detail", "missing.detail", "var.label",
+          "fixed", "labels")
       is_const <- function(e) {
         (is.atomic(e) && length(e) == 1L) ||
           (is.call(e) && identical(e[[1L]], as.name("c")) &&
@@ -1610,11 +1654,14 @@
       opt_i <- which(cn %in% keep_opts)
       opt_i <- opt_i[vapply(opt_i, function(i) is_const(items[[i]]),
                             logical(1))]
-      line <- .jst_term_text(as.call(c(as.list(ex[[1L]]), items[opt_i])))
-      if (length(ex) >= 3L) line <- paste0(ex[[3L]], " <- ", line)
-      .jst_stop("no data frame and no variables were named.\n",
-                "Name a data frame and ", ex[[2L]],
-                " of its variables, for example:\n",
+      line <- .jst_term_text(as.call(c(as.list(ex$call), items[opt_i])))
+      if (!is.null(ex$lhs)) line <- paste0(ex$lhs, " <- ", line)
+      what  <- if (!is.null(ex$what)) ex$what else "variables"
+      line2 <- if (!is.null(ex$line2)) ex$line2 else
+        paste0("Name a data frame and ", ex$n, " of its ",
+               if (!is.null(ex$noun)) ex$noun else "variables")
+      .jst_stop("no data frame and no ", what, " were named.\n",
+                line2, ", for example:\n",
                 "  ", line,
                 fn = fn)
     }
@@ -1644,6 +1691,84 @@
             "Or set a default first, then run the call:\n",
             "  juse(", fr, ")\n",
             "  ", .jst_term_text(cl),
+            fn = fn)
+}
+
+#' Internal helper: the example a recode-family stop gives when no variable is named
+#'
+#' One example per function, given by two stops (Session 370, Fix Slate
+#' 18): the function's own stop for a data frame named with no variable
+#' (\code{.jst_no_var_stop()}), and ruling R22's single stop for a call
+#' naming neither (\code{.jst_no_frame_stop()}), so the two agree. Each is
+#' a line on community that runs as printed in every convention state (voice
+#' Rule AC; Jeff, S369: a remedy must not lead to another stop). The
+#' functions that return a variable are assigned to a column of community,
+#' as jsum()'s and javg()'s examples are; jdeclare_missing() names its
+#' convention, since a declaration on a plain variable needs one and
+#' community's are SPSS-style. community's one text variable is its ID, so
+#' jencode()'s example encodes RespondentID.
+#'
+#' @param fn Character. The function's name.
+#' @return NULL for a function with no entry, else a list: call (the call,
+#'   quoted), lhs (the column it is assigned to, or NULL), n ("one" or "one
+#'   or more"), noun (for R22's line, when not "variables"), provide (the
+#'   no-variable stop's second line, before ", for example:"), named (the
+#'   arguments that name variables) and keep (the arguments R22's stop
+#'   keeps from the call).
+#' @keywords internal
+.jst_no_var_example <- function(fn) {
+  switch(fn,
+    jrecode = list(
+      call = quote(jrecode(community, OwnsHome, map = "1=1; 2=0")),
+      lhs = "community$OwnsHome01", n = "one",
+      provide = "Provide the variable to recode",
+      named = "orig.var", keep = character(0)),
+    jencode = list(
+      call = quote(jencode(community, RespondentID)),
+      lhs = "community$IDNumber", n = "one", noun = "text variables",
+      provide = "Provide the text variable to encode",
+      named = "var", keep = character(0)),
+    jrelabel = list(
+      call = quote(jrelabel(community, Age, var.label = "Age in years")),
+      lhs = "community$Age", n = "one",
+      provide = "Provide the variable to label",
+      named = "var", keep = character(0)),
+    jdeclare_missing = list(
+      call = quote(jdeclare_missing(community, Age, codes = -99,
+                                    convention = "spss")),
+      n = "one or more",
+      provide = "Provide one or more variable names",
+      named = "vars", keep = c("missing.notice", "modify")),
+    NULL)
+}
+
+#' Internal helper: the stop for a data frame named with no variable
+#'
+#' jrecode(d), jencode(d) and jrelabel(d) -- or the same under a juse()
+#' default with no variable -- reached the blank-name guard of
+#' \code{.jst_check_vars()} and were told "Variable names cannot be blank.
+#' / Check for a stray comma or period in the call." (the S369 item). They
+#' now say what is missing and give the function's own example, as jdesc()
+#' and jfreq() have since Session 338: "no variable specified." /
+#' "Provide the variable to recode, for example:" and the line on
+#' community. jdeclare_missing(d) gives the same form, its line on
+#' community, then \code{extra} (its vars = names() line). Session 370, Fix
+#' Slate 18.
+#'
+#' @param fn Character. The function's name.
+#' @param extra Character or NULL. Text that follows the example, starting
+#'   with its own newline.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_no_var_stop <- function(fn, extra = NULL) {
+  ex   <- .jst_no_var_example(fn)
+  line <- .jst_term_text(ex$call)
+  if (!is.null(ex$lhs)) line <- paste0(ex$lhs, " <- ", line)
+  .jst_stop(if (identical(ex$n, "one")) "no variable specified.\n" else
+              "no variables specified.\n",
+            ex$provide, ", for example:\n",
+            "  ", line,
+            extra,
             fn = fn)
 }
 

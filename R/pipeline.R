@@ -597,21 +597,21 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     # "jsubset activated for mk()" for a filter no later call reached. It is
     # refused as the registration verbs refuse one; a place (lst$d) is
     # accepted, since an analysis of lst$d reads the same text.
+    # No condition (Session 370, Fix Slate 18): what is missing, then a line
+    # on community, before the expression check -- whose offered line for
+    # jsubset(mk()) had been built with Age < 40, as this stop's example had
+    # been built on the call's data frame ("Example: jsubset(g6, Age <
+    # 40)"), both for a data frame that may have no Age.
+    if (missing(expr)) {
+      .jst_stop("no condition specified.\n",
+                "Provide a condition, for example:\n",
+                "  jsubset(community, Age < 40)")
+    }
     if (identical(.jst_data_arg_kind(raw_data), "expression")) {
       .jst_registration_expression_stop(
-        raw_data, "jsubset",
-        if (missing(expr)) {
-          as.call(list(as.name("jsubset"), raw_data, quote(Age < 40)))
-        } else {
-          sys.call()
-        },
-        registering = missing(expr) ||
-          (!is.null(raw_expr) && is.null(toggle_word(raw_expr))),
+        raw_data, "jsubset", sys.call(),
+        registering = !is.null(raw_expr) && is.null(toggle_word(raw_expr)),
         noun = "jsubset filter", then = "set it")
-    }
-    if (missing(expr)) {
-      .jst_stop("the condition must be a logical expression. ",
-           "Example: jsubset(", target_name, ", Age < 40)")
     }
     if (is.null(raw_expr)) return(clear_one(target_name))
     named_word <- toggle_word(raw_expr)
@@ -1881,7 +1881,10 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   # An expression given as the data -- jdummy(mk(), Grp) -- has no name to
   # store a registration under and is refused; a place (lst$d) is accepted,
   # and the note's file is named for its last part. (S342)
-  if (arg1$mode == "explicit" &&
+  # A call naming no variables -- jdummy(mk()) -- gets the no-variables
+  # stop below instead (Session 370, Fix Slate 18): the line this one
+  # offered, jdummy(mydata), stopped there.
+  if (arg1$mode == "explicit" && ...length() > 0L &&
       identical(.jst_data_arg_kind(raw_data), "expression")) {
     .jst_registration_expression_stop(
       raw_data, "jdummy", sys.call(),
@@ -1920,12 +1923,17 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     return(.jst_handle_clear("dummy", explicit_frame = .jst_data_name))
   }
 
-  # No usable variable: data supplied but no variable named.
+  # No usable variable: data supplied but no variable named. As the other
+  # registration verbs' stop since Session 370 (Fix Slate 18): what is
+  # missing, then a line on community. It had given four calls in one
+  # sentence -- jdummy(VarName) and its remove and clear forms -- one of
+  # which, jdummy(VarName = NULL), was not a call jdummy() takes; the
+  # remove and clear forms are on the help page and in jdummy()'s status
+  # display (voice Rule D).
   if (length(var_names) == 0L) {
-    .jst_stop("no variable supplied. ",
-              "Use jdummy(VarName) to register, jdummy(VarName, remove = TRUE) ",
-              "to remove, jdummy(VarName = NULL) to clear this frame, ",
-              "or jdummy(clear.all = TRUE) to clear every frame.",
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jdummy(community, Region)",
               fn = "jdummy")
   }
 
@@ -2237,7 +2245,10 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
   # An expression given as the data has no name to store a registration
   # under (S342); a place (lst$d) is accepted and saved by its last part.
-  if (arg1$mode == "explicit" &&
+  # A call naming no variables -- jnumeric(mk()) -- gets the no-variables
+  # stop below instead (Session 370, Fix Slate 18): the line this one
+  # offered, jnumeric(mydata), stopped there.
+  if (arg1$mode == "explicit" && ...length() > 0L &&
       identical(.jst_data_arg_kind(raw_data), "expression")) {
     .jst_registration_expression_stop(
       raw_data, "jnumeric", sys.call(),
@@ -2262,8 +2273,12 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("numeric", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
-    .jst_stop("Specify one or more variables to register, e.g. ",
-         "jnumeric(", data_name, ", <var1>, <var2>).")
+    # One sentence a line, the example on a line of its own (Session 370,
+    # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
+    # named the call's data frame beside placeholder variables.
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jnumeric(community, Environment2)")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -2358,7 +2373,10 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
   # An expression given as the data has no name to store a registration
   # under (S342); a place (lst$d) is accepted and saved by its last part.
-  if (arg1$mode == "explicit" &&
+  # A call naming no variables -- jcount(mk()) -- gets the no-variables
+  # stop below instead (Session 370, Fix Slate 18): the line this one
+  # offered, jcount(mydata), stopped there.
+  if (arg1$mode == "explicit" && ...length() > 0L &&
       identical(.jst_data_arg_kind(raw_data), "expression")) {
     .jst_registration_expression_stop(
       raw_data, "jcount", sys.call(),
@@ -2382,8 +2400,13 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("count", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
-    .jst_stop("Specify one or more variables to register, e.g. ",
-         "jcount(", data_name, ", <var1>, <var2>).")
+    # One sentence a line, the example on a line of its own (Session 370,
+    # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
+    # named the call's data frame beside placeholder variables.
+    # community holds no count, so the example is a placeholder (MyData).
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jcount(MyData, Arrests)")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -2490,7 +2513,10 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   default_used <- arg1$mode %in% c("default", "symbol_with_default")
   # An expression given as the data has no name to store a registration
   # under (S342); a place (lst$d) is accepted and saved by its last part.
-  if (arg1$mode == "explicit" &&
+  # A call naming no variables -- jlikert(mk()) -- gets the no-variables
+  # stop below instead (Session 370, Fix Slate 18): the line this one
+  # offered, jlikert(mydata), stopped there.
+  if (arg1$mode == "explicit" && ...length() > 0L &&
       identical(.jst_data_arg_kind(raw_data), "expression")) {
     .jst_registration_expression_stop(
       raw_data, "jlikert", sys.call(),
@@ -2514,8 +2540,12 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     return(.jst_handle_clear("likert", explicit_frame = data_name))
   }
   if (length(variables) == 0) {
-    .jst_stop("Specify one or more variables to register, e.g. ",
-         "jlikert(", data_name, ", <var1>, <var2>).")
+    # One sentence a line, the example on a line of its own (Session 370,
+    # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
+    # named the call's data frame beside placeholder variables.
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jlikert(community, Environment1, Environment2)")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
