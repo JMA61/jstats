@@ -1,0 +1,41 @@
+# Internal helper: a column's lettered missing-value markers made plain NA
+
+[`haven::zap_missing()`](https://haven.tidyverse.org/reference/zap_missing.html)
+turns a labelled column's Stata-style and SAS-style markers into plain
+NA and drops the labels attached to them, but its method for a plain
+double returns the column unchanged – and a Stata file whose extended
+missing values carry no value label loads as exactly that, a double
+holding tagged NAs. Until Session 372 the two callers passed such a
+column through with its markers in place:
+`jsave(preserve.declarations = FALSE)` then repeated the .sav and .xpt
+refusal that had offered it, and `jload(preserve.declarations = FALSE)`
+and `jconvert(to = "baseR")` reported as plain NA markers that were
+still there. Here every marker cell becomes plain NA, labelled or not.
+Callers:
+[`.jst_handle_udms()`](https://jma61.github.io/jstats/reference/dot-jst_handle_udms.md)
+and
+[`jconvert()`](https://jma61.github.io/jstats/reference/jconvert.md)'s
+base R arm. The analysis pipeline's mask
+([`.jst_apply_declared_udms_as_na()`](https://jma61.github.io/jstats/reference/dot-jst_apply_declared_udms_as_na.md))
+keeps
+[`haven::zap_missing()`](https://haven.tidyverse.org/reference/zap_missing.html):
+a plain double's tagged cells are NA to every count, and with no labels
+there is nothing for `as_factor()` to revive, so a zap there would
+change nothing.
+
+## Usage
+
+``` r
+.jst_zap_tags(col)
+```
+
+## Arguments
+
+- col:
+
+  A column.
+
+## Value
+
+The column with its markers plain NA. A column that is not a double
+holds none and is returned unchanged.

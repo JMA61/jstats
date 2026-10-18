@@ -101,14 +101,12 @@ The four target formats:
   round-trip through
   [`jsave()`](https://jma61.github.io/jstats/reference/jsave.md) with
   original labeling. For columns carrying Stata-style missing values
-  (`tagged_na` markers), uses
-  [`haven::zap_missing()`](https://haven.tidyverse.org/reference/zap_missing.html)
-  to convert them to plain `NA`s. A string variable's declared missing
-  values (SPSS declares them directly, as in
-  `MISSING VALUES MARITAL ('UNKNOWN')`) become `NA` the same way. They
-  cannot become Stata-style or SAS-style missing values, which exist
-  only on numeric variables, so `to = "stata"` and `to = "sas"` stop and
-  name such a variable;
+  (`tagged_na` markers), makes every marker a plain `NA`, labelled or
+  not. A string variable's declared missing values (SPSS declares them
+  directly, as in `MISSING VALUES MARITAL ('UNKNOWN')`) become `NA` the
+  same way. They cannot become Stata-style or SAS-style missing values,
+  which exist only on numeric variables, so `to = "stata"` and
+  `to = "sas"` stop and name such a variable;
   [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) turns
   it into a numeric one.
 
@@ -206,13 +204,17 @@ Atomicity applies to every error mode – the entire `jconvert()` call
 either succeeds or errors before mutating the data frame.
 
 **Pattern A – value labels suggest missingness but no formal
-declaration.** When a column has no formal missing-value declaration but
-carries value labels matching the package's missing-label wordlist (e.g.
-`"Refused"`, `"Don't know"`, `"Not applicable"`), `jconvert()` skips the
-column and surfaces it in the notification with the affected value/label
-pairs. To formalize these as declared missing values use
+declaration.** When a numeric column has no formal missing-value
+declaration but carries value labels matching the package's
+missing-label wordlist (e.g. `"Refused"`, `"Don't know"`,
+`"Not applicable"`), `jconvert()` skips the column and surfaces it in
+the notification with the affected value/label pairs. To formalize these
+as declared missing values use
 [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md);
-to leave them as ordinary data, no action is needed.
+to leave them as ordinary data, no action is needed. A text variable is
+not reported:
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
+declares missing values on numeric variables only.
 
 ## See also
 

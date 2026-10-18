@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.244</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.245</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -150,8 +150,8 @@ convert declared cells to plain <code>NA</code>. For SPSS-style columns
 removes the attributes; value labels are preserved so the column
 can still round-trip through <code><a href="jsave.html">jsave()</a></code> with original
 labeling. For columns carrying Stata-style missing values
-(<code>tagged_na</code> markers), uses <code><a href="https://haven.tidyverse.org/reference/zap_missing.html" class="external-link">haven::zap_missing()</a></code> to
-convert them to plain <code>NA</code>s. A string variable's declared
+(<code>tagged_na</code> markers), makes every marker a plain <code>NA</code>,
+labelled or not. A string variable's declared
 missing values (SPSS declares them directly, as in
 <code>MISSING VALUES MARITAL ('UNKNOWN')</code>) become <code>NA</code> the
 same way. They cannot become Stata-style or SAS-style missing
@@ -261,14 +261,15 @@ columns out. Atomicity applies to every
 error mode – the entire <code>jconvert()</code> call either succeeds or
 errors before mutating the data frame.</p>
 <p><strong>Pattern A – value labels suggest missingness but no formal
-declaration.</strong> When a column has no formal missing-value declaration
-but carries value labels matching the package's missing-label
-wordlist (e.g. <code>"Refused"</code>, <code>"Don't know"</code>,
+declaration.</strong> When a numeric column has no formal missing-value
+declaration but carries value labels matching the package's
+missing-label wordlist (e.g. <code>"Refused"</code>, <code>"Don't know"</code>,
 <code>"Not applicable"</code>), <code>jconvert()</code> skips the column and
 surfaces it in the notification with the affected value/label pairs.
 To formalize these as declared missing values use
 <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>; to leave them as ordinary data, no action
-is needed.</p>
+is needed. A text variable is not reported: <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>
+declares missing values on numeric variables only.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
