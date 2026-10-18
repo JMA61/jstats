@@ -9,7 +9,8 @@ expression and show the corrected form}
   raw_expr,
   expr_str,
   origin = c("set", "call"),
-  frame = NULL
+  frame = NULL,
+  envir = NULL
 )
 }
 \arguments{
@@ -23,6 +24,11 @@ per-call \code{subset =}); chooses the lead and the fix-line form.}
 \item{frame}{Character(1) or \code{NULL}. For \code{"set"}: the data
 frame as typed, when the call named one; the fix line keeps it
 (\code{jsubset(d, !(Age < 40))}; Session 338, the S290 item).}
+
+\item{envir}{The caller's environment, or \code{NULL}. For \code{"set"}
+with no data frame named and no default set, where the data frame
+holding the condition's variables is looked for, so the fix line can
+name it (ruling R23, Session 371).}
 }
 \description{
 Called on the PARSED filter expression from two places: \code{jsubset()}

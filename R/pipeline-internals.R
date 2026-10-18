@@ -197,7 +197,7 @@
     .jst_stop(first, "\n", second, "\n",
               "Build the filter from the data frame's own columns, ",
               "for example:\n",
-              "  jsubset(Age < 40)", unchanged_obj)
+              "  jsubset(community, Age < 40)", unchanged_obj)
   }
 
   if (origin == "status") {
@@ -250,10 +250,10 @@
   } else if (is_count) {
     paste0("Build the filter from the data frame's own columns, ",
            "for example:\n",
-           "  jsubset(Age < 40)")
+           "  jsubset(community, Age < 40)")
   } else {
     paste0("Compare a variable to a value, for example:\n",
-           "  jsubset(Age < 40)")
+           "  jsubset(community, Age < 40)")
   }
   unchanged <- if (isTRUE(prior) && !is.null(data_name)) {
     paste0("\nYour earlier filter for the ", data_name,

@@ -137,10 +137,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # Otherwise var is supplied positionally.
   if (arg1$mode == "symbol_with_default") {
     if (!missing(var)) {
-      displaced <- deparse(substitute(var))
-      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
-                "Use jrelabel(", deparse(arg1$first_arg_sub), ", labels = ", displaced, ")",
-                fn = "jrelabel")
+      .jst_named_args_stop("jrelabel", arg1, data, arg1$name, sys.call(),
+                           "labels")
     }
     var_name <- .jst_one_var_name(arg1$first_arg_sub, .fn)   # R18, S356
   } else {
@@ -186,7 +184,8 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   # jrelabel() never converts. Mirrors jdeclare_missing()'s type guard.
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
-      .jst_stop("The labels argument must be a single quoted string, e.g. \"1=Yes; 0=No\".")
+      .jst_stop("the labels must be one quoted string, for example:\n",
+                "  labels = \"1=Yes; 0=No\"")
     }
     if (inherits(x, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
       .jst_stop("'", var_name, "' is a date/time variable; value labels can ",
@@ -1323,10 +1322,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # Otherwise orig.var is supplied positionally.
   if (arg1$mode == "symbol_with_default") {
     if (!missing(orig.var)) {
-      displaced <- deparse(substitute(orig.var))
-      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
-                "Use jrecode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
-                fn = "jrecode")
+      .jst_named_args_stop("jrecode", arg1, data, .jst_data_name, sys.call(),
+                           "map")
     }
     orig_name <- .jst_one_var_name(arg1$first_arg_sub, "jrecode")   # R18, S356
   } else {
@@ -1352,11 +1349,25 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # pasted into a line the user is meant to run: every such line below
   # names mydata, and the closing reminder says how mydata is made (S343;
   # the S339 rule, Internals "Notes -- S339").
-  data_kind  <- .jst_data_arg_kind(data_sub)
-  data_typed <- .jst_term_text(data_sub)
+  # The data argument left out under a juse() default -- jrecode(orig.var = Age, ...), jrecode(, Age, ...) --
+  # holds R's missing-argument marker, which stops R itself when read
+  # ("argument "data_sub" is missing, with no default"; Session 371, the
+  # remedy-line audit): the default frame is a name.
+  data_kind  <- if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub)
+  data_typed <- if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)
   if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
-  if (missing(map) || !is.character(map) || length(map) != 1) {
-    .jst_stop("The map argument must be a single quoted string, e.g. map = \"1=1; 2=0\".")
+  # One sentence a line and the example on its own (Session 371, item 8;
+  # voice Rule L): "e.g. map = ..." had been inline. No map at all gets the
+  # function's own example, which runs.
+  if (missing(map)) {
+    .jst_stop("no map specified.\n",
+              "Provide a map in quotes, for example:\n",
+              "  community$OwnsHome01 <- jrecode(community, OwnsHome, ",
+              "map = \"1=1; 2=0\")")
+  }
+  if (!is.character(map) || length(map) != 1) {
+    .jst_stop("the map must be one quoted string, for example:\n",
+              "  map = \"1=1; 2=0\"")
   }
 
   # Validate convention argument up front so an invalid value errors
@@ -1419,7 +1430,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   labels_tagged_raw <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
-      .jst_stop("The labels argument must be a single quoted string, e.g. labels = \"1=Male; 0=Female\".")
+      .jst_stop("the labels must be one quoted string, for example:\n",
+                "  labels = \"1=Male; 0=Female\"")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels, convention),
@@ -4001,10 +4013,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
   # first_arg_sub. Otherwise var is supplied positionally.
   if (arg1$mode == "symbol_with_default") {
     if (!missing(var)) {
-      displaced <- deparse(substitute(var))
-      .jst_stop("when the data argument is omitted, all subsequent arguments must be named. ",
-                "Use jencode(", deparse(arg1$first_arg_sub), ", map = ", displaced, ")",
-                fn = "jencode")
+      .jst_named_args_stop("jencode", arg1, data, .jst_data_name, sys.call(),
+                           "map")
     }
     var_name <- .jst_one_var_name(arg1$first_arg_sub, .fn)   # R18, S356
   } else {
@@ -4024,15 +4034,19 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
                     default_used = arg1$mode %in%
                       c("default", "symbol_with_default"))
   }
-  # An expression given as the data: see jrecode() (S343).
-  data_kind  <- .jst_data_arg_kind(data_sub)
-  data_typed <- .jst_term_text(data_sub)
+  # An expression given as the data: see jrecode() (S343). The data left out
+  # under a default -- jencode(var = Name), jencode(, Name) -- is the default
+  # frame's name (S371), as in jrecode().
+  data_kind  <- if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub)
+  data_typed <- if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)
   if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
   if (!is.null(map) && (!is.character(map) || length(map) != 1)) {
-    .jst_stop("The map argument must be a single quoted string, e.g. map = \"Bail=1; Parole=2\".")
+    .jst_stop("the map must be one quoted string, for example:\n",
+              "  map = \"Bail=1; Parole=2\"")
   }
   if (!is.null(labels) && (!is.character(labels) || length(labels) != 1)) {
-    .jst_stop("The labels argument must be a single quoted string, e.g. labels = \"1=Bail; 2=Parole\".")
+    .jst_stop("the labels must be one quoted string, for example:\n",
+              "  labels = \"1=Bail; 2=Parole\"")
   }
 
   # Validate convention up front so an invalid value errors whether or not
@@ -6013,8 +6027,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   labels_tagged_raw <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1L) {
-      .jst_stop("The labels argument must be a single quoted string, e.g. ",
-           "labels = \"-99=Refused; -98=Don't know\".")
+      .jst_stop("the labels must be one quoted string, for example:\n",
+                "  labels = \"-99=Refused; -98=Don't know\"")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels, convention),

@@ -4,7 +4,7 @@
 \alias{.jst_check_named_variables}
 \title{Internal helper: catch a named item in a variable list}
 \usage{
-.jst_check_named_variables(quos, data, fn_name, frame = NULL)
+.jst_check_named_variables(quos, data, fn_name, frame = NULL, envir = NULL)
 }
 \arguments{
 \item{quos}{The captured variable list (\code{rlang::enquos(...)}).}
@@ -22,6 +22,11 @@ prefix and for the \code{jsubset()} fix form.}
 \item{frame}{Character(1) or \code{NULL}. For \code{jsubset()}: the data
 frame as typed, when the call named one; the fix line keeps it
 (\code{jsubset(d, Gender == 1)}; Session 338, the S290 item).}
+
+\item{envir}{The caller's environment, or \code{NULL}. For
+\code{jsubset()} with no data frame named and no default set, where the
+data frame holding the condition's variables is looked for, so the fix
+line can name it (ruling R23, Session 371).}
 }
 \description{
 A variable list (the \code{...} of \code{jdesc()}, \code{jsum()},

@@ -345,11 +345,15 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   # invisibly, so an unassigned top-level call silently drops them. The
   # leading blank line keeps it clear of any advisory note above (Rule F).
   if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    # An expression given as the data gets the naming line first (S343).
+    # An expression given as the data gets the naming line first (S343);
+    # the data left out under a default is the default frame's name (S371:
+    # jsum(, A, B) printed its totals, then stopped on R's "argument
+    # "data_sub" is missing").
     .jst_msg(
       "\nNote: jsum() returns the totals; assign them to a column to keep them:\n",
-      .jst_assign_lines("jsum", .jst_data_name, .jst_data_arg_kind(data_sub),
-                        .jst_term_text(data_sub)),
+      .jst_assign_lines("jsum", .jst_data_name,
+                        if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub),
+                        if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)),
       "For the full distribution (min, max, SD), run jdesc() on the new column."
     )
   }
@@ -636,8 +640,9 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     # An expression given as the data gets the naming line first (S343).
     .jst_msg(
       "\nNote: javg() returns the scores; assign them to a column to keep them:\n",
-      .jst_assign_lines("javg", .jst_data_name, .jst_data_arg_kind(data_sub),
-                        .jst_term_text(data_sub)),
+      .jst_assign_lines("javg", .jst_data_name,
+                        if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub),
+                        if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)),
       "For the full distribution (min, max, SD), run jdesc() on the new column."
     )
   }

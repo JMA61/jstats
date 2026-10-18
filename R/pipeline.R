@@ -330,8 +330,13 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
       }
     } else {
       if (is.null(fs)) {
-        .jst_msg("No jsubset set for ", frame, ". Use ", set_example,
-                 " to set one.")
+        # A line on community, never the frame's own name with a placeholder
+        # condition (Session 371, item 8 of the remedy-line audit: "Use
+        # jsubset(d, expression) to set one.", whose word ran as R's own
+        # function). set_example is no longer printed.
+        .jst_msg("No jsubset set for ", frame, ".\n",
+                 "To set one, give a condition, for example:\n",
+                 "  jsubset(community, Age < 40)")
       } else {
         # The filter is run once before it is turned back on, as it was when
         # set (S331): what it names may have gone, or the frame may have
@@ -448,7 +453,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     data.frame()
   } else frame_in_hand
   .jst_check_named_variables(rlang::enquos(...), named_against, "jsubset",
-                             frame = frame_typed)
+                             frame = frame_typed, envir = parent.frame())
 
   # -- No arguments: print session-wide status ------------------------------
   # Session-wide (the clear.all = TRUE scope). Collapse rule: 0 or 1 frame
@@ -570,7 +575,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     .jst_check_filter_syntax(raw_data,
                              paste(deparse(raw_data, width.cutoff = 500),
                                    collapse = " "),
-                             origin = "set")
+                             origin = "set", envir = parent.frame())
   }
 
   # -- Resolve which arg is the data and which is the expression ------------
@@ -750,21 +755,38 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
 #' @param frame Character(1) or \code{NULL}. For \code{"set"}: the data
 #'   frame as typed, when the call named one; the fix line keeps it
 #'   (\code{jsubset(d, !(Age < 40))}; Session 338, the S290 item).
+#' @param envir The caller's environment, or \code{NULL}. For \code{"set"}
+#'   with no data frame named and no default set, where the data frame
+#'   holding the condition's variables is looked for, so the fix line can
+#'   name it (ruling R23, Session 371).
 #' @keywords internal
 .jst_check_filter_syntax <- function(raw_expr, expr_str,
                                      origin = c("set", "call"),
-                                     frame = NULL) {
+                                     frame = NULL, envir = NULL) {
   origin <- match.arg(origin)
   lead <- if (origin == "call") paste0("subset = ", expr_str) else expr_str
   # The fix line is the user's own condition rewritten, so it keeps the
   # frame the call named. A generic example (example = TRUE) is not the
-  # user's call and takes no frame: its variables are not theirs (voice
-  # Rule AC).
+  # user's call and never takes the user's frame (voice Rule AC; Session
+  # 338): it is set on community, whose variables it names (Session 371,
+  # the remedy-line audit -- jsubset(Age < 40 & Volunteer == 1) stopped
+  # with no default, or on a default with no Age). With no frame named and
+  # no default (envir given: jsubset((Sex = 1)) typed where the frame
+  # goes), the fix line names the one data frame holding the condition's
+  # variables, MyData with none or several (ruling R23, Session 371): the
+  # bare jsubset(Sex == 1) stopped again for want of one.
+  named_fr <- NULL
+  if (origin == "set" && is.null(frame) && !is.null(envir) &&
+      is.null(getOption(".jst_default_data"))) {
+    named_fr <- .jst_frame_holding(
+      setdiff(all.vars(raw_expr), c("AND", "OR", "NOT", "XOR")), envir)
+    if (is.null(named_fr)) named_fr <- "MyData"
+  }
+  and_frame <- if (!is.null(named_fr)) ", and name the data frame" else ""
   fixline <- function(fixed, example = FALSE) {
-    if (origin == "call") paste0("  subset = ", fixed)
-    else paste0("  jsubset(",
-                if (!is.null(frame) && !example) paste0(frame, ", "),
-                fixed, ")")
+    if (origin == "call") return(paste0("  subset = ", fixed))
+    fr <- if (example) "community" else if (!is.null(frame)) frame else named_fr
+    paste0("  jsubset(", if (!is.null(fr)) paste0(fr, ", "), fixed, ")")
   }
   dep <- function(e) paste(deparse(e, width.cutoff = 500), collapse = " ")
 
@@ -818,7 +840,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     }
     .jst_stop(
       lead, " uses ", kw, ", which R does not recognize.\n",
-      "Use ", replacement, ":\n",
+      "Use ", replacement, if (!is_example) and_frame, ":\n",
       fixline(fixed, example = is_example)
     )
   }
@@ -846,7 +868,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     fixed <- dep(fix_eq(raw_expr))
     .jst_stop(
       lead, " uses a single =, which does not test equality in R.\n",
-      "Use == (two equals signs):\n",
+      "Use == (two equals signs)", and_frame, ":\n",
       fixline(fixed)
     )
   }
@@ -1161,8 +1183,10 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
       }
     } else {
       if (is.null(cs)) {
-        .jst_msg("No jcomplete filter set for ", frame, ". Use ", set_example,
-                 " to set one.")
+        # As jsubset()'s (Session 371): a line on community.
+        .jst_msg("No jcomplete filter set for ", frame, ".\n",
+                 "To set one, name its variables, for example:\n",
+                 "  jcomplete(community, Age, Income)")
       } else {
         # Checked before it is turned back on (S331), as the analysis checks
         # it: a variable dropped or renamed while the setting was off.
@@ -1420,6 +1444,15 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   # reached unless it typed mk() again: refused as the registration verbs
   # and jsubset() refuse one, a place (lst$d) accepted. Its off, on and
   # NULL forms get the status call.
+  # Given an expression and nothing else (Session 371, ruling R23): the
+  # no-variables stop first, as the registration verbs and jsubset() give
+  # theirs (S370) -- the refusal's line, jcomplete(mydata), stopped again.
+  if (arg1$mode == "explicit" && length(dots_raw) == 0L &&
+      identical(.jst_data_arg_kind(raw_data), "expression")) {
+    .jst_stop("no variables specified.\n",
+              "Provide one or more variable names, for example:\n",
+              "  jcomplete(community, Age, Income)")
+  }
   if (arg1$mode == "explicit" &&
       identical(.jst_data_arg_kind(raw_data), "expression")) {
     .jst_registration_expression_stop(

@@ -903,8 +903,13 @@
 #' @param frame Character(1) or \code{NULL}. For \code{jsubset()}: the data
 #'   frame as typed, when the call named one; the fix line keeps it
 #'   (\code{jsubset(d, Gender == 1)}; Session 338, the S290 item).
+#' @param envir The caller's environment, or \code{NULL}. For
+#'   \code{jsubset()} with no data frame named and no default set, where the
+#'   data frame holding the condition's variables is looked for, so the fix
+#'   line can name it (ruling R23, Session 371).
 #' @keywords internal
-.jst_check_named_variables <- function(quos, data, fn_name, frame = NULL) {
+.jst_check_named_variables <- function(quos, data, fn_name, frame = NULL,
+                                       envir = NULL) {
   nms <- names(quos)
   if (is.null(nms) || !any(nzchar(nms))) return(invisible(NULL))
   named <- nms[nzchar(nms)]
@@ -918,9 +923,20 @@
     typed <- paste0(nm, " = ", val)
     fixed <- paste0(nm, " == ", val)
     if (identical(fn_name, "jsubset")) {
+      # No data frame named and no default (ruling R23, Session 371): the
+      # line names the one data frame holding the variable, MyData with none
+      # or several -- jsubset(Gender == 1) stopped again for want of one.
+      fr <- frame
+      and_frame <- ""
+      if (is.null(fr) && is.null(data) && !is.null(envir) &&
+          is.null(getOption(".jst_default_data"))) {
+        fr <- .jst_frame_holding(nm, envir)
+        if (is.null(fr)) fr <- "MyData"
+        and_frame <- ", and name the data frame"
+      }
       .jst_stop(typed, " uses a single =, which does not test equality in R.\n",
-                "Use == (two equals signs):\n",
-                "  jsubset(", if (!is.null(frame)) paste0(frame, ", "),
+                "Use == (two equals signs)", and_frame, ":\n",
+                "  jsubset(", if (!is.null(fr)) paste0(fr, ", "),
                 fixed, ")", fn = fn_name)
     }
     has_subset <- "subset" %in% names(formals(sys.function(sys.parent())))
@@ -1094,9 +1110,69 @@
   for (i in seq_along(items)[-1L]) {
     if (identical(items[[i]], data_sub)) { items[[i]] <- as.name(nm); break }
   }
+  # Ruling R23 (Session 371): jplot("g6") had been offered jplot(g6), which
+  # stopped for want of a variable.
+  gap <- .jst_call_gap(fn_name, as.call(items), envir)
+  if (!is.null(gap)) {
+    .jst_gap_stop(fn_name, gap, cl = as.call(items),
+                  head = paste0("\"", nm, "\" is in quotes"),
+                  qual = " without quotes")
+  }
   .jst_stop("\"", nm, "\" is in quotes.\n",
             "A data frame's name goes without them:\n",
             "  ", .jst_term_text(as.call(items)), fn = fn_name)
+}
+
+#' Internal helper: a value given where the data frame goes
+#'
+#' jplot(1:3), jplot(list(1)), jdesc(5, Age) on a function that does not
+#' take a single column: an expression that names no variable is neither a
+#' name nor a condition. The resolver had asked whether it was a variable
+#' name, or said it "needs a data frame", and put it back in the line
+#' beside MyData -- jplot(MyData, 1:3) (Session 371, the remedy-line audit;
+#' the S369 seed). It is said to be no data frame, and the lines are the
+#' call without it, the data frame named the one in the workspace holding
+#' the call's other variables (MyData with none or several). A call left
+#' with no variable gets ruling R23's stop.
+#'
+#' @param data_sub The expression given as the data.
+#' @param data_str Its text.
+#' @param fn_name Character. The function's name.
+#' @param envir The caller's environment.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_value_data_stop <- function(data_sub, data_str, fn_name, envir) {
+  ucl <- tryCatch(.jst_caller_call(), error = function(e) NULL)
+  it  <- if (is.null(ucl)) list(as.name(fn_name)) else as.list(ucl)
+  it[[1L]] <- as.name(fn_name)
+  nn <- names(it)
+  if (is.null(nn)) nn <- rep("", length(it))
+  hit <- which(vapply(it, function(e) identical(e, data_sub), logical(1)))
+  hit <- hit[hit > 1L]
+  if (length(hit) > 0L) {
+    it <- it[-hit[1L]]
+    nn <- nn[-hit[1L]]
+  }
+  names(it) <- nn
+  un <- which(!nzchar(nn))
+  un <- un[un > 1L]
+  typed <- unique(unlist(lapply(un, function(i) all.vars(it[[i]]))))
+  fr <- .jst_frame_holding(typed, envir)
+  if (is.null(fr)) fr <- "MyData"
+  offered <- as.call(c(it[1L], list(as.name(fr)), it[-1L]))
+  names(offered) <- c(nn[1L], "", nn[-1L])
+  gap <- .jst_call_gap(fn_name, offered, envir)
+  if (!is.null(gap)) {
+    .jst_gap_stop(fn_name, gap, cl = as.call(it),
+                  head = paste0(data_str, " is not a data frame"))
+  }
+  .jst_stop(data_str, " is not a data frame.\n",
+            "Name the data frame first:\n",
+            "  ", .jst_term_text(offered), "\n",
+            "Or set a default first, then run the call:\n",
+            "  juse(", fr, ")\n",
+            "  ", .jst_term_text(.jst_default_route(fn_name, as.call(it))),
+            fn = fn_name)
 }
 
 #' Internal helper: a variable named in quotes inside a formula
@@ -1599,27 +1675,7 @@
   # rather than variables, gets jconvert(community, to = "stata").
   if (at == 0L && is.null(vars_given) &&
       !any(!vapply(unnamed, is_empty, logical(1)))) {
-    ex <- switch(fn,
-      jdesc  = list(call = quote(jdesc(community, Age, Income)),
-                    n = "one or more"),
-      jfreq  = list(call = quote(jfreq(community, Region)), n = "one or more"),
-      jcorr  = list(call = quote(jcorr(community, Income, Age,
-                                       WellbeingScore)),
-                    n = "two or more"),
-      jalpha = list(call = quote(jalpha(community, Environment1, Environment3,
-                                        Environment4)),
-                    n = "two or more"),
-      jsum   = list(call = quote(jsum(community, Environment1, Environment3)),
-                    n = "two or more", lhs = "community$EnvTotal"),
-      javg   = list(call = quote(javg(community, Environment1, Environment3)),
-                    n = "two or more", lhs = "community$EnvAvg"),
-      jplot  = list(call = quote(jplot(community, Age)), n = "one or two"),
-      jconvert = list(call = quote(jconvert(community, to = "stata")),
-                      what = "target format",
-                      line2 = "Name a data frame and a target format",
-                      named = c("vars", "to"),
-                      keep = c("missing.notice", "modify")),
-      .jst_no_var_example(fn))
+    ex <- .jst_r22_example(fn)
     # A call that names its variables, or jconvert()'s target, by argument
     # -- jrecode(orig.var = Age, ...), jdeclare_missing(vars = "Age", ...),
     # jconvert(to = "stata") -- lacks only the data frame, so it keeps the
@@ -1640,22 +1696,7 @@
       ex <- NULL
     }
     if (!is.null(ex)) {
-      keep_opts <- if (!is.null(ex$keep)) ex$keep else
-        c("method", "layout", "digits", "variable.id", "value.id",
-          "case.processing.detail", "missing.detail", "var.label",
-          "fixed", "labels")
-      is_const <- function(e) {
-        (is.atomic(e) && length(e) == 1L) ||
-          (is.call(e) && identical(e[[1L]], as.name("c")) &&
-             all(vapply(as.list(e)[-1L],
-                        function(a) is.atomic(a) && length(a) == 1L,
-                        logical(1))))
-      }
-      opt_i <- which(cn %in% keep_opts)
-      opt_i <- opt_i[vapply(opt_i, function(i) is_const(items[[i]]),
-                            logical(1))]
-      line <- .jst_term_text(as.call(c(as.list(ex$call), items[opt_i])))
-      if (!is.null(ex$lhs)) line <- paste0(ex$lhs, " <- ", line)
+      line  <- .jst_example_line(ex, items, cn)
       what  <- if (!is.null(ex$what)) ex$what else "variables"
       line2 <- if (!is.null(ex$line2)) ex$line2 else
         paste0("Name a data frame and ", ex$n, " of its ",
@@ -1685,12 +1726,321 @@
     first <- "Name the data frame first:"
   }
   names(new) <- nn
+  # Ruling R23 (Session 371): a call that would stop again once its data
+  # frame is named -- jrecode(orig.var = Age) with no map, jconvert(vars =
+  # "Age") with no target and no convention set -- gets ruling R22's form
+  # instead, what is missing and the function's own example. Only where
+  # the lines name a data frame of the workspace: a MyData line does not
+  # run as printed, and the two routes say what the stop is about.
+  if (!identical(fr, "MyData")) {
+    gap <- .jst_call_gap(fn, as.call(new), envir)
+    if (!is.null(gap)) .jst_gap_stop(fn, gap, cl = cl)
+  }
   .jst_stop(lead,
             first, "\n",
             "  ", .jst_term_text(as.call(new)), "\n",
             "Or set a default first, then run the call:\n",
             "  juse(", fr, ")\n",
-            "  ", .jst_term_text(cl),
+            "  ", .jst_term_text(.jst_default_route(fn, cl)),
+            fn = fn)
+}
+
+#' Internal helper: the example ruling R22's stop gives, per function
+#'
+#' One line per function on community, the same line the function's own
+#' no-variable stop gives where it has one (\code{.jst_no_var_example()}).
+#' Moved out of \code{.jst_no_frame_stop()} at Session 371 so ruling R23's
+#' stop (\code{.jst_gap_stop()}) gives the same line.
+#'
+#' @param fn Character. The function's name.
+#' @return NULL for a function with no entry, else a list: call, n, and
+#'   optionally lhs, what, line2, noun, named, keep, provide (see
+#'   \code{.jst_no_var_example()}).
+#' @keywords internal
+.jst_r22_example <- function(fn) {
+  switch(fn,
+    jdesc  = list(call = quote(jdesc(community, Age, Income)),
+                  n = "one or more"),
+    jfreq  = list(call = quote(jfreq(community, Region)), n = "one or more"),
+    jcorr  = list(call = quote(jcorr(community, Income, Age,
+                                     WellbeingScore)),
+                  n = "two or more"),
+    jalpha = list(call = quote(jalpha(community, Environment1, Environment3,
+                                      Environment4)),
+                  n = "two or more"),
+    jsum   = list(call = quote(jsum(community, Environment1, Environment3)),
+                  n = "two or more", lhs = "community$EnvTotal"),
+    javg   = list(call = quote(javg(community, Environment1, Environment3)),
+                  n = "two or more", lhs = "community$EnvAvg"),
+    jplot  = list(call = quote(jplot(community, Age)), n = "one or two"),
+    jconvert = list(call = quote(jconvert(community, to = "stata")),
+                    what = "target format",
+                    line2 = "Name a data frame and a target format",
+                    named = c("vars", "to"),
+                    keep = c("missing.notice", "modify")),
+    .jst_no_var_example(fn))
+}
+
+#' Internal helper: the line ruling R22's and ruling R23's stops end on
+#'
+#' The function's example on community, keeping the call's display options
+#' whose values are constants (method =, digits = and the like), which hold
+#' on any data (ruling R22, Session 369).
+#'
+#' @param ex The \code{.jst_r22_example()} entry.
+#' @param items,cn The call's arguments as a list, and their names.
+#' @return Character(1), the line, its assignment included.
+#' @keywords internal
+.jst_example_line <- function(ex, items = list(), cn = character(0)) {
+  keep_opts <- if (!is.null(ex$keep)) ex$keep else
+    c("method", "layout", "digits", "variable.id", "value.id",
+      "case.processing.detail", "missing.detail", "var.label",
+      "fixed", "labels")
+  is_const <- function(e) {
+    (is.atomic(e) && length(e) == 1L) ||
+      (is.call(e) && identical(e[[1L]], as.name("c")) &&
+         all(vapply(as.list(e)[-1L],
+                    function(a) is.atomic(a) && length(a) == 1L,
+                    logical(1))))
+  }
+  opt_i <- which(cn %in% keep_opts)
+  opt_i <- opt_i[vapply(opt_i, function(i) is_const(items[[i]]),
+                        logical(1))]
+  line <- .jst_term_text(as.call(c(as.list(ex$call), items[opt_i])))
+  if (!is.null(ex$lhs)) line <- paste0(ex$lhs, " <- ", line)
+  line
+}
+
+#' Internal helper: what a rebuilt call still lacks
+#'
+#' Ruling R23 (Session 371, the remedy-line audit; Jeff: "All yours
+#' including the ruling"): a stop that rebuilds the user's call -- naming
+#' its data frame (the resolver's not-found routes, the no-data-frame
+#' routes), taking a data frame's name out of quotes, leaving out a value
+#' given as the data -- checks the call it would offer for the inputs the
+#' function cannot run without. One that would stop again for want of one
+#' gets ruling R22's form instead (\code{.jst_gap_stop()}): what is
+#' missing, and the function's own example on community. jrecode(Age) with
+#' g6 holding Age had been offered jrecode(g6, Age), which stopped for its
+#' map. The inputs: jrecode()'s map; jrelabel()'s labels or variable label;
+#' jdeclare_missing()'s codes (or range, or labels) and, with no convention
+#' set or named, a convention for a variable with no declaration of its
+#' own; jconvert()'s target with no convention set; a second variable for
+#' jcorr(), jalpha(), jsum() and javg(); a variable for jdesc(), jfreq()
+#' and jplot() (a formula is a variable list). Only a function with an
+#' example has a gap.
+#'
+#' @param fn Character. The function's name.
+#' @param cl The call as it would be offered.
+#' @param envir Where the call's data frame is looked for.
+#' @return NULL, or a list: what (the input missing, for the lead), verb
+#'   ("was" or "were", after a head of the stop's own) and tail (the second
+#'   line after "Name a data frame").
+#' @keywords internal
+.jst_call_gap <- function(fn, cl, envir = parent.frame()) {
+  if (is.null(.jst_r22_example(fn))) return(NULL)
+  ns   <- topenv(environment(.jst_call_gap))
+  fobj <- tryCatch(get(if (identical(fn, "jplot")) "jplot.default" else fn,
+                       envir = ns, mode = "function"),
+                   error = function(e) NULL)
+  if (is.null(fobj)) return(NULL)
+  mc <- tryCatch(match.call(fobj, cl, expand.dots = FALSE),
+                 error = function(e) NULL)
+  if (is.null(mc)) return(NULL)
+  a    <- as.list(mc)[-1L]
+  has  <- function(nm) !is.null(a[[nm]])
+  dots <- a[["..."]]
+  if (is.null(dots)) dots <- list()
+  dn <- names(dots)
+  if (is.null(dn)) dn <- rep("", length(dots))
+  nvar <- sum(!nzchar(dn))
+  conv_set <- isTRUE(getOption(".jst_options_missing_convention",
+                               .jst_options_defaults$missing.convention) %in%
+                       c("spss", "stata", "sas"))
+  gap <- function(what, verb, tail) list(what = what, verb = verb, tail = tail)
+  first <- if (identical(fn, "jplot")) a$x else a$data
+  is_fml <- is.call(first) && identical(first[[1L]], as.name("~"))
+  switch(fn,
+    jrecode = if (!has("map"))
+      gap("map", "was", ", one of its variables and a map"),
+    jrelabel = if (!has("labels") && !has("var.label"))
+      gap("labels", "were", ", one of its variables and a label"),
+    jdeclare_missing = {
+      if (!has("codes") && !has("range") && !has("labels")) {
+        gap("codes", "were", ", one or more of its variables and the codes")
+      } else if (!has("convention") && !conv_set &&
+                 !.jst_gap_declared(a, dots[!nzchar(dn)], envir)) {
+        gap("convention", "was", paste0(", one or more of its variables, ",
+                                        "the codes and a convention"))
+      }
+    },
+    jconvert = if (!has("to") && !conv_set)
+      gap("target format", "was", " and a target format"),
+    jcorr = , jalpha = , jsum = , javg = if (nvar < 2L)
+      gap(if (nvar == 1L) "second variable" else "variables",
+          if (nvar == 1L) "was" else "were",
+          " and two or more of its variables"),
+    jdesc = , jfreq = if (nvar < 1L)
+      gap("variables", "were", " and one or more of its variables"),
+    jplot = if (nvar < 1L && !is_fml)
+      gap("variables", "were", " and one or two of its variables"),
+    NULL)
+}
+
+#' Internal helper: whether the variables a jdeclare_missing() call names
+#' already carry declarations of their own
+#'
+#' Such a variable meets no convention gate: jdeclare_missing() follows its
+#' own form (Session 345). Used by \code{.jst_call_gap()}; FALSE when the
+#' data frame or the variables cannot be read, so the gap is said.
+#'
+#' @param a The matched call's arguments (\code{.jst_call_gap()}).
+#' @param vars_dots The call's unnamed variable arguments.
+#' @param envir Where the data frame is looked for.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_gap_declared <- function(a, vars_dots, envir) {
+  fr <- a$data
+  if (!is.symbol(fr)) return(FALSE)
+  d <- tryCatch(get(as.character(fr), envir = envir), error = function(e) NULL)
+  if (!is.data.frame(d)) return(FALSE)
+  v <- vapply(vars_dots, function(e) if (is.symbol(e)) as.character(e) else "",
+              character(1))
+  if (!is.null(a$vars)) {
+    vv <- tryCatch(eval(a$vars, baseenv()), error = function(e) NULL)
+    if (is.character(vv)) v <- c(v, vv)
+  }
+  v <- intersect(v, names(d))
+  if (length(v) == 0L) return(FALSE)
+  all(vapply(v, function(nm) {
+    x <- d[[nm]]
+    !is.null(attr(x, "na_values")) || !is.null(attr(x, "na_range")) ||
+      (is.double(x) && any(haven::is_tagged_na(x)))
+  }, logical(1)))
+}
+
+#' Internal helper: ruling R23's stop
+#'
+#' What the rebuilt call lacks, then ruling R22's line: "no data frame and
+#' no map were named." / "Name a data frame, one of its variables and a
+#' map, for example:" and the function's example on community. A stop with
+#' a first sentence of its own passes it as \code{head} ("\"g6\" is in
+#' quotes", "1:3 is not a data frame"), and the lead becomes "<head>, and
+#' no variables were named.". Session 371.
+#'
+#' @param fn Character. The function's name.
+#' @param gap The \code{.jst_call_gap()} result.
+#' @param cl The call, for its display options; NULL for none.
+#' @param head Optional first clause, in place of "no data frame".
+#' @param qual Words after "Name a data frame" (" without quotes").
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_gap_stop <- function(fn, gap, cl = NULL, head = NULL, qual = "") {
+  ex    <- .jst_r22_example(fn)
+  items <- if (is.null(cl)) list() else as.list(cl)
+  cn    <- names(items)
+  if (is.null(cn)) cn <- rep("", length(items))
+  line  <- .jst_example_line(ex, items, cn)
+  lead  <- if (is.null(head)) {
+    paste0("no data frame and no ", gap$what, " were named.")
+  } else {
+    paste0(head, ", and no ", gap$what, " ", gap$verb, " named.")
+  }
+  .jst_stop(lead, "\n",
+            "Name a data frame", qual, gap$tail, ", for example:\n",
+            "  ", line,
+            fn = fn)
+}
+
+#' Internal helper: the default route's call, its arguments named
+#'
+#' The second route of the no-data-frame stops ("Or set a default first,
+#' then run the call:") runs the call with no data frame, and jrecode(),
+#' jencode() and jrelabel() refuse an unnamed argument after the variable
+#' there ("when the data argument is omitted, all subsequent arguments must
+#' be named."). The route had been the call as typed, jrecode(Age, "1=2"),
+#' which stopped on that rule (Session 371, the remedy-line audit). For
+#' those three the arguments after the variable are named, by the
+#' function's own argument names, and an empty first argument is dropped;
+#' every other function's call is returned as typed.
+#'
+#' @param fn Character. The function's name.
+#' @param typed The call as typed.
+#' @return A call.
+#' @keywords internal
+.jst_default_route <- function(fn, typed) {
+  if (!fn %in% c("jrecode", "jencode", "jrelabel")) return(typed)
+  it <- as.list(typed)
+  nn <- names(it)
+  if (is.null(nn)) nn <- rep("", length(it))
+  empty <- vapply(it, function(e) is.symbol(e) && !nzchar(as.character(e)),
+                  logical(1))
+  empty[1L] <- FALSE
+  it <- it[!empty]
+  nn <- nn[!empty]
+  names(it) <- nn
+  un <- which(!nzchar(nn))
+  un <- un[un > 1L]
+  if (length(un) < 2L) return(as.call(it))
+  fobj <- get(fn, envir = topenv(environment(.jst_default_route)),
+              mode = "function")
+  full <- as.call(c(it[1L], list(data = quote(MyData)), it[-1L]))
+  mc <- tryCatch(match.call(fobj, full), error = function(e) NULL)
+  if (is.null(mc)) return(as.call(it))
+  a <- as.list(mc)[-1L]
+  vslot <- if (identical(fn, "jrecode")) "orig.var" else "var"
+  v <- a[[vslot]]
+  if (is.null(v)) return(as.call(it))
+  rest <- a[!names(a) %in% c("data", vslot)]
+  as.call(c(list(as.name(fn), v), rest))
+}
+
+#' Internal helper: the stop for an unnamed argument after the variable, with
+#' no data frame
+#'
+#' jrecode(), jencode() and jrelabel() under a juse() default, given the
+#' variable first and another argument unnamed -- jrecode(Age, "1=2"). The
+#' stop had rewritten the call by position, "Use jrecode(Age, map = ...)",
+#' inline (Session 371, the remedy-line audit): a first argument that was
+#' not a variable of the default frame -- a data frame's name typed wrong,
+#' jencode(dta, Name, map = "a=1") -- was offered jencode(dta, map = Name),
+#' the map dropped. Now the first argument is checked first, and one the
+#' default frame lacks gets the not-found sentence, with the default hint;
+#' the call is given back with its one unnamed argument named, on a line of
+#' its own, and with several unnamed, or the slot already named, the
+#' sentence alone.
+#'
+#' @param fn Character. The function's name.
+#' @param arg1 The resolver's result.
+#' @param data The default data frame.
+#' @param data_name Its name.
+#' @param cl The call as typed.
+#' @param slot The argument an unnamed second argument fills ("map",
+#'   "labels").
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_named_args_stop <- function(fn, arg1, data, data_name, cl, slot) {
+  first <- tryCatch(.jst_one_var_name(arg1$first_arg_sub, fn),
+                    error = function(e) NULL)
+  if (!is.null(first) && nzchar(first) && is.data.frame(data) &&
+      !first %in% names(data)) {
+    .jst_check_vars(data, first, data_name, default_used = TRUE)
+  }
+  it <- as.list(cl)
+  it[[1L]] <- as.name(fn)
+  nn <- names(it)
+  if (is.null(nn)) nn <- rep("", length(it))
+  un <- which(!nzchar(nn))
+  un <- un[un > 2L]
+  fixed <- NULL
+  if (length(un) == 1L && !slot %in% nn) {
+    nn[un] <- slot
+    names(it) <- nn
+    fixed <- .jst_term_text(as.call(it))
+  }
+  .jst_stop("when the data argument is omitted, all subsequent arguments ",
+            "must be named.",
+            if (!is.null(fixed)) paste0("\nName the ", slot, ":\n  ", fixed),
             fn = fn)
 }
 
@@ -2021,10 +2371,20 @@
     # and asked whether it is a variable name; and each call runs on a line
     # of its own (Rule L), where both sat inline after colons.
     data_str <- paste(deparse(data_sub), collapse = "")
+    # A value that names no variable -- jplot(1:3), jplot(list(1)), a
+    # literal -- is not a condition either (Session 371, the remedy-line
+    # audit): the lines had put it back in the call beside MyData,
+    # jplot(MyData, 1:3). It is said to be no data frame, and the lines
+    # leave it out.
+    if (!is.symbol(data_sub) && length(all.vars(data_sub)) == 0L) {
+      .jst_value_data_stop(data_sub, data_str, fn_name, envir)
+    }
+    # One sentence a line (Session 371; voice Rule E): the question had
+    # shared a line with "not found." and the wrap broke it mid-sentence.
     head <- if (is.symbol(data_sub)) {
       paste0("'", data_str,
              if (eval_result$failed) "' not found." else "' is not a data frame.",
-             " Did you mean to use it as a variable name?\n",
+             "\nDid you mean to use it as a variable name?\n",
              "If so, name the data frame first:\n")
     } else {
       paste0(data_str, " needs a data frame, and none was named or set ",
@@ -2039,6 +2399,7 @@
     if (is.null(fr)) fr <- "MyData"
     line1 <- paste0(fn_name, "(", fr, ", ", data_str, ")")
     line2 <- paste0(fn_name, "(", data_str, ")")
+    offered <- call(fn_name, as.name(fr), data_sub)
     # The whole call, not its first argument (Session 369, found building
     # Fix Slate 17): jcorr(Score, Age) was offered jcorr(ab1, Score), which
     # stopped again for want of a second variable. When the name is the
@@ -2061,9 +2422,25 @@
           if (is.null(fr)) fr <- "MyData"
           new <- c(it[1L], list(as.name(fr)), it[-1L])
           names(new) <- c(nn[1L], "", nn[-1L])
-          line1 <- .jst_term_text(as.call(new))
-          line2 <- .jst_term_text(ucl)
+          offered <- as.call(new)
+          line1 <- .jst_term_text(offered)
+          # The default route names jrecode()'s, jencode()'s and jrelabel()'s
+          # arguments after the variable, as they require with no data frame
+          # (Session 371): jrecode(Age, "1=2") stopped on that rule.
+          line2 <- .jst_term_text(.jst_default_route(fn_name, ucl))
         }
+      }
+    }
+    # Ruling R23 (Session 371): the line would stop again for want of an
+    # input -- jrecode(g6, Age) with no map -- so ruling R22's form instead.
+    # Only where the line names a data frame of the workspace: with MyData
+    # the name may be a data frame's typed wrong, and "'dta' not found."
+    # says so where ruling R22's lead would not.
+    if (is.symbol(data_sub) && !identical(fr, "MyData")) {
+      gap <- .jst_call_gap(fn_name, offered, envir)
+      if (!is.null(gap)) {
+        .jst_gap_stop(fn_name, gap,
+                      cl = tryCatch(.jst_caller_call(), error = function(e) NULL))
       }
     }
     .jst_stop(
@@ -2393,6 +2770,19 @@
 
   if (length(dots) > 0L) {
     extra <- vapply(dots, rlang::quo_name, character(1), USE.NAMES = FALSE)
+    # A single value given as the data -- nofr <- 5; jdesc(nofr, Age) -- is
+    # no column (Session 371, the remedy-line audit; the S369 seed): the line
+    # had kept it as a variable, jdesc(MyData, nofr, Age). It is said to be a
+    # single value, and the line leaves it out.
+    if (!isTRUE(wrapped$in_frame) && nrow(wrapped$frame) == 1L) {
+      fr <- .jst_frame_holding(no_frame(extra), user_env)
+      if (is.null(fr)) fr <- "MyData"
+      .jst_stop(typed, " is a single value, not a data frame.\n",
+                "Name the data frame first:\n",
+                "  ", fn_name, "(", fr, ", ",
+                paste(no_frame(extra), collapse = ", "), ")",
+                fn = fn_name)
+    }
     .jst_stop(.jst_format_var_list(extra, and = TRUE),
               if (length(extra) == 1L) " needs" else " need", lead, first,
               fix(paste(no_frame(extra), collapse = ", "), no_frame(extra)),
