@@ -1668,8 +1668,11 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
     }
     # The <blank> row's footnote, against the table it explains (S340).
     if (blank_counts$n > 0L) {
+      bf_col <- data[[variable_name]]
       .jst_msg_out(.jst_blank_footnote(
-        blank_counts, declare = !is.factor(data[[variable_name]])))
+        blank_counts, declare = !is.factor(bf_col),
+        declare_arg = if (is.factor(bf_col)) NULL
+                      else .jst_text_declare_args(bf_col, "")$arg))
     }
     cat("\n")
 
@@ -2568,15 +2571,29 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #'   is not a name gives \code{mydata}.
 #' @keywords internal
 .jst_date_text_report <- function(date_info, data_name) {
-  dn <- if (is.character(data_name) && length(data_name) == 1L &&
-            identical(make.names(data_name), data_name)) data_name else "mydata"
+  # A name or a place (lst$d) is used as typed; an expression given as
+  # the data (jscreen(mk())) gets "mydata" and, opening each block of
+  # lines, the line that makes it (the S343 rule; Session 374, from the
+  # remedy-line audit, where the lines named a mydata nothing made).
+  kind <- if (is.character(data_name) && length(data_name) == 1L &&
+              !is.na(data_name) && nzchar(data_name)) {
+    tryCatch(.jst_data_arg_kind(str2lang(data_name)),
+             error = function(e) "expression")
+  } else "expression"
+  dn  <- if (kind %in% c("name", "place")) data_name else "mydata"
+  pre <- if (identical(dn, "mydata") && is.character(data_name) &&
+             length(data_name) == 1L && !is.na(data_name) &&
+             nzchar(data_name)) {
+    paste0("  mydata <- ", data_name)
+  } else character(0)
   conv <- function(v, f) {
     paste0("  ", dn, "$", v, " <- as.Date(", dn, "$", v, ", format = \"", f,
            "\")")
   }
   one   <- names(date_info)[lengths(lapply(date_info, `[[`, "fmt")) == 1L]
   two   <- setdiff(names(date_info), one)
-  lines <- "date (unparsed): text in a date format, which as.Date() makes a date:"
+  lines <- c("date (unparsed): text in a date format, which as.Date() makes a date:",
+             pre)
   for (v in one) lines <- c(lines, conv(v, date_info[[v]]$fmt))
   for (v in two) {
     lines <- c(lines,
@@ -2599,7 +2616,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
       " two-digit years (as in ", date_info[[yy[1L]]]$example, ").\n",
       "as.Date() puts 69-99 in the 1900s and 00-68 in the 2000s, so check ",
       "the years it gives:\n",
-      paste(rng, collapse = "\n"))
+      paste(c(pre, rng), collapse = "\n"))
   }
   invisible(NULL)
 }

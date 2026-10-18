@@ -109,6 +109,76 @@
   }
 }
 
+#' Internal helper: the template for a formula jstats does not read
+#'
+#' Voice Rule AK (ruling R24, Session 371; built Session 374). One form for
+#' every formula R allows and jstats does not read: a fixed first line, the
+#' formula as typed on a line of its own, one sentence on what jstats takes
+#' (the only line that changes from case to case), and the function's own
+#' example on community, which runs. Nothing explains what the unread form
+#' means: whoever typed it on purpose does not need it, and whoever typed it
+#' by mistake cannot use it.
+#'
+#' @param formula The formula as typed.
+#' @param fn The user-facing function name.
+#' @param sentence One sentence ending in a colon, saying what to write
+#'   instead.
+#' @return Does not return; always stops.
+#' @keywords internal
+.jst_formula_unread_stop <- function(formula, fn, sentence) {
+  ex <- .jst_formula_examples[[fn]]
+  if (is.null(ex)) {
+    stop("Internal error: no formula example for '", fn, "'.", call. = FALSE)
+  }
+  attributes(formula) <- NULL
+  .jst_stop("this formula is not a form jstats reads:\n",
+            "  ", .jst_term_text(formula), "\n",
+            sentence, "\n",
+            "  ", ex, fn = fn)
+}
+
+#' Internal data: each formula function's example on community
+#'
+#' The line the Rule AK template ends on (\code{.jst_formula_unread_stop()}).
+#' Each runs on the shipped community data with no settings made.
+#'
+#' @keywords internal
+.jst_formula_examples <- list(
+  jt        = "jt(WellbeingScore ~ Volunteer, data = community)",
+  jaov      = "jaov(WellbeingScore ~ Region, data = community)",
+  jcrosstab = "jcrosstab(Education ~ Volunteer, data = community)",
+  jlm       = "jlm(WellbeingScore ~ Age + Income, data = community)",
+  jlogistic = "jlogistic(Volunteer ~ Income + Age, data = community)"
+)
+
+#' Internal helper: refuse the dot in a formula (ruling R24)
+#'
+#' lm() reads \code{y ~ .} as every other column of the data. jstats does
+#' not (Jeff, S371: most data sets hold dates, IDs and categorical variables
+#' needing recoding first, and a dot typed by mistake would give a long,
+#' meaningless output). Refused in every formula function with the Rule AK
+#' template; the sentence names what the function takes on the side the dot
+#' was typed.
+#'
+#' @param formula The formula as typed.
+#' @param fn The user-facing function name.
+#' @return \code{invisible(NULL)}, or stops.
+#' @keywords internal
+.jst_formula_dot_stop <- function(formula, fn) {
+  if (!"." %in% all.vars(formula)) return(invisible(NULL))
+  rhs <- formula[[length(formula)]]
+  on_right <- "." %in% all.vars(rhs)
+  sentence <- if (!on_right) {
+    "Name each variable in the formula, for example:"
+  } else {
+    switch(fn,
+           jlm = , jlogistic = "Name each predictor in the formula, for example:",
+           jt = , jaov = "Name the grouping variable in the formula, for example:",
+           "Name each variable in the formula, for example:")
+  }
+  .jst_formula_unread_stop(formula, fn, sentence)
+}
+
 #' Internal helper: front-door check that formula functions got a formula
 #'
 #' Called at the top of the formula-interface functions (jt, jaov, jcrosstab,
@@ -142,6 +212,11 @@
   if (inherits(formula, "formula")) {
     # A variable in quotes inside the formula (ruling R18, Session 356).
     .jst_formula_quoted_stop(formula, sys.call(sys.parent()), fn)
+    # The dot (ruling R24, Session 374): refused with the template for a
+    # formula jstats does not read, before the title and before the data
+    # frame is looked for, so the no-data-frame stop never offers a line
+    # that stops here next.
+    .jst_formula_dot_stop(formula, fn)
     # Formula slot is fine. If data was supplied but is NULL, fail fast with
     # a clear message: the caller collapses a missing data argument to NULL
     # too, but only a SUPPLIED data argument carries a data_name, so
@@ -191,9 +266,10 @@
     # Leading-comma habit carried over from the data-first functions:
     # an empty first slot pushes the formula into the data position.
     .jst_stop(
-      "The formula goes first -- e.g. ", fn, "(", f_text, ", MyData).\n",
-      "With a juse() default set, no comma is needed: ",
-      fn, "(", f_text, ").",
+      "The formula goes first, for example:\n",
+      "  ", fn, "(", f_text, ", MyData)\n",
+      "With a juse() default set, no comma is needed:\n",
+      "  ", fn, "(", f_text, ")",
       fn = fn
     )
   }
@@ -208,8 +284,8 @@
       "MyData"
     }
     .jst_stop(
-      "The formula goes first, then the data -- e.g. ",
-      fn, "(", f_text, ", ", d_token, ").",
+      "The formula goes first, then the data:\n",
+      "  ", fn, "(", f_text, ", ", d_token, ")",
       fn = fn
     )
   }
@@ -220,14 +296,15 @@
     # for users arriving from syntax-as-strings environments.
     .jst_stop(
       "The formula should not be in quotes.\n",
-      "Remove them -- e.g. ", fn, "(", formula, ", MyData).",
+      "Remove them:\n",
+      "  ", fn, "(", formula, ", MyData)",
       fn = fn
     )
   }
 
   .jst_stop(
-    "The first input must be a formula -- e.g. ",
-    fn, "(", example, ", MyData).",
+    "The first input must be a formula, for example:\n",
+    "  ", fn, "(", example, ", MyData)",
     fn = fn
   )
 }
@@ -535,6 +612,48 @@
     return(length(unique(v[keep])))
   }
   length(unique(as.vector(unclass(x))[keep]))
+}
+
+#' Internal helper: the note on a predictor coded as a dichotomy other
+#' than 0/1
+#'
+#' jlm() and jlogistic() (Session 347 wording). Since Session 374 (the
+#' remedy-line audit; lean okayed S371) the jdummy() line is offered only
+#' where jdummy() would take the variable as it stands: the variable as
+#' given -- unfiltered, as jdummy() reads it -- has two categories, and
+#' their dummy names can be made (codes -1 and 1 both give x_1, and
+#' jdummy() stops). An expression given as the data, which jdummy()
+#' refuses, gets no line either. Without the line the note says what to
+#' reach, a 0/1 variable.
+#'
+#' @param v Character; the predictor's name.
+#' @param coding "1/2" or "other", from \code{.jst_is_dichotomy()}.
+#' @param x_in The variable in the frame as given, before any filter.
+#' @param data_name Character; the data frame's name.
+#' @param data_kind "name", "place" or "expression".
+#' @return Character(1), the note.
+#' @keywords internal
+.jst_dichotomy_note <- function(v, coding, x_in, data_name, data_kind) {
+  lead <- if (identical(coding, "1/2")) {
+    paste0("Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ")
+  } else {
+    paste0("Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
+           "correctly, but ")
+  }
+  takes <- !identical(data_kind, "expression") && !is.null(x_in) &&
+    isTRUE(tryCatch({
+      reg <- .jst_make_dummy_names(x_in, v, ref = "auto",
+                                   data_name = data_name)
+      length(reg$codes) == 2L
+    }, error = function(e) FALSE))
+  if (!takes) {
+    return(paste0(lead, "making ", v, " a 0/1 variable in the data frame ",
+                  "can help interpret the intercept."))
+  }
+  paste0(lead, "registering ", v, " as a dummy can help interpret the ",
+         "intercept:\n",
+         "  jdummy(", data_name, ", ", v, ")\n",
+         "Or make it a 0/1 variable in the data frame.")
 }
 
 #' Internal helper: stop on a predictor dummy-coded in the call that has

@@ -696,8 +696,10 @@
   verb <- .jst_clear_verb(kind)
   .jst_stop(Klab, " registrations exist on more than one data frame: ",
        paste(frames, collapse = ", "), ".\n",
-       "Name the one to clear, e.g. ", verb, "(", frames[1], ", NULL), ",
-       "or clear them all with ", verb, "(clear.all = TRUE).")
+       "Name the one to clear, for example:\n",
+       "  ", verb, "(", frames[1], ", NULL)\n",
+       "Or clear them all:\n",
+       "  ", verb, "(clear.all = TRUE)")
 }
 
 #' Internal helper: shared registration engine for jnumeric() / jcount() /
@@ -999,9 +1001,10 @@
   if (length(frames) == 1L) return(frames)
   .jst_stop("more than one data frame carries a ", fn_label, " setting: ",
             paste(frames, collapse = ", "), ".\n",
-            "Name the one to clear, e.g. ", fn_label, "(", frames[1L],
-            ", NULL), or clear them all with ", fn_label,
-            "(clear.all = TRUE).")
+            "Name the one to clear, for example:\n",
+            "  ", fn_label, "(", frames[1L], ", NULL)\n",
+            "Or clear them all:\n",
+            "  ", fn_label, "(clear.all = TRUE)")
 }
 
 #' Internal helper: render a pipeline-state clear message

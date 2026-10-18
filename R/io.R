@@ -461,7 +461,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # One voice with the bare-name redirect below (the S219 item's finding
     # 6; Session 357): the fact, then the base R line on its own. The file
     # is named as typed, slashes swapped so the line pastes back into R.
-    shown <- gsub("\\", "/", file, fixed = TRUE)
+    # Since Session 374 the file is looked for first, as for every other
+    # format: a file that does not exist gets the file-not-found stop,
+    # where it had been offered a load() line that failed with base R's
+    # "cannot open the connection"; one found in the data.dir folder is
+    # named by its path there, so the offered line runs.
+    if (has_dir) {
+      if (!file.exists(file)) {
+        .jst_stop("File not found: ", .jst_norm_path(file))
+      }
+      found_rdata <- file
+    } else {
+      found_rdata <- sub("^\\./", "", .jst_find_file(file, quiet = TRUE))
+    }
+    shown <- gsub("\\", "/", found_rdata, fixed = TRUE)
     .jst_stop(
       shown, " is an .RData file, which jstats does not load.\n",
       "Load it with base R:\n",
@@ -710,7 +723,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         paste0("The name '", name, "' starts with a number.\n")
       },
       "R does not allow a data frame's name to start with a digit.\n",
-      "Provide a name, e.g.:\n",
+      "Provide a name, for example:\n",
       # Slash-swap, not normalizePath: a bare data.dir-resolved name
       # must stay bare so the rerun resolves the same way; only the
       # backslashes are unpasteable (S241 walk finding, D6 sibling).
@@ -4331,28 +4344,103 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         # S267: intros are plain prose through the stdout emitter -- the
         # old "#" prefixes made the block read as a script fragment and
         # left the second call commented out (not directly runnable).
-        if (!is.null(ex_gate)) {
-          .jst_msg_out("\n", ex_gate)
-          .jst_msg_out("Then, to declare one variable's codes as missing:")
-        } else {
-          .jst_msg_out("\nTo declare one variable's codes as missing:")
+        # Session 374 (the S373 item; Jeff's lean, as the text lines have
+        # it since S373): a declaration REPLACES a variable's codes, so on
+        # a variable that already declares codes the line names those as
+        # well -- offered codes = -98 alone, a file declaring -99 lost it,
+        # counted as valid. A range the variable declares is kept by a call
+        # that does not name one, and leaves room for one code beside it;
+        # with no range SPSS takes three. Past the room, the most frequent
+        # new codes, and the intro says so; with no room, a sentence.
+        ex_decl <- suppressWarnings(as.numeric(
+          attr(ex_col, "na_values", exact = TRUE)))
+        ex_decl <- ex_decl[!is.na(ex_decl)]
+        ex_rng  <- attr(ex_col, "na_range", exact = TRUE)
+        ex_new  <- ex_codes[!(ex_codes %in% ex_decl)]
+        ex_room <- (if (!is.null(ex_rng)) 1L else 3L) - length(ex_decl)
+        ex_more <- FALSE
+        ex_has  <- length(ex_decl) > 0L || !is.null(ex_rng)
+        if (ex_has && length(ex_new) > ex_room && ex_room > 0L) {
+          fx  <- Filter(function(f) f$var == ex_var &&
+                          f$value %in% ex_new, findings)
+          cnt <- vapply(fx, function(f) as.numeric(f$count), numeric(1))
+          val <- vapply(fx, function(f) as.numeric(f$value), numeric(1))
+          ex_new  <- sort(val[order(-cnt, val)][seq_len(ex_room)])
+          ex_more <- TRUE
         }
-        .jst_msg_out(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)",
-                             obj_name, ex_var, codes_str))
-        # For a suspected (unlabelled) target, offer a commented example
-        # that also attaches labels in the same call. Placeholder label
-        # strings, not guessed meanings -- the scan does not know what the
-        # codes signify (Session 115). Omitted for a label-only target,
-        # where the codes already carry labels and bare codes preserve them.
-        if (ex_src %in% c("suspected", "convention_matched")) {
-          lbl_parts <- paste0("\"label", seq_along(ex_codes), "\" = ",
-                              format(ex_codes, trim = TRUE))
-          lbl_str   <- paste0("c(", paste(lbl_parts, collapse = ", "), ")")
-          .jst_msg_out("To declare and label them in one call, replacing ",
-                       "the placeholder names:")
-          .jst_msg_out(sprintf(
-            "  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)",
-            obj_name, ex_var, lbl_str))
+        if (ex_has && ex_room <= 0L) {
+          .jst_msg_out("\n", ex_var, " already declares ",
+                       if (!is.null(ex_rng)) "a missing-value range and 1 code"
+                       else paste0(length(ex_decl), " missing values"),
+                       ", the most SPSS-style missing values allow.\n",
+                       if (!is.null(ex_rng)) "To declare more, widen the range "
+                       else "To declare more, use a range ",
+                       "or Stata-style missing values.")
+        } else {
+          all_codes <- c(ex_decl, ex_new)
+          fmt_c <- function(v) format(v, trim = TRUE, scientific = FALSE)
+          codes_str <- if (length(all_codes) == 1L) fmt_c(all_codes) else
+            paste0("c(", paste(fmt_c(all_codes), collapse = ", "), ")")
+          with_decl <- if (length(ex_decl) > 0L) {
+            ", with the ones it already declares"
+          } else ""
+          intro <- if (ex_more) {
+            paste0("declare the ",
+                   c("most frequent", "two most frequent",
+                     "three most frequent")[ex_room],
+                   " of one variable's codes as missing", with_decl,
+                   if (!is.null(ex_rng)) " (a range allows one code beside it):"
+                   else " (SPSS-style missing values take at most three):")
+          } else {
+            paste0("declare one variable's codes as missing", with_decl, ":")
+          }
+          if (!is.null(ex_gate)) {
+            .jst_msg_out("\n", ex_gate)
+            .jst_msg_out("Then, to ", intro)
+          } else {
+            .jst_msg_out("\nTo ", intro)
+          }
+          .jst_msg_out(sprintf("  jdeclare_missing(%s, %s, codes = %s, modify = TRUE)",
+                               obj_name, ex_var, codes_str))
+          # For a suspected (unlabelled) target, offer a commented example
+          # that also attaches labels in the same call. Placeholder label
+          # strings, not guessed meanings -- the scan does not know what
+          # the codes signify (Session 115). Omitted for a label-only
+          # target, where the codes already carry labels and bare codes
+          # preserve them. A code the variable already declares keeps its
+          # own label: named codes when every one has a label, else bare
+          # codes and labels = (codes = cannot name some and not others).
+          if (ex_src %in% c("suspected", "convention_matched")) {
+            vl_ex <- if (haven::is.labelled(ex_col)) {
+              labelled::val_labels(ex_col)
+            } else NULL
+            d_lab <- vapply(ex_decl, function(v) {
+              if (length(vl_ex) == 0L) return(NA_character_)
+              hit <- which(suppressWarnings(as.numeric(vl_ex)) == v)
+              if (length(hit) > 0L) names(vl_ex)[hit[1L]] else NA_character_
+            }, character(1))
+            labs_all <- c(d_lab, paste0("label", seq_along(ex_new)))
+            lbl_line <- NULL
+            if (!anyNA(labs_all)) {
+              lbl_parts <- paste0("\"", .jst_dq_escape(labs_all), "\" = ",
+                                  fmt_c(all_codes))
+              lbl_line <- sprintf(
+                "  jdeclare_missing(%s, %s, codes = c(%s), modify = TRUE)",
+                obj_name, ex_var, paste(lbl_parts, collapse = ", "))
+            } else {
+              la <- .jst_labels_arg(fmt_c(all_codes), labs_all)
+              if (!nzchar(la$note)) {
+                lbl_line <- sprintf(
+                  "  jdeclare_missing(%s, %s, codes = %s%s, modify = TRUE)",
+                  obj_name, ex_var, codes_str, la$arg)
+              }
+            }
+            if (!is.null(lbl_line)) {
+              .jst_msg_out("To declare and label them in one call, replacing ",
+                           "the placeholder names:")
+              .jst_msg_out(lbl_line)
+            }
+          }
         }
       }
     }

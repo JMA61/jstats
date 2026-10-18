@@ -283,7 +283,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
     if (.jst_warns_seems_categorical(data[[v]], v, .jst_data_name,
                                      override = .ov)) {
-      .jst_warn(.jst_assumption_warning(v, "jcorr"))
+      .jst_warn(.jst_assumption_warning(
+        v, if (identical(method, "pearson")) "jcorr" else paste0("jcorr_", method)))
     }
   }
 
@@ -2684,6 +2685,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
   # Apply data pipeline (jcomplete, jsubset, subset)
+  # The frame as given, for the dichotomy note's jdummy() line (Session
+  # 374): jdummy() reads the variable unfiltered, so the line is offered
+  # only where it would take it as it stands.
+  data_in <- data
   subset_expr <- substitute(subset)
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr, envir = parent.frame(),
@@ -3137,21 +3142,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
       iv_dich <- .jst_is_dichotomy(data[[v]])
       if (iv_dich$is_dichotomy) {
         if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-          if (iv_dich$coding == "1/2") {
-            .jst_msg(
-              "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
-              "registering ", v, " as a dummy can help interpret the intercept:\n",
-              "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or make it a 0/1 variable in the data frame."
-            )
-          } else if (iv_dich$coding == "other") {
-            .jst_msg(
-              "Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
-              "correctly, but registering ", v, " as a dummy can help interpret ",
-              "the intercept:\n",
-              "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or make it a 0/1 variable in the data frame."
-            )
+          if (iv_dich$coding %in% c("1/2", "other")) {
+            .jst_msg(.jst_dichotomy_note(v, iv_dich$coding, data_in[[v]],
+                                         .jst_data_name, .jst_data_kind))
           }
         }
         # 0/1, factor, character, logical: no note.
@@ -4537,21 +4530,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       iv_dich <- .jst_is_dichotomy(data[[v]])
       if (iv_dich$is_dichotomy) {
         if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-          if (iv_dich$coding == "1/2") {
-            .jst_msg(
-              "Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ",
-              "registering ", v, " as a dummy can help interpret the intercept:\n",
-              "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or make it a 0/1 variable in the data frame."
-            )
-          } else if (iv_dich$coding == "other") {
-            .jst_msg(
-              "Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
-              "correctly, but registering ", v, " as a dummy can help interpret ",
-              "the intercept:\n",
-              "  jdummy(", .jst_data_name, ", ", v, ")\n",
-              "Or make it a 0/1 variable in the data frame."
-            )
+          if (iv_dich$coding %in% c("1/2", "other")) {
+            .jst_msg(.jst_dichotomy_note(v, iv_dich$coding, data_in[[v]],
+                                         .jst_data_name, .jst_data_kind))
           }
         }
         # 0/1, factor, character, logical: no note.

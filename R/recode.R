@@ -2577,6 +2577,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
   # voice reference and JStats_Missing_Values_Reference.txt Part 4.
   orig_val_labels_for_note <-
     if (inherits(orig, "haven_labelled")) labelled::val_labels(orig) else NULL
+  # The codes the D1 note's declare pair declares, when it prints one, for
+  # the S319 note's pair below (Session 374).
+  d1_declared <- numeric(0)
 
   # A code with its label in the house form jfreq's Missing section uses,
   # -99 ["Refused"] (S319, 0.9.196; the notes had used -99 ("Refused")).
@@ -3047,6 +3050,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                        scientific = FALSE),
                 collapse = ", "),
           ")", d1_conv_arg, ", modify = TRUE)")
+        d1_declared <- flagged
         d1_body <- if (one && d1_direct) {
           paste0(
             "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
@@ -3081,6 +3085,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
               parsed_map$na_rule$tagged, parsed_map$else_tag),
             res_conv, length(flagged))
           if (length(d1_free) == length(flagged)) {
+            d1_declared <- numeric(0)
             d1_lead <- paste0(
               "To make the value", if (one) "" else "s", " missing, map ",
               if (one) "it to a " else "them to ", res_style, " marker",
@@ -3183,8 +3188,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         .jst_render_map_string(parsed_map), "\"", rel_conv_arg, ")\n",
         "  jdeclare_missing(", .jst_data_name, ", ", orig_name,
         "R, codes = c(",
-        paste(format(c(result_na_values, rel_codes), trim = TRUE,
-                     scientific = FALSE), collapse = ", "),
+        # When the D1 note above printed its own declare pair, this pair
+        # names that note's codes too (Session 374, the S372 item): each
+        # pair rebuilds the recoded variable, and a declaration replaces a
+        # variable's codes, so running both pairs in turn left only these
+        # codes declared.
+        paste(format(unique(c(result_na_values, d1_declared, rel_codes)),
+                     trim = TRUE, scientific = FALSE), collapse = ", "),
         ")", rel_conv_arg, ", modify = TRUE)")
     }
     .note(rel_head, rel_body)
@@ -5965,7 +5975,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
     .jst_stop("`vars` must be one or more variable names in quotes, ",
-         "e.g. vars = c(\"Age\", \"Income\").")
+         "for example:\n",
+         "  vars = c(\"Age\", \"Income\")")
   }
 
   if (length(dot_names) > 0) {
@@ -9681,7 +9692,8 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
     .jst_stop("`vars` must be one or more variable names in quotes, ",
-         "e.g. vars = c(\"Age\", \"Income\").")
+         "for example:\n",
+         "  vars = c(\"Age\", \"Income\")")
   }
 
   if (length(dot_names) > 0) {

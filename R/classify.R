@@ -746,12 +746,22 @@
 #' \code{jencode()} line it had, since \code{jdeclare_missing()} refuses a
 #' factor.
 #'
+#' Since Session 374 (the S373 item) the declare route names the values
+#' the variable already declares as well -- \code{codes = c("UNKNOWN",
+#' "")} -- since a declaration replaces a variable's values and
+#' \code{codes = ""} alone dropped them; past a text variable's three the
+#' jencode() line alone is given, as for a factor.
+#'
 #' @param counts A \code{.jst_blank_counts()} list.
 #' @param declare Logical; FALSE for a factor, whose blank levels
 #'   \code{jdeclare_missing()} cannot declare.
+#' @param declare_arg Character(1); the codes argument the declare route
+#'   names (\code{.jst_text_declare_args()}), or NULL when no declaration
+#'   can hold the blank beside the values declared.
 #' @return Character(1), newline-joined; \code{""} when there is no blank.
 #' @keywords internal
-.jst_blank_footnote <- function(counts, declare = TRUE) {
+.jst_blank_footnote <- function(counts, declare = TRUE,
+                                declare_arg = "codes = \"\"") {
   n <- counts$n
   if (n == 0L) return("")
   cells <- function(k) paste(.jst_fmt_n(k), .jst_plural(k, "cell", "cells"))
@@ -770,10 +780,18 @@
          .jst_plural(n, "It is counted as a valid value",
                      "They are counted as valid values"),
          ", not as missing.\n",
-         if (isTRUE(declare)) {
+         if (isTRUE(declare) && !is.null(declare_arg)) {
            paste0("To give ", it, " a code, use jencode().\n",
-                  "To declare ", it, " missing, use jdeclare_missing() ",
-                  "with codes = \"\".")
+                  if (identical(declare_arg, "codes = \"\"")) {
+                    paste0("To declare ", it, " missing, use jdeclare_missing() ",
+                           "with codes = \"\".")
+                  } else {
+                    # The values the variable declares are named too
+                    # (Session 374), the argument on a line of its own.
+                    paste0("To declare ", it, " missing as well, use ",
+                           "jdeclare_missing() with:\n",
+                           "  ", declare_arg)
+                  })
          } else {
            paste0("To give ", it, " a code or make ", it,
                   " missing, use jencode().")
@@ -836,8 +854,8 @@
 .jst_analysis_type_error_msg <- function(var_name, kind, fn_label) {
   if (kind == "datetime") {
     return(paste0("'", var_name, "' is a date/time variable and cannot be used in ",
-      fn_label, ". Convert it to an elapsed duration first, e.g. ",
-      "as.numeric(difftime(end, start, units = \"days\"))."))
+      fn_label, ".\nConvert it to an elapsed duration first, for example:\n",
+      "  as.numeric(difftime(end, start, units = \"days\"))"))
   }
   if (kind %in% c("complex", "raw", "list", "other")) {
     return(paste0("'", var_name, "' is of type ", kind,
@@ -1214,17 +1232,24 @@
 #'
 #' @param formula The user's analysis formula.
 #' @param data_name Character; the data frame's name (for the example line).
+#' @param skip_fetch Logical; leave a term that fetches an object (a dollar
+#'   sign, an at sign or brackets) to the workspace-object check.
 #' @return Invisibly NULL; stops when a transformed term is found. A
 #'   formula that terms() cannot process (e.g. a bare dot) passes through
 #'   untouched for downstream handling.
 #' @keywords internal
-.jst_check_formula_transforms <- function(formula, data_name) {
+.jst_check_formula_transforms <- function(formula, data_name,
+                                          skip_fetch = FALSE) {
   vars <- tryCatch(attr(stats::terms(formula), "variables"),
                    error = function(e) NULL)
   if (is.null(vars)) return(invisible(NULL))
   for (i in seq_along(vars)[-1L]) {
     v <- vars[[i]]
     if (!is.call(v)) next
+    # skip_fetch (Session 374): a term that fetches an object with $, @,
+    # [[ or [ is left to the workspace-object check, which names it.
+    if (isTRUE(skip_fetch) && is.symbol(v[[1L]]) &&
+        as.character(v[[1L]]) %in% c("$", "@", "[[", "[")) next
     term_txt <- paste(deparse(v), collapse = "")
     # Runnable example only for the simple shape: one function, one bare
     # variable (log(x), sqrt(x)). Anything else (I(x^2), poly(x, 2),
@@ -1937,6 +1962,12 @@
     }
     e
   }
+  # A single column given as the data (jdesc(d$Age, subset = zw == 1)) is
+  # offered in the data-first form, jdesc(d, Age, ...): the single-column
+  # form refuses a condition on another variable of its frame, so the call
+  # as typed stopped again once the object was added (Session 374, from the
+  # remedy-line audit).
+  if (!is.null(call)) call <- .jst_data_first_form(call, data_name)
   call_line <- if (!is.null(call)) .jst_term_text(swap(call)) else NULL
   intro <- if (identical(col, op)) {
     "Add it to the data frame first:"
@@ -1947,6 +1978,39 @@
     lines, intro,
     paste0("  ", data_name, "$", col, " <- ", op),
     if (!is.null(call_line)) paste0("  ", call_line)))
+}
+
+#' Internal helper: a single-column call in the data-first form
+#'
+#' \code{jdesc(d$Age, subset = zw == 1)} becomes
+#' \code{jdesc(d, Age, subset = zw == 1)}: the frame first, the variable
+#' after it, every other argument kept. Only for a call whose first
+#' unnamed argument is \code{<data_name>$<name>}; any other call is
+#' returned as it came (Session 374).
+#'
+#' @param call The user's call.
+#' @param data_name Character; the data frame's name.
+#' @return The call.
+#' @keywords internal
+.jst_data_first_form <- function(call, data_name) {
+  if (!is.call(call) || length(call) < 2L || is.null(data_name)) return(call)
+  items <- as.list(call)
+  nms <- names(items)
+  if (is.null(nms)) nms <- rep("", length(items))
+  pos <- which(!nzchar(nms))
+  pos <- pos[pos > 1L]
+  if (length(pos) == 0L) return(call)
+  a <- items[[pos[1L]]]
+  if (!(is.call(a) && length(a) == 3L && identical(a[[1L]], as.name("$")) &&
+        is.symbol(a[[2L]]) && identical(as.character(a[[2L]]), data_name) &&
+        is.symbol(a[[3L]]))) {
+    return(call)
+  }
+  items <- c(items[seq_len(pos[1L] - 1L)], list(a[[2L]], a[[3L]]),
+             items[-seq_len(pos[1L])])
+  nms   <- c(nms[seq_len(pos[1L] - 1L)], "", "", nms[-seq_len(pos[1L])])
+  names(items) <- nms
+  as.call(items)
 }
 
 #' Internal helper: stop for a workspace object a formula reads as a
@@ -1964,10 +2028,13 @@
 #' @param data_name Character; the data frame's name.
 #' @param enclos The environment the formula's other names resolve in.
 #' @param n_frame Integer or NULL; the frame's row count as given.
+#' @param term_first Logical; a computed term that gives a categorical
+#'   variable is refused before the object it reads is named.
 #' @return Invisible NULL; stops when one is found.
 #' @keywords internal
 .jst_check_formula_objects <- function(formula, data, data_name,
-                                       enclos = NULL, n_frame = NULL) {
+                                       enclos = NULL, n_frame = NULL,
+                                       term_first = FALSE) {
   if (!is.data.frame(data)) return(invisible(NULL))
   vars <- tryCatch(attr(stats::terms(formula), "variables"),
                    error = function(e) NULL)
@@ -1979,6 +2046,23 @@
   if (is.null(n_frame)) n_frame <- nrow(data)
   rec <- .jst_frame_object(as.list(vars)[-1L], data, enclos, n_frame)
   if (is.null(rec)) return(invisible(NULL))
+  # A term the function refuses whatever it reads -- factor(w), which
+  # gives a categorical variable -- gets that refusal first (Session 374,
+  # the remedy-line audit; lean okayed S371): adding the object to the
+  # data frame, as the lines below say, would only reach it next. A
+  # fetched object (.GlobalEnv$G) is not a computed term and is named for
+  # what it is, as before.
+  if (isTRUE(term_first) && is.call(rec$term) &&
+      !(is.symbol(rec$term[[1L]]) &&
+        as.character(rec$term[[1L]]) %in% c("$", "@", "[[", "["))) {
+    res <- tryCatch(eval(rec$term, data, enclos), error = function(e) NULL)
+    if (is.factor(res) || is.character(res)) {
+      .jst_stop("The formula term ", .jst_term_text(rec$term),
+                " produces a categorical variable, not a numeric one.\n",
+                "Create it as a new column first, then use that column ",
+                "in the formula.")
+    }
+  }
   txt <- .jst_frame_object_text(rec, .jst_term_text(rec$term), data,
                                 data_name, n_frame, call = .jst_caller_call())
   .jst_stop(paste(txt$lines, collapse = "\n"))
@@ -2106,7 +2190,7 @@
   .jst_check_formula_frames(formula, data, data_name, enclos = enclos)
   # A workspace object standing in for a variable (ruling R19, Session 357).
   .jst_check_formula_objects(formula, data, data_name, enclos = enclos,
-                             n_frame = n_frame)
+                             n_frame = n_frame, term_first = TRUE)
 
   # A workspace vector recycled inside a computed term (Session 324).
   rec <- .jst_formula_recycled(formula, data, enclos)
@@ -3206,6 +3290,13 @@
                 clause = "Descriptive statistics may not be meaningful."),
   jcorr  = list(verb = "seems", connector = ". ",
                 clause = "Pearson correlations assume continuous/interval data."),
+  # The rank methods name themselves (Session 374): the Pearson clause
+  # printed under method = "spearman" told the user about a test they had
+  # not asked for.
+  jcorr_spearman = list(verb = "seems", connector = ". ",
+                        clause = "Spearman correlations assume ordinal or interval data."),
+  jcorr_kendall  = list(verb = "seems", connector = ". ",
+                        clause = "Kendall correlations assume ordinal or interval data."),
   jt     = list(verb = "seems", connector = ". ",
                 clause = "A t-test expects an interval outcome."),
   jaov   = list(verb = "seems", connector = ". ",
@@ -3330,7 +3421,8 @@
   rules <- rules[nchar(rules) > 0]
 
   if (length(rules) == 0) {
-    stop("The map argument is empty. Provide at least one rule, e.g. map = \"1=1; 2=0\".", call. = FALSE)
+    stop("The map argument is empty.\nProvide at least one rule, for example:\n",
+         "  map = \"1=1; 2=0\"", call. = FALSE)
   }
 
   result <- list(mappings = list(), else_action = "na",
@@ -3347,8 +3439,9 @@
 
     if (!grepl("=", rule)) {
       stop(paste0(
-        "Invalid rule '", rule, "' in map argument: each rule must contain '=', ",
-        "e.g. '1=0' or '2,3=1'."
+        "Invalid rule '", rule, "' in map argument: each rule must contain ",
+        "'=', for example:\n",
+        "  map = \"1=0; 2,3=1\""
       ), call. = FALSE)
     }
 
@@ -3625,7 +3718,8 @@
   rules <- .jst_split_label_rules(labels_str)
 
   if (length(rules) == 0) {
-    stop("The labels argument is empty. Provide at least one label, e.g. labels = \"1=Male; 0=Female\".", call. = FALSE)
+    stop("The labels argument is empty.\nProvide at least one label, for example:\n",
+         "  labels = \"1=Male; 0=Female\"", call. = FALSE)
   }
 
   result        <- c()
@@ -3637,7 +3731,8 @@
     if (!grepl("=", rule)) {
       stop(paste0(
         "Invalid label rule '", rule, "': each rule must contain '=', ",
-        "e.g. '1=Male'."
+        "for example:\n",
+        "  labels = \"1=Male; 0=Female\""
       ), call. = FALSE)
     }
 
@@ -4036,7 +4131,8 @@
   rules <- rules[nchar(rules) > 0]
 
   if (length(rules) == 0) {
-    stop("The map argument is empty. Provide at least one rule, e.g. map = \"Bail=1; Parole=2\".", call. = FALSE)
+    stop("The map argument is empty.\nProvide at least one rule, for example:\n",
+         "  map = \"Bail=1; Parole=2\"", call. = FALSE)
   }
 
   result <- list(mappings = list(), else_action = "na",
@@ -4050,8 +4146,9 @@
     parts <- as.character(.jst_split_unquoted(rule, "="))
     if (length(parts) < 2L) {
       stop(paste0(
-        "Invalid rule '", rule, "' in map argument: each rule must contain '=', ",
-        "e.g. 'Bail=1' or 'Bail,Remand=1'."
+        "Invalid rule '", rule, "' in map argument: each rule must contain ",
+        "'=', for example:\n",
+        "  map = \"Bail=1; Remand,Parole=2\""
       ), call. = FALSE)
     }
     # Split on the FIRST unquoted equals sign; anything after it rejoins,

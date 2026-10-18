@@ -1268,7 +1268,8 @@ jai <- function(setup = NULL, path = NULL) {
            "first use may ask for permission.")
   if (explicit) {
     .jst_msg("To be found automatically, the file must sit in a folder ",
-             "named jstats inside your assistant's skills folder, e.g.:\n  ",
+             "named jstats inside your assistant's skills folder, for ",
+             "example:\n  ",
              .jst_skill_default_dir())
   }
   invisible(NULL)

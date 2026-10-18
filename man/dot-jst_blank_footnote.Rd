@@ -4,13 +4,17 @@
 \alias{.jst_blank_footnote}
 \title{Internal helper: jfreq()'s footnote under a table with a blank row}
 \usage{
-.jst_blank_footnote(counts, declare = TRUE)
+.jst_blank_footnote(counts, declare = TRUE, declare_arg = "codes = \\"\\"")
 }
 \arguments{
 \item{counts}{A \code{.jst_blank_counts()} list.}
 
 \item{declare}{Logical; FALSE for a factor, whose blank levels
 \code{jdeclare_missing()} cannot declare.}
+
+\item{declare_arg}{Character(1); the codes argument the declare route
+names (\code{.jst_text_declare_args()}), or NULL when no declaration
+can hold the blank beside the values declared.}
 }
 \value{
 Character(1), newline-joined; \code{""} when there is no blank.
@@ -28,5 +32,11 @@ Since Slate E5 (ruling R27) the way out names both routes, a line each:
 with \code{codes = ""} declares them missing. A factor gets the one
 \code{jencode()} line it had, since \code{jdeclare_missing()} refuses a
 factor.
+
+Since Session 374 (the S373 item) the declare route names the values
+the variable already declares as well -- \code{codes = c("UNKNOWN",
+"")} -- since a declaration replaces a variable's values and
+\code{codes = ""} alone dropped them; past a text variable's three the
+jencode() line alone is given, as for a factor.
 }
 \keyword{internal}

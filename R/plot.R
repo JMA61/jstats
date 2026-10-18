@@ -463,11 +463,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   .jst_data_name    <- arg1$name
   .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
 
+  # An internal guard since Session 374 (the remedy-line audit): the
+  # resolver above stops every call that would reach here without a data
+  # frame -- no call tried reached it -- so it is a plain invariant, with
+  # no offered line (it had offered jplot(my_result)).
   if (!is.data.frame(data)) {
-    .jst_stop("the first argument must be a data frame.\n",
-              "To plot a result, such as a model from jlm(), give it first:\n",
-              "  jplot(my_result)",
-              fn = "jplot")
+    stop("Internal error: jplot() reached its plotting step without a ",
+         "data frame.", call. = FALSE)
   }
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -915,8 +917,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # below stopped for the wrong reason. The variable count moved below the
   # frame's resolution to make room; neither step prints anything.
   .jst_check_formula_frames(formula, data, .jst_data_name)
-  # A workspace object standing in for a variable (ruling R19, Session
-  # 357), named for what it is ahead of the computed-term refusal below.
+  # A computed term is refused first (Session 374, the remedy-line audit:
+  # the add-it line kept a term refused next); a workspace object fetched
+  # with $, @ or [[ (ruling R19, Session 357) is named for what it is
+  # ahead of the refusal of any other term.
+  .jst_check_formula_transforms(formula, .jst_data_name, skip_fetch = TRUE)
   .jst_check_formula_objects(formula, data, .jst_data_name)
   .jst_check_formula_transforms(formula, .jst_data_name)
 
@@ -3038,8 +3043,8 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
 #' @describeIn jplot (planned) direct plotting of a \code{jdesc()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_desc <- function(x, which = "core", ...) {
-  .jst_stop("Plotting jst_desc result objects is not supported. ",
-       "Instead, call jplot() with the data frame directly, e.g.:\n",
+  .jst_stop("Plotting jst_desc result objects is not supported.\n",
+       "Call jplot() with the data frame instead, for example:\n",
        "  jplot(community, Age)       # histogram\n",
        "  jplot(community, Region)    # bar chart\n",
        "  jplot(WellbeingScore ~ Region, community, categorical = \"Region\")  # boxplot")
@@ -3048,8 +3053,8 @@ jplot.jst_desc <- function(x, which = "core", ...) {
 #' @describeIn jplot (planned) direct plotting of a \code{jfreq()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_freq <- function(x, which = "core", ...) {
-  .jst_stop("Plotting jst_freq result objects is not supported. ",
-       "Instead, call jplot() with the data frame directly, e.g.:\n",
+  .jst_stop("Plotting jst_freq result objects is not supported.\n",
+       "Call jplot() with the data frame instead, for example:\n",
        "  jplot(community, Region)    # bar chart\n",
        "  jplot(community, Region, Volunteer, ",
        "categorical = c(\"Region\", \"Volunteer\"))  # grouped bar chart")

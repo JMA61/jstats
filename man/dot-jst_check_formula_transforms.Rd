@@ -4,12 +4,15 @@
 \alias{.jst_check_formula_transforms}
 \title{Internal: refuse a transformed term in a model formula, in house voice}
 \usage{
-.jst_check_formula_transforms(formula, data_name)
+.jst_check_formula_transforms(formula, data_name, skip_fetch = FALSE)
 }
 \arguments{
 \item{formula}{The user's analysis formula.}
 
 \item{data_name}{Character; the data frame's name (for the example line).}
+
+\item{skip_fetch}{Logical; leave a term that fetches an object (a dollar
+sign, an at sign or brackets) to the workspace-object check.}
 }
 \value{
 Invisibly NULL; stops when a transformed term is found. A

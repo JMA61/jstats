@@ -1817,8 +1817,11 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # computed-term refusal below would call d$Region a function applied to a
   # variable, and the two-sides check would name d as the shared variable.
   .jst_check_formula_frames(formula, data, .jst_data_name)
-  # A workspace object standing in for a variable (ruling R19, Session
-  # 357), named for what it is ahead of the computed-term refusal below.
+  # A computed term is refused first (Session 374, the remedy-line audit:
+  # the add-it line kept a term refused next); a workspace object fetched
+  # with $, @ or [[ (ruling R19, Session 357) is named for what it is
+  # ahead of the refusal of any other term.
+  .jst_check_formula_transforms(formula, .jst_data_name, skip_fetch = TRUE)
   .jst_check_formula_objects(formula, data, .jst_data_name)
   # Transformed-term front door (AUDIT-021): a cross-tabulation needs plain
   # variables. Pre-check, a term like log(x) was silently ignored -- table()

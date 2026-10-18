@@ -10,7 +10,8 @@ variable}
   data,
   data_name,
   enclos = NULL,
-  n_frame = NULL
+  n_frame = NULL,
+  term_first = FALSE
 )
 }
 \arguments{
@@ -24,6 +25,9 @@ have run).}
 \item{enclos}{The environment the formula's other names resolve in.}
 
 \item{n_frame}{Integer or NULL; the frame's row count as given.}
+
+\item{term_first}{Logical; a computed term that gives a categorical
+variable is refused before the object it reads is named.}
 }
 \value{
 Invisible NULL; stops when one is found.
