@@ -86,8 +86,8 @@ convert declared cells to plain \code{NA}. For SPSS-style columns
 removes the attributes; value labels are preserved so the column
 can still round-trip through \code{jsave()} with original
 labeling. For columns carrying Stata-style missing values
-(\code{tagged_na} markers), uses \code{haven::zap_missing()} to
-convert them to plain \code{NA}s. A string variable's declared
+(\code{tagged_na} markers), makes every marker a plain \code{NA},
+labelled or not. A string variable's declared
 missing values (SPSS declares them directly, as in
 \code{MISSING VALUES MARITAL ('UNKNOWN')}) become \code{NA} the
 same way. They cannot become Stata-style or SAS-style missing
@@ -192,14 +192,15 @@ error mode -- the entire \code{jconvert()} call either succeeds or
 errors before mutating the data frame.
 
 \strong{Pattern A -- value labels suggest missingness but no formal
-declaration.} When a column has no formal missing-value declaration
-but carries value labels matching the package's missing-label
-wordlist (e.g. \code{"Refused"}, \code{"Don't know"},
+declaration.} When a numeric column has no formal missing-value
+declaration but carries value labels matching the package's
+missing-label wordlist (e.g. \code{"Refused"}, \code{"Don't know"},
 \code{"Not applicable"}), \code{jconvert()} skips the column and
 surfaces it in the notification with the affected value/label pairs.
 To formalize these as declared missing values use
 \code{jdeclare_missing()}; to leave them as ordinary data, no action
-is needed.
+is needed. A text variable is not reported: \code{jdeclare_missing()}
+declares missing values on numeric variables only.
 }
 \examples{
 # community ships with SPSS-style missing values (Income, Education,

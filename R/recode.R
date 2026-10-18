@@ -645,28 +645,54 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       if (x == floor(x)) format(as.integer(x)) else format(x)
     }
 
-    rebuilt_parts <- character(0)
+    # The line's codes, in the call's order: each marker replaced by the
+    # variable's code it pairs with, each number as typed. r_num, r_lab and
+    # r_val are parallel; a code given twice is kept once.
+    r_num <- numeric(0); r_lab <- character(0)
     for (i in seq_along(parsed_codes)) {
       val <- parsed_codes[i]
       lbl <- names(parsed_codes)[i]
       if (i %in% tag_idx) {
         this_tag <- tolower(tags_in_codes[i])
         if (this_tag %in% unmapped) next   # no column code to substitute
-        val_render <- format_num(letter_to_code[[this_tag]])
+        num <- letter_to_code[[this_tag]]
       } else {
-        val_render <- format_num(as.numeric(val))
+        num <- as.numeric(val)
       }
-      if (is.null(lbl) || !nzchar(lbl)) {
-        rebuilt_parts <- c(rebuilt_parts, val_render)
-      } else {
-        lbl_render <- if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", lbl)) {
-          lbl
-        } else {
-          paste0("`", lbl, "`")
-        }
-        rebuilt_parts <- c(rebuilt_parts,
-                           paste0(lbl_render, " = ", val_render))
-      }
+      if (num %in% r_num) next
+      r_num <- c(r_num, num)
+      r_lab <- c(r_lab, if (is.null(lbl) || !nzchar(lbl)) NA_character_
+                        else lbl)
+    }
+    # Session 372 (found with the S371 audit's mixed-codes item):
+    # jdeclare_missing() REPLACES a variable's declared codes (Decision 12),
+    # so the line names the variable's other codes too. It named only those
+    # the markers took: codes = ".a" on a variable declaring -99 and -98
+    # was offered codes = -99, which dropped -98. A kept code keeps the
+    # label it has; where the line's other codes are named and a kept one
+    # has no label, the codes go bare and the names move to labels =, since
+    # codes = cannot name some codes and not others.
+    vl_col   <- if (haven::is.labelled(col)) labelled::val_labels(col) else NULL
+    others   <- na_vals[!(na_vals %in% r_num)]
+    o_lab    <- vapply(others, function(v) {
+      if (is.null(vl_col) || length(vl_col) == 0L) return(NA_character_)
+      hit <- which(suppressWarnings(as.numeric(vl_col)) == v)
+      if (length(hit) > 0L) names(vl_col)[hit[1L]] else NA_character_
+    }, character(1))
+    all_num  <- c(r_num, others)
+    all_lab  <- c(r_lab, o_lab)
+    lbl_out  <- function(l) {
+      if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", l)) l else paste0("`", l, "`")
+    }
+    vals_txt <- vapply(all_num, format_num, character(1))
+    labs_arg <- list(arg = "", note = "")
+    rebuilt_parts <- if (all(is.na(r_lab))) {
+      vals_txt
+    } else if (!anyNA(all_lab)) {
+      paste0(vapply(all_lab, lbl_out, character(1)), " = ", vals_txt)
+    } else {
+      labs_arg <- .jst_labels_arg(vals_txt, all_lab)
+      vals_txt
     }
 
     if (length(rebuilt_parts) > 0L) {
@@ -677,16 +703,43 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       } else {
         codes_arg <- rebuilt_parts
       }
+      # Session 372: codes that mix markers and numbers reach this message
+      # too, sign-off 4 now giving way where the variable carries no marker
+      # (the S371 remedy-line audit). The line then holds the call's own
+      # numbers beside the substituted codes, so the lead says declare, not
+      # label; and where the line holds more than the substituted codes --
+      # those numbers, or the variable's codes kept -- the closing sentence
+      # names which codes took the markers' place.
+      mixed_in <- length(tag_idx) < length(parsed_codes)
+      sub_tags <- unique(tolower(tags_in_codes[tag_idx]))
+      sub_tags <- sub_tags[!(sub_tags %in% unmapped)]
+      sub_txt  <- .jst_and_list(vapply(sub_tags, function(tg) {
+        format_num(letter_to_code[[tg]])
+      }, character(1)))
+      sub_mk   <- .jst_and_list(paste0("'.",
+                                       quote_tags[match(sub_tags, all_tags)],
+                                       "'"))
+      named_sub <- mixed_in || length(others) > 0L
       msg_parts <- c(msg_parts,
-        "To label the declared numeric codes, name them directly:",
+        if (mixed_in) {
+          "To declare the codes as SPSS-style missing values, name them directly:"
+        } else "To label the declared numeric codes, name them directly:",
         paste0("  jdeclare_missing(", data_name, ", ", var_name,
-               ", codes = ", codes_arg, ")"),
+               ", codes = ", codes_arg, labs_arg$arg, ")"),
+        if (nzchar(labs_arg$note)) labs_arg$note,
         "",
         # S355 (the S219 item, finding 3): the pairing said for what it is,
         # and only when there is one to say -- "(the ordering jconvert()
         # uses)" read as internals in an error, and with one code there is
         # nothing to order.
-        if (sum(!is.na(letter_to_code)) > 1L) {
+        if (named_sub && length(sub_tags) == 1L) {
+          paste0(var_name, "'s declared missing value ", sub_txt,
+                 " takes the place of ", sub_mk, ".")
+        } else if (named_sub) {
+          paste0(var_name, "'s declared missing values ", sub_txt,
+                 " take the place of ", sub_mk, ", paired with the ",
+                 "markers in order of magnitude, largest first.")
+        } else if (sum(!is.na(letter_to_code)) > 1L) {
           paste0("The numeric codes above are ", var_name, "'s declared ",
                  "missing values, paired with the markers in order of ",
                  "magnitude, largest first.")
@@ -779,7 +832,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
   tag_parts <- character(0)
   for (i in tag_idx) {
     lbl <- fmt_label(names(parsed_codes)[i])
-    rhs <- paste0("tagged_na(\"",
+    # haven:: always (Session 372): tagged_na() runs bare only where haven
+    # is attached, which jstats does not do.
+    rhs <- paste0("haven::tagged_na(\"",
                   .jst_canonical_tag(tags_in_codes[i], phr), "\")")
     if (is.na(lbl)) tag_parts <- c(tag_parts, rhs)
     else            tag_parts <- c(tag_parts, paste0(lbl, " = ", rhs))
@@ -2923,7 +2978,21 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
         # S250 plural item). The plural note now leads with the declare
         # pair, which keeps every code distinct under every convention,
         # and names the merge in prose without printing it.
-        d1_tail <- if (one) "map it directly:"
+        # Session 372 (the S371 remedy-line audit): no token route where the
+        # source carries lettered markers and the map leaves the recoded
+        # variable none -- every marker mapped to a number (.a=0) or to NA.
+        # The missing token there is read against the source's form: under
+        # a setting that is not it the line stopped ("'missing' is
+        # ambiguous"), and under the source's own convention it took the
+        # source's first marker, so the note that followed said the recoded
+        # cases shared that kind of missing data and offered another line.
+        # The declare pair runs, the recoded variable holding no marker; a
+        # recoded variable that keeps markers gets ruling R8's marker line
+        # below, as before.
+        d1_direct <- !(length(.jst_marker_tags(orig)$all) > 0L &&
+                         is.na(res_conv))
+        d1_tail <- if (one && d1_direct) "map it directly:"
+                   else if (one) "declare it on the recoded variable:"
                    else "declare them on the recoded variable:"
         d1_lead <- if (d1_unset) {
           paste0(.jst_choose_convention_error(
@@ -2975,7 +3044,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
                        scientific = FALSE),
                 collapse = ", "),
           ")", d1_conv_arg, ", modify = TRUE)")
-        d1_body <- if (one) {
+        d1_body <- if (one && d1_direct) {
           paste0(
             "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
             .jst_data_name, ", ", orig_name, ", map = \"",
@@ -2984,6 +3053,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
             "Or declare ", .jst_and_list(codes),
             " as missing on the recoded variable:\n",
             d1_pair)
+        } else if (!d1_direct) {
+          d1_pair
         } else {
           paste0(d1_pair, "\n",
                  "To make them one missing value instead, map ",
@@ -4300,6 +4371,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     # do just below: the missing token that would keep them declared needs
     # a convention, and automatic mode never asks for one (S340).
     if (n_decl > 0) {
+      # With no convention selected the map's missing token stops at the
+      # choose-first gate, so the menu leads (Session 372, the S371
+      # remedy-line audit; ruling R15's form, as the load scan has it). The
+      # encoded variable is new, so no declaration of its own lets it pass.
+      decl_gate <- .jst_declare_gate_lead("jencode",
+                                          n = length(decl_words))
       msgs <- c(msgs, paste0(
         paste0(
           "Note: ", .jst_fmt_n(n_decl), " ",
@@ -4307,11 +4384,12 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
           "' holding a declared missing value (",
           paste0("\"", decl_words, "\"", collapse = ", "), ") ",
           .jst_plural(n_decl, "was", "were"), " left missing (NA)."), "\n",
+        if (!is.null(decl_gate)) paste0(decl_gate, "\n"),
         # The missing token makes ONE missing value, so two declared
         # strings sent to it come back as one: said here, before the
         # rerun's own "combine" note says it.
         paste0(
-          "To keep ",
+          if (!is.null(decl_gate)) "Then, to keep " else "To keep ",
           if (length(decl_words) > 1L) "them declared, as one missing value"
           else .jst_plural(n_decl, "it as a declared missing value",
                            "them as declared missing values"),
@@ -6234,7 +6312,18 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   }
 
   # --- Sign-off 4: reject mixed tagged + numeric ---------------------------
-  if (has_tagged && has_numeric) {
+  # Only where a target can take the marker half (Session 372, the S371
+  # remedy-line audit): the split's first line labels markers the variable
+  # carries, so on a variable carrying none -- SPSS-style declarations, or
+  # nothing declared -- it stopped at sign-off 3, and on an SPSS-declared
+  # variable the second line stopped too, on the convention conflict. When
+  # no target carries a marker, the call goes on to sign-off 3, whose
+  # message is the advice for that variable: its own codes named, or the
+  # tools that make markers.
+  mixed_takes_markers <- any(vapply(target_vars, function(vn) {
+    length(.jst_marker_tags(data[[vn]])$all) > 0L
+  }, logical(1)))
+  if (has_tagged && has_numeric && mixed_takes_markers) {
     .jst_stop(.jst_jdeclare_missing_mixed_error(
       parsed_codes, data_name, target_vars[1],
       per_call_convention = convention,
@@ -7853,7 +7942,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     for (i in seq_along(conversion_info$sorted_codes)) {
       tag <- conversion_info$tag_letters[i]
       lbl <- conversion_info$sorted_labels[i]
-      rhs <- paste0("tagged_na(\"", tag, "\")")
+      # haven:: always (Session 372), as the mixed-codes stop's lines.
+      rhs <- paste0("haven::tagged_na(\"", tag, "\")")
       if (nzchar(lbl)) {
         lbl_render <- if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", lbl)) lbl
                       else paste0("`", lbl, "`")
@@ -8337,8 +8427,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #'     removes the attributes; value labels are preserved so the column
 #'     can still round-trip through \code{jsave()} with original
 #'     labeling. For columns carrying Stata-style missing values
-#'     (\code{tagged_na} markers), uses \code{haven::zap_missing()} to
-#'     convert them to plain \code{NA}s. A string variable's declared
+#'     (\code{tagged_na} markers), makes every marker a plain \code{NA},
+#'     labelled or not. A string variable's declared
 #'     missing values (SPSS declares them directly, as in
 #'     \code{MISSING VALUES MARITAL ('UNKNOWN')}) become \code{NA} the
 #'     same way. They cannot become Stata-style or SAS-style missing
@@ -8443,14 +8533,15 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' errors before mutating the data frame.
 #'
 #' \strong{Pattern A -- value labels suggest missingness but no formal
-#' declaration.} When a column has no formal missing-value declaration
-#' but carries value labels matching the package's missing-label
-#' wordlist (e.g. \code{"Refused"}, \code{"Don't know"},
+#' declaration.} When a numeric column has no formal missing-value
+#' declaration but carries value labels matching the package's
+#' missing-label wordlist (e.g. \code{"Refused"}, \code{"Don't know"},
 #' \code{"Not applicable"}), \code{jconvert()} skips the column and
 #' surfaces it in the notification with the affected value/label pairs.
 #' To formalize these as declared missing values use
 #' \code{jdeclare_missing()}; to leave them as ordinary data, no action
-#' is needed.
+#' is needed. A text variable is not reported: \code{jdeclare_missing()}
+#' declares missing values on numeric variables only.
 #'
 #' @examples
 #' # community ships with SPSS-style missing values (Income, Education,
@@ -8694,9 +8785,15 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
     # narrative and jsave() offer a frame holding a declared string --
     # its declared values made plain NA, then the frame converted --
     # printed the report about the label the first line left behind.
+    # Since Session 372 not on a text variable under ANY target (the S371
+    # remedy-line audit): jdeclare_missing() declares missing values on
+    # numeric variables only -- a text code is refused, quoted ("Invalid
+    # code 'X'") or not (unquoted, R's "object 'X' not found", or a
+    # workspace X's value declared without a word) -- so the report's line
+    # stopped under to = "spss" and "baseR" as well. Declaring on a text
+    # variable is an open capability (the S222 E5 item).
     pa_entries <- list()
-    if (haven::is.labelled(col) &&
-        !(to %in% c("stata", "sas") && is.character(col))) {
+    if (haven::is.labelled(col) && !is.character(col)) {
       val_labs <- labelled::val_labels(col)
       if (!is.null(val_labs) && length(val_labs) > 0L) {
         for (i in seq_along(val_labs)) {
@@ -9183,8 +9280,11 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
         attr(data[[vname]], "na_values") <- NULL
         attr(data[[vname]], "na_range")  <- NULL
       } else {
-        # Stata-form: haven::zap_missing handles tagged NAs uniformly.
-        data[[vname]] <- haven::zap_missing(col)
+        # Stata-form: every marker made plain NA, a plain double's
+        # unlabelled markers included (S372; haven::zap_missing() returns a
+        # plain double unchanged, so "Stripped" was reported over markers
+        # still in the cells).
+        data[[vname]] <- .jst_zap_tags(col)
       }
 
       # Report rows from the original info (pre-strip codes): what was

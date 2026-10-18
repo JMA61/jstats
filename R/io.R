@@ -3120,6 +3120,40 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   .jst_convention_census(df)$predominant
 }
 
+#' Internal helper: a column's lettered missing-value markers made plain NA
+#'
+#' \code{haven::zap_missing()} turns a labelled column's Stata-style and
+#' SAS-style markers into plain NA and drops the labels attached to them,
+#' but its method for a plain double returns the column unchanged -- and a
+#' Stata file whose extended missing values carry no value label loads as
+#' exactly that, a double holding tagged NAs. Until Session 372 the two
+#' callers passed such a column through with its markers in place:
+#' \code{jsave(preserve.declarations = FALSE)} then repeated the .sav and
+#' .xpt refusal that had offered it, and
+#' \code{jload(preserve.declarations = FALSE)} and
+#' \code{jconvert(to = "baseR")} reported as plain NA markers that were
+#' still there. Here every marker cell becomes plain NA, labelled or not.
+#' Callers: \code{.jst_handle_udms()} and \code{jconvert()}'s base R arm.
+#' The analysis pipeline's mask (\code{.jst_apply_declared_udms_as_na()})
+#' keeps \code{haven::zap_missing()}: a plain double's tagged cells are NA
+#' to every count, and with no labels there is nothing for
+#' \code{as_factor()} to revive, so a zap there would change nothing.
+#'
+#' @param col A column.
+#' @return The column with its markers plain NA. A column that is not a
+#'   double holds none and is returned unchanged.
+#' @keywords internal
+.jst_zap_tags <- function(col) {
+  if (!is.double(col)) return(col)
+  if (haven::is.labelled(col)) return(haven::zap_missing(col))
+  # A plain double: writing R's own NA over each NA cell replaces a tag's
+  # payload and keeps the column's attributes (a variable label, a Stata
+  # display format).
+  na_pos <- which(is.na(col))
+  if (length(na_pos) > 0L) col[na_pos] <- NA_real_
+  col
+}
+
 #' Internal: inspect a data frame for UDM-bearing columns and optionally
 #' convert UDM cells to NA
 #'
@@ -3191,8 +3225,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         # preserving labels on non-missing values. (The analysis pipeline's
         # Step 0 applies the same zap on its own copy -- AUDIT-039 -- for a
         # different reason: keeping as_factor() from reviving labelled
-        # tags as factor levels.)
-        df[[vname]] <- haven::zap_missing(col)
+        # tags as factor levels.) A plain double holding unlabelled markers
+        # is zapped too (S372; .jst_zap_tags()).
+        df[[vname]] <- .jst_zap_tags(col)
       }
     }
   }
@@ -4999,8 +5034,24 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     paste0("It was written to the file as an ordinary value, so other ",
            "software will read it as valid data.")
   }
+  # The declaration takes the form the frame's other columns use, SPSS-style
+  # (Session 372, the S371 remedy-line audit). Read from the setting alone,
+  # the line stopped at the choose-first gate with no convention selected,
+  # and under stata or sas it made the code a marker, which the .sav save
+  # beside it then refused; convention = "spss" rides unless the setting is
+  # already spss.
+  rel_carg <- if (identical(getOption(".jst_options_missing_convention",
+                                      .jst_options_defaults$missing.convention),
+                            "spss")) "" else ", convention = \"spss\""
+  # jdeclare_missing() REPLACES a variable's declared codes (Decision 12),
+  # so on a column declaring codes of its own the line names them beside
+  # the stray (Session 372, found with the audit's item): it dropped them,
+  # as the S319 jrecode() pairs once did.
   decl_lines <- vapply(vars, function(vn) {
-    cs <- strays[[vn]]
+    own <- infos[[vn]]
+    own <- if (is.null(own) || is.null(own$codes)) numeric(0) else
+      own$codes$numeric[!is.na(own$codes$numeric)]
+    cs <- c(own, strays[[vn]])
     ct <- if (length(cs) == 1L) {
       .jst_fmt_code(cs)
     } else {
@@ -5008,7 +5059,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                          collapse = ", "), ")")
     }
     paste0("  jdeclare_missing(", data_name, ", ", vn, ", codes = ", ct,
-           ", modify = TRUE)")
+           rel_carg, ", modify = TRUE)")
   }, character(1))
   jsave_line <- paste0("  jsave(", data_name, ", \"", file_arg,
                        "\", overwrite = TRUE)")
