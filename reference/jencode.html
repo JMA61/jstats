@@ -19,7 +19,7 @@ to a rank."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.245</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.246</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -189,8 +189,9 @@ its order, so the rerun-with-a-map suggestion is not printed for it.
 Levels that are all numbers convert by face value, like numbers stored
 as text. With a <code>map</code>, the rules name the level text exactly as
 they name words. This is also the route from a factor to
-<code><a href="jrecode.html">jrecode()</a></code>, <code><a href="jrelabel.html">jrelabel()</a></code> and <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>,
-which work on numeric variables only.</p>
+<code><a href="jrecode.html">jrecode()</a></code> and <code><a href="jrelabel.html">jrelabel()</a></code>, which work on numeric variables
+only, and to <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>, which takes numeric and text
+variables but not a factor.</p>
 <p><strong>Numbers stored as text convert by face value.</strong> Here the two
 part company. <code>AUTORECODE</code> treats "34" as just another string and
 renumbers it to its alphabetical rank; <code>jencode()</code> always

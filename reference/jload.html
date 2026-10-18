@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.245</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.246</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -340,6 +340,12 @@ as suspected. Flagged values are reported but not changed. If
 they are missing values, declare them with
 <code><a href="jdeclare_missing.html">jdeclare_missing</a></code>, which keeps the codes and their labels;
 the report shows the call.</p>
+<p>A text variable's values are flagged too: as label-only when their value
+label suggests missingness, and as suspected when the value itself does
+(<code>"UNKNOWN"</code>, <code>"Not stated"</code>) or when it differs from a value
+the variable declares only in letter case or outer spaces. The call the
+report shows names the values the variable already declares, since a
+declaration replaces them, and at most three in all.</p>
 <p><strong>Package example datasets and .rda / .RData files:</strong>
 <code>jload()</code> opens the example datasets shipped with jstats –
 currently <code>community</code> and <code>clinic</code> – by bare name:

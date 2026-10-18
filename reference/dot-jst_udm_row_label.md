@@ -17,7 +17,8 @@ rows.
 
 - code_display:
 
-  Character display form of the value.
+  Character display form of the value. A blank one – a text variable's
+  declared blank, `codes = ""` (Slate E5) – shows as `<blank>`.
 
 - label:
 

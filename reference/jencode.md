@@ -153,10 +153,11 @@ declared its order, so the rerun-with-a-map suggestion is not printed
 for it. Levels that are all numbers convert by face value, like numbers
 stored as text. With a `map`, the rules name the level text exactly as
 they name words. This is also the route from a factor to
-[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md),
-[`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md) and
+[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md) and
+[`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md),
+which work on numeric variables only, and to
 [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md),
-which work on numeric variables only.
+which takes numeric and text variables but not a factor.
 
 **Numbers stored as text convert by face value.** Here the two part
 company. `AUTORECODE` treats "34" as just another string and renumbers

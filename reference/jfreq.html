@@ -11,7 +11,7 @@ also accepts a plain vector."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.245</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.246</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -171,8 +171,9 @@ or tabs – are tabulated together in one row labeled <code>&lt;blank&gt;</code>
 They are counted as valid values, not as missing: a blank is absent data
 in one file and a real answer in the next (a column coded "Y" or left
 empty), and only you know which. A short footnote under the table says
-how many there are; <code><a href="jencode.html">jencode</a></code> gives them a code or makes
-them missing. <code>&lt;blank&gt;</code> is the row's label, not a value in the
+how many there are; <code><a href="jencode.html">jencode</a></code> gives them a code, and
+<code><a href="jdeclare_missing.html">jdeclare_missing</a></code> with <code>codes = ""</code> declares them
+missing. <code>&lt;blank&gt;</code> is the row's label, not a value in the
 data: a filter selects those cells by what they hold,
 <code>subset = trimws(Source) == ""</code> (or <code>Source == ""</code> for the
 empty cells alone, leaving out those holding only spaces).</p>

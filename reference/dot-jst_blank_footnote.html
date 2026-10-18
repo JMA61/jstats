@@ -15,7 +15,7 @@ table, on stdout, as jscreen()'s star legend is."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.245</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.246</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,7 +50,7 @@ table, on stdout, as jscreen()'s star legend is.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_blank_footnote</span><span class="op">(</span><span class="va">counts</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_blank_footnote</span><span class="op">(</span><span class="va">counts</span>, declare <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -60,10 +60,23 @@ table, on stdout, as jscreen()'s star legend is.</p>
 <dl><dt id="arg-counts">counts<a class="anchor" aria-label="anchor" href="#arg-counts"></a></dt>
 <dd><p>A <code><a href="dot-jst_blank_counts.html">.jst_blank_counts()</a></code> list.</p></dd>
 
+
+<dt id="arg-declare">declare<a class="anchor" aria-label="anchor" href="#arg-declare"></a></dt>
+<dd><p>Logical; FALSE for a factor, whose blank levels
+<code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> cannot declare.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Character(1), newline-joined; <code>""</code> when there is no blank.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Since Slate E5 (ruling R27) the way out names both routes, a line each:
+<code><a href="jencode.html">jencode()</a></code> gives the blank cells a code, <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>
+with <code>codes = ""</code> declares them missing. A factor gets the one
+<code><a href="jencode.html">jencode()</a></code> line it had, since <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> refuses a
+factor.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

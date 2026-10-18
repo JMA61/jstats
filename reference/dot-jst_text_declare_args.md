@@ -1,0 +1,42 @@
+# Internal helper: the codes a declaration offered on a text variable names
+
+The codes = argument – with labels = where some values carry a label and
+others do not – of a line that declares values on a text variable
+together with the values it already declares (Jeff, Session 373): a
+declaration replaces a variable's values, so a line naming only the new
+ones would drop the others. Used by jdeclare_missing()'s note on values
+that differ from a declared one only in case or outer spaces, the load
+scan and jconvert()'s Pattern A report. A value keeps the label the
+variable gives it; a new value with none of its own takes the label of
+the declared value it differs from only in case or outer spaces. Every
+value labelled: named codes; none: bare codes; some: bare codes and
+labels =, as the S372 lines on numbers give them
+([`.jst_labels_arg()`](https://jma61.github.io/jstats/reference/dot-jst_labels_arg.md)).
+
+## Usage
+
+``` r
+.jst_text_declare_args(col, add, add_labels = NULL)
+```
+
+## Arguments
+
+- col:
+
+  The variable as it stands (character, or character-backed
+  haven_labelled_spss).
+
+- add:
+
+  The values to declare beside the declared ones.
+
+- add_labels:
+
+  Labels for `add` (placeholders), or NULL for the variable's own.
+
+## Value
+
+A list: `arg`, the argument text, or NULL past three values (a text
+variable's limit) or where a labels string cannot hold a value or a
+label; `n`, the number of values the line would name; `add_labels`, the
+labels the new values take ("" none).

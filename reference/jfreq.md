@@ -135,8 +135,10 @@ file and a real answer in the next (a column coded "Y" or left empty),
 and only you know which. A short footnote under the table says how many
 there are;
 [`jencode`](https://jma61.github.io/jstats/reference/jencode.md) gives
-them a code or makes them missing. `<blank>` is the row's label, not a
-value in the data: a filter selects those cells by what they hold,
+them a code, and
+[`jdeclare_missing`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
+with `codes = ""` declares them missing. `<blank>` is the row's label,
+not a value in the data: a filter selects those cells by what they hold,
 `subset = trimws(Source) == ""` (or `Source == ""` for the empty cells
 alone, leaving out those holding only spaces).
 

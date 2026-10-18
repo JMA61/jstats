@@ -9,7 +9,7 @@ table, on stdout, as jscreen()'s star legend is.
 ## Usage
 
 ``` r
-.jst_blank_footnote(counts)
+.jst_blank_footnote(counts, declare = TRUE)
 ```
 
 ## Arguments
@@ -20,6 +20,24 @@ table, on stdout, as jscreen()'s star legend is.
   [`.jst_blank_counts()`](https://jma61.github.io/jstats/reference/dot-jst_blank_counts.md)
   list.
 
+- declare:
+
+  Logical; FALSE for a factor, whose blank levels
+  [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
+  cannot declare.
+
 ## Value
 
 Character(1), newline-joined; `""` when there is no blank.
+
+## Details
+
+Since Slate E5 (ruling R27) the way out names both routes, a line each:
+[`jencode()`](https://jma61.github.io/jstats/reference/jencode.md) gives
+the blank cells a code,
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
+with `codes = ""` declares them missing. A factor gets the one
+[`jencode()`](https://jma61.github.io/jstats/reference/jencode.md) line
+it had, since
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
+refuses a factor.

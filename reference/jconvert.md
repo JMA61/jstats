@@ -211,10 +211,10 @@ missing-label wordlist (e.g. `"Refused"`, `"Don't know"`,
 the notification with the affected value/label pairs. To formalize these
 as declared missing values use
 [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md);
-to leave them as ordinary data, no action is needed. A text variable is
-not reported:
-[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
-declares missing values on numeric variables only.
+to leave them as ordinary data, no action is needed. A text variable's
+labelled values are reported under `to = "spss"` and `to = "baseR"`, and
+declared with their values in quotes; not under `"stata"` or `"sas"`,
+whose missing values exist only on numeric variables.
 
 ## See also
 

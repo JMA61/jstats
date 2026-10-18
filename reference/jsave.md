@@ -139,11 +139,12 @@ and shows it written with forward slashes.
   once: complex, raw, list, or POSIXlt columns; missing values of a form
   the format cannot hold (Stata-style in `.sav`, SPSS-style in `.dta`,
   either in `.xpt`); and, for `.sav`, more than three declared codes, or
-  a range plus more than one code, on one column. No file is written
-  until the problems are fixed. A missing-value form the format cannot
-  hold can also be saved as plain NA with
-  `preserve.declarations = FALSE`, which the message offers beside the
-  conversion.
+  a range plus more than one code, on one column, and a text variable's
+  declared missing value longer than 8 bytes, which the file would cut
+  short so its cells read back as data. No file is written until the
+  problems are fixed. A missing-value form the format cannot hold can
+  also be saved as plain NA with `preserve.declarations = FALSE`, which
+  the message offers beside the conversion.
 
 - SPSS (`.sav`), Stata (`.dta`), SAS interchange (`.xpt`) and CSV
   (`.csv`) have no missing value for text: a text variable's missing
@@ -201,11 +202,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpRlEzSl/community.sav
+#> Saved community to /tmp/Rtmpbe915M/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpRlEzSl/community.sav
+#> Saved community to /tmp/Rtmpbe915M/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{

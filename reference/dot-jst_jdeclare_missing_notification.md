@@ -2,10 +2,9 @@
 
 Returns `list(block = , tail = )`. `block` is the header and the body
 lines (or, on the naming branch with every marker bare, the no-change
-note). `tail` is the durability reminder, with the equivalent call after
-it at the full tier on the conversion branch; it is `NULL` at the
-minimal tier and when nothing changed. The caller prints the two apart,
-with what the call did to an earlier declaration between them (S339).
+note). `tail` is the durability reminder; it is `NULL` at the minimal
+tier and when nothing changed. The caller prints the two apart, with
+what the call did to an earlier declaration between them (S339).
 
 ## Usage
 

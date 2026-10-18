@@ -293,6 +293,13 @@ but not changed. If they are missing values, declare them with
 [`jdeclare_missing`](https://jma61.github.io/jstats/reference/jdeclare_missing.md),
 which keeps the codes and their labels; the report shows the call.
 
+A text variable's values are flagged too: as label-only when their value
+label suggests missingness, and as suspected when the value itself does
+(`"UNKNOWN"`, `"Not stated"`) or when it differs from a value the
+variable declares only in letter case or outer spaces. The call the
+report shows names the values the variable already declares, since a
+declaration replaces them, and at most three in all.
+
 **Package example datasets and .rda / .RData files:** `jload()` opens
 the example datasets shipped with jstats – currently `community` and
 `clinic` – by bare name: `jload("community")`. These ship inside the

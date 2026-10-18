@@ -1,5 +1,17 @@
 # Internal: scan for coded missing values and report findings
 
+A text variable's values are found by
+[`.jst_scan_text_missing()`](https://jma61.github.io/jstats/reference/dot-jst_scan_text_missing.md)
+(Slate E5): label-only by their labels, suspected by their own wording.
+
+## Usage
+
+``` r
+.jst_scan_coded_missing(df, obj_name)
+```
+
+## Details
+
 Classifies findings three ways, most specific first: label-only (a value
 label suggesting missingness, per the package wordlist, with no formal
 declaration); convention-matched (Session 361; the Session 23 item,
@@ -9,9 +21,3 @@ sentinel value with no metadata at all). Values formally declared in
 `na_values` or `na_range` are excluded from every classification –
 declared UDMs are reported by jload's narrative (`.jst_handle_udms`),
 not here.
-
-## Usage
-
-``` r
-.jst_scan_coded_missing(df, obj_name)
-```

@@ -23,7 +23,7 @@ missing values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.245</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.246</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -268,8 +268,10 @@ missing-label wordlist (e.g. <code>"Refused"</code>, <code>"Don't know"</code>,
 surfaces it in the notification with the affected value/label pairs.
 To formalize these as declared missing values use
 <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>; to leave them as ordinary data, no action
-is needed. A text variable is not reported: <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code>
-declares missing values on numeric variables only.</p>
+is needed. A text variable's labelled values are reported under
+<code>to = "spss"</code> and <code>to = "baseR"</code>, and declared with their
+values in quotes; not under <code>"stata"</code> or <code>"sas"</code>, whose
+missing values exist only on numeric variables.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
