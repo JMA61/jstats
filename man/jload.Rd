@@ -275,6 +275,13 @@ they are missing values, declare them with
 \code{\link{jdeclare_missing}}, which keeps the codes and their labels;
 the report shows the call.
 
+A text variable's values are flagged too: as label-only when their value
+label suggests missingness, and as suspected when the value itself does
+(\code{"UNKNOWN"}, \code{"Not stated"}) or when it differs from a value
+the variable declares only in letter case or outer spaces. The call the
+report shows names the values the variable already declares, since a
+declaration replaces them, and at most three in all.
+
 \strong{Package example datasets and .rda / .RData files:}
 \code{jload()} opens the example datasets shipped with jstats --
 currently \code{community} and \code{clinic} -- by bare name:

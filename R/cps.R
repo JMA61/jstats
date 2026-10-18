@@ -223,9 +223,14 @@
       if (!is.null(mi$codes) && nrow(mi$codes) > 0L) {
         for (i in seq_len(nrow(mi$codes))) {
           r   <- mi$codes[i, ]
-          key <- if (text_codes) r$code else r$numeric
-          s   <- sum(!is.na(x_pre)  & x_pre  == key)
-          p   <- sum(!is.na(x_pool) & x_pool == key)
+          # A declared blank covers every blank cell (Slate E5).
+          if (text_codes) {
+            s <- sum(.jst_text_codes_mask(x_pre,  r$code))
+            p <- sum(.jst_text_codes_mask(x_pool, r$code))
+          } else {
+            s <- sum(!is.na(x_pre)  & x_pre  == r$numeric)
+            p <- sum(!is.na(x_pool) & x_pool == r$numeric)
+          }
           lab <- .jst_udm_row_label(r$code, r$label)
           rows <- rbind(rows, data.frame(code_label = lab, src = s, pool = p,
                                          stringsAsFactors = FALSE))

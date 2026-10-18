@@ -7,7 +7,9 @@
 .jst_udm_row_label(code_display, label, unlabelled = "note")
 }
 \arguments{
-\item{code_display}{Character display form of the value.}
+\item{code_display}{Character display form of the value. A blank one --
+a text variable's declared blank, \code{codes = ""} (Slate E5) -- shows
+as \code{<blank>}.}
 
 \item{label}{Character label; \code{NA}, \code{""}, \code{NULL} or a
 zero-length vector for none.}

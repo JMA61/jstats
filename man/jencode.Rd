@@ -140,8 +140,9 @@ its order, so the rerun-with-a-map suggestion is not printed for it.
 Levels that are all numbers convert by face value, like numbers stored
 as text. With a \code{map}, the rules name the level text exactly as
 they name words. This is also the route from a factor to
-\code{jrecode()}, \code{jrelabel()} and \code{jdeclare_missing()},
-which work on numeric variables only.
+\code{jrecode()} and \code{jrelabel()}, which work on numeric variables
+only, and to \code{jdeclare_missing()}, which takes numeric and text
+variables but not a factor.
 
 \strong{Numbers stored as text convert by face value.} Here the two
 part company. \code{AUTORECODE} treats "34" as just another string and

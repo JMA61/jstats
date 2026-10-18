@@ -626,6 +626,30 @@
   !is.na(x) & !grepl("[^ \t\r\n]", x, useBytes = TRUE)
 }
 
+#' Internal helper: which text cells does a declared string cover?
+#'
+#' A text variable's declared missing value matches the cells that hold it
+#' exactly as stored -- case and outer spaces count, as in SPSS -- with one
+#' exception: a declared blank (\code{""}, ruling R27, Slate E5) covers
+#' every blank cell, empty or holding only spaces, tabs or line ends, as
+#' SPSS's \code{MISSING VALUES S ('')} covers a string of spaces. The one
+#' comparison every reader of a declared string makes: the masking pass,
+#' jfreq()'s Missing rows, the Case Processing rows, jconvert(to =
+#' "baseR"), preserve.declarations = FALSE and jsave()'s notes.
+#'
+#' @param x A text variable (character, or character-backed labelled).
+#' @param codes Character vector of declared strings.
+#' @return Logical, the length of \code{x}; FALSE for NA cells.
+#' @keywords internal
+.jst_text_codes_mask <- function(x, codes) {
+  x <- as.character(unclass(x))
+  attributes(x) <- NULL
+  codes <- as.character(codes)
+  out <- !is.na(x) & x %in% codes[!.jst_is_blank(codes)]
+  if (any(.jst_is_blank(codes))) out <- out | .jst_is_blank(x)
+  out
+}
+
 #' Internal helper: put the blank label on a text variable's blank cells
 #'
 #' A character vector (plain or haven-labelled) comes back with every blank
@@ -716,10 +740,18 @@
 #' they are not; and the one way to change that. A legend printed with its
 #' table, on stdout, as jscreen()'s star legend is.
 #'
+#' Since Slate E5 (ruling R27) the way out names both routes, a line each:
+#' \code{jencode()} gives the blank cells a code, \code{jdeclare_missing()}
+#' with \code{codes = ""} declares them missing. A factor gets the one
+#' \code{jencode()} line it had, since \code{jdeclare_missing()} refuses a
+#' factor.
+#'
 #' @param counts A \code{.jst_blank_counts()} list.
+#' @param declare Logical; FALSE for a factor, whose blank levels
+#'   \code{jdeclare_missing()} cannot declare.
 #' @return Character(1), newline-joined; \code{""} when there is no blank.
 #' @keywords internal
-.jst_blank_footnote <- function(counts) {
+.jst_blank_footnote <- function(counts, declare = TRUE) {
   n <- counts$n
   if (n == 0L) return("")
   cells <- function(k) paste(.jst_fmt_n(k), .jst_plural(k, "cell", "cells"))
@@ -733,13 +765,19 @@
            .jst_fmt_n(counts$empty), " empty, ", .jst_fmt_n(counts$space),
            " holding only spaces or tabs).")
   }
+  it <- .jst_plural(n, "it", "them")
   paste0(what, "\n",
          .jst_plural(n, "It is counted as a valid value",
                      "They are counted as valid values"),
          ", not as missing.\n",
-         "To give ", .jst_plural(n, "it", "them"),
-         " a code or make ", .jst_plural(n, "it", "them"),
-         " missing, use jencode().")
+         if (isTRUE(declare)) {
+           paste0("To give ", it, " a code, use jencode().\n",
+                  "To declare ", it, " missing, use jdeclare_missing() ",
+                  "with codes = \"\".")
+         } else {
+           paste0("To give ", it, " a code or make ", it,
+                  " missing, use jencode().")
+         })
 }
 
 #' Internal helper: classify a variable's analysis-relevant type "kind"

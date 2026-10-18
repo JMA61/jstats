@@ -117,7 +117,9 @@ stops, naming every problem at once: complex, raw, list, or
 POSIXlt columns; missing values of a form the format cannot hold
 (Stata-style in \code{.sav}, SPSS-style in \code{.dta}, either in
 \code{.xpt}); and, for \code{.sav}, more than three declared codes,
-or a range plus more than one code, on one column. No file is
+or a range plus more than one code, on one column, and a text
+variable's declared missing value longer than 8 bytes, which the
+file would cut short so its cells read back as data. No file is
 written until the problems are fixed. A missing-value form the
 format cannot hold can also be saved as plain NA with
 \code{preserve.declarations = FALSE}, which the message offers

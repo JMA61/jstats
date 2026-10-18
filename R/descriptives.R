@@ -841,8 +841,9 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #' They are counted as valid values, not as missing: a blank is absent data
 #' in one file and a real answer in the next (a column coded "Y" or left
 #' empty), and only you know which. A short footnote under the table says
-#' how many there are; \code{\link{jencode}} gives them a code or makes
-#' them missing. \code{<blank>} is the row's label, not a value in the
+#' how many there are; \code{\link{jencode}} gives them a code, and
+#' \code{\link{jdeclare_missing}} with \code{codes = ""} declares them
+#' missing. \code{<blank>} is the row's label, not a value in the
 #' data: a filter selects those cells by what they hold,
 #' \code{subset = trimws(Source) == ""} (or \code{Source == ""} for the
 #' empty cells alone, leaving out those holding only spaces).
@@ -1313,8 +1314,9 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
             code_rows <- rbind(code_rows, data.frame(
               Value = .jst_udm_row_label(r$code, r$label),
               Freq  = if (text_codes) {
-                        as.integer(sum(!is.na(x_pool_chr) &
-                                         x_pool_chr == r$code))
+                        # A declared blank counts every blank cell (E5).
+                        as.integer(sum(.jst_text_codes_mask(x_pool_chr,
+                                                            r$code)))
                       } else pool_count(as.numeric(r$numeric)),
               Sort  = if (text_codes) as.numeric(i) else as.numeric(r$numeric),
               stringsAsFactors = FALSE))
@@ -1665,7 +1667,10 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                    .jst_plural(zero_hidden, "is", "are"), " not listed.")
     }
     # The <blank> row's footnote, against the table it explains (S340).
-    if (blank_counts$n > 0L) .jst_msg_out(.jst_blank_footnote(blank_counts))
+    if (blank_counts$n > 0L) {
+      .jst_msg_out(.jst_blank_footnote(
+        blank_counts, declare = !is.factor(data[[variable_name]])))
+    }
     cat("\n")
 
     # value.id / variable.id legends under this variable's own table.

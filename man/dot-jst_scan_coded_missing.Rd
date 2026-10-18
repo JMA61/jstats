@@ -7,6 +7,10 @@
 .jst_scan_coded_missing(df, obj_name)
 }
 \description{
+A text variable's values are found by \code{.jst_scan_text_missing()}
+(Slate E5): label-only by their labels, suspected by their own wording.
+}
+\details{
 Classifies findings three ways, most specific first: label-only (a value
 label suggesting missingness, per the package wordlist, with no formal
 declaration); convention-matched (Session 361; the Session 23 item,

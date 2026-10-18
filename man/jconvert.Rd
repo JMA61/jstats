@@ -199,8 +199,10 @@ missing-label wordlist (e.g. \code{"Refused"}, \code{"Don't know"},
 surfaces it in the notification with the affected value/label pairs.
 To formalize these as declared missing values use
 \code{jdeclare_missing()}; to leave them as ordinary data, no action
-is needed. A text variable is not reported: \code{jdeclare_missing()}
-declares missing values on numeric variables only.
+is needed. A text variable's labelled values are reported under
+\code{to = "spss"} and \code{to = "baseR"}, and declared with their
+values in quotes; not under \code{"stata"} or \code{"sas"}, whose
+missing values exist only on numeric variables.
 }
 \examples{
 # community ships with SPSS-style missing values (Income, Education,

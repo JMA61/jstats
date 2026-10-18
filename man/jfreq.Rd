@@ -119,8 +119,9 @@ or tabs -- are tabulated together in one row labeled \code{<blank>}.
 They are counted as valid values, not as missing: a blank is absent data
 in one file and a real answer in the next (a column coded "Y" or left
 empty), and only you know which. A short footnote under the table says
-how many there are; \code{\link{jencode}} gives them a code or makes
-them missing. \code{<blank>} is the row's label, not a value in the
+how many there are; \code{\link{jencode}} gives them a code, and
+\code{\link{jdeclare_missing}} with \code{codes = ""} declares them
+missing. \code{<blank>} is the row's label, not a value in the
 data: a filter selects those cells by what they hold,
 \code{subset = trimws(Source) == ""} (or \code{Source == ""} for the
 empty cells alone, leaving out those holding only spaces).

@@ -119,7 +119,15 @@
 .jst_missing_label_wordlist <- c(
   "missing", "refused", "don't know", "dont know",
   "no answer", "not asked", "not applicable", "n/a", "na",
-  "skipped", "declined", "prefer not to say"
+  "skipped", "declined", "prefer not to say",
+  # Ruling R28 (Jeff, Session 372): the administrative vocabulary ABS-styled
+  # files use, "Not stated" above all, and the field file's UNKNOWN (796
+  # cases), the case behind E5. Whole-value matching is kept, so "Refused
+  # to provide information" is still not caught. Every use only REPORTS --
+  # the load scan, jconvert()'s Pattern A, jencode()'s word-evidence nudge,
+  # and since Slate E5 the text scan -- so a real "Unknown" category costs
+  # a hint the user dismisses.
+  "not stated", "not known", "not recorded", "withheld", "unknown"
 )
 
 
@@ -365,7 +373,8 @@
                             count = integer(0), source = character(0),
                             numeric = numeric(0), stringsAsFactors = FALSE)
       for (i in seq_len(nrow(info$codes))) {
-        code_mask <- (!is.na(x_chr) & x_chr == info$codes$code[i])
+        # A declared blank covers every blank cell (Slate E5).
+        code_mask <- .jst_text_codes_mask(x_chr, info$codes$code[i])
         mask      <- mask | code_mask
         entries   <- rbind(entries, data.frame(
           code_display = info$codes$code[i],

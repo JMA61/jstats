@@ -20,8 +20,7 @@
 \description{
 Returns \code{list(block = , tail = )}. \code{block} is the header and
 the body lines (or, on the naming branch with every marker bare, the
-no-change note). \code{tail} is the durability reminder, with the
-equivalent call after it at the full tier on the conversion branch; it is
+no-change note). \code{tail} is the durability reminder; it is
 \code{NULL} at the minimal tier and when nothing changed. The caller
 prints the two apart, with what the call did to an earlier declaration
 between them (S339).

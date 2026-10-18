@@ -24,7 +24,9 @@ names (e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
 either \code{...} or \code{vars}, not both. All arguments after
 the variables must be named.}
 
-\item{codes}{Numeric vector of code values to declare as missing.
+\item{codes}{The values to declare as missing: numbers, or on a text
+variable the values themselves in quotes, such as
+\code{codes = "UNKNOWN"} (see the Text variables section).
 Accepts two forms:
 \describe{
 \item{Option A (separate codes and labels)}{Unnamed numeric
@@ -69,7 +71,10 @@ inside the quotes is then part of the label. When a \code{range} is in effect
 (supplied in this call, or already on the column), entries may also
 name values inside the range: those attach as value labels on the
 in-range values without becoming discrete declared codes (see the
-Missing-value ranges section).}
+Missing-value ranges section). On a text variable the values are text,
+as in \code{labels = "REF=Refused; UNKNOWN=Unknown"}: a value holding
+an equals sign or a semicolon goes in quotes, and \code{blank} names
+the blank cells, as in the maps of \code{\link{jencode}}.}
 
 \item{range}{Optional. A length-2 numeric vector declaring a
 missing-value RANGE (band), e.g. \code{range = c(-99, -51)} --
@@ -90,7 +95,7 @@ most ONE discrete code alongside a range, and the check applies to
 the column's composed result (what this call supplies plus what
 already survives on the column), so a declaration that a
 \code{.sav} file could not hold is refused here rather than at
-save time.}
+save time. A text variable takes no range.}
 
 \item{vars}{Optional. A character vector of variable names, the
 programmatic alternative to unquoted names in \code{...}
@@ -114,7 +119,9 @@ choose -- the package never infers a convention for a fresh declaration. A
 convention behaves as the Stata convention with uppercase markers: markers
 are stored and labeled as \code{.A}-\code{.Z}. A quoted marker's letter
 case is accepted either way under both tagged conventions; the case
-written to the column follows the resolved convention.}
+written to the column follows the resolved convention. A text
+variable's missing values are SPSS-style whatever the setting, so
+\code{"stata"} and \code{"sas"} are refused for one.}
 
 \item{missing.notice}{Logical. When \code{TRUE} (the default), the
 function prints a notification summarizing what was declared,
@@ -149,8 +156,9 @@ returned copy can be ignored.
 \description{
 \code{jdeclare_missing()} declares missing values on one or more
 variables. Declared missing values are specific data values --
-typically negative codes such as \code{-99} or Stata-style tagged
-markers such as \code{.a} -- that indicate \emph{why} a value is
+typically negative codes such as \code{-99}, Stata-style tagged
+markers such as \code{.a}, or on a text variable words such as
+\code{"UNKNOWN"} -- that indicate \emph{why} a value is
 missing (refused, don't know, not applicable, etc.) rather than
 simply that it is missing. Once declared, those cells are
 automatically excluded from analyses but remain visible in the data
@@ -217,8 +225,7 @@ descending, more-negative-first as tie-breaker, then assigned
 \code{.B}, ... under SAS convention). The
 assignment proceeds independently of the \code{missing.convention.codes}
 setting in \code{\link{joptions}} (which only governs the reverse
-Stata-to-SPSS direction). At the full \code{joutput} tier, a
-conversion note shows the tagged-marker equivalent for future calls.
+Stata-to-SPSS direction).
 
 The letters are taken from the start of the alphabet whatever the
 variable already holds, so a code is refused when its letter is one
@@ -255,6 +262,39 @@ take a range in the same declaration; the call is refused with the
 surviving codes named. When the new range no longer covers all of
 the old one, a note names the range as it was and counts the cases
 that are no longer missing.
+}
+
+\section{Text variables}{
+
+On a text variable the codes are the values themselves, in quotes:
+\code{jdeclare_missing(df, Marital, codes = "UNKNOWN")}, or with labels,
+\code{codes = c(Refused = "REF")} or \code{labels = "REF=Refused"}. They
+are declared SPSS-style -- the form SPSS's \code{MISSING VALUES} gives a
+string variable, and the only form a text value has -- under every
+\code{missing.convention} setting and with none selected, so no
+convention needs choosing first. Under a Stata or SAS setting a note
+says so; \code{convention = "stata"} or \code{"sas"} and a \code{range}
+are refused for text. At most three values may be declared, the SPSS
+limit on a string variable.
+
+A value matches the cells that hold it exactly as stored: letter case
+and outer spaces count, as in SPSS. After declaring, a note names any
+values that differ from a declared one only in case or outer spaces
+(\code{"Unknown"} beside \code{"UNKNOWN"}), with their counts, and
+gives the call that declares them too -- naming the values already
+declared, since a call replaces a variable's declaration -- or, past
+three values, points to \code{\link{jencode}}.
+\code{codes = ""} declares every blank cell missing -- empty, or holding
+only spaces or tabs -- as SPSS declares a blank string missing;
+otherwise jstats counts blank cells as valid values and never assumes
+they are missing.
+
+Numbers given for a text variable are refused with the call to run, the
+numbers in quotes. A call naming text and numeric variables together
+declares numbers on the numeric ones or words on the text ones, and
+refuses the others with the call to run. To keep the values in an SPSS
+file, each must be 8 characters or fewer: \code{jsave()} refuses a
+longer one, which the file would cut short.
 }
 
 \section{Mixed conventions and file export}{
@@ -334,6 +374,14 @@ df5$Mood2 <- jrecode(df5, MoodRating,
 jdeclare_missing(df5, Mood2,
              codes = c("Refused" = ".a", "Don't know" = ".b"),
              modify = TRUE)
+
+# A text variable: the values themselves, in quotes, declared SPSS-style
+# under every setting. codes = "" declares the blank cells.
+df8 <- data.frame(Marital = c("Married", "UNKNOWN", "Single", "",
+                              "UNKNOWN", "Married"))
+df8 <- jdeclare_missing(df8, Marital, codes = c(Unknown = "UNKNOWN"))
+df8 <- jdeclare_missing(df8, Marital, codes = c("UNKNOWN", ""))
+jfreq(df8, Marital)
 
 \dontrun{
 # The same neutral call -- plain numeric codes, no convention argument,

@@ -4,10 +4,13 @@
 \alias{.jst_blank_footnote}
 \title{Internal helper: jfreq()'s footnote under a table with a blank row}
 \usage{
-.jst_blank_footnote(counts)
+.jst_blank_footnote(counts, declare = TRUE)
 }
 \arguments{
 \item{counts}{A \code{.jst_blank_counts()} list.}
+
+\item{declare}{Logical; FALSE for a factor, whose blank levels
+\code{jdeclare_missing()} cannot declare.}
 }
 \value{
 Character(1), newline-joined; \code{""} when there is no blank.
@@ -18,5 +21,12 @@ two kinds counted apart when both occur; that it is counted as valid --
 "Valid \%" reads to this audience as though blanks were excluded, and
 they are not; and the one way to change that. A legend printed with its
 table, on stdout, as jscreen()'s star legend is.
+}
+\details{
+Since Slate E5 (ruling R27) the way out names both routes, a line each:
+\code{jencode()} gives the blank cells a code, \code{jdeclare_missing()}
+with \code{codes = ""} declares them missing. A factor gets the one
+\code{jencode()} line it had, since \code{jdeclare_missing()} refuses a
+factor.
 }
 \keyword{internal}

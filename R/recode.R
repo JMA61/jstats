@@ -914,7 +914,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     paste0(format(old_range[1]), " to ", format(old_range[2]))
 
   if (identical(output_level, "minimal")) {
-    dropped_render <- c(if (has_codes) dropped_df$code,
+    # A text variable's dropped blank shows as <blank> (Slate E5).
+    dropped_render <- c(if (has_codes) vapply(dropped_df$code, function(z)
+                          .jst_udm_row_label(z, NA, unlabelled = "bare"),
+                          character(1), USE.NAMES = FALSE),
                         if (!is.null(range_txt)) paste0("range ", range_txt))
     return(paste0(
       "Note: jdeclare_missing replaced the existing declared missing values on ",
@@ -3971,8 +3974,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #' Levels that are all numbers convert by face value, like numbers stored
 #' as text. With a \code{map}, the rules name the level text exactly as
 #' they name words. This is also the route from a factor to
-#' \code{jrecode()}, \code{jrelabel()} and \code{jdeclare_missing()},
-#' which work on numeric variables only.
+#' \code{jrecode()} and \code{jrelabel()}, which work on numeric variables
+#' only, and to \code{jdeclare_missing()}, which takes numeric and text
+#' variables but not a factor.
 #'
 #' \strong{Numbers stored as text convert by face value.} Here the two
 #' part company. \code{AUTORECODE} treats "34" as just another string and
@@ -4195,6 +4199,14 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
     src_decl <- .jst_missing_info(orig)
     if (!is.null(src_decl) && isTRUE(src_decl$text)) {
       decl_mask  <- word_mask & words %in% trimws(src_decl$codes$code)
+      # A declared blank (codes = "", ruling R27, Slate E5) makes the blank
+      # cells declared values: left missing with the declared strings, and
+      # offered back as blank=missing rather than as plain blanks.
+      if (any(.jst_is_blank(src_decl$codes$code))) {
+        decl_mask  <- decl_mask | blank_mask
+        blank_mask <- rep(FALSE, length(blank_mask))
+        n_blank    <- 0L
+      }
       decl_words <- unique(words[decl_mask])
       decl_words <- decl_words[order(tolower(decl_words), decl_words,
                                      method = "radix")]
@@ -4382,7 +4394,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
           "Note: ", .jst_fmt_n(n_decl), " ",
           .jst_plural(n_decl, "cell", "cells"), " in '", var_name,
           "' holding a declared missing value (",
-          paste0("\"", decl_words, "\"", collapse = ", "), ") ",
+          paste(ifelse(nzchar(decl_words), paste0("\"", decl_words, "\""),
+                       .jst_blank_label), collapse = ", "), ") ",
           .jst_plural(n_decl, "was", "were"), " left missing (NA)."), "\n",
         if (!is.null(decl_gate)) paste0(decl_gate, "\n"),
         # The missing token makes ONE missing value, so two declared
@@ -5520,8 +5533,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' @description
 #' \code{jdeclare_missing()} declares missing values on one or more
 #' variables. Declared missing values are specific data values --
-#' typically negative codes such as \code{-99} or Stata-style tagged
-#' markers such as \code{.a} -- that indicate \emph{why} a value is
+#' typically negative codes such as \code{-99}, Stata-style tagged
+#' markers such as \code{.a}, or on a text variable words such as
+#' \code{"UNKNOWN"} -- that indicate \emph{why} a value is
 #' missing (refused, don't know, not applicable, etc.) rather than
 #' simply that it is missing. Once declared, those cells are
 #' automatically excluded from analyses but remain visible in the data
@@ -5554,7 +5568,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   names (e.g. \code{Income}, or \code{MathScore, EnglishScore}). Use
 #'   either \code{...} or \code{vars}, not both. All arguments after
 #'   the variables must be named.
-#' @param codes Numeric vector of code values to declare as missing.
+#' @param codes The values to declare as missing: numbers, or on a text
+#'   variable the values themselves in quotes, such as
+#'   \code{codes = "UNKNOWN"} (see the Text variables section).
 #'   Accepts two forms:
 #'   \describe{
 #'     \item{Option A (separate codes and labels)}{Unnamed numeric
@@ -5598,7 +5614,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   (supplied in this call, or already on the column), entries may also
 #'   name values inside the range: those attach as value labels on the
 #'   in-range values without becoming discrete declared codes (see the
-#'   Missing-value ranges section).
+#'   Missing-value ranges section). On a text variable the values are text,
+#'   as in \code{labels = "REF=Refused; UNKNOWN=Unknown"}: a value holding
+#'   an equals sign or a semicolon goes in quotes, and \code{blank} names
+#'   the blank cells, as in the maps of \code{\link{jencode}}.
 #' @param range Optional. A length-2 numeric vector declaring a
 #'   missing-value RANGE (band), e.g. \code{range = c(-99, -51)} --
 #'   every value from the first bound through the second is treated as
@@ -5618,7 +5637,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   the column's composed result (what this call supplies plus what
 #'   already survives on the column), so a declaration that a
 #'   \code{.sav} file could not hold is refused here rather than at
-#'   save time.
+#'   save time. A text variable takes no range.
 #' @param vars Optional. A character vector of variable names, the
 #'   programmatic alternative to unquoted names in \code{...}
 #'   (e.g. \code{vars = c("Age", "Income")}, or \code{vars =
@@ -5640,7 +5659,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #'   convention behaves as the Stata convention with uppercase markers: markers
 #'   are stored and labeled as \code{.A}-\code{.Z}. A quoted marker's letter
 #'   case is accepted either way under both tagged conventions; the case
-#'   written to the column follows the resolved convention.
+#'   written to the column follows the resolved convention. A text
+#'   variable's missing values are SPSS-style whatever the setting, so
+#'   \code{"stata"} and \code{"sas"} are refused for one.
 #' @param missing.notice Logical. When \code{TRUE} (the default), the
 #'   function prints a notification summarizing what was declared,
 #'   plus a reminder of how to keep the result. Under SPSS convention
@@ -5707,8 +5728,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' \code{.B}, ... under SAS convention). The
 #' assignment proceeds independently of the \code{missing.convention.codes}
 #' setting in \code{\link{joptions}} (which only governs the reverse
-#' Stata-to-SPSS direction). At the full \code{joutput} tier, a
-#' conversion note shows the tagged-marker equivalent for future calls.
+#' Stata-to-SPSS direction).
 #'
 #' The letters are taken from the start of the alphabet whatever the
 #' variable already holds, so a code is refused when its letter is one
@@ -5743,6 +5763,37 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' surviving codes named. When the new range no longer covers all of
 #' the old one, a note names the range as it was and counts the cases
 #' that are no longer missing.
+#'
+#' @section Text variables:
+#' On a text variable the codes are the values themselves, in quotes:
+#' \code{jdeclare_missing(df, Marital, codes = "UNKNOWN")}, or with labels,
+#' \code{codes = c(Refused = "REF")} or \code{labels = "REF=Refused"}. They
+#' are declared SPSS-style -- the form SPSS's \code{MISSING VALUES} gives a
+#' string variable, and the only form a text value has -- under every
+#' \code{missing.convention} setting and with none selected, so no
+#' convention needs choosing first. Under a Stata or SAS setting a note
+#' says so; \code{convention = "stata"} or \code{"sas"} and a \code{range}
+#' are refused for text. At most three values may be declared, the SPSS
+#' limit on a string variable.
+#'
+#' A value matches the cells that hold it exactly as stored: letter case
+#' and outer spaces count, as in SPSS. After declaring, a note names any
+#' values that differ from a declared one only in case or outer spaces
+#' (\code{"Unknown"} beside \code{"UNKNOWN"}), with their counts, and
+#' gives the call that declares them too -- naming the values already
+#' declared, since a call replaces a variable's declaration -- or, past
+#' three values, points to \code{\link{jencode}}.
+#' \code{codes = ""} declares every blank cell missing -- empty, or holding
+#' only spaces or tabs -- as SPSS declares a blank string missing;
+#' otherwise jstats counts blank cells as valid values and never assumes
+#' they are missing.
+#'
+#' Numbers given for a text variable are refused with the call to run, the
+#' numbers in quotes. A call naming text and numeric variables together
+#' declares numbers on the numeric ones or words on the text ones, and
+#' refuses the others with the call to run. To keep the values in an SPSS
+#' file, each must be 8 characters or fewer: \code{jsave()} refuses a
+#' longer one, which the file would cut short.
 #'
 #' @section Mixed conventions and file export:
 #' A single data frame may carry columns with SPSS-style and columns
@@ -5822,6 +5873,14 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
 #' jdeclare_missing(df5, Mood2,
 #'              codes = c("Refused" = ".a", "Don't know" = ".b"),
 #'              modify = TRUE)
+#'
+#' # A text variable: the values themselves, in quotes, declared SPSS-style
+#' # under every setting. codes = "" declares the blank cells.
+#' df8 <- data.frame(Marital = c("Married", "UNKNOWN", "Single", "",
+#'                               "UNKNOWN", "Married"))
+#' df8 <- jdeclare_missing(df8, Marital, codes = c(Unknown = "UNKNOWN"))
+#' df8 <- jdeclare_missing(df8, Marital, codes = c("UNKNOWN", ""))
+#' jfreq(df8, Marital)
 #'
 #' \dontrun{
 #' # The same neutral call -- plain numeric codes, no convention argument,
@@ -5938,6 +5997,54 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   .jst_check_vars(data, target_vars, data_name)
   n_targets <- length(target_vars)
+
+  # --- Text variables (Slate E5; rulings R26 and R27) -----------------------
+  # A text variable's missing values are quoted strings, declared
+  # SPSS-style whatever the setting -- the only form a string has -- so a
+  # call on text variables takes a route of its own. A call naming text
+  # variables alone always does; one that also names numeric variables
+  # does when its codes are words, which only a text variable can hold
+  # (the numeric variables are then refused, as a text variable is on
+  # the numeric route when the codes are numbers).
+  text_mask <- vapply(target_vars, function(v) is.character(data[[v]]),
+                      logical(1))
+  if (any(text_mask)) {
+    # A value typed without its quotes -- codes = UNKNOWN, codes =
+    # c(Refused = REF) -- met R's "object 'UNKNOWN' not found". On a text
+    # variable the slot takes quoted values, so ruling R18's pointer
+    # applies (Slate E5): read before the codes are evaluated. A name
+    # holding a value passes.
+    bare <- if (!missing(codes)) {
+      .jst_bare_code_words(substitute(codes), parent.frame())
+    }
+    if (!is.null(bare)) {
+      # The codes as they would be with the words quoted: checked as any
+      # call's codes are, so the pointer's line runs (ruling R23).
+      return(invisible(.jst_jdeclare_missing_text(
+        data = data, data_name = data_name, data_kind = data_kind,
+        data_sub_expr = data_sub_expr, arg1 = arg1,
+        target_vars = target_vars,
+        codes = eval(bare$new, parent.frame()), labels = labels,
+        range = range, convention = convention,
+        missing.notice = missing.notice, modify = modify, cl = sys.call(),
+        mc = match.call(), vars = vars, vars_sub_expr = vars_sub_expr,
+        envir = parent.frame(), bare = bare)))
+    }
+    codes_given <- !(missing(codes) || is.null(codes))
+    if (all(text_mask) ||
+        .jst_declare_codes_are_text(if (codes_given) codes else NULL,
+                                    if (!codes_given) labels else NULL)) {
+      return(invisible(.jst_jdeclare_missing_text(
+        data = data, data_name = data_name, data_kind = data_kind,
+        data_sub_expr = data_sub_expr, arg1 = arg1,
+        target_vars = target_vars,
+        codes = if (codes_given) codes else NULL, labels = labels,
+        range = range, convention = convention,
+        missing.notice = missing.notice, modify = modify,
+        cl = sys.call(), mc = match.call(), vars = vars,
+        vars_sub_expr = vars_sub_expr, envir = parent.frame())))
+    }
+  }
 
   # --- Input checks (call-level) --------------------------------------------
 
@@ -6347,16 +6454,19 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       # Type guard: declaring numeric codes on a text or factor column is
       # destructive (text coerces to all-NA; a factor is silently replaced
       # by its internal integer codes), so both are refused with a fix.
-      if (is.character(col) ||
-          (haven::is.labelled(col) && typeof(col) == "character")) {
-        .jst_stop("'", vn, "' is a character (text) variable; missing ",
-             "values can only be declared on numeric variables.\n",
-             "Convert it to numbers first with jencode().")
+      # A text variable reaches here only in a call that also names numeric
+      # variables and gives numbers: its own call, the codes quoted, is the
+      # fix (Slate E5, ruling R26's lean 1).
+      if (is.character(col)) {
+        .jst_stop(.jst_jdeclare_text_numbers_msg(
+          vn, data_name,
+          .jst_jdeclare_text_quoted_line(data_name, vn, codes, labels,
+                                         modify, missing.notice)))
       }
       if (is.factor(col)) {
-        .jst_stop("'", vn, "' is a factor; missing values can only be ",
-             "declared on numeric variables.\n",
-             "Convert it to numbers first with jencode().")
+        .jst_stop("'", vn, "' is a factor; missing values can be declared ",
+                  "on numeric and text variables only.\n",
+                  "Convert it to numbers first with jencode().")
       }
 
       # --- Read existing UDM info on the column ----------------------------
@@ -6927,8 +7037,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   # --- Build and emit notification -----------------------------------------
   # Both builders return the declaration block and, apart from it, the
-  # tail: the durability reminder (and at the full tier the equivalent
-  # call). What the call did to an earlier declaration comes between the
+  # tail: the durability reminder. What the call did to an earlier
+  # declaration comes between the
   # two (S339, the S267 items): the drop notice and the mixed-marker note
   # report a CONSEQUENCE of the call, and until 0.9.213 they trailed the
   # reminder, which reads as the closer.
@@ -7800,6 +7910,863 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
 
 # -----------------------------------------------------------------------------
+# Text variables (Slate E5; rulings R26 and R27, Jeff, Session 372)
+#
+# A text variable's declared missing values are strings -- what SPSS's
+# MISSING VALUES gives a string variable, and the only form a string has
+# (Cross-cutting 7 (2): a marker is a kind of NA in a NUMERIC variable).
+# jdeclare_missing() declares them SPSS-style under every setting and with
+# none selected: there is nothing to choose, so no convention is inferred,
+# no choose-first menu is shown, and Decision 11 holds. Under a stata or sas
+# setting one note says the declaration is SPSS-style. convention = "stata"
+# or "sas" and a range are refused for text (SPSS allows no range on a
+# string). Codes match the cells exactly as stored -- case and outer spaces
+# count, as in SPSS -- and a note after declaring names the values that
+# differ from a declared one only in case or outer spaces, with their
+# counts (the field file's UNKNOWN 796 beside Unknown 136). codes = ""
+# (R27) declares every blank cell, empty or spaces only, as SPSS's MISSING
+# VALUES S ('') covers them; jstats still never ASSUMES a blank is
+# missing. Labels both ways: codes = c(Refused = "REF"), or labels =
+# "REF=Refused", a value holding = or ; quoted as in jencode()'s maps. Up
+# to three values, SPSS's limit on a string.
+#
+# The leans R26 carried (Jeff: "Yes to all of your recommendations."):
+# a number given for a text variable is refused with the call to run, its
+# codes quoted (lean 1); exact matching with the case-and-spaces note
+# (lean 2); labels both ways (lean 3).
+# -----------------------------------------------------------------------------
+
+#' Internal helper: are a jdeclare_missing() call's codes words?
+#'
+#' TRUE when the codes (or, with no codes, the labels string) cannot be read
+#' as numbers or markers -- words, which only a text variable holds. Decides
+#' the route of a call that names text and numeric variables together.
+#'
+#' @param codes The codes as given, or NULL.
+#' @param labels The labels string as given, or NULL.
+#' @return Logical(1).
+#' @keywords internal
+.jst_declare_codes_are_text <- function(codes, labels) {
+  if (!is.null(codes)) {
+    if (!is.character(codes)) return(FALSE)
+    return(inherits(tryCatch(.jst_parse_code_tokens(codes),
+                             error = function(e) e), "error"))
+  }
+  if (is.character(labels) && length(labels) == 1L && !is.na(labels)) {
+    return(inherits(tryCatch(.jst_parse_labels(labels),
+                             error = function(e) e), "error"))
+  }
+  FALSE
+}
+
+#' Internal helper: values typed without quotes in a text variable's codes
+#'
+#' Ruling R18's front-door check for jdeclare_missing() on a text variable
+#' (Slate E5): \code{codes = UNKNOWN} or \code{codes = c(Refused = REF,
+#' "")} -- a name that holds nothing, where a quoted value goes. Read from
+#' the unevaluated argument; a name that holds a value is left alone, as
+#' R18 leaves it everywhere.
+#'
+#' @param expr The codes argument as typed (\code{substitute(codes)}).
+#' @param env The caller's environment.
+#' @return NULL, or a list of \code{words} (the names typed bare) and
+#'   \code{new} (the expression with each in quotes).
+#' @keywords internal
+.jst_bare_code_words <- function(expr, env) {
+  missing_sym <- function(e) is.symbol(e) && nzchar(as.character(e)) &&
+    !exists(as.character(e), envir = env)
+  if (missing_sym(expr)) {
+    return(list(words = as.character(expr), new = as.character(expr)))
+  }
+  if (!is.call(expr) || !identical(expr[[1L]], as.name("c")) ||
+      length(expr) < 2L) {
+    return(NULL)
+  }
+  words <- character(0)
+  for (i in seq_along(expr)[-1L]) {
+    if (missing_sym(expr[[i]])) {
+      words <- c(words, as.character(expr[[i]]))
+      expr[[i]] <- as.character(expr[[i]])
+    }
+  }
+  if (length(words) == 0L) return(NULL)
+  list(words = words, new = expr)
+}
+
+#' Internal helper: a character vector as the R code that makes it
+#'
+#' \code{"UNKNOWN"}, or \code{c(Refused = "REF", "Don't know" = "DK")}: each
+#' value in double quotes, escaped; a name bare when R reads it bare, else
+#' quoted. For the lines jdeclare_missing() offers on a text variable.
+#'
+#' @param x A character vector, possibly named.
+#' @return Character(1).
+#' @keywords internal
+.jst_chr_vec_text <- function(x) {
+  nm <- names(x)
+  parts <- vapply(seq_along(x), function(i) {
+    v <- paste0("\"", .jst_dq_escape(x[[i]]), "\"")
+    n <- if (is.null(nm) || is.na(nm[i])) "" else nm[i]
+    if (!nzchar(n)) return(v)
+    nn <- if (identical(make.names(n), n)) n
+          else paste0("\"", .jst_dq_escape(n), "\"")
+    paste0(nn, " = ", v)
+  }, character(1))
+  if (length(parts) == 1L && (is.null(nm) || is.na(nm[1L]) || !nzchar(nm[1L])))
+    parts
+  else paste0("c(", paste(parts, collapse = ", "), ")")
+}
+
+#' Internal helper: numbers as a text variable's codes, quoted
+#'
+#' \code{c(-99, -98)} as \code{c("-99", "-98")}, names kept; a marker as its
+#' spelling (\code{".a"}).
+#'
+#' @param codes Numeric codes, possibly named.
+#' @return Character(1), the R code.
+#' @keywords internal
+.jst_numbers_as_text_codes <- function(codes) {
+  .jst_chr_vec_text(.jst_numbers_as_strings(codes))
+}
+
+#' Internal helper: numbers as a text variable's codes, as strings
+#'
+#' The character vector \code{.jst_numbers_as_text_codes()} writes out:
+#' each number as R prints it, never in scientific notation; a marker as
+#' its spelling; names kept.
+#'
+#' @param codes Numeric codes, possibly named.
+#' @return Named character vector.
+#' @keywords internal
+.jst_numbers_as_strings <- function(codes) {
+  num <- as.numeric(codes)
+  tg  <- if (is.double(codes)) haven::na_tag(codes) else rep(NA, length(num))
+  chr <- vapply(seq_along(num), function(i) {
+    if (!is.na(tg[i])) paste0(".", tg[i])
+    else format(num[i], scientific = FALSE, trim = TRUE)
+  }, character(1))
+  names(chr) <- names(codes)
+  chr
+}
+
+#' Internal helper: numbers given as a text variable's codes, quoted
+#'
+#' The line to run when numbers were given for a text variable (ruling
+#' R26's lean 1): the same call on that variable with each number in
+#' quotes, its labels string as typed (a labels string is already text),
+#' and missing.notice = FALSE and modify = TRUE kept. A marker becomes its
+#' spelling (".a"); convention = and range = are left out, since a text
+#' variable takes neither.
+#'
+#' @param data_name The data frame's name as the call gave it.
+#' @param vn The variable.
+#' @param codes The codes as parsed (numeric), or NULL.
+#' @param labels The labels string, or NULL.
+#' @param modify,missing.notice The call's flags.
+#' @return Character(1), indented two spaces.
+#' @keywords internal
+.jst_jdeclare_text_quoted_line <- function(data_name, vn, codes, labels,
+                                           modify, missing.notice) {
+  # NULL where the quoted call would stop again (ruling R23): more than
+  # three codes, or a labels string that does not name them as text.
+  if (!is.null(codes) && length(codes) > 3L) return(NULL)
+  if (is.character(labels) && length(labels) == 1L && !is.na(labels)) {
+    pl <- tryCatch(.jst_parse_text_labels(labels), error = function(e) NULL)
+    if (is.null(pl)) return(NULL)
+    if (!is.null(codes) && !all(pl %in% .jst_numbers_as_strings(codes))) {
+      return(NULL)
+    }
+  }
+  args <- character(0)
+  if (!is.null(codes) && length(codes) > 0L) {
+    args <- c(args, paste0("codes = ", .jst_numbers_as_text_codes(codes)))
+  }
+  if (is.character(labels) && length(labels) == 1L && !is.na(labels)) {
+    args <- c(args, paste0("labels = \"", .jst_dq_escape(labels), "\""))
+  }
+  if (isFALSE(missing.notice)) args <- c(args, "missing.notice = FALSE")
+  if (isTRUE(modify)) args <- c(args, "modify = TRUE")
+  paste0("  jdeclare_missing(", data_name, ", ", vn,
+         if (length(args) > 0L) paste0(", ", paste(args, collapse = ", ")),
+         ")")
+}
+
+#' Internal helper: the stop for numbers given as a text variable's codes
+#'
+#' @param vars The text variable(s).
+#' @param data_name Unused; kept for the call sites' symmetry.
+#' @param line The line to run (\code{.jst_jdeclare_text_quoted_line()}).
+#' @return Character(1), the message.
+#' @keywords internal
+.jst_jdeclare_text_numbers_msg <- function(vars, data_name, line) {
+  one <- length(vars) == 1L
+  paste0(.jst_and_list(vars),
+         if (one) " is a text variable" else " are text variables",
+         ", so ", if (one) "its" else "their", " codes go in quotes",
+         if (is.null(line)) "." else paste0(":\n", line))
+}
+
+#' Internal helper: the rules of a text variable's labels string
+#'
+#' Splits on the semicolons outside quotation marks. A mark opens a quoted
+#' value at the start of a rule -- \code{"A;B"=Odd} -- or a quoted label
+#' right after its equals sign (ruling R17's form); anywhere else it is an
+#' ordinary character, so a rule DK=Don't know reads as written, as in
+#' jencode()'s maps.
+#'
+#' @param s The labels string.
+#' @return Character vector of rules, trimmed, empty ones dropped.
+#' @keywords internal
+.jst_split_text_label_rules <- function(s) {
+  chars <- strsplit(s, "", fixed = TRUE)[[1]]
+  out <- character(0)
+  cur <- character(0)
+  q   <- ""
+  for (ch in chars) {
+    sofar <- paste(cur, collapse = "")
+    if (nzchar(q)) {
+      cur <- c(cur, ch)
+      if (identical(ch, q)) q <- ""
+    } else if (ch %in% c("\"", "'") &&
+               (!nzchar(trimws(sofar)) || grepl("=[ \t]*$", sofar))) {
+      q   <- ch
+      cur <- c(cur, ch)
+    } else if (identical(ch, ";")) {
+      out <- c(out, sofar)
+      cur <- character(0)
+    } else {
+      cur <- c(cur, ch)
+    }
+  }
+  if (nzchar(q)) {
+    stop(paste0("Unbalanced quotation mark in the labels argument. A ",
+                "quoted value or label must open and close with the same ",
+                "mark, as in \"Not stated\"=\"Not stated\"."),
+         call. = FALSE)
+  }
+  out <- trimws(c(out, paste(cur, collapse = "")))
+  out[nzchar(out)]
+}
+
+#' Internal helper: parse a text variable's labels string
+#'
+#' \code{"REF=Refused; UNKNOWN=Unknown"} into a named character vector
+#' (names the labels, values the strings), for jdeclare_missing() on a text
+#' variable (Slate E5, ruling R26's lean 3). The value is read up to the
+#' first equals sign; quoted, it may hold \code{=} or \code{;}, and its
+#' text is kept as typed, outer spaces included -- a declared value matches
+#' as stored. Bare, it is trimmed, and \code{blank} names the blank cells,
+#' as in jencode()'s maps (\code{"blank"} in quotes is the word). The label
+#' is read as ruling R17 reads one.
+#'
+#' @param labels_str The labels string.
+#' @return Named character vector.
+#' @keywords internal
+.jst_parse_text_labels <- function(labels_str) {
+  rules <- .jst_split_text_label_rules(labels_str)
+  if (length(rules) == 0L) {
+    stop("The labels argument is empty. Provide at least one label, for ",
+         "example labels = \"REF=Refused\".", call. = FALSE)
+  }
+  vals <- character(0)
+  labs <- character(0)
+  for (rule in rules) {
+    first <- substr(rule, 1L, 1L)
+    if (first %in% c("\"", "'")) {
+      close <- regexpr(first, substr(rule, 2L, nchar(rule)), fixed = TRUE)[1L]
+      val   <- substr(rule, 2L, close)
+      rest  <- trimws(substr(rule, close + 2L, nchar(rule)))
+      if (!startsWith(rest, "=")) {
+        stop(paste0("Invalid label rule '", rule, "': each rule must ",
+                    "contain '=' after its value, for example 'REF=Refused'."),
+             call. = FALSE)
+      }
+      lab_raw <- substr(rest, 2L, nchar(rest))
+    } else {
+      eq <- regexpr("=", rule, fixed = TRUE)[1L]
+      if (eq < 0L) {
+        stop(paste0("Invalid label rule '", rule, "': each rule must ",
+                    "contain '=', for example 'REF=Refused'."),
+             call. = FALSE)
+      }
+      val <- trimws(substr(rule, 1L, eq - 1L))
+      if (identical(tolower(val), "blank")) {
+        val <- ""
+      } else if (!nzchar(val)) {
+        stop(paste0("Empty value on the left of '=' in label rule '", rule,
+                    "'. Name a value, or use blank for the blank cells."),
+             call. = FALSE)
+      }
+      lab_raw <- substr(rule, eq + 1L, nchar(rule))
+    }
+    lab <- .jst_unquote_label(lab_raw)
+    if (!nzchar(lab)) {
+      stop(paste0("Empty label text in rule '", rule, "'. Provide a label ",
+                  "name after the equals sign."), call. = FALSE)
+    }
+    vals <- c(vals, val)
+    labs <- c(labs, lab)
+  }
+  stats::setNames(vals, labs)
+}
+
+#' Internal helper: a declared string as a message names it
+#'
+#' In double quotes, as typed; a declared blank as \code{<blank>}.
+#'
+#' @param v Character vector.
+#' @return Character vector.
+#' @keywords internal
+.jst_text_code_show <- function(v) {
+  ifelse(.jst_is_blank(v), .jst_blank_label, paste0("\"", v, "\""))
+}
+
+#' Internal: the confirmation's lines for a text variable
+#'
+#' The \code{.jst_jdeclare_missing_body()} structure for a text variable's
+#' resulting declaration (Slate E5), read from the column the call
+#' produced: each declared string as jfreq()'s Missing rows show it
+#' (\code{REF ["Refused"]}, \code{<blank>}), marked "no label" when it has
+#' none and "not present in the data" when no cell holds it.
+#'
+#' @param new_col The declared variable.
+#' @return A list of \code{text}, \code{notes} and \code{absent}.
+#' @keywords internal
+.jst_jdeclare_missing_text_body <- function(new_col) {
+  x <- as.character(unclass(new_col))
+  attributes(x) <- NULL
+  labs <- if (haven::is.labelled(new_col)) labelled::val_labels(new_col)
+          else NULL
+  nv <- sort(as.character(attr(new_col, "na_values", exact = TRUE)),
+             method = "radix")
+  text <- character(0); notes <- list(); absent <- logical(0)
+  for (v in nv) {
+    hit <- if (length(labs) > 0L)
+             which(!is.na(unname(labs)) & as.character(unname(labs)) == v)
+           else integer(0)
+    lbl <- if (length(hit) > 0L) names(labs)[hit[1L]] else ""
+    text   <- c(text, .jst_udm_row_label(v, lbl, unlabelled = "bare"))
+    notes  <- c(notes, list(if (!nzchar(lbl)) "no label" else character(0)))
+    absent <- c(absent, !any(.jst_text_codes_mask(x, v)))
+  }
+  list(text = text, notes = notes, absent = absent)
+}
+
+#' Internal: values a text variable holds that differ from a declared one
+#' only in case or outer spaces
+#'
+#' Ruling R26's lean 2: codes match exactly, as in SPSS, and the values
+#' that differ from a declared code only in letter case or outer spaces are
+#' named after declaring, with their counts, most cases first.
+#'
+#' @param col The variable.
+#' @param codes The declared strings.
+#' @return NULL, or a list of \code{values} and \code{n}.
+#' @keywords internal
+.jst_text_near_misses <- function(col, codes) {
+  x <- as.character(unclass(col))
+  attributes(x) <- NULL
+  x <- x[!is.na(x) & !.jst_is_blank(x)]
+  real <- codes[!.jst_is_blank(codes)]
+  if (length(real) == 0L || length(x) == 0L) return(NULL)
+  ux   <- unique(x)
+  cand <- ux[!(ux %in% real) &
+               tolower(trimws(ux)) %in% tolower(trimws(real))]
+  if (length(cand) == 0L) return(NULL)
+  n <- vapply(cand, function(v) sum(x == v), integer(1))
+  o <- order(-n, cand, method = "radix")
+  list(values = cand[o], n = unname(n[o]))
+}
+
+#' Internal helper: a text value as the left side of a labels-string rule
+#'
+#' For the labels = string of a line offered on a text variable (Slate E5,
+#' ruling R26's lean 3): a blank as blank; a value that holds a semicolon
+#' or an equals sign, opens with a quotation mark, has outer spaces or is
+#' the word blank, in the mark it does not hold; any other value as it is.
+#' Escaped for the R string literal it sits in (\code{.jst_dq_escape()}).
+#'
+#' @param v Character(1).
+#' @return Character(1), or \code{NA} where no labels string can hold the
+#'   value.
+#' @keywords internal
+.jst_text_value_rule <- function(v) {
+  if (.jst_is_blank(v)) return("blank")
+  needs <- grepl("[;=]", v) || grepl("^[\"']", v) ||
+    !identical(v, trimws(v)) || identical(tolower(v), "blank")
+  if (!needs) return(.jst_dq_escape(v))
+  if (!grepl("\"", v, fixed = TRUE)) {
+    return(paste0("\\\"", .jst_dq_escape(v), "\\\""))
+  }
+  if (!grepl("'", v, fixed = TRUE)) {
+    return(paste0("'", .jst_dq_escape(v), "'"))
+  }
+  NA_character_
+}
+
+#' Internal helper: the codes a declaration offered on a text variable names
+#'
+#' The codes = argument -- with labels = where some values carry a label
+#' and others do not -- of a line that declares values on a text variable
+#' together with the values it already declares (Jeff, Session 373): a
+#' declaration replaces a variable's values, so a line naming only the new
+#' ones would drop the others. Used by jdeclare_missing()'s note on values
+#' that differ from a declared one only in case or outer spaces, the load
+#' scan and jconvert()'s Pattern A report. A value keeps the label the
+#' variable gives it; a new value with none of its own takes the label of
+#' the declared value it differs from only in case or outer spaces. Every
+#' value labelled: named codes; none: bare codes; some: bare codes and
+#' labels =, as the S372 lines on numbers give them
+#' (\code{.jst_labels_arg()}).
+#'
+#' @param col The variable as it stands (character, or character-backed
+#'   haven_labelled_spss).
+#' @param add The values to declare beside the declared ones.
+#' @param add_labels Labels for \code{add} (placeholders), or NULL for the
+#'   variable's own.
+#' @return A list: \code{arg}, the argument text, or NULL past three
+#'   values (a text variable's limit) or where a labels string cannot hold
+#'   a value or a label; \code{n}, the number of values the line would
+#'   name; \code{add_labels}, the labels the new values take ("" none).
+#' @keywords internal
+.jst_text_declare_args <- function(col, add, add_labels = NULL) {
+  decl <- attr(col, "na_values", exact = TRUE)
+  decl <- if (is.null(decl)) character(0) else as.character(decl)
+  labs_col <- attr(col, "labels", exact = TRUE)
+  lab_of <- function(v) {
+    if (length(labs_col) == 0L) return("")
+    m <- match(v, as.character(unname(labs_col)))
+    if (is.na(m)) "" else names(labs_col)[m]
+  }
+  keep <- !(add %in% decl)
+  add  <- add[keep]
+  if (!is.null(add_labels)) add_labels <- add_labels[keep]
+  decl_labs <- vapply(decl, lab_of, character(1), USE.NAMES = FALSE)
+  nb  <- !.jst_is_blank(decl)
+  key <- function(v) tolower(trimws(v))
+  if (is.null(add_labels)) {
+    add_labels <- vapply(add, function(v) {
+      own <- lab_of(v)
+      if (nzchar(own)) return(own)
+      m <- match(key(v), key(decl[nb]))
+      if (is.na(m)) "" else decl_labs[nb][m]
+    }, character(1), USE.NAMES = FALSE)
+  }
+  vals <- c(decl, add)
+  labs <- c(decl_labs, add_labels)
+  labs[is.na(labs)] <- ""
+  n <- length(vals)
+  out <- list(arg = NULL, n = n, add_labels = add_labels)
+  if (n == 0L || n > 3L) return(out)
+  if (all(nzchar(labs))) {
+    out$arg <- paste0("codes = ",
+                      .jst_chr_vec_text(stats::setNames(vals, labs)))
+    return(out)
+  }
+  codes <- paste0("codes = ", .jst_chr_vec_text(vals))
+  if (!any(nzchar(labs))) {
+    out$arg <- codes
+    return(out)
+  }
+  lhs <- vapply(vals, .jst_text_value_rule, character(1), USE.NAMES = FALSE)
+  la  <- .jst_labels_arg(lhs, labs)
+  if (anyNA(lhs[nzchar(labs)]) || nzchar(la$note)) return(out)
+  out$arg <- paste0(codes, la$arg)
+  out
+}
+
+#' Internal: jdeclare_missing() on text variables
+#'
+#' The route a call naming text variables takes (Slate E5; rulings R26 and
+#' R27; see the banner above). Called by \code{jdeclare_missing()} once the
+#' data frame and the variables are resolved, with the call's arguments as
+#' given; returns the data frame. Every line it offers names the data frame
+#' and the text variables, keeps codes and labels as typed (numbers
+#' quoted), and leaves out what a text variable cannot take
+#' (\code{convention = "stata"} or \code{"sas"}, \code{range}), so a line
+#' never stops on a second problem (ruling R23).
+#'
+#' @keywords internal
+.jst_jdeclare_missing_text <- function(data, data_name, data_kind,
+                                       data_sub_expr, arg1, target_vars,
+                                       codes, labels, range, convention,
+                                       missing.notice, modify, cl, mc,
+                                       vars, vars_sub_expr, envir,
+                                       bare = NULL) {
+  fn <- "jdeclare_missing"
+  is_text   <- vapply(target_vars, function(v) is.character(data[[v]]),
+                      logical(1))
+  text_vars <- target_vars[is_text]
+  n_targets <- length(target_vars)
+
+  # The line a refusal offers: the call on the text variables, codes and
+  # labels as typed (numbers quoted, when numbers were given). Deparsed
+  # here, not with .jst_term_text(), which collapses runs of spaces inside
+  # a quoted value too -- and a declared value matches as stored.
+  dep <- function(e) paste(trimws(deparse(e, width.cutoff = 500L)),
+                           collapse = " ")
+  call_line <- function(codes_txt = NULL) {
+    if (is.null(codes_txt) && is.numeric(codes)) {
+      codes_txt <- .jst_numbers_as_text_codes(codes)
+    } else if (is.null(codes_txt) && !is.null(bare)) {
+      codes_txt <- dep(bare$new)
+    }
+    vpart <- if (!is.null(vars) && all(is_text)) {
+      paste0("vars = ", dep(vars_sub_expr))
+    } else paste(text_vars, collapse = ", ")
+    args <- c(
+      if (!is.null(codes_txt)) paste0("codes = ", codes_txt)
+      else if (!is.null(mc$codes)) paste0("codes = ", dep(mc$codes)),
+      if (!is.null(mc$labels)) paste0("labels = ", dep(mc$labels)),
+      if (isFALSE(missing.notice)) "missing.notice = FALSE",
+      if (isTRUE(modify)) "modify = TRUE")
+    paste0("  jdeclare_missing(", data_name, ", ", vpart,
+           if (length(args) > 0L) paste0(", ", paste(args, collapse = ", ")),
+           ")")
+  }
+  subj <- function(vs) {
+    paste0(.jst_and_list(vs),
+           if (length(vs) == 1L) " is a text variable"
+           else " are text variables")
+  }
+
+  if (is.null(codes) && is.null(labels) && is.null(range)) {
+    .jst_stop("provide the values to declare, for example codes = ",
+              "\"UNKNOWN\" or labels = \"REF=Refused\".", fn = fn)
+  }
+
+  .jst_check_flag(missing.notice, "missing.notice")
+  .jst_check_flag(modify, "modify")
+  if (isTRUE(modify) && arg1$mode == "explicit" &&
+      !is.symbol(data_sub_expr)) {
+    if (identical(.jst_data_arg_kind(data_sub_expr), "place")) {
+      .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
+                "To change ", .jst_term_text(data_sub_expr),
+                " itself, assign the result to it:\n",
+                .jst_place_assign_line(cl, data_sub_expr), fn = fn)
+    }
+    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
+              "Name the data first, then rerun with modify = TRUE:\n",
+              "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "),
+              "\n",
+              "  jdeclare_missing(mydata, ..., modify = TRUE)", fn = fn)
+  }
+
+  # The codes' shape, whatever their type, ahead of the numbers refusal
+  # below, so the line it offers never stops on one of these (ruling R23).
+  if (!is.null(codes)) {
+    if (length(codes) == 0L) {
+      .jst_stop("`codes` for a text variable must be quoted text, for ",
+                "example codes = \"UNKNOWN\".", fn = fn)
+    }
+    if (anyNA(codes)) {
+      .jst_stop("`codes` holds NA.\n",
+                "Name the values to declare in quotes; for blank cells, ",
+                "codes = \"\".", fn = fn)
+    }
+    cn <- names(codes)
+    all_named <- !is.null(cn) && all(!is.na(cn) & nzchar(cn))
+    any_named <- !is.null(cn) && any(!is.na(cn) & nzchar(cn))
+    if (any_named && !all_named) {
+      .jst_stop("`codes` names some of its codes and not others. Name ",
+                "every code, as in codes = c(Refused = \"REF\", Unknown = ",
+                "\"UNK\"), or name none and give the labels with labels =.",
+                fn = fn)
+    }
+    if (all_named && !is.null(labels)) {
+      .jst_stop("the codes are labeled twice: by their names in `codes` ",
+                "and by `labels`. Use one: the names, as in ",
+                "codes = c(Refused = \"REF\"), or labels = with codes that ",
+                "carry no names.", fn = fn)
+    }
+  }
+
+  # Numbers given for a text variable (lean 1) are checked as the strings
+  # they would be quoted, and refused last, so the call the refusal offers
+  # -- and every line before it -- carries them quoted and runs.
+  numbers_given <- !is.null(codes) && is.numeric(codes)
+  codes_given   <- codes
+
+  # convention = : checked as everywhere; "stata" or "sas" refused (R26).
+  if (!is.null(convention)) {
+    if (is.character(convention) && length(convention) == 1L &&
+        !is.na(convention)) {
+      convention <- tolower(convention)
+    }
+    if (!is.character(convention) || length(convention) != 1L ||
+        !convention %in% c("spss", "stata", "sas")) {
+      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
+    }
+    if (convention %in% c("stata", "sas")) {
+      one <- length(text_vars) == 1L
+      .jst_stop(subj(text_vars), ", and ",
+                .jst_convention_label(convention),
+                " missing values exist only for numbers.\n",
+                if (one) "Its" else "Their",
+                " missing values are declared SPSS-style; drop convention = \"",
+                convention, "\":\n", call_line(), fn = fn)
+    }
+  }
+
+  # A range (R26): SPSS allows none on a string.
+  if (!is.null(range)) {
+    one <- length(text_vars) == 1L
+    .jst_stop(subj(text_vars),
+              ", and a missing-value range exists only for numbers.\n",
+              if (!is.null(codes) || !is.null(labels)) {
+                paste0("Declare ", if (one) "its" else "their",
+                       " values without range =:\n", call_line())
+              } else {
+                paste0("Name ", if (one) "its" else "their",
+                       " values with codes =, for example codes = ",
+                       "\"UNKNOWN\".")
+              }, fn = fn)
+  }
+
+  # --- The codes ------------------------------------------------------------
+  if (numbers_given) codes <- .jst_numbers_as_strings(codes)
+  if (!is.null(codes)) {
+    if (!is.character(codes)) {
+      .jst_stop("`codes` for a text variable must be quoted text, for ",
+                "example codes = \"UNKNOWN\".", fn = fn)
+    }
+    if (!any_named) names(codes) <- rep("", length(codes))
+  }
+
+  parsed_labels <- NULL
+  if (!is.null(labels)) {
+    if (!is.character(labels) || length(labels) != 1L || is.na(labels)) {
+      .jst_stop("the labels must be one quoted string, for example:\n",
+                "  labels = \"REF=Refused; UNKNOWN=Unknown\"", fn = fn)
+    }
+    parsed_labels <- tryCatch(
+      .jst_parse_text_labels(labels),
+      error = function(e) .jst_stop(paste0("Error in labels argument: ",
+                                           conditionMessage(e)), fn = fn))
+  }
+
+  # The codes as declared: names are labels ("" for none). The labels-only
+  # form declares the values its labels name.
+  decl <- if (is.null(codes)) parsed_labels else codes
+  blank_in <- .jst_is_blank(decl)
+  decl[blank_in] <- ""
+  if (!is.null(codes) && !is.null(parsed_labels)) {
+    pl <- parsed_labels
+    pl[.jst_is_blank(pl)] <- ""
+    unmatched <- !(pl %in% decl)
+    if (any(unmatched)) {
+      .jst_stop("labels names ",
+                if (sum(unmatched) == 1L) "a value that is" else "values that are",
+                " not among the codes: ",
+                paste0(vapply(pl[unmatched], .jst_jencode_lhs_render,
+                              character(1)), "=",
+                       names(pl)[unmatched], collapse = "; "), ".\n",
+                "Label only the codes, or leave codes out and let labels = ",
+                "name the values.", fn = fn)
+    }
+    names(decl) <- names(pl)[match(decl, pl)]
+    names(decl)[is.na(names(decl))] <- ""
+  }
+  if (anyDuplicated(decl) > 0L) {
+    dups <- unique(decl[duplicated(decl)])
+    .jst_stop("the codes name the same value more than once: ",
+              paste(.jst_text_code_show(dups), collapse = ", "), ".", fn = fn)
+  }
+  if (length(decl) > 3L) {
+    .jst_stop("a text variable can have at most 3 declared missing values ",
+              "(the SPSS limit); the call names ", length(decl), ".\n",
+              "To make more of its values missing, encode it with jencode(), ",
+              "whose map can send each one to missing.", fn = fn)
+  }
+
+  # A call whose codes are words, naming variables that hold no text: the
+  # words cannot be declared there, so the call on the text variables is
+  # the line to run. Checked last, once the codes and labels have passed
+  # every check, so the line it offers runs (ruling R23).
+  if (!all(is_text)) {
+    others <- target_vars[!is_text]
+    .jst_stop("the codes are text, and ", .jst_and_list(others),
+              if (length(others) == 1L) " is not a text variable."
+              else " are not text variables.", "\n",
+              "To declare them on the text ",
+              if (length(text_vars) == 1L) "variable" else "variables",
+              ", run:\n", call_line(), fn = fn)
+  }
+
+  # A value typed without its quotes (ruling R18's pointer; see the
+  # caller): last, its codes checked with the words quoted.
+  if (!is.null(bare)) {
+    w <- bare$words
+    .jst_stop(.jst_and_list(w), if (length(w) == 1L) " is" else " are",
+              " not in quotes.\n",
+              if (length(w) == 1L) "A text variable's value goes"
+              else "A text variable's values go", " in quotes:\n",
+              call_line(dep(bare$new)), fn = fn)
+  }
+
+  if (numbers_given) {
+    .jst_stop(.jst_jdeclare_text_numbers_msg(
+                text_vars, data_name,
+                call_line(.jst_numbers_as_text_codes(codes_given))),
+              fn = fn)
+  }
+
+  # --- Build each variable (all of them are text by now) --------------------
+  results      <- vector("list", n_targets)
+  drop_notices <- character(0)
+  near_notes   <- character(0)
+  for (ti in seq_len(n_targets)) {
+    vn  <- target_vars[ti]
+    col <- data[[vn]]
+    existing_info <- .jst_missing_info(col)
+
+    x <- as.character(unclass(col))
+    attributes(x) <- NULL
+    names(x) <- names(col)
+    old_labs <- if (haven::is.labelled(col)) labelled::val_labels(col)
+                else NULL
+    relabelled <- unname(decl[nzchar(names(decl))])
+    if (length(old_labs) > 0L && length(relabelled) > 0L) {
+      old_labs <- old_labs[!(as.character(unname(old_labs)) %in% relabelled)]
+    }
+    new_labs <- decl[nzchar(names(decl))]
+    all_labs <- c(old_labs, new_labs)
+    if (length(all_labs) == 0L) all_labs <- NULL
+    new_col <- haven::labelled_spss(
+      x         = x,
+      labels    = all_labs,
+      na_values = unname(decl),
+      label     = attr(col, "label", exact = TRUE))
+    new_col <- .jst_carry_col_attrs(col, new_col)
+
+    results[[ti]] <- list(
+      new_col = new_col, branch = "spss_canonical",
+      conversion_info = NULL, existing_info = existing_info,
+      resolved_convention = "spss", parsed_codes_used = decl,
+      marker_notes = NULL,
+      body = .jst_jdeclare_missing_text_body(new_col))
+
+    # What the call did to an earlier declaration (sign-off 5).
+    if (!is.null(existing_info) && !is.null(existing_info$codes)) {
+      old <- existing_info$codes
+      old_key <- ifelse(.jst_is_blank(old$code), "", old$code)
+      gone <- !(old_key %in% decl)
+      if (any(gone)) {
+        drop_notices <- c(drop_notices, .jst_jdeclare_missing_drop_notice(
+          dropped_df = old[gone, , drop = FALSE], var_name = vn,
+          representation = "spss"))
+      }
+    }
+
+    # Values that differ from a declared one only in case or outer spaces.
+    nm <- .jst_text_near_misses(col, unname(decl))
+    if (!is.null(nm)) {
+      k    <- length(nm$values)
+      show <- min(k, 10L)
+      rows <- paste0("  ", .jst_text_code_show(nm$values[seq_len(show)]),
+                     " (", vapply(nm$n[seq_len(show)], .jst_fmt_n,
+                                  character(1)), ")")
+      if (k > show) rows <- c(rows, paste0("  and ", k - show, " more"))
+      # Treated as a suspected missing value (Jeff, S373): the line that
+      # declares it with the values declared here -- a declaration replaces
+      # a variable's values -- or, past a text variable's three, why there
+      # is none. modify = TRUE, so the line runs whether or not this call's
+      # result was assigned; on a place the wrapper gives the assignment
+      # form; an expression has no name to give.
+      nl <- .jst_text_declare_args(new_col, nm$values)
+      vn0 <- as.character(unname(vn))
+      vtxt <- if (identical(make.names(vn0), vn0)) vn0
+              else paste0("`", vn0, "`")
+      advice <- if (nl$n > 3L) {
+        paste0("\nA text variable can have at most 3 declared missing ",
+               "values, so ", .jst_plural(k, "it", "they"),
+               " cannot be declared too.\n",
+               "To make ", .jst_plural(k, "it", "them"), " missing as ",
+               "well, encode ", vn, " with jencode(), whose map can send ",
+               "each value to missing.")
+      } else if (!is.null(nl$arg) && !identical(data_kind, "expression")) {
+        paste0("\n",
+               .jst_plural(k, "If it also marks missing data, declare it",
+                           "If they also mark missing data, declare them"),
+               " too:\n",
+               "  jdeclare_missing(", data_name, ", ", vtxt, ", ", nl$arg,
+               ", modify = TRUE)")
+      }
+      near_notes <- c(near_notes, paste0(
+        "Note: ", vn, " also holds ",
+        .jst_plural(k, "a value that differs", "values that differ"),
+        " from a declared value only in letter case or outer spaces:\n",
+        paste(rows, collapse = "\n"), "\n",
+        .jst_plural(k, "It is not declared, so it counts",
+                    "They are not declared, so they count"),
+        " as valid data.", advice))
+    }
+  }
+
+  for (ti in seq_len(n_targets)) {
+    data[[target_vars[ti]]] <- results[[ti]]$new_col
+  }
+
+  if (isTRUE(modify)) {
+    modify_target <- if (arg1$mode == "explicit") as.character(data_sub_expr)
+                     else arg1$name
+    assign(modify_target, data, envir = envir)
+  }
+
+  # --- The notification -----------------------------------------------------
+  if (isTRUE(missing.notice)) {
+    notif <- if (n_targets == 1L) {
+      .jst_jdeclare_missing_notification(
+        data_name = data_name, var_name = target_vars[1L],
+        parsed_codes = decl, branch = "spss_canonical",
+        body = results[[1L]]$body, modify = modify,
+        resolved_convention = "spss", data_kind = data_kind)
+    } else {
+      nd <- nchar(data_name)
+      .jst_jdeclare_missing_bulk_notification(
+        data_name = data_name, target_vars = target_vars, results = results,
+        modify = modify, data_kind = data_kind,
+        scaffold_var = .jst_scaffold_vars(
+          target_vars,
+          vars_typed = if (!is.null(vars)) {
+            typed <- deparse(vars_sub_expr, width.cutoff = 500L)
+            if (length(typed) == 1L) typed
+          },
+          fixed_chars = max(2L * nd + 31L, nd + 42L)))
+    }
+    .jst_msg_out(notif$block)
+
+    # Under a stata or sas setting, why the block says SPSS-style (R26).
+    opt <- getOption(".jst_options_missing_convention",
+                     .jst_options_defaults$missing.convention)
+    if (is.null(convention) && opt %in% c("stata", "sas")) {
+      one <- n_targets == 1L
+      cat("\n")   # Rule F
+      .jst_msg_out(
+        "Note: ", subj(target_vars), ", so ", if (one) "its" else "their",
+        " missing values are declared SPSS-style.\n",
+        .jst_convention_label(opt),
+        " missing values exist only on numeric variables.")
+    }
+    if (length(drop_notices) > 0L) {
+      cat("\n")   # Rule F
+      .jst_msg_out(paste(drop_notices, collapse = "\n"))
+    }
+    if (length(near_notes) > 0L) {
+      cat("\n")   # Rule F
+      .jst_msg_out(paste(near_notes, collapse = "\n\n"))
+    }
+    if (!is.null(notif$tail)) {
+      cat("\n")
+      .jst_msg_out(notif$tail)
+    }
+  }
+
+  data
+}
+
+
+# -----------------------------------------------------------------------------
 # Notification builder
 # -----------------------------------------------------------------------------
 
@@ -7808,8 +8775,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' @description
 #' Returns \code{list(block = , tail = )}. \code{block} is the header and
 #' the body lines (or, on the naming branch with every marker bare, the
-#' no-change note). \code{tail} is the durability reminder, with the
-#' equivalent call after it at the full tier on the conversion branch; it is
+#' no-change note). \code{tail} is the durability reminder; it is
 #' \code{NULL} at the minimal tier and when nothing changed. The caller
 #' prints the two apart, with what the call did to an earlier declaration
 #' between them (S339).
@@ -7934,40 +8900,13 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                    "\n")
   }
 
-  # Full tier: conversion equivalent for the tagged-conversion branch.
-  # Style word follows the resolved convention (S240).
-  if (identical(output_level, "full") && branch == "stata_conversion") {
-    eq_style <- .jst_convention_label(resolved_convention)
-    tag_parts <- character(0)
-    for (i in seq_along(conversion_info$sorted_codes)) {
-      tag <- conversion_info$tag_letters[i]
-      lbl <- conversion_info$sorted_labels[i]
-      # haven:: always (Session 372), as the mixed-codes stop's lines.
-      rhs <- paste0("haven::tagged_na(\"", tag, "\")")
-      if (nzchar(lbl)) {
-        lbl_render <- if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", lbl)) lbl
-                      else paste0("`", lbl, "`")
-        tag_parts <- c(tag_parts, paste0(lbl_render, " = ", rhs))
-      } else {
-        tag_parts <- c(tag_parts, rhs)
-      }
-    }
-    eq_call <- if (isTRUE(modify)) {
-      paste0(
-        "Equivalent ", eq_style, " call for future use:\n",
-        "  jdeclare_missing(", data_name, ", ", var_name,
-        ", codes = c(", paste(tag_parts, collapse = ", "),
-        "), modify = TRUE)\n"
-      )
-    } else {
-      paste0(
-        "Equivalent ", eq_style, " call for future use:\n",
-        "  ", assign_name, " <- jdeclare_missing(", data_name, ", ", var_name,
-        ", codes = c(", paste(tag_parts, collapse = ", "), "))\n"
-      )
-    }
-    tail <- paste0(tail, eq_call)
-  }
+  # No "Equivalent Stata-style call for future use" at the full tier since
+  # Slate E5 (the S372 item; Jeff: "Ok to your lean."). It came with the
+  # Session 30 design of the conversion branch, as the call that labels the
+  # markers the conversion made; since Session 126 jdeclare_missing() labels
+  # markers and never creates them, so run on the data the call was given it
+  # stopped ("has no lettered markers to label"), and run on the converted
+  # variable it named labels the call had already set.
 
   list(block = block, tail = tail)
 }
@@ -8540,8 +9479,10 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' surfaces it in the notification with the affected value/label pairs.
 #' To formalize these as declared missing values use
 #' \code{jdeclare_missing()}; to leave them as ordinary data, no action
-#' is needed. A text variable is not reported: \code{jdeclare_missing()}
-#' declares missing values on numeric variables only.
+#' is needed. A text variable's labelled values are reported under
+#' \code{to = "spss"} and \code{to = "baseR"}, and declared with their
+#' values in quotes; not under \code{"stata"} or \code{"sas"}, whose
+#' missing values exist only on numeric variables.
 #'
 #' @examples
 #' # community ships with SPSS-style missing values (Income, Education,
@@ -8792,8 +9733,13 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
     # workspace X's value declared without a word) -- so the report's line
     # stopped under to = "spss" and "baseR" as well. Declaring on a text
     # variable is an open capability (the S222 E5 item).
+    # Since Slate E5 (the S372 item, lean 6) a text variable is reported
+    # again under to = "spss" and "baseR": jdeclare_missing() declares its
+    # values, quoted, and the line runs. Not under "stata" or "sas", for
+    # the Session 351 reason above.
     pa_entries <- list()
-    if (haven::is.labelled(col) && !is.character(col)) {
+    if (haven::is.labelled(col) &&
+        (!is.character(col) || to %in% c("spss", "baseR"))) {
       val_labs <- labelled::val_labels(col)
       if (!is.null(val_labs) && length(val_labs) > 0L) {
         for (i in seq_along(val_labs)) {
@@ -9261,9 +10207,10 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
         if (isTRUE(info$text)) {
           # A string variable's declared values are strings (S340). Until
           # then nothing matched here: the declaration was stripped and its
-          # cells stayed in the data, reported as converted.
+          # cells stayed in the data, reported as converted. A declared
+          # blank covers every blank cell (Slate E5).
           x_chr <- as.character(unclass(col))
-          mask  <- !is.na(x_chr) & x_chr %in% info$codes$code
+          mask  <- .jst_text_codes_mask(x_chr, info$codes$code)
         } else if (!is.null(info$codes) && nrow(info$codes) > 0L) {
           declared_codes <- info$codes$numeric
           declared_codes <- declared_codes[!is.na(declared_codes)]
@@ -9819,9 +10766,12 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       for (vname in names(pattern_a)) {
         entries <- pattern_a[[vname]]
         for (e in entries) {
+          # A text variable's value in quotes, as the load scan shows it
+          # and the line below declares it (Slate E5).
+          shown <- if (is.character(e$value)) .jst_text_code_show(e$value)
+                   else as.character(e$value)
           msg_lines <- c(msg_lines, paste0(
-            "  ", vname, ": ",
-            .jst_udm_row_label(as.character(e$value), e$label)))
+            "  ", vname, ": ", .jst_udm_row_label(shown, e$label)))
         }
       }
       # S355 (the S319 item; voice Rule D): the fix as lines that run, one
@@ -9840,6 +10790,16 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       pa_expr <- identical(.jst_data_arg_kind(data_sub_expr), "expression")
       pa_dn   <- if (pa_expr) "mydata" else data_name
       pa_lines <- vapply(names(pattern_a), function(vname) {
+        # A text variable's values quoted, at most three, with no
+        # convention = (Slate E5: a text variable is declared SPSS-style
+        # under every setting).
+        if (is.character(data[[vname]])) {
+          v <- vapply(pattern_a[[vname]], function(e) as.character(e$value),
+                      character(1))
+          return(paste0("  jdeclare_missing(", pa_dn, ", ", vname,
+                        ", codes = ", .jst_chr_vec_text(utils::head(v, 3L)),
+                        ", modify = TRUE)"))
+        }
         v <- vapply(pattern_a[[vname]], function(e) {
           format(e$value, trim = TRUE, scientific = FALSE)
         }, character(1))

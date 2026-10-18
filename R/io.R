@@ -236,6 +236,13 @@
 #' \code{\link{jdeclare_missing}}, which keeps the codes and their labels;
 #' the report shows the call.
 #'
+#' A text variable's values are flagged too: as label-only when their value
+#' label suggests missingness, and as suspected when the value itself does
+#' (\code{"UNKNOWN"}, \code{"Not stated"}) or when it differs from a value
+#' the variable declares only in letter case or outer spaces. The call the
+#' report shows names the values the variable already declares, since a
+#' declaration replaces them, and at most three in all.
+#'
 #' \strong{Package example datasets and .rda / .RData files:}
 #' \code{jload()} opens the example datasets shipped with jstats --
 #' currently \code{community} and \code{clinic} -- by bare name:
@@ -3205,8 +3212,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           # A string variable's declared values are strings (S340): until
           # then the numeric comparison matched nothing, so the declaration
           # was stripped below while its cells stayed in the data as text.
+          # A declared blank covers every blank cell (Slate E5).
           x_chr <- as.character(unclass(col))
-          mask  <- !is.na(x_chr) & x_chr %in% info$codes$code
+          mask  <- .jst_text_codes_mask(x_chr, info$codes$code)
         } else if (!is.null(info$codes)) {
           mask <- mask | (!is.na(x_num) & x_num %in% info$codes$numeric)
         }
@@ -3797,7 +3805,64 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   )
 }
 
+#' Internal: the load scan's findings on one text variable
+#'
+#' Slate E5 (the S372 item, lean 5): a value of a text variable is reported
+#' \code{label_only} when its value label suggests missingness, and
+#' \code{suspected} when the value itself does (\code{"UNKNOWN"},
+#' \code{"Refused"}) -- both read by the word list
+#' (\code{.jst_label_suggests_missing()}) -- and \code{suspected} too
+#' when it differs from a value the variable declares only in letter case
+#' or outer spaces (Jeff, S373; \code{.jst_text_near_misses()}, the helper
+#' jdeclare_missing()'s note uses). A value the variable already declares
+#' missing, and a blank cell, are not reported: blanks are reported, never
+#' assumed missing (Cross-cutting 7 (3)), by jfreq() and jscreen().
+#'
+#' @param col The variable (character, or character-backed labelled).
+#' @param vname Its name.
+#' @return A list of findings, in the scan's form, with \code{text = TRUE};
+#'   values in radix order.
+#' @keywords internal
+.jst_scan_text_missing <- function(col, vname) {
+  x <- as.character(unclass(col))
+  attributes(x) <- NULL
+  x <- x[!is.na(x) & !.jst_is_blank(x)]
+  if (length(x) == 0L) return(list())
+  ux <- unique(x)
+  declared <- attr(col, "na_values", exact = TRUE)
+  near <- character(0)
+  if (length(declared) > 0L) {
+    ux <- ux[!.jst_text_codes_mask(ux, as.character(declared))]
+    near <- .jst_text_near_misses(col, as.character(declared))$values
+  }
+  if (length(ux) == 0L) return(list())
+  labs <- if (haven::is.labelled(col)) labelled::val_labels(col) else NULL
+  lab_of <- rep(NA_character_, length(ux))
+  if (length(labs) > 0L) {
+    m <- match(ux, as.character(unname(labs)))
+    lab_of[!is.na(m)] <- names(labs)[m[!is.na(m)]]
+  }
+  by_label <- vapply(lab_of, .jst_label_suggests_missing, logical(1))
+  by_word  <- !by_label & (tolower(trimws(ux)) %in% .jst_missing_label_wordlist |
+                            ux %in% near)
+  hit <- which(by_label | by_word)
+  if (length(hit) == 0L) return(list())
+  hit <- hit[order(ux[hit], method = "radix")]
+  counts <- table(x[x %in% ux[hit]])
+  lapply(hit, function(i) {
+    f <- list(var = vname, value = ux[i],
+              count = as.integer(counts[[ux[i]]]),
+              source = if (by_label[i]) "label_only" else "suspected",
+              text = TRUE)
+    if (by_label[i]) f$label <- lab_of[i]
+    f
+  })
+}
+
 #' Internal: scan for coded missing values and report findings
+#'
+#' A text variable's values are found by \code{.jst_scan_text_missing()}
+#' (Slate E5): label-only by their labels, suspected by their own wording.
 #'
 #' Classifies findings three ways, most specific first: label-only (a value
 #' label suggesting missingness, per the package wordlist, with no formal
@@ -3828,13 +3893,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   for (vname in names(df)) {
     col <- df[[vname]]
+    # A text variable (Slate E5, the S372 item, lean 5): its values whose
+    # label suggests missingness (label-only) and its values that read as
+    # missing by themselves (suspected), by the word list. Until then the
+    # scan skipped every character-backed column -- as.numeric() on a
+    # labelled one is a vctrs error, which until S340 stopped jload() after
+    # it had assigned the frame -- so a labelled "Refused" in a text
+    # variable was counted valid with no hint anywhere.
+    if (is.character(col)) {
+      findings <- c(findings, .jst_scan_text_missing(col, vname))
+      next
+    }
     if (!is.numeric(col) && !inherits(col, "haven_labelled")) next
-    # A character-backed haven_labelled column (a string variable carrying
-    # value labels, as a .sav stores Sex "M" / "F") has no numeric codes to
-    # scan, and as.numeric() on one is a vctrs error, not an NA: until S340
-    # jload() stopped here with "Can't convert `vec_data(x)` <character> to
-    # <double>" after it had assigned the frame.
-    if (is.character(col)) next
     # Only scan numeric-like variables (.jst_as_numeric(): the AUDIT-014
     # pattern, found at this site by the Session 342 scan)
     num_vals <- suppressWarnings(.jst_as_numeric(col))
@@ -3980,8 +4050,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       if (is.null(groups[[key]])) {
         group_keys <- c(group_keys, key)
         groups[[key]] <- list(var = f$var, source = f$source,
-                              values = numeric(0), counts = integer(0),
-                              labels = character(0))
+                              values = if (isTRUE(f$text)) character(0)
+                                       else numeric(0),
+                              counts = integer(0),
+                              labels = character(0),
+                              text = isTRUE(f$text))
       }
       groups[[key]]$values <- c(groups[[key]]$values, f$value)
       groups[[key]]$counts <- c(groups[[key]]$counts, f$count)
@@ -4009,6 +4082,10 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     vc_parts <- character(n_show)
     for (i in seq_len(n_show)) {
       g <- groups[[group_keys[i]]]
+      # A text variable's value in double quotes, as the declaration that
+      # follows takes it (Slate E5); a number as %g.
+      show_v <- if (isTRUE(g$text)) paste0("\"", g$values, "\"")
+                else sprintf("%g", g$values)
       if (g$source == "label_only") {
         # S355 (the S319 item): the value with its label in the one form
         # every declared value takes (voice Rule AF, .jst_udm_row_label()),
@@ -4016,12 +4093,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         # of the same finding read 9 = "Not asked".
         vc_strs <- paste0(
           vapply(seq_along(g$values), function(k) {
-            .jst_udm_row_label(sprintf("%g", g$values[k]), g$labels[k],
-                               unlabelled = "bare")
+            .jst_udm_row_label(show_v[k], g$labels[k], unlabelled = "bare")
           }, character(1)),
           " (", g$counts, ")")
       } else {
-        vc_strs <- sprintf("%g (%d)", g$values, g$counts)
+        vc_strs <- paste0(show_v, " (", g$counts, ")")
       }
       vc_parts[i] <- paste(vc_strs, collapse = ", ")
     }
@@ -4146,7 +4222,67 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         break
       }
     }
-    if (!is.null(ex_var)) {
+    ex_text <- !is.null(ex_var) && any(vapply(findings, function(f) {
+      f$var == ex_var && isTRUE(f$text)
+    }, logical(1)))
+    if (ex_text) {
+      # A text variable (Slate E5): its values quoted, declared SPSS-style
+      # under every setting, so no choose-first menu (ruling R26). The line
+      # names the values the variable already declares as well (Jeff, S373:
+      # a declaration replaces a variable's values, so a line naming the
+      # new ones alone dropped them), at most three in all -- a text
+      # variable's limit -- the new ones the most frequent, so the line
+      # runs (ruling R23); the intro says so when there were more.
+      fx <- Filter(function(f) f$var == ex_var, findings)
+      ex_col <- df[[ex_var]]
+      n_decl <- length(attr(ex_col, "na_values", exact = TRUE))
+      room <- 3L - n_decl
+      vals <- vapply(fx, `[[`, character(1), "value")
+      cnts <- vapply(fx, function(f) as.numeric(f$count), numeric(1))
+      o    <- order(-cnts, vals, method = "radix")
+      vals <- vals[o]
+      if (room <= 0L) {
+        .jst_msg_out("\n", ex_var, " already declares ", n_decl,
+                     " missing values, the most a text variable can have.\n",
+                     "To make more of its values missing, encode it with ",
+                     "jencode(), whose map can send each one to missing.")
+      } else {
+        more <- length(vals) > room
+        if (more) vals <- vals[seq_len(room)]
+        vals <- sort(vals, method = "radix")   # the row's order
+        with_decl <- if (n_decl > 0L) ", with the ones it already declares"
+                     else ""
+        intro <- if (more) {
+          paste0("To declare the ",
+                 c("most frequent", "two most frequent",
+                   "three most frequent")[room],
+                 " of one variable's values as missing", with_decl,
+                 " (a text variable takes at most three):")
+        } else paste0("To declare one variable's values as missing",
+                      with_decl, ":")
+        da <- .jst_text_declare_args(ex_col, vals)
+        if (!is.null(da$arg)) {
+          .jst_msg_out("\n", intro)
+          .jst_msg_out(sprintf("  jdeclare_missing(%s, %s, %s, modify = TRUE)",
+                               obj_name, ex_var, da$arg))
+          # Placeholder labels for the new values with no label of their
+          # own -- the scan does not know what they mean (Session 115).
+          pl   <- da$add_labels
+          need <- !nzchar(pl)
+          if (ex_src %in% c("suspected", "convention_matched") && any(need)) {
+            pl[need] <- paste0("label", seq_len(sum(need)))
+            dp <- .jst_text_declare_args(ex_col, vals, pl)
+            if (!is.null(dp$arg)) {
+              .jst_msg_out("To declare and label them in one call, ",
+                           "replacing the placeholder names:")
+              .jst_msg_out(sprintf(
+                "  jdeclare_missing(%s, %s, %s, modify = TRUE)",
+                obj_name, ex_var, dp$arg))
+            }
+          }
+        }
+      }
+    } else if (!is.null(ex_var)) {
       ex_codes <- sort(unique(vapply(findings, function(f) {
         if (f$var == ex_var) f$value else NA_real_
       }, numeric(1))))
@@ -4707,6 +4843,79 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 }
 
 
+#' Internal: a frame's declared text values that a .sav file would cut
+#'
+#' SPSS format (.sav) keeps 8 bytes of a string variable's declared missing
+#' value (observed S372, haven 2.5.4: "Refused to provide information" read
+#' back as "Refused", the long cells valid). Bytes, not characters: a
+#' letter outside plain ASCII takes two or more.
+#'
+#' @param data A data frame.
+#' @return A list, one entry per variable with such a value: \code{var} and
+#'   \code{codes} (the values too long, as stored).
+#' @keywords internal
+.jst_sav_long_text_codes <- function(data) {
+  out <- list()
+  for (v in .jst_declared_text_vars(data)) {
+    codes <- .jst_missing_info(data[[v]])$codes$code
+    long  <- codes[nchar(codes, type = "bytes") > 8L]
+    if (length(long) > 0L) out[[length(out) + 1L]] <- list(var = v, codes = long)
+  }
+  out
+}
+
+#' Internal: jsave's refusal for a declared text value too long for .sav
+#'
+#' The S372 item, refused before the write (Slate E5; lean 4, Jeff: "Yes to
+#' all of your recommendations."): the variables and the values, then the
+#' ways out -- R format (.rds), which keeps them; the save with every
+#' declared missing value as plain NA (Session 361's offer at every .sav
+#' refusal); jencode(), which makes the variable numbers; or a shorter
+#' value, stated as the requirement (voice Rule X).
+#'
+#' @param long_text \code{.jst_sav_long_text_codes()}'s list.
+#' @param data_name The data frame's name, for the lines.
+#' @param prose_name The data frame as the sentence names it.
+#' @param stem The name the offered file takes.
+#' @param pd_line The offered save with \code{preserve.declarations =
+#'   FALSE}, or NULL.
+#' @return Character(1), a section for \code{.jst_jsave_combined_error_msg()}.
+#' @keywords internal
+.jst_jsave_sav_long_text_error_msg <- function(long_text, data_name,
+                                               prose_name = data_name,
+                                               stem = data_name,
+                                               pd_line = NULL) {
+  n_v   <- length(long_text)
+  n_c   <- sum(lengths(lapply(long_text, `[[`, "codes")))
+  rows  <- unlist(lapply(long_text, function(e) {
+    paste0("  ", e$var, ": ", paste0("\"", e$codes, "\"", collapse = ", "))
+  }))
+  first <- long_text[[1L]]$var
+  paste(c(
+    paste0("SPSS format (.sav) keeps only 8 characters (8 bytes) of a text ",
+           "variable's declared missing value, so a longer one would read ",
+           "back as ordinary data."),
+    "",
+    paste0(if (n_v == 1L) "This variable in " else "These variables in ",
+           prose_name, if (n_c == 1L) " declares a longer value:"
+           else " declare longer values:"),
+    .jst_cap_var_lines(rows),
+    "",
+    paste0("To save in R format (.rds) instead, keeping ",
+           if (n_c == 1L) "it:" else "them:"),
+    sprintf("  jsave(%s, \"%s.rds\")", data_name, stem),
+    if (!is.null(pd_line)) c(
+      "To save as SPSS format (.sav) with every declared missing value as plain NA:",
+      pd_line),
+    paste0("To make ", if (n_v == 1L) first else "a variable",
+           " numbers first, whose missing values SPSS format keeps in ",
+           "full, use jencode()."),
+    paste0("Or shorten ", if (n_c == 1L) "the value" else "each value",
+           " in the data to 8 characters or fewer, and declare the ",
+           "shorter one.")
+  ), collapse = "\n")
+}
+
 #' Internal: build jsave's error message for unsupported column types
 #'
 #' The statistical interchange formats (.sav, .dta, .xpt) cannot store
@@ -5217,7 +5426,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       attributes(vals) <- NULL
       nv <- attr(x, "na_values", exact = TRUE)
       nr <- attr(x, "na_range", exact = TRUE)
-      hit <- !is.na(vals) & vals %in% nv
+      # A declared blank covers every blank cell, shown once (Slate E5).
+      if (is.character(vals)) {
+        hit <- .jst_text_codes_mask(vals, nv)
+        vals[hit & .jst_is_blank(vals)] <- ""
+      } else {
+        hit <- !is.na(vals) & vals %in% nv
+      }
       if (length(nr) == 2L && is.numeric(vals)) {
         hit <- hit | (!is.na(vals) & vals >= nr[1L] & vals <= nr[2L])
       }
@@ -5226,7 +5441,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     if (length(held) > 0L) {
       show_code <- function(z) {
-        if (is.character(z)) paste0("\"", z, "\"")
+        if (is.character(z) && !nzchar(z)) .jst_blank_label
+        else if (is.character(z)) paste0("\"", z, "\"")
         else if (z == floor(z)) format(z, scientific = FALSE, trim = TRUE)
         else format(z, trim = TRUE)
       }
@@ -5524,7 +5740,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     POSIXlt columns; missing values of a form the format cannot hold
 #'     (Stata-style in \code{.sav}, SPSS-style in \code{.dta}, either in
 #'     \code{.xpt}); and, for \code{.sav}, more than three declared codes,
-#'     or a range plus more than one code, on one column. No file is
+#'     or a range plus more than one code, on one column, and a text
+#'     variable's declared missing value longer than 8 bytes, which the
+#'     file would cut short so its cells read back as data. No file is
 #'     written until the problems are fixed. A missing-value form the
 #'     format cannot hold can also be saved as plain NA with
 #'     \code{preserve.declarations = FALSE}, which the message offers
@@ -6082,6 +6300,17 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
                                            prose_name = data_name,
                                            stem       = code_stem,
                                            pd_line    = pd_line)
+      }
+      # A text variable's declared value over 8 bytes (the S372 item, Slate
+      # E5): a .sav keeps 8 bytes of a string missing value, so the value is
+      # written cut short and its cases read back as valid data.
+      long_text <- .jst_sav_long_text_codes(data)
+      if (length(long_text) > 0L) {
+        sections[[length(sections) + 1L]] <-
+          .jst_jsave_sav_long_text_error_msg(long_text, code_name,
+                                             prose_name = data_name,
+                                             stem       = code_stem,
+                                             pd_line    = pd_line)
       }
     } else if (ext == "dta") {
       # Any SPSS-form column blocks the write; since S218 the remedy is

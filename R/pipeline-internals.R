@@ -2001,7 +2001,9 @@
 #' their own \code{sprintf()}; they call this, and \code{unlabelled}
 #' carries the one difference between them.
 #'
-#' @param code_display Character display form of the value.
+#' @param code_display Character display form of the value. A blank one --
+#'   a text variable's declared blank, \code{codes = ""} (Slate E5) -- shows
+#'   as \code{<blank>}.
 #' @param label Character label; \code{NA}, \code{""}, \code{NULL} or a
 #'   zero-length vector for none.
 #' @param unlabelled What a value with no label gets: \code{"note"}, the
@@ -2013,6 +2015,12 @@
 #'
 #' @keywords internal
 .jst_udm_row_label <- function(code_display, label, unlabelled = "note") {
+  # A text variable's declared blank (codes = "", ruling R27, Slate E5) is
+  # shown under the one label every blank cell has, never as nothing.
+  if (is.character(code_display) && length(code_display) == 1L &&
+      .jst_is_blank(code_display)) {
+    code_display <- .jst_blank_label
+  }
   if (length(label) == 1L && !is.na(label) && nzchar(label)) {
     sprintf('%s ["%s"]', code_display, label)
   } else if (identical(unlabelled, "bare")) {
