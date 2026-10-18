@@ -113,6 +113,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_dir_created_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_dp.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_file_stem.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_data_first_form.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_date_shapes.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_date_text_format.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_date_text_report.html</loc></url>
@@ -124,6 +125,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_route.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_detect_suspicious_values.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_dichotomy_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dq_escape.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_drop_formula_terms.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_category_values.html</loc></url>
@@ -168,9 +170,12 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_format_var_list.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_bad_power.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_bare_powers.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_dot_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_dup_var.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_examples.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_quoted_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_recycled.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_unread_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_forwarded_args.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_column.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_frame_column_fix.html</loc></url>

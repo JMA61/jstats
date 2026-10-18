@@ -16,7 +16,8 @@ term so a fetched object is named for what it is.
   data,
   data_name,
   enclos = NULL,
-  n_frame = NULL
+  n_frame = NULL,
+  term_first = FALSE
 )
 ```
 
@@ -41,6 +42,11 @@ term so a fetched object is named for what it is.
 - n_frame:
 
   Integer or NULL; the frame's row count as given.
+
+- term_first:
+
+  Logical; a computed term that gives a categorical variable is refused
+  before the object it reads is named.
 
 ## Value
 

@@ -9,7 +9,7 @@ table, on stdout, as jscreen()'s star legend is.
 ## Usage
 
 ``` r
-.jst_blank_footnote(counts, declare = TRUE)
+.jst_blank_footnote(counts, declare = TRUE, declare_arg = "codes = \"\"")
 ```
 
 ## Arguments
@@ -26,6 +26,13 @@ table, on stdout, as jscreen()'s star legend is.
   [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
   cannot declare.
 
+- declare_arg:
+
+  Character(1); the codes argument the declare route names
+  ([`.jst_text_declare_args()`](https://jma61.github.io/jstats/reference/dot-jst_text_declare_args.md)),
+  or NULL when no declaration can hold the blank beside the values
+  declared.
+
 ## Value
 
 Character(1), newline-joined; `""` when there is no blank.
@@ -41,3 +48,9 @@ with `codes = ""` declares them missing. A factor gets the one
 it had, since
 [`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
 refuses a factor.
+
+Since Session 374 (the S373 item) the declare route names the values the
+variable already declares as well – `codes = c("UNKNOWN", "")` – since a
+declaration replaces a variable's values and `codes = ""` alone dropped
+them; past a text variable's three the jencode() line alone is given, as
+for a factor.

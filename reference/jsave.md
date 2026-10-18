@@ -202,11 +202,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/Rtmpbe915M/community.sav
+#> Saved community to /tmp/RtmpiCifVo/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/Rtmpbe915M/community.sav
+#> Saved community to /tmp/RtmpiCifVo/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{

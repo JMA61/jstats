@@ -18,7 +18,7 @@ data-frame name.
 ## Usage
 
 ``` r
-.jst_check_formula_transforms(formula, data_name)
+.jst_check_formula_transforms(formula, data_name, skip_fetch = FALSE)
 ```
 
 ## Arguments
@@ -30,6 +30,11 @@ data-frame name.
 - data_name:
 
   Character; the data frame's name (for the example line).
+
+- skip_fetch:
+
+  Logical; leave a term that fetches an object (a dollar sign, an at
+  sign or brackets) to the workspace-object check.
 
 ## Value
 
