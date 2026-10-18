@@ -51,7 +51,7 @@ subset = NOT(Age &amp;lt; 40) ... subset = !(Age &amp;lt; 40) per call.
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.243</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.244</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -105,7 +105,8 @@ operator stands in. The lead and the fix line follow <code>origin</code>:
 <span>  <span class="va">raw_expr</span>,</span>
 <span>  <span class="va">expr_str</span>,</span>
 <span>  origin <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"set"</span>, <span class="st">"call"</span><span class="op">)</span>,</span>
-<span>  frame <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  frame <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  envir <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -130,6 +131,13 @@ per-call <code>subset =</code>); chooses the lead and the fix-line form.</p></dd
 <dd><p>Character(1) or <code>NULL</code>. For <code>"set"</code>: the data
 frame as typed, when the call named one; the fix line keeps it
 (<code>jsubset(d, !(Age &lt; 40))</code>; Session 338, the S290 item).</p></dd>
+
+
+<dt id="arg-envir">envir<a class="anchor" aria-label="anchor" href="#arg-envir"></a></dt>
+<dd><p>The caller's environment, or <code>NULL</code>. For <code>"set"</code>
+with no data frame named and no default set, where the data frame
+holding the condition's variables is looked for, so the fix line can
+name it (ruling R23, Session 371).</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -33,7 +33,8 @@ all). Two branches:
   raw_expr,
   expr_str,
   origin = c("set", "call"),
-  frame = NULL
+  frame = NULL,
+  envir = NULL
 )
 ```
 
@@ -59,6 +60,13 @@ all). Two branches:
   Character(1) or `NULL`. For `"set"`: the data frame as typed, when the
   call named one; the fix line keeps it (`jsubset(d, !(Age < 40))`;
   Session 338, the S290 item).
+
+- envir:
+
+  The caller's environment, or `NULL`. For `"set"` with no data frame
+  named and no default set, where the data frame holding the condition's
+  variables is looked for, so the fix line can name it (ruling R23,
+  Session 371).
 
 ## Details
 

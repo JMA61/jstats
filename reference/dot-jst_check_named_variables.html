@@ -55,7 +55,7 @@ jsubset() before its argument grammar runs.
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.243</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.244</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -107,7 +107,7 @@ Unnamed items pass through untouched. Called at every
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_named_variables</span><span class="op">(</span><span class="va">quos</span>, <span class="va">data</span>, <span class="va">fn_name</span>, frame <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_check_named_variables</span><span class="op">(</span><span class="va">quos</span>, <span class="va">data</span>, <span class="va">fn_name</span>, frame <span class="op">=</span> <span class="cn">NULL</span>, envir <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -136,6 +136,13 @@ prefix and for the <code><a href="jsubset.html">jsubset()</a></code> fix form.</
 <dd><p>Character(1) or <code>NULL</code>. For <code><a href="jsubset.html">jsubset()</a></code>: the data
 frame as typed, when the call named one; the fix line keeps it
 (<code>jsubset(d, Gender == 1)</code>; Session 338, the S290 item).</p></dd>
+
+
+<dt id="arg-envir">envir<a class="anchor" aria-label="anchor" href="#arg-envir"></a></dt>
+<dd><p>The caller's environment, or <code>NULL</code>. For
+<code><a href="jsubset.html">jsubset()</a></code> with no data frame named and no default set, where the
+data frame holding the condition's variables is looked for, so the fix
+line can name it (ruling R23, Session 371).</p></dd>
 
 </dl></div>
 

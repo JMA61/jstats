@@ -36,7 +36,7 @@ and the name tells them apart (Session 290):
 ## Usage
 
 ``` r
-.jst_check_named_variables(quos, data, fn_name, frame = NULL)
+.jst_check_named_variables(quos, data, fn_name, frame = NULL, envir = NULL)
 ```
 
 ## Arguments
@@ -68,3 +68,11 @@ and the name tells them apart (Session 290):
   [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md):
   the data frame as typed, when the call named one; the fix line keeps
   it (`jsubset(d, Gender == 1)`; Session 338, the S290 item).
+
+- envir:
+
+  The caller's environment, or `NULL`. For
+  [`jsubset()`](https://jma61.github.io/jstats/reference/jsubset.md)
+  with no data frame named and no default set, where the data frame
+  holding the condition's variables is looked for, so the fix line can
+  name it (ruling R23, Session 371).
