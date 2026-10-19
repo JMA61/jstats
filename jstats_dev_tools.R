@@ -429,7 +429,10 @@ receive_package <- function(file = "jstats_source.R") {
   cat("Split:              wrote", length(chunks), "file(s) to R/\n")
 
   ## -- 6. reassemble-and-diff self-check ---------------------------------------
-  re <- do.call(c, lapply(names(chunks),
+  # base::c here and below, never a bare c: do.call() takes its first argument
+  # as a value, so a c in the workspace -- a vector of the user's, or one a red
+  # battery left -- was found first and stopped the receive (Session 375).
+  re <- do.call(base::c, lapply(names(chunks),
                           function(nm) .jdev_read_raw(file.path("R", nm))))
   if (!identical(re, raw_in)) {
     .jdev_restore_backup(bdir, managed_before, names(chunks))
@@ -536,7 +539,7 @@ receive_package <- function(file = "jstats_source.R") {
     raw_in <- .jdev_read_raw(file)
     nm     <- names(.jdev_split_sentinels(raw_in))
     all(file.exists(file.path("R", nm))) &&
-      identical(do.call(c, lapply(nm, function(f)
+      identical(do.call(base::c, lapply(nm, function(f)
         .jdev_read_raw(file.path("R", f)))), raw_in)
   }, error = function(e) FALSE)
 }
@@ -777,7 +780,7 @@ assemble_package <- function(out = "jstats_source.R") {
          "before assembling, or the assembled master will be incomplete.",
          call. = FALSE)
   }
-  out_raw <- do.call(c, lapply(manifest,
+  out_raw <- do.call(base::c, lapply(manifest,
                                function(nm) .jdev_read_raw(file.path("R", nm))))
   # verify each piece still starts with its own correct sentinel
   txt <- rawToChar(out_raw)
