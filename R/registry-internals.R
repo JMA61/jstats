@@ -1259,6 +1259,29 @@
     .jst_stop("'", var_name, "' has fewer than 2 categories. ",
          "Cannot create dummy variables.")
   }
+  # Values that are not whole numbers (Session 375; the jdummy() guardrails
+  # item, its thresholds calibrated): a variable measured to a fraction --
+  # SelfControl = 3.7 -- is a scale, not a set of categories, and dummy
+  # coding it gave one indicator per distinct value. It stops, ahead of the
+  # category limit below, whose way out (raise the limit) does not fit it.
+  # The item's two warnings (10 to 20 categories; a range that looks
+  # continuous) were not built: the limit of 20 already stops a continuous
+  # variable's many values (Session 127), and a variable of 12 categories
+  # named in jdummy() is the user's stated intent (Jeff's okay, Session 375).
+  if (var_type %in% c("numeric", "haven_labelled")) {
+    frac <- codes[abs(codes - round(codes)) > sqrt(.Machine$double.eps)]
+    if (length(frac) > 0L) {
+      shown <- format(frac[seq_len(min(3L, length(frac)))], trim = TRUE,
+                      digits = 7L)
+      .jst_stop(var_name, " has values that are not whole numbers (",
+                paste(shown, collapse = ", "),
+                if (length(frac) > 3L) ", ...", "), so it ",
+                "cannot be dummy-coded.\n",
+                "Dummy coding makes one indicator for each category. If ",
+                "these values are categories, recode them to whole-number ",
+                "codes first with jrecode().")
+    }
+  }
   if (n_cats > max.categories) {
     raise_to   <- (n_cats %/% 10L + 1L) * 10L
     dn         <- if (is.null(data_name) || !nzchar(data_name)) "data" else data_name

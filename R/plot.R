@@ -50,7 +50,10 @@
 #'   \item \code{jst_logistic}: \code{probability}, \code{roc},
 #'     \code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
 #'     \code{coef}, \code{vif}
-#'   \item \code{jst_ttest}, \code{jst_anova}: \code{box}
+#'   \item \code{jst_ttest}, \code{jst_anova}: \code{box} (the default),
+#'     \code{qq} (a normal Q-Q plot of the standardized residuals: each
+#'     case's distance from its group's mean, or for a paired test each
+#'     pair's difference from the mean difference)
 #'   \item \code{jst_corr}: \code{heatmap}, \code{scatter} (scatter requires
 #'     exactly 2 variables in the correlation)
 #'   \item \code{jst_crosstab}: \code{bar}
@@ -2698,7 +2701,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
       ggplot2::scale_x_log10() +
       ggplot2::labs(title = "Odds Ratios (95% CI)",
                     subtitle = "Log scale; OR = 1 means no effect",
-                    x = "Exp(B)", y = NULL) +
+                    x = "Exp(b)", y = NULL) +
       ggplot2::theme_minimal()
     print(p)
     plots$coef <- p
@@ -2776,9 +2779,145 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   f
 }
 
+#' Internal helper: standardized residuals of a comparison of groups
+#'
+#' Each case's distance from its group's mean, divided by its standard
+#' error: \code{e / (s * sqrt(1 - 1/n))}, with \code{n} the group's size and
+#' \code{s} the pooled standard deviation (\code{pooled = TRUE}, Student's
+#' t-test and the traditional ANOVA, where this is \code{rstandard()} of
+#' the one-way model) or the group's own (\code{pooled = FALSE}, Welch's
+#' tests, whose groups need not share a variance). A paired test passes the
+#' differences as one group. A case of a one-case group, or of a group with
+#' no spread, gets \code{NA}. What \code{jt()} and \code{jaov()} return as
+#' \code{residuals} and the normal Q-Q plot draws (Session 375; ruling R14,
+#' part 2).
+#'
+#' @param y Numeric vector; the outcome (or the paired differences).
+#' @param g The groups, any type; a case missing on either is left out.
+#' @param pooled Logical; pool the standard deviation across the groups.
+#' @return Numeric vector, the cases complete on both, names kept.
+#' @keywords internal
+.jst_group_std_resid <- function(y, g, pooled = TRUE) {
+  nm <- names(y)
+  y  <- as.numeric(y)
+  ok <- !is.na(y) & !is.na(g)
+  y  <- y[ok]
+  gf <- factor(unclass(g)[ok])
+  idx <- split(seq_along(y), gf)
+  idx <- idx[lengths(idx) > 0L]
+  e   <- y - stats::ave(y, gf)
+  s   <- if (pooled) {
+    df_res <- length(y) - length(idx)
+    rep(if (df_res > 0L) sqrt(sum(e^2) / df_res) else NA_real_, length(idx))
+  } else {
+    vapply(idx, function(ii) if (length(ii) > 1L) stats::sd(y[ii])
+                             else NA_real_, numeric(1))
+  }
+  r <- rep(NA_real_, length(y))
+  for (k in seq_along(idx)) {
+    ii <- idx[[k]]
+    n  <- length(ii)
+    if (n > 1L && is.finite(s[k]) && s[k] > 0) {
+      r[ii] <- e[ii] / (s[k] * sqrt(1 - 1 / n))
+    }
+  }
+  if (!is.null(nm)) names(r) <- nm[ok]
+  r
+}
+
+#' Internal helper: the residuals of a jt() or jaov() result
+#'
+#' The \code{residuals} element, which results made before Session 375 do
+#' not carry; for one of those, the stop that asks for the call again.
+#'
+#' @param x A \code{jst_ttest} or \code{jst_anova} result.
+#' @param fn Character(1); \code{"jt"} or \code{"jaov"}.
+#' @return Numeric vector.
+#' @keywords internal
+.jst_result_residuals <- function(x, fn) {
+  if (is.null(x$residuals)) {
+    .jst_stop("This ", fn, "() result was made by an earlier version of ",
+              "jstats and holds no residuals.\n",
+              "Run ", fn, "() again to draw the Q-Q plot.")
+  }
+  x$residuals
+}
+
+#' Internal helper: the normal Q-Q plot of a comparison's residuals
+#'
+#' The standardized residuals against the normal quantiles, the line of
+#' equality dashed, the three cases farthest from 0 labeled by their row
+#' names (by their pair's number for a paired test) -- the plot
+#' \code{jlm()}'s \code{"qq"} draws, for a \code{jt()} or \code{jaov()}
+#' result (Session 375; ruling R14, part 2: a plot, not a test). Printed,
+#' and returned invisibly.
+#'
+#' @param r Numeric vector; the standardized residuals.
+#' @param paired Logical; the residuals are a paired test's differences.
+#' @param n_label Integer; the cases labeled.
+#' @return Invisibly, the ggplot.
+#' @keywords internal
+#' @importFrom rlang .data
+.jst_plot_group_qq <- function(r, paired = FALSE, n_label = 3L) {
+  lab <- names(r)
+  if (is.null(lab) || paired) lab <- as.character(seq_along(r))
+  keep <- !is.na(r)
+  r    <- unname(r[keep])
+  lab  <- lab[keep]
+  qq   <- stats::qqnorm(r, plot.it = FALSE)
+  df_qq <- data.frame(theoretical = qq$x, sample = qq$y, obs = lab,
+                      stringsAsFactors = FALSE)
+  idx <- if (length(r) <= n_label) seq_along(r)
+         else order(abs(r), decreasing = TRUE)[seq_len(n_label)]
+  p <- ggplot2::ggplot(df_qq, ggplot2::aes(x = .data$theoretical,
+                                            y = .data$sample)) +
+    ggplot2::geom_point(alpha = 0.5) +
+    ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
+                         color = "red") +
+    ggplot2::geom_text(data = df_qq[idx, ],
+                       ggplot2::aes(label = .data$obs),
+                       hjust = -0.2, size = 3, color = "red") +
+    ggplot2::labs(title = "Normal Q-Q",
+                  subtitle = if (paired) "Differences between the pairs",
+                  x = "Theoretical Quantiles",
+                  y = "Standardized Residuals") +
+    ggplot2::theme_minimal()
+  print(p)
+  invisible(p)
+}
+
+#' Internal helper: the line jplot() prints under a comparison's plots
+#'
+#' jplot() on a model result says what it drew; on a \code{jt()} or
+#' \code{jaov()} result it drew the box plot alone, and said nothing. With
+#' the Q-Q plot (Session 375; ruling R14, part 2: "as jlm()'s which =
+#' "qq"") it says so in jplot()'s words for a model: one diagnostic plot
+#' on one line, two plots as a numbered list with the arrow buttons named,
+#' since the box plot is then behind the Q-Q plot in the Plots pane. The
+#' box plot alone stays silent, as it has been since jplot() drew it. None
+#' above, one blank line after (Session 359).
+#'
+#' @param drawn Character; the names of the plots drawn, in order.
+#' @return Invisible NULL.
+#' @keywords internal
+.jst_group_plot_list <- function(drawn) {
+  drawn <- unname(drawn)
+  if (!length(drawn) || identical(drawn, "Box Plot")) return(invisible(NULL))
+  if (length(drawn) == 1L) {
+    cat("(Diagnostic plot produced: ", drawn, ")\n", sep = "")
+  } else {
+    .jst_msg_out(length(drawn), " plots produced\n",
+                 "(use the arrow buttons in RStudio's Plots pane to ",
+                 "navigate):")
+    for (i in seq_along(drawn)) cat("  ", i, ". ", drawn[i], "\n", sep = "")
+  }
+  cat("\n")
+  invisible(NULL)
+}
+
 # -- jplot.jst_ttest -----------------------------------------------------------
 
-#' @describeIn jplot a group-comparison box plot for a \code{jt()} result, with the group means marked.
+#' @describeIn jplot a group-comparison box plot for a \code{jt()} result, with the group means marked; \code{which = "qq"} draws the normal Q-Q plot of its residuals.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_ttest <- function(x, which = "core", ...) {
@@ -2795,7 +2934,8 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
          "Install with: install.packages(\"ggplot2\")")
   }
 
-  plot_set <- .jst_resolve_which(which, core = "box", all_plots = "box",
+  plot_set <- .jst_resolve_which(which, core = "box",
+                                 all_plots = c("box", "qq"),
                                  class_name = "jst_ttest")
 
   mf <- x$model_frame
@@ -2828,13 +2968,20 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
     plots$box <- p
   }
 
+  # The normal Q-Q plot of the residuals (Session 375; ruling R14, part 2).
+  if ("qq" %in% plot_set) {
+    plots$qq <- .jst_plot_group_qq(.jst_result_residuals(x, "jt"),
+                                   paired = identical(x$test_type, "paired"))
+  }
+
+  .jst_group_plot_list(c(box = "Box Plot", qq = "Normal Q-Q")[names(plots)])
   .jst_return_plots(plots)
 }
 
 
 # -- jplot.jst_anova -----------------------------------------------------------
 
-#' @describeIn jplot a group-comparison box plot for a \code{jaov()} result, with the group means marked.
+#' @describeIn jplot a group-comparison box plot for a \code{jaov()} result, with the group means marked; \code{which = "qq"} draws the normal Q-Q plot of its residuals.
 #' @export
 #' @importFrom rlang .data
 jplot.jst_anova <- function(x, which = "core", ...) {
@@ -2851,7 +2998,8 @@ jplot.jst_anova <- function(x, which = "core", ...) {
          "Install with: install.packages(\"ggplot2\")")
   }
 
-  plot_set <- .jst_resolve_which(which, core = "box", all_plots = "box",
+  plot_set <- .jst_resolve_which(which, core = "box",
+                                 all_plots = c("box", "qq"),
                                  class_name = "jst_anova")
 
   mf <- x$model_frame
@@ -2884,6 +3032,12 @@ jplot.jst_anova <- function(x, which = "core", ...) {
     plots$box <- p
   }
 
+  # The normal Q-Q plot of the residuals (Session 375; ruling R14, part 2).
+  if ("qq" %in% plot_set) {
+    plots$qq <- .jst_plot_group_qq(.jst_result_residuals(x, "jaov"))
+  }
+
+  .jst_group_plot_list(c(box = "Box Plot", qq = "Normal Q-Q")[names(plots)])
   .jst_return_plots(plots)
 }
 

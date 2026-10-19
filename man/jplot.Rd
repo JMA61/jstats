@@ -198,7 +198,10 @@ Valid plot names by class (for the result-object form):
 \item \code{jst_logistic}: \code{probability}, \code{roc},
 \code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
 \code{coef}, \code{vif}
-\item \code{jst_ttest}, \code{jst_anova}: \code{box}
+\item \code{jst_ttest}, \code{jst_anova}: \code{box} (the default),
+\code{qq} (a normal Q-Q plot of the standardized residuals: each
+case's distance from its group's mean, or for a paired test each
+pair's difference from the mean difference)
 \item \code{jst_corr}: \code{heatmap}, \code{scatter} (scatter requires
 exactly 2 variables in the correlation)
 \item \code{jst_crosstab}: \code{bar}
@@ -239,9 +242,9 @@ band illustrating the homoskedasticity assumption), \code{none} (no band).
 
 \item \code{jplot(jst_logistic)}: predicted-probability (S-curve) and coefficient plots for a \code{jlogistic()} result.
 
-\item \code{jplot(jst_ttest)}: a group-comparison box plot for a \code{jt()} result, with the group means marked.
+\item \code{jplot(jst_ttest)}: a group-comparison box plot for a \code{jt()} result, with the group means marked; \code{which = "qq"} draws the normal Q-Q plot of its residuals.
 
-\item \code{jplot(jst_anova)}: a group-comparison box plot for a \code{jaov()} result, with the group means marked.
+\item \code{jplot(jst_anova)}: a group-comparison box plot for a \code{jaov()} result, with the group means marked; \code{which = "qq"} draws the normal Q-Q plot of its residuals.
 
 \item \code{jplot(jst_corr)}: a heat-map of the correlation matrix for a \code{jcorr()} result, or a scatter plot for a single pair.
 

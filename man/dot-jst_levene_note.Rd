@@ -16,7 +16,11 @@
 \item{fn}{Character(1); \code{"jt"} or \code{"jaov"}.}
 }
 \value{
-Invisibly NULL; called for the note it prints.
+Invisibly, the verdict the note states -- \code{"acceptable"},
+\code{"unreliable"} or \code{"differ"} -- or \code{NA} when there is no
+note (the test not significant, or a group with fewer than two cases).
+The verdict is returned at every output level, printed or not, so the
+caller's \code{levene} element records it (Session 375).
 }
 \description{
 Printed by \code{jt()} and \code{jaov()} under the Levene table when the

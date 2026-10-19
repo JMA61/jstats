@@ -301,6 +301,10 @@ tidy.jst_crosstab <- function(x, ...) {
     .jst_stop("This jcrosstab() result has no chi-square test to tidy.\n",
               "Re-run with jcrosstab(..., chisq = TRUE).", fn = "tidy")
   }
+  # Cramer's V (Session 375); a result made before then carries none, and
+  # it is computed from what the result does carry.
+  v <- if (!is.null(x$cramers_v)) x$cramers_v
+       else .jst_cramers_v(x$chi_square, x$n, dim(x$observed))
   data.frame(
     statistic = unname(x$chi_square),
     parameter = unname(x$df),
@@ -308,5 +312,6 @@ tidy.jst_crosstab <- function(x, ...) {
     method    = if (!is.null(x$chi_method)) x$chi_method
                 else "Pearson's Chi-squared test",
     n         = x$n,
+    cramers_v = unname(v),
     stringsAsFactors = FALSE, row.names = NULL)
 }

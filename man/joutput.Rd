@@ -17,6 +17,7 @@ joutput(
   variable.id = NULL,
   value.id = NULL,
   ref.categories = NULL,
+  model.layout = NULL,
   missing.notice = NULL,
   digits = NULL,
   quiet = FALSE
@@ -73,9 +74,14 @@ apply to it:
 (\code{jt}, \code{jaov});
 \item \code{"vif"} -- the variance inflation factors (\code{jlm},
 \code{jlogistic});
-\item \code{"residuals"}, \code{"qq"}, \code{"scale"},
-\code{"cooks"}, \code{"leverage"} -- the regression diagnostic
-plots (\code{jlm}).
+\item \code{"qq"} -- the normal Q-Q plot of the residuals
+(\code{jt}, \code{jaov}, \code{jlm});
+\item \code{"residuals"}, \code{"scale"} -- the regression
+diagnostic plots (\code{jlm});
+\item \code{"binned"} -- the binned residual plot
+(\code{jlogistic});
+\item \code{"cooks"}, \code{"leverage"} -- Cook's distance and
+residuals against leverage (\code{jlm}, \code{jlogistic}).
 }
 Name more than one with \code{c()}:
 \code{joutput(diagnostics = c("levene", "vif"))}. A diagnostic prints
@@ -197,6 +203,13 @@ label. Not a logical.}
 
 \item{ref.categories}{Logical or NULL. Override the level's default
 for the reference categories block (registered dummies).}
+
+\item{model.layout}{Character or NULL. The order of \code{jlm()}'s and
+\code{jlogistic()}'s output: \code{"coefficients"} (every level's
+default) prints the Coefficients table first and the fit statistics
+after it; \code{"fit"} prints the fit statistics first. A level call
+puts it back to \code{"coefficients"}, as it puts back the other
+settings.}
 
 \item{missing.notice}{Logical or NULL. Controls the notification about
 declared missing values that \code{jload()} emits for files whose

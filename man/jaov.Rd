@@ -58,12 +58,16 @@ If NULL (default), defers to \code{joutput()}.}
 \item{effect.size}{Logical or NULL. If TRUE, prints eta-squared. If NULL
 (default), defers to \code{joutput()}.}
 
-\item{diagnostics}{Logical, \code{"levene"}, or NULL. If TRUE (or
-\code{"levene"}), prints Levene's test for homogeneity of variance,
-with a note under it when the test is significant (see "Unequal
-variances"). If NULL (default), defers to \code{joutput()}'s
-\code{diagnostics} setting, which is off at every output level until
-it is set.}
+\item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints
+Levene's test for homogeneity of variance, with a note under it when
+the test is significant (see "Unequal variances"), and draws a normal
+Q-Q plot of the standardized residuals -- each case's distance from
+its group's mean -- a look at normality as a plot rather than a test.
+\code{"levene"} or \code{"qq"} asks for one of them;
+\code{c("levene", "qq")} for both. If NULL (default), defers to
+\code{joutput()}'s \code{diagnostics} setting, which is off at every
+output level until it is set. The Q-Q plot is also drawn by
+\code{jplot(result, which = "qq")}.}
 
 \item{ci}{Logical or NULL. If TRUE, adds 95\% confidence intervals to the
 group descriptives table. If NULL (default), defers to \code{joutput()}.}
@@ -130,7 +134,13 @@ Invisibly returns a list of class \code{jst_anova} containing:
 \code{sample_info} (pipeline and missing data counts), and
 \code{posthoc} (the pairwise comparisons as an unrounded data frame,
 with \code{test} naming the method; \code{NULL} when post-hoc tests
-were not requested).
+were not requested), and \code{levene}: Levene's test as printed, a
+list of \code{F}, \code{df1}, \code{df2}, \code{p} and \code{note} --
+the verdict of the note under a significant test
+(\code{"acceptable"}, \code{"unreliable"} or \code{"differ"}), recorded
+at every output level, or \code{NA} when no note applies (the test not
+significant, or Welch's ANOVA run); \code{NULL} when Levene's test was
+not asked for.
 }
 \description{
 Runs a one-way ANOVA and prints a formatted group descriptives table

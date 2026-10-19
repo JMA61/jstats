@@ -16,7 +16,8 @@ jcrosstab(
   variable.id = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
-  digits = NULL
+  digits = NULL,
+  categorical = NULL
 )
 }
 \arguments{
@@ -33,9 +34,13 @@ the Pearson chi-square and the Yates continuity-corrected chi-square --
 matching the rows commercial statistical software reports; the Pearson
 row is the headline result and is what the returned object carries.
 Larger tables show the single Pearson result (the correction applies
-only to 2x2 tables). When any cell's expected frequency is less than
-5, a note under the test gives the number of such cells and the
-smallest expected frequency. Default is FALSE.}
+only to 2x2 tables). Under the test, Cramer's V gives its effect
+size: the square root of the Pearson chi-square over N times one less
+than the smaller of the table's dimensions, from 0 (no association)
+to 1. A 2x2 table's line reads "Phi (Cramer's V)", the two being
+equal there (phi without its sign). When any cell's expected
+frequency is less than 5, a note under the test gives the number of
+such cells and the smallest expected frequency. Default is FALSE.}
 
 \item{expected}{Logical. If TRUE, prints expected frequencies alongside
 observed, to two decimal places. An expected frequency just under 5
@@ -103,6 +108,14 @@ percentages, expected frequencies (two places), or integer quantities
 (counts, N, degrees of freedom), which keep their own fixed
 conventions. NULL (default) defers to
 \code{joutput()}'s \code{digits} setting (default 3).}
+
+\item{categorical}{The variables of the formula to tabulate however many
+values they hold, named in quotes or without them:
+\code{categorical = "Age"}, or \code{categorical = c(Age, Income)}.
+A variable with more than 20 values otherwise stops the call, since a
+variable measured on a scale -- an age, a score -- makes a table too
+large to read; the message gives the call with this argument. NULL
+(default) names none.}
 }
 \value{
 Invisibly returns a list of class \code{jst_crosstab} containing:
@@ -112,7 +125,8 @@ standardized residuals), \code{n} (total N), \code{model_frame} (the
 analysis data frame used for plotting), \code{sample_info} (pipeline and
 missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
 \code{df}, and \code{p} (the Pearson chi-square), \code{chi_method}
-(the test's method string), and for 2x2 tables
+(the test's method string), \code{cramers_v} (Cramer's V, phi without
+its sign in a 2x2 table), and for 2x2 tables
 \code{chi_square_corrected} and \code{p_corrected} (the Yates
 continuity-corrected values).
 }

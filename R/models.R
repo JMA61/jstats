@@ -1324,6 +1324,162 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   })
 }
 
+#' Internal helper: the generalized VIF of each set of dummy variables
+#'
+#' A categorical predictor of three or more categories enters a model as a
+#' set of dummy variables, and the VIF table gave each dummy column its own
+#' VIF, which depends on the reference category; \code{car::vif()} gives
+#' the set one generalized VIF (Fox and Monette, 1992; the S346 item, built
+#' Session 375): \code{det(R11) * det(R22) / det(R)}, \code{R} the
+#' predictors' correlation matrix, \code{R11} the set's block and \code{R22}
+#' the rest's, with \code{GVIF^(1/(2*Df))} beside it -- on the scale of
+#' the square root of a VIF, so its square compares with the usual VIF
+#' guidelines. A set is a multi-category predictor's dummy columns and, in
+#' a model with an interaction, the interaction columns built on them
+#' with the same other variables (\code{Age * Region}). Any other column
+#' is a set of one, whose GVIF is its VIF.
+#'
+#' @param model A fitted \code{lm} or \code{glm}.
+#' @param regs The multi-category registrations,
+#'   \code{.jst_collect_multicat_regs()}.
+#' @return \code{NULL} when no set has two or more columns (the table is
+#'   then the plain VIF table), or when the correlation matrix is
+#'   singular; otherwise a data frame of \code{term}, \code{GVIF},
+#'   \code{Df} and \code{GVIF_adj} (\code{GVIF^(1/(2*Df))}), in the
+#'   model's column order.
+#' @references Fox, J., and Monette, G. (1992). Generalized collinearity
+#'   diagnostics. \emph{Journal of the American Statistical Association},
+#'   87(417), 178-183.
+#' @keywords internal
+.jst_compute_gvif <- function(model, regs) {
+  if (length(regs) == 0L) return(NULL)
+  X <- stats::model.matrix(model)[, -1, drop = FALSE]
+  if (ncol(X) < 2L) return(NULL)
+  cols <- .jst_unbacktick(colnames(X))
+  owner <- character(0)
+  for (reg in regs) {
+    for (dn in reg$dummy_names) owner[dn] <- reg$var_name
+  }
+  key <- vapply(cols, function(cl) {
+    parts  <- strsplit(cl, ":", fixed = TRUE)[[1L]]
+    mapped <- ifelse(parts %in% names(owner), owner[parts], parts)
+    if (any(parts %in% names(owner))) paste(mapped, collapse = ":") else cl
+  }, character(1), USE.NAMES = FALSE)
+  if (!any(duplicated(key))) return(NULL)
+  tryCatch({
+    R    <- stats::cor(X)
+    detR <- det(R)
+    keys <- unique(key)
+    rows <- lapply(keys, function(k) {
+      b    <- which(key == k)
+      rest <- setdiff(seq_len(ncol(R)), b)
+      det_rest <- if (length(rest)) det(R[rest, rest, drop = FALSE]) else 1
+      g    <- det(R[b, b, drop = FALSE]) * det_rest / detR
+      data.frame(term = .jst_interaction_label(k), GVIF = g,
+                 Df = length(b), GVIF_adj = g^(1 / (2 * length(b))),
+                 stringsAsFactors = FALSE)
+    })
+    out <- do.call(rbind, rows)
+    rownames(out) <- NULL
+    out
+  }, error = function(e) NULL)
+}
+
+#' Internal helper: print the VIF table and its notes
+#'
+#' The VIF table of \code{jlm()} and \code{jlogistic()}, with its brief
+#' interpretation under it (Session 346: printed except at the minimal
+#' level). Without a set of dummy variables it is the table of each
+#' predictor's VIF as before. With one (Session 375), the table takes
+#' \code{car::vif()}'s columns -- GVIF, Df and GVIF^(1/(2*Df)) -- with one
+#' row per predictor, the set's dummy columns sharing one, and two lines
+#' under it say what the rows are; a predictor's note then fires when
+#' GVIF^(1/(2*Df)) squared passes 10, as a VIF's does.
+#'
+#' @param vif_values Named numeric; each column's VIF.
+#' @param gvif The data frame \code{.jst_compute_gvif()} returns, or
+#'   \code{NULL}.
+#' @return Invisible NULL.
+#' @keywords internal
+.jst_print_vif <- function(vif_values, gvif = NULL) {
+  cat("\n")
+  tail_line <- "  If you need to interpret this coefficient specifically, consider whether the collinearity is a concern for your research question."
+  if (is.null(gvif)) {
+    vif_df <- data.frame(
+      Variable = .jst_interaction_label(names(vif_values)),
+      VIF      = round(vif_values, 3),
+      stringsAsFactors = FALSE,
+      row.names = NULL
+    )
+    # VIF keeps its fixed three places, trailing zeros included (1.250,
+    # not 1.25). (Session 326) The VIF column block-centered, the lines
+    # trimmed. (Session 327)
+    .jst_print_table(vif_df,
+                     caption = "VIF (Variance Inflation Factors)",
+                     row.names = FALSE,
+                     align = c("l", "bc"),
+                     digits = c(VIF = 3L))
+
+    # Targeted notes for VIF > 10: the table's brief interpretation,
+    # printed with it except at the minimal level (Session 346).
+    high_vif <- vif_values[vif_values > 10]
+    if (length(high_vif) > 0 && .jst_notes_on()) {
+      cat("\n")
+      # Both numbers to one place, padded (Session 327): through
+      # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
+      # table showing 16.000.
+      for (nm in names(high_vif)) {
+        .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
+                     .jst_fmt_stat(high_vif[[nm]], 1L),
+                     "): standard error inflated by a factor of ",
+                     .jst_fmt_stat(sqrt(high_vif[[nm]]), 1L), ".\n",
+                     tail_line)
+      }
+    }
+    return(invisible(NULL))
+  }
+  gv_df <- data.frame(
+    Variable = gvif$term,
+    GVIF     = gvif$GVIF,
+    Df       = gvif$Df,
+    Adj      = gvif$GVIF_adj,
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+  .jst_print_table(gv_df,
+                   caption = "VIF (Variance Inflation Factors)",
+                   col.names = c("Variable", "GVIF", "Df", "GVIF^(1/(2*Df))"),
+                   row.names = FALSE,
+                   align = c("l", "bc", "bc", "bc"),
+                   digits = c(GVIF = 3L, Adj = 3L))
+  # What the rows are: a column legend, printed with its table at every
+  # level (voice reference, Rule M).
+  cat("\n")
+  .jst_msg_out("A row with Df above 1 is a set of dummy variables, with one ",
+               "generalized VIF (GVIF) for the set.\n",
+               "GVIF^(1/(2*Df)) squared is on the scale of an ordinary VIF.")
+  high <- which(gvif$GVIF_adj^2 > 10)
+  if (length(high) > 0 && .jst_notes_on()) {
+    cat("\n")
+    for (i in high) {
+      if (gvif$Df[i] == 1L) {
+        .jst_msg_out(gvif$term[i], " (VIF = ",
+                     .jst_fmt_stat(gvif$GVIF[i], 1L),
+                     "): standard error inflated by a factor of ",
+                     .jst_fmt_stat(gvif$GVIF_adj[i], 1L), ".\n",
+                     tail_line)
+      } else {
+        .jst_msg_out(gvif$term[i], " (GVIF = ",
+                     .jst_fmt_stat(gvif$GVIF[i], 1L), " on ", gvif$Df[i],
+                     " df): standard errors inflated by a factor of about ",
+                     .jst_fmt_stat(gvif$GVIF_adj[i], 1L), ".\n",
+                     sub("this coefficient", "these coefficients", tail_line))
+      }
+    }
+  }
+  invisible(NULL)
+}
+
 #' Internal helper: produce diagnostic plots for a fitted linear model
 #'
 #' Generates five diagnostic plots using ggplot2. Each plot is printed
@@ -1605,6 +1761,10 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{leverage}.
 #' @param n_label Integer. Number of extreme observations to label on
 #'   relevant plots. Default 3.
+#' @param list Logical. TRUE (jplot()) prints the list of the plots drawn,
+#'   then a blank line, then any note. FALSE (jlogistic()'s diagnostics,
+#'   Session 375, which print their own list above, as jlm()'s do) prints
+#'   no list, and each note one blank line below what precedes it.
 #'
 #' @return Invisibly, a named list of \code{ggplot} objects corresponding to
 #'   the requested plots. Returns \code{NULL} invisibly if ggplot2 is not
@@ -1612,7 +1772,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'
 #' @keywords internal
 #' @importFrom rlang .data
-.jst_plot_logistic_diagnostics <- function(model, which, n_label = 3) {
+.jst_plot_logistic_diagnostics <- function(model, which, n_label = 3,
+                                           list = TRUE) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
@@ -1806,14 +1967,24 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   )
   produced <- plot_names_pretty[which]
   produced <- produced[!is.na(produced)]
-  # The list is jplot()'s own output (this helper's only caller): none
-  # above it and one blank line after it, as the effect plots' count line
-  # (Session 359; the many-plot form opened on a blank line and ended
-  # without one).
+  # jlogistic()'s diagnostics print their own list (Session 375): here,
+  # only the notes, each a blank line below what precedes it (Rule F).
+  if (!list) {
+    for (nt in removed$note(leverage)) {
+      cat("\n")
+      .jst_msg(nt)
+    }
+    return(invisible(plots))
+  }
+  # The list is jplot()'s own output: none above it and one blank line
+  # after it, as the effect plots' count line (Session 359; the many-plot
+  # form opened on a blank line and ended without one).
   if (length(produced) == 1) {
     cat("(Diagnostic plot produced: ", produced, ")\n", sep = "")
   } else if (length(produced) > 1) {
-    .jst_msg_out(length(produced), " diagnostic plots produced ",
+    # The parenthesis on a line of its own (Jeff, S375): wrapped, it split
+    # the instruction mid-phrase.
+    .jst_msg_out(length(produced), " diagnostic plots produced\n",
                  "(use the arrow buttons in RStudio's Plots pane to ",
                  "navigate):")
     for (i in seq_along(produced)) {
@@ -2377,10 +2548,18 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{leverage}, more than one combined with \code{c()}, as in
 #'   \code{diagnostics = c("vif", "qq")}; a name that is not one of these
 #'   is an error. A VIF above 10 gets a line of interpretation under the
-#'   table, except at \code{joutput("minimal")}. If NULL (default), defers
-#'   to \code{joutput()}'s \code{diagnostics} setting, which is off at
-#'   every output level until it is set. The same plots are available
-#'   afterwards from \code{jplot()} on the returned object.
+#'   table, except at \code{joutput("minimal")}. In a model with a
+#'   predictor of three or more categories, whose dummy variables would
+#'   each get a VIF that depends on the reference category, the table
+#'   gives each predictor one row with its generalized VIF (Fox and
+#'   Monette, 1992), Df and GVIF^(1/(2*Df)), as \code{car::vif()} does, the
+#'   dummy variables sharing a row (and an interaction's, with the same
+#'   other variable); squared, GVIF^(1/(2*Df)) is on the scale of a VIF,
+#'   and the line of interpretation fires when it passes 10. If NULL
+#'   (default), defers to \code{joutput()}'s \code{diagnostics} setting,
+#'   which is off at every output level until it is set. The same plots
+#'   are available afterwards from \code{jplot()} on the returned
+#'   object.
 #' @param full Logical. If TRUE, turns on the coefficient confidence
 #'   interval. Does not override an explicit FALSE, and does not turn on
 #'   diagnostics, which \code{diagnostics} alone governs.
@@ -2422,6 +2601,11 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'       labels them, and \code{dummy}, the dummy column of each
 #'       (\code{NA} for the reference). Used by \code{jplot()}.}
 #'     \item{vif}{Named numeric vector of VIF values, or NULL for bivariate.}
+#'     \item{gvif}{The generalized VIFs, when the model has a set of dummy
+#'       variables (a predictor of three or more categories): a data frame
+#'       of \code{term}, \code{GVIF}, \code{Df} and \code{GVIF_adj}
+#'       (\code{GVIF^(1/(2*Df))}), one row per predictor, as the VIF table
+#'       prints them; NULL otherwise.}
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
 #'
@@ -2583,12 +2767,19 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'
 #' Gelman, A. (2008). Scaling regression inputs by dividing by two standard
 #' deviations. \emph{Statistics in Medicine}, 27(15), 2865-2873.
+#' @param model.layout Character or NULL. The order of the coefficient
+#'   table and the fit statistics: \code{"coefficients"} (the default) prints
+#'   the Coefficients table first and the fit block after it;
+#'   \code{"fit"} prints the fit block first, for readers who look at the
+#'   model as a whole before its coefficients. The Case Processing block,
+#'   the diagnostics and the other tables stay where they are. NULL
+#'   (default) defers to \code{joutput()}'s \code{model.layout} setting.
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL, count = NULL,
                 ci = NULL, std = "regular",
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...,
-                value.id = NULL) {
+                value.id = NULL, model.layout = NULL) {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -2596,8 +2787,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                    list(std = .jst_word_spec(c("regular", "all", "gelman",
                                                "product", "none"), "a choice"),
                         diagnostics = .jst_word_spec(.jst_diagnostic_sets$jlm,
-                                                     "a diagnostic name"))),
+                                                     "a diagnostic name"),
+                        model.layout = .jst_word_spec(c("coefficients", "fit"),
+                                                      "a layout"))),
                  "jlm")
+  # The order of the coefficient table and the fit block (Session 375).
+  model_layout <- .jst_resolve_model_layout(model.layout, "jlm")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(full, "full")
@@ -3610,183 +3805,171 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     coef_col_names <- c(coef_col_names, "95% CI Lower", "95% CI Upper")
     coef_align     <- c(coef_align, "bc", "bc")
   }
-  .jst_print_table(coef_disp,
-                   caption   = "Coefficients",
-                   col.names = c("", coef_col_names),
-                   align     = c("ln", coef_align),
-                   row.names = FALSE)
+  # The coefficient block and the fit block, printed in the order
+  # model.layout sets (Session 375; the Session 63 item): the Coefficients
+  # table first by default, the fit statistics first under "fit". The
+  # seam between them is the same either way: one blank line, or the
+  # variable.id "legend" roster.
+  print_coef_block <- function() {
+    .jst_print_table(coef_disp,
+                     caption   = "Coefficients",
+                     col.names = c("", coef_col_names),
+                     align     = c("ln", coef_align),
+                     row.names = FALSE)
 
-  # Notes under the table, each one blank line below what precedes it, when
-  # a standardized column is shown -- column legends, printed with their
-  # table at every level (the jscreen star legend's precedent; voice
-  # reference, Rule M ruling S320), each ending in the bare "See ?jlm."
-  # (Rule D's S320 carve-out), which leads to the "Comparing with other
-  # software" section. Each names only the kinds of term the model has
-  # (Session 321, Jeff): an interaction (x * z, or I(x * z)), a squared or
-  # other power term (I(x^2)), or both.
-  #   - std = "regular", "all" or "gelman", a model with an interaction or
-  #     a power (Session 320; power terms and the wording Session 321): both
-  #     refits center the predictors, so a main effect's beta is its effect
-  #     at the average of the predictor it interacts with (a squared term's
-  #     variable, at its own average), while its b is the effect at that
-  #     predictor's 0 -- the same row can carry opposite signs, which reads as
-  #     an error to anyone who does not know why -- and software that
-  #     standardizes the product itself reports different values for the
-  #     same model.
-  #   - the same three, a predictor variable that equals the product of two
-  #     others, or the square of one (Session 321): jlm cannot see its parts,
-  #     so its beta treats it as an ordinary predictor.
-  #   - std = "product", a model with any of these: the column treats each
-  #     interaction and power as an ordinary predictor, as some other
-  #     software does.
-  if (show_beta_col) {
-    poly_info  <- lapply(intersect(resolved$computed, names(mf)[-1L]),
-                         .jst_poly_term, data_names = names(data),
-                         enclos = term_enclos)
-    poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
-    poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
-    pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
-                                  `[[`, numeric(1), "power")))
-    has_int  <- any(grepl(":", term_keys, fixed = TRUE)) ||
-                any(poly_kinds == "interaction")
-    has_pow  <- any(poly_kinds == "power")
-    pow_noun <- if (pow_max > 2) "power term" else "squared term"
-    hand     <- .jst_hand_products(mf, skip = c(resolved$computed,
-                                                dummy_coef_names))
-    # One the fit dropped as aliased (the same product also entered as an
-    # interaction) has no row to explain; the collinearity warning covers it.
-    fit_b    <- stats::coef(model)
-    names(fit_b) <- .jst_unbacktick(names(fit_b))
-    hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
-                            logical(1))]
-    hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
+    # Notes under the table, each one blank line below what precedes it, when
+    # a standardized column is shown -- column legends, printed with their
+    # table at every level (the jscreen star legend's precedent; voice
+    # reference, Rule M ruling S320), each ending in the bare "See ?jlm."
+    # (Rule D's S320 carve-out), which leads to the "Comparing with other
+    # software" section. Each names only the kinds of term the model has
+    # (Session 321, Jeff): an interaction (x * z, or I(x * z)), a squared or
+    # other power term (I(x^2)), or both.
+    #   - std = "regular", "all" or "gelman", a model with an interaction or
+    #     a power (Session 320; power terms and the wording Session 321): both
+    #     refits center the predictors, so a main effect's beta is its effect
+    #     at the average of the predictor it interacts with (a squared term's
+    #     variable, at its own average), while its b is the effect at that
+    #     predictor's 0 -- the same row can carry opposite signs, which reads as
+    #     an error to anyone who does not know why -- and software that
+    #     standardizes the product itself reports different values for the
+    #     same model.
+    #   - the same three, a predictor variable that equals the product of two
+    #     others, or the square of one (Session 321): jlm cannot see its parts,
+    #     so its beta treats it as an ordinary predictor.
+    #   - std = "product", a model with any of these: the column treats each
+    #     interaction and power as an ordinary predictor, as some other
+    #     software does.
+    if (show_beta_col) {
+      poly_info  <- lapply(intersect(resolved$computed, names(mf)[-1L]),
+                           .jst_poly_term, data_names = names(data),
+                           enclos = term_enclos)
+      poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
+      poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
+      pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
+                                    `[[`, numeric(1), "power")))
+      has_int  <- any(grepl(":", term_keys, fixed = TRUE)) ||
+                  any(poly_kinds == "interaction")
+      has_pow  <- any(poly_kinds == "power")
+      pow_noun <- if (pow_max > 2) "power term" else "squared term"
+      hand     <- .jst_hand_products(mf, skip = c(resolved$computed,
+                                                  dummy_coef_names))
+      # One the fit dropped as aliased (the same product also entered as an
+      # interaction) has no row to explain; the collinearity warning covers it.
+      fit_b    <- stats::coef(model)
+      names(fit_b) <- .jst_unbacktick(names(fit_b))
+      hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
+                              logical(1))]
+      hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
 
-    legends <- character(0)
-    if (identical(std, "product")) {
-      p_int <- has_int || any(!hand_sq)
-      p_pow <- has_pow || any(hand_sq)
-      if (p_int || p_pow) {
-        legends <- c(legends, paste0(
-          beta_header, " treats ",
-          .jst_term_kinds_phrase(p_int, p_pow, pow_noun, each = TRUE),
-          " as an ordinary predictor, as some other software does.\n",
-          "See ?jlm."))
+      legends <- character(0)
+      if (identical(std, "product")) {
+        p_int <- has_int || any(!hand_sq)
+        p_pow <- has_pow || any(hand_sq)
+        if (p_int || p_pow) {
+          legends <- c(legends, paste0(
+            beta_header, " treats ",
+            .jst_term_kinds_phrase(p_int, p_pow, pow_noun, each = TRUE),
+            " as an ordinary predictor, as some other software does.\n",
+            "See ?jlm."))
+        }
+      } else {
+        if (has_int || has_pow) {
+          legends <- c(legends, paste0(
+            "In a model with ",
+            .jst_term_kinds_phrase(has_int, has_pow, pow_noun), ", ",
+            beta_header, " comes from centered predictors: a ", beta_header,
+            " can have the opposite sign from its b, and other software may ",
+            "report different ", beta_header, " values.\n",
+            "See ?jlm."))
+        }
+        if (length(hand) > 0L) {
+          what <- vapply(hand, function(h) {
+            if (identical(h$a, h$b)) paste0(h$col, " is ", h$a, " squared")
+            else paste0(h$col, " is ", h$a, " * ", h$b)
+          }, character(1))
+          one <- length(hand) == 1L
+          legends <- c(legends, paste0(
+            .jst_format_var_list(what, and = TRUE),
+            if (one) " entered as its own variable, so "
+            else ", each entered as its own variable, so ",
+            beta_header,
+            if (one) " treats it as an ordinary predictor, not as "
+            else " treats them as ordinary predictors, not as ",
+            .jst_term_kinds_phrase(any(!hand_sq), any(hand_sq), "squared term"),
+            ".\n",
+            "See ?jlm."))
+        }
       }
+      for (lg in legends) {
+        cat("\n")
+        .jst_msg_out(lg)
+      }
+    }
+
+    # Outcome named beneath the table, following variable.id; folds into the
+    # legend under the legend modes (see .jst_print_outcome_line).
+    .jst_print_outcome_line(lab_src, original_formula_vars[1], vlmode)
+  }
+  print_fit_block <- function() {
+    cat("R-squared: ", sprintf(paste0("%.", digits_n, "f"), r_squared),
+        "    Adjusted R-squared: ", sprintf(paste0("%.", digits_n, "f"), adj_r_squared), "\n", sep = "")
+    cat("Residual Standard Error: ", sprintf(paste0("%.", digits_n, "f"), residual_se), "\n", sep = "")
+    # The two df are whole numbers and print whole (Session 328): cat()
+    # abbreviates a double of exactly 100000, so a model with 100,000 residual
+    # degrees of freedom read "on 1 and 1e+05 DF".
+    if (no_predictors) {
+      cat("\nF-statistic: none (the model has no predictors to test)\n")
     } else {
-      if (has_int || has_pow) {
-        legends <- c(legends, paste0(
-          "In a model with ",
-          .jst_term_kinds_phrase(has_int, has_pow, pow_noun), ", ",
-          beta_header, " comes from centered predictors: a ", beta_header,
-          " can have the opposite sign from its b, and other software may ",
-          "report different ", beta_header, " values.\n",
-          "See ?jlm."))
-      }
-      if (length(hand) > 0L) {
-        what <- vapply(hand, function(h) {
-          if (identical(h$a, h$b)) paste0(h$col, " is ", h$a, " squared")
-          else paste0(h$col, " is ", h$a, " * ", h$b)
-        }, character(1))
-        one <- length(hand) == 1L
-        legends <- c(legends, paste0(
-          .jst_format_var_list(what, and = TRUE),
-          if (one) " entered as its own variable, so "
-          else ", each entered as its own variable, so ",
-          beta_header,
-          if (one) " treats it as an ordinary predictor, not as "
-          else " treats them as ordinary predictors, not as ",
-          .jst_term_kinds_phrase(any(!hand_sq), any(hand_sq), "squared term"),
-          ".\n",
-          "See ?jlm."))
-      }
+      cat("\nF-statistic: ", sprintf(paste0("%.", digits_n, "f"), f_value),
+          " on ", format(df1, scientific = FALSE),
+          " and ", format(df2, scientific = FALSE),
+          " DF, p-value: ", f_p_fmt, "\n", sep = "")
     }
-    for (lg in legends) {
+    cat("Sum of Squares:\n")
+    cat("  Regression: ", sprintf(paste0("%.", digits_n, "f"), ss_regression), "\n", sep = "")
+    cat("  Residual:   ", sprintf(paste0("%.", digits_n, "f"), ss_residual),   "\n", sep = "")
+    cat("  Total:      ", sprintf(paste0("%.", digits_n, "f"), ss_total),      "\n", sep = "")
+  }
+  print_seam <- function() {
+    # "legend" (mid): between the Coefficients table and the R-squared/fit block.
+    # In legend mode the roster's trailing blank line doubles as the separator
+    # before the fit block (matching jlogistic); otherwise one blank is emitted
+    # here. The R-squared line carries no leading newline, so exactly one blank
+    # precedes the fit block in every variable.id mode.
+    if (identical(vlmode, "legend")) {
       cat("\n")
-      .jst_msg_out(lg)
+      .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
+    } else {
+      cat("\n")
     }
   }
-
-  # Outcome named beneath the table, following variable.id; folds into the
-  # legend under the legend modes (see .jst_print_outcome_line).
-  .jst_print_outcome_line(lab_src, original_formula_vars[1], vlmode)
-
-  # "legend" (mid): between the Coefficients table and the R-squared/fit block.
-  # In legend mode the roster's trailing blank line doubles as the separator
-  # before the fit block (matching jlogistic); otherwise one blank is emitted
-  # here. The R-squared line carries no leading newline, so exactly one blank
-  # precedes the fit block in every variable.id mode.
-  if (identical(vlmode, "legend")) {
-    cat("\n")
-    .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
+  if (identical(model_layout, "fit")) {
+    print_fit_block()
+    print_seam()
+    print_coef_block()
   } else {
-    cat("\n")
+    print_coef_block()
+    print_seam()
+    print_fit_block()
   }
-
-  cat("R-squared: ", sprintf(paste0("%.", digits_n, "f"), r_squared),
-      "    Adjusted R-squared: ", sprintf(paste0("%.", digits_n, "f"), adj_r_squared), "\n", sep = "")
-  cat("Residual Standard Error: ", sprintf(paste0("%.", digits_n, "f"), residual_se), "\n", sep = "")
-  # The two df are whole numbers and print whole (Session 328): cat()
-  # abbreviates a double of exactly 100000, so a model with 100,000 residual
-  # degrees of freedom read "on 1 and 1e+05 DF".
-  if (no_predictors) {
-    cat("\nF-statistic: none (the model has no predictors to test)\n")
-  } else {
-    cat("\nF-statistic: ", sprintf(paste0("%.", digits_n, "f"), f_value),
-        " on ", format(df1, scientific = FALSE),
-        " and ", format(df2, scientific = FALSE),
-        " DF, p-value: ", f_p_fmt, "\n", sep = "")
-  }
-  cat("Sum of Squares:\n")
-  cat("  Regression: ", sprintf(paste0("%.", digits_n, "f"), ss_regression), "\n", sep = "")
-  cat("  Residual:   ", sprintf(paste0("%.", digits_n, "f"), ss_residual),   "\n", sep = "")
-  cat("  Total:      ", sprintf(paste0("%.", digits_n, "f"), ss_total),      "\n", sep = "")
 
   # -- Diagnostics (VIF + plots) --------------------------------------------
   vif_values <- NULL
+  gvif_df    <- NULL
   if (show_diag) {
 
     # VIF — only for multivariate models (2+ predictors)
     if ("vif" %in% diag_which) {
       vif_values <- .jst_compute_vif(model)
-      if (!is.null(vif_values)) {
-        cat("\n")
-        vif_df <- data.frame(
-          Variable = .jst_interaction_label(names(vif_values)),
-          VIF      = round(vif_values, 3),
-          stringsAsFactors = FALSE,
-          row.names = NULL
-        )
-        # VIF keeps its fixed three places, trailing zeros included (1.250,
-        # not 1.25). (Session 326) The VIF column block-centered, the lines
-        # trimmed. (Session 327)
-        .jst_print_table(vif_df,
-                         caption = "VIF (Variance Inflation Factors)",
-                         row.names = FALSE,
-                         align = c("l", "bc"),
-                         digits = c(VIF = 3L))
-
-        # Targeted notes for VIF > 10: the table's brief interpretation,
-        # printed with it except at the minimal level (Session 346).
-        high_vif <- vif_values[vif_values > 10]
-        if (length(high_vif) > 0 && .jst_notes_on()) {
-          cat("\n")
-          # Both numbers to one place, padded (Session 327): through
-          # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
-          # table showing 16.000.
-          for (nm in names(high_vif)) {
-            .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
-                         .jst_fmt_stat(high_vif[[nm]], 1L),
-                         "): standard error inflated by a factor of ",
-                         .jst_fmt_stat(sqrt(high_vif[[nm]]), 1L), ".\n",
-                         "  If you need to interpret this coefficient ",
-                         "specifically, consider whether the collinearity ",
-                         "is a concern for your research question.")
-          }
-        }
-      }
+      gvif_df    <- .jst_compute_gvif(model, multi_cat_regs)
+      # The table and its notes, shared with jlogistic() (Session 375,
+      # which added the generalized VIF of a set of dummy variables).
+      if (!is.null(vif_values)) .jst_print_vif(vif_values, gvif_df)
     } else {
       # Compute VIF silently for return object even if not displayed
       vif_values <- .jst_compute_vif(model)
+      gvif_df    <- .jst_compute_gvif(model, multi_cat_regs)
     }
 
     # Diagnostic plots
@@ -3811,7 +3994,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         # jplot()'s line for jlogistic(), word for word (Session 347): the
         # two said one thing two ways, this one "use the back arrow in the
         # Plots pane to view all".
-        .jst_msg_out("\n", length(plot_which), " diagnostic plots produced ",
+        .jst_msg_out("\n", length(plot_which), " diagnostic plots produced\n",
                      "(use the arrow buttons in RStudio's Plots pane to ",
                      "navigate):")
         for (i in seq_along(plot_which)) {
@@ -3924,6 +4107,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                                         dummy_coef_names, lab_src,
                                         value_mode_coef),
     vif             = vif_values,
+    gvif            = gvif_df,
     sample_info     = sample_info
   )
   class(ret) <- "jst_lm"
@@ -3939,7 +4123,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #' Fits a binary logistic regression using \code{stats::glm()} with
 #' \code{family = binomial} and prints formatted output including an omnibus
 #' model test, model summary statistics, and a coefficients table with
-#' odds ratios (Exp(B)).
+#' Gelman-standardized coefficients and odds ratios (Exp(b)).
 #'
 #' The dependent variable must be coded 0/1. If it is not, the function
 #' stops with a clear error message and suggests the appropriate
@@ -4051,17 +4235,40 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   variable is fixed, so naming it here has no effect. A variable cannot be
 #'   listed in both \code{count} and \code{categorical}.
 #' @param ci Logical or NULL. If TRUE, adds 95% confidence intervals for
-#'   Exp(B). If NULL (default), defers to \code{joutput()}.
+#'   Exp(b). If NULL (default), defers to \code{joutput()}.
+#' @param std Character. The standardized-coefficient column, between p and
+#'   Exp(b). One of \code{"gelman"} (default) -- Gelman (2008) scaling,
+#'   headed "Gelman beta"; \code{"product"} -- each column of the model
+#'   scaled as it stands, the product of an interaction and a squared term
+#'   included (headed "Product beta"); or \code{"none"} -- omit the column.
+#'   See the section Standardized coefficients. \code{jlm()}'s regular
+#'   standardization (\code{"regular"}, \code{"all"}) divides by the
+#'   outcome's standard deviation, which a binary outcome does not have,
+#'   and is not available here. The returned object carries both columns'
+#'   full values (\code{beta_gelman}, \code{beta_product}) whichever is
+#'   shown.
 #' @param classification Logical. If TRUE, prints a classification table
 #'   showing predicted vs observed outcomes. Default is FALSE.
-#' @param diagnostics Logical, \code{"vif"}, or NULL. If TRUE (or
-#'   \code{"vif"}), prints the VIF table for a model with two or more
-#'   predictors. The values are the predictors' ordinary variance inflation
-#'   factors, computed from their correlations as for a linear model. A
-#'   VIF above 10 gets a line of interpretation under the table, except at
-#'   \code{joutput("minimal")}. If NULL (default), defers to
-#'   \code{joutput()}'s \code{diagnostics} setting, which is off at every
-#'   output level until it is set.
+#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints
+#'   the VIF table (for a model with two or more predictors) and draws three
+#'   diagnostic plots: binned residuals, Cook's distance, and residuals
+#'   against leverage. A character vector names the ones to show:
+#'   \code{vif}, \code{binned}, \code{cooks}, \code{leverage}, more than
+#'   one combined with \code{c()}, as in
+#'   \code{diagnostics = c("vif", "cooks")}; a name that is not one of
+#'   these is an error. The VIF values are the predictors' ordinary
+#'   variance inflation factors, computed from their correlations as for a
+#'   linear model. A VIF above 10 gets a line of interpretation under the
+#'   table, except at \code{joutput("minimal")}. In a model with a
+#'   predictor of three or more categories the table gives each predictor
+#'   one row with its generalized VIF, Df and GVIF^(1/(2*Df)), the dummy
+#'   variables sharing a row, as in \code{jlm()}; computed from the
+#'   correlations, these differ a little from \code{car::vif()} on a
+#'   \code{glm}, which uses the coefficients' covariance. If NULL
+#'   (default), defers to \code{joutput()}'s \code{diagnostics} setting,
+#'   which is off at every output level until it is set. The plots, and
+#'   the probability, ROC, calibration and odds-ratio plots, are
+#'   available afterwards from \code{jplot()} on the returned object.
 #' @param full Logical. If TRUE, turns on ci and classification. Does not
 #'   override an explicit FALSE, and does not turn on diagnostics, which
 #'   \code{diagnostics} alone governs.
@@ -4079,9 +4286,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'     \item{coefficients_raw}{Flat data frame of raw, full-precision
 #'       coefficient statistics (one row per coefficient): \code{term} (machine
 #'       key, shared with jlm), \code{b}, \code{SE}, \code{Wald}, \code{df},
-#'       \code{p}, \code{exp_b}, and \code{exp_ci_lower} / \code{exp_ci_upper}
+#'       \code{p}, \code{exp_b}, \code{exp_ci_lower} / \code{exp_ci_upper}
 #'       odds-ratio CI bounds (present regardless of the \code{ci} display
-#'       toggle). Carries an \code{outcome} attribute.}
+#'       toggle), \code{beta_gelman} and \code{beta_product} (the full
+#'       standardized coefficients, whichever \code{std} shows). Carries
+#'       \code{beta_standardization} and \code{outcome} attributes.}
 #'     \item{fit_raw}{List of raw, full-precision model-level fit statistics:
 #'       \code{ll_model}, \code{ll_null}, \code{deviance}, \code{null_deviance},
 #'       the omnibus likelihood-ratio test (\code{chi_sq}, \code{omnibus_df},
@@ -4101,6 +4310,11 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'       labels them, and \code{dummy}, the dummy column of each
 #'       (\code{NA} for the reference). Used by \code{jplot()}.}
 #'     \item{vif}{Named numeric vector of VIF values, or NULL.}
+#'     \item{gvif}{The generalized VIFs, when the model has a set of dummy
+#'       variables (a predictor of three or more categories): a data frame
+#'       of \code{term}, \code{GVIF}, \code{Df} and \code{GVIF_adj}
+#'       (\code{GVIF^(1/(2*Df))}), one row per predictor, as the VIF table
+#'       prints them; NULL otherwise.}
 #'     \item{sample_info}{Pipeline and missing data counts.}
 #'   }
 #'
@@ -4113,10 +4327,48 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   category, with one row per dummy variable, as the predictor's own rows
 #'   are. Each row's b is the change in the log-odds slope of one variable
 #'   per unit of the other (or, for a dummy row, the difference in slope
-#'   between that category and the reference), and its Exp(B) the factor by
+#'   between that category and the reference), and its Exp(b) the factor by
 #'   which the other variable's odds ratio is multiplied per unit; the
 #'   main-effect rows give the slopes where the other variable is zero.
 #'   \code{\link{jplot}} on the result draws the probability plots.
+#'
+#' @section Standardized coefficients:
+#'   A logistic regression's coefficients are in each predictor's own units,
+#'   so they cannot be compared across predictors measured differently. The
+#'   Gelman beta column puts them on one footing (Gelman, 2008): the model is
+#'   refit with every predictor centered, a continuous predictor also divided
+#'   by two standard deviations and a binary predictor (a 0/1 variable, or a
+#'   category's dummy variable) left on its one-unit scale. A continuous
+#'   predictor's Gelman beta is then the change in the log-odds for a move
+#'   from one standard deviation below its mean to one above, and a binary
+#'   predictor's the difference between its two groups, so the two are
+#'   comparable; \code{exp()} of a Gelman beta is the odds ratio for that
+#'   move. The outcome is not standardized -- it has no standard deviation
+#'   to standardize by, which is why fully standardized logistic
+#'   coefficients are contested and this column uses Gelman's scaling. It is
+#'   the column \code{jlm(std = "gelman")} gives a linear model, computed the
+#'   same way.
+#'
+#'   A computed term that is a power or a product of variables, such as
+#'   \code{I(x^2)} or \code{I(x * z)}, is recomputed from the rescaled
+#'   variables (Gelman, 2008, section 3.1), as an interaction written
+#'   \code{x * z} is. In a model with an interaction or a squared term the
+#'   predictors are centered, so a main effect's Gelman beta is its effect
+#'   at the average of the variable it interacts with, while its b is the
+#'   effect where that variable is 0; the two can differ in sign, and a note
+#'   under the table says so. A variable that equals the product of two
+#'   other predictors, or the square of one, is named in a note of its own,
+#'   since the column treats it as an ordinary predictor.
+#'
+#'   \code{std = "product"} instead scales each column of the model as it
+#'   stands -- b times two standard deviations of the column, a binary
+#'   column's b unchanged -- the product of an interaction and a squared
+#'   term included, the convention of software that computes a product as
+#'   a new variable. On a model without such terms the two columns agree.
+#'
+#' @references
+#' Gelman, A. (2008). Scaling regression inputs by dividing by two standard
+#' deviations. \emph{Statistics in Medicine}, 27(15), 2865-2873.
 #'
 #' @examples
 #' # With explicit data frame -- Volunteer is already coded 0/1
@@ -4189,19 +4441,49 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   \code{ref.categories} setting. Applies to \code{jlm()} and
 #'   \code{jlogistic()} only, since they are the functions that produce
 #'   dummy-coded coefficient tables.
+#' @param model.layout Character or NULL. The order of the coefficient
+#'   table and the fit statistics: \code{"coefficients"} (the default) prints
+#'   the Coefficients table first and the fit block after it;
+#'   \code{"fit"} prints the fit block first, for readers who look at the
+#'   model as a whole before its coefficients. The Case Processing block,
+#'   the diagnostics and the other tables stay where they are. NULL
+#'   (default) defers to \code{joutput()}'s \code{model.layout} setting.
 jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                       numeric = NULL, categorical = NULL, count = NULL,
                       ci = NULL, classification = FALSE,
                       diagnostics = NULL, ref.categories = NULL, full = FALSE,
                       case.processing.detail = NULL, digits = NULL, ...,
-                      value.id = NULL) {
+                      value.id = NULL, model.layout = NULL, std = "gelman") {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
                  c(.jst_word_specs("variable.id", "value.id", "case.processing.detail"),
                    list(diagnostics = .jst_word_spec(
-                     .jst_diagnostic_sets$jlogistic, "a diagnostic name"))),
+                     .jst_diagnostic_sets$jlogistic, "a diagnostic name"),
+                     model.layout = .jst_word_spec(c("coefficients", "fit"),
+                                                   "a layout"),
+                     std = .jst_word_spec(c("gelman", "product", "none"),
+                                          "a choice"))),
                  "jlogistic")
+  # The order of the coefficient table and the fit block (Session 375).
+  model_layout <- .jst_resolve_model_layout(model.layout, "jlogistic")
+  # The standardized column (Session 375): Gelman's scaling by default, as
+  # jlm()'s std = "gelman" computes it; the product-first form; or none.
+  # jlm()'s regular standardization divides by the outcome's standard
+  # deviation, which a binary outcome does not have.
+  if (!is.character(std) || length(std) != 1L || is.na(std) ||
+      !(std %in% c("gelman", "product", "none"))) {
+    if (is.character(std) && length(std) == 1L &&
+        isTRUE(std %in% c("regular", "all"))) {
+      .jst_stop("std = \"", std, "\" is not available in a logistic ",
+                "regression: its outcome has no standard deviation to ",
+                "standardize by.\n",
+                "Use std = \"gelman\" (the default), \"product\" or \"none\".",
+                fn = "jlogistic")
+    }
+    .jst_stop_arg(fn = "jlogistic", arg = "std",
+                  choices = c("gelman", "product", "none"))
+  }
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(classification, "classification")
@@ -4327,6 +4609,11 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # found here on the formula as typed, warned once the model is fitted.
   # See the matching block in jlm (Session 321).
   bare_powers <- .jst_formula_bare_powers(formula)
+  # The formula's own environment, for the constants a computed term may
+  # name, which the standardized refits re-evaluate below (Session 375, as
+  # in jlm()).
+  term_enclos <- environment(formula)
+  if (is.null(term_enclos)) term_enclos <- parent.frame()
 
   # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
   # refusal): compute log(x), I(x^2), and the like once on the analysis
@@ -5013,7 +5300,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   exp_b <- exp(coefs$b)
 
   # Continuous-statistic formatter honoring the joutput `digits` setting
-  # (coefficients, SEs, Wald, Exp(B), CI bounds). The Wald p-value and df
+  # (coefficients, SEs, Wald, Exp(b), CI bounds). The Wald p-value and df
   # keep their own fixed conventions. A value that rounds to zero from below
   # prints as a plain "0.000", not a signed "-0.000" (which reads as an error).
   fmt3 <- function(x) {
@@ -5026,6 +5313,61 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # japa-ready return carries beside each row, matching jlm. (return-shape audit)
   term_keys <- rownames(coefs)
 
+  # Standardized coefficients (Session 375; the jlogistic standardization
+  # item). Gelman (2008) scaling, as jlm()'s std = "gelman" REFIT does it:
+  # every predictor column of the model frame centered, a continuous one
+  # also divided by two standard deviations, a binary one (a 0/1 variable
+  # or a category's dummy column) left on its one-unit scale; a computed
+  # power or product recomputed from the rescaled inputs; the formula refit.
+  # The outcome needs no standard deviation, which is why this scaling, and
+  # not jlm()'s regular one, is the one a logistic regression can show. The
+  # warnings of the original fit (separation, say) are not repeated by the
+  # refit. Product-first (std = "product"): each column of the model scaled
+  # as it stands, a product and a power included -- b times two standard
+  # deviations of the column, a binary column's b as it is. Both carried on
+  # the return whichever is shown.
+  mf_gel <- mf
+  for (nm in names(mf_gel)[-1L]) {
+    col <- mf_gel[[nm]]
+    if (!is.numeric(col)) next
+    n_uni <- length(unique(col[!is.na(col)]))
+    ctr   <- col - mean(col, na.rm = TRUE)
+    mf_gel[[nm]] <- if (n_uni <= 2L) ctr
+                    else ctr / (2 * stats::sd(col, na.rm = TRUE))
+  }
+  mf_gel <- .jst_rescale_poly_terms(
+    mf_gel, mf, data, resolved$computed,
+    rescale = function(v) {
+      ctr <- v - mean(v)
+      if (length(unique(v)) <= 2L) ctr else ctr / (2 * stats::sd(v))
+    },
+    enclos  = term_enclos)
+  gelman_coefs <- tryCatch(
+    suppressWarnings(stats::coef(stats::glm(formula, data = mf_gel,
+                                            family = stats::binomial))),
+    error = function(e) NULL)
+  gelman_b        <- rep(NA_real_, nrow(coefs))
+  names(gelman_b) <- term_keys
+  if (!is.null(gelman_coefs)) {
+    names(gelman_coefs) <- .jst_unbacktick(names(gelman_coefs))
+    common_g <- intersect(names(gelman_coefs), term_keys)
+    gelman_b[common_g] <- gelman_coefs[common_g]
+  }
+  gelman_b["(Intercept)"] <- NA_real_
+  gelman_b <- gelman_b[term_keys]
+  mm_cols           <- stats::model.matrix(model)
+  colnames(mm_cols) <- .jst_unbacktick(colnames(mm_cols))
+  product_b         <- rep(NA_real_, nrow(coefs))
+  names(product_b)  <- term_keys
+  for (nm in intersect(colnames(mm_cols), term_keys)) {
+    if (identical(nm, "(Intercept)")) next
+    v <- mm_cols[, nm]
+    product_b[nm] <- coefs[nm, "b"] *
+      (if (length(unique(v)) <= 2L) 1 else 2 * stats::sd(v))
+  }
+  disp_beta     <- if (identical(std, "product")) product_b else gelman_b
+  show_beta_col <- !identical(std, "none") && !no_predictors
+
   # Clean up factor coefficient names for readability
   rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
                                             all.vars(formula)[-1],
@@ -5037,16 +5379,94 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     Wald   = fmt3(wald),
     df     = rep("1", nrow(coefs)),
     p      = p_fmt,
+    Beta   = ifelse(is.na(disp_beta), "", fmt3(disp_beta)),
     Exp_B  = fmt3(exp_b),
     stringsAsFactors = FALSE,
     row.names = rownames(coefs)
   )
+  if (!show_beta_col) out_coefs$Beta <- NULL
 
-  col_names <- c("b", "SE", "Wald", "df", "p", "Exp(B)")
+  # The standardized column sits after p and before Exp(b), so the
+  # odds-ratio column keeps its confidence interval beside it; its header
+  # names the regime, as jlm()'s does: "Gelman" + beta so the value is not
+  # misread as a classic beta, "Product" + beta for the product-first form.
+  # Exp(b), not SPSS's Exp(B), matches the lowercase b of the coefficient
+  # column (the jlogistic standardization item, Jeff's lean).
+  beta_header <- if (identical(std, "product")) "Product \u03b2"
+                 else "Gelman \u03b2"
+  col_names <- c("b", "SE", "Wald", "df", "p",
+                 if (show_beta_col) beta_header, "Exp(b)")
+
+  # The notes under the table when a standardized column is shown, as
+  # jlm()'s (Session 375; until then models_check G12 locked their
+  # absence): a model with an interaction or a power, where a main effect's
+  # beta is its effect at the average of the other variable; a predictor
+  # that is the product or square of others; the product-first column's
+  # convention. Each ends "See ?jlogistic.", whose section Standardized
+  # coefficients explains.
+  legends <- character(0)
+  if (show_beta_col) {
+    poly_info  <- lapply(intersect(resolved$computed, names(mf)[-1L]),
+                         .jst_poly_term, data_names = names(data),
+                         enclos = term_enclos)
+    poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
+    poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
+    pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
+                                  `[[`, numeric(1), "power")))
+    has_int  <- any(grepl(":", term_keys, fixed = TRUE)) ||
+                any(poly_kinds == "interaction")
+    has_pow  <- any(poly_kinds == "power")
+    pow_noun <- if (pow_max > 2) "power term" else "squared term"
+    hand     <- .jst_hand_products(mf, skip = c(resolved$computed,
+                                                dummy_coef_names))
+    fit_b    <- stats::coef(model)
+    names(fit_b) <- .jst_unbacktick(names(fit_b))
+    hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
+                            logical(1))]
+    hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
+    if (identical(std, "product")) {
+      p_int <- has_int || any(!hand_sq)
+      p_pow <- has_pow || any(hand_sq)
+      if (p_int || p_pow) {
+        legends <- c(legends, paste0(
+          beta_header, " treats ",
+          .jst_term_kinds_phrase(p_int, p_pow, pow_noun, each = TRUE),
+          " as an ordinary predictor, as some other software does.\n",
+          "See ?jlogistic."))
+      }
+    } else {
+      if (has_int || has_pow) {
+        legends <- c(legends, paste0(
+          "In a model with ",
+          .jst_term_kinds_phrase(has_int, has_pow, pow_noun), ", ",
+          beta_header, " comes from centered predictors: a ", beta_header,
+          " can have the opposite sign from its b, and other software may ",
+          "report different ", beta_header, " values.\n",
+          "See ?jlogistic."))
+      }
+      if (length(hand) > 0L) {
+        what <- vapply(hand, function(h) {
+          if (identical(h$a, h$b)) paste0(h$col, " is ", h$a, " squared")
+          else paste0(h$col, " is ", h$a, " * ", h$b)
+        }, character(1))
+        one <- length(hand) == 1L
+        legends <- c(legends, paste0(
+          .jst_format_var_list(what, and = TRUE),
+          if (one) " entered as its own variable, so "
+          else ", each entered as its own variable, so ",
+          beta_header,
+          if (one) " treats it as an ordinary predictor, not as "
+          else " treats them as ordinary predictors, not as ",
+          .jst_term_kinds_phrase(any(!hand_sq), any(hand_sq), "squared term"),
+          ".\n",
+          "See ?jlogistic."))
+      }
+    }
+  }
 
   # Profile-likelihood CI on the odds-ratio scale, computed once regardless of
   # the `ci` display toggle so the japa-ready return always carries it.
-  # stats::confint() gives log-odds bounds; exp() puts them on the Exp(B) scale.
+  # stats::confint() gives log-odds bounds; exp() puts them on the Exp(b) scale.
   # A profiling failure (e.g. separation) degrades to NA rather than erroring.
   ci_raw <- tryCatch(suppressMessages(stats::confint(model)),
                      error = function(e) NULL)
@@ -5099,9 +5519,8 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # folded in, and the categories indented two spaces beneath with value.id
   # labels. Single-contrast (dichotomous) predictors and continuous predictors
   # are left as flat rows. The display label rides in a leading column printed
-  # with "ln" (left, no-trim) alignment so the indent survives. jlogistic has
-  # no standardized-beta column, so there is nothing to blank on the grouped
-  # rows; the returned object is untouched.
+  # with "ln" (left, no-trim) alignment so the indent survives; the
+  # returned object is untouched.
   multi_cat_regs <- .jst_collect_multicat_regs(dummy_regs, auto_cat_regs,
                                                dummy_coef_names)
   coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
@@ -5110,57 +5529,80 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # Block-centered ("bc") since Session 328, as jlm's: the df column then
   # follows the same rule as the Omnibus table's below it (the two
   # disagreed, " 1" above "2 ", while this table was decimal-tabbed).
-  .jst_print_table(coef_disp,
-                   caption   = "Coefficients",
-                   col.names = c("", col_names),
-                   align     = c("ln", rep("bc", length(col_names))),
-                   row.names = FALSE)
+  # The coefficient block and the fit block, printed in the order
+  # model.layout sets (Session 375; the Session 63 item), as in jlm().
+  print_coef_block <- function() {
+    .jst_print_table(coef_disp,
+                     caption   = "Coefficients",
+                     col.names = c("", col_names),
+                     align     = c("ln", rep("bc", length(col_names))),
+                     row.names = FALSE)
 
-  # Outcome named beneath the table, following variable.id; folds into the
-  # legend under the legend modes (see .jst_print_outcome_line).
-  .jst_print_outcome_line(lab_src, original_formula_vars[1], vlmode)
+    # The standardized column's notes, each a blank line below what
+    # precedes it (Session 375, as in jlm()).
+    for (lg in legends) {
+      cat("\n")
+      .jst_msg_out(lg)
+    }
 
-  # -- Fit block (coefficient-first layout: prints after the Coefficients
-  # table). The variable.id "legend" roster sits at this coefficients/fit
-  # seam, mirroring jlm. (Session 63)
-  if (identical(vlmode, "legend")) {
-    cat("\n")
-    .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
-    # the roster's trailing blank line doubles as the separator before the
-    # fit block, so no extra blank is emitted here.
-  } else {
-    cat("\n")
+    # Outcome named beneath the table, following variable.id; folds into the
+    # legend under the legend modes (see .jst_print_outcome_line).
+    .jst_print_outcome_line(lab_src, original_formula_vars[1], vlmode)
   }
-  # The fit statistics to digits places, trailing zeros kept, as in the
-  # coefficient table above. Each of these one-row tables took its decimals
-  # from its single value, so -2 Log Likelihood could read 141.17 beside a
-  # three-place R-squared. (Session 326) Both tables block-centered and
-  # trimmed (Session 327): each value sits under the middle of its header,
-  # where the default alignment put it at the header's right edge and
-  # left-justified p.
-  # The intercept-only model (Session 359): the Omnibus Test compares the
-  # model with the intercept-only model, so there is nothing to test, and
-  # one line takes the table's place, as jlm()'s F line does.
-  if (no_predictors) {
-    cat("Omnibus Test of Model Coefficients\n",
-        "None: the model has no predictors to test.\n", sep = "")
-  } else {
-    .jst_print_table(omnibus_table,
-                     caption = "Omnibus Test of Model Coefficients",
-                     col.names = c("Chi-Square", "df", "p"),
+  print_fit_block <- function() {
+    # The fit statistics to digits places, trailing zeros kept, as in the
+    # coefficient table above. Each of these one-row tables took its decimals
+    # from its single value, so -2 Log Likelihood could read 141.17 beside a
+    # three-place R-squared. (Session 326) Both tables block-centered and
+    # trimmed (Session 327): each value sits under the middle of its header,
+    # where the default alignment put it at the header's right edge and
+    # left-justified p.
+    # The intercept-only model (Session 359): the Omnibus Test compares the
+    # model with the intercept-only model, so there is nothing to test, and
+    # one line takes the table's place, as jlm()'s F line does.
+    if (no_predictors) {
+      cat("Omnibus Test of Model Coefficients\n",
+          "None: the model has no predictors to test.\n", sep = "")
+    } else {
+      .jst_print_table(omnibus_table,
+                       caption = "Omnibus Test of Model Coefficients",
+                       col.names = c("Chi-Square", "df", "p"),
+                       row.names = FALSE,
+                       align = rep("bc", 3L),
+                       digits = c(Chi_Square = digits_n))
+    }
+    cat("\n")
+    .jst_print_table(summary_table,
+                     caption = "Model Summary",
+                     col.names = c("-2 Log Likelihood", "Cox & Snell R\u00b2",
+                                   "Nagelkerke R\u00b2", "AIC"),
                      row.names = FALSE,
-                     align = rep("bc", 3L),
-                     digits = c(Chi_Square = digits_n))
+                     align = rep("bc", 4L),
+                     digits = c(neg2LL = digits_n, CoxSnellR2 = digits_n,
+                                NagelkerkeR2 = digits_n, AIC = digits_n))
   }
-  cat("\n")
-  .jst_print_table(summary_table,
-                   caption = "Model Summary",
-                   col.names = c("-2 Log Likelihood", "Cox & Snell R\u00b2",
-                                 "Nagelkerke R\u00b2", "AIC"),
-                   row.names = FALSE,
-                   align = rep("bc", 4L),
-                   digits = c(neg2LL = digits_n, CoxSnellR2 = digits_n,
-                              NagelkerkeR2 = digits_n, AIC = digits_n))
+  print_seam <- function() {
+    # -- Fit block (coefficient-first layout: prints after the Coefficients
+    # table). The variable.id "legend" roster sits at this coefficients/fit
+    # seam, mirroring jlm. (Session 63)
+    if (identical(vlmode, "legend")) {
+      cat("\n")
+      .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
+      # the roster's trailing blank line doubles as the separator before the
+      # fit block, so no extra blank is emitted here.
+    } else {
+      cat("\n")
+    }
+  }
+  if (identical(model_layout, "fit")) {
+    print_fit_block()
+    print_seam()
+    print_coef_block()
+  } else {
+    print_coef_block()
+    print_seam()
+    print_fit_block()
+  }
 
   # -- Classification table (optional) ---------------------------------------
   if (classification) {
@@ -5201,51 +5643,56 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 
   # -- Diagnostics (VIF) -----------------------------------------------------
   vif_values <- NULL
+  gvif_df    <- NULL
   if (show_diag && "vif" %in% diag_which) {
     # VIF from the linear predictor model matrix, through the helper jlm()
     # uses (Session 347; the two blocks here repeated its body since
     # Session 172). NULL for fewer than two predictor columns.
     vif_values <- .jst_compute_vif(model)
-    if (!is.null(vif_values)) {
-      cat("\n")
-      vif_df <- data.frame(
-        Variable = .jst_interaction_label(names(vif_values)),
-        VIF      = round(vif_values, 3),
-        stringsAsFactors = FALSE,
-        row.names = NULL
-      )
-      # VIF keeps its fixed three places, trailing zeros included.
-      # (Session 326) The VIF column block-centered, the lines trimmed.
-      # (Session 327)
-      .jst_print_table(vif_df,
-                       caption = "VIF (Variance Inflation Factors)",
-                       row.names = FALSE,
-                       align = c("l", "bc"),
-                       digits = c(VIF = 3L))
-
-      # Targeted notes for VIF > 10: the table's brief interpretation,
-      # printed with it except at the minimal level (Session 346).
-      high_vif <- vif_values[vif_values > 10]
-      if (length(high_vif) > 0 && .jst_notes_on()) {
-        cat("\n")
-        # Both numbers to one place, padded (Session 327): through
-        # round() a VIF of 16 read "VIF = 16 ... a factor of 4" beside a
-        # table showing 16.000.
-        for (nm in names(high_vif)) {
-          .jst_msg_out(.jst_interaction_label(nm), " (VIF = ",
-                       .jst_fmt_stat(high_vif[[nm]], 1L),
-                       "): standard error inflated by a factor of ",
-                       .jst_fmt_stat(sqrt(high_vif[[nm]]), 1L), ".\n",
-                       "  If you need to interpret this coefficient ",
-                       "specifically, consider whether the collinearity ",
-                       "is a concern for your research question.")
-        }
-      }
-    }
+    gvif_df    <- .jst_compute_gvif(model, multi_cat_regs)
+    # The table and its notes, shared with jlm() (Session 375, which added
+    # the generalized VIF of a set of dummy variables).
+    if (!is.null(vif_values)) .jst_print_vif(vif_values, gvif_df)
   } else if (show_diag) {
     # Compute VIF silently for the return object: the helper's note when
     # the matrix is singular is not printed here, as it was not before.
     vif_values <- suppressMessages(.jst_compute_vif(model))
+    gvif_df    <- .jst_compute_gvif(model, multi_cat_regs)
+  }
+
+  # The residual and influence plots (Session 375, Capability Slate C2):
+  # jlogistic()'s diagnostics draw them as jlm()'s draw its own, with the
+  # same list above them; the fit plots stay jplot()'s.
+  if (show_diag) {
+    plot_which  <- intersect(diag_which, c("binned", "cooks", "leverage"))
+    plot_labels <- c(binned = "Binned Residuals", cooks = "Cook's Distance",
+                     leverage = "Residuals vs Leverage")
+    # The intercept-only model: every case has the same fitted probability
+    # and leverage, so the two plots drawn against them are left out, and
+    # a note under the list names them, as in jlm().
+    plot_which <- .jst_no_predictor_plots(
+      plot_which, model, skip = c("binned", "leverage"),
+      labels = plot_labels, note = FALSE)
+    no_pred_dropped <- attr(plot_which, "dropped")
+    plot_which <- as.vector(plot_which)
+    if (length(plot_which) > 0) {
+      if (length(plot_which) == 1) {
+        cat("\n(Diagnostic plot produced: ",
+            plot_labels[plot_which[1]], ")\n", sep = "")
+      } else {
+        .jst_msg_out("\n", length(plot_which), " diagnostic plots produced\n",
+                     "(use the arrow buttons in RStudio's Plots pane to ",
+                     "navigate):")
+        for (i in seq_along(plot_which)) {
+          cat("  ", i, ". ", plot_labels[plot_which[i]], "\n", sep = "")
+        }
+      }
+      .jst_plot_logistic_diagnostics(model, which = plot_which, list = FALSE)
+    }
+    if (length(no_pred_dropped) > 0L) {
+      cat("\n")
+      .jst_no_predictor_note(plot_labels[no_pred_dropped])
+    }
   }
 
   cat("\n")
@@ -5284,9 +5731,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     exp_b        = unname(exp_b),
     exp_ci_lower = unname(exp_ci_lower_raw),
     exp_ci_upper = unname(exp_ci_upper_raw),
+    beta_gelman  = unname(gelman_b),
+    beta_product = unname(product_b),
     stringsAsFactors = FALSE,
     row.names = NULL
   )
+  # Which standardized column the table shows (Session 375), as jlm()'s
+  # coefficients_raw records it.
+  attr(coefficients_raw, "beta_standardization") <- std
   attr(coefficients_raw, "outcome") <- c(
     name  = original_formula_vars[1],
     label = .jst_label_or_name(lab_src, original_formula_vars[1]))
@@ -5336,6 +5788,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                                         dummy_coef_names, lab_src,
                                         value_mode_coef),
     vif             = vif_values,
+    gvif            = gvif_df,
     sample_info     = sample_info
   )
   class(ret) <- "jst_logistic"

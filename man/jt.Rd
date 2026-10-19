@@ -44,12 +44,18 @@ one case. Ignored when paired = TRUE.}
 \item{effect.size}{Logical or NULL. If TRUE, prints Cohen's d. If NULL
 (default), defers to \code{joutput()} session setting.}
 
-\item{diagnostics}{Logical, \code{"levene"}, or NULL. If TRUE (or
-\code{"levene"}), prints Levene's test for homogeneity of variance,
-with a note under it when the test is significant (see "Unequal
-variances"). Not applicable when paired = TRUE. If NULL (default),
-defers to \code{joutput()}'s \code{diagnostics} setting, which is off
-at every output level until it is set.}
+\item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints
+Levene's test for homogeneity of variance, with a note under it when
+the test is significant (see "Unequal variances"), and draws a normal
+Q-Q plot of the standardized residuals -- each case's distance from
+its group's mean, or for a paired test each pair's difference from the
+mean difference -- a look at normality as a plot rather than a test.
+\code{"levene"} or \code{"qq"} asks for one of them;
+\code{c("levene", "qq")} for both. Levene's test is not applicable
+when paired = TRUE. If NULL (default), defers to \code{joutput()}'s
+\code{diagnostics} setting, which is off at every output level until
+it is set. The Q-Q plot is also drawn by
+\code{jplot(result, which = "qq")}.}
 
 \item{ci}{Logical or NULL. If TRUE, adds 95\% confidence interval for the
 mean difference. If NULL (default), defers to \code{joutput()}.}
@@ -111,8 +117,14 @@ Invisibly returns a list of class \code{jst_ttest} containing:
 \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
 data frame used for plotting), \code{test_type}, \code{formula},
 \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
-\code{ci} (95\% CI), \code{cohens_d}, \code{d_label}, \code{n}, and
-\code{sample_info} (pipeline and missing data counts).
+\code{ci} (95\% CI), \code{cohens_d}, \code{d_label}, \code{n},
+\code{sample_info} (pipeline and missing data counts), and
+\code{levene}: Levene's test as printed, a list of \code{F},
+\code{df1}, \code{df2}, \code{p} and \code{note} -- the verdict of the
+note under a significant test (\code{"acceptable"}, \code{"unreliable"}
+or \code{"differ"}), recorded at every output level, or \code{NA} when
+no note applies (the test not significant, or Welch's test run);
+\code{NULL} when Levene's test was not asked for or the test is paired.
 }
 \description{
 Runs a t-test and prints formatted group descriptives and test results.

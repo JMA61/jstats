@@ -20,7 +20,8 @@ jlm(
   case.processing.detail = NULL,
   digits = NULL,
   ...,
-  value.id = NULL
+  value.id = NULL,
+  model.layout = NULL
 )
 }
 \arguments{
@@ -135,10 +136,18 @@ diagnostic plots. A character vector names the ones to show:
 \code{leverage}, more than one combined with \code{c()}, as in
 \code{diagnostics = c("vif", "qq")}; a name that is not one of these
 is an error. A VIF above 10 gets a line of interpretation under the
-table, except at \code{joutput("minimal")}. If NULL (default), defers
-to \code{joutput()}'s \code{diagnostics} setting, which is off at
-every output level until it is set. The same plots are available
-afterwards from \code{jplot()} on the returned object.}
+table, except at \code{joutput("minimal")}. In a model with a
+predictor of three or more categories, whose dummy variables would
+each get a VIF that depends on the reference category, the table
+gives each predictor one row with its generalized VIF (Fox and
+Monette, 1992), Df and GVIF^(1/(2\emph{Df)), as \code{car::vif()} does, the
+dummy variables sharing a row (and an interaction's, with the same
+other variable); squared, GVIF^(1/(2}Df)) is on the scale of a VIF,
+and the line of interpretation fires when it passes 10. If NULL
+(default), defers to \code{joutput()}'s \code{diagnostics} setting,
+which is off at every output level until it is set. The same plots
+are available afterwards from \code{jplot()} on the returned
+object.}
 
 \item{ref.categories}{Logical or NULL. Per-call override for showing the
 reference-categories block (the baseline level dropped from each set of
@@ -186,6 +195,14 @@ identically under all supported modes. NULL (default) defers to
 \code{joutput()}'s \code{value.id} setting. Applies only to multi-category
 dummy predictors; continuous and single-contrast (dichotomous) predictors
 are unaffected. Not a logical.}
+
+\item{model.layout}{Character or NULL. The order of the coefficient
+table and the fit statistics: \code{"coefficients"} (the default) prints
+the Coefficients table first and the fit block after it;
+\code{"fit"} prints the fit block first, for readers who look at the
+model as a whole before its coefficients. The Case Processing block,
+the diagnostics and the other tables stay where they are. NULL
+(default) defers to \code{joutput()}'s \code{model.layout} setting.}
 }
 \value{
 Invisibly returns a list of class \code{jst_lm} containing:
@@ -222,6 +239,11 @@ variable: \code{labels}, its categories as the coefficient table
 labels them, and \code{dummy}, the dummy column of each
 (\code{NA} for the reference). Used by \code{jplot()}.}
 \item{vif}{Named numeric vector of VIF values, or NULL for bivariate.}
+\item{gvif}{The generalized VIFs, when the model has a set of dummy
+variables (a predictor of three or more categories): a data frame
+of \code{term}, \code{GVIF}, \code{Df} and \code{GVIF_adj}
+(\code{GVIF^(1/(2*Df))}), one row per predictor, as the VIF table
+prints them; NULL otherwise.}
 \item{sample_info}{Pipeline and missing data counts.}
 }
 }

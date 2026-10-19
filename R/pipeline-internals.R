@@ -1454,7 +1454,8 @@
                   case.processing = FALSE, case.processing.detail = "none",
                   case.processing.filter = "collapse",
                   variable.id = "names", value.id = "labels",
-                  ref.categories = FALSE, digits = 3,
+                  ref.categories = FALSE, model.layout = "coefficients",
+                  digits = 3,
                   missing.notice = FALSE),
   standard = list(effect.size = TRUE,
                   regression.ci = FALSE, means.ci = TRUE,
@@ -1462,7 +1463,8 @@
                   case.processing = NULL,  case.processing.detail = "totals",
                   case.processing.filter = "auto",
                   variable.id = "names", value.id = "both",
-                  ref.categories = TRUE, digits = 3,
+                  ref.categories = TRUE, model.layout = "coefficients",
+                  digits = 3,
                   missing.notice = TRUE),
   full     = list(effect.size = TRUE,
                   regression.ci = TRUE,  means.ci = TRUE,
@@ -1470,7 +1472,8 @@
                   case.processing = TRUE,  case.processing.detail = "per_code",
                   case.processing.filter = "list",
                   variable.id = "legend", value.id = "both",
-                  ref.categories = TRUE, digits = 3,
+                  ref.categories = TRUE, model.layout = "coefficients",
+                  digits = 3,
                   missing.notice = TRUE)
 )
 
@@ -1557,6 +1560,41 @@
   defaults[[level]][[name]]
 }
 
+#' Internal helper: check a model.layout value
+#'
+#' \code{"coefficients"} or \code{"fit"} (Session 375), the choice error
+#' otherwise.
+#'
+#' @param x The value given.
+#' @param fn The function's name.
+#' @return Invisible NULL.
+#' @keywords internal
+.jst_check_model_layout <- function(x, fn) {
+  if (!is.character(x) || length(x) != 1L || is.na(x) ||
+      !(x %in% c("coefficients", "fit"))) {
+    .jst_stop_arg(fn = fn, arg = "model.layout",
+                  choices = c("coefficients", "fit"))
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: the order of a model's coefficient table and fit block
+#'
+#' The call's own \code{model.layout}, then \code{joutput()}'s, then
+#' \code{"coefficients"} (Session 375; the Session 63 item): jlm() and
+#' jlogistic() print the Coefficients table first and the fit statistics
+#' after it, or under \code{"fit"} the other way round.
+#'
+#' @param per_call The call's \code{model.layout} argument.
+#' @param fn The function's name.
+#' @return \code{"coefficients"} or \code{"fit"}.
+#' @keywords internal
+.jst_resolve_model_layout <- function(per_call, fn) {
+  if (!is.null(per_call)) .jst_check_model_layout(per_call, fn)
+  v <- .jst_resolve_toggle("model.layout", per_call)
+  if (is.null(v)) "coefficients" else v
+}
+
 # -- Diagnostics: one setting, apart from the levels (Session 346) -------------
 #
 # Jeff's ruling of 8 October 2026, amending ruling R14 parts 3 and 4.
@@ -1574,11 +1612,17 @@
 # A new diagnostic joins its function's set and TRUE picks it up.
 
 #' @keywords internal
+#
+# Session 375 (Capability Slate C2): jt() and jaov() gained "qq", a normal
+# Q-Q plot of the residuals (ruling R14, part 2: a plot, not a test), and
+# jlogistic() gained its residual and influence plots -- "binned", "cooks"
+# and "leverage" -- as jlm()'s set holds its own; the probability, ROC,
+# calibration and odds-ratio plots show the fit and stay jplot()'s.
 .jst_diagnostic_sets <- list(
-  jt        = "levene",
-  jaov      = "levene",
+  jt        = c("levene", "qq"),
+  jaov      = c("levene", "qq"),
   jlm       = c("vif", "residuals", "qq", "scale", "cooks", "leverage"),
-  jlogistic = "vif"
+  jlogistic = c("vif", "binned", "cooks", "leverage")
 )
 
 #' Internal helper: validate a diagnostics value
@@ -1712,15 +1756,23 @@
 #' @param y Numeric vector; the outcome.
 #' @param g Factor; the groups.
 #' @param fn Character(1); \code{"jt"} or \code{"jaov"}.
-#' @return Invisibly NULL; called for the note it prints.
+#' @return Invisibly, the verdict the note states -- \code{"acceptable"},
+#'   \code{"unreliable"} or \code{"differ"} -- or \code{NA} when there is no
+#'   note (the test not significant, or a group with fewer than two cases).
+#'   The verdict is returned at every output level, printed or not, so the
+#'   caller's \code{levene} element records it (Session 375).
 #' @keywords internal
 .jst_levene_note <- function(p, y, g, fn) {
-  if (is.na(p) || p >= 0.05 || !.jst_notes_on()) return(invisible(NULL))
+  if (is.na(p) || p >= 0.05) return(invisible(NA_character_))
   n <- tapply(y, g, function(v) sum(!is.na(v)))
   s <- tapply(y, g, stats::sd, na.rm = TRUE)
-  if (any(is.na(n)) || any(n < 2L) || anyNA(s)) return(invisible(NULL))
+  if (any(is.na(n)) || any(n < 2L) || anyNA(s)) return(invisible(NA_character_))
   r_n <- max(n) / min(n)
   r_s <- if (min(s) == 0) Inf else max(s) / min(s)
+  key <- if (r_n <= 1.25 && r_s <= 2) "acceptable"
+         else if (r_n > 1.5 && r_s > 2) "unreliable"
+         else "differ"
+  if (!.jst_notes_on()) return(invisible(key))
   # One decimal place. Two where one would mislead: where it would print
   # "1.0" for sizes or SDs that are not the same, and where it would put
   # the ratio on the other side of a guideline from the verdict below
@@ -1751,10 +1803,10 @@
   wel   <- if (identical(fn, "jt")) "Welch's t-test" else "Welch's ANOVA"
   welch_line <- paste0(wel, " does not assume equal variances: ",
                        "welch = TRUE.\n")
-  verdict <- if (r_n <= 1.25 && r_s <= 2) {
+  verdict <- if (identical(key, "acceptable")) {
     paste0("Both are within the usual guidelines, so ", std,
            " is usually still acceptable.\n")
-  } else if (r_n > 1.5 && r_s > 2) {
+  } else if (identical(key, "unreliable")) {
     paste0("Both are beyond the usual guidelines, so the p-value of ", std,
            " may not be reliable.\n", welch_line)
   } else {
@@ -1765,7 +1817,7 @@
                sizes, ", and ", sds, ".\n",
                verdict,
                "See ?", fn, ".")
-  invisible(NULL)
+  invisible(key)
 }
 
 #' Internal helper: validate and resolve the digits (decimal places) setting

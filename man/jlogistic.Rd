@@ -20,7 +20,9 @@ jlogistic(
   case.processing.detail = NULL,
   digits = NULL,
   ...,
-  value.id = NULL
+  value.id = NULL,
+  model.layout = NULL,
+  std = "gelman"
 )
 }
 \arguments{
@@ -66,19 +68,31 @@ variable is fixed, so naming it here has no effect. A variable cannot be
 listed in both \code{count} and \code{categorical}.}
 
 \item{ci}{Logical or NULL. If TRUE, adds 95\% confidence intervals for
-Exp(B). If NULL (default), defers to \code{joutput()}.}
+Exp(b). If NULL (default), defers to \code{joutput()}.}
 
 \item{classification}{Logical. If TRUE, prints a classification table
 showing predicted vs observed outcomes. Default is FALSE.}
 
-\item{diagnostics}{Logical, \code{"vif"}, or NULL. If TRUE (or
-\code{"vif"}), prints the VIF table for a model with two or more
-predictors. The values are the predictors' ordinary variance inflation
-factors, computed from their correlations as for a linear model. A
-VIF above 10 gets a line of interpretation under the table, except at
-\code{joutput("minimal")}. If NULL (default), defers to
-\code{joutput()}'s \code{diagnostics} setting, which is off at every
-output level until it is set.}
+\item{diagnostics}{Logical, character vector, or NULL. If TRUE, prints
+the VIF table (for a model with two or more predictors) and draws three
+diagnostic plots: binned residuals, Cook's distance, and residuals
+against leverage. A character vector names the ones to show:
+\code{vif}, \code{binned}, \code{cooks}, \code{leverage}, more than
+one combined with \code{c()}, as in
+\code{diagnostics = c("vif", "cooks")}; a name that is not one of
+these is an error. The VIF values are the predictors' ordinary
+variance inflation factors, computed from their correlations as for a
+linear model. A VIF above 10 gets a line of interpretation under the
+table, except at \code{joutput("minimal")}. In a model with a
+predictor of three or more categories the table gives each predictor
+one row with its generalized VIF, Df and GVIF^(1/(2*Df)), the dummy
+variables sharing a row, as in \code{jlm()}; computed from the
+correlations, these differ a little from \code{car::vif()} on a
+\code{glm}, which uses the coefficients' covariance. If NULL
+(default), defers to \code{joutput()}'s \code{diagnostics} setting,
+which is off at every output level until it is set. The plots, and
+the probability, ROC, calibration and odds-ratio plots, are
+available afterwards from \code{jplot()} on the returned object.}
 
 \item{ref.categories}{Logical or NULL. Per-call override for showing the
 reference-categories block (the baseline level dropped from each set of
@@ -126,6 +140,26 @@ identically under all supported modes. NULL (default) defers to
 \code{joutput()}'s \code{value.id} setting. Applies only to multi-category
 dummy predictors; continuous and single-contrast (dichotomous) predictors
 are unaffected. Not a logical.}
+
+\item{model.layout}{Character or NULL. The order of the coefficient
+table and the fit statistics: \code{"coefficients"} (the default) prints
+the Coefficients table first and the fit block after it;
+\code{"fit"} prints the fit block first, for readers who look at the
+model as a whole before its coefficients. The Case Processing block,
+the diagnostics and the other tables stay where they are. NULL
+(default) defers to \code{joutput()}'s \code{model.layout} setting.}
+
+\item{std}{Character. The standardized-coefficient column, between p and
+Exp(b). One of \code{"gelman"} (default) -- Gelman (2008) scaling,
+headed "Gelman beta"; \code{"product"} -- each column of the model
+scaled as it stands, the product of an interaction and a squared term
+included (headed "Product beta"); or \code{"none"} -- omit the column.
+See the section Standardized coefficients. \code{jlm()}'s regular
+standardization (\code{"regular"}, \code{"all"}) divides by the
+outcome's standard deviation, which a binary outcome does not have,
+and is not available here. The returned object carries both columns'
+full values (\code{beta_gelman}, \code{beta_product}) whichever is
+shown.}
 }
 \value{
 Invisibly returns a list of class \code{jst_logistic} containing:
@@ -138,9 +172,11 @@ Invisibly returns a list of class \code{jst_logistic} containing:
 \item{coefficients_raw}{Flat data frame of raw, full-precision
 coefficient statistics (one row per coefficient): \code{term} (machine
 key, shared with jlm), \code{b}, \code{SE}, \code{Wald}, \code{df},
-\code{p}, \code{exp_b}, and \code{exp_ci_lower} / \code{exp_ci_upper}
+\code{p}, \code{exp_b}, \code{exp_ci_lower} / \code{exp_ci_upper}
 odds-ratio CI bounds (present regardless of the \code{ci} display
-toggle). Carries an \code{outcome} attribute.}
+toggle), \code{beta_gelman} and \code{beta_product} (the full
+standardized coefficients, whichever \code{std} shows). Carries
+\code{beta_standardization} and \code{outcome} attributes.}
 \item{fit_raw}{List of raw, full-precision model-level fit statistics:
 \code{ll_model}, \code{ll_null}, \code{deviance}, \code{null_deviance},
 the omnibus likelihood-ratio test (\code{chi_sq}, \code{omnibus_df},
@@ -160,6 +196,11 @@ variable: \code{labels}, its categories as the coefficient table
 labels them, and \code{dummy}, the dummy column of each
 (\code{NA} for the reference). Used by \code{jplot()}.}
 \item{vif}{Named numeric vector of VIF values, or NULL.}
+\item{gvif}{The generalized VIFs, when the model has a set of dummy
+variables (a predictor of three or more categories): a data frame
+of \code{term}, \code{GVIF}, \code{Df} and \code{GVIF_adj}
+(\code{GVIF^(1/(2*Df))}), one row per predictor, as the VIF table
+prints them; NULL otherwise.}
 \item{sample_info}{Pipeline and missing data counts.}
 }
 }
@@ -167,7 +208,7 @@ labels them, and \code{dummy}, the dummy column of each
 Fits a binary logistic regression using \code{stats::glm()} with
 \code{family = binomial} and prints formatted output including an omnibus
 model test, model summary statistics, and a coefficients table with
-odds ratios (Exp(B)).
+Gelman-standardized coefficients and odds ratios (Exp(b)).
 }
 \details{
 The dependent variable must be coded 0/1. If it is not, the function
@@ -238,10 +279,46 @@ interaction rows are grouped under a header naming the reference
 category, with one row per dummy variable, as the predictor's own rows
 are. Each row's b is the change in the log-odds slope of one variable
 per unit of the other (or, for a dummy row, the difference in slope
-between that category and the reference), and its Exp(B) the factor by
+between that category and the reference), and its Exp(b) the factor by
 which the other variable's odds ratio is multiplied per unit; the
 main-effect rows give the slopes where the other variable is zero.
 \code{\link{jplot}} on the result draws the probability plots.
+}
+
+\section{Standardized coefficients}{
+
+A logistic regression's coefficients are in each predictor's own units,
+so they cannot be compared across predictors measured differently. The
+Gelman beta column puts them on one footing (Gelman, 2008): the model is
+refit with every predictor centered, a continuous predictor also divided
+by two standard deviations and a binary predictor (a 0/1 variable, or a
+category's dummy variable) left on its one-unit scale. A continuous
+predictor's Gelman beta is then the change in the log-odds for a move
+from one standard deviation below its mean to one above, and a binary
+predictor's the difference between its two groups, so the two are
+comparable; \code{exp()} of a Gelman beta is the odds ratio for that
+move. The outcome is not standardized -- it has no standard deviation
+to standardize by, which is why fully standardized logistic
+coefficients are contested and this column uses Gelman's scaling. It is
+the column \code{jlm(std = "gelman")} gives a linear model, computed the
+same way.
+
+A computed term that is a power or a product of variables, such as
+\code{I(x^2)} or \code{I(x * z)}, is recomputed from the rescaled
+variables (Gelman, 2008, section 3.1), as an interaction written
+\code{x * z} is. In a model with an interaction or a squared term the
+predictors are centered, so a main effect's Gelman beta is its effect
+at the average of the variable it interacts with, while its b is the
+effect where that variable is 0; the two can differ in sign, and a note
+under the table says so. A variable that equals the product of two
+other predictors, or the square of one, is named in a note of its own,
+since the column treats it as an ordinary predictor.
+
+\code{std = "product"} instead scales each column of the model as it
+stands -- b times two standard deviations of the column, a binary
+column's b unchanged -- the product of an interaction and a squared
+term included, the convention of software that computes a product as
+a new variable. On a model without such terms the two columns agree.
 }
 
 \examples{
@@ -291,6 +368,10 @@ jlogistic(Volunteer ~ Age + Education, numeric = "Education")
 jdummy(community, NULL)
 juse(NULL)
 
+}
+\references{
+Gelman, A. (2008). Scaling regression inputs by dividing by two standard
+deviations. \emph{Statistics in Medicine}, 27(15), 2865-2873.
 }
 \seealso{
 \code{\link{jstats}} for the package overview,

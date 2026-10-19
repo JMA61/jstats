@@ -60,9 +60,14 @@
 #'       (\code{jt}, \code{jaov});
 #'     \item \code{"vif"} -- the variance inflation factors (\code{jlm},
 #'       \code{jlogistic});
-#'     \item \code{"residuals"}, \code{"qq"}, \code{"scale"},
-#'       \code{"cooks"}, \code{"leverage"} -- the regression diagnostic
-#'       plots (\code{jlm}).
+#'     \item \code{"qq"} -- the normal Q-Q plot of the residuals
+#'       (\code{jt}, \code{jaov}, \code{jlm});
+#'     \item \code{"residuals"}, \code{"scale"} -- the regression
+#'       diagnostic plots (\code{jlm});
+#'     \item \code{"binned"} -- the binned residual plot
+#'       (\code{jlogistic});
+#'     \item \code{"cooks"}, \code{"leverage"} -- Cook's distance and
+#'       residuals against leverage (\code{jlm}, \code{jlogistic}).
 #'   }
 #'   Name more than one with \code{c()}:
 #'   \code{joutput(diagnostics = c("levene", "vif"))}. A diagnostic prints
@@ -178,6 +183,12 @@
 #'   label. Not a logical.
 #' @param ref.categories Logical or NULL. Override the level's default
 #'   for the reference categories block (registered dummies).
+#' @param model.layout Character or NULL. The order of \code{jlm()}'s and
+#'   \code{jlogistic()}'s output: \code{"coefficients"} (every level's
+#'   default) prints the Coefficients table first and the fit statistics
+#'   after it; \code{"fit"} prints the fit statistics first. A level call
+#'   puts it back to \code{"coefficients"}, as it puts back the other
+#'   settings.
 #' @param missing.notice Logical or NULL. Controls the notification about
 #'   declared missing values that \code{jload()} emits for files whose
 #'   variables carry them. \code{TRUE} prints it on every
@@ -290,7 +301,8 @@ joutput <- function(level, effect.size = NULL,
                     case.processing = NULL, case.processing.detail = NULL,
                     case.processing.filter = NULL,
                     variable.id = NULL, value.id = NULL,
-                    ref.categories = NULL, missing.notice = NULL,
+                    ref.categories = NULL, model.layout = NULL,
+                    missing.notice = NULL,
                     digits = NULL, quiet = FALSE) {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
@@ -301,7 +313,9 @@ joutput <- function(level, effect.size = NULL,
                                                  .jst_output_toggle_names),
                                                "a level or setting name"),
                         case.processing.filter = .jst_word_spec(
-                          c("auto", "list", "collapse"), "a row form"))),
+                          c("auto", "list", "collapse"), "a row form"),
+                        model.layout = .jst_word_spec(
+                          c("coefficients", "fit"), "a layout"))),
                  "joutput")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
@@ -388,6 +402,10 @@ joutput <- function(level, effect.size = NULL,
     toggle_args$value.id <- value.id
   }
   if (!is.null(ref.categories))  toggle_args$ref.categories  <- ref.categories
+  if (!is.null(model.layout)) {
+    .jst_check_model_layout(model.layout, "joutput")
+    toggle_args$model.layout <- model.layout
+  }
   if (!is.null(missing.notice))      toggle_args$missing.notice      <- missing.notice
   if (!is.null(digits)) {
     if (length(digits) != 1L || is.na(digits) ||
@@ -498,7 +516,7 @@ joutput <- function(level, effect.size = NULL,
                               "case.processing", "case.processing.detail",
                               "case.processing.filter",
                               "variable.id", "value.id", "ref.categories",
-                              "missing.notice", "digits")
+                              "model.layout", "missing.notice", "digits")
 
 # -- Internal: joutput setting relatedness map --------------------------------
 #
@@ -581,7 +599,7 @@ joutput <- function(level, effect.size = NULL,
     # and missing.notice support three states (TRUE/FALSE/NULL=AUTO); the remaining
     # toggles are binary.
     label <- if (nm %in% c("case.processing.detail", "case.processing.filter",
-                           "variable.id", "value.id")) {
+                           "variable.id", "value.id", "model.layout")) {
       toupper(effective)
     } else if (nm == "digits") {
       as.character(effective)

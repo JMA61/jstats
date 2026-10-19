@@ -56,12 +56,18 @@
 #'   one case. Ignored when paired = TRUE.
 #' @param effect.size Logical or NULL. If TRUE, prints Cohen's d. If NULL
 #'   (default), defers to \code{joutput()} session setting.
-#' @param diagnostics Logical, \code{"levene"}, or NULL. If TRUE (or
-#'   \code{"levene"}), prints Levene's test for homogeneity of variance,
-#'   with a note under it when the test is significant (see "Unequal
-#'   variances"). Not applicable when paired = TRUE. If NULL (default),
-#'   defers to \code{joutput()}'s \code{diagnostics} setting, which is off
-#'   at every output level until it is set.
+#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints
+#'   Levene's test for homogeneity of variance, with a note under it when
+#'   the test is significant (see "Unequal variances"), and draws a normal
+#'   Q-Q plot of the standardized residuals -- each case's distance from
+#'   its group's mean, or for a paired test each pair's difference from the
+#'   mean difference -- a look at normality as a plot rather than a test.
+#'   \code{"levene"} or \code{"qq"} asks for one of them;
+#'   \code{c("levene", "qq")} for both. Levene's test is not applicable
+#'   when paired = TRUE. If NULL (default), defers to \code{joutput()}'s
+#'   \code{diagnostics} setting, which is off at every output level until
+#'   it is set. The Q-Q plot is also drawn by
+#'   \code{jplot(result, which = "qq")}.
 #' @param ci Logical or NULL. If TRUE, adds 95% confidence interval for the
 #'   mean difference. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
@@ -140,8 +146,14 @@
 #'   \code{model} (the \code{t.test} result), \code{model_frame} (the analysis
 #'   data frame used for plotting), \code{test_type}, \code{formula},
 #'   \code{descriptives}, \code{t}, \code{df}, \code{p}, \code{mean_difference},
-#'   \code{ci} (95% CI), \code{cohens_d}, \code{d_label}, \code{n}, and
-#'   \code{sample_info} (pipeline and missing data counts).
+#'   \code{ci} (95% CI), \code{cohens_d}, \code{d_label}, \code{n},
+#'   \code{sample_info} (pipeline and missing data counts), and
+#'   \code{levene}: Levene's test as printed, a list of \code{F},
+#'   \code{df1}, \code{df2}, \code{p} and \code{note} -- the verdict of the
+#'   note under a significant test (\code{"acceptable"}, \code{"unreliable"}
+#'   or \code{"differ"}), recorded at every output level, or \code{NA} when
+#'   no note applies (the test not significant, or Welch's test run);
+#'   \code{NULL} when Levene's test was not asked for or the test is paired.
 #'
 #' @examples
 #' # With explicit data frame
@@ -239,7 +251,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   ci          <- .jst_resolve_toggle("means.ci",    ci)
   # Diagnostics are apart from the levels and from full = TRUE (Session
   # 346): the call's own diagnostics =, else joutput()'s, else off.
-  levene      <- "levene" %in% .jst_resolve_diagnostics(diagnostics, "jt")
+  diag_which  <- .jst_resolve_diagnostics(diagnostics, "jt")
+  levene      <- "levene" %in% diag_which
+  qq_plot     <- "qq" %in% diag_which
   # Red title - determined before any output
   if (paired) {
     .cat_red("Paired Samples T-Test\n")
@@ -511,7 +525,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   dv_disp    <- .jst_combine_id(dv_name,    .jst_label_or_name(lab_src, dv_name),    vlmode)
   group_disp <- .jst_combine_id(group_name, .jst_label_or_name(lab_src, group_name), vlmode)
 
-  # Levene's test
+  # Levene's test. Its result is returned as well as printed (Session 375):
+  # `levene_ret` is NULL when the test was not run.
+  levene_ret <- NULL
   if (levene && !paired) {
     group_factor  <- data[[group_name]]
     dv_vals       <- data[[dv_name]]
@@ -545,7 +561,12 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
     # The note under a significant test, in one of three forms (Session
     # 346; .jst_levene_note()). Not when Welch's test is the one run.
-    if (!welch) .jst_levene_note(levene_p, dv_vals, group_factor, "jt")
+    levene_note <- if (!welch) .jst_levene_note(levene_p, dv_vals,
+                                                group_factor, "jt")
+                   else NA_character_
+    levene_ret <- list(F = levene_result$`F value`[1],
+                       df1 = levene_result$Df[1], df2 = levene_result$Df[2],
+                       p = levene_p, note = levene_note)
     cat("\n")
   } else if (levene && paired && !is.null(diagnostics)) {
     # Said only when this call asked for Levene's test (Session 347). Under
@@ -683,6 +704,31 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     cat(paste0("\n", d_label, ": ", .jst_fmt_stat(cohens_d, digits_n), "\n"))
   }
 
+  # The standardized residuals (Session 375; ruling R14, part 2): each case's
+  # distance from its group's mean, or each pair's difference from the mean
+  # difference, over its standard error -- what the normal Q-Q plot draws,
+  # here under diagnostics and afterwards from jplot(). Returned as
+  # `residuals`.
+  if (paired) {
+    t_resid <- .jst_group_std_resid(group1_data - group2_data,
+                                    rep(1L, length(group1_data)),
+                                    pooled = FALSE)
+  } else {
+    t_resid <- .jst_group_std_resid(
+      c(group1_data, group2_data),
+      rep(1:2, c(length(group1_data), length(group2_data))),
+      pooled = !welch)
+    rn <- unlist(lapply(levels[1:2], function(lv) {
+      ii <- which(data[[group_name]] == lv)
+      rownames(data)[ii[!is.na(data[[dv_name]][ii])]]
+    }))
+    if (length(rn) == length(t_resid)) names(t_resid) <- rn
+  }
+  if (qq_plot) {
+    cat("\n(Diagnostic plot produced: Normal Q-Q)\n")
+    .jst_plot_group_qq(t_resid, paired = paired)
+  }
+
   leg <- .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
                             vlmode, value_mode)
 
@@ -704,7 +750,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     cohens_d        = cohens_d,
     d_label         = d_label,
     n               = n_analysis,
-    sample_info     = sample_info
+    sample_info     = sample_info,
+    levene          = levene_ret,
+    residuals       = t_resid
   )
   class(ret) <- "jst_ttest"
   invisible(ret)
@@ -779,12 +827,16 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   If NULL (default), defers to \code{joutput()}.
 #' @param effect.size Logical or NULL. If TRUE, prints eta-squared. If NULL
 #'   (default), defers to \code{joutput()}.
-#' @param diagnostics Logical, \code{"levene"}, or NULL. If TRUE (or
-#'   \code{"levene"}), prints Levene's test for homogeneity of variance,
-#'   with a note under it when the test is significant (see "Unequal
-#'   variances"). If NULL (default), defers to \code{joutput()}'s
-#'   \code{diagnostics} setting, which is off at every output level until
-#'   it is set.
+#' @param diagnostics Logical, character vector, or NULL. If TRUE, prints
+#'   Levene's test for homogeneity of variance, with a note under it when
+#'   the test is significant (see "Unequal variances"), and draws a normal
+#'   Q-Q plot of the standardized residuals -- each case's distance from
+#'   its group's mean -- a look at normality as a plot rather than a test.
+#'   \code{"levene"} or \code{"qq"} asks for one of them;
+#'   \code{c("levene", "qq")} for both. If NULL (default), defers to
+#'   \code{joutput()}'s \code{diagnostics} setting, which is off at every
+#'   output level until it is set. The Q-Q plot is also drawn by
+#'   \code{jplot(result, which = "qq")}.
 #' @param ci Logical or NULL. If TRUE, adds 95% confidence intervals to the
 #'   group descriptives table. If NULL (default), defers to \code{joutput()}.
 #' @param subset An optional unquoted logical expression (e.g.
@@ -867,7 +919,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   \code{sample_info} (pipeline and missing data counts), and
 #'   \code{posthoc} (the pairwise comparisons as an unrounded data frame,
 #'   with \code{test} naming the method; \code{NULL} when post-hoc tests
-#'   were not requested).
+#'   were not requested), and \code{levene}: Levene's test as printed, a
+#'   list of \code{F}, \code{df1}, \code{df2}, \code{p} and \code{note} --
+#'   the verdict of the note under a significant test
+#'   (\code{"acceptable"}, \code{"unreliable"} or \code{"differ"}), recorded
+#'   at every output level, or \code{NA} when no note applies (the test not
+#'   significant, or Welch's ANOVA run); \code{NULL} when Levene's test was
+#'   not asked for.
 #'
 #' @examples
 #' # With explicit data frame
@@ -977,7 +1035,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   posthoc      <- .jst_resolve_toggle("posthoc",     posthoc)
   # Diagnostics are apart from the levels and from full = TRUE (Session
   # 346): the call's own diagnostics =, else joutput()'s, else off.
-  levene       <- "levene" %in% .jst_resolve_diagnostics(diagnostics, "jaov")
+  diag_which   <- .jst_resolve_diagnostics(diagnostics, "jaov")
+  levene       <- "levene" %in% diag_which
+  qq_plot      <- "qq" %in% diag_which
   # Red title
   if (welch) {
     .cat_red("Welch's One-Way ANOVA\n")
@@ -1212,7 +1272,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     NULL
   }
 
-  # Levene's test
+  # Levene's test. Its result is returned as well as printed (Session 375):
+  # `levene_ret` is NULL when the test was not run.
+  levene_ret <- NULL
   if (levene) {
     group_factor  <- data[[group_name]]
     dv_vals       <- data[[dv_name]]
@@ -1246,7 +1308,12 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
     # The note under a significant test, in one of three forms (Session
     # 346; .jst_levene_note()). Not when Welch's test is the one run.
-    if (!welch) .jst_levene_note(levene_p, dv_vals, group_factor, "jaov")
+    levene_note <- if (!welch) .jst_levene_note(levene_p, dv_vals,
+                                                group_factor, "jaov")
+                   else NA_character_
+    levene_ret <- list(F = levene_result$`F value`[1],
+                       df1 = levene_result$Df[1], df2 = levene_result$Df[2],
+                       p = levene_p, note = levene_note)
     cat("\n")
   }
 
@@ -1504,6 +1571,20 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     p_value <- result$`Pr(>F)`[1]
   }
 
+  # The standardized residuals (Session 375; ruling R14, part 2): each case's
+  # distance from its group's mean over its standard error -- pooled for the
+  # traditional ANOVA, the group's own under Welch's -- what the normal Q-Q
+  # plot draws, here under diagnostics and afterwards from jplot().
+  # Returned as `residuals`.
+  aov_y <- .jst_as_numeric(data[[dv_name]])
+  names(aov_y) <- rownames(data)
+  aov_resid <- .jst_group_std_resid(aov_y, data[[group_name]],
+                                    pooled = !welch)
+  if (qq_plot) {
+    cat("\n(Diagnostic plot produced: Normal Q-Q)\n")
+    .jst_plot_group_qq(aov_resid)
+  }
+
   leg <- .jst_print_legends(lab_src, c(dv_name, group_name), group_name,
                             vlmode, value_mode)
 
@@ -1524,7 +1605,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     eta_squared  = eta_sq,
     n            = n_analysis,
     sample_info  = sample_info,
-    posthoc      = posthoc_tbl
+    posthoc      = posthoc_tbl,
+    levene       = levene_ret,
+    residuals    = aov_resid
   )
   class(ret) <- "jst_anova"
   invisible(ret)
@@ -1620,6 +1703,108 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 }
 
 
+#' Internal helper: Cramer's V
+#'
+#' The effect size of a chi-square test of independence (Session 375):
+#' \code{sqrt(chi2 / (n * (k - 1)))}, \code{k} the smaller of the table's
+#' two dimensions; in a 2 x 2 table, phi without its sign.
+#'
+#' @param chi2 The Pearson chi-square.
+#' @param n The table's total.
+#' @param dims The table's dimensions.
+#' @return Numeric(1); NA when the table has fewer than two rows or
+#'   columns.
+#' @keywords internal
+.jst_cramers_v <- function(chi2, n, dims) {
+  k <- min(dims)
+  if (is.null(chi2) || k < 2L || !is.finite(n) || n <= 0) return(NA_real_)
+  unname(sqrt(as.numeric(chi2) / (n * (k - 1))))
+}
+
+#' Internal helper: variable names given to an argument, in quotes or bare
+#'
+#' \code{categorical = "Age"}, \code{categorical = Age},
+#' \code{categorical = c(Age, "Income")}: a string, a bare name, or a
+#' \code{c()} of either, read as names without evaluating them, so a bare
+#' name is the data frame's variable whatever the workspace holds (ruling
+#' R18). Anything else -- a name holding names, a computed list -- is
+#' evaluated and must give names. Session 375, for jcrosstab()'s
+#' \code{categorical =}.
+#'
+#' @param sub The argument, unevaluated.
+#' @param env The caller's environment.
+#' @param data The data frame.
+#' @param arg The argument's name, for the stop.
+#' @param data_name The data frame's name, for the not-found stop.
+#' @param example A variable to name in the stop's example.
+#' @return Character vector of names; empty for NULL.
+#' @keywords internal
+.jst_names_given <- function(sub, env, data, arg, data_name = NULL,
+                             example = "Age") {
+  if (is.null(sub)) return(character(0))
+  one <- function(e) {
+    if (is.character(e) && length(e) == 1L && !is.na(e)) return(e)
+    if (is.symbol(e) && nzchar(as.character(e))) {
+      nm <- as.character(e)
+      if (nm %in% names(data)) return(nm)
+    }
+    NULL
+  }
+  got <- one(sub)
+  if (!is.null(got)) return(got)
+  if (is.call(sub) && identical(sub[[1L]], as.name("c")) && length(sub) > 1L) {
+    parts <- lapply(as.list(sub)[-1L], one)
+    if (all(!vapply(parts, is.null, logical(1)))) return(unlist(parts))
+  }
+  val <- tryCatch(eval(sub, env), error = function(e) e)
+  if (!inherits(val, "error") && is.character(val) && !anyNA(val)) return(val)
+  if (is.symbol(sub)) {
+    .jst_check_vars(data, as.character(sub), data_name)
+  }
+  .jst_stop(arg, " = takes the names of variables, for example:\n",
+            "  ", arg, " = ", deparse(example))
+}
+
+#' Internal helper: the stop on a cross-tabulation variable with more than
+#' 20 values
+#'
+#' A variable measured on a scale and cross-tabulated by mistake -- jcrosstab(
+#' Age ~ Sex) -- printed a table of one row per age (the large-crosstab
+#' item, built Session 375 at the lean of 20). Past 20 values the call
+#' stops, naming each such variable and its count (several in one stop,
+#' voice Rule AJ), with the call that tabulates it anyway: the call as
+#' typed with \code{categorical =} naming it, so it runs as printed.
+#'
+#' @param levels_list List of the two variables' categories.
+#' @param names Character(2); the variables.
+#' @param cat_names Character; the variables \code{categorical =} names.
+#' @param call The call, from \code{sys.call()}.
+#' @param cap Integer; the most values a variable may have.
+#' @return Invisible NULL, or stops.
+#' @keywords internal
+.jst_crosstab_values_cap <- function(levels_list, names, cat_names, call,
+                                     cap = 20L) {
+  n_vals <- lengths(levels_list)
+  over   <- n_vals > cap & !(names %in% cat_names)
+  if (!any(over)) return(invisible(NULL))
+  v    <- names[over]
+  n    <- n_vals[over]
+  one  <- length(v) == 1L
+  keep <- unique(c(cat_names, v))
+  cl   <- call
+  cl$categorical <- if (length(keep) == 1L) keep
+                    else as.call(c(as.name("c"), as.list(keep)))
+  line <- paste(deparse(cl, width.cutoff = 500L), collapse = " ")
+  counts <- if (one) paste0(n, " different values")
+            else if (length(unique(n)) == 1L) paste0(n[1], " different values each")
+            else paste0(.jst_and_list(as.character(n)), " different values")
+  .jst_stop(.jst_and_list(v), if (one) " has " else " have ", counts,
+            ", more than the ", cap, " a cross-tabulation shows.\n",
+            "To tabulate every value anyway, name ",
+            if (one) "it" else "them", " in categorical =:\n",
+            "  ", line, fn = "jcrosstab")
+}
+
 #' Cross-tabulation with optional chi-square test of independence
 #'
 #' Produces a cross-tabulation of two categorical variables, showing
@@ -1650,9 +1835,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   matching the rows commercial statistical software reports; the Pearson
 #'   row is the headline result and is what the returned object carries.
 #'   Larger tables show the single Pearson result (the correction applies
-#'   only to 2x2 tables). When any cell's expected frequency is less than
-#'   5, a note under the test gives the number of such cells and the
-#'   smallest expected frequency. Default is FALSE.
+#'   only to 2x2 tables). Under the test, Cramer's V gives its effect
+#'   size: the square root of the Pearson chi-square over N times one less
+#'   than the smaller of the table's dimensions, from 0 (no association)
+#'   to 1. A 2x2 table's line reads "Phi (Cramer's V)", the two being
+#'   equal there (phi without its sign). When any cell's expected
+#'   frequency is less than 5, a note under the test gives the number of
+#'   such cells and the smallest expected frequency. Default is FALSE.
 #' @param expected Logical. If TRUE, prints expected frequencies alongside
 #'   observed, to two decimal places. An expected frequency just under 5
 #'   that would round to 5.00 prints as 4.99, so a cell the chi-square
@@ -1705,7 +1894,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   analysis data frame used for plotting), \code{sample_info} (pipeline and
 #'   missing data counts), and if \code{chisq = TRUE}: \code{chi_square},
 #'   \code{df}, and \code{p} (the Pearson chi-square), \code{chi_method}
-#'   (the test's method string), and for 2x2 tables
+#'   (the test's method string), \code{cramers_v} (Cramer's V, phi without
+#'   its sign in a 2x2 table), and for 2x2 tables
 #'   \code{chi_square_corrected} and \code{p_corrected} (the Yates
 #'   continuity-corrected values).
 #'
@@ -1750,11 +1940,19 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   Processing table itself prints only when a filter or listwise
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
+#' @param categorical The variables of the formula to tabulate however many
+#'   values they hold, named in quotes or without them:
+#'   \code{categorical = "Age"}, or \code{categorical = c(Age, Income)}.
+#'   A variable with more than 20 values otherwise stops the call, since a
+#'   variable measured on a scale -- an age, a score -- makes a table too
+#'   large to read; the message gives the call with this argument. NULL
+#'   (default) names none.
 jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                       row.pct = TRUE, col.pct = FALSE, residuals = "none",
                       subset = NULL,
                       variable.id = NULL, value.id = NULL,
-                      case.processing.detail = NULL, digits = NULL) {
+                      case.processing.detail = NULL, digits = NULL,
+                      categorical = NULL) {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -1850,6 +2048,22 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # Type gate (Session 46): both variables are categorical; refuse date/time
   # and complex/list/raw. See .jst_check_analysis_var.
   for (.gv in terms) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a cross-tabulation")
+
+  # categorical = (Session 375): the variables to tabulate whatever their
+  # number of values, past the 20 a cross-tabulation otherwise stops at
+  # (below). Names in quotes or bare; each must be in the formula.
+  cat_names <- .jst_names_given(substitute(categorical), parent.frame(),
+                                data, "categorical", .jst_data_name,
+                                example = row_name)
+  if (length(cat_names) > 0L) {
+    not_in <- setdiff(cat_names, terms)
+    if (length(not_in) > 0L) {
+      .jst_stop("categorical = names ", .jst_and_list(not_in), ", ",
+                if (length(not_in) == 1L) "which is" else "which are",
+                " not in the formula.\n",
+                "Name only the formula's variables there.")
+    }
+  }
 
   # Apply data pipeline (jcomplete, jsubset, subset)
   subset_expr <- substitute(subset)
@@ -1950,6 +2164,16 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     }
   }
 
+  # More than 20 values (Session 375; the large-crosstab item, lean 20): a
+  # variable measured on a scale -- an age, a score -- cross-tabulated by
+  # mistake floods the console with a table no one reads. It stops, naming
+  # the variable and its count, with the call that tabulates it anyway:
+  # categorical = names it. The values are counted as the categories are
+  # above, in the data the analysis reads. Two such variables, one stop
+  # (voice Rule AJ).
+  .jst_crosstab_values_cap(list(row_levels, col_levels), c(row_name, col_name),
+                           cat_names, sys.call())
+
   row_labels <- if (row_labelled) .jst_format_value_labels(row_codes, row_vl, value_mode) else row_levels
   col_labels <- if (col_labelled) .jst_format_value_labels(col_codes, col_vl, value_mode) else col_levels
 
@@ -1963,6 +2187,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # residuals do not depend on the correction.
   chi_result <- suppressWarnings(stats::chisq.test(obs_table, correct = FALSE))
   is_2x2     <- all(dim(obs_table) == 2L)
+  cramers_v  <- .jst_cramers_v(chi_result$statistic, sum(obs_table),
+                               dim(obs_table))
   chi_corrected <- if (is_2x2) {
     suppressWarnings(stats::chisq.test(obs_table, correct = TRUE))
   } else {
@@ -2149,6 +2375,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                        row.names = FALSE)
     }
 
+    # Cramer's V (Session 375; the Session 72 item): the test's effect size,
+    # from the Pearson chi-square, sqrt(chi-square / (N * (k - 1))) with k
+    # the smaller of the table's two dimensions -- under the table, as
+    # jaov()'s eta-squared is under its ANOVA table. In a 2 x 2 table it is
+    # phi without its sign, and the line names both.
+    cat("\n", if (is_2x2) "Phi (Cramer's V): " else "Cramer's V: ",
+        .jst_fmt_stat(cramers_v, digits_n), "\n", sep = "")
+
     min_expected <- min(exp_table)
     n_below_5    <- sum(exp_table < 5)
     if (n_below_5 > 0) {
@@ -2217,6 +2451,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     ret$df         <- chi_result$parameter
     ret$p          <- chi_result$p.value
     ret$chi_method <- chi_result$method
+    ret$cramers_v  <- cramers_v
     if (is_2x2) {
       ret$chi_square_corrected <- chi_corrected$statistic
       ret$p_corrected          <- chi_corrected$p.value
