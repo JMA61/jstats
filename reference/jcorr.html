@@ -15,7 +15,7 @@ Warns when variables may be categorical rather than continuous."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.249</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -107,8 +107,9 @@ defers to <code><a href="joutput.html">joutput()</a></code>'s <code>variable.id<
 
 
 <dt id="arg-numeric">numeric<a class="anchor" aria-label="anchor" href="#arg-numeric"></a></dt>
-<dd><p>Optional character vector of variable names to treat as
-continuous for this call (the per-call counterpart of <code><a href="jnumeric.html">jnumeric()</a></code>).
+<dd><p>Optional. Variables to treat as continuous for this call
+(the per-call counterpart of <code><a href="jnumeric.html">jnumeric()</a></code>), named bare or in
+quotes, several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>: <code>numeric = Age</code>.
 Its only effect in <code>jcorr()</code> is to suppress the structural "seems
 categorical" caution for those variables; correlations are computed the
 same way regardless (labelled variables are coerced to numeric either way).</p></dd>
@@ -123,8 +124,9 @@ variable is a parked design decision.)</p></dd>
 
 
 <dt id="arg-count">count<a class="anchor" aria-label="anchor" href="#arg-count"></a></dt>
-<dd><p>Optional character vector of variable names to treat as counts
-for this call (the per-call counterpart of <code><a href="jcount.html">jcount()</a></code>). A count is
+<dd><p>Optional. Variables to treat as counts for this call (the
+per-call counterpart of <code><a href="jcount.html">jcount()</a></code>), named bare or in quotes,
+several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. A count is
 numeric-like here, so it behaves like <code>numeric</code>: it suppresses the
 "seems categorical" caution for those variables.</p></dd>
 
@@ -171,8 +173,9 @@ which keep their own fixed conventions. NULL (default) defers to
     <p>Invisibly returns a list of class <code>jst_corr</code> containing:
 <code>r</code> (correlation matrix), <code>p</code> (p-value matrix),
 <code>n</code> (pairwise N matrix), <code>method</code>, <code>model_frame</code> (the
-analysis data frame used for plotting), and <code>sample_info</code>
-(pipeline and missing data counts).</p>
+analysis data frame used for plotting), <code>sample_info</code>
+(pipeline and missing data counts), <code>data_name</code> (the data
+frame's name, for the lines <code><a href="jplot.html">jplot()</a></code> offers) and <code>labels</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

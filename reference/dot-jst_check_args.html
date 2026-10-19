@@ -17,7 +17,7 @@ variable-passing)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.249</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,7 +61,13 @@ variable-passing).</p>
 
 
 <dl><dt id="arg-dots">dots<a class="anchor" aria-label="anchor" href="#arg-dots"></a></dt>
-<dd><p>A list of arguments captured via <code>list(...)</code>.</p></dd>
+<dd><p>The arguments in <code>...</code>, captured unevaluated with
+<code>rlang::enquos(...)</code>: only their names are read, so an argument
+the function does not take gets the "unused input" stop even when its
+value is a name found nowhere (Fix Slate 23, Session 377; with
+<code>list(...)</code> the value was evaluated first, and
+<code>jt(Age ~ Volunteer, d, numeric = Age)</code> stopped with R's own
+"object 'Age' not found").</p></dd>
 
 
 <dt id="arg-aliases">aliases<a class="anchor" aria-label="anchor" href="#arg-aliases"></a></dt>

@@ -24,6 +24,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_apply_mask.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_apply_new_names.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_apply_pipeline.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_arg_given.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_as_numeric.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_assign_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_assign_reminder.html</loc></url>
@@ -32,6 +33,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_auto_plot_type.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_bake_registrations.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_bare_code_words.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_bare_words.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_blank_counts.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_blank_footnote.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_blank_label.html</loc></url>
@@ -352,6 +354,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_lm_diagnostics.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_logistic_diagnostics.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_n_line.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_result_classes.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_title.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_variables.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plural.html</loc></url>

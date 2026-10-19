@@ -11,7 +11,15 @@ jcrosstab()'s `categorical =`.
 ## Usage
 
 ``` r
-.jst_names_given(sub, env, data, arg, data_name = NULL, example = "Age")
+.jst_names_given(
+  sub,
+  env,
+  data,
+  arg,
+  data_name = NULL,
+  example = "Age",
+  default_used = FALSE
+)
 ```
 
 ## Arguments
@@ -39,6 +47,11 @@ jcrosstab()'s `categorical =`.
 - example:
 
   A variable to name in the stop's example.
+
+- default_used:
+
+  Logical; the data frame is the juse() default, so the not-found stop
+  carries its hint, as every not-found stop does (Session 377).
 
 ## Value
 

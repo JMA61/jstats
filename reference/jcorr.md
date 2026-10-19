@@ -67,13 +67,14 @@ jcorr(
 
 - numeric:
 
-  Optional character vector of variable names to treat as continuous for
-  this call (the per-call counterpart of
-  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md)).
-  Its only effect in `jcorr()` is to suppress the structural "seems
-  categorical" caution for those variables; correlations are computed
-  the same way regardless (labelled variables are coerced to numeric
-  either way).
+  Optional. Variables to treat as continuous for this call (the per-call
+  counterpart of
+  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html): `numeric = Age`. Its only
+  effect in `jcorr()` is to suppress the structural "seems categorical"
+  caution for those variables; correlations are computed the same way
+  regardless (labelled variables are coerced to numeric either way).
 
 - categorical:
 
@@ -85,11 +86,13 @@ jcorr(
 
 - count:
 
-  Optional character vector of variable names to treat as counts for
-  this call (the per-call counterpart of
-  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)). A
-  count is numeric-like here, so it behaves like `numeric`: it
-  suppresses the "seems categorical" caution for those variables.
+  Optional. Variables to treat as counts for this call (the per-call
+  counterpart of
+  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). A count is numeric-like here,
+  so it behaves like `numeric`: it suppresses the "seems categorical"
+  caution for those variables.
 
 - value.id:
 
@@ -136,8 +139,11 @@ jcorr(
 
 Invisibly returns a list of class `jst_corr` containing: `r`
 (correlation matrix), `p` (p-value matrix), `n` (pairwise N matrix),
-`method`, `model_frame` (the analysis data frame used for plotting), and
-`sample_info` (pipeline and missing data counts).
+`method`, `model_frame` (the analysis data frame used for plotting),
+`sample_info` (pipeline and missing data counts), `data_name` (the data
+frame's name, for the lines
+[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) offers)
+and `labels`.
 
 ## Details
 

@@ -20,9 +20,7 @@ the scatter or box builder depending on the IV's type.
   band,
   subset_expr,
   labels,
-  numeric = NULL,
-  categorical = NULL,
-  count = NULL,
+  name_subs = list(),
   parent_env
 )
 ```

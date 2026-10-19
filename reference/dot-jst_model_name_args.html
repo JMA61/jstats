@@ -19,7 +19,7 @@ computed list, is evaluated as before."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.249</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,7 +56,14 @@ computed list, is evaluated as before.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_model_name_args</span><span class="op">(</span><span class="va">subs</span>, <span class="va">env</span>, <span class="va">data</span>, <span class="va">data_name</span>, example <span class="op">=</span> <span class="st">"Age"</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_model_name_args</span><span class="op">(</span></span>
+<span>  <span class="va">subs</span>,</span>
+<span>  <span class="va">env</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  <span class="va">data_name</span>,</span>
+<span>  example <span class="op">=</span> <span class="st">"Age"</span>,</span>
+<span>  default_used <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -83,11 +90,21 @@ computed list, is evaluated as before.</p>
 <dt id="arg-example">example<a class="anchor" aria-label="anchor" href="#arg-example"></a></dt>
 <dd><p>A variable to name in the stop's example.</p></dd>
 
+
+<dt id="arg-default-used">default_used<a class="anchor" aria-label="anchor" href="#arg-default-used"></a></dt>
+<dd><p>Logical; passed to <code><a href="dot-jst_names_given.html">.jst_names_given()</a></code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The same named list, each element a character vector of names
 or <code>NULL</code> when none was given.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Since Session 377 also <code><a href="jdesc.html">jdesc()</a></code>'s, <code><a href="jcorr.html">jcorr()</a></code>'s and
+<code><a href="jplot.html">jplot()</a></code>'s <code>numeric =</code> and <code>count =</code> (and
+<code><a href="jplot.html">jplot()</a></code>'s <code>categorical =</code>).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

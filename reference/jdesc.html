@@ -11,7 +11,7 @@ invisibly returns the underlying results as a data frame."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.249</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,8 +111,9 @@ legend after the table. NULL (default) defers to <code><a href="joutput.html">jo
 
 
 <dt id="arg-numeric">numeric<a class="anchor" aria-label="anchor" href="#arg-numeric"></a></dt>
-<dd><p>Optional character vector of variable names to treat as
-continuous for this call (the per-call counterpart of <code><a href="jnumeric.html">jnumeric()</a></code>).
+<dd><p>Optional. Variables to treat as continuous for this call
+(the per-call counterpart of <code><a href="jnumeric.html">jnumeric()</a></code>), named bare or in
+quotes, several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>: <code>numeric = Age</code>.
 Its only effect in <code>jdesc()</code> is to suppress the structural "seems
 categorical" descriptive caution for those variables; the descriptives
 themselves are computed the same way regardless.</p></dd>
@@ -127,8 +128,9 @@ design decision.)</p></dd>
 
 
 <dt id="arg-count">count<a class="anchor" aria-label="anchor" href="#arg-count"></a></dt>
-<dd><p>Optional character vector of variable names to treat as counts
-for this call (the per-call counterpart of <code><a href="jcount.html">jcount()</a></code>). A count is
+<dd><p>Optional. Variables to treat as counts for this call (the
+per-call counterpart of <code><a href="jcount.html">jcount()</a></code>), named bare or in quotes,
+several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. A count is
 numeric-like here, so it behaves like <code>numeric</code>: it suppresses the
 "seems categorical" caution for those variables.</p></dd>
 

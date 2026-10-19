@@ -135,30 +135,36 @@ jplot(x, which = "core", ...)
 
 - numeric:
 
-  Optional character vector of plotted-variable names to treat as
-  continuous for this call (the per-call counterpart of
-  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md)).
-  In `jplot()` a variable's class chooses the geometry, so this forces
+  Optional. Plotted variables to treat as continuous for this call (the
+  per-call counterpart of
+  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html): `numeric = Education`. In
+  `jplot()` a variable's class chooses the geometry, so this forces
   numeric handling (histogram for a single variable; scatter / numeric
   axis in the formula and two-variable forms). Applies to the plotted
   variables only, not the `by` grouping variable.
 
 - categorical:
 
-  Optional character vector of plotted-variable names to treat as
-  categorical for this call (the per-call counterpart of
+  Optional. Plotted variables to treat as categorical for this call (the
+  per-call counterpart of
   [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md) for
-  plotting purposes). Forces categorical geometry (bar for a single
-  variable; box / categorical axis in the formula form). A variable
-  cannot be listed in both `categorical` and `numeric`/`count`.
+  plotting purposes), named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). Forces categorical geometry
+  (bar for a single variable; box / categorical axis in the formula
+  form). A variable cannot be listed in both `categorical` and
+  `numeric`/`count`.
 
 - count:
 
-  Optional character vector of plotted-variable names to treat as counts
-  for this call (the per-call counterpart of
-  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)). A
-  count is numeric-like for plotting, so it draws the same as `numeric`;
-  it is provided for symmetry with the other analysis functions.
+  Optional. Plotted variables to treat as counts for this call (the
+  per-call counterpart of
+  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). A count is numeric-like for
+  plotting, so it draws the same as `numeric`; it is provided for
+  symmetry with the other analysis functions.
 
 - focal:
 

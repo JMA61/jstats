@@ -74,12 +74,14 @@ jdesc(
 
 - numeric:
 
-  Optional character vector of variable names to treat as continuous for
-  this call (the per-call counterpart of
-  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md)).
-  Its only effect in `jdesc()` is to suppress the structural "seems
-  categorical" descriptive caution for those variables; the descriptives
-  themselves are computed the same way regardless.
+  Optional. Variables to treat as continuous for this call (the per-call
+  counterpart of
+  [`jnumeric()`](https://jma61.github.io/jstats/reference/jnumeric.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html): `numeric = Age`. Its only
+  effect in `jdesc()` is to suppress the structural "seems categorical"
+  descriptive caution for those variables; the descriptives themselves
+  are computed the same way regardless.
 
 - categorical:
 
@@ -91,11 +93,13 @@ jdesc(
 
 - count:
 
-  Optional character vector of variable names to treat as counts for
-  this call (the per-call counterpart of
-  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)). A
-  count is numeric-like here, so it behaves like `numeric`: it
-  suppresses the "seems categorical" caution for those variables.
+  Optional. Variables to treat as counts for this call (the per-call
+  counterpart of
+  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). A count is numeric-like here,
+  so it behaves like `numeric`: it suppresses the "seems categorical"
+  caution for those variables.
 
 - value.id:
 

@@ -12,7 +12,7 @@ sentence of what `which` takes from
 ## Usage
 
 ``` r
-.jst_resolve_which(which, core, all_plots, class_name)
+.jst_resolve_which(which, core, all_plots, class_name, explain = NULL)
 ```
 
 ## Arguments
@@ -36,6 +36,24 @@ sentence of what `which` takes from
   Character. The S3 class being dispatched on; the stop names the
   function whose result it is.
 
+- explain:
+
+  Optional named character vector: a plot name the method draws only for
+  some results of its kind, and the stop that says why, used in place of
+  the plot-name stop when that name is the only one refused (jcorr()'s
+  scatter plot, which needs two variables).
+
 ## Value
 
 A character vector of plot identifiers to produce.
+
+## Details
+
+A plot name typed without quotes (Fix Slate 23, Session 377) is read
+here, from the method's call, rather than evaluated: `which = vif` had
+stopped with R's own "object 'vif' not found". A name this result has
+gets ruling R18's pointer, the call with the name in quotes; a name it
+does not have gets the plot-name stop, since the pointer's line would
+stop on it next (ruling R23). The generic's own bare-word check leaves
+`which` to this helper whenever `x` is a result, so the set read is this
+result's, not every result's.

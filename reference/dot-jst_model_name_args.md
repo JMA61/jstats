@@ -14,7 +14,14 @@ before.
 ## Usage
 
 ``` r
-.jst_model_name_args(subs, env, data, data_name, example = "Age")
+.jst_model_name_args(
+  subs,
+  env,
+  data,
+  data_name,
+  example = "Age",
+  default_used = FALSE
+)
 ```
 
 ## Arguments
@@ -41,7 +48,22 @@ before.
 
   A variable to name in the stop's example.
 
+- default_used:
+
+  Logical; passed to
+  [`.jst_names_given()`](https://jma61.github.io/jstats/reference/dot-jst_names_given.md).
+
 ## Value
 
 The same named list, each element a character vector of names or `NULL`
 when none was given.
+
+## Details
+
+Since Session 377 also
+[`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md)'s,
+[`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md)'s and
+[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md)'s
+`numeric =` and `count =` (and
+[`jplot()`](https://jma61.github.io/jstats/reference/jplot.md)'s
+`categorical =`).

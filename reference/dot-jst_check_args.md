@@ -16,7 +16,13 @@ accept `...` as a safety net (not for substantive variable-passing).
 
 - dots:
 
-  A list of arguments captured via `list(...)`.
+  The arguments in `...`, captured unevaluated with
+  `rlang::enquos(...)`: only their names are read, so an argument the
+  function does not take gets the "unused input" stop even when its
+  value is a name found nowhere (Fix Slate 23, Session 377; with
+  `list(...)` the value was evaluated first, and
+  `jt(Age ~ Volunteer, d, numeric = Age)` stopped with R's own "object
+  'Age' not found").
 
 - aliases:
 

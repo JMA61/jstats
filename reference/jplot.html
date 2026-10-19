@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.249</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -171,9 +171,9 @@ later phase). NULL (default) defers to <code><a href="joutput.html">joutput()</a
 
 
 <dt id="arg-numeric">numeric<a class="anchor" aria-label="anchor" href="#arg-numeric"></a></dt>
-<dd><p>Optional character vector of plotted-variable names to treat
-as continuous for this call (the per-call counterpart of
-<code><a href="jnumeric.html">jnumeric()</a></code>). In <code>jplot()</code> a variable's class chooses the
+<dd><p>Optional. Plotted variables to treat as continuous for
+this call (the per-call counterpart of <code><a href="jnumeric.html">jnumeric()</a></code>), named bare
+or in quotes, several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>: <code>numeric = Education</code>. In <code>jplot()</code> a variable's class chooses the
 geometry, so this forces numeric handling (histogram for a single
 variable; scatter / numeric axis in the formula and two-variable forms).
 Applies to the plotted variables only, not the <code>by</code> grouping
@@ -181,17 +181,18 @@ variable.</p></dd>
 
 
 <dt id="arg-categorical">categorical<a class="anchor" aria-label="anchor" href="#arg-categorical"></a></dt>
-<dd><p>Optional character vector of plotted-variable names to
-treat as categorical for this call (the per-call counterpart of
-<code><a href="jdummy.html">jdummy()</a></code> for plotting purposes). Forces categorical geometry (bar
+<dd><p>Optional. Plotted variables to treat as categorical
+for this call (the per-call counterpart of <code><a href="jdummy.html">jdummy()</a></code> for plotting
+purposes), named bare or in quotes, several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. Forces categorical geometry (bar
 for a single variable; box / categorical axis in the formula form). A
 variable cannot be listed in both <code>categorical</code> and
 <code>numeric</code>/<code>count</code>.</p></dd>
 
 
 <dt id="arg-count">count<a class="anchor" aria-label="anchor" href="#arg-count"></a></dt>
-<dd><p>Optional character vector of plotted-variable names to treat
-as counts for this call (the per-call counterpart of <code><a href="jcount.html">jcount()</a></code>). A
+<dd><p>Optional. Plotted variables to treat as counts for this call
+(the per-call counterpart of <code><a href="jcount.html">jcount()</a></code>), named bare or in quotes,
+several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. A
 count is numeric-like for plotting, so it draws the same as <code>numeric</code>;
 it is provided for symmetry with the other analysis functions.</p></dd>
 
