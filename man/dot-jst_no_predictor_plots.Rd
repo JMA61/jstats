@@ -27,7 +27,7 @@ names as the attribute \code{"dropped"}.
 The intercept-only model (\code{y ~ 1}, supported since Session 359)
 gives every case the same fitted value and the same leverage, and has
 no predictor to put on an axis: a fit line, an effect plot, a
-coefficient or VIF plot, and the plots drawn against the fitted values
+coefficient plot, and the plots drawn against the fitted values
 or the leverage have nothing to show. Those named in \code{skip} are
 left out of \code{plot_set}, and one note names them.
 }

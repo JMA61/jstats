@@ -1625,6 +1625,33 @@
   jlogistic = c("vif", "binned", "cooks", "leverage")
 )
 
+#' Internal helper: the sentence saying what an argument of names takes
+#'
+#' Voice Rule A's choice form for an argument that takes one or more names
+#' from a fixed set, with any values it takes besides them first:
+#' "`diagnostics` must be TRUE, FALSE, or one or more of "vif", "qq", and
+#' "cooks"." Built here once (Session 376), for the diagnostics stop
+#' (.jst_check_diagnostics(), whose sentence it was) and jplot()'s
+#' \code{which} (.jst_resolve_which()); any argument of names whose value
+#' is not one of its set states its set with it. A set of one name reads
+#' "..., or "heatmap"."
+#'
+#' @param arg Character(1); the argument's name, backticked in the
+#'   sentence.
+#' @param valid Character; the names it takes, each put in double quotes.
+#' @param lead Character; values it takes besides the names, as they are
+#'   to print (\code{TRUE}, or \code{"\\"core\\""} with its quotes).
+#' @return Character(1), ending in a full stop.
+#' @keywords internal
+.jst_takes_names <- function(arg, valid, lead = NULL) {
+  quoted <- paste0("\"", valid, "\"")
+  names_part <- if (length(valid) == 1L) quoted
+                else paste0("one or more of ", .jst_and_list(quoted))
+  paste0("`", arg, "` must be ",
+         if (length(lead)) paste0(paste(lead, collapse = ", "), ", or "),
+         names_part, ".")
+}
+
 #' Internal helper: validate a diagnostics value
 #'
 #' A \code{diagnostics} value is \code{TRUE}, \code{FALSE}, \code{NULL}
@@ -1656,12 +1683,7 @@
   } else {
     .jst_diagnostic_sets[[fn]]
   }
-  quoted <- paste0("\"", valid, "\"")
-  takes  <- paste0("`diagnostics` must be TRUE, FALSE, or ",
-                   if (length(valid) == 1L) quoted
-                   else paste0("one or more of ",
-                               .jst_format_var_list(quoted, and = TRUE)),
-                   ".")
+  takes  <- .jst_takes_names("diagnostics", valid, lead = c("TRUE", "FALSE"))
   if (!is.character(value) || length(value) == 0L || anyNA(value)) {
     .jst_stop(takes, fn = fn)
   }

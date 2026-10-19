@@ -2467,16 +2467,19 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   \code{joutput()}'s \code{value.id} setting. Applies only to multi-category
 #'   dummy predictors; continuous and single-contrast (dichotomous) predictors
 #'   are unaffected. Not a logical.
-#' @param numeric Optional character vector of variable names that should be
-#'   treated as continuous (numeric) even if they have value labels. For
-#'   example, \code{numeric = "Age"} or \code{numeric = c("Age", "Education")}.
-#' @param categorical Optional character vector of variable names that should
-#'   be treated as categorical even if they lack value labels. For example,
-#'   \code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
+#' @param numeric Optional. Variables that should be treated as continuous
+#'   (numeric) even if they have value labels, named bare or in quotes, several
+#'   with \code{c()}. For example, \code{numeric = Age} or
+#'   \code{numeric = c(Age, Education)}.
+#' @param categorical Optional. Variables that should be treated as
+#'   categorical even if they lack value labels, named bare or in quotes,
+#'   several with \code{c()}. For example, \code{categorical = Program} or
+#'   \code{categorical = c(Program, Region)}.
 #'   The first sorted unique value becomes the reference category. Use
 #'   \code{jdummy()} for control over the reference category.
-#' @param count Optional character vector of variable names to treat as counts
-#'   for this call (the per-call counterpart of \code{jcount()}). On the
+#' @param count Optional. Variables to treat as counts for this call (the
+#'   per-call counterpart of \code{jcount()}), named bare or in quotes,
+#'   several with \code{c()}. On the
 #'   dependent variable it speaks the count-regression caveat definitively
 #'   rather than as a hedge, and applies even when the variable sits outside
 #'   the structural 0-6 band. On an independent variable it behaves like
@@ -2927,6 +2930,20 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   raw_vars <- .jst_check_formula_vars(
     formula, data, .jst_data_name, default_used = .jst_default_used,
     n_frame = pipeline$pipeline_counts$n_original)
+
+  # numeric =, categorical = and count = name variables, bare or in quotes
+  # (ruling R18; Fix Slate 22, Session 376): read here, before anything
+  # evaluates them. categorical = Region had stopped with R's own "object
+  # 'Region' not found".
+  .name_args  <- .jst_model_name_args(
+    list(numeric = substitute(numeric), categorical = substitute(categorical),
+         count = substitute(count)),
+    parent.frame(), data, .jst_data_name,
+    example = c(setdiff(c(raw_vars[-1L], names(data)), raw_vars[1L]),
+                "Age")[1L])
+  numeric     <- .name_args$numeric
+  categorical <- .name_args$categorical
+  count       <- .name_args$count
 
   # A single term raised to a power outside I() -- x^2 -- is R's formula
   # operator for interactions, not arithmetic, and enters the model as the
@@ -4223,13 +4240,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   \code{joutput()}'s \code{value.id} setting. Applies only to multi-category
 #'   dummy predictors; continuous and single-contrast (dichotomous) predictors
 #'   are unaffected. Not a logical.
-#' @param numeric Optional character vector of variable names to treat
-#'   as continuous even if they have value labels.
-#' @param categorical Optional character vector of variable names to treat
-#'   as categorical even if they lack value labels.
-#' @param count Optional character vector of independent-variable names to
-#'   treat as counts for this call (the per-call counterpart of
-#'   \code{jcount()}). A count predictor is numeric-like, so it enters the
+#' @param numeric Optional. Variables to treat as continuous even if they
+#'   have value labels, named bare or in quotes, several with \code{c()}.
+#' @param categorical Optional. Variables to treat as categorical even if
+#'   they lack value labels, named bare or in quotes, several with
+#'   \code{c()}: \code{categorical = Region}.
+#' @param count Optional. Independent variables to treat as counts for this
+#'   call (the per-call counterpart of \code{jcount()}), named bare or in
+#'   quotes, several with \code{c()}. A count predictor is numeric-like, so it enters the
 #'   model exactly as \code{numeric} would; the argument is provided for
 #'   symmetry with the other analysis functions. The binary dependent
 #'   variable is fixed, so naming it here has no effect. A variable cannot be
@@ -4604,6 +4622,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   raw_vars <- .jst_check_formula_vars(
     formula, data, .jst_data_name, default_used = .jst_default_used,
     n_frame = pipeline$pipeline_counts$n_original)
+
+  # numeric =, categorical = and count = name variables, bare or in quotes
+  # (ruling R18; Fix Slate 22, Session 376): read here, before anything
+  # evaluates them. categorical = Region had stopped with R's own "object
+  # 'Region' not found".
+  .name_args  <- .jst_model_name_args(
+    list(numeric = substitute(numeric), categorical = substitute(categorical),
+         count = substitute(count)),
+    parent.frame(), data, .jst_data_name,
+    example = c(setdiff(c(raw_vars[-1L], names(data)), raw_vars[1L]),
+                "Age")[1L])
+  numeric     <- .name_args$numeric
+  categorical <- .name_args$categorical
+  count       <- .name_args$count
 
   # A single term raised to a power outside I() enters as the term alone;
   # found here on the formula as typed, warned once the model is fitted.

@@ -50,18 +50,21 @@ Coefficients table and the R-squared/fit block; \code{"legend.bottom"}
 prints it at the very end. NULL (default) defers to \code{joutput()}'s
 \code{variable.id} setting. Not a logical.}
 
-\item{numeric}{Optional character vector of variable names that should be
-treated as continuous (numeric) even if they have value labels. For
-example, \code{numeric = "Age"} or \code{numeric = c("Age", "Education")}.}
+\item{numeric}{Optional. Variables that should be treated as continuous
+(numeric) even if they have value labels, named bare or in quotes, several
+with \code{c()}. For example, \code{numeric = Age} or
+\code{numeric = c(Age, Education)}.}
 
-\item{categorical}{Optional character vector of variable names that should
-be treated as categorical even if they lack value labels. For example,
-\code{categorical = "Program"} or \code{categorical = c("Program", "Region")}.
+\item{categorical}{Optional. Variables that should be treated as
+categorical even if they lack value labels, named bare or in quotes,
+several with \code{c()}. For example, \code{categorical = Program} or
+\code{categorical = c(Program, Region)}.
 The first sorted unique value becomes the reference category. Use
 \code{jdummy()} for control over the reference category.}
 
-\item{count}{Optional character vector of variable names to treat as counts
-for this call (the per-call counterpart of \code{jcount()}). On the
+\item{count}{Optional. Variables to treat as counts for this call (the
+per-call counterpart of \code{jcount()}), named bare or in quotes,
+several with \code{c()}. On the
 dependent variable it speaks the count-regression caveat definitively
 rather than as a hedge, and applies even when the variable sits outside
 the structural 0-6 band. On an independent variable it behaves like

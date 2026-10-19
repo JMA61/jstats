@@ -53,15 +53,16 @@ Coefficients table (at the coefficients/fit seam);
 \code{"legend.bottom"} prints it at the very end. NULL (default) defers
 to \code{joutput()}'s \code{variable.id} setting. Not a logical.}
 
-\item{numeric}{Optional character vector of variable names to treat
-as continuous even if they have value labels.}
+\item{numeric}{Optional. Variables to treat as continuous even if they
+have value labels, named bare or in quotes, several with \code{c()}.}
 
-\item{categorical}{Optional character vector of variable names to treat
-as categorical even if they lack value labels.}
+\item{categorical}{Optional. Variables to treat as categorical even if
+they lack value labels, named bare or in quotes, several with
+\code{c()}: \code{categorical = Region}.}
 
-\item{count}{Optional character vector of independent-variable names to
-treat as counts for this call (the per-call counterpart of
-\code{jcount()}). A count predictor is numeric-like, so it enters the
+\item{count}{Optional. Independent variables to treat as counts for this
+call (the per-call counterpart of \code{jcount()}), named bare or in
+quotes, several with \code{c()}. A count predictor is numeric-like, so it enters the
 model exactly as \code{numeric} would; the argument is provided for
 symmetry with the other analysis functions. The binary dependent
 variable is fixed, so naming it here has no effect. A variable cannot be

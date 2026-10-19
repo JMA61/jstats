@@ -1765,6 +1765,36 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
             "  ", arg, " = ", deparse(example))
 }
 
+#' Internal helper: the model functions' variable lists, bare or quoted
+#'
+#' \code{numeric =}, \code{categorical =} and \code{count =} in
+#' \code{jlm()} and \code{jlogistic()} name variables, so under ruling
+#' R18 they take names bare or in quotes, a \code{c()} of either, each
+#' read by \code{.jst_names_given()} without evaluating a bare name
+#' (Fix Slate 22, Session 376: \code{categorical = Region} had stopped
+#' with R's own "object 'Region' not found"). A name holding names, or a
+#' computed list, is evaluated as before.
+#'
+#' @param subs Named list of the arguments, unevaluated (each from
+#'   \code{substitute()} in the calling function).
+#' @param env The caller's environment.
+#' @param data The data frame.
+#' @param data_name The data frame's name, for the not-found stop.
+#' @param example A variable to name in the stop's example.
+#' @return The same named list, each element a character vector of names
+#'   or \code{NULL} when none was given.
+#' @keywords internal
+.jst_model_name_args <- function(subs, env, data, data_name,
+                                 example = "Age") {
+  out <- lapply(names(subs), function(a) {
+    got <- .jst_names_given(subs[[a]], env, data, a, data_name,
+                            example = example)
+    if (length(got) > 0L) got else NULL
+  })
+  names(out) <- names(subs)
+  out
+}
+
 #' Internal helper: the stop on a cross-tabulation variable with more than
 #' 20 values
 #'

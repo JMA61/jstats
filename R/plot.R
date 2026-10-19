@@ -45,11 +45,11 @@
 #' Valid plot names by class (for the result-object form):
 #' \itemize{
 #'   \item \code{jst_lm}: \code{fit}, \code{predicted}, \code{effects},
-#'     \code{coef}, \code{vif}, \code{residuals}, \code{qq},
+#'     \code{coef}, \code{residuals}, \code{qq},
 #'     \code{scale}, \code{cooks}, \code{leverage}
 #'   \item \code{jst_logistic}: \code{probability}, \code{roc},
 #'     \code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
-#'     \code{coef}, \code{vif}
+#'     \code{coef}
 #'   \item \code{jst_ttest}, \code{jst_anova}: \code{box} (the default),
 #'     \code{qq} (a normal Q-Q plot of the standardized residuals: each
 #'     case's distance from its group's mean, or for a paired test each
@@ -242,7 +242,7 @@ jplot <- function(x, which = "core", ...) {
                        "which" %in% names(sys.call()))
                      list(which = .jst_word_spec(
                        c("core", "all", "fit", "predicted", "effects", "coef",
-                         "vif", "residuals", "qq", "scale", "cooks",
+                         "residuals", "qq", "scale", "cooks",
                          "leverage", "probability", "roc", "calibration",
                          "binned", "box", "heatmap", "scatter", "bar"),
                        "a plot name")),
@@ -1647,8 +1647,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' identifiers. Accepts the special values \code{core} and
 #' \code{all} (resolved against the supplied \code{core} and
 #' \code{all_plots} vectors) or an explicit character vector of plot
-#' names. Errors with a clear message listing the valid options if any
-#' name in \code{which} isn't recognized.
+#' names. A name it does not take stops in voice Rule A's form, the
+#' result named by the function that made it, and the sentence of what
+#' \code{which} takes from \code{.jst_takes_names()} (Session 376).
 #'
 #' @param which The user's \code{which} argument: \code{core},
 #'   \code{all}, or a character vector of plot names.
@@ -1656,25 +1657,36 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #'   "core" set for this jplot method.
 #' @param all_plots Character vector of all valid plot identifiers for
 #'   this jplot method.
-#' @param class_name Character. The S3 class being dispatched on, used
-#'   in the error message.
+#' @param class_name Character. The S3 class being dispatched on; the
+#'   stop names the function whose result it is.
 #'
 #' @return A character vector of plot identifiers to produce.
 #'
 #' @keywords internal
 .jst_resolve_which <- function(which, core, all_plots, class_name) {
-  if (length(which) == 1 && which %in% c("core", "all")) {
+  if (is.character(which) && length(which) == 1L && !is.na(which) &&
+      which %in% c("core", "all")) {
     return(if (which == "core") core else all_plots)
   }
+  # The stop in voice Rule A's form, as the diagnostics stop gives it
+  # (Session 376; it read "Invalid plot name for class 'jst_lm': ...",
+  # R's class name and single quotes). The result named by the function
+  # that made it.
+  maker <- c(jst_lm = "jlm", jst_logistic = "jlogistic", jst_ttest = "jt",
+             jst_anova = "jaov", jst_corr = "jcorr",
+             jst_crosstab = "jcrosstab")[class_name]
+  owner <- if (is.na(maker)) "this result" else paste0("a ", maker, "() result")
+  takes <- .jst_takes_names("which", all_plots,
+                            lead = c("\"core\"", "\"all\""))
+  if (!is.character(which) || length(which) == 0L || anyNA(which)) {
+    .jst_stop(takes, fn = "jplot")
+  }
   bad <- setdiff(which, all_plots)
-  if (length(bad) > 0) {
-    .jst_stop(sprintf(
-      "Invalid plot %s for class '%s': %s.\nValid names: %s, or use \"core\" / \"all\".",
-      .jst_plural(length(bad), "name"),
-      class_name,
-      paste(sprintf("'%s'", bad), collapse = ", "),
-      paste(sprintf("'%s'", all_plots), collapse = ", ")
-    ))
+  if (length(bad) > 0L) {
+    .jst_stop(.jst_and_list(paste0("\"", unique(bad), "\"")),
+              if (length(unique(bad)) == 1L) " is not a plot of "
+              else " are not plots of ",
+              owner, ".\n", takes, fn = "jplot")
   }
   which
 }
@@ -1739,7 +1751,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' The intercept-only model (\code{y ~ 1}, supported since Session 359)
 #' gives every case the same fitted value and the same leverage, and has
 #' no predictor to put on an axis: a fit line, an effect plot, a
-#' coefficient or VIF plot, and the plots drawn against the fitted values
+#' coefficient plot, and the plots drawn against the fitted values
 #' or the leverage have nothing to show. Those named in \code{skip} are
 #' left out of \code{plot_set}, and one note names them.
 #'
@@ -2156,7 +2168,9 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
          "Install with: install.packages(\"ggplot2\")")
   }
 
-  all_plots <- c("fit", "predicted", "effects", "coef", "vif",
+  # No "vif" since Session 376 (Jeff: the bar chart added nothing the VIF
+  # table does not give, and the commercial packages draw none).
+  all_plots <- c("fit", "predicted", "effects", "coef",
                  "residuals", "qq", "scale", "cooks", "leverage")
   core      <- c("fit", "qq", "residuals", "cooks")
   plot_set  <- .jst_resolve_which(which, core, all_plots, "jst_lm")
@@ -2175,12 +2189,11 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
   # leverage, are left out with one note.
   plot_set <- .jst_no_predictor_plots(
     plot_set, model,
-    skip   = c("fit", "predicted", "effects", "coef", "vif", "residuals",
+    skip   = c("fit", "predicted", "effects", "coef", "residuals",
                "scale", "leverage"),
     labels = c(fit = "the fit plot", predicted = "Observed vs Predicted",
                effects = "the effect plots",
                coef = "Coefficients (95% CI)",
-               vif = "Variance Inflation Factors",
                residuals = "Residuals vs Fitted", scale = "Scale-Location",
                leverage = "Residuals vs Leverage"))
 
@@ -2484,31 +2497,6 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     plots$coef <- p
   }
 
-  # ---- vif bar plot --------------------------------------------------------
-  if ("vif" %in% plot_set) {
-    vifs <- x$vif
-    if (is.null(vifs)) {
-      .jst_msg("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
-    } else {
-      vif_df <- data.frame(
-        term = factor(names(vifs), levels = names(vifs)[order(vifs)]),
-        vif  = as.numeric(vifs),
-        stringsAsFactors = FALSE
-      )
-      p <- ggplot2::ggplot(vif_df,
-                           ggplot2::aes(x = .data$vif, y = .data$term)) +
-        ggplot2::geom_vline(xintercept = c(5, 10), linetype = "dashed",
-                            color = "red", alpha = 0.6) +
-        ggplot2::geom_col(fill = "steelblue", alpha = 0.8) +
-        ggplot2::labs(title = "Variance Inflation Factors",
-                      subtitle = "Reference lines at VIF = 5 and 10",
-                      x = "VIF", y = NULL) +
-        ggplot2::theme_minimal()
-      print(p)
-      plots$vif <- p
-    }
-  }
-
   # ---- diagnostic plots (residuals / qq / scale / cooks / leverage) --------
   diag_plots <- intersect(plot_set, c("residuals", "qq", "scale", "cooks",
                                       "leverage"))
@@ -2546,8 +2534,9 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
          "Install with: install.packages(\"ggplot2\")")
   }
 
+  # No "vif" since Session 376, as in jplot.jst_lm().
   all_plots <- c("probability", "roc", "calibration", "binned",
-                 "cooks", "leverage", "coef", "vif")
+                 "cooks", "leverage", "coef")
   core      <- c("probability", "roc", "calibration", "cooks")
   plot_set  <- .jst_resolve_which(which, core, all_plots, "jst_logistic")
 
@@ -2565,13 +2554,12 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   plot_set <- .jst_no_predictor_plots(
     plot_set, model,
     skip   = c("probability", "roc", "calibration", "binned", "leverage",
-               "coef", "vif"),
+               "coef"),
     labels = c(probability = "the probability plot", roc = "ROC Curve",
                calibration = "Calibration Plot",
                binned = "Binned Residuals",
                leverage = "Residuals vs Leverage",
-               coef = "Odds Ratios (95% CI)",
-               vif = "Variance Inflation Factors"))
+               coef = "Odds Ratios (95% CI)"))
 
   # The model's variables and the focal one, as in jplot.jst_lm()
   # (Session 360).
@@ -2705,31 +2693,6 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
       ggplot2::theme_minimal()
     print(p)
     plots$coef <- p
-  }
-
-  # ---- vif bar plot --------------------------------------------------------
-  if ("vif" %in% plot_set) {
-    vifs <- x$vif
-    if (is.null(vifs)) {
-      .jst_msg("VIF plot skipped: VIF is only computed for models with 2+ predictors.")
-    } else {
-      vif_df <- data.frame(
-        term = factor(names(vifs), levels = names(vifs)[order(vifs)]),
-        vif  = as.numeric(vifs),
-        stringsAsFactors = FALSE
-      )
-      p <- ggplot2::ggplot(vif_df,
-                           ggplot2::aes(x = .data$vif, y = .data$term)) +
-        ggplot2::geom_vline(xintercept = c(5, 10), linetype = "dashed",
-                            color = "red", alpha = 0.6) +
-        ggplot2::geom_col(fill = "steelblue", alpha = 0.8) +
-        ggplot2::labs(title = "Variance Inflation Factors",
-                      subtitle = "Reference lines at VIF = 5 and 10",
-                      x = "VIF", y = NULL) +
-        ggplot2::theme_minimal()
-      print(p)
-      plots$vif <- p
-    }
   }
 
   # ---- diagnostic plots (binned / roc / calibration / cooks / leverage) ----

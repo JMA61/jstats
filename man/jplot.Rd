@@ -193,11 +193,11 @@ equation/R-squared/band annotations.
 Valid plot names by class (for the result-object form):
 \itemize{
 \item \code{jst_lm}: \code{fit}, \code{predicted}, \code{effects},
-\code{coef}, \code{vif}, \code{residuals}, \code{qq},
+\code{coef}, \code{residuals}, \code{qq},
 \code{scale}, \code{cooks}, \code{leverage}
 \item \code{jst_logistic}: \code{probability}, \code{roc},
 \code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
-\code{coef}, \code{vif}
+\code{coef}
 \item \code{jst_ttest}, \code{jst_anova}: \code{box} (the default),
 \code{qq} (a normal Q-Q plot of the standardized residuals: each
 case's distance from its group's mean, or for a paired test each
