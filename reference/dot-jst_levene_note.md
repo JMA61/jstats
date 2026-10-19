@@ -49,7 +49,11 @@ errs, because that depends on which groups are the more variable.
 
 ## Value
 
-Invisibly NULL; called for the note it prints.
+Invisibly, the verdict the note states – `"acceptable"`, `"unreliable"`
+or `"differ"` – or `NA` when there is no note (the test not significant,
+or a group with fewer than two cases). The verdict is returned at every
+output level, printed or not, so the caller's `levene` element records
+it (Session 375).
 
 ## Details
 

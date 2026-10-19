@@ -81,12 +81,16 @@ jaov(
 
 - diagnostics:
 
-  Logical, `"levene"`, or NULL. If TRUE (or `"levene"`), prints Levene's
-  test for homogeneity of variance, with a note under it when the test
-  is significant (see "Unequal variances"). If NULL (default), defers to
+  Logical, character vector, or NULL. If TRUE, prints Levene's test for
+  homogeneity of variance, with a note under it when the test is
+  significant (see "Unequal variances"), and draws a normal Q-Q plot of
+  the standardized residuals – each case's distance from its group's
+  mean – a look at normality as a plot rather than a test. `"levene"` or
+  `"qq"` asks for one of them; `c("levene", "qq")` for both. If NULL
+  (default), defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `diagnostics` setting, which is off at every output level until it is
-  set.
+  set. The Q-Q plot is also drawn by `jplot(result, which = "qq")`.
 
 - ci:
 
@@ -173,7 +177,12 @@ used for plotting), `test_type`, `formula`, `descriptives`, `f`, `df1`,
 `df2`, `p`, `eta_squared`, `n`, `sample_info` (pipeline and missing data
 counts), and `posthoc` (the pairwise comparisons as an unrounded data
 frame, with `test` naming the method; `NULL` when post-hoc tests were
-not requested).
+not requested), and `levene`: Levene's test as printed, a list of `F`,
+`df1`, `df2`, `p` and `note` – the verdict of the note under a
+significant test (`"acceptable"`, `"unreliable"` or `"differ"`),
+recorded at every output level, or `NA` when no note applies (the test
+not significant, or Welch's ANOVA run); `NULL` when Levene's test was
+not asked for.
 
 ## Details
 
@@ -354,6 +363,9 @@ jaov(WellbeingScore ~ Region, data = community, diagnostics = TRUE)
 #> Total     102     13445.825
 #> 
 #> Eta-squared: 0.020
+#> 
+#> (Diagnostic plot produced: Normal Q-Q)
+
 #> 
 
 # Pairwise comparisons after the traditional ANOVA: Tukey HSD

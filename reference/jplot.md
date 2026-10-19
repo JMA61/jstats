@@ -231,7 +231,10 @@ Valid plot names by class (for the result-object form):
 - `jst_logistic`: `probability`, `roc`, `calibration`, `binned`,
   `cooks`, `leverage`, `coef`, `vif`
 
-- `jst_ttest`, `jst_anova`: `box`
+- `jst_ttest`, `jst_anova`: `box` (the default), `qq` (a normal Q-Q plot
+  of the standardized residuals: each case's distance from its group's
+  mean, or for a paired test each pair's difference from the mean
+  difference)
 
 - `jst_corr`: `heatmap`, `scatter` (scatter requires exactly 2 variables
   in the correlation)
@@ -281,11 +284,13 @@ the homoskedasticity assumption), `none` (no band).
 
 - `jplot(jst_ttest)`: a group-comparison box plot for a
   [`jt()`](https://jma61.github.io/jstats/reference/jt.md) result, with
-  the group means marked.
+  the group means marked; `which = "qq"` draws the normal Q-Q plot of
+  its residuals.
 
 - `jplot(jst_anova)`: a group-comparison box plot for a
   [`jaov()`](https://jma61.github.io/jstats/reference/jaov.md) result,
-  with the group means marked.
+  with the group means marked; `which = "qq"` draws the normal Q-Q plot
+  of its residuals.
 
 - `jplot(jst_corr)`: a heat-map of the correlation matrix for a
   [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) result,

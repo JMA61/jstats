@@ -23,7 +23,7 @@ labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -131,12 +131,16 @@ If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>.<
 
 
 <dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
-<dd><p>Logical, <code>"levene"</code>, or NULL. If TRUE (or
-<code>"levene"</code>), prints Levene's test for homogeneity of variance,
-with a note under it when the test is significant (see "Unequal
-variances"). If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>'s
-<code>diagnostics</code> setting, which is off at every output level until
-it is set.</p></dd>
+<dd><p>Logical, character vector, or NULL. If TRUE, prints
+Levene's test for homogeneity of variance, with a note under it when
+the test is significant (see "Unequal variances"), and draws a normal
+Q-Q plot of the standardized residuals – each case's distance from
+its group's mean – a look at normality as a plot rather than a test.
+<code>"levene"</code> or <code>"qq"</code> asks for one of them;
+<code>c("levene", "qq")</code> for both. If NULL (default), defers to
+<code><a href="joutput.html">joutput()</a></code>'s <code>diagnostics</code> setting, which is off at every
+output level until it is set. The Q-Q plot is also drawn by
+<code>jplot(result, which = "qq")</code>.</p></dd>
 
 
 <dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
@@ -221,7 +225,13 @@ an error that names <code>diagnostics</code>.</p></dd>
 <code>sample_info</code> (pipeline and missing data counts), and
 <code>posthoc</code> (the pairwise comparisons as an unrounded data frame,
 with <code>test</code> naming the method; <code>NULL</code> when post-hoc tests
-were not requested).</p>
+were not requested), and <code>levene</code>: Levene's test as printed, a
+list of <code>F</code>, <code>df1</code>, <code>df2</code>, <code>p</code> and <code>note</code> –
+the verdict of the note under a significant test
+(<code>"acceptable"</code>, <code>"unreliable"</code> or <code>"differ"</code>), recorded
+at every output level, or <code>NA</code> when no note applies (the test not
+significant, or Welch's ANOVA run); <code>NULL</code> when Levene's test was
+not asked for.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -399,6 +409,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Total     102     13445.825</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Eta-squared: 0.020</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Diagnostic plot produced: Normal Q-Q)</span>
+<span class="r-plt img"><img src="jaov-1.png" alt="" width="700" height="433"></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Pairwise comparisons after the traditional ANOVA: Tukey HSD</span></span></span>

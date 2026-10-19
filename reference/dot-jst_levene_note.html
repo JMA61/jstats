@@ -41,7 +41,7 @@ errs, because that depends on which groups are the more variable."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -113,7 +113,11 @@ errs, because that depends on which groups are the more variable.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly NULL; called for the note it prints.</p>
+    <p>Invisibly, the verdict the note states – <code>"acceptable"</code>,
+<code>"unreliable"</code> or <code>"differ"</code> – or <code>NA</code> when there is no
+note (the test not significant, or a group with fewer than two cases).
+The verdict is returned at every output level, printed or not, so the
+caller's <code>levene</code> element records it (Session 375).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

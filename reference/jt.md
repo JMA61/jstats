@@ -66,13 +66,18 @@ jt(
 
 - diagnostics:
 
-  Logical, `"levene"`, or NULL. If TRUE (or `"levene"`), prints Levene's
-  test for homogeneity of variance, with a note under it when the test
-  is significant (see "Unequal variances"). Not applicable when paired =
-  TRUE. If NULL (default), defers to
+  Logical, character vector, or NULL. If TRUE, prints Levene's test for
+  homogeneity of variance, with a note under it when the test is
+  significant (see "Unequal variances"), and draws a normal Q-Q plot of
+  the standardized residuals – each case's distance from its group's
+  mean, or for a paired test each pair's difference from the mean
+  difference – a look at normality as a plot rather than a test.
+  `"levene"` or `"qq"` asks for one of them; `c("levene", "qq")` for
+  both. Levene's test is not applicable when paired = TRUE. If NULL
+  (default), defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `diagnostics` setting, which is off at every output level until it is
-  set.
+  set. The Q-Q plot is also drawn by `jplot(result, which = "qq")`.
 
 - ci:
 
@@ -155,8 +160,13 @@ jt(
 Invisibly returns a list of class `jst_ttest` containing: `model` (the
 `t.test` result), `model_frame` (the analysis data frame used for
 plotting), `test_type`, `formula`, `descriptives`, `t`, `df`, `p`,
-`mean_difference`, `ci` (95% CI), `cohens_d`, `d_label`, `n`, and
-`sample_info` (pipeline and missing data counts).
+`mean_difference`, `ci` (95% CI), `cohens_d`, `d_label`, `n`,
+`sample_info` (pipeline and missing data counts), and `levene`: Levene's
+test as printed, a list of `F`, `df1`, `df2`, `p` and `note` – the
+verdict of the note under a significant test (`"acceptable"`,
+`"unreliable"` or `"differ"`), recorded at every output level, or `NA`
+when no note applies (the test not significant, or Welch's test run);
+`NULL` when Levene's test was not asked for or the test is paired.
 
 ## Details
 
@@ -330,6 +340,9 @@ jt(WellbeingScore ~ Volunteer, data = community, diagnostics = TRUE)
 #> -3.338  101  .001       -7.211         -11.496       -2.925
 #> 
 #> Cohen's d: -0.658
+#> 
+#> (Diagnostic plot produced: Normal Q-Q)
+
 #> 
 
 # Using juse() default

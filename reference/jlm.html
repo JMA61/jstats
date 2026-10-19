@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,7 +63,8 @@ blank for the intercept and for dummy-coded categorical terms.</p>
 <span>  case.processing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span>,</span>
-<span>  value.id <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  model.layout <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -197,10 +198,18 @@ diagnostic plots. A character vector names the ones to show:
 <code>leverage</code>, more than one combined with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>, as in
 <code>diagnostics = c("vif", "qq")</code>; a name that is not one of these
 is an error. A VIF above 10 gets a line of interpretation under the
-table, except at <code>joutput("minimal")</code>. If NULL (default), defers
-to <code><a href="joutput.html">joutput()</a></code>'s <code>diagnostics</code> setting, which is off at
-every output level until it is set. The same plots are available
-afterwards from <code><a href="jplot.html">jplot()</a></code> on the returned object.</p></dd>
+table, except at <code>joutput("minimal")</code>. In a model with a
+predictor of three or more categories, whose dummy variables would
+each get a VIF that depends on the reference category, the table
+gives each predictor one row with its generalized VIF (Fox and
+Monette, 1992), Df and GVIF^(1/(2<em>Df)), as <code>car::vif()</code> does, the
+dummy variables sharing a row (and an interaction's, with the same
+other variable); squared, GVIF^(1/(2</em>Df)) is on the scale of a VIF,
+and the line of interpretation fires when it passes 10. If NULL
+(default), defers to <code><a href="joutput.html">joutput()</a></code>'s <code>diagnostics</code> setting,
+which is off at every output level until it is set. The same plots
+are available afterwards from <code><a href="jplot.html">jplot()</a></code> on the returned
+object.</p></dd>
 
 
 <dt id="arg-ref-categories">ref.categories<a class="anchor" aria-label="anchor" href="#arg-ref-categories"></a></dt>
@@ -260,6 +269,16 @@ identically under all supported modes. NULL (default) defers to
 <code><a href="joutput.html">joutput()</a></code>'s <code>value.id</code> setting. Applies only to multi-category
 dummy predictors; continuous and single-contrast (dichotomous) predictors
 are unaffected. Not a logical.</p></dd>
+
+
+<dt id="arg-model-layout">model.layout<a class="anchor" aria-label="anchor" href="#arg-model-layout"></a></dt>
+<dd><p>Character or NULL. The order of the coefficient
+table and the fit statistics: <code>"coefficients"</code> (the default) prints
+the Coefficients table first and the fit block after it;
+<code>"fit"</code> prints the fit block first, for readers who look at the
+model as a whole before its coefficients. The Case Processing block,
+the diagnostics and the other tables stay where they are. NULL
+(default) defers to <code><a href="joutput.html">joutput()</a></code>'s <code>model.layout</code> setting.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -329,6 +348,13 @@ labels them, and <code>dummy</code>, the dummy column of each
 
 <dt>vif</dt>
 <dd><p>Named numeric vector of VIF values, or NULL for bivariate.</p></dd>
+
+<dt>gvif</dt>
+<dd><p>The generalized VIFs, when the model has a set of dummy
+variables (a predictor of three or more categories): a data frame
+of <code>term</code>, <code>GVIF</code>, <code>Df</code> and <code>GVIF_adj</code>
+(<code>GVIF^(1/(2*Df))</code>), one row per predictor, as the VIF table
+prints them; NULL otherwise.</p></dd>
 
 <dt>sample_info</dt>
 <dd><p>Pipeline and missing data counts.</p></dd>

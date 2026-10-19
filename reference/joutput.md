@@ -21,6 +21,7 @@ joutput(
   variable.id = NULL,
   value.id = NULL,
   ref.categories = NULL,
+  model.layout = NULL,
   missing.notice = NULL,
   digits = NULL,
   quiet = FALSE
@@ -94,8 +95,14 @@ joutput(
 
   - `"vif"` – the variance inflation factors (`jlm`, `jlogistic`);
 
-  - `"residuals"`, `"qq"`, `"scale"`, `"cooks"`, `"leverage"` – the
-    regression diagnostic plots (`jlm`).
+  - `"qq"` – the normal Q-Q plot of the residuals (`jt`, `jaov`, `jlm`);
+
+  - `"residuals"`, `"scale"` – the regression diagnostic plots (`jlm`);
+
+  - `"binned"` – the binned residual plot (`jlogistic`);
+
+  - `"cooks"`, `"leverage"` – Cook's distance and residuals against
+    leverage (`jlm`, `jlogistic`).
 
   Name more than one with [`c()`](https://rdrr.io/r/base/c.html):
   `joutput(diagnostics = c("levene", "vif"))`. A diagnostic prints with
@@ -233,6 +240,16 @@ joutput(
 
   Logical or NULL. Override the level's default for the reference
   categories block (registered dummies).
+
+- model.layout:
+
+  Character or NULL. The order of
+  [`jlm()`](https://jma61.github.io/jstats/reference/jlm.md)'s and
+  [`jlogistic()`](https://jma61.github.io/jstats/reference/jlogistic.md)'s
+  output: `"coefficients"` (every level's default) prints the
+  Coefficients table first and the fit statistics after it; `"fit"`
+  prints the fit statistics first. A level call puts it back to
+  `"coefficients"`, as it puts back the other settings.
 
 - missing.notice:
 
@@ -373,6 +390,7 @@ joutput("standard")                       # effect sizes + means/diff CIs (jt, j
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
+#>   model.layout: COEFFICIENTS
 #>   missing.notice: ON
 #>   digits: 3
 #> 
@@ -390,6 +408,7 @@ joutput("standard", regression.ci = TRUE) # also show jlm/jlogistic coefficient 
 #>   variable.id: NAMES
 #>   value.id: BOTH
 #>   ref.categories: ON
+#>   model.layout: COEFFICIENTS
 #>   missing.notice: ON
 #>   digits: 3
 #> 
@@ -407,6 +426,7 @@ joutput("full")                         # every statistic and every detail
 #>   variable.id: LEGEND
 #>   value.id: BOTH
 #>   ref.categories: ON
+#>   model.layout: COEFFICIENTS
 #>   missing.notice: ON
 #>   digits: 3
 #> 
@@ -449,6 +469,7 @@ joutput()                               # show current settings
 #>   variable.id: LEGEND
 #>   value.id: BOTH
 #>   ref.categories: ON
+#>   model.layout: COEFFICIENTS
 #>   missing.notice: ON
 #>   digits: 2 (override)
 #> 

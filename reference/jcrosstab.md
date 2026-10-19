@@ -22,7 +22,8 @@ jcrosstab(
   variable.id = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
-  digits = NULL
+  digits = NULL,
+  categorical = NULL
 )
 ```
 
@@ -47,8 +48,12 @@ jcrosstab(
   the rows commercial statistical software reports; the Pearson row is
   the headline result and is what the returned object carries. Larger
   tables show the single Pearson result (the correction applies only to
-  2x2 tables). When any cell's expected frequency is less than 5, a note
-  under the test gives the number of such cells and the smallest
+  2x2 tables). Under the test, Cramer's V gives its effect size: the
+  square root of the Pearson chi-square over N times one less than the
+  smaller of the table's dimensions, from 0 (no association) to 1. A 2x2
+  table's line reads "Phi (Cramer's V)", the two being equal there (phi
+  without its sign). When any cell's expected frequency is less than 5,
+  a note under the test gives the number of such cells and the smallest
   expected frequency. Default is FALSE.
 
 - expected:
@@ -138,6 +143,15 @@ jcrosstab(
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `digits` setting (default 3).
 
+- categorical:
+
+  The variables of the formula to tabulate however many values they
+  hold, named in quotes or without them: `categorical = "Age"`, or
+  `categorical = c(Age, Income)`. A variable with more than 20 values
+  otherwise stops the call, since a variable measured on a scale – an
+  age, a score – makes a table too large to read; the message gives the
+  call with this argument. NULL (default) names none.
+
 ## Value
 
 Invisibly returns a list of class `jst_crosstab` containing: `observed`
@@ -146,7 +160,8 @@ Invisibly returns a list of class `jst_crosstab` containing: `observed`
 (total N), `model_frame` (the analysis data frame used for plotting),
 `sample_info` (pipeline and missing data counts), and if `chisq = TRUE`:
 `chi_square`, `df`, and `p` (the Pearson chi-square), `chi_method` (the
-test's method string), and for 2x2 tables `chi_square_corrected` and
+test's method string), `cramers_v` (Cramer's V, phi without its sign in
+a 2x2 table), and for 2x2 tables `chi_square_corrected` and
 `p_corrected` (the Yates continuity-corrected values).
 
 ## Details
@@ -279,6 +294,8 @@ jcrosstab(Education ~ Volunteer, data = community, chisq = TRUE)
 #> Chi-Square  df    p    N
 #> ----------  --  ----  --
 #>   16.407     4  .003  97
+#> 
+#> Cramer's V: 0.411
 #> 
 
 # With expected frequencies and column percentages
@@ -443,5 +460,7 @@ jcrosstab(Education ~ Volunteer, chisq = TRUE)
 #> Chi-Square  df    p    N
 #> ----------  --  ----  --
 #>   16.407     4  .003  97
+#> 
+#> Cramer's V: 0.411
 #> 
 ```

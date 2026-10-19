@@ -13,7 +13,7 @@ precedence over joutput() settings."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,6 +60,7 @@ precedence over joutput() settings.</p>
 <span>  variable.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ref.categories <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  model.layout <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  missing.notice <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -134,9 +135,14 @@ apply to it:</p><ul><li><p><code>"levene"</code> – Levene's test for homogenei
 (<code>jt</code>, <code>jaov</code>);</p></li>
 <li><p><code>"vif"</code> – the variance inflation factors (<code>jlm</code>,
 <code>jlogistic</code>);</p></li>
-<li><p><code>"residuals"</code>, <code>"qq"</code>, <code>"scale"</code>,
-<code>"cooks"</code>, <code>"leverage"</code> – the regression diagnostic
-plots (<code>jlm</code>).</p></li>
+<li><p><code>"qq"</code> – the normal Q-Q plot of the residuals
+(<code>jt</code>, <code>jaov</code>, <code>jlm</code>);</p></li>
+<li><p><code>"residuals"</code>, <code>"scale"</code> – the regression
+diagnostic plots (<code>jlm</code>);</p></li>
+<li><p><code>"binned"</code> – the binned residual plot
+(<code>jlogistic</code>);</p></li>
+<li><p><code>"cooks"</code>, <code>"leverage"</code> – Cook's distance and
+residuals against leverage (<code>jlm</code>, <code>jlogistic</code>).</p></li>
 </ul><p>Name more than one with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>:
 <code>joutput(diagnostics = c("levene", "vif"))</code>. A diagnostic prints
 with its brief interpretation (the note under a significant Levene's
@@ -265,6 +271,15 @@ label. Not a logical.</p></dd>
 <dt id="arg-ref-categories">ref.categories<a class="anchor" aria-label="anchor" href="#arg-ref-categories"></a></dt>
 <dd><p>Logical or NULL. Override the level's default
 for the reference categories block (registered dummies).</p></dd>
+
+
+<dt id="arg-model-layout">model.layout<a class="anchor" aria-label="anchor" href="#arg-model-layout"></a></dt>
+<dd><p>Character or NULL. The order of <code><a href="jlm.html">jlm()</a></code>'s and
+<code><a href="jlogistic.html">jlogistic()</a></code>'s output: <code>"coefficients"</code> (every level's
+default) prints the Coefficients table first and the fit statistics
+after it; <code>"fit"</code> prints the fit statistics first. A level call
+puts it back to <code>"coefficients"</code>, as it puts back the other
+settings.</p></dd>
 
 
 <dt id="arg-missing-notice">missing.notice<a class="anchor" aria-label="anchor" href="#arg-missing-notice"></a></dt>
@@ -412,6 +427,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   model.layout: COEFFICIENTS</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -429,6 +445,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: NAMES</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   model.layout: COEFFICIENTS</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -446,6 +463,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: LEGEND</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   model.layout: COEFFICIENTS</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -488,6 +506,7 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   variable.id: LEGEND</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   value.id: BOTH</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ref.categories: ON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   model.layout: COEFFICIENTS</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   missing.notice: ON</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   digits: 2 (override)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -261,7 +261,10 @@ equation/R-squared/band annotations.</p>
 <li><p><code>jst_logistic</code>: <code>probability</code>, <code>roc</code>,
 <code>calibration</code>, <code>binned</code>, <code>cooks</code>, <code>leverage</code>,
 <code>coef</code>, <code>vif</code></p></li>
-<li><p><code>jst_ttest</code>, <code>jst_anova</code>: <code>box</code></p></li>
+<li><p><code>jst_ttest</code>, <code>jst_anova</code>: <code>box</code> (the default),
+<code>qq</code> (a normal Q-Q plot of the standardized residuals: each
+case's distance from its group's mean, or for a paired test each
+pair's difference from the mean difference)</p></li>
 <li><p><code>jst_corr</code>: <code>heatmap</code>, <code>scatter</code> (scatter requires
 exactly 2 variables in the correlation)</p></li>
 <li><p><code>jst_crosstab</code>: <code>bar</code></p></li>
@@ -294,8 +297,8 @@ band illustrating the homoskedasticity assumption), <code>none</code> (no band).
 <ul><li><p><code>jplot(default)</code>: the default method: a scatter or box plot from a formula (<code>DV ~ IV</code>), or a histogram or bar chart from a data frame and one or more variables.</p></li>
 <li><p><code>jplot(jst_lm)</code>: diagnostic, coefficient (forest), and fitted-effect plots for a <code><a href="jlm.html">jlm()</a></code> linear-regression result.</p></li>
 <li><p><code>jplot(jst_logistic)</code>: predicted-probability (S-curve) and coefficient plots for a <code><a href="jlogistic.html">jlogistic()</a></code> result.</p></li>
-<li><p><code>jplot(jst_ttest)</code>: a group-comparison box plot for a <code><a href="jt.html">jt()</a></code> result, with the group means marked.</p></li>
-<li><p><code>jplot(jst_anova)</code>: a group-comparison box plot for a <code><a href="jaov.html">jaov()</a></code> result, with the group means marked.</p></li>
+<li><p><code>jplot(jst_ttest)</code>: a group-comparison box plot for a <code><a href="jt.html">jt()</a></code> result, with the group means marked; <code>which = "qq"</code> draws the normal Q-Q plot of its residuals.</p></li>
+<li><p><code>jplot(jst_anova)</code>: a group-comparison box plot for a <code><a href="jaov.html">jaov()</a></code> result, with the group means marked; <code>which = "qq"</code> draws the normal Q-Q plot of its residuals.</p></li>
 <li><p><code>jplot(jst_corr)</code>: a heat-map of the correlation matrix for a <code><a href="jcorr.html">jcorr()</a></code> result, or a scatter plot for a single pair.</p></li>
 <li><p><code>jplot(jst_crosstab)</code>: a grouped bar chart of cell counts for a <code><a href="jcrosstab.html">jcrosstab()</a></code> result.</p></li>
 <li><p><code>jplot(jst_desc)</code>: (planned) direct plotting of a <code><a href="jdesc.html">jdesc()</a></code> result is not yet available; this method points you to the data-first form, for example <code>jplot(data, Variable)</code>.</p></li>

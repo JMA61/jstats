@@ -9,7 +9,7 @@ structure of a logistic model.
 ## Usage
 
 ``` r
-.jst_plot_logistic_diagnostics(model, which, n_label = 3)
+.jst_plot_logistic_diagnostics(model, which, n_label = 3, list = TRUE)
 ```
 
 ## Arguments
@@ -27,6 +27,13 @@ structure of a logistic model.
 
   Integer. Number of extreme observations to label on relevant plots.
   Default 3.
+
+- list:
+
+  Logical. TRUE (jplot()) prints the list of the plots drawn, then a
+  blank line, then any note. FALSE (jlogistic()'s diagnostics, Session
+  375, which print their own list above, as jlm()'s do) prints no list,
+  and each note one blank line below what precedes it.
 
 ## Value
 

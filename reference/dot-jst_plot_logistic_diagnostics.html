@@ -13,7 +13,7 @@ of a logistic model."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,7 +47,7 @@ of a logistic model.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_plot_logistic_diagnostics</span><span class="op">(</span><span class="va">model</span>, <span class="va">which</span>, n_label <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_plot_logistic_diagnostics</span><span class="op">(</span><span class="va">model</span>, <span class="va">which</span>, n_label <span class="op">=</span> <span class="fl">3</span>, list <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -67,6 +67,13 @@ of a logistic model.</p>
 <dt id="arg-n-label">n_label<a class="anchor" aria-label="anchor" href="#arg-n-label"></a></dt>
 <dd><p>Integer. Number of extreme observations to label on
 relevant plots. Default 3.</p></dd>
+
+
+<dt id="arg-list">list<a class="anchor" aria-label="anchor" href="#arg-list"></a></dt>
+<dd><p>Logical. TRUE (jplot()) prints the list of the plots drawn,
+then a blank line, then any note. FALSE (jlogistic()'s diagnostics,
+Session 375, which print their own list above, as jlm()'s do) prints
+no list, and each note one blank line below what precedes it.</p></dd>
 
 </dl></div>
     <div class="section level2">

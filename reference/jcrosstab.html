@@ -17,7 +17,7 @@ variables, numeric codes are displayed alongside labels."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,8 @@ variables, numeric codes are displayed alongside labels.</p>
 <span>  variable.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  case.processing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  digits <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  categorical <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -91,9 +92,13 @@ the Pearson chi-square and the Yates continuity-corrected chi-square –
 matching the rows commercial statistical software reports; the Pearson
 row is the headline result and is what the returned object carries.
 Larger tables show the single Pearson result (the correction applies
-only to 2x2 tables). When any cell's expected frequency is less than
-5, a note under the test gives the number of such cells and the
-smallest expected frequency. Default is FALSE.</p></dd>
+only to 2x2 tables). Under the test, Cramer's V gives its effect
+size: the square root of the Pearson chi-square over N times one less
+than the smaller of the table's dimensions, from 0 (no association)
+to 1. A 2x2 table's line reads "Phi (Cramer's V)", the two being
+equal there (phi without its sign). When any cell's expected
+frequency is less than 5, a note under the test gives the number of
+such cells and the smallest expected frequency. Default is FALSE.</p></dd>
 
 
 <dt id="arg-expected">expected<a class="anchor" aria-label="anchor" href="#arg-expected"></a></dt>
@@ -180,6 +185,16 @@ percentages, expected frequencies (two places), or integer quantities
 conventions. NULL (default) defers to
 <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
 
+
+<dt id="arg-categorical">categorical<a class="anchor" aria-label="anchor" href="#arg-categorical"></a></dt>
+<dd><p>The variables of the formula to tabulate however many
+values they hold, named in quotes or without them:
+<code>categorical = "Age"</code>, or <code>categorical = c(Age, Income)</code>.
+A variable with more than 20 values otherwise stops the call, since a
+variable measured on a scale – an age, a score – makes a table too
+large to read; the message gives the call with this argument. NULL
+(default) names none.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -190,7 +205,8 @@ standardized residuals), <code>n</code> (total N), <code>model_frame</code> (the
 analysis data frame used for plotting), <code>sample_info</code> (pipeline and
 missing data counts), and if <code>chisq = TRUE</code>: <code>chi_square</code>,
 <code>df</code>, and <code>p</code> (the Pearson chi-square), <code>chi_method</code>
-(the test's method string), and for 2x2 tables
+(the test's method string), <code>cramers_v</code> (Cramer's V, phi without
+its sign in a 2x2 table), and for 2x2 tables
 <code>chi_square_corrected</code> and <code>p_corrected</code> (the Yates
 continuity-corrected values).</p>
     </div>
@@ -321,6 +337,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p    N</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  ----  --</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   16.407     4  .003  97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cramer's V: 0.411</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With expected frequencies and column percentages</span></span></span>
@@ -485,6 +503,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Chi-Square  df    p    N</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------  --  ----  --</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   16.407     4  .003  97</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cramer's V: 0.411</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

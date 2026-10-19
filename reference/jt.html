@@ -19,7 +19,7 @@ are displayed alongside labels in the group descriptives table."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.247</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,12 +111,18 @@ one case. Ignored when paired = TRUE.</p></dd>
 
 
 <dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
-<dd><p>Logical, <code>"levene"</code>, or NULL. If TRUE (or
-<code>"levene"</code>), prints Levene's test for homogeneity of variance,
-with a note under it when the test is significant (see "Unequal
-variances"). Not applicable when paired = TRUE. If NULL (default),
-defers to <code><a href="joutput.html">joutput()</a></code>'s <code>diagnostics</code> setting, which is off
-at every output level until it is set.</p></dd>
+<dd><p>Logical, character vector, or NULL. If TRUE, prints
+Levene's test for homogeneity of variance, with a note under it when
+the test is significant (see "Unequal variances"), and draws a normal
+Q-Q plot of the standardized residuals – each case's distance from
+its group's mean, or for a paired test each pair's difference from the
+mean difference – a look at normality as a plot rather than a test.
+<code>"levene"</code> or <code>"qq"</code> asks for one of them;
+<code>c("levene", "qq")</code> for both. Levene's test is not applicable
+when paired = TRUE. If NULL (default), defers to <code><a href="joutput.html">joutput()</a></code>'s
+<code>diagnostics</code> setting, which is off at every output level until
+it is set. The Q-Q plot is also drawn by
+<code>jplot(result, which = "qq")</code>.</p></dd>
 
 
 <dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
@@ -196,8 +202,14 @@ an error that names <code>diagnostics</code>.</p></dd>
 <code>model</code> (the <code>t.test</code> result), <code>model_frame</code> (the analysis
 data frame used for plotting), <code>test_type</code>, <code>formula</code>,
 <code>descriptives</code>, <code>t</code>, <code>df</code>, <code>p</code>, <code>mean_difference</code>,
-<code>ci</code> (95% CI), <code>cohens_d</code>, <code>d_label</code>, <code>n</code>, and
-<code>sample_info</code> (pipeline and missing data counts).</p>
+<code>ci</code> (95% CI), <code>cohens_d</code>, <code>d_label</code>, <code>n</code>,
+<code>sample_info</code> (pipeline and missing data counts), and
+<code>levene</code>: Levene's test as printed, a list of <code>F</code>,
+<code>df1</code>, <code>df2</code>, <code>p</code> and <code>note</code> – the verdict of the
+note under a significant test (<code>"acceptable"</code>, <code>"unreliable"</code>
+or <code>"differ"</code>), recorded at every output level, or <code>NA</code> when
+no note applies (the test not significant, or Welch's test run);
+<code>NULL</code> when Levene's test was not asked for or the test is paired.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -367,6 +379,9 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -3.338  101  .001       -7.211         -11.496       -2.925</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Cohen's d: -0.658</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Diagnostic plot produced: Normal Q-Q)</span>
+<span class="r-plt img"><img src="jt-1.png" alt="" width="700" height="433"></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
