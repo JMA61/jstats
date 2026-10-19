@@ -318,7 +318,13 @@
 #' functions that accept \code{...} as a safety net (not for substantive
 #' variable-passing).
 #'
-#' @param dots A list of arguments captured via \code{list(...)}.
+#' @param dots The arguments in \code{...}, captured unevaluated with
+#'   \code{rlang::enquos(...)}: only their names are read, so an argument
+#'   the function does not take gets the "unused input" stop even when its
+#'   value is a name found nowhere (Fix Slate 23, Session 377; with
+#'   \code{list(...)} the value was evaluated first, and
+#'   \code{jt(Age ~ Volunteer, d, numeric = Age)} stopped with R's own
+#'   "object 'Age' not found").
 #' @param aliases Named character vector. Names are the incorrect argument
 #'   names that users might type; values are the correct argument names
 #'   to suggest in the error message.
@@ -1533,22 +1539,10 @@
     expr <- mc[[arg]]
     sp   <- specs[[arg]]
     # The words typed, and which of them are bare symbols.
-    if (is.symbol(expr)) {
-      words <- as.character(expr)
-      bare  <- TRUE
-    } else if (is.call(expr) && identical(expr[[1L]], as.name("c")) &&
-               length(expr) > 1L) {
-      items <- as.list(expr)[-1L]
-      ok <- vapply(items, function(a) is.symbol(a) ||
-                     (is.character(a) && length(a) == 1L && !is.na(a)),
-                   logical(1))
-      if (!all(ok)) next
-      words <- vapply(items, as.character, character(1))
-      bare  <- vapply(items, is.symbol, logical(1))
-    } else {
-      next
-    }
-    if (!any(bare) || !any(nzchar(words))) next
+    bw <- .jst_bare_words(expr)
+    if (is.null(bw)) next
+    words <- bw$words
+    bare  <- bw$bare
     m <- match(tolower(words[bare]), tolower(sp$values))
     if (anyNA(m)) next
     # A name holding a value still works.
@@ -1574,6 +1568,37 @@
               "  ", line, fn = fn)
   }
   invisible(NULL)
+}
+
+#' Internal helper: the words of an argument typed without quotes
+#'
+#' A bare symbol, or a \code{c()} of symbols and strings with at least one
+#' symbol: the words as typed and which of them are bare. Anything else --
+#' a string, a call of another function, an empty name -- gives NULL.
+#' Shared by \code{.jst_word_args()} (moved out of it, Session 377) and
+#' jplot()'s \code{.jst_resolve_which()}.
+#'
+#' @param expr An argument's expression, unevaluated.
+#' @return A list (\code{words}, character; \code{bare}, logical), or NULL.
+#' @keywords internal
+.jst_bare_words <- function(expr) {
+  if (is.symbol(expr)) {
+    words <- as.character(expr)
+    bare  <- TRUE
+  } else if (is.call(expr) && identical(expr[[1L]], as.name("c")) &&
+             length(expr) > 1L) {
+    items <- as.list(expr)[-1L]
+    ok <- vapply(items, function(a) is.symbol(a) ||
+                   (is.character(a) && length(a) == 1L && !is.na(a)),
+                 logical(1))
+    if (!all(ok)) return(NULL)
+    words <- vapply(items, as.character, character(1))
+    bare  <- vapply(items, is.symbol, logical(1))
+  } else {
+    return(NULL)
+  }
+  if (!any(bare) || !any(nzchar(words))) return(NULL)
+  list(words = words, bare = bare)
 }
 
 #' Internal helper: the call as typed, with one argument replaced

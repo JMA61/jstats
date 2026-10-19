@@ -89,8 +89,9 @@
 #'   \code{"legend"} and \code{"legend.bottom"} keep names and print a label
 #'   legend after the table. NULL (default) defers to \code{joutput()}'s
 #'   \code{variable.id} setting. Not a logical.
-#' @param numeric Optional character vector of variable names to treat as
-#'   continuous for this call (the per-call counterpart of \code{jnumeric()}).
+#' @param numeric Optional. Variables to treat as continuous for this call
+#'   (the per-call counterpart of \code{jnumeric()}), named bare or in
+#'   quotes, several with \code{c()}: \code{numeric = Age}.
 #'   Its only effect in \code{jdesc()} is to suppress the structural "seems
 #'   categorical" descriptive caution for those variables; the descriptives
 #'   themselves are computed the same way regardless.
@@ -99,8 +100,9 @@
 #'   an error pointing to \code{jfreq()} for a categorical summary. (How
 #'   \code{jdesc()} should handle an asserted-categorical variable is a parked
 #'   design decision.)
-#' @param count Optional character vector of variable names to treat as counts
-#'   for this call (the per-call counterpart of \code{jcount()}). A count is
+#' @param count Optional. Variables to treat as counts for this call (the
+#'   per-call counterpart of \code{jcount()}), named bare or in quotes,
+#'   several with \code{c()}. A count is
 #'   numeric-like here, so it behaves like \code{numeric}: it suppresses the
 #'   "seems categorical" caution for those variables.
 #' @param value.id Character or NULL. Value-label display mode for the
@@ -196,8 +198,13 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     return(.jst_vector_recurse(
       jdesc, "jdesc", wrapped, parent.frame(), dots = dots,
       subset_sub = subset_sub, by_quo = by_quo,
-      args = list(variable.id = variable.id, numeric = numeric,
-                  categorical = categorical, count = count,
+      # numeric =, categorical = and count = go to the re-call as typed,
+      # where a bare name is read in the column's frame (Fix Slate 23,
+      # Session 377): evaluated here, numeric = Age stopped with R's own
+      # "object 'Age' not found".
+      args = list(variable.id = variable.id, numeric = substitute(numeric),
+                  categorical = substitute(categorical),
+                  count = substitute(count),
                   value.id = value.id,
                   case.processing.detail = case.processing.detail,
                   digits = digits)))
@@ -249,11 +256,21 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # variable is a parked design (see JStats_Classification_Registry_Reference
   # Part 4), so rather than silently summarizing a variable the user asked to
   # treat categorically, jdesc stops and points to jfreq().
-  if (!is.null(categorical)) {
+  # Names bare or in quotes (ruling R18; Fix Slate 23, Session 377, as
+  # jlm()'s since Session 376), read without evaluating a bare name, which
+  # had stopped with R's own "object 'Environment2' not found" -- for
+  # categorical = too, ahead of its refusal.
+  if (.jst_arg_given(substitute(categorical), parent.frame())) {
     .jst_stop("categorical = is not supported yet: this function always ",
          "computes numeric descriptives.\nFor a categorical summary use ",
          "jfreq() instead.")
   }
+  .name_args <- .jst_model_name_args(
+    list(numeric = substitute(numeric), count = substitute(count)),
+    parent.frame(), data, .jst_data_name, example = unname(variable_names[1L]),
+    default_used = .jst_default_used)
+  numeric <- .name_args$numeric
+  count   <- .name_args$count
   for (.arg in c("numeric", "count")) {
     .val <- get(.arg)
     if (!is.null(.val)) {

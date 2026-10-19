@@ -56,8 +56,9 @@ the grouping-variable column header) -- best for short labels;
 legend after the table. NULL (default) defers to \code{joutput()}'s
 \code{variable.id} setting. Not a logical.}
 
-\item{numeric}{Optional character vector of variable names to treat as
-continuous for this call (the per-call counterpart of \code{jnumeric()}).
+\item{numeric}{Optional. Variables to treat as continuous for this call
+(the per-call counterpart of \code{jnumeric()}), named bare or in
+quotes, several with \code{c()}: \code{numeric = Age}.
 Its only effect in \code{jdesc()} is to suppress the structural "seems
 categorical" descriptive caution for those variables; the descriptives
 themselves are computed the same way regardless.}
@@ -68,8 +69,9 @@ an error pointing to \code{jfreq()} for a categorical summary. (How
 \code{jdesc()} should handle an asserted-categorical variable is a parked
 design decision.)}
 
-\item{count}{Optional character vector of variable names to treat as counts
-for this call (the per-call counterpart of \code{jcount()}). A count is
+\item{count}{Optional. Variables to treat as counts for this call (the
+per-call counterpart of \code{jcount()}), named bare or in quotes,
+several with \code{c()}. A count is
 numeric-like here, so it behaves like \code{numeric}: it suppresses the
 "seems categorical" caution for those variables.}
 

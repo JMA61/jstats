@@ -7,7 +7,13 @@
 .jst_check_args(dots, aliases, fn_name)
 }
 \arguments{
-\item{dots}{A list of arguments captured via \code{list(...)}.}
+\item{dots}{The arguments in \code{...}, captured unevaluated with
+\code{rlang::enquos(...)}: only their names are read, so an argument
+the function does not take gets the "unused input" stop even when its
+value is a name found nowhere (Fix Slate 23, Session 377; with
+\code{list(...)} the value was evaluated first, and
+\code{jt(Age ~ Volunteer, d, numeric = Age)} stopped with R's own
+"object 'Age' not found").}
 
 \item{aliases}{Named character vector. Names are the incorrect argument
 names that users might type; values are the correct argument names

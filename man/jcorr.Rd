@@ -46,8 +46,9 @@ with a legend mode otherwise); \code{"legend"}/\code{"legend.bottom"}
 keep names and print a label legend after the table. NULL (default)
 defers to \code{joutput()}'s \code{variable.id} setting. Not a logical.}
 
-\item{numeric}{Optional character vector of variable names to treat as
-continuous for this call (the per-call counterpart of \code{jnumeric()}).
+\item{numeric}{Optional. Variables to treat as continuous for this call
+(the per-call counterpart of \code{jnumeric()}), named bare or in
+quotes, several with \code{c()}: \code{numeric = Age}.
 Its only effect in \code{jcorr()} is to suppress the structural "seems
 categorical" caution for those variables; correlations are computed the
 same way regardless (labelled variables are coerced to numeric either way).}
@@ -58,8 +59,9 @@ pointing to \code{jcrosstab()} for association between categorical
 variables. (How \code{jcorr()} should handle an asserted-categorical
 variable is a parked design decision.)}
 
-\item{count}{Optional character vector of variable names to treat as counts
-for this call (the per-call counterpart of \code{jcount()}). A count is
+\item{count}{Optional. Variables to treat as counts for this call (the
+per-call counterpart of \code{jcount()}), named bare or in quotes,
+several with \code{c()}. A count is
 numeric-like here, so it behaves like \code{numeric}: it suppresses the
 "seems categorical" caution for those variables.}
 
@@ -96,8 +98,9 @@ which keep their own fixed conventions. NULL (default) defers to
 Invisibly returns a list of class \code{jst_corr} containing:
 \code{r} (correlation matrix), \code{p} (p-value matrix),
 \code{n} (pairwise N matrix), \code{method}, \code{model_frame} (the
-analysis data frame used for plotting), and \code{sample_info}
-(pipeline and missing data counts).
+analysis data frame used for plotting), \code{sample_info}
+(pipeline and missing data counts), \code{data_name} (the data
+frame's name, for the lines \code{jplot()} offers) and \code{labels}.
 }
 \description{
 Computes pairwise correlations and prints a formatted lower-triangle

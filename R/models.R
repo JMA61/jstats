@@ -41,8 +41,9 @@
 #'   with a legend mode otherwise); \code{"legend"}/\code{"legend.bottom"}
 #'   keep names and print a label legend after the table. NULL (default)
 #'   defers to \code{joutput()}'s \code{variable.id} setting. Not a logical.
-#' @param numeric Optional character vector of variable names to treat as
-#'   continuous for this call (the per-call counterpart of \code{jnumeric()}).
+#' @param numeric Optional. Variables to treat as continuous for this call
+#'   (the per-call counterpart of \code{jnumeric()}), named bare or in
+#'   quotes, several with \code{c()}: \code{numeric = Age}.
 #'   Its only effect in \code{jcorr()} is to suppress the structural "seems
 #'   categorical" caution for those variables; correlations are computed the
 #'   same way regardless (labelled variables are coerced to numeric either way).
@@ -51,8 +52,9 @@
 #'   pointing to \code{jcrosstab()} for association between categorical
 #'   variables. (How \code{jcorr()} should handle an asserted-categorical
 #'   variable is a parked design decision.)
-#' @param count Optional character vector of variable names to treat as counts
-#'   for this call (the per-call counterpart of \code{jcount()}). A count is
+#' @param count Optional. Variables to treat as counts for this call (the
+#'   per-call counterpart of \code{jcount()}), named bare or in quotes,
+#'   several with \code{c()}. A count is
 #'   numeric-like here, so it behaves like \code{numeric}: it suppresses the
 #'   "seems categorical" caution for those variables.
 #' @param value.id Not supported by \code{jcorr()}. The function does not
@@ -71,8 +73,9 @@
 #' @return Invisibly returns a list of class \code{jst_corr} containing:
 #'   \code{r} (correlation matrix), \code{p} (p-value matrix),
 #'   \code{n} (pairwise N matrix), \code{method}, \code{model_frame} (the
-#'   analysis data frame used for plotting), and \code{sample_info}
-#'   (pipeline and missing data counts).
+#'   analysis data frame used for plotting), \code{sample_info}
+#'   (pipeline and missing data counts), \code{data_name} (the data
+#'   frame's name, for the lines \code{jplot()} offers) and \code{labels}.
 #'
 #' @examples
 #' # With explicit data frame
@@ -172,11 +175,21 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   # JStats_Classification_Registry_Reference Part 4), so rather than coercing a
   # variable the user asked to treat categorically, jcorr stops and points to
   # jcrosstab().
-  if (!is.null(categorical)) {
+  # Names bare or in quotes (ruling R18; Fix Slate 23, Session 377, as
+  # jlm()'s since Session 376), read without evaluating a bare name, which
+  # had stopped with R's own "object 'Environment2' not found" -- for
+  # categorical = too, ahead of its refusal.
+  if (.jst_arg_given(substitute(categorical), parent.frame())) {
     .jst_stop("categorical = is not supported yet: correlation requires ",
          "numeric variables.\nFor association between categorical variables use ",
          "jcrosstab() instead.")
   }
+  .name_args <- .jst_model_name_args(
+    list(numeric = substitute(numeric), count = substitute(count)),
+    parent.frame(), data, .jst_data_name, example = unname(variable_names[1L]),
+    default_used = .jst_default_used)
+  numeric <- .name_args$numeric
+  count   <- .name_args$count
   for (.arg in c("numeric", "count")) {
     .val <- get(.arg)
     if (!is.null(.val)) {
@@ -368,6 +381,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     mf <- data[, variable_names, drop = FALSE]
     ret <- list(r = r_matrix, p = p_matrix, n = n_matrix, method = method,
                 model_frame = mf, sample_info = sample_info,
+                data_name = .jst_data_name,
                 labels = stats::setNames(
                   vapply(variable_names, function(v) .jst_label_or_name(data, v),
                          character(1)), variable_names))
@@ -452,6 +466,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     method      = method,
     model_frame = mf,
     sample_info = sample_info,
+    data_name   = .jst_data_name,
     labels      = stats::setNames(
       vapply(variable_names, function(v) .jst_label_or_name(data, v),
              character(1)), variable_names)
@@ -2807,7 +2822,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   .jst_check_diagnostics(diagnostics, "jlm")
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(which = "diagnostics", plots = "diagnostics",
                 show = "diagnostics"),
     fn_name = "jlm"
@@ -2940,7 +2955,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
          count = substitute(count)),
     parent.frame(), data, .jst_data_name,
     example = c(setdiff(c(raw_vars[-1L], names(data)), raw_vars[1L]),
-                "Age")[1L])
+                "Age")[1L], default_used = .jst_default_used)
   numeric     <- .name_args$numeric
   categorical <- .name_args$categorical
   count       <- .name_args$count
@@ -4514,7 +4529,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   .jst_check_diagnostics(diagnostics, "jlogistic")
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(which = "diagnostics", plots = "diagnostics",
                 show = "diagnostics"),
     fn_name = "jlogistic"
@@ -4632,7 +4647,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
          count = substitute(count)),
     parent.frame(), data, .jst_data_name,
     example = c(setdiff(c(raw_vars[-1L], names(data)), raw_vars[1L]),
-                "Age")[1L])
+                "Age")[1L], default_used = .jst_default_used)
   numeric     <- .name_args$numeric
   categorical <- .name_args$categorical
   count       <- .name_args$count

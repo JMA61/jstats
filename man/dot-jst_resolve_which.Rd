@@ -4,7 +4,7 @@
 \alias{.jst_resolve_which}
 \title{Internal helper: resolve the \code{which} argument for jplot dispatch methods}
 \usage{
-.jst_resolve_which(which, core, all_plots, class_name)
+.jst_resolve_which(which, core, all_plots, class_name, explain = NULL)
 }
 \arguments{
 \item{which}{The user's \code{which} argument: \code{core},
@@ -18,6 +18,11 @@ this jplot method.}
 
 \item{class_name}{Character. The S3 class being dispatched on; the
 stop names the function whose result it is.}
+
+\item{explain}{Optional named character vector: a plot name the method
+draws only for some results of its kind, and the stop that says why,
+used in place of the plot-name stop when that name is the only one
+refused (jcorr()'s scatter plot, which needs two variables).}
 }
 \value{
 A character vector of plot identifiers to produce.
@@ -30,5 +35,15 @@ identifiers. Accepts the special values \code{core} and
 names. A name it does not take stops in voice Rule A's form, the
 result named by the function that made it, and the sentence of what
 \code{which} takes from \code{.jst_takes_names()} (Session 376).
+}
+\details{
+A plot name typed without quotes (Fix Slate 23, Session 377) is read
+here, from the method's call, rather than evaluated: \code{which = vif}
+had stopped with R's own "object 'vif' not found". A name this result
+has gets ruling R18's pointer, the call with the name in quotes; a name
+it does not have gets the plot-name stop, since the pointer's line
+would stop on it next (ruling R23). The generic's own bare-word check
+leaves \code{which} to this helper whenever \code{x} is a result, so
+the set read is this result's, not every result's.
 }
 \keyword{internal}

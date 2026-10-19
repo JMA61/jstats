@@ -146,21 +146,22 @@
 #'   on plots (the \code{"name: label"} form for plot titles is deferred to a
 #'   later phase). NULL (default) defers to \code{joutput()}'s
 #'   \code{variable.id} setting. Not a logical.
-#' @param numeric Optional character vector of plotted-variable names to treat
-#'   as continuous for this call (the per-call counterpart of
-#'   \code{jnumeric()}). In \code{jplot()} a variable's class chooses the
+#' @param numeric Optional. Plotted variables to treat as continuous for
+#'   this call (the per-call counterpart of \code{jnumeric()}), named bare
+#'   or in quotes, several with \code{c()}: \code{numeric = Education}. In \code{jplot()} a variable's class chooses the
 #'   geometry, so this forces numeric handling (histogram for a single
 #'   variable; scatter / numeric axis in the formula and two-variable forms).
 #'   Applies to the plotted variables only, not the \code{by} grouping
 #'   variable.
-#' @param categorical Optional character vector of plotted-variable names to
-#'   treat as categorical for this call (the per-call counterpart of
-#'   \code{jdummy()} for plotting purposes). Forces categorical geometry (bar
+#' @param categorical Optional. Plotted variables to treat as categorical
+#'   for this call (the per-call counterpart of \code{jdummy()} for plotting
+#'   purposes), named bare or in quotes, several with \code{c()}. Forces categorical geometry (bar
 #'   for a single variable; box / categorical axis in the formula form). A
 #'   variable cannot be listed in both \code{categorical} and
 #'   \code{numeric}/\code{count}.
-#' @param count Optional character vector of plotted-variable names to treat
-#'   as counts for this call (the per-call counterpart of \code{jcount()}). A
+#' @param count Optional. Plotted variables to treat as counts for this call
+#'   (the per-call counterpart of \code{jcount()}), named bare or in quotes,
+#'   several with \code{c()}. A
 #'   count is numeric-like for plotting, so it draws the same as \code{numeric};
 #'   it is provided for symmetry with the other analysis functions.
 #'
@@ -237,8 +238,18 @@ jplot <- function(x, which = "core", ...) {
   # A bare word where a quoted value goes (ruling R18, Session 356), before
   # anything is evaluated. `which` is read only when the user named it:
   # jplot(Region, Volunteer) binds a second variable to it by position.
+  # And not here when x names a result (Fix Slate 23, Session 377): the
+  # list below is every result's, so which = heatmap on a jlm() result was
+  # offered which = "heatmap", which stops next; the method reads `which`
+  # against that result's own plot names (.jst_resolve_which()). A name is
+  # looked up without evaluating anything; a call given as x keeps the
+  # check here, ahead of running it.
+  x_sub    <- if (missing(x)) NULL else substitute(x)
+  x_result <- is.symbol(x_sub) &&
+    inherits(get0(as.character(x_sub), envir = parent.frame()),
+             .jst_plot_result_classes)
   .jst_word_args(sys.call(), mc, parent.frame(),
-                 c(if (!is.null(names(sys.call())) &&
+                 c(if (!x_result && !is.null(names(sys.call())) &&
                        "which" %in% names(sys.call()))
                      list(which = .jst_word_spec(
                        c("core", "all", "fit", "predicted", "effects", "coef",
@@ -445,8 +456,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                               equation = equation, r2 = r2, band = band,
                               subset_expr = substitute(subset),
                               labels = labels,
-                              numeric = numeric, categorical = categorical,
-                              count = count,
+                              name_subs = list(
+                                numeric     = substitute(numeric),
+                                categorical = substitute(categorical),
+                                count       = substitute(count)),
                               parent_env = parent.frame()))
   }
 
@@ -520,6 +533,19 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   check_names <- variable_names
   if (has_by) check_names <- c(check_names, by_name)
   .jst_check_vars(data, check_names, .jst_data_name, default_used = .jst_default_used)
+
+  # numeric =, categorical = and count = name variables, bare or in quotes
+  # (ruling R18; Fix Slate 23, Session 377, as jlm()'s since Session 376):
+  # read without evaluating a bare name, which had stopped with R's own
+  # "object 'Environment2' not found".
+  .name_args  <- .jst_model_name_args(
+    list(numeric = substitute(numeric), categorical = substitute(categorical),
+         count = substitute(count)),
+    parent.frame(), data, .jst_data_name, example = unname(variable_names[1L]),
+    default_used = .jst_default_used)
+  numeric     <- .name_args$numeric
+  categorical <- .name_args$categorical
+  count       <- .name_args$count
 
   # -- Per-call classification overrides -------------------------------------
   # In jplot a variable's class chooses the geometry (numeric -> histogram /
@@ -824,8 +850,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @keywords internal
 .jst_jplot_formula <- function(formula, jplot_call, ..., by_expr, type, line,
                                equation, r2, band, subset_expr, labels,
-                               numeric = NULL, categorical = NULL, count = NULL,
-                               parent_env) {
+                               name_subs = list(), parent_env) {
 
   # -- Parse formula ---------------------------------------------------------
   .jst_formula_quoted_stop(formula, jplot_call, "jplot")   # R18, S356
@@ -844,11 +869,20 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # fell through to the juse() branch -- a false "No data frame specified"
   # error with no default set, and the DEFAULT frame silently plotted in
   # place of d with one set.)
-  dots <- list(...)
-  dot_names <- names(dots)
-  if (is.null(dot_names)) dot_names <- rep("", length(dots))
-  positional_dots <- dots[!nzchar(dot_names)]
+  # Read unevaluated first (Fix Slate 23, Session 377): an argument jplot()
+  # does not take stops as "unused input", as it does in the data-first
+  # form, where it had been evaluated -- foo = Smoker stopping with R's own
+  # "object 'Smoker' not found" -- or, given a value, silently ignored. Only
+  # the data frame is evaluated.
+  dots_q    <- rlang::enquos(...)
+  dot_names <- names(dots_q)
+  if (is.null(dot_names)) dot_names <- rep("", length(dots_q))
+  .jst_check_args(dots_q[nzchar(dot_names) & dot_names != "data"],
+                  aliases = character(0), fn_name = "jplot")
+  positional_dots <- lapply(dots_q[!nzchar(dot_names)], rlang::eval_tidy)
   has_data_named  <- "data" %in% dot_names
+  dots <- if (has_data_named)
+    list(data = rlang::eval_tidy(dots_q[[match("data", dot_names)]])) else list()
 
   # The frame's expression as typed, recovered from the captured call, for
   # messages and for the registry lookups keyed on it (jsubset, jcomplete,
@@ -965,6 +999,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # assert a plotted variable's class, which here decides scatter-vs-box (and
   # guards the numeric-DV requirement). count is numeric-like for geometry.
   # Scoped to the two formula variables (DV and IV); not the by= variable.
+  # Names bare or in quotes, read without evaluating a bare name (ruling
+  # R18; Fix Slate 23, Session 377).
+  .name_args  <- .jst_model_name_args(name_subs, parent_env, data,
+                                      .jst_data_name, example = x_name,
+                                      default_used = .jst_default_used)
+  numeric     <- .name_args$numeric
+  categorical <- .name_args$categorical
+  count       <- .name_args$count
   .plot_vars <- c(y_name, x_name)
   for (.arg in c("numeric", "categorical", "count")) {
     .val <- get(.arg)
@@ -1641,6 +1683,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 
 # -- Internal helpers for jplot ------------------------------------------------
 
+#' Internal constant: the results jplot() draws through .jst_resolve_which()
+#'
+#' The classes whose methods read \code{which} against the result's own
+#' plot names. jplot()'s generic leaves a bare \code{which} to them
+#' (Session 377).
+#' @keywords internal
+.jst_plot_result_classes <- c("jst_lm", "jst_logistic", "jst_ttest",
+                              "jst_anova", "jst_corr", "jst_crosstab")
+
 #' Internal helper: resolve the `which` argument for jplot dispatch methods
 #'
 #' Translates the user's \code{which} argument into a vector of plot
@@ -1651,6 +1702,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' result named by the function that made it, and the sentence of what
 #' \code{which} takes from \code{.jst_takes_names()} (Session 376).
 #'
+#' A plot name typed without quotes (Fix Slate 23, Session 377) is read
+#' here, from the method's call, rather than evaluated: \code{which = vif}
+#' had stopped with R's own "object 'vif' not found". A name this result
+#' has gets ruling R18's pointer, the call with the name in quotes; a name
+#' it does not have gets the plot-name stop, since the pointer's line
+#' would stop on it next (ruling R23). The generic's own bare-word check
+#' leaves \code{which} to this helper whenever \code{x} is a result, so
+#' the set read is this result's, not every result's.
+#'
 #' @param which The user's \code{which} argument: \code{core},
 #'   \code{all}, or a character vector of plot names.
 #' @param core Character vector of plot identifiers comprising the
@@ -1659,11 +1719,49 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #'   this jplot method.
 #' @param class_name Character. The S3 class being dispatched on; the
 #'   stop names the function whose result it is.
+#' @param explain Optional named character vector: a plot name the method
+#'   draws only for some results of its kind, and the stop that says why,
+#'   used in place of the plot-name stop when that name is the only one
+#'   refused (jcorr()'s scatter plot, which needs two variables).
 #'
 #' @return A character vector of plot identifiers to produce.
 #'
 #' @keywords internal
-.jst_resolve_which <- function(which, core, all_plots, class_name) {
+.jst_resolve_which <- function(which, core, all_plots, class_name,
+                               explain = NULL) {
+  # The expression the method was given for `which`, and what it evaluates
+  # to (an error for a name found nowhere; a function for effects or qq
+  # where a package defines one).
+  ex  <- eval(call("substitute", as.name("which")), parent.frame())
+  val <- tryCatch(which, error = function(e) e)
+  words <- .jst_bare_words(ex)
+  if (!is.null(words) && !is.character(val)) {
+    takes_all <- c("core", "all", all_plots)
+    hit <- match(tolower(words$words), tolower(takes_all))
+    if (anyNA(hit)) {
+      which <- words$words
+    } else {
+      canon <- words$words
+      canon[!is.na(hit)] <- takes_all[hit[!is.na(hit)]]
+      new <- if (length(canon) == 1L) canon else
+        as.call(c(list(as.name("c")), as.list(canon)))
+      cl <- sys.call(-1L)
+      cl[[1L]] <- as.name("jplot")
+      mc <- match.call(jplot, cl)
+      named <- !is.null(names(cl)) && "which" %in% names(cl)
+      typed <- words$words[words$bare]
+      .jst_stop(.jst_and_list(typed),
+                if (length(typed) == 1L) " is" else " are",
+                " not in quotes.\n",
+                if (named) "which = takes a plot name in quotes:"
+                else "A plot name goes in quotes:", "\n",
+                "  ", .jst_call_with(cl, mc, "which", new), fn = "jplot")
+    }
+  } else if (inherits(val, "error")) {
+    stop(val)
+  } else {
+    which <- val
+  }
   if (is.character(which) && length(which) == 1L && !is.na(which) &&
       which %in% c("core", "all")) {
     return(if (which == "core") core else all_plots)
@@ -1682,6 +1780,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     .jst_stop(takes, fn = "jplot")
   }
   bad <- setdiff(which, all_plots)
+  if (length(bad) > 0L && length(explain) > 0L &&
+      all(unique(bad) %in% names(explain))) {
+    .jst_stop(paste(explain[unique(bad)], collapse = "\n"), fn = "jplot")
+  }
   if (length(bad) > 0L) {
     .jst_stop(.jst_and_list(paste0("\"", unique(bad), "\"")),
               if (length(unique(bad)) == 1L) " is not a plot of "
@@ -2157,10 +2259,10 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
   .jst_check_flag(r2, "r2")
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(diagnostics = "which", plots = "which",
                 show = "which", type = "which"),
-    fn_name = "jplot.jst_lm"
+    fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -2523,10 +2625,10 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                                ...) {
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(diagnostics = "which", plots = "which",
                 show = "which", type = "which"),
-    fn_name = "jplot.jst_logistic"
+    fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -2886,10 +2988,10 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
 jplot.jst_ttest <- function(x, which = "core", ...) {
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(diagnostics = "which", plots = "which",
                 show = "which", type = "which"),
-    fn_name = "jplot.jst_ttest"
+    fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -2950,10 +3052,10 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
 jplot.jst_anova <- function(x, which = "core", ...) {
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(diagnostics = "which", plots = "which",
                 show = "which", type = "which"),
-    fn_name = "jplot.jst_anova"
+    fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -3013,10 +3115,10 @@ jplot.jst_anova <- function(x, which = "core", ...) {
 jplot.jst_corr <- function(x, which = "core", ...) {
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(diagnostics = "which", plots = "which",
                 show = "which", type = "which"),
-    fn_name = "jplot.jst_corr"
+    fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -3030,9 +3132,36 @@ jplot.jst_corr <- function(x, which = "core", ...) {
   default_core <- if (n_vars >= 3) "heatmap" else "scatter"
   all_plots <- if (n_vars >= 3) "heatmap" else c("scatter", "heatmap")
 
+  # A scatter plot is drawn only for two variables. Asked of a result of
+  # three or more, the stop says so and gives the two-variable call (Fix
+  # Slate 23, Session 377; Jeff: "Default okay."), where it said scatter
+  # "is not a plot of a jcorr() result". The data frame is the one the
+  # result was made from (data_name, since v0.9.250; MyData for an older
+  # result) and the method stays as it was.
+  explain <- NULL
+  if (n_vars >= 3) {
+    vn <- rownames(r_matrix)[1:2]
+    dn <- x$data_name
+    dx <- if (is.character(dn) && length(dn) == 1L)
+      tryCatch(str2lang(dn), error = function(e) NULL)
+    if (!(is.symbol(dx) ||
+          (is.call(dx) && identical(dx[[1L]], as.name("$"))))) {
+      dn <- "MyData"   # an older result, or an expression given as the data
+    }
+    meth <- if (!is.null(x$method) && !identical(x$method, "pearson"))
+      paste0(", method = \"", x$method, "\"") else ""
+    explain <- c(scatter = paste0(
+      "a scatter plot needs a jcorr() result with exactly two variables, ",
+      "and this one has ", n_vars, ".\n",
+      "Correlate two of them and plot that result, for example:\n",
+      "  r2 <- jcorr(", dn, ", ", vn[1], ", ", vn[2], meth, ")\n",
+      "  jplot(r2, which = \"scatter\")"))
+  }
+
   plot_set <- .jst_resolve_which(which, core = default_core,
                                  all_plots = all_plots,
-                                 class_name = "jst_corr")
+                                 class_name = "jst_corr",
+                                 explain = explain)
 
   plots <- list()
 
@@ -3079,6 +3208,10 @@ jplot.jst_corr <- function(x, which = "core", ...) {
     var_names <- colnames(mf)
     r_val <- r_matrix[1, 2]
     n_val <- x$n[1, 2]
+    # The pairs the correlation used (Session 377): a case missing either
+    # value is left out here, as it was from r and N, where ggplot2 dropped
+    # it with its own "Removed 4 rows containing missing values" warning.
+    mf <- mf[!is.na(mf[[1L]]) & !is.na(mf[[2L]]), , drop = FALSE]
 
     p <- ggplot2::ggplot(mf,
                          ggplot2::aes(x = .data[[var_names[1]]],
@@ -3103,10 +3236,10 @@ jplot.jst_corr <- function(x, which = "core", ...) {
 jplot.jst_crosstab <- function(x, which = "core", ...) {
 
   .jst_check_args(
-    list(...),
+    rlang::enquos(...),
     aliases = c(diagnostics = "which", plots = "which",
                 show = "which", type = "which"),
-    fn_name = "jplot.jst_crosstab"
+    fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {

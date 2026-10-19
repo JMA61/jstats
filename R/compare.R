@@ -210,7 +210,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   .jst_check_flag(effect.size, "effect.size", null.ok = TRUE)
   .jst_check_flag(ci, "ci", null.ok = TRUE)
   # levene = was the name of this setting until v0.9.219.
-  .jst_check_args(list(...), aliases = c(levene = "diagnostics"),
+  .jst_check_args(rlang::enquos(...), aliases = c(levene = "diagnostics"),
                   fn_name = "jt")
 
   digits_n <- .jst_resolve_digits(digits)
@@ -991,7 +991,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   .jst_check_flag(ci, "ci", null.ok = TRUE)
   .jst_check_flag(posthoc, "posthoc", null.ok = TRUE)
   # levene = was the name of this setting until v0.9.219.
-  .jst_check_args(list(...), aliases = c(levene = "diagnostics"),
+  .jst_check_args(rlang::enquos(...), aliases = c(levene = "diagnostics"),
                   fn_name = "jaov")
 
   digits_n    <- .jst_resolve_digits(digits)
@@ -1737,10 +1737,13 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param arg The argument's name, for the stop.
 #' @param data_name The data frame's name, for the not-found stop.
 #' @param example A variable to name in the stop's example.
+#' @param default_used Logical; the data frame is the juse() default, so the
+#'   not-found stop carries its hint, as every not-found stop does (Session
+#'   377).
 #' @return Character vector of names; empty for NULL.
 #' @keywords internal
 .jst_names_given <- function(sub, env, data, arg, data_name = NULL,
-                             example = "Age") {
+                             example = "Age", default_used = FALSE) {
   if (is.null(sub)) return(character(0))
   one <- function(e) {
     if (is.character(e) && length(e) == 1L && !is.na(e)) return(e)
@@ -1759,7 +1762,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   val <- tryCatch(eval(sub, env), error = function(e) e)
   if (!inherits(val, "error") && is.character(val) && !anyNA(val)) return(val)
   if (is.symbol(sub)) {
-    .jst_check_vars(data, as.character(sub), data_name)
+    .jst_check_vars(data, as.character(sub), data_name,
+                    default_used = isTRUE(default_used))
   }
   .jst_stop(arg, " = takes the names of variables, for example:\n",
             "  ", arg, " = ", deparse(example))
@@ -1781,18 +1785,44 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #' @param data The data frame.
 #' @param data_name The data frame's name, for the not-found stop.
 #' @param example A variable to name in the stop's example.
+#' @param default_used Logical; passed to \code{.jst_names_given()}.
 #' @return The same named list, each element a character vector of names
 #'   or \code{NULL} when none was given.
+#' @details Since Session 377 also \code{jdesc()}'s, \code{jcorr()}'s and
+#'   \code{jplot()}'s \code{numeric =} and \code{count =} (and
+#'   \code{jplot()}'s \code{categorical =}).
 #' @keywords internal
 .jst_model_name_args <- function(subs, env, data, data_name,
-                                 example = "Age") {
+                                 example = "Age", default_used = FALSE) {
   out <- lapply(names(subs), function(a) {
     got <- .jst_names_given(subs[[a]], env, data, a, data_name,
-                            example = example)
+                            example = example, default_used = default_used)
     if (length(got) > 0L) got else NULL
   })
   names(out) <- names(subs)
   out
+}
+
+#' Internal helper: was an argument given a value?
+#'
+#' \code{jdesc()} and \code{jcorr()} refuse \code{categorical =} whatever
+#' it names, so they need only to know whether it was given -- read here
+#' without evaluating a bare name (Fix Slate 23, Session 377:
+#' \code{categorical = Environment2} had stopped with R's own "object
+#' 'Environment2' not found" ahead of the refusal). A NULL, typed or held
+#' by a name, is not a value.
+#'
+#' @param sub The argument, unevaluated.
+#' @param env The caller's environment.
+#' @return Logical(1).
+#' @keywords internal
+.jst_arg_given <- function(sub, env) {
+  if (is.null(sub)) return(FALSE)
+  if (is.symbol(sub)) {
+    val <- tryCatch(eval(sub, env), error = function(e) TRUE)
+    return(!is.null(val))
+  }
+  TRUE
 }
 
 #' Internal helper: the stop on a cross-tabulation variable with more than
@@ -2084,7 +2114,8 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # (below). Names in quotes or bare; each must be in the formula.
   cat_names <- .jst_names_given(substitute(categorical), parent.frame(),
                                 data, "categorical", .jst_data_name,
-                                example = row_name)
+                                example = row_name,
+                                default_used = .jst_default_used)
   if (length(cat_names) > 0L) {
     not_in <- setdiff(cat_names, terms)
     if (length(not_in) > 0L) {

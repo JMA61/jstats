@@ -4,7 +4,15 @@
 \alias{.jst_names_given}
 \title{Internal helper: variable names given to an argument, in quotes or bare}
 \usage{
-.jst_names_given(sub, env, data, arg, data_name = NULL, example = "Age")
+.jst_names_given(
+  sub,
+  env,
+  data,
+  arg,
+  data_name = NULL,
+  example = "Age",
+  default_used = FALSE
+)
 }
 \arguments{
 \item{sub}{The argument, unevaluated.}
@@ -18,6 +26,10 @@
 \item{data_name}{The data frame's name, for the not-found stop.}
 
 \item{example}{A variable to name in the stop's example.}
+
+\item{default_used}{Logical; the data frame is the juse() default, so the
+not-found stop carries its hint, as every not-found stop does (Session
+377).}
 }
 \value{
 Character vector of names; empty for NULL.

@@ -4,7 +4,14 @@
 \alias{.jst_model_name_args}
 \title{Internal helper: the model functions' variable lists, bare or quoted}
 \usage{
-.jst_model_name_args(subs, env, data, data_name, example = "Age")
+.jst_model_name_args(
+  subs,
+  env,
+  data,
+  data_name,
+  example = "Age",
+  default_used = FALSE
+)
 }
 \arguments{
 \item{subs}{Named list of the arguments, unevaluated (each from
@@ -17,6 +24,8 @@
 \item{data_name}{The data frame's name, for the not-found stop.}
 
 \item{example}{A variable to name in the stop's example.}
+
+\item{default_used}{Logical; passed to \code{.jst_names_given()}.}
 }
 \value{
 The same named list, each element a character vector of names
@@ -30,5 +39,10 @@ read by \code{.jst_names_given()} without evaluating a bare name
 (Fix Slate 22, Session 376: \code{categorical = Region} had stopped
 with R's own "object 'Region' not found"). A name holding names, or a
 computed list, is evaluated as before.
+}
+\details{
+Since Session 377 also \code{jdesc()}'s, \code{jcorr()}'s and
+\code{jplot()}'s \code{numeric =} and \code{count =} (and
+\code{jplot()}'s \code{categorical =}).
 }
 \keyword{internal}

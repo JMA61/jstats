@@ -16,9 +16,7 @@
   band,
   subset_expr,
   labels,
-  numeric = NULL,
-  categorical = NULL,
-  count = NULL,
+  name_subs = list(),
   parent_env
 )
 }
