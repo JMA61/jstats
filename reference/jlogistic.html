@@ -13,7 +13,7 @@ Gelman-standardized coefficients and odds ratios (Exp(b))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.249</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -109,19 +109,20 @@ to <code><a href="joutput.html">joutput()</a></code>'s <code>variable.id</code> 
 
 
 <dt id="arg-numeric">numeric<a class="anchor" aria-label="anchor" href="#arg-numeric"></a></dt>
-<dd><p>Optional character vector of variable names to treat
-as continuous even if they have value labels.</p></dd>
+<dd><p>Optional. Variables to treat as continuous even if they
+have value labels, named bare or in quotes, several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>.</p></dd>
 
 
 <dt id="arg-categorical">categorical<a class="anchor" aria-label="anchor" href="#arg-categorical"></a></dt>
-<dd><p>Optional character vector of variable names to treat
-as categorical even if they lack value labels.</p></dd>
+<dd><p>Optional. Variables to treat as categorical even if
+they lack value labels, named bare or in quotes, several with
+<code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>: <code>categorical = Region</code>.</p></dd>
 
 
 <dt id="arg-count">count<a class="anchor" aria-label="anchor" href="#arg-count"></a></dt>
-<dd><p>Optional character vector of independent-variable names to
-treat as counts for this call (the per-call counterpart of
-<code><a href="jcount.html">jcount()</a></code>). A count predictor is numeric-like, so it enters the
+<dd><p>Optional. Independent variables to treat as counts for this
+call (the per-call counterpart of <code><a href="jcount.html">jcount()</a></code>), named bare or in
+quotes, several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. A count predictor is numeric-like, so it enters the
 model exactly as <code>numeric</code> would; the argument is provided for
 symmetry with the other analysis functions. The binary dependent
 variable is fixed, so naming it here has no effect. A variable cannot be

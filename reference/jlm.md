@@ -69,30 +69,33 @@ jlm(
 
 - numeric:
 
-  Optional character vector of variable names that should be treated as
-  continuous (numeric) even if they have value labels. For example,
-  `numeric = "Age"` or `numeric = c("Age", "Education")`.
+  Optional. Variables that should be treated as continuous (numeric)
+  even if they have value labels, named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). For example, `numeric = Age`
+  or `numeric = c(Age, Education)`.
 
 - categorical:
 
-  Optional character vector of variable names that should be treated as
-  categorical even if they lack value labels. For example,
-  `categorical = "Program"` or `categorical = c("Program", "Region")`.
-  The first sorted unique value becomes the reference category. Use
+  Optional. Variables that should be treated as categorical even if they
+  lack value labels, named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). For example,
+  `categorical = Program` or `categorical = c(Program, Region)`. The
+  first sorted unique value becomes the reference category. Use
   [`jdummy()`](https://jma61.github.io/jstats/reference/jdummy.md) for
   control over the reference category.
 
 - count:
 
-  Optional character vector of variable names to treat as counts for
-  this call (the per-call counterpart of
-  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)). On
-  the dependent variable it speaks the count-regression caveat
-  definitively rather than as a hedge, and applies even when the
-  variable sits outside the structural 0-6 band. On an independent
-  variable it behaves like `numeric` (a count predictor enters the model
-  as numeric). A variable cannot be listed in both `count` and
-  `categorical`.
+  Optional. Variables to treat as counts for this call (the per-call
+  counterpart of
+  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). On the dependent variable it
+  speaks the count-regression caveat definitively rather than as a
+  hedge, and applies even when the variable sits outside the structural
+  0-6 band. On an independent variable it behaves like `numeric` (a
+  count predictor enters the model as numeric). A variable cannot be
+  listed in both `count` and `categorical`.
 
 - ci:
 

@@ -225,11 +225,11 @@ equation/R-squared/band annotations.
 
 Valid plot names by class (for the result-object form):
 
-- `jst_lm`: `fit`, `predicted`, `effects`, `coef`, `vif`, `residuals`,
-  `qq`, `scale`, `cooks`, `leverage`
+- `jst_lm`: `fit`, `predicted`, `effects`, `coef`, `residuals`, `qq`,
+  `scale`, `cooks`, `leverage`
 
 - `jst_logistic`: `probability`, `roc`, `calibration`, `binned`,
-  `cooks`, `leverage`, `coef`, `vif`
+  `cooks`, `leverage`, `coef`
 
 - `jst_ttest`, `jst_anova`: `box` (the default), `qq` (a normal Q-Q plot
   of the standardized residuals: each case's distance from its group's

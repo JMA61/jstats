@@ -13,7 +13,7 @@ blank for the intercept and for dummy-coded categorical terms."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.248</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.249</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -106,22 +106,25 @@ prints it at the very end. NULL (default) defers to <code><a href="joutput.html"
 
 
 <dt id="arg-numeric">numeric<a class="anchor" aria-label="anchor" href="#arg-numeric"></a></dt>
-<dd><p>Optional character vector of variable names that should be
-treated as continuous (numeric) even if they have value labels. For
-example, <code>numeric = "Age"</code> or <code>numeric = c("Age", "Education")</code>.</p></dd>
+<dd><p>Optional. Variables that should be treated as continuous
+(numeric) even if they have value labels, named bare or in quotes, several
+with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. For example, <code>numeric = Age</code> or
+<code>numeric = c(Age, Education)</code>.</p></dd>
 
 
 <dt id="arg-categorical">categorical<a class="anchor" aria-label="anchor" href="#arg-categorical"></a></dt>
-<dd><p>Optional character vector of variable names that should
-be treated as categorical even if they lack value labels. For example,
-<code>categorical = "Program"</code> or <code>categorical = c("Program", "Region")</code>.
+<dd><p>Optional. Variables that should be treated as
+categorical even if they lack value labels, named bare or in quotes,
+several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. For example, <code>categorical = Program</code> or
+<code>categorical = c(Program, Region)</code>.
 The first sorted unique value becomes the reference category. Use
 <code><a href="jdummy.html">jdummy()</a></code> for control over the reference category.</p></dd>
 
 
 <dt id="arg-count">count<a class="anchor" aria-label="anchor" href="#arg-count"></a></dt>
-<dd><p>Optional character vector of variable names to treat as counts
-for this call (the per-call counterpart of <code><a href="jcount.html">jcount()</a></code>). On the
+<dd><p>Optional. Variables to treat as counts for this call (the
+per-call counterpart of <code><a href="jcount.html">jcount()</a></code>), named bare or in quotes,
+several with <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>. On the
 dependent variable it speaks the count-regression caveat definitively
 rather than as a hedge, and applies even when the variable sits outside
 the structural 0-6 band. On an independent variable it behaves like

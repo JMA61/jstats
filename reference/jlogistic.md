@@ -70,24 +70,27 @@ jlogistic(
 
 - numeric:
 
-  Optional character vector of variable names to treat as continuous
-  even if they have value labels.
+  Optional. Variables to treat as continuous even if they have value
+  labels, named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html).
 
 - categorical:
 
-  Optional character vector of variable names to treat as categorical
-  even if they lack value labels.
+  Optional. Variables to treat as categorical even if they lack value
+  labels, named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html): `categorical = Region`.
 
 - count:
 
-  Optional character vector of independent-variable names to treat as
-  counts for this call (the per-call counterpart of
-  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)). A
-  count predictor is numeric-like, so it enters the model exactly as
-  `numeric` would; the argument is provided for symmetry with the other
-  analysis functions. The binary dependent variable is fixed, so naming
-  it here has no effect. A variable cannot be listed in both `count` and
-  `categorical`.
+  Optional. Independent variables to treat as counts for this call (the
+  per-call counterpart of
+  [`jcount()`](https://jma61.github.io/jstats/reference/jcount.md)),
+  named bare or in quotes, several with
+  [`c()`](https://rdrr.io/r/base/c.html). A count predictor is
+  numeric-like, so it enters the model exactly as `numeric` would; the
+  argument is provided for symmetry with the other analysis functions.
+  The binary dependent variable is fixed, so naming it here has no
+  effect. A variable cannot be listed in both `count` and `categorical`.
 
 - ci:
 

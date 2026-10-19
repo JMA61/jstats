@@ -3,9 +3,9 @@
 The intercept-only model (`y ~ 1`, supported since Session 359) gives
 every case the same fitted value and the same leverage, and has no
 predictor to put on an axis: a fit line, an effect plot, a coefficient
-or VIF plot, and the plots drawn against the fitted values or the
-leverage have nothing to show. Those named in `skip` are left out of
-`plot_set`, and one note names them.
+plot, and the plots drawn against the fitted values or the leverage have
+nothing to show. Those named in `skip` are left out of `plot_set`, and
+one note names them.
 
 ## Usage
 
