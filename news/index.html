@@ -33,6 +33,22 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.9.254" id="jstats-09254">jstats 0.9.254<a class="anchor" aria-label="anchor" href="#jstats-09254"></a></h2>
+<p>Thank you for trying jstats. Here is what is new since the last release (0.9.252).</p>
+<ul><li>
+<strong>CSV files load as written.</strong> A postcode such as 0800 keeps its zero, a long ID keeps every digit, a column of F stays F, and the word NA in a text column (Namibia’s country code) stays a word. A note says when a column of numbers was kept as text, so a file you loaded before may now give such a column as text, with the reason beside it.</li>
+<li>
+<strong>N/A, - and . in a column of numbers.</strong> jstats does not assume they mean missing. When a few such cells make a column of numbers text, a note names them and gives the line that reads them as missing: <code>jload("incomes.csv", na = c("N/A", "-", "."))</code>
+</li>
+<li>
+<strong>Keep a column exactly as typed.</strong> <code>text =</code> reads codes such as 250.10 as written, in CSV and Excel files: <code>jload("visits.csv", text = Diag)</code>
+</li>
+<li>
+<strong>What is new, when you update.</strong> From your next update on, <code><a href="../reference/jupdate.html">jupdate()</a></code> prints these notes for each release it installs.</li>
+</ul><p>When something you typed before now stops, its message says what to type instead.</p>
+<p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.252" id="jstats-09252">jstats 0.9.252<a class="anchor" aria-label="anchor" href="#jstats-09252"></a></h2>
 <p>To the colleagues and students trying jstats before its CRAN release: thank you. Here is what is new since the last release (0.9.223).</p>
 <ul><li>
@@ -52,7 +68,8 @@
 <strong>Clearer messages throughout.</strong> Every line of code a message suggests now runs as printed.</li>
 </ul><p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
 </div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
