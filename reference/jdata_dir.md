@@ -10,7 +10,7 @@ package-internal option names.
 ## Usage
 
 ``` r
-jdata_dir(default = ".")
+jdata_dir(default = ".", ...)
 ```
 
 ## Arguments
@@ -19,6 +19,12 @@ jdata_dir(default = ".")
 
   Value returned when no data folder is configured. Defaults to `"."`
   (the working directory).
+
+- ...:
+
+  Not used. An input `jdata_dir()` does not take – a misspelled argument
+  – stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 

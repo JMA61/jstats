@@ -312,6 +312,9 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_names_arg.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_names_given.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_near_choice_hint.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_news_entries.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_news_plain.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_news_render.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_no_frame_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_no_header_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_no_predictor_note.html</loc></url>
@@ -494,6 +497,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_unquote_word.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_update_install.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_update_installed_version.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_update_news.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_update_target_lib.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_use_color.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_value_data_stop.html</loc></url>

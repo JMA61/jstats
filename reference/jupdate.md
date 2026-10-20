@@ -10,7 +10,7 @@ a script, or a Quarto document.
 ## Usage
 
 ``` r
-jupdate(ask = FALSE)
+jupdate(ask = FALSE, ...)
 ```
 
 ## Arguments
@@ -22,6 +22,12 @@ jupdate(ask = FALSE)
   installing. Defaults to `FALSE` (update without prompting), which is
   also what happens in any non-interactive session, such as a Quarto
   render.
+
+- ...:
+
+  Not used. An input `jupdate()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 
@@ -71,6 +77,14 @@ reported about the cause so you can see why.
 **The separate process.** The install runs in a separate R process so
 the copy of jstats loaded in your session does not lock its own files
 during the install (the usual cause of a failed update on Windows).
+
+**What is new.** After a successful update jupdate() prints the news for
+every version newer than the one you had, read from the news file
+(NEWS.md) the new version installed: the newest version first, with the
+Markdown backticks and bold markers taken out, since the Console shows
+them as typed. When the file has no such entry, only the success message
+prints. The same notes are on the Changelog page of the package's
+reference site.
 
 **After the update.** Restart R once to load the new version; the
 success message shows how.

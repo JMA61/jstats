@@ -11,7 +11,7 @@ what they find there.
 ## Usage
 
 ``` r
-jai(setup = NULL, path = NULL)
+jai(setup = NULL, path = NULL, ...)
 ```
 
 ## Arguments
@@ -25,6 +25,12 @@ jai(setup = NULL, path = NULL)
 
   Optional. An existing folder to write into, overriding the default
   destination; used only by `"project"` and `"machine"`.
+
+- ...:
+
+  Not used. An input `jai()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 
@@ -86,7 +92,7 @@ jai()
 #> jstats conventions
 #> 
 #> Orientation for users and AI assistants.
-#> Orientation text v3.8 | jstats 0.9.252 | generated 2026-10-20
+#> Orientation text v3.8 | jstats 0.9.253 | generated 2026-10-20
 #> 
 #> jstats is an integrated set of j-prefixed analysis functions (jdesc,
 #> jfreq, jlm, ...) with shared syntax and output styled after commercial

@@ -17,7 +17,7 @@ document."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.253</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@ document."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Update jstats to the latest version</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.252/R/utils.R" class="external-link"><code>R/utils.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/utils.R" class="external-link"><code>R/utils.R</code></a></small>
       <div class="d-none name"><code>jupdate.Rd</code></div>
     </div>
 
@@ -54,7 +54,7 @@ document.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jupdate</span><span class="op">(</span>ask <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jupdate</span><span class="op">(</span>ask <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -67,6 +67,12 @@ jupdate() shows the available and installed versions and asks for
 confirmation before installing. Defaults to <code>FALSE</code> (update without
 prompting), which is also what happens in any non-interactive session, such
 as a Quarto render.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Not used. An input <code>jupdate()</code> does not take – a
+misspelled argument – stops with "unused input" and the name as
+typed, in place of R's own "unused argument".</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -107,6 +113,13 @@ about the cause so you can see why.</p>
 <p><strong>The separate process.</strong> The install runs in a separate R process
 so the copy of jstats loaded in your session does not lock its own files
 during the install (the usual cause of a failed update on Windows).</p>
+<p><strong>What is new.</strong> After a successful update jupdate() prints the
+news for every version newer than the one you had, read from the news
+file (NEWS.md) the new version installed: the newest version first,
+with the Markdown backticks and bold markers taken out, since the
+Console shows them as typed. When the file has no such entry, only the
+success message prints. The same notes are on the Changelog page of
+the package's reference site.</p>
 <p><strong>After the update.</strong> Restart R once to load the new version; the
 success message shows how.</p>
     </div>
