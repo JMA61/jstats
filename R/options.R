@@ -1550,6 +1550,9 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
 #'
 #' @param default Value returned when no data folder is configured. Defaults
 #'   to \code{"."} (the working directory).
+#' @param ... Not used. An input \code{jdata_dir()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #' @return A length-one character string (the configured folder, or
 #'   \code{default}); or \code{default} unchanged when it is \code{NULL}.
 #' @seealso \code{\link{joptions}} to set the folder; \code{\link{jload}} and
@@ -1564,7 +1567,13 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
 #' jdata_dir(default = NULL)                    # NULL if nothing configured
 #' }
 #' @export
-jdata_dir <- function(default = ".") {
+jdata_dir <- function(default = ".", ...) {
+  # An input jdata_dir() does not take -- a misspelled argument, or a
+  # value past default -- stops here, read by name and never evaluated
+  # (Capability Slate C4, Session 379, the (S378) item; until then R
+  # stopped first, in its own words, "unused argument").
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jdata_dir", positional = "refuse")
   # A folder typed bare (ruling R18, Session 356).
   .jst_free_text_arg(substitute(default), parent.frame(), sys.call(),
                      match.call(), "default", "a folder name", "jdata_dir")

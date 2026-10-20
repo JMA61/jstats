@@ -4,11 +4,15 @@
 \alias{jdata_dir}
 \title{Return the configured data folder}
 \usage{
-jdata_dir(default = ".")
+jdata_dir(default = ".", ...)
 }
 \arguments{
 \item{default}{Value returned when no data folder is configured. Defaults
 to \code{"."} (the working directory).}
+
+\item{...}{Not used. An input \code{jdata_dir()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 A length-one character string (the configured folder, or

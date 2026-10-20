@@ -4,7 +4,7 @@
 \alias{jai}
 \title{Print the jstats orientation, or install it for an AI assistant}
 \usage{
-jai(setup = NULL, path = NULL)
+jai(setup = NULL, path = NULL, ...)
 }
 \arguments{
 \item{setup}{Optional. \code{"project"}, \code{"machine"}, \code{"chat"},
@@ -14,6 +14,10 @@ printed to the console.}
 \item{path}{Optional. An existing folder to write into, overriding the
 default destination; used only by \code{"project"} and
 \code{"machine"}.}
+
+\item{...}{Not used. An input \code{jai()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly \code{NULL}. Called for its side effects.

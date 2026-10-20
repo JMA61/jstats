@@ -4,7 +4,7 @@
 \alias{jupdate}
 \title{Update jstats to the latest version}
 \usage{
-jupdate(ask = FALSE)
+jupdate(ask = FALSE, ...)
 }
 \arguments{
 \item{ask}{Logical. When \code{TRUE} and the session is interactive,
@@ -12,6 +12,10 @@ jupdate() shows the available and installed versions and asks for
 confirmation before installing. Defaults to \code{FALSE} (update without
 prompting), which is also what happens in any non-interactive session, such
 as a Quarto render.}
+
+\item{...}{Not used. An input \code{jupdate()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly \code{NULL}. Called for its side effect of installing the
@@ -61,6 +65,14 @@ about the cause so you can see why.
 \strong{The separate process.} The install runs in a separate R process
 so the copy of jstats loaded in your session does not lock its own files
 during the install (the usual cause of a failed update on Windows).
+
+\strong{What is new.} After a successful update jupdate() prints the
+news for every version newer than the one you had, read from the news
+file (NEWS.md) the new version installed: the newest version first,
+with the Markdown backticks and bold markers taken out, since the
+Console shows them as typed. When the file has no such entry, only the
+success message prints. The same notes are on the Changelog page of
+the package's reference site.
 
 \strong{After the update.} Restart R once to load the new version; the
 success message shows how.

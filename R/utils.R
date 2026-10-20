@@ -239,6 +239,14 @@
 #' so the copy of jstats loaded in your session does not lock its own files
 #' during the install (the usual cause of a failed update on Windows).
 #'
+#' \strong{What is new.} After a successful update jupdate() prints the
+#' news for every version newer than the one you had, read from the news
+#' file (NEWS.md) the new version installed: the newest version first,
+#' with the Markdown backticks and bold markers taken out, since the
+#' Console shows them as typed. When the file has no such entry, only the
+#' success message prints. The same notes are on the Changelog page of
+#' the package's reference site.
+#'
 #' \strong{After the update.} Restart R once to load the new version; the
 #' success message shows how.
 #'
@@ -247,6 +255,9 @@
 #'   confirmation before installing. Defaults to \code{FALSE} (update without
 #'   prompting), which is also what happens in any non-interactive session, such
 #'   as a Quarto render.
+#' @param ... Not used. An input \code{jupdate()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #'
 #' @return Invisibly \code{NULL}. Called for its side effect of installing the
 #'   update, and for the messages it prints.
@@ -259,7 +270,13 @@
 #'
 #' @export
 #' @importFrom utils available.packages install.packages
-jupdate <- function(ask = FALSE) {
+jupdate <- function(ask = FALSE, ...) {
+  # An input jupdate() does not take -- a misspelled argument, or a value
+  # past ask -- stops here, read by name and never evaluated (Capability
+  # Slate C4, Session 379, the (S378) item; until then R stopped first, in
+  # its own words, "unused argument").
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jupdate", positional = "refuse")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(ask, "ask")
   # One network read doubles as a connectivity probe and a migration check.
@@ -392,9 +409,17 @@ jupdate <- function(ask = FALSE) {
     )
   }
 
+  # The news the update brings, from the NEWS.md it installed: the entries
+  # newer than the version this session had (Capability Slate C4, Session
+  # 379). "" when there are none, and the message is then as it was. It
+  # goes between the success line and the restart lines, so the step the
+  # user takes next is the last thing printed.
+  news <- .jst_update_news(lib, installed_ver, now)
+
   .jst_msg(
     "jstats has been updated to version ", now, ".\n",
     "\n",
+    news,
     "Restart R to load it in RStudio:\n",
     "  - open the Session menu > choose Restart R\n",
     "  - or press Ctrl+Shift+F10\n",
@@ -510,6 +535,213 @@ jupdate <- function(ask = FALSE) {
 }
 
 
+#' Internal helper: the news an update brings, ready to print
+#'
+#' After a successful update, jupdate() prints the entries of the NEWS.md
+#' the new version installed, for the versions newer than the one the
+#' session had, so a tester who updates sees what changed without visiting
+#' the release page (Capability Slate C4, Session 379; Jeff, S378: "we can
+#' have jupdate print the news file - at least until the time right when
+#' I'm going to submit to CRAN, at which point it can be re-evaluated.").
+#' R installs a package's NEWS.md at the top of its folder in the library,
+#' from a source package and in a binary alike (observed on R 4.3.3,
+#' S379), so the file is read from the library the update went into --
+#' never the loaded copy, which is the old version -- as
+#' .jst_update_installed_version() reads the version.
+#'
+#' Nothing here can cost the user the update: a file that is missing or
+#' unreadable, or that holds no entry newer than \code{from}, gives "",
+#' and jupdate()'s success message prints as it always has. A file that
+#' cannot be opened makes readLines() WARN before it errors (as an address
+#' that cannot be read does, Session 340), so a warning is caught as an
+#' error is and gives "" -- otherwise R's "cannot open file" would print
+#' under a successful update (found by startup_check.R I08).
+#'
+#' @param lib The library folder the update was installed into.
+#' @param from The version the session had before the update.
+#' @param to The version now installed.
+#' @return Character(1): "", or the lead line, the entries newest first
+#'   and a closing blank line, to be spliced into jupdate()'s message.
+#' @keywords internal
+.jst_update_news <- function(lib, from, to) {
+  read_news <- function() {
+    f <- file.path(lib, "jstats", "NEWS.md")
+    if (!file.exists(f)) return("")
+    entries <- .jst_news_entries(readLines(f, warn = FALSE,
+                                           encoding = "UTF-8"), from, to)
+    if (!length(entries)) return("")
+    paste0("What is new since version ", from, ":\n\n",
+           paste(vapply(entries, .jst_news_render, character(1)),
+                 collapse = "\n\n"),
+           "\n\n")
+  }
+  tryCatch(read_news(), error = function(e) "", warning = function(w) "")
+}
+
+
+#' Internal helper: the entries of a NEWS.md between two versions
+#'
+#' An entry is a level-one heading naming the package and a version --
+#' "# jstats 0.9.252", a "v" before the number or anything after it
+#' allowed -- and the lines under it up to the next level-one heading. A
+#' level-one heading with no version ("# jstats (development version)") is
+#' no entry. Kept: the entries newer than \code{from} and no newer than
+#' \code{to}, newest first whatever the file's order.
+#'
+#' @param lines Character vector: the file's lines.
+#' @param from,to Version strings.
+#' @return A list of entries, each a list with \code{version},
+#'   \code{title} (the heading as text) and \code{body} (its lines).
+#' @keywords internal
+.jst_news_entries <- function(lines, from, to) {
+  lines <- sub("[[:space:]]+$", "", sub("^\ufeff", "", lines))
+  head  <- grep("^#[[:space:]]", lines)
+  if (!length(head)) return(list())
+  ver_re <- "^#[[:space:]]+[^[:space:]]+[[:space:]]+v?([0-9]+([.-][0-9]+)+).*$"
+  ends   <- c(head[-1L] - 1L, length(lines))
+  lo     <- package_version(from)
+  hi     <- package_version(to)
+  out    <- list()
+  vers   <- list()
+  for (k in seq_along(head)) {
+    h <- lines[head[k]]
+    if (!grepl(ver_re, h)) next
+    v <- package_version(sub(ver_re, "\\1", h), strict = FALSE)
+    if (is.na(v) || v <= lo || v > hi) next
+    body <- if (ends[k] > head[k]) lines[(head[k] + 1L):ends[k]] else character(0)
+    out[[length(out) + 1L]]   <- list(version = as.character(v),
+                                      title = .jst_news_plain(sub("^#[[:space:]]+", "", h)),
+                                      body = body)
+    vers[[length(vers) + 1L]] <- v
+  }
+  if (length(out) > 1L) {
+    ord <- order(do.call(c, vers), decreasing = TRUE)
+    out <- out[ord]
+  }
+  out
+}
+
+
+#' Internal helper: one NEWS.md entry as Console text
+#'
+#' The Console shows Markdown as typed, so the entry is printed as plain
+#' text: its heading as a line, each paragraph as one line for the emitter
+#' to wrap, each list item at two spaces with a dash and its text hung at
+#' four, nested items two further in, a line that is only code -- a call
+#' in backticks, or the lines of a fenced block -- on a line of its own,
+#' four spaces in (two past an item's text), and the backticks and bold
+#' markers taken out (\code{.jst_news_plain()}). A blank line in the file
+#' is one blank line here. Prose is reflowed to the message width, not
+#' broken one sentence to a line: the entry is the release's own text,
+#' not a message in the package's voice. An item is wrapped here, at its
+#' hanging indent, through \code{.jst_wrap_indent()}, so each of its lines
+#' fits the width and the emitter passes it as it is.
+#'
+#' @param entry One element of \code{.jst_news_entries()}'s list.
+#' @param width The message width.
+#' @return Character(1), lines joined by newlines.
+#' @keywords internal
+.jst_news_render <- function(entry, width = .jst_resolve_width()) {
+  out   <- c(entry$title, "")
+  para  <- character(0)   # the lines of the paragraph or item being read
+  lead  <- ""             # an item's first-line marker, as printed
+  ctx   <- 0L             # the indent of the current item's text; 0 outside
+  fence <- FALSE
+  f_ind <- 0L
+  after_blank <- FALSE
+  code_ind <- function() if (ctx > 0L) ctx + 2L else 4L
+  emit <- function() {
+    if (length(para)) {
+      txt <- .jst_news_plain(paste(trimws(para), collapse = " "))
+      if (nzchar(lead)) {
+        w   <- .jst_wrap_indent(txt, nchar(lead), width)
+        out <<- c(out, paste0(lead, substring(w, nchar(lead) + 1L)))
+      } else if (ctx > 0L) {
+        out <<- c(out, .jst_wrap_indent(txt, ctx, width))
+      } else {
+        out <<- c(out, txt)
+      }
+    }
+    para <<- character(0)
+    lead <<- ""
+  }
+  item_re <- "^([[:space:]]*)([*+-]|[0-9]+[.)])[[:space:]]+(.*)$"
+  for (ln in entry$body) {
+    lead_sp <- nchar(ln) - nchar(sub("^[[:space:]]+", "", ln))
+    if (fence) {
+      if (grepl("^[[:space:]]*```", ln)) {
+        fence <- FALSE
+      } else {
+        out <- c(out, paste0(strrep(" ", code_ind()),
+                             sub(paste0("^ {0,", f_ind, "}"), "", ln)))
+      }
+      next
+    }
+    if (!nzchar(trimws(ln))) {
+      emit()
+      if (length(out) && nzchar(out[length(out)])) out <- c(out, "")
+      after_blank <- TRUE
+      next
+    }
+    if (after_blank && lead_sp < 2L) ctx <- 0L
+    after_blank <- FALSE
+    if (grepl("^[[:space:]]*```", ln)) {
+      emit()
+      fence <- TRUE
+      f_ind <- lead_sp
+    } else if (grepl("^#{1,6}[[:space:]]", ln)) {
+      emit()
+      ctx <- 0L
+      out <- c(out, .jst_news_plain(sub("^#+[[:space:]]+", "", ln)))
+    } else if (grepl(item_re, ln)) {
+      emit()
+      mark <- sub(item_re, "\\2", ln)
+      if (grepl("^[*+-]$", mark)) mark <- "-"
+      lead <- paste0(strrep(" ", 2L + 2L * (lead_sp %/% 2L)), mark, " ")
+      ctx  <- nchar(lead)
+      para <- sub(item_re, "\\3", ln)
+    } else if (grepl("^[[:space:]]*`[^`]+`$", ln)) {
+      emit()
+      out <- c(out, paste0(strrep(" ", code_ind()),
+                           .jst_news_plain(trimws(ln))))
+    } else {
+      para <- c(para, ln)
+    }
+  }
+  emit()
+  while (length(out) > 1L && !nzchar(out[length(out)])) {
+    out <- out[-length(out)]
+  }
+  paste(out, collapse = "\n")
+}
+
+
+#' Internal helper: Markdown markup taken out of a line of NEWS.md
+#'
+#' The backticks around code and the asterisks of bold, which the Console
+#' would show as typed; a link becomes its text with the address in
+#' parentheses, and an address in angle brackets the address. Typographic
+#' dashes, quotation marks, the ellipsis and the no-break space become
+#' their ASCII forms, as in every runtime string. Single asterisks and
+#' underscores are left alone: in this file they are more often code
+#' (\code{x * z}) than emphasis.
+#'
+#' @param x Character vector.
+#' @return Character vector.
+#' @keywords internal
+.jst_news_plain <- function(x) {
+  x <- gsub("\\[([^]]*)\\]\\(([^)]*)\\)", "\\1 (\\2)", x)
+  x <- gsub("<(https?://[^>]*)>", "\\1", x)
+  x <- gsub("**", "", x, fixed = TRUE)
+  x <- gsub("`", "", x, fixed = TRUE)
+  typo  <- c("\u2014", "\u2013", "\u2018", "\u2019", "\u201c", "\u201d",
+             "\u2026", "\u00a0")
+  ascii <- c("--", "-", "'", "'", "\"", "\"", "...", " ")
+  for (i in seq_along(typo)) x <- gsub(typo[i], ascii[i], x, fixed = TRUE)
+  x
+}
+
+
 #' Print the jstats orientation, or install it for an AI assistant
 #'
 #' \code{jai()} prints a short, plain-text orientation to the package's core
@@ -557,6 +789,9 @@ jupdate <- function(ask = FALSE) {
 #' @param path Optional. An existing folder to write into, overriding the
 #'   default destination; used only by \code{"project"} and
 #'   \code{"machine"}.
+#' @param ... Not used. An input \code{jai()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #'
 #' @return Invisibly \code{NULL}. Called for its side effects.
 #'
@@ -571,7 +806,13 @@ jupdate <- function(ask = FALSE) {
 #' @seealso \code{help("jstats")} for the package overview and full
 #'   function list.
 #' @export
-jai <- function(setup = NULL, path = NULL) {
+jai <- function(setup = NULL, path = NULL, ...) {
+  # An input jai() does not take -- a misspelled argument, or a value past
+  # path -- stops here, read by name and never evaluated (Capability Slate
+  # C4, Session 379, the (S378) item; until then R stopped first, in its
+  # own words, "unused argument").
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jai", positional = "refuse")
   if (!is.null(path)) {
     if (!is.character(path) || length(path) != 1L || is.na(path)) {
       .jst_stop("`path` must be a single folder name in quotes.")
