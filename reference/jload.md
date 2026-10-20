@@ -29,6 +29,8 @@ jload(
   sheet = NULL,
   skip = 0,
   header = TRUE,
+  text = NULL,
+  na = NULL,
   preserve.declarations = TRUE,
   missing.notice = NULL,
   quiet = FALSE,
@@ -110,6 +112,29 @@ jload(
   with `header = FALSE`; writing `header = TRUE` in the call says the
   numbers are the names (years, say), and the note is not shown.
 
+- text:
+
+  For Excel and CSV files. Variables to read exactly as the file has
+  them, as text: no number, no `TRUE` or `FALSE`, the word `NA` kept,
+  and `na` not applied. Name them without quotes, or in quotes, alone or
+  in [`c()`](https://rdrr.io/r/base/c.html): `text = Diag`,
+  `text = c(Diag, Postcode)`. A name is the file's own or the one
+  `jload()` gives the variable (`"Post code"` or `Post_code`). For codes
+  that numbers would change, such as the diagnosis codes `250.10` and
+  `250.1`. A name a CSV file does not have stops the load before it is
+  read, listing the file's names (a sheet's, once it is read). Every
+  other format carries its own variable types, so `text` stops there.
+
+- na:
+
+  For Excel and CSV files. Cell values to read as missing, in quotes:
+  `na = c("N/A", "-", ".")`. They are added to what is already missing
+  (an empty cell in a variable of numbers, and in a CSV file the word
+  `NA` there), in every variable but those named in `text`. When a
+  variable is numbers except for a few cells, a note names those cells
+  and shows the call with `na`. Every other format carries its own
+  missing values, so `na` stops there.
+
 - preserve.declarations:
 
   Logical. If `TRUE` (default), declared missing values arriving with
@@ -149,8 +174,9 @@ jload(
   file shadowed a shipped dataset, the note that an existing object was
   replaced, and the notes on what the read changed or found (variable
   names changed, a title row, names that are all numbers, rows and
-  columns that may not be data, a CSV file's encoding) are still shown,
-  as is the coded-missing scan report; turn that off with
+  columns that may not be data, a CSV file's encoding, a variable kept
+  as text, a variable of numbers made text by a few cells) are still
+  shown, as is the coded-missing scan report; turn that off with
   `check.missing = FALSE`.
 
 - ...:
@@ -198,6 +224,44 @@ in Windows-1252, and a note says so. Read with `header = FALSE`, a file
 has no names line, so each line is measured against the number of values
 most lines hold: a line holding more stops the load, and one holding
 fewer is read with its last cells empty.
+
+**Values in a CSV file:** A CSV file stores every value as text, so each
+variable's type is read from its values. A variable becomes numbers, or
+`TRUE` and `FALSE`, only where no value would change:
+
+- A whole number written with a leading zero (a postcode `0800`, an ID
+  `007`) keeps its variable as text, as written; numbers would drop the
+  zero. A note says so, with the line that makes it numbers anyway.
+
+- A whole number of more than 15 digits (an account or record ID) keeps
+  its variable as text: a number holds 15 digits exactly, so different
+  IDs would become one number. A note says so.
+
+- `T` and `F` standing alone stay text (a variable of `F` in a sample of
+  women is not `FALSE`); the words `TRUE` and `FALSE`, as R and Excel
+  write them, are read as `TRUE` and `FALSE`.
+
+- The word `NA` is missing in a variable of numbers, or of `TRUE` and
+  `FALSE`, which is how R writes a missing value there. In a text
+  variable it is a word, as in an Excel sheet (`NA` is Namibia's country
+  code), and the coded-missing scan names it with the line that declares
+  it missing.
+
+Base R's [`read.csv()`](https://rdrr.io/r/utils/read.table.html) reads
+all four as numbers, `TRUE` or `FALSE`, or missing, without a word. Use
+`text` for a code the rules cannot see, such as `250.10`, which numbers
+would read as `250.1`.
+
+**Values that are not numbers:** In a CSV file or a sheet, a variable of
+numbers that holds a few other values – `N/A`, `-` or `.` for a missing
+value – is read as text. jstats does not assume such a value is missing
+(a dash can mean zero), so a note names the values, with the `jload()`
+call whose `na` reads them as missing:
+`jload("incomes.csv", overwrite = TRUE, na = c("N/A", "-"))`. A variable
+is named when it has at most five such values and numbers in more than
+half of its cells that are not empty; in a sheet, its numbers must be
+number cells, since a number stored as text keeps the variable text
+whatever `na` names.
 
 **A file with no names row:** A CSV file or a sheet whose first row is
 data loses that case to the variable names, which are then numbers (`1`
@@ -367,6 +431,8 @@ jload("community.xlsx", sheet = "Wave2")
 jload("community.xlsx", sheet = 2)
 jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
 jload("scores.csv", header = FALSE)   # no names row: V1, V2, ...
+jload("visits.csv", text = Diag)       # codes kept as written: 250.10
+jload("incomes.csv", na = c("N/A", "-"))   # these cells read as missing
 
 # CSV and R format
 jload("community.csv")

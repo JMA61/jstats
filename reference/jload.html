@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.253</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.254</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,6 +85,8 @@ extension). Use the <code>name</code> argument to specify a different name.</p>
 <span>  sheet <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  skip <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  header <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  text <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  na <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  preserve.declarations <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  missing.notice <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -170,6 +172,30 @@ name read is a number, a note shows the call with
 numbers are the names (years, say), and the note is not shown.</p></dd>
 
 
+<dt id="arg-text">text<a class="anchor" aria-label="anchor" href="#arg-text"></a></dt>
+<dd><p>For Excel and CSV files. Variables to read exactly as the file
+has them, as text: no number, no <code>TRUE</code> or <code>FALSE</code>, the word
+<code>NA</code> kept, and <code>na</code> not applied. Name them without quotes, or
+in quotes, alone or in <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>: <code>text = Diag</code>,
+<code>text = c(Diag, Postcode)</code>. A name is the file's own or the one
+<code>jload()</code> gives the variable (<code>"Post code"</code> or
+<code>Post_code</code>). For codes that numbers would change, such as the
+diagnosis codes <code>250.10</code> and <code>250.1</code>. A name a CSV file does
+not have stops the load before it is read, listing the file's names (a
+sheet's, once it is read). Every other format carries its own variable
+types, so <code>text</code> stops there.</p></dd>
+
+
+<dt id="arg-na">na<a class="anchor" aria-label="anchor" href="#arg-na"></a></dt>
+<dd><p>For Excel and CSV files. Cell values to read as missing, in
+quotes: <code>na = c("N/A", "-", ".")</code>. They are added to what is
+already missing (an empty cell in a variable of numbers, and in a CSV
+file the word <code>NA</code> there), in every variable but those named in
+<code>text</code>. When a variable is numbers except for a few cells, a note
+names those cells and shows the call with <code>na</code>. Every other format
+carries its own missing values, so <code>na</code> stops there.</p></dd>
+
+
 <dt id="arg-preserve-declarations">preserve.declarations<a class="anchor" aria-label="anchor" href="#arg-preserve-declarations"></a></dt>
 <dd><p>Logical. If <code>TRUE</code> (default), declared
 missing values arriving with the file are preserved: SPSS-style
@@ -208,9 +234,10 @@ Errors, warnings, the multi-sheet advisory, the overwrite prompt, the
 note that a local file shadowed a shipped dataset, the note that an
 existing object was replaced, and the notes on what the read changed
 or found (variable names changed, a title row, names that are all
-numbers, rows and columns that may not be data, a CSV file's encoding)
-are still shown, as is the coded-missing scan report; turn that off
-with <code>check.missing = FALSE</code>.</p></dd>
+numbers, rows and columns that may not be data, a CSV file's encoding,
+a variable kept as text, a variable of numbers made text by a few
+cells) are still shown, as is the coded-missing scan report; turn that
+off with <code>check.missing = FALSE</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -259,6 +286,40 @@ in Windows-1252, and a note says so. Read with <code>header = FALSE</code>, a
 file has no names line, so each line is measured against the number of
 values most lines hold: a line holding more stops the load, and one
 holding fewer is read with its last cells empty.</p>
+<p><strong>Values in a CSV file:</strong>
+A CSV file stores every value as text, so each variable's type is read
+from its values. A variable becomes numbers, or <code>TRUE</code> and
+<code>FALSE</code>, only where no value would change:</p><ul><li><p>A whole number written with a leading zero (a postcode
+<code>0800</code>, an ID <code>007</code>) keeps its variable as text, as written;
+numbers would drop the zero. A note says so, with the line that makes
+it numbers anyway.</p></li>
+<li><p>A whole number of more than 15 digits (an account or record ID)
+keeps its variable as text: a number holds 15 digits exactly, so
+different IDs would become one number. A note says so.</p></li>
+<li><p><code>T</code> and <code>F</code> standing alone stay text (a variable of
+<code>F</code> in a sample of women is not <code>FALSE</code>); the words
+<code>TRUE</code> and <code>FALSE</code>, as R and Excel write them, are read as
+<code>TRUE</code> and <code>FALSE</code>.</p></li>
+<li><p>The word <code>NA</code> is missing in a variable of numbers, or of
+<code>TRUE</code> and <code>FALSE</code>, which is how R writes a missing value
+there. In a text variable it is a word, as in an Excel sheet
+(<code>NA</code> is Namibia's country code), and the coded-missing scan
+names it with the line that declares it missing.</p></li>
+</ul><p>Base R's <code><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv()</a></code> reads all four as numbers, <code>TRUE</code> or
+<code>FALSE</code>, or missing, without a word. Use <code>text</code> for a code the
+rules cannot see, such as <code>250.10</code>, which numbers would read as
+<code>250.1</code>.</p>
+<p><strong>Values that are not numbers:</strong>
+In a CSV file or a sheet, a variable of numbers that holds a few other
+values – <code>N/A</code>, <code>-</code> or <code>.</code> for a missing value – is read
+as text. jstats does not assume such a value is missing (a dash can mean
+zero), so a note names the values, with the <code>jload()</code> call whose
+<code>na</code> reads them as missing:
+<code>jload("incomes.csv", overwrite = TRUE, na = c("N/A", "-"))</code>. A
+variable is named when it has at most five such values and numbers in
+more than half of its cells that are not empty; in a sheet, its numbers
+must be number cells, since a number stored as text keeps the variable
+text whatever <code>na</code> names.</p>
 <p><strong>A file with no names row:</strong>
 A CSV file or a sheet whose first row is data loses that case to the
 variable names, which are then numbers (<code>1</code> becomes <code>X1</code>).
@@ -413,6 +474,8 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.xlsx"</span>, sheet <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"survey.xlsx"</span>, skip <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>   <span class="co"># a title and a blank row above the names</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"scores.csv"</span>, header <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>   <span class="co"># no names row: V1, V2, ...</span></span></span>
+<span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"visits.csv"</span>, text <span class="op">=</span> <span class="va">Diag</span><span class="op">)</span>       <span class="co"># codes kept as written: 250.10</span></span></span>
+<span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"incomes.csv"</span>, na <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"N/A"</span>, <span class="st">"-"</span><span class="op">)</span><span class="op">)</span>   <span class="co"># these cells read as missing</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># CSV and R format</span></span></span>
 <span class="r-in"><span><span class="fu">jload</span><span class="op">(</span><span class="st">"community.csv"</span><span class="op">)</span></span></span>
