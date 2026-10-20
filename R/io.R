@@ -69,6 +69,24 @@
 #'   name read is a number, a note shows the call with
 #'   \code{header = FALSE}; writing \code{header = TRUE} in the call says the
 #'   numbers are the names (years, say), and the note is not shown.
+#' @param text For Excel and CSV files. Variables to read exactly as the file
+#'   has them, as text: no number, no \code{TRUE} or \code{FALSE}, the word
+#'   \code{NA} kept, and \code{na} not applied. Name them without quotes, or
+#'   in quotes, alone or in \code{c()}: \code{text = Diag},
+#'   \code{text = c(Diag, Postcode)}. A name is the file's own or the one
+#'   \code{jload()} gives the variable (\code{"Post code"} or
+#'   \code{Post_code}). For codes that numbers would change, such as the
+#'   diagnosis codes \code{250.10} and \code{250.1}. A name a CSV file does
+#'   not have stops the load before it is read, listing the file's names (a
+#'   sheet's, once it is read). Every other format carries its own variable
+#'   types, so \code{text} stops there.
+#' @param na For Excel and CSV files. Cell values to read as missing, in
+#'   quotes: \code{na = c("N/A", "-", ".")}. They are added to what is
+#'   already missing (an empty cell in a variable of numbers, and in a CSV
+#'   file the word \code{NA} there), in every variable but those named in
+#'   \code{text}. When a variable is numbers except for a few cells, a note
+#'   names those cells and shows the call with \code{na}. Every other format
+#'   carries its own missing values, so \code{na} stops there.
 #' @param preserve.declarations Logical. If \code{TRUE} (default), declared
 #'   missing values arriving with the file are preserved: SPSS-style
 #'   codes such as -99, and declared ranges, keep their original numeric
@@ -132,6 +150,45 @@
 #' file has no names line, so each line is measured against the number of
 #' values most lines hold: a line holding more stops the load, and one
 #' holding fewer is read with its last cells empty.
+#'
+#' \strong{Values in a CSV file:}
+#' A CSV file stores every value as text, so each variable's type is read
+#' from its values. A variable becomes numbers, or \code{TRUE} and
+#' \code{FALSE}, only where no value would change:
+#' \itemize{
+#'   \item A whole number written with a leading zero (a postcode
+#'     \code{0800}, an ID \code{007}) keeps its variable as text, as written;
+#'     numbers would drop the zero. A note says so, with the line that makes
+#'     it numbers anyway.
+#'   \item A whole number of more than 15 digits (an account or record ID)
+#'     keeps its variable as text: a number holds 15 digits exactly, so
+#'     different IDs would become one number. A note says so.
+#'   \item \code{T} and \code{F} standing alone stay text (a variable of
+#'     \code{F} in a sample of women is not \code{FALSE}); the words
+#'     \code{TRUE} and \code{FALSE}, as R and Excel write them, are read as
+#'     \code{TRUE} and \code{FALSE}.
+#'   \item The word \code{NA} is missing in a variable of numbers, or of
+#'     \code{TRUE} and \code{FALSE}, which is how R writes a missing value
+#'     there. In a text variable it is a word, as in an Excel sheet
+#'     (\code{NA} is Namibia's country code), and the coded-missing scan
+#'     names it with the line that declares it missing.
+#' }
+#' Base R's \code{read.csv()} reads all four as numbers, \code{TRUE} or
+#' \code{FALSE}, or missing, without a word. Use \code{text} for a code the
+#' rules cannot see, such as \code{250.10}, which numbers would read as
+#' \code{250.1}.
+#'
+#' \strong{Values that are not numbers:}
+#' In a CSV file or a sheet, a variable of numbers that holds a few other
+#' values -- \code{N/A}, \code{-} or \code{.} for a missing value -- is read
+#' as text. jstats does not assume such a value is missing (a dash can mean
+#' zero), so a note names the values, with the \code{jload()} call whose
+#' \code{na} reads them as missing:
+#' \code{jload("incomes.csv", overwrite = TRUE, na = c("N/A", "-"))}. A
+#' variable is named when it has at most five such values and numbers in
+#' more than half of its cells that are not empty; in a sheet, its numbers
+#' must be number cells, since a number stored as text keeps the variable
+#' text whatever \code{na} names.
 #'
 #' \strong{A file with no names row:}
 #' A CSV file or a sheet whose first row is data loses that case to the
@@ -297,6 +354,8 @@
 #' jload("community.xlsx", sheet = 2)
 #' jload("survey.xlsx", skip = 2)   # a title and a blank row above the names
 #' jload("scores.csv", header = FALSE)   # no names row: V1, V2, ...
+#' jload("visits.csv", text = Diag)       # codes kept as written: 250.10
+#' jload("incomes.csv", na = c("N/A", "-"))   # these cells read as missing
 #'
 #' # CSV and R format
 #' jload("community.csv")
@@ -329,15 +388,17 @@
 #'   note that a local file shadowed a shipped dataset, the note that an
 #'   existing object was replaced, and the notes on what the read changed
 #'   or found (variable names changed, a title row, names that are all
-#'   numbers, rows and columns that may not be data, a CSV file's encoding)
-#'   are still shown, as is the coded-missing scan report; turn that off
-#'   with \code{check.missing = FALSE}.
+#'   numbers, rows and columns that may not be data, a CSV file's encoding,
+#'   a variable kept as text, a variable of numbers made text by a few
+#'   cells) are still shown, as is the coded-missing scan report; turn that
+#'   off with \code{check.missing = FALSE}.
 #' @param ... Not used. An input \code{jload()} does not take -- a
 #'   misspelled argument -- stops with "unused input" and the name as
 #'   typed, in place of R's own "unused argument".
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
-                  skip = 0, header = TRUE, preserve.declarations = TRUE,
+                  skip = 0, header = TRUE, text = NULL, na = NULL,
+                  preserve.declarations = TRUE,
                   missing.notice = NULL, quiet = FALSE, ...) {
   # An input jload() does not take -- a misspelled argument, or a value in
   # a place it has none -- stops here, read by name and never evaluated
@@ -358,6 +419,23 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # first row of numbers (the S362 audit's item 14).
   .jst_check_flag(header, "header")
   header_given <- !missing(header)
+  # text = and na = (ruling R31, Jeff, S380): variables of a CSV file or a
+  # sheet read exactly as the file has them, and the cell values read as
+  # missing. text = names variables, so it is read unevaluated, bare or in
+  # quotes (ruling R18), and checked against the file's names before the
+  # read; na = takes cell values, which go in quotes.
+  text_sub   <- substitute(text)
+  text_given <- !is.null(text_sub)
+  text_txt   <- if (text_given) {
+    paste(deparse(text_sub, width.cutoff = 500L), collapse = " ")
+  } else NULL
+  .jst_free_text_arg(substitute(na), parent.frame(), sys.call(),
+                     match.call(), "na", "a cell value", "jload")
+  if (!is.null(na) && (!is.character(na) || length(na) == 0L || anyNA(na))) {
+    .jst_stop("`na` must be the cell values to read as missing, in quotes, ",
+              "for example:\n",
+              "  na = c(\"N/A\", \"-\")")
+  }
   .jst_check_flag(preserve.declarations, "preserve.declarations")
   .jst_check_flag(quiet, "quiet")
   .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
@@ -438,6 +516,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # printed call runs as printed. Until Session 365 the multi-sheet note
   # built its own line from basename(file), which dropped a typed folder,
   # and the sheet stop's and the leading-digit stop's lines dropped skip =.
+  # Since Session 380 (ruling R31) text = as typed and na = are kept too.
   line_for <- function(..., loaded = FALSE, shown_file = file_typed) {
     set  <- list(...)
     pick <- function(key, own) if (key %in% names(set)) set[[key]] else own
@@ -445,6 +524,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     sh <- pick("sheet", sheet)
     sk <- pick("skip", skip)
     hd <- pick("header", header)
+    tx <- pick("text", text_txt)
+    nv <- pick("na", na)
     a <- paste0("\"", .jst_dq_escape(shown_file), "\"")
     if (!is.null(nm)) a <- c(a, paste0("name = \"", .jst_dq_escape(nm), "\""))
     if (isTRUE(overwrite) || loaded) a <- c(a, "overwrite = TRUE")
@@ -452,6 +533,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     if (!is.null(sh)) a <- c(a, paste0("sheet = ", paste(deparse(sh), collapse = "")))
     if (!is.null(sk) && sk > 0L) a <- c(a, paste0("skip = ", sk))
     if (isFALSE(hd)) a <- c(a, "header = FALSE")
+    if (!is.null(tx)) a <- c(a, paste0("text = ", tx))
+    if (!is.null(nv)) a <- c(a, paste0("na = ", .jst_na_arg_text(nv)))
     paste0("  jload(", paste(a, collapse = ", "), ")")
   }
 
@@ -693,19 +776,29 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # header = FALSE on a format that carries its own variable names (ruling
   # R21): a stop, before the overwrite question and the read, with the call
   # to run without it. header = TRUE written out passes, as skip = 0 does.
-  if (!header && (from_package || !ext %in% c("csv", "xlsx", "xls"))) {
+  # Since Session 380 (ruling R31) text = and na = too, every one given named
+  # in one stop (voice Rule AJ) and dropped from the line, so it runs.
+  sheet_only <- c(if (!header) "header = FALSE", if (text_given) "text =",
+                  if (!is.null(na)) "na =")
+  if (length(sheet_only) > 0L &&
+      (from_package || !ext %in% c("csv", "xlsx", "xls"))) {
+    carries <- .jst_and_list(c(if (!header) "variable names",
+                               if (text_given) "variable types",
+                               if (!is.null(na)) "missing values"))
     .jst_stop(
-      "header = FALSE is only for Excel format (.xlsx, .xls) and CSV format ",
-      "(.csv).\n",
+      .jst_and_list(sheet_only),
+      if (length(sheet_only) == 1L) " is" else " are",
+      " only for Excel format (.xlsx, .xls) and CSV format (.csv).\n",
       if (from_package) {
         paste0(file, " is a jstats example dataset, which carries its own ",
-               "variable names.\n")
+               carries, ".\n")
       } else {
         paste0(basename(file), " is in ", .jst_format_label(ext), " (.", ext,
-               "), which carries its own variable names.\n")
+               "), which carries its own ", carries, ".\n")
       },
-      "To load it, drop header = FALSE:\n",
-      line_for(header = TRUE, sheet = NULL, skip = 0L)
+      "To load it, drop ",
+      if (length(sheet_only) == 1L) sheet_only else "them", ":\n",
+      line_for(header = TRUE, sheet = NULL, skip = 0L, text = NULL, na = NULL)
     )
   }
 
@@ -896,6 +989,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
   }
 
+  # text = names a CSV file does not have (ruling R31, Session 380): a stop
+  # listing the file's names, as sheet = lists the sheets, read from the
+  # names line alone, so it comes before the question and the read. A
+  # sheet's names wait for the read: readxl finds a sheet's last column
+  # only by reading its rows (a column with data and no name is past the
+  # names row), and nothing is assigned before the check there either.
+  if (text_given && !from_package && ext == "csv") {
+    pre_nm <- .jst_csv_header_names(resolved_path, skip, csv_enc, header,
+                                    csv_cols)
+    if (!is.null(pre_nm)) {
+      .jst_jload_text_cols(text_sub, target_env, pre_nm, shown)
+    }
+  }
+
   # --- The overwrite question, after every check that can stop ---------------
   # (Session 366; see the overwrite check above.) What is left to stop the
   # load needs the read itself: an .rds file holding something other than a
@@ -929,6 +1036,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       line_for(sheet = all_sheets[2L], loaded = TRUE)
     )
   }
+
+  # What the CSV typing and the sheet's text = read leave for the notes
+  # below (ruling R31, Session 380).
+  text_pos  <- integer(0)
+  kept_text <- list()
+  markers   <- list()
 
   # For .sav: always pass user_na = TRUE so UDM metadata is available for
   # the .jst_handle_udms step below, regardless of preserve.declarations. The package
@@ -964,7 +1077,26 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                  if (!header && !is.null(csv_cols)) {
                    csv_args$col.names <- paste0("V", seq_len(csv_cols))
                  }
-                 read_or_stop(do.call(utils::read.csv, csv_args))
+                 # Since Session 380 (ruling R31): every cell read as the
+                 # file has it, then each variable typed by jstats's rule
+                 # (.jst_csv_type_columns()): numbers only where no value
+                 # would change -- a leading zero (0800) or more than 15
+                 # digits keeps the variable as text, with a note; T and F
+                 # alone stay text; the word NA is missing in a variable of
+                 # numbers or TRUE/FALSE and a word in a text variable; text
+                 # = variables as written, na = values missing.
+                 csv_args$colClasses <- "character"
+                 csv_args$na.strings <- character(0)
+                 csv_raw <- read_or_stop(do.call(utils::read.csv, csv_args))
+                 if (text_given) {
+                   text_pos <- .jst_jload_text_cols(text_sub, target_env,
+                                                    names(csv_raw), shown)
+                 }
+                 csv_typed <- .jst_csv_type_columns(csv_raw, text_pos, na,
+                                                    header = header)
+                 kept_text <- csv_typed$kept
+                 markers   <- csv_typed$markers
+                 csv_typed$df
                },
                rds      = read_or_stop(readRDS(resolved_path)),
                xlsx     = ,
@@ -986,8 +1118,26 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                                    guess_max = 1048576L,
                                    .name_repair = "minimal")
                  if (!is.null(sheet)) read_args$sheet <- sheet
+                 # Since Session 380 (ruling R31): na = cells read as
+                 # missing (readxl's na, beside the empty cell), and text =
+                 # variables read again on their own, as text and with no
+                 # na =, so each is as the sheet has it.
+                 if (!is.null(na)) read_args$na <- unique(c("", na))
                  xl <- read_or_stop(do.call(readxl::read_excel, read_args))
                  if (!header) names(xl) <- paste0("V", seq_len(ncol(xl)))
+                 if (text_given) {
+                   text_pos <- .jst_jload_text_cols(text_sub, target_env,
+                                                    names(xl), shown)
+                 }
+                 if (length(text_pos) > 0L) {
+                   ct <- rep("skip", ncol(xl))
+                   ct[text_pos] <- "text"
+                   tx_args <- read_args
+                   tx_args$na <- ""
+                   tx_args$col_types <- ct
+                   xt <- read_or_stop(do.call(readxl::read_excel, tx_args))
+                   for (q in seq_along(text_pos)) xl[[text_pos[q]]] <- xt[[q]]
+                 }
                  xl
                }
   )
@@ -1033,6 +1183,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     if ((sheet_file || ext == "csv") && is.null(title_rows)) {
       no_head <- header && !header_given && .jst_names_all_numbers(raw_nm)
       parts   <- .jst_import_stray_parts(df, raw_nm, header)
+    }
+    # A sheet's variables of numbers made text by a few cells (ruling R31,
+    # question 5; a CSV file's were found as it was typed), none beside a
+    # title note, whose skip = call reads the sheet again.
+    if (sheet_file && is.null(title_rows)) {
+      markers <- .jst_marker_columns(df, text_pos, cells = function(cols) {
+        ct <- rep("skip", ncol(df))
+        ct[cols] <- "list"
+        a <- read_args
+        a$col_types <- ct
+        do.call(readxl::read_excel, a)
+      }, header = header)
+    } else if (!is.null(title_rows)) {
+      markers <- list()
     }
     cl <- .jst_clean_import_names(raw_nm)
     if (any(cl$changed)) {
@@ -1184,6 +1348,19 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (!is.null(nohead_note)) emit_note(nohead_note)
   if (!is.null(stray_note)) emit_note(stray_note)
   if (!is.null(rename_note)) emit_note(rename_note)
+  # Session 380 (ruling R31): a CSV variable kept as text because numbers
+  # would change its values, and a variable of numbers made text by a few
+  # cells, with the call whose na = reads them as missing (the values na =
+  # already named kept in it). After the names note, so each is named as
+  # loaded.
+  if (length(kept_text) > 0L) {
+    emit_note(.jst_kept_text_note(kept_text, names(df), obj_name))
+  }
+  if (length(markers) > 0L) {
+    mk_vals <- unique(c(na, unlist(lapply(markers, function(m) m$values))))
+    emit_note(.jst_marker_note(markers, names(df),
+                               line_for(na = mk_vals, loaded = TRUE)))
+  }
 
   # --- UDM narrative notification --------------------------------------------
   # Toggle resolution: per-call missing.notice arg > joutput global toggle >
@@ -1261,8 +1438,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # excluded from every classification.
   # (The scan's formal-UDM branch, unreachable from this call by
   # construction, was removed at S233 -- see the changelog.)
+  # A variable the note on a few cells named is left out (Session 380): the
+  # scan's declaration of its words left it text, so jt() still refused it.
   if (check.missing) {
-    .jst_scan_coded_missing(df, obj_name)
+    mk_vars <- names(df)[vapply(markers, function(m) m$pos, integer(1))]
+    .jst_scan_coded_missing(
+      if (length(mk_vars) > 0L) df[, !names(df) %in% mk_vars, drop = FALSE]
+      else df, obj_name)
   }
 
   # DECISION B (settled S205, implemented S208): return nothing. jload() is
@@ -2576,6 +2758,445 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   if (one) "it" else "them",
                   " from the file and load the file again."))
   paste0("Note: ", paste(out, collapse = "\n"))
+}
+
+# -- What a cell is read as (Session 380, ruling R31) --------------------------
+# The S362 import audit's item 16, widened to Excel at S364 and ruled by Jeff
+# at S380, one question at a time. A CSV file's value is read as a number,
+# or as TRUE or FALSE, only where nothing it says would change: 0800 had
+# been 800, four 20-digit IDs one number, a variable of F FALSE. The word
+# NA is missing where it stands for a number and a word in a text variable,
+# as a sheet's is. A variable of numbers that a few other cells made text is
+# said to be, with the jload() line whose na = reads them as missing. text =
+# and na = for CSV and Excel files.
+
+#' Internal: an na = value written as a call takes it
+#'
+#' @param na Character vector.
+#' @return Character(1): one quoted value, or a c() of them.
+#' @keywords internal
+.jst_na_arg_text <- function(na) {
+  q <- paste0("\"", .jst_dq_escape(na), "\"")
+  if (length(q) == 1L) q else paste0("c(", paste(q, collapse = ", "), ")")
+}
+
+#' Internal: a CSV file's variable names, from its names line alone
+#'
+#' For jload()'s \code{text =} (Session 380): the names read.csv() gives the
+#' variables, read before the file is, so a name the file does not have
+#' stops ahead of the overwrite question and the read. With
+#' \code{header = FALSE} they are V1 to Vk, k the count of values most lines
+#' hold.
+#' @param path,skip,enc As jload() reads the file.
+#' @param header jload()'s \code{header}.
+#' @param n_cols The count of values most lines hold, or NULL.
+#' @return Character vector, or NULL when the line cannot be read.
+#' @keywords internal
+.jst_csv_header_names <- function(path, skip, enc, header, n_cols) {
+  if (!header) {
+    return(if (is.null(n_cols)) NULL else paste0("V", seq_len(n_cols)))
+  }
+  tryCatch(suppressWarnings(names(utils::read.csv(
+    path, header = TRUE, nrows = 1L, skip = skip, check.names = FALSE,
+    row.names = NULL, colClasses = "character", na.strings = character(0),
+    fileEncoding = if (is.null(enc)) "" else enc))),
+    error = function(e) NULL)
+}
+
+#' Internal: the variables jload()'s text = names
+#'
+#' Ruling R31 (Session 380): \code{text =} names variables, so under ruling
+#' R18 it takes names bare or in quotes, or a \code{c()} of either, each read
+#' without evaluating it. A name is the file's own or the one jload() gives
+#' the variable (\code{"Post code"} or \code{Post_code}). A bare name the
+#' file does not have, but which holds names in the workspace, is read for
+#' them; any other expression is evaluated and must give names. A name the
+#' file has under neither form stops, every such name in one stop (voice Rule
+#' AJ), with the file's names listed, as \code{sheet =} lists the sheets.
+#' @param sub \code{text =} as typed (\code{substitute(text)}).
+#' @param env The caller's environment.
+#' @param raw_nm The names as the file has them.
+#' @param shown The file's name, for the stop.
+#' @return Integer vector: the variables' positions.
+#' @keywords internal
+.jst_jload_text_cols <- function(sub, env, raw_nm, shown) {
+  if (is.null(sub)) return(integer(0))
+  clean <- .jst_clean_import_names(raw_nm)$names
+  known <- c(raw_nm, clean)
+  elem <- function(e) {
+    if (is.character(e) && length(e) == 1L && !is.na(e)) return(e)
+    if (is.symbol(e) && nzchar(as.character(e))) {
+      nm <- as.character(e)
+      if (nm %in% known) return(nm)
+      val <- tryCatch(eval(e, env), error = function(err) NULL)
+      if (is.character(val) && length(val) > 0L && !anyNA(val)) return(val)
+      return(nm)
+    }
+    NULL
+  }
+  given <- if (is.symbol(sub) || is.character(sub)) {
+    if (is.symbol(sub) && !as.character(sub) %in% known &&
+        is.null(tryCatch(eval(sub, env), error = function(err) 0L))) {
+      character(0)
+    } else elem(sub)
+  } else if (is.call(sub) && identical(sub[[1L]], as.name("c")) &&
+             length(sub) > 1L) {
+    parts <- lapply(as.list(sub)[-1L], elem)
+    if (any(vapply(parts, is.null, logical(1)))) NULL else unlist(parts)
+  } else {
+    val <- tryCatch(eval(sub, env), error = function(err) err)
+    if (is.null(val)) character(0)
+    else if (is.character(val) && !anyNA(val)) val
+    else NULL
+  }
+  if (is.null(given)) {
+    .jst_stop("text = takes the names of variables, for example:\n",
+              "  text = ", clean[1L], fn = "jload")
+  }
+  given <- unique(given)
+  pos <- lapply(given, function(g) {
+    p <- which(raw_nm == g)
+    if (length(p) == 0L) p <- which(clean == g)
+    p
+  })
+  miss <- given[lengths(pos) == 0L]
+  if (length(miss) > 0L) {
+    .jst_stop(.jst_and_list(miss), if (length(miss) == 1L) " was" else " were",
+              " not found in ", shown, ".\n",
+              if (length(clean) == 1L) "Its only variable is " else
+                "Its variables are ",
+              .jst_short_list(clean, 12L), ".", fn = "jload")
+  }
+  sort(unique(unlist(pos)))
+}
+
+#' Internal: footnote rows at the end of a data frame read from a file
+#'
+#' The rows below the data that hold text in the first variable alone, read
+#' from the last case up, past empty cases, as the stray-parts note finds
+#' them (Session 365). Session 380, so the note on a variable of numbers
+#' made text by a few cells does not take footnotes for such cells. (The
+#' stray-parts note finds none when the run reaches the first case; here a
+#' run that long leaves the first variable no numbers, so the note has
+#' nothing to name either way.)
+#' @param df A data frame; a CSV file's as read, every cell text, or a
+#'   sheet's.
+#' @return Integer vector of row numbers.
+#' @keywords internal
+.jst_note_rows <- function(df) {
+  n <- nrow(df)
+  if (n < 2L || ncol(df) < 2L || !is.character(df[[1L]])) return(integer(0))
+  emp <- function(v) is.na(v) || !nzchar(trimws(as.character(v)))
+  rows <- integer(0)
+  i <- n
+  while (i >= 1L) {
+    if (!all(vapply(df[-1L], function(v) emp(v[[i]]), logical(1)))) break
+    first <- df[[1L]][[i]]
+    if (!emp(first)) {
+      if (.jst_is_number_text(first)) break
+      rows <- c(rows, i)
+    }
+    i <- i - 1L
+  }
+  sort(rows)
+}
+
+#' Internal: a variable of numbers that a few other cells made text
+#'
+#' Ruling R31, question 5 (Jeff, S380): N/A, - or . in a variable of numbers
+#' makes it text, and jstats never assumes such a cell is missing (a dash is
+#' "nil or rounded to zero" in an ABS table). The values found are named, with
+#' the line that reads them as missing. "A few": at most five values that are
+#' not numbers, and numbers in more than half the cells that are not empty
+#' (Jeff's okay of the lean, S380), so a Yes/No variable with a stray 3 is
+#' never told to read Yes and No as missing.
+#' @param x The variable's cells, empty ones and any not to count left out
+#'   by the caller or left in (an empty cell is not counted).
+#' @param max_values The most values that are not numbers.
+#' @return NULL, or list(values, counts): the values in the order first met.
+#' @keywords internal
+.jst_marker_values <- function(x, max_values = 5L) {
+  x <- x[!is.na(x)]
+  if (length(x) == 0L) return(NULL)
+  # Read on the distinct values, so a text variable of a million cells
+  # costs its handful of categories (Session 380: 1.9 million rows).
+  u   <- unique(x)
+  u   <- u[nzchar(trimws(u))]
+  num <- .jst_is_number_text(u)
+  vals <- u[!num]
+  if (length(vals) == 0L || length(vals) > max_values) return(NULL)
+  n_each <- tabulate(match(x, u), nbins = length(u))
+  if (2L * sum(n_each[num]) <= sum(n_each)) return(NULL)
+  list(values = vals, counts = as.integer(n_each[!num]))
+}
+
+#' Internal: is a variable's first cell a word?
+#'
+#' Read with \code{header = FALSE}, the first row may be the names after
+#' all, and a name above numbers is not a cell for the note on a few cells
+#' to name (Session 380).
+#' @param x A text variable.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_first_is_word <- function(x) {
+  length(x) > 0L && !is.na(x[1L]) && nzchar(trimws(x[1L])) &&
+    !.jst_is_number_text(x[1L])
+}
+
+#' Internal: a sheet's variables of numbers made text by a few cells
+#'
+#' The Excel side of ruling R31's question 5: each text variable not named
+#' in \code{text =}, its footnote rows left out of the first variable. A
+#' variable is named only when its numbers are NUMBER cells and every text
+#' cell holds a value that is not a number: readxl gives a variable holding
+#' a text cell as text, and a number stored as text keeps it text whatever
+#' \code{na =} names, so the line the note offers would not make it numbers
+#' (ICD codes typed as text, 250.10 beside 250.1, are text cells throughout).
+#' Only the cells say which (as \code{.jst_excel_cells_numeric()} does for
+#' footnotes, Session 365), read again for the variables in question.
+#' @param df The sheet as read.
+#' @param skip_pos Positions not to look at (\code{text =}).
+#' @param cells A function of positions giving those variables read as cells
+#'   (readxl's \code{col_types = "list"}), or NULL for no such check.
+#' @param header jload()'s \code{header}: read with FALSE, a variable whose
+#'   first cell is a word is passed over, since that row may be the names.
+#' @return A list of list(pos, values, counts).
+#' @keywords internal
+.jst_marker_columns <- function(df, skip_pos = integer(0), cells = NULL,
+                                header = TRUE) {
+  notes <- .jst_note_rows(df)
+  cand <- list()
+  for (j in seq_along(df)) {
+    x <- df[[j]]
+    if (j %in% skip_pos || !is.character(x)) next
+    if (!header && .jst_first_is_word(x)) next
+    if (j == 1L && length(notes) > 0L) x <- x[-notes]
+    mk <- .jst_marker_values(x)
+    if (!is.null(mk)) cand[[length(cand) + 1L]] <- c(list(pos = j), mk)
+  }
+  if (length(cand) == 0L || is.null(cells)) return(cand)
+  pos <- vapply(cand, function(m) m$pos, integer(1))
+  cl  <- tryCatch(suppressMessages(suppressWarnings(cells(pos))),
+                  error = function(e) NULL)
+  if (is.null(cl) || length(cl) != length(pos)) return(list())
+  out <- list()
+  for (q in seq_along(pos)) {
+    v <- cl[[q]]
+    if (pos[q] == 1L && length(notes) > 0L) v <- v[-notes]
+    one <- function(e) length(e) == 1L && !is.na(e)
+    is_num <- vapply(v, function(e) one(e) && is.numeric(e), logical(1))
+    is_txt <- vapply(v, function(e) {
+      one(e) && is.character(e) && nzchar(trimws(e))
+    }, logical(1))
+    is_emp <- vapply(v, function(e) {
+      length(e) == 0L || (length(e) == 1L && is.na(e)) ||
+        (is.character(e) && length(e) == 1L && !nzchar(trimws(e)))
+    }, logical(1))
+    txt <- as.character(unlist(v[is_txt]))
+    if (any(!(is_num | is_txt | is_emp)) || length(txt) == 0L ||
+        2L * sum(is_num) <= sum(is_num) + length(txt) ||
+        any(.jst_is_number_text(txt))) next
+    vals <- unique(txt)
+    if (length(vals) > 5L) next
+    out[[length(out) + 1L]] <- list(
+      pos = pos[q], values = vals,
+      counts = as.integer(table(factor(txt, levels = vals))))
+  }
+  out
+}
+
+#' Internal: type the variables of a CSV file read as text
+#'
+#' Ruling R31 (Jeff, S380). jload() reads every cell of a CSV file as the
+#' file has it (\code{colClasses = "character"}, no value read as missing)
+#' and types each variable here, as read.csv() would --
+#' \code{utils::type.convert()} after the word NA is made missing, so a
+#' variable that keeps its type is what read.csv() gave -- except:
+#' \itemize{
+#'   \item a variable of numbers holding a whole number written with a
+#'     leading zero (0800, 007, not 0 or 0.5), or a whole number of more than
+#'     15 digits, stays text, its empty cells and the word NA missing, and is
+#'     reported for the note (question 1, question 2);
+#'   \item a variable of TRUE/FALSE holding T or F standing alone stays text,
+#'     as written (question 3), with no note;
+#'   \item in a text variable the word NA stays a word (question 4), unless
+#'     the variable is numbers except a few cells, where the word NA and an
+#'     empty cell are missing, as in a variable of numbers, and the cells are
+#'     reported for the note (question 5);
+#'   \item a \code{text =} variable is left as the file has it, NA and all,
+#'     and \code{na =} values are missing everywhere else (question 6).
+#' }
+#' @param df The file as read, every variable character.
+#' @param text_pos Positions named in \code{text =}.
+#' @param na \code{na =}'s values, or NULL.
+#' @param header jload()'s \code{header}: read with FALSE, a text variable
+#'   whose first cell is a word is not named by the note on a few cells,
+#'   since that line may be the names.
+#' @return list(df, kept, markers): kept a list of list(pos, why ("zero" or
+#'   "long"), n, examples); markers a list of list(pos, values, counts).
+#' @keywords internal
+.jst_csv_type_columns <- function(df, text_pos = integer(0), na = NULL,
+                                  header = TRUE) {
+  kept  <- list()
+  marks <- list()
+  notes <- .jst_note_rows(df)
+  # Empty, or spaces and tabs alone. Each test below reads only the cells
+  # it can concern -- startsWith() and a byte count before any pattern --
+  # so a million-row file costs little more than read.csv() (Session 380).
+  blank_of <- function(x) {
+    b  <- !is.na(x) & !nzchar(x)
+    sp <- which(startsWith(x, " ") | startsWith(x, "\t"))
+    b[sp] <- !nzchar(trimws(x[sp]))
+    b
+  }
+  for (j in seq_along(df)) {
+    if (j %in% text_pos) next
+    x <- df[[j]]
+    if (length(na) > 0L) x[!is.na(x) & x %in% na] <- NA
+    na_word <- which(x == "NA")
+    y <- x
+    y[na_word] <- NA
+    t <- utils::type.convert(y, as.is = TRUE, na.strings = character(0),
+                             numerals = "allow.loss")
+    if (is.character(t)) {
+      use <- rep(TRUE, length(x))
+      use[na_word] <- FALSE
+      if (j == 1L && length(notes) > 0L) use[notes] <- FALSE
+      mk <- if (!header && .jst_first_is_word(x)) NULL else
+        .jst_marker_values(x[use])
+      if (!is.null(mk)) {
+        x[na_word] <- NA
+        x[blank_of(x)] <- NA
+        marks[[length(marks) + 1L]] <- c(list(pos = j), mk)
+      }
+      df[[j]] <- x
+    } else if (is.logical(t)) {
+      core <- x[!is.na(t)]
+      tf <- any(core %in% c("T", "F")) ||
+        any(trimws(core[startsWith(core, " ") | endsWith(core, " ")]) %in%
+              c("T", "F"))
+      df[[j]] <- if (tf) x else t
+    } else if (is.numeric(t)) {
+      # The distinct values that can be a leading zero (a 0 first, or a
+      # space before it) or a whole number of more than 15 digits.
+      ux <- unique(x)
+      ux <- ux[!is.na(ux) & ux != "NA"]
+      cu <- ux[startsWith(ux, "0") | startsWith(ux, " ") |
+                 startsWith(ux, "\t") | nchar(ux, "bytes") >= 16L]
+      v  <- trimws(cu)
+      lz <- grepl("^0[0-9]+$", v)
+      lg <- grepl("^[-+]?[0-9]{16,}$", v)
+      if (any(lz) || any(lg)) {
+        hit <- if (any(lz)) lz else lg
+        n_hit <- sum(x %in% cu[hit])
+        x[na_word] <- NA
+        x[blank_of(x)] <- NA
+        df[[j]] <- x
+        kept[[length(kept) + 1L]] <- list(
+          pos = j, why = if (any(lz)) "zero" else "long", n = n_hit,
+          examples = unique(v[hit]))
+      } else df[[j]] <- t
+    } else df[[j]] <- t
+  }
+  list(df = df, kept = kept, markers = marks)
+}
+
+#' Internal: jload()'s note on variables kept as text
+#'
+#' Ruling R31, questions 1 and 2 (Session 380): a CSV variable of numbers
+#' kept as text because a number would change a value -- a leading zero it
+#' would drop, or more than the 15 digits it holds exactly. One variable:
+#' the sentence and, for a leading zero, the as.numeric() line. Several: a
+#' line each, then the lines for those with a leading zero (converting a
+#' long ID would destroy it, so none is offered).
+#' @param kept From \code{.jst_csv_type_columns()}.
+#' @param vars The data frame's variable names, as loaded.
+#' @param obj_name The data frame's name.
+#' @return Character(1).
+#' @keywords internal
+.jst_kept_text_note <- function(kept, vars, obj_name) {
+  nm   <- vars[vapply(kept, function(k) k$pos, integer(1))]
+  why  <- vapply(kept, function(k) k$why, character(1))
+  fact <- function(k, own) {
+    n <- format(k$n, big.mark = ",")
+    one <- k$n == 1L
+    if (k$why == "zero") {
+      paste0(n, if (own) " of its values" else if (one) " value" else " values",
+             if (one) " starts" else " start", " with a 0 (",
+             .jst_short_list(k$examples, 3L), ")",
+             if (own) paste0(", which ", if (one) "a number" else "numbers",
+                             " would drop") else "")
+    } else {
+      paste0(n, if (own) " of its values" else if (one) " value" else " values",
+             if (one) " is" else " are", " longer than the 15 digits a ",
+             "number holds exactly")
+    }
+  }
+  zero <- nm[why == "zero"]
+  lines <- paste0("  ", obj_name, "$", zero, " <- as.numeric(", obj_name, "$",
+                  zero, ")")
+  if (length(kept) == 1L) {
+    out <- paste0("Note: ", nm, " was kept as text: ", fact(kept[[1L]], TRUE),
+                  ".")
+    if (length(zero) == 1L) {
+      out <- paste0(out, "\nTo make it numbers anyway:\n", lines)
+    }
+    return(out)
+  }
+  w <- max(nchar(nm))
+  rows <- vapply(seq_along(kept), function(i) {
+    paste0("  ", formatC(nm[i], width = -w), "  ", fact(kept[[i]], FALSE))
+  }, character(1))
+  out <- paste0("Note: ", length(kept), " variables were kept as text, since ",
+                "numbers would change their values:\n",
+                paste(rows, collapse = "\n"))
+  if (length(zero) > 0L) {
+    out <- paste0(out, "\nTo make ",
+                  if (length(zero) == 1L) zero else "them", " numbers anyway:\n",
+                  paste(lines, collapse = "\n"))
+  }
+  out
+}
+
+#' Internal: jload()'s note on variables of numbers made text by a few cells
+#'
+#' Ruling R31, question 5 (Session 380): the values that are not numbers,
+#' each quoted with its count, then the jload() call as typed with
+#' \code{na =} naming them, which reads them as missing and the variables as
+#' numbers. It replaces the load scan's block for these variables, whose
+#' declaration left the variable text.
+#' @param marks From \code{.jst_csv_type_columns()} or
+#'   \code{.jst_marker_columns()}.
+#' @param vars The data frame's variable names, as loaded.
+#' @param line The jload() line with \code{na =}, indented.
+#' @return Character(1).
+#' @keywords internal
+.jst_marker_note <- function(marks, vars, line) {
+  nm <- vars[vapply(marks, function(m) m$pos, integer(1))]
+  cells <- function(m) {
+    paste(paste0("\"", .jst_dq_escape(m$values), "\" (",
+                 format(m$counts, big.mark = ",", trim = TRUE), ")"),
+          collapse = ", ")
+  }
+  if (length(marks) == 1L) {
+    k  <- sum(marks[[1L]]$counts)
+    one <- k == 1L
+    return(paste0(
+      "Note: ", nm, " is numbers except for ", format(k, big.mark = ","),
+      if (one) " cell: " else " cells: ", cells(marks[[1L]]), ".\n",
+      "It was read as text.\n",
+      "To read ", if (one) "that cell" else "those cells", " as missing and ",
+      nm, " as numbers:\n", line))
+  }
+  w <- max(nchar(nm))
+  rows <- vapply(seq_along(marks), function(i) {
+    paste0("  ", formatC(nm[i], width = -w), "  ", cells(marks[[i]]))
+  }, character(1))
+  paste0("Note: ", length(marks), " variables are numbers except for a few ",
+         "cells, so they were read as text:\n",
+         paste(rows, collapse = "\n"), "\n",
+         "To read those cells as missing and the variables as numbers:\n",
+         line)
 }
 
 #' Internal: a data frame's name made from a file's name
