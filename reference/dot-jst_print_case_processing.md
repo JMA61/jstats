@@ -17,7 +17,7 @@ pre-resolved.
   sample_info,
   analysis_type = "listwise",
   detail = NULL,
-  notification_template = NULL,
+  notification_template = .jst_listwise_note,
   data = NULL,
   analysis_vars = NULL
 )
@@ -40,7 +40,15 @@ pre-resolved.
   Per-call case.processing.detail override (NULL, "none", "totals",
   "per_code"). NULL defers to the joutput tier default.
 
-- notification_template, data, analysis_vars:
+- notification_template:
+
+  The listwise-discrepancy note (per-variable layouts only). The
+  default, `.jst_listwise_note`, is the sentence jdesc() and jfreq()
+  print; a `%s` in it takes the count with its noun ("6 cases", "1
+  case"). The note under a jcomplete() that covers only some of the
+  variables is built below, not from it.
+
+- data, analysis_vars:
 
   Listwise-discrepancy notification inputs (per-variable layouts only);
   see the closure below.
