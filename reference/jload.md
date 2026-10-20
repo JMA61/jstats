@@ -231,7 +231,8 @@ variable's type is read from its values. A variable becomes numbers, or
 
 - A whole number written with a leading zero (a postcode `0800`, an ID
   `007`) keeps its variable as text, as written; numbers would drop the
-  zero. A note says so, with the line that makes it numbers anyway.
+  zero. A note says so, with the line that makes it numbers anyway (and,
+  for a variable `jload()` renamed, the line that puts its label back).
 
 - A whole number of more than 15 digits (an account or record ID) keeps
   its variable as text: a number holds 15 digits exactly, so different
@@ -259,9 +260,14 @@ value – is read as text. jstats does not assume such a value is missing
 call whose `na` reads them as missing:
 `jload("incomes.csv", overwrite = TRUE, na = c("N/A", "-"))`. A variable
 is named when it has at most five such values and numbers in more than
-half of its cells that are not empty; in a sheet, its numbers must be
-number cells, since a number stored as text keeps the variable text
-whatever `na` names.
+half of its cells that are not empty; in a sheet, number cells must be
+more than half of them. A sheet's variable that also holds a number
+stored as text stays text whatever `na` names, so its note gives the
+base R lines that make it numbers instead:
+`d$Code[d$Code == "N/A"] <- NA`, then `d$Code <- as.numeric(d$Code)`.
+Where `jload()` renamed the variable, a last line puts back the label it
+gave it, which [`as.numeric()`](https://rdrr.io/r/base/numeric.html)
+drops.
 
 **A file with no names row:** A CSV file or a sheet whose first row is
 data loses that case to the variable names, which are then numbers (`1`

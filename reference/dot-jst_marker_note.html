@@ -15,7 +15,7 @@ declaration left the variable text."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.254</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.255</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,7 @@ declaration left the variable text."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Internal: jload()'s note on variables of numbers made text by a few cells</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.254/R/io.R" class="external-link"><code>R/io.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/io.R" class="external-link"><code>R/io.R</code></a></small>
       <div class="d-none name"><code>dot-jst_marker_note.Rd</code></div>
     </div>
 
@@ -51,7 +51,7 @@ declaration left the variable text.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_marker_note</span><span class="op">(</span><span class="va">marks</span>, <span class="va">vars</span>, <span class="va">line</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_marker_note</span><span class="op">(</span><span class="va">marks</span>, <span class="va">vars</span>, <span class="va">line</span>, obj_name <span class="op">=</span> <span class="cn">NULL</span>, labels <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -70,10 +70,32 @@ declaration left the variable text.</p>
 <dt id="arg-line">line<a class="anchor" aria-label="anchor" href="#arg-line"></a></dt>
 <dd><p>The jload() line with <code>na =</code>, indented.</p></dd>
 
+
+<dt id="arg-obj-name">obj_name<a class="anchor" aria-label="anchor" href="#arg-obj-name"></a></dt>
+<dd><p>The data frame's name, for the base R lines.</p></dd>
+
+
+<dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>
+<dd><p>The variables' labels, parallel to <code>marks</code>, NA where
+there is none; NULL for none.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Character(1).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Since Session 381 (Fix Slate 24, the (S380) item): a sheet's variable
+that also holds a number stored as text (<code>stored</code> above zero, from
+<code><a href="dot-jst_marker_columns.html">.jst_marker_columns()</a></code>) stays text after a reload with
+<code>na =</code>, so its lines are base R's instead
+(<code><a href="dot-jst_numeric_lines.html">.jst_numeric_lines()</a></code>): its cells made missing, then
+<code><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric()</a></code>, then its label put back if jload() gave it one.
+Beside a variable the reload does serve, the reload comes first – its
+<code>na =</code> names every value in the note, so the stored variable's
+cells are already missing – and the stored variable gets only the
+<code><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric()</a></code> line.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
