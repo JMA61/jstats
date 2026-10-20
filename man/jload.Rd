@@ -208,7 +208,8 @@ from its values. A variable becomes numbers, or \code{TRUE} and
 \item A whole number written with a leading zero (a postcode
 \code{0800}, an ID \code{007}) keeps its variable as text, as written;
 numbers would drop the zero. A note says so, with the line that makes
-it numbers anyway.
+it numbers anyway (and, for a variable \code{jload()} renamed, the
+line that puts its label back).
 \item A whole number of more than 15 digits (an account or record ID)
 keeps its variable as text: a number holds 15 digits exactly, so
 different IDs would become one number. A note says so.
@@ -235,9 +236,14 @@ zero), so a note names the values, with the \code{jload()} call whose
 \code{na} reads them as missing:
 \code{jload("incomes.csv", overwrite = TRUE, na = c("N/A", "-"))}. A
 variable is named when it has at most five such values and numbers in
-more than half of its cells that are not empty; in a sheet, its numbers
-must be number cells, since a number stored as text keeps the variable
-text whatever \code{na} names.
+more than half of its cells that are not empty; in a sheet, number cells
+must be more than half of them. A sheet's variable that also holds a
+number stored as text stays text whatever \code{na} names, so its note
+gives the base R lines that make it numbers instead:
+\code{d$Code[d$Code == "N/A"] <- NA}, then
+\code{d$Code <- as.numeric(d$Code)}. Where \code{jload()} renamed the
+variable, a last line puts back the label it gave it, which
+\code{as.numeric()} drops.
 
 \strong{A file with no names row:}
 A CSV file or a sheet whose first row is data loses that case to the

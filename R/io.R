@@ -159,7 +159,8 @@
 #'   \item A whole number written with a leading zero (a postcode
 #'     \code{0800}, an ID \code{007}) keeps its variable as text, as written;
 #'     numbers would drop the zero. A note says so, with the line that makes
-#'     it numbers anyway.
+#'     it numbers anyway (and, for a variable \code{jload()} renamed, the
+#'     line that puts its label back).
 #'   \item A whole number of more than 15 digits (an account or record ID)
 #'     keeps its variable as text: a number holds 15 digits exactly, so
 #'     different IDs would become one number. A note says so.
@@ -186,9 +187,14 @@
 #' \code{na} reads them as missing:
 #' \code{jload("incomes.csv", overwrite = TRUE, na = c("N/A", "-"))}. A
 #' variable is named when it has at most five such values and numbers in
-#' more than half of its cells that are not empty; in a sheet, its numbers
-#' must be number cells, since a number stored as text keeps the variable
-#' text whatever \code{na} names.
+#' more than half of its cells that are not empty; in a sheet, number cells
+#' must be more than half of them. A sheet's variable that also holds a
+#' number stored as text stays text whatever \code{na} names, so its note
+#' gives the base R lines that make it numbers instead:
+#' \code{d$Code[d$Code == "N/A"] <- NA}, then
+#' \code{d$Code <- as.numeric(d$Code)}. Where \code{jload()} renamed the
+#' variable, a last line puts back the label it gave it, which
+#' \code{as.numeric()} drops.
 #'
 #' \strong{A file with no names row:}
 #' A CSV file or a sheet whose first row is data loses that case to the
@@ -1353,13 +1359,26 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # cells, with the call whose na = reads them as missing (the values na =
   # already named kept in it). After the names note, so each is named as
   # loaded.
+  # Since Session 381 the base R lines either note offers put back the
+  # label jload() gave a renamed variable, which as.numeric() drops.
+  label_at <- function(pos) {
+    vapply(pos, function(p) {
+      l <- attr(df[[p]], "label", exact = TRUE)
+      if (is.character(l) && length(l) == 1L && !is.na(l) && nzchar(l)) l
+      else NA_character_
+    }, character(1), USE.NAMES = FALSE)
+  }
   if (length(kept_text) > 0L) {
-    emit_note(.jst_kept_text_note(kept_text, names(df), obj_name))
+    emit_note(.jst_kept_text_note(
+      kept_text, names(df), obj_name,
+      labels = label_at(vapply(kept_text, function(k) k$pos, integer(1)))))
   }
   if (length(markers) > 0L) {
     mk_vals <- unique(c(na, unlist(lapply(markers, function(m) m$values))))
-    emit_note(.jst_marker_note(markers, names(df),
-                               line_for(na = mk_vals, loaded = TRUE)))
+    emit_note(.jst_marker_note(
+      markers, names(df), line_for(na = mk_vals, loaded = TRUE),
+      obj_name = obj_name,
+      labels = label_at(vapply(markers, function(m) m$pos, integer(1)))))
   }
 
   # --- UDM narrative notification --------------------------------------------
@@ -2947,20 +2966,28 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'
 #' The Excel side of ruling R31's question 5: each text variable not named
 #' in \code{text =}, its footnote rows left out of the first variable. A
-#' variable is named only when its numbers are NUMBER cells and every text
-#' cell holds a value that is not a number: readxl gives a variable holding
-#' a text cell as text, and a number stored as text keeps it text whatever
-#' \code{na =} names, so the line the note offers would not make it numbers
-#' (ICD codes typed as text, 250.10 beside 250.1, are text cells throughout).
-#' Only the cells say which (as \code{.jst_excel_cells_numeric()} does for
-#' footnotes, Session 365), read again for the variables in question.
+#' variable is named only when NUMBER cells are more than half of its cells
+#' that are not empty, and at least one text cell holds a value that is not
+#' a number (ICD codes typed as text, 250.10 beside 250.1, are text cells
+#' throughout, and are never named). readxl gives a variable holding a text
+#' cell as text, so a number stored as text beside the number cells keeps it
+#' text whatever \code{na =} names; since Session 381 (Fix Slate 24, the
+#' (S380) item) such a variable is named too, with \code{stored} counting
+#' those cells, and the note gives it the lines that make it numbers in R
+#' rather than a reload (until then it was passed over, and the scan's
+#' declaration left it text). A stored number whose value numbers would
+#' change -- a leading zero, more than 15 digits (ruling R31, questions 1
+#' and 2) -- still passes the variable over. Only the cells say which (as
+#' \code{.jst_excel_cells_numeric()} does for footnotes, Session 365), read
+#' again for the variables in question.
 #' @param df The sheet as read.
 #' @param skip_pos Positions not to look at (\code{text =}).
 #' @param cells A function of positions giving those variables read as cells
 #'   (readxl's \code{col_types = "list"}), or NULL for no such check.
 #' @param header jload()'s \code{header}: read with FALSE, a variable whose
 #'   first cell is a word is passed over, since that row may be the names.
-#' @return A list of list(pos, values, counts).
+#' @return A list of list(pos, values, counts), each with \code{stored}, the
+#'   count of numbers stored as text, when \code{cells} is given.
 #' @keywords internal
 .jst_marker_columns <- function(df, skip_pos = integer(0), cells = NULL,
                                 header = TRUE) {
@@ -2993,14 +3020,20 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         (is.character(e) && length(e) == 1L && !nzchar(trimws(e)))
     }, logical(1))
     txt <- as.character(unlist(v[is_txt]))
-    if (any(!(is_num | is_txt | is_emp)) || length(txt) == 0L ||
+    # Text cells that are numbers stored as text, and those that are not
+    # (the values the note names). Session 381: a stored number no longer
+    # passes the variable over, unless numbers would change its value.
+    stored <- .jst_is_number_text(txt)
+    words  <- txt[!stored]
+    if (any(!(is_num | is_txt | is_emp)) || length(words) == 0L ||
         2L * sum(is_num) <= sum(is_num) + length(txt) ||
-        any(.jst_is_number_text(txt))) next
-    vals <- unique(txt)
+        any(grepl("^0[0-9]+$|^[-+]?[0-9]{16,}$", trimws(txt[stored])))) next
+    vals <- unique(words)
     if (length(vals) > 5L) next
     out[[length(out) + 1L]] <- list(
       pos = pos[q], values = vals,
-      counts = as.integer(table(factor(txt, levels = vals))))
+      counts = as.integer(table(factor(words, levels = vals))),
+      stored = sum(stored))
   }
   out
 }
@@ -3108,15 +3141,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' would drop, or more than the 15 digits it holds exactly. One variable:
 #' the sentence and, for a leading zero, the as.numeric() line. Several: a
 #' line each, then the lines for those with a leading zero (converting a
-#' long ID would destroy it, so none is offered).
+#' long ID would destroy it, so none is offered). Since Session 381 a
+#' variable jload() renamed, whose label is its name in the file, gets a
+#' line after its as.numeric() line that puts the label back, since
+#' as.numeric() drops it (\code{.jst_numeric_lines()}).
 #' @param kept From \code{.jst_csv_type_columns()}.
 #' @param vars The data frame's variable names, as loaded.
 #' @param obj_name The data frame's name.
+#' @param labels The variables' labels, parallel to \code{kept}, NA where
+#'   there is none; NULL for none.
 #' @return Character(1).
 #' @keywords internal
-.jst_kept_text_note <- function(kept, vars, obj_name) {
+.jst_kept_text_note <- function(kept, vars, obj_name, labels = NULL) {
   nm   <- vars[vapply(kept, function(k) k$pos, integer(1))]
   why  <- vapply(kept, function(k) k$why, character(1))
+  if (is.null(labels)) labels <- rep(NA_character_, length(kept))
   fact <- function(k, own) {
     n <- format(k$n, big.mark = ",")
     one <- k$n == 1L
@@ -3133,13 +3172,15 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
   }
   zero <- nm[why == "zero"]
-  lines <- paste0("  ", obj_name, "$", zero, " <- as.numeric(", obj_name, "$",
-                  zero, ")")
+  lines <- unlist(lapply(which(why == "zero"), function(i) {
+    .jst_numeric_lines(obj_name, nm[i], label = labels[i])
+  }))
   if (length(kept) == 1L) {
     out <- paste0("Note: ", nm, " was kept as text: ", fact(kept[[1L]], TRUE),
                   ".")
     if (length(zero) == 1L) {
-      out <- paste0(out, "\nTo make it numbers anyway:\n", lines)
+      out <- paste0(out, "\nTo make it numbers anyway:\n",
+                    paste(lines, collapse = "\n"))
     }
     return(out)
   }
@@ -3165,38 +3206,115 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \code{na =} naming them, which reads them as missing and the variables as
 #' numbers. It replaces the load scan's block for these variables, whose
 #' declaration left the variable text.
+#'
+#' Since Session 381 (Fix Slate 24, the (S380) item): a sheet's variable
+#' that also holds a number stored as text (\code{stored} above zero, from
+#' \code{.jst_marker_columns()}) stays text after a reload with
+#' \code{na =}, so its lines are base R's instead
+#' (\code{.jst_numeric_lines()}): its cells made missing, then
+#' \code{as.numeric()}, then its label put back if jload() gave it one.
+#' Beside a variable the reload does serve, the reload comes first -- its
+#' \code{na =} names every value in the note, so the stored variable's
+#' cells are already missing -- and the stored variable gets only the
+#' \code{as.numeric()} line.
 #' @param marks From \code{.jst_csv_type_columns()} or
 #'   \code{.jst_marker_columns()}.
 #' @param vars The data frame's variable names, as loaded.
 #' @param line The jload() line with \code{na =}, indented.
+#' @param obj_name The data frame's name, for the base R lines.
+#' @param labels The variables' labels, parallel to \code{marks}, NA where
+#'   there is none; NULL for none.
 #' @return Character(1).
 #' @keywords internal
-.jst_marker_note <- function(marks, vars, line) {
+.jst_marker_note <- function(marks, vars, line, obj_name = NULL,
+                             labels = NULL) {
   nm <- vars[vapply(marks, function(m) m$pos, integer(1))]
+  st <- vapply(marks, function(m) isTRUE(m$stored > 0L), logical(1))
+  if (is.null(labels)) labels <- rep(NA_character_, length(marks))
   cells <- function(m) {
     paste(paste0("\"", .jst_dq_escape(m$values), "\" (",
                  format(m$counts, big.mark = ",", trim = TRUE), ")"),
           collapse = ", ")
   }
+  conv <- function(i, values) {
+    paste(.jst_numeric_lines(obj_name, nm[i], values = values,
+                             label = labels[i]), collapse = "\n")
+  }
   if (length(marks) == 1L) {
     k  <- sum(marks[[1L]]$counts)
     one <- k == 1L
-    return(paste0(
+    head <- paste0(
       "Note: ", nm, " is numbers except for ", format(k, big.mark = ","),
-      if (one) " cell: " else " cells: ", cells(marks[[1L]]), ".\n",
-      "It was read as text.\n",
-      "To read ", if (one) "that cell" else "those cells", " as missing and ",
-      nm, " as numbers:\n", line))
+      if (one) " cell: " else " cells: ", cells(marks[[1L]]), ".\n")
+    to <- paste0("To read ", if (one) "that cell" else "those cells",
+                 " as missing and ", nm, " as numbers:\n")
+    if (!st) return(paste0(head, "It was read as text.\n", to, line))
+    s <- marks[[1L]]$stored
+    return(paste0(
+      head, "It was read as text, and ",
+      if (s == 1L) "one of its numbers is" else paste(s, "of its numbers are"),
+      " stored as text in the sheet, so reading the file again with na = ",
+      "would not make it numbers.\n", to, conv(1L, marks[[1L]]$values)))
   }
   w <- max(nchar(nm))
   rows <- vapply(seq_along(marks), function(i) {
     paste0("  ", formatC(nm[i], width = -w), "  ", cells(marks[[i]]))
   }, character(1))
-  paste0("Note: ", length(marks), " variables are numbers except for a few ",
-         "cells, so they were read as text:\n",
-         paste(rows, collapse = "\n"), "\n",
-         "To read those cells as missing and the variables as numbers:\n",
-         line)
+  out <- paste0("Note: ", length(marks), " variables are numbers except for a ",
+                "few cells, so they were read as text:\n",
+                paste(rows, collapse = "\n"), "\n")
+  to <- "To read those cells as missing and the variables as numbers:\n"
+  if (!any(st)) return(paste0(out, to, line))
+  if (all(st)) {
+    return(paste0(
+      out, "They also hold numbers stored as text in the sheet, so reading ",
+      "the file again with na = would not make them numbers.\n", to,
+      paste(vapply(seq_along(marks), function(i) conv(i, marks[[i]]$values),
+                   character(1)), collapse = "\n")))
+  }
+  sn <- nm[st]
+  one_stored <- length(sn) == 1L && marks[[which(st)]]$stored == 1L
+  paste0(
+    out, .jst_and_list(sn), " also ", if (length(sn) == 1L) "holds" else "hold",
+    if (one_stored) " a number" else " numbers",
+    " stored as text in the sheet, which na = does not change.\n", to,
+    line, "\n",
+    paste(vapply(which(st), function(i) conv(i, NULL), character(1)),
+          collapse = "\n"))
+}
+
+#' Internal: the base R lines that make a text variable numbers
+#'
+#' Session 381 (Fix Slate 24). The lines jload()'s notes offer for a
+#' variable left as text: its cells named in \code{values} made missing
+#' (\code{==} for one value, \code{\%in\%} for several), then
+#' \code{as.numeric()}, which then gives no warning; then, when jload()
+#' gave the variable a label (its name in the file, after a rename), the
+#' line that puts the label back, since \code{as.numeric()} drops every
+#' attribute. Each line indented two spaces.
+#' @param obj_name The data frame's name.
+#' @param var The variable's name, as loaded.
+#' @param values The cells to make missing, or NULL.
+#' @param label The variable's label, or NA.
+#' @return Character: one line each.
+#' @keywords internal
+.jst_numeric_lines <- function(obj_name, var, values = NULL,
+                               label = NA_character_) {
+  v   <- paste0(obj_name, "$", var)
+  out <- character(0)
+  if (length(values) > 0L) {
+    q <- paste0("\"", .jst_dq_escape(values), "\"")
+    out <- paste0("  ", v, "[", v,
+                  if (length(q) == 1L) paste0(" == ", q) else
+                    paste0(" %in% c(", paste(q, collapse = ", "), ")"),
+                  "] <- NA")
+  }
+  out <- c(out, paste0("  ", v, " <- as.numeric(", v, ")"))
+  if (length(label) == 1L && !is.na(label)) {
+    out <- c(out, paste0("  attr(", v, ", \"label\") <- \"",
+                         .jst_dq_escape(label), "\""))
+  }
+  out
 }
 
 #' Internal: a data frame's name made from a file's name

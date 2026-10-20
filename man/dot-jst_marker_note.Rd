@@ -4,7 +4,7 @@
 \alias{.jst_marker_note}
 \title{Internal: jload()'s note on variables of numbers made text by a few cells}
 \usage{
-.jst_marker_note(marks, vars, line)
+.jst_marker_note(marks, vars, line, obj_name = NULL, labels = NULL)
 }
 \arguments{
 \item{marks}{From \code{.jst_csv_type_columns()} or
@@ -13,6 +13,11 @@
 \item{vars}{The data frame's variable names, as loaded.}
 
 \item{line}{The jload() line with \code{na =}, indented.}
+
+\item{obj_name}{The data frame's name, for the base R lines.}
+
+\item{labels}{The variables' labels, parallel to \code{marks}, NA where
+there is none; NULL for none.}
 }
 \value{
 Character(1).
@@ -23,5 +28,17 @@ each quoted with its count, then the jload() call as typed with
 \code{na =} naming them, which reads them as missing and the variables as
 numbers. It replaces the load scan's block for these variables, whose
 declaration left the variable text.
+}
+\details{
+Since Session 381 (Fix Slate 24, the (S380) item): a sheet's variable
+that also holds a number stored as text (\code{stored} above zero, from
+\code{.jst_marker_columns()}) stays text after a reload with
+\code{na =}, so its lines are base R's instead
+(\code{.jst_numeric_lines()}): its cells made missing, then
+\code{as.numeric()}, then its label put back if jload() gave it one.
+Beside a variable the reload does serve, the reload comes first -- its
+\code{na =} names every value in the note, so the stored variable's
+cells are already missing -- and the stored variable gets only the
+\code{as.numeric()} line.
 }
 \keyword{internal}
