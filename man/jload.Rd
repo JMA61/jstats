@@ -16,7 +16,8 @@ jload(
   header = TRUE,
   preserve.declarations = TRUE,
   missing.notice = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  ...
 )
 }
 \arguments{
@@ -112,6 +113,10 @@ or found (variable names changed, a title row, names that are all
 numbers, rows and columns that may not be data, a CSV file's encoding)
 are still shown, as is the coded-missing scan report; turn that off
 with \code{check.missing = FALSE}.}
+
+\item{...}{Not used. An input \code{jload()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly returns \code{NULL}; jload() is called for its side

@@ -21,6 +21,9 @@
 #'
 #' @param data A data frame (unquoted). If omitted, prints the current
 #'   default. Use \code{juse(NULL)} to clear the default.
+#' @param ... Not used. An input \code{juse()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect of
 #'   setting, displaying, or clearing the default data frame.
@@ -42,7 +45,13 @@
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-juse <- function(data) {
+juse <- function(data, ...) {
+  # An input juse() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "juse", positional = "refuse")
 
   if (missing(data)) {
     # juse() with no arguments — print current default

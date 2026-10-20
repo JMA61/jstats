@@ -190,11 +190,22 @@
 #'   Processing table itself prints only when a filter or listwise
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jt <- function(formula, data, paired = FALSE, welch = FALSE,
                effect.size = NULL, diagnostics = NULL, ci = NULL,
                subset = NULL, variable.id = NULL, value.id = NULL,
                case.processing.detail = NULL, full = FALSE, digits = NULL,
-               ...) {
+               print = NULL, ...) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -756,6 +767,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   )
   class(ret) <- "jst_ttest"
   invisible(ret)
+  })
 }
 
 
@@ -971,11 +983,22 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 #'   Processing table itself prints only when a filter or listwise
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                  effect.size = NULL, diagnostics = NULL, ci = NULL,
                  subset = NULL, variable.id = NULL, value.id = NULL,
                  case.processing.detail = NULL, full = FALSE, digits = NULL,
-                 ...) {
+                 print = NULL, ...) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -1611,6 +1634,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   )
   class(ret) <- "jst_anova"
   invisible(ret)
+  })
 }
 
 
@@ -2007,12 +2031,32 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 #'   variable measured on a scale -- an age, a score -- makes a table too
 #'   large to read; the message gives the call with this argument. NULL
 #'   (default) names none.
+#' @param ... Not used. An input \code{jcrosstab()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                       row.pct = TRUE, col.pct = FALSE, residuals = "none",
                       subset = NULL,
                       variable.id = NULL, value.id = NULL,
                       case.processing.detail = NULL, digits = NULL,
-                      categorical = NULL) {
+                      categorical = NULL, print = NULL, ...) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
+  # An input jcrosstab() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jcrosstab", positional = "refuse")
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -2520,4 +2564,5 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   }
   class(ret) <- "jst_crosstab"
   invisible(ret)
+  })
 }

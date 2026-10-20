@@ -17,7 +17,9 @@ jcrosstab(
   value.id = NULL,
   case.processing.detail = NULL,
   digits = NULL,
-  categorical = NULL
+  categorical = NULL,
+  print = NULL,
+  ...
 )
 }
 \arguments{
@@ -116,6 +118,17 @@ A variable with more than 20 values otherwise stops the call, since a
 variable measured on a scale -- an age, a score -- makes a table too
 large to read; the message gives the call with this argument. NULL
 (default) names none.}
+
+\item{print}{Logical or NULL. \code{FALSE} prints nothing -- no table,
+no title, no note -- and returns the result as every call does;
+errors and warnings still show. \code{TRUE} prints even under
+\code{joutput("silent")}. \code{NULL} (the default) prints unless
+the level is silent. For a script that keeps many results and
+wants no output: see \code{\link{joutput}}.}
+
+\item{...}{Not used. An input \code{jcrosstab()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly returns a list of class \code{jst_crosstab} containing:

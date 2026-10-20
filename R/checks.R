@@ -330,12 +330,19 @@
 #'   to suggest in the error message.
 #' @param fn_name Character. The calling function's name, used in the
 #'   error message.
+#' @param positional \code{"pass"} (the default) lets an unnamed item
+#'   through: in the data-first functions the dots carry the variables.
+#'   \code{"refuse"} is for a function whose \code{...} exists only to
+#'   catch what it does not take (Capability Slate C3, Session 378: the
+#'   ten functions that had no \code{...} and stopped in R's own words):
+#'   an unnamed item is an unused input too, shown as typed
+#'   (\code{unused input: "x"}), never evaluated.
 #'
 #' @return \code{invisible(NULL)}. Called for its side effect of
 #'   throwing an error when an invalid argument name is found.
 #'
 #' @keywords internal
-.jst_check_args <- function(dots, aliases, fn_name) {
+.jst_check_args <- function(dots, aliases, fn_name, positional = "pass") {
   if (length(dots) == 0) return(invisible(NULL))
   dot_names <- names(dots)
   if (is.null(dot_names)) dot_names <- rep("", length(dots))
@@ -346,6 +353,15 @@
     }
   }
   bad <- dot_names[nzchar(dot_names)]
+  if (identical(positional, "refuse")) {
+    # An unnamed item, as typed: a value in quotes keeps them.
+    bad <- vapply(seq_along(dots), function(i) {
+      if (nzchar(dot_names[i])) return(dot_names[i])
+      q  <- dots[[i]]
+      ex <- if (rlang::is_quosure(q)) rlang::quo_get_expr(q) else q
+      paste(deparse(ex, width.cutoff = 500L), collapse = " ")
+    }, character(1))
+  }
   if (length(bad) > 0) {
     .jst_stop("unused ", .jst_plural(length(bad), "input"), ": ",
               paste(bad, collapse = ", "), fn = fn_name)

@@ -47,7 +47,12 @@
 #'   \item \code{jst_lm}: \code{fit}, \code{predicted}, \code{effects},
 #'     \code{coef}, \code{residuals}, \code{qq},
 #'     \code{scale}, \code{cooks}, \code{leverage}
-#'   \item \code{jst_logistic}: \code{probability}, \code{roc},
+#'   \item \code{jst_logistic}: \code{probability}, \code{logit} (the
+#'     same fitted line on the log-odds scale, where it is straight: the
+#'     linear predictor and its 95% band against the focal variable, the
+#'     cases as a rug along the axis, those with the outcome at the top
+#'     and the others at the bottom; at a dummy-coded focal variable's
+#'     categories, the log-odds at each), \code{roc},
 #'     \code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
 #'     \code{coef}
 #'   \item \code{jst_ttest}, \code{jst_anova}: \code{box} (the default),
@@ -75,8 +80,20 @@
 #' (\code{y ~ 1}), the plots that need a predictor, or that are drawn
 #' against the fitted values or the leverage, are left out with a note.
 #'
-#' Valid plot types for the data-first form: \code{histogram}, \code{bar},
-#' \code{scatter}, \code{box}, \code{grouped_bar}.
+#' Valid plot types for the data-first form: \code{histogram},
+#' \code{density}, \code{bar}, \code{scatter}, \code{box},
+#' \code{grouped_bar}. A density plot is the histogram's alternative for a
+#' numeric variable -- its kernel density estimate, one curve, or one per
+#' group of \code{by =} laid over each other -- and is drawn only when
+#' asked for with \code{type = "density"}.
+#'
+#' In the variable-list form \code{facet =} draws one panel per group of
+#' the variable named, with the groups' value labels as the panel titles:
+#' the alternative to \code{by =} when the groups are many, since colors
+#' laid over each other stop being readable past a handful. The two can be
+#' combined, \code{by =} coloring the groups of one variable within each
+#' panel of another. A scatterplot or boxplot by groups takes \code{by =}
+#' in the formula form; \code{facet =} is refused there.
 #'
 #' Valid \code{line} values: \code{FALSE} (default), \code{TRUE} (alias for
 #' \code{lm}), \code{lm}, \code{loess}, \code{connect}.
@@ -117,10 +134,13 @@
 #' @param r2 Logical. If TRUE (default), displays R-squared in the subtitle
 #'   alongside the equation.
 #' @param by Unquoted variable name for group-coloring (data-first form).
+#' @param facet Unquoted variable name for one panel per group
+#'   (variable-list form: a histogram, density plot, bar chart or grouped
+#'   bar chart), bare or in quotes. See Details.
 #' @param type Character. Plot type override for the data-first form. One
-#'   of \code{histogram}, \code{bar}, \code{scatter}, \code{box},
-#'   \code{grouped_bar}. If NULL (default), auto-detected from variable
-#'   types.
+#'   of \code{histogram}, \code{density}, \code{bar}, \code{scatter},
+#'   \code{box}, \code{grouped_bar}. If NULL (default), auto-detected
+#'   from variable types; \code{density} is never the automatic choice.
 #' @param line Controls a line overlay on data-first scatter plots. One of
 #'   \code{FALSE} (default; no line), \code{TRUE} (alias for \code{lm}),
 #'   \code{lm}, \code{loess}, \code{connect}.
@@ -235,38 +255,7 @@ jplot <- function(x, which = "core", ...) {
   # refuses it, and forcing it first printed a tibble's "Unknown or
   # uninitialised column" warning ahead of that stop. It takes route 3.
   mc       <- match.call(expand.dots = TRUE)
-  # A bare word where a quoted value goes (ruling R18, Session 356), before
-  # anything is evaluated. `which` is read only when the user named it:
-  # jplot(Region, Volunteer) binds a second variable to it by position.
-  # And not here when x names a result (Fix Slate 23, Session 377): the
-  # list below is every result's, so which = heatmap on a jlm() result was
-  # offered which = "heatmap", which stops next; the method reads `which`
-  # against that result's own plot names (.jst_resolve_which()). A name is
-  # looked up without evaluating anything; a call given as x keeps the
-  # check here, ahead of running it.
   x_sub    <- if (missing(x)) NULL else substitute(x)
-  x_result <- is.symbol(x_sub) &&
-    inherits(get0(as.character(x_sub), envir = parent.frame()),
-             .jst_plot_result_classes)
-  .jst_word_args(sys.call(), mc, parent.frame(),
-                 c(if (!x_result && !is.null(names(sys.call())) &&
-                       "which" %in% names(sys.call()))
-                     list(which = .jst_word_spec(
-                       c("core", "all", "fit", "predicted", "effects", "coef",
-                         "residuals", "qq", "scale", "cooks",
-                         "leverage", "probability", "roc", "calibration",
-                         "binned", "box", "heatmap", "scatter", "bar"),
-                       "a plot name")),
-                   list(type = .jst_word_spec(c("histogram", "bar", "scatter",
-                                                "box", "grouped_bar"),
-                                              "a plot type"),
-                        line = .jst_word_spec(c("lm", "loess", "connect"),
-                                              "a line type"),
-                        band = .jst_word_spec(c("ci", "pi", "see", "none"),
-                                              "a band type"),
-                        at   = .jst_word_spec(c("zero", "mean", "mixed"),
-                                              "a choice"))),
-                 "jplot")
   has_data <- "data" %in% names(mc)
   # A call forwarded through a wrapper's ... (Session 369, Fix Slate 16):
   # match.call() gives each forwarded argument as ..1, ..2, which point at
@@ -289,6 +278,41 @@ jplot <- function(x, which = "core", ...) {
                 !is.null(.jst_frame_column(substitute(x), parent.frame()))
   x_ok     <- if (missing(x) || x_col) FALSE else
                 tryCatch({ force(x); TRUE }, error = function(e) FALSE)
+  # A bare word where a quoted value goes (ruling R18, Session 356). `which`
+  # is read only when the user named it: jplot(Region, Volunteer) binds a
+  # second variable to it by position. And not here when x is a result (Fix
+  # Slate 23, Session 377): the list below is every result's, so which =
+  # heatmap on a jlm() result was offered which = "heatmap", which stops
+  # next; the method reads `which` against that result's own plot names
+  # (.jst_resolve_which()). Since Session 378 (Capability Slate C3) the
+  # check comes after x is forced above, so a result made by the call
+  # itself -- jplot(jlm(y ~ x, d), which = heatmap) -- or taken from a
+  # list is a result here too, where a name was looked up without
+  # evaluating and a call kept the check, and the pointer it offered
+  # stopped next (the S377 item). A data frame's column is not forced
+  # (S338), and is no result.
+  x_result <- x_ok && inherits(x, .jst_plot_result_classes)
+  .jst_word_args(sys.call(), mc, parent.frame(),
+                 c(if (!x_result && !is.null(names(sys.call())) &&
+                       "which" %in% names(sys.call()))
+                     list(which = .jst_word_spec(
+                       c("core", "all", "fit", "predicted", "effects", "coef",
+                         "residuals", "qq", "scale", "cooks",
+                         "leverage", "probability", "logit", "roc",
+                         "calibration", "binned", "box", "heatmap", "scatter",
+                         "bar"),
+                       "a plot name")),
+                   list(type = .jst_word_spec(c("histogram", "density", "bar",
+                                                "scatter", "box",
+                                                "grouped_bar"),
+                                              "a plot type"),
+                        line = .jst_word_spec(c("lm", "loess", "connect"),
+                                              "a line type"),
+                        band = .jst_word_spec(c("ci", "pi", "see", "none"),
+                                              "a band type"),
+                        at   = .jst_word_spec(c("zero", "mean", "mixed"),
+                                              "a choice"))),
+                 "jplot")
   rewrite  <- !x_ok || (has_data && is.atomic(x) && !is.null(x))
   if (!rewrite) {
     if (has_data && is.data.frame(x)) {
@@ -416,7 +440,8 @@ jplot <- function(x, which = "core", ...) {
 jplot.default <- function(x, ..., by = NULL, type = NULL,
                           line = FALSE, equation = TRUE, r2 = TRUE,
                           band = "ci", subset = NULL, labels = NULL,
-                          numeric = NULL, categorical = NULL, count = NULL) {
+                          numeric = NULL, categorical = NULL, count = NULL,
+                          facet = NULL) {
   # Validate TRUE/FALSE flags up front. (`line` is excluded: it is a hybrid
   # flag-or-string -- FALSE/TRUE or "lm"/"loess"/"connect" -- with its own
   # validation and house-voice error further down.)
@@ -451,6 +476,16 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
              error = function(e) list(value = NULL, failed = TRUE))
   if (!is.null(x_eval) && !x_eval$failed && inherits(x_eval$value, "formula")) {
     by_sub <- substitute(by)
+    # facet = is the variable-list form's (Capability Slate C3, Session
+    # 378): a scatterplot or boxplot by groups takes by =.
+    if (!is.null(substitute(facet)) && !missing(facet)) {
+      .jst_stop("facet = draws one panel per group of a histogram, a ",
+                "density plot or a bar chart, in the variable-list form.\n",
+                "For a scatterplot or a boxplot by groups, add by = to the ",
+                "call instead, for example:\n",
+                "  jplot(WellbeingScore ~ Income, community, by = Region)",
+                fn = "jplot")
+    }
     return(.jst_jplot_formula(x, jplot_call, ...,
                               by_expr = by_sub, type = type, line = line,
                               equation = equation, r2 = r2, band = band,
@@ -510,6 +545,12 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   by_quo         <- rlang::enquo(by)
   has_by         <- !rlang::quo_is_null(by_quo)
   by_name        <- if (has_by) .jst_one_var_name(by_quo, "jplot", "by =") else NULL
+  # facet = (Capability Slate C3, Session 378): one panel per group of the
+  # variable named, an alternative to by = when the groups are many. Read as
+  # by = is, bare or in quotes, one variable.
+  facet_quo      <- rlang::enquo(facet)
+  has_facet      <- !rlang::quo_is_null(facet_quo)
+  facet_name     <- if (has_facet) .jst_one_var_name(facet_quo, "jplot", "facet =") else NULL
 
   n_vars <- length(variable_names)
   # One sentence a line, each example on a line of its own (Session 369,
@@ -523,8 +564,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
   if (n_vars > 2) {
     .jst_stop("only 1 or 2 variables can be plotted at once.\n",
-              "To show a variable by the groups of another, use by =, ",
-              "for example:\n",
+              "To show a variable by the groups of another, add by = to the ",
+              "call, for example:\n",
               "  jplot(community, Age, by = Region)\n",
               "Or call jplot() once for each variable.", fn = "jplot")
   }
@@ -532,7 +573,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # Check all variables exist
   check_names <- variable_names
   if (has_by) check_names <- c(check_names, by_name)
+  if (has_facet) check_names <- c(check_names, facet_name)
   .jst_check_vars(data, check_names, .jst_data_name, default_used = .jst_default_used)
+  if (has_by && has_facet && identical(by_name, facet_name)) {
+    .jst_stop("by = and facet = both name ", by_name, ".\n",
+              "Name it once: by = colors the groups on one plot, facet = ",
+              "draws one panel per group.", fn = "jplot")
+  }
 
   # numeric =, categorical = and count = name variables, bare or in quotes
   # (ruling R18; Fix Slate 23, Session 377, as jlm()'s since Session 376):
@@ -594,7 +641,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr,
                                   envir = parent.frame(),
-                                  vars = c(variable_names, by_name))
+                                  vars = c(variable_names, by_name, facet_name))
   # A text variable's blank cells plot as one category, <blank> (S340).
   data <- .jst_label_blank_text(pipeline$data)
   # Pipeline messages are printed below, after the red title
@@ -644,11 +691,32 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     resolved_type <- .jst_auto_plot_type(var_types, n_vars)
   }
 
-  valid_types <- c("histogram", "bar", "scatter", "box", "grouped_bar")
+  valid_types <- c("histogram", "density", "bar", "scatter", "box",
+                   "grouped_bar")
   if (!resolved_type %in% valid_types) {
     .jst_stop("Invalid `type` value: \"", resolved_type, "\".\n",
          "Valid types: ", paste(sprintf("\"%s\"", valid_types),
                                  collapse = ", "), ".")
+  }
+  # A histogram or a density plot (Capability Slate C3, Session 378: the
+  # density plot is an alternative to the histogram, never the automatic
+  # choice) draws one numeric variable: on two the scatter stop below
+  # speaks; on a text variable, a factor or a date -- values no axis can
+  # bin -- the stop is here, where ggplot2's own "stat_bin() requires a
+  # continuous x aesthetic" had been the answer.
+  if (resolved_type %in% c("histogram", "density") && n_vars == 1L) {
+    v1 <- variable_names[1L]; c1 <- data[[v1]]
+    kind <- if (is.character(c1) ||
+                (haven::is.labelled(c1) && typeof(c1) == "character")) "a text variable"
+            else if (is.factor(c1)) "a factor"
+            else if (inherits(c1, c("Date", "POSIXct", "POSIXlt"))) "a date variable"
+    if (!is.null(kind)) {
+      .jst_stop("a ", if (resolved_type == "density") "density plot" else "histogram",
+                " needs a numeric variable, and ", v1, " is ", kind, ".\n",
+                "For the count of each value, draw a bar chart:\n",
+                "  jplot(", if (!is.null(.jst_data_name)) .jst_data_name else "MyData",
+                ", ", v1, ", type = \"bar\")", fn = "jplot")
+    }
   }
 
   # -- Require formula syntax for scatter and box (relationship plots) ------
@@ -765,14 +833,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   } else NULL
 
   # -- Red title --------------------------------------------------------------
-  plot_title <- .jst_plot_title(resolved_type, variable_names, by_name)
+  plot_title <- .jst_plot_title(resolved_type, variable_names, by_name,
+                                facet_name)
   .cat_red(paste0(plot_title, "\n"))
 
   # Print pipeline messages (default data frame note, filter/complete status)
   if (.jst_default_used) .jst_default_note(.jst_data_name)
   .jst_print_msgs(pipeline$msgs)
   # The cases the plot draws, and how many it leaves out (Session 349).
-  .jst_plot_n_line(data, c(variable_names, by_name),
+  .jst_plot_n_line(data, c(variable_names, by_name, facet_name),
                    pipeline$pipeline_counts$n_original)
 
   # Convert haven-labelled variables for plotting, by their resolved class.
@@ -807,6 +876,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   } else if (has_by && !is.factor(data[[by_name]])) {
     data[[by_name]] <- factor(data[[by_name]])
   }
+  # The facet variable as the by variable: a factor, its value labels as the
+  # panel titles.
+  if (has_facet) data[[facet_name]] <- .jst_plot_group_factor(data[[facet_name]])
 
   # Console label legend (only under "legend"/"legend.bottom"; collapse).
   if (vlmode %in% c("legend", "legend.bottom")) {
@@ -817,16 +889,18 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   p <- switch(
     resolved_type,
     histogram   = .jst_build_histogram(data, variable_names[1], by_name,
-                                       axis_labels, by_label),
+                                       axis_labels, by_label, facet_name),
+    density     = .jst_build_density(data, variable_names[1], by_name,
+                                     axis_labels, by_label, facet_name),
     bar         = .jst_build_bar(data, variable_names[1], by_name,
-                                 axis_labels, by_label),
+                                 axis_labels, by_label, facet_name),
     scatter     = .jst_build_scatter(data, variable_names, by_name,
                                      line, equation, r2, band,
                                      axis_labels, by_label),
     box         = .jst_build_box(data, variable_names, var_types, by_name,
                                  axis_labels, by_label),
     grouped_bar = .jst_build_grouped_bar(data, variable_names,
-                                         axis_labels)
+                                         axis_labels, facet_name)
   )
 
   print(p)
@@ -1267,14 +1341,19 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' Appends " by <by_name>" when a by-variable is supplied.
 #' Uses variable names (not labels), matching the user's typed call.
 #'
+#' A facet variable (Session 378) adds ", one panel per <facet_name>".
+#'
 #' @param plot_type Character, one of the valid resolved types.
 #' @param variable_names Character vector of 1 or 2 variable names.
 #' @param by_name Optional character string for the by-variable.
+#' @param facet_name Optional character string for the facet variable.
 #' @keywords internal
-.jst_plot_title <- function(plot_type, variable_names, by_name = NULL) {
+.jst_plot_title <- function(plot_type, variable_names, by_name = NULL,
+                            facet_name = NULL) {
   prefix <- switch(
     plot_type,
     histogram   = "Histogram",
+    density     = "Density Plot",
     bar         = "Bar Chart",
     scatter     = "Scatterplot",
     box         = "Boxplot",
@@ -1286,11 +1365,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   } else {
     paste(variable_names[1], "and", variable_names[2])
   }
-  if (!is.null(by_name)) {
+  out <- if (!is.null(by_name)) {
     paste0(prefix, ": ", body, " by ", by_name)
   } else {
     paste0(prefix, ": ", body)
   }
+  if (!is.null(facet_name)) out <- paste0(out, ", one panel per ", facet_name)
+  out
 }
 
 
@@ -1338,7 +1419,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_histogram <- function(data, x_name, by_name = NULL,
-                                 axis_labels = NULL, by_label = NULL) {
+                                 axis_labels = NULL, by_label = NULL,
+                                 facet_name = NULL) {
   # A haven-labelled column is discrete on the x axis, so geom_histogram()
   # errors ("requires a continuous x aesthetic"). Strip the labels to the
   # underlying numeric for plotting -- declared missing codes have already
@@ -1352,6 +1434,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (inherits(x_col, "haven_labelled")) x_col <- as.numeric(x_col)
   plot_df <- data.frame(x = x_col)
   if (!is.null(by_name)) plot_df$by <- data[[by_name]]
+  if (!is.null(facet_name)) plot_df$facet <- data[[facet_name]]
 
   plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
 
@@ -1372,7 +1455,87 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       ggplot2::labs(x = x_lab, y = "Count", fill = by_lab) +
       ggplot2::theme_minimal()
   }
-  p
+  .jst_plot_facets(p, facet_name)
+}
+
+
+#' Internal helper: build a density plot (1 numeric variable)
+#'
+#' The alternative to the histogram (Capability Slate C3, Session 378):
+#' the variable's kernel density estimate, one curve, or one per group of
+#' \code{by =} laid over each other, and one panel per group of
+#' \code{facet =}. Never the automatic choice: \code{type = "density"}
+#' asks for it.
+#'
+#' @keywords internal
+#' @importFrom rlang .data
+.jst_build_density <- function(data, x_name, by_name = NULL,
+                               axis_labels = NULL, by_label = NULL,
+                               facet_name = NULL) {
+  x_col <- data[[x_name]]
+  if (inherits(x_col, "haven_labelled")) x_col <- as.numeric(x_col)
+  plot_df <- data.frame(x = x_col)
+  if (!is.null(by_name)) plot_df$by <- data[[by_name]]
+  if (!is.null(facet_name)) plot_df$facet <- data[[facet_name]]
+
+  plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
+
+  x_lab  <- if (!is.null(axis_labels)) axis_labels[[x_name]] else x_name
+  by_lab <- if (!is.null(by_label)) by_label else by_name
+
+  if (is.null(by_name)) {
+    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x)) +
+      ggplot2::geom_density(fill = "#3366FF", color = "#3366FF",
+                            alpha = 0.35, linewidth = 0.8) +
+      ggplot2::labs(x = x_lab, y = "Density") +
+      ggplot2::theme_minimal()
+  } else {
+    p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x,
+                                                fill = .data$by,
+                                                color = .data$by)) +
+      ggplot2::geom_density(alpha = 0.3, linewidth = 0.8) +
+      ggplot2::labs(x = x_lab, y = "Density", fill = by_lab,
+                    color = by_lab) +
+      ggplot2::theme_minimal()
+  }
+  .jst_plot_facets(p, facet_name)
+}
+
+
+#' Internal helper: one panel per group (facet =)
+#'
+#' Adds \code{ggplot2::facet_wrap()} on the builder's \code{facet} column
+#' when a facet variable was given (Capability Slate C3, Session 378), and
+#' returns the plot as it is otherwise. The column is the facet variable
+#' made a factor, its value labels the panel titles.
+#'
+#' @param p The ggplot.
+#' @param facet_name Character(1) or NULL.
+#' @return The ggplot.
+#' @keywords internal
+.jst_plot_facets <- function(p, facet_name) {
+  if (is.null(facet_name)) return(p)
+  p + ggplot2::facet_wrap(ggplot2::vars(.data$facet))
+}
+
+#' Internal helper: a grouping variable as a factor, value labels kept
+#'
+#' The form the \code{by =} and \code{facet =} variables take for
+#' plotting: a haven-labelled variable with value labels through
+#' \code{haven::as_factor()}, so the labels name the groups, and anything
+#' else through \code{factor()}.
+#'
+#' @param x The variable.
+#' @return A factor.
+#' @keywords internal
+.jst_plot_group_factor <- function(x) {
+  if (is.factor(x)) return(x)
+  if (haven::is.labelled(x)) {
+    val_labs <- labelled::val_labels(x)
+    if (!is.null(val_labs) && length(val_labs) > 0) return(haven::as_factor(x))
+    return(factor(x))
+  }
+  factor(x)
 }
 
 
@@ -1381,12 +1544,14 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @keywords internal
 #' @importFrom rlang .data
 .jst_build_bar <- function(data, x_name, by_name = NULL,
-                           axis_labels = NULL, by_label = NULL) {
+                           axis_labels = NULL, by_label = NULL,
+                           facet_name = NULL) {
   plot_df <- data.frame(x = data[[x_name]])
   if (!is.null(plot_df$x) && !is.factor(plot_df$x)) {
     plot_df$x <- factor(plot_df$x)
   }
   if (!is.null(by_name)) plot_df$by <- data[[by_name]]
+  if (!is.null(facet_name)) plot_df$facet <- data[[facet_name]]
 
   plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
 
@@ -1405,7 +1570,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       ggplot2::labs(x = x_lab, y = "Count", fill = by_lab) +
       ggplot2::theme_minimal()
   }
-  p
+  .jst_plot_facets(p, facet_name)
 }
 
 
@@ -1659,7 +1824,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #'
 #' @keywords internal
 #' @importFrom rlang .data
-.jst_build_grouped_bar <- function(data, variable_names, axis_labels = NULL) {
+.jst_build_grouped_bar <- function(data, variable_names, axis_labels = NULL,
+                                   facet_name = NULL) {
   x_name    <- variable_names[1]
   fill_name <- variable_names[2]
 
@@ -1669,6 +1835,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   plot_df <- data.frame(x = data[[x_name]], fill = data[[fill_name]])
   if (!is.factor(plot_df$x))    plot_df$x    <- factor(plot_df$x)
   if (!is.factor(plot_df$fill)) plot_df$fill <- factor(plot_df$fill)
+  if (!is.null(facet_name)) plot_df$facet <- data[[facet_name]]
   plot_df <- plot_df[stats::complete.cases(plot_df), , drop = FALSE]
 
   p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = .data$x, fill = .data$fill)) +
@@ -1677,7 +1844,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     ggplot2::scale_fill_brewer(palette = "Blues") +
     ggplot2::labs(x = x_lab, y = "Count", fill = fill_lab) +
     ggplot2::theme_minimal()
-  p
+  .jst_plot_facets(p, facet_name)
 }
 
 
@@ -1779,14 +1946,19 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (!is.character(which) || length(which) == 0L || anyNA(which)) {
     .jst_stop(takes, fn = "jplot")
   }
-  bad <- setdiff(which, all_plots)
+  bad <- unique(setdiff(which, all_plots))
   if (length(bad) > 0L && length(explain) > 0L &&
-      all(unique(bad) %in% names(explain))) {
-    .jst_stop(paste(explain[unique(bad)], collapse = "\n"), fn = "jplot")
+      all(bad %in% names(explain))) {
+    .jst_stop(paste(explain[bad], collapse = "\n"), fn = "jplot")
   }
   if (length(bad) > 0L) {
-    .jst_stop(.jst_and_list(paste0("\"", unique(bad), "\"")),
-              if (length(unique(bad)) == 1L) " is not a plot of "
+    # A name the method explains (jcorr()'s scatter on three or more
+    # variables) is not "not a plot" of the result: beside a name that is,
+    # the stop names only the latter (Session 378; the S377 item), and the
+    # explanation comes on the next call, once that name is gone.
+    plain <- setdiff(bad, names(explain))
+    .jst_stop(.jst_and_list(paste0("\"", plain, "\"")),
+              if (length(plain) == 1L) " is not a plot of "
               else " are not plots of ",
               owner, ".\n", takes, fn = "jplot")
   }
@@ -2055,11 +2227,13 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' @param group One element of \code{.jst_plot_variables()$groups}.
 #' @param at_vals The held values, by model column.
 #' @param logistic Logical; TRUE for a \code{glm} on the logit link.
+#' @param link Logical; with \code{logistic}, TRUE keeps the prediction
+#'   and its interval on the logit scale (the logit plot, Session 378).
 #' @return A data frame: \code{x} (a factor of the categories),
 #'   \code{fit}, \code{lwr}, \code{upr}.
 #' @keywords internal
 .jst_category_predictions <- function(model, group, at_vals,
-                                      logistic = FALSE) {
+                                      logistic = FALSE, link = FALSE) {
   k  <- length(group$labels)
   d  <- group$dummy
   nd <- data.frame(row.names = seq_len(k))
@@ -2068,9 +2242,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (logistic) {
     p   <- .jst_predict_kept(model, newdata = nd, type = "link",
                              se.fit = TRUE)
-    fit <- stats::plogis(p$fit)
-    lwr <- stats::plogis(p$fit - 1.96 * p$se.fit)
-    upr <- stats::plogis(p$fit + 1.96 * p$se.fit)
+    tr  <- if (link) identity else stats::plogis
+    fit <- tr(p$fit)
+    lwr <- tr(p$fit - 1.96 * p$se.fit)
+    upr <- tr(p$fit + 1.96 * p$se.fit)
   } else {
     p   <- .jst_predict_kept(model, newdata = nd, interval = "confidence",
                              level = 0.95)
@@ -2636,8 +2811,9 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
          "Install with: install.packages(\"ggplot2\")")
   }
 
-  # No "vif" since Session 376, as in jplot.jst_lm().
-  all_plots <- c("probability", "roc", "calibration", "binned",
+  # No "vif" since Session 376, as in jplot.jst_lm(). "logit" since
+  # Session 378: the probability plot's companion, not in the core set.
+  all_plots <- c("probability", "logit", "roc", "calibration", "binned",
                  "cooks", "leverage", "coef")
   core      <- c("probability", "roc", "calibration", "cooks")
   plot_set  <- .jst_resolve_which(which, core, all_plots, "jst_logistic")
@@ -2655,9 +2831,10 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   # case has the same predicted probability and leverage.
   plot_set <- .jst_no_predictor_plots(
     plot_set, model,
-    skip   = c("probability", "roc", "calibration", "binned", "leverage",
-               "coef"),
-    labels = c(probability = "the probability plot", roc = "ROC Curve",
+    skip   = c("probability", "logit", "roc", "calibration", "binned",
+               "leverage", "coef"),
+    labels = c(probability = "the probability plot",
+               logit = "the logit-scale plot", roc = "ROC Curve",
                calibration = "Calibration Plot",
                binned = "Binned Residuals",
                leverage = "Residuals vs Leverage",
@@ -2678,8 +2855,16 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
 
   plots <- list()
 
-  # ---- probability plot (S-curve) ------------------------------------------
-  if ("probability" %in% plot_set) {
+  # ---- probability plot (S-curve) and its logit-scale companion ----------
+  # The two share one computation (Capability Slate C3, Session 378): the
+  # linear predictor and its 95% band along the focal variable, every other
+  # predictor held where at = puts it. The probability plot draws them
+  # through plogis(); the logit plot draws them as they are, where the
+  # fitted line is straight, with the cases as a rug along the axis (those
+  # with the outcome at the top, the others at the bottom), since a 0/1
+  # outcome has no log-odds of its own to plot. At a dummy-coded focal
+  # variable's categories, the prediction at each, on either scale.
+  if (any(c("probability", "logit") %in% plot_set)) {
     at_vals <- .jst_resolve_at(at, mf, dv_name, focal_cols,
                                x$dummy_coef_names)
 
@@ -2689,6 +2874,8 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
       # behind them at 0 and 1.
       pred_df  <- .jst_category_predictions(model, focal_group, at_vals,
                                             logistic = TRUE)
+      pred_lg  <- .jst_category_predictions(model, focal_group, at_vals,
+                                            logistic = TRUE, link = TRUE)
       point_df <- data.frame(x = .jst_case_category(mf, focal_group),
                              y = as.numeric(mf[[dv_name]]))
     } else {
@@ -2708,11 +2895,17 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
       pred_link <- .jst_predict_kept(model, newdata = newdata, type = "link",
                                      se.fit = TRUE)
       t_crit <- 1.96
+      link_df <- data.frame(
+        x   = grid_x,
+        fit = pred_link$fit,
+        lwr = pred_link$fit - t_crit * pred_link$se.fit,
+        upr = pred_link$fit + t_crit * pred_link$se.fit
+      )
       line_df <- data.frame(
         x   = grid_x,
-        fit = stats::plogis(pred_link$fit),
-        lwr = stats::plogis(pred_link$fit - t_crit * pred_link$se.fit),
-        upr = stats::plogis(pred_link$fit + t_crit * pred_link$se.fit)
+        fit = stats::plogis(link_df$fit),
+        lwr = stats::plogis(link_df$lwr),
+        upr = stats::plogis(link_df$upr)
       )
       point_df <- data.frame(
         x = mf[[focal_name]],
@@ -2727,7 +2920,9 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
     } else {
       "probabilities"
     })
+  }
 
+  if ("probability" %in% plot_set) {
     p <- if (!is.null(focal_group)) {
       ggplot2::ggplot() +
         ggplot2::geom_point(data = point_df,
@@ -2762,6 +2957,57 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
       ggplot2::theme_minimal()
     print(p)
     plots$probability <- p
+  }
+
+  # ---- logit-scale plot (the linear underlayer) ----------------------------
+  if ("logit" %in% plot_set) {
+    held_lg <- .jst_held_note(at_vals, if (is.null(focal_group)) {
+      "line"
+    } else {
+      "log-odds"
+    })
+    p <- if (!is.null(focal_group)) {
+      ggplot2::ggplot() +
+        ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
+                            color = "grey60") +
+        .jst_category_layers(pred_lg)
+    } else {
+      rug_df <- point_df
+      rug_df$side <- ifelse(rug_df$y == 1, "t", "b")
+      ggplot2::ggplot() +
+        ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
+                            color = "grey60") +
+        ggplot2::geom_ribbon(data = link_df,
+                             ggplot2::aes(x = .data$x,
+                                          ymin = .data$lwr,
+                                          ymax = .data$upr),
+                             fill = "#3366FF", alpha = 0.18) +
+        ggplot2::geom_line(data = link_df,
+                           ggplot2::aes(x = .data$x, y = .data$fit),
+                           color = "#3366FF", linewidth = 0.9) +
+        ggplot2::geom_rug(data = rug_df[rug_df$side == "t", , drop = FALSE],
+                          ggplot2::aes(x = .data$x), sides = "t",
+                          alpha = 0.35, color = "#222222",
+                          length = ggplot2::unit(0.03, "npc")) +
+        ggplot2::geom_rug(data = rug_df[rug_df$side == "b", , drop = FALSE],
+                          ggplot2::aes(x = .data$x), sides = "b",
+                          alpha = 0.35, color = "#222222",
+                          length = ggplot2::unit(0.03, "npc"))
+    }
+    p <- p +
+      ggplot2::labs(
+        title    = paste0("Log-odds (Logit Scale): ", dv_name,
+                          " = ", predicts_label),
+        x        = focal_name,
+        y        = paste0("Log-odds of ", dv_name, " = ", predicts_label),
+        subtitle = held_lg,
+        caption  = if (is.null(focal_group))
+          paste0("Rug: cases with ", dv_name, " = ", predicts_label,
+                 " at the top, the others at the bottom")
+      ) +
+      ggplot2::theme_minimal()
+    print(p)
+    plots$logit <- p
   }
 
   # ---- coef forest plot (OR scale) -----------------------------------------

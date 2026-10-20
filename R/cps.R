@@ -77,6 +77,7 @@
           else if (identical(cps_toggle, FALSE)) "never"
           else switch(output_level, minimal = "never", standard = "auto",
                       full = "always",
+                      silent = "auto",   # standard's: nothing prints (S378)
                       stop(".jst_resolve_cps_render(): unknown output level '",
                            output_level, "'", call. = FALSE))
 

@@ -4,7 +4,7 @@
 \alias{jcopy}
 \title{Copy a data frame, carrying its classification registrations}
 \usage{
-jcopy(data, name, overwrite = FALSE, quiet = FALSE)
+jcopy(data, name, overwrite = FALSE, quiet = FALSE, ...)
 }
 \arguments{
 \item{data}{The source data frame (unquoted). May be omitted when a juse()
@@ -21,6 +21,10 @@ name already exists in your environment, and the script was run by
 pasting or with RStudio's Run button, the call stops with an error.}
 
 \item{quiet}{Logical; if TRUE, suppress the confirmation message.}
+
+\item{...}{Not used. An input \code{jcopy()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly NULL. Called for its side effect: the copy is assigned into

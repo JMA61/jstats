@@ -11,7 +11,8 @@ jalpha(
   variable.id = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
-  digits = NULL
+  digits = NULL,
+  print = NULL
 )
 }
 \arguments{
@@ -59,6 +60,13 @@ whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
 which keep their own fixed conventions. NULL (default) defers to
 \code{joutput()}'s \code{digits} setting (default 3).}
+
+\item{print}{Logical or NULL. \code{FALSE} prints nothing -- no table,
+no title, no note -- and returns the result as every call does;
+errors and warnings still show. \code{TRUE} prints even under
+\code{joutput("silent")}. \code{NULL} (the default) prints unless
+the level is silent. For a script that keeps many results and
+wants no output: see \code{\link{joutput}}.}
 }
 \value{
 Invisibly returns a list of class \code{jst_alpha} containing:

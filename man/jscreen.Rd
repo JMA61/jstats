@@ -15,7 +15,8 @@ jscreen(
   issues = TRUE,
   r.type = FALSE,
   stats = FALSE,
-  digits = NULL
+  digits = NULL,
+  print = NULL
 )
 }
 \arguments{
@@ -82,6 +83,13 @@ Mean and Median regardless of this setting.}
 \item{digits}{Integer or NULL. Number of decimal places for the Mean and
 Median columns. NULL (default) defers to \code{joutput()}'s \code{digits}
 setting (default 3).}
+
+\item{print}{Logical or NULL. \code{FALSE} prints nothing -- no table,
+no title, no note -- and returns the result as every call does;
+errors and warnings still show. \code{TRUE} prints even under
+\code{joutput("silent")}. \code{NULL} (the default) prints unless
+the level is silent. For a script that keeps many results and
+wants no output: see \code{\link{joutput}}.}
 }
 \value{
 Invisibly returns a data frame of the screening results, with one

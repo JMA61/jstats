@@ -11,7 +11,8 @@ jfreq(
   variable.id = NULL,
   value.id = NULL,
   missing.detail = NULL,
-  case.processing.detail = NULL
+  case.processing.detail = NULL,
+  print = NULL
 )
 }
 \arguments{
@@ -72,6 +73,13 @@ table itself prints only when a filter is active (even one that
 excluded no cases); otherwise a one-line N statement takes its
 place. See \code{?joutput}
 (\code{case.processing}).}
+
+\item{print}{Logical or NULL. \code{FALSE} prints nothing -- no table,
+no title, no note -- and returns the result as every call does;
+errors and warnings still show. \code{TRUE} prints even under
+\code{joutput("silent")}. \code{NULL} (the default) prints unless
+the level is silent. For a script that keeps many results and
+wants no output: see \code{\link{joutput}}.}
 }
 \value{
 Invisibly returns a list of class \code{jst_freq} containing:

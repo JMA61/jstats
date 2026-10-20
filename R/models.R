@@ -107,10 +107,21 @@
 #'   Processing table itself prints only when a filter or listwise
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NULL,
                   numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, layout = NULL, case.processing.detail = NULL,
-                  digits = NULL) {
+                  digits = NULL, print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -473,6 +484,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   )
   class(ret) <- "jst_corr"
   invisible(ret)
+  })
 }
 
 
@@ -2792,12 +2804,23 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #'   model as a whole before its coefficients. The Case Processing block,
 #'   the diagnostics and the other tables stay where they are. NULL
 #'   (default) defers to \code{joutput()}'s \code{model.layout} setting.
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                 numeric = NULL, categorical = NULL, count = NULL,
                 ci = NULL, std = "regular",
                 diagnostics = NULL, ref.categories = NULL, full = FALSE,
                 case.processing.detail = NULL, digits = NULL, ...,
-                value.id = NULL, model.layout = NULL) {
+                value.id = NULL, model.layout = NULL, print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -4145,6 +4168,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   class(ret) <- "jst_lm"
   if (!leg_bottom) cat("\n")
   invisible(ret)
+  })
 }
 
 
@@ -4481,12 +4505,24 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   model as a whole before its coefficients. The Case Processing block,
 #'   the diagnostics and the other tables stay where they are. NULL
 #'   (default) defers to \code{joutput()}'s \code{model.layout} setting.
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                       numeric = NULL, categorical = NULL, count = NULL,
                       ci = NULL, classification = FALSE,
                       diagnostics = NULL, ref.categories = NULL, full = FALSE,
                       case.processing.detail = NULL, digits = NULL, ...,
-                      value.id = NULL, model.layout = NULL, std = "gelman") {
+                      value.id = NULL, model.layout = NULL, std = "gelman",
+                      print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -5840,6 +5876,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   )
   class(ret) <- "jst_logistic"
   invisible(ret)
+  })
 }
 
 
@@ -5933,9 +5970,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
 #'   Processing table itself prints only when a filter or listwise
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
                    value.id = NULL, case.processing.detail = NULL,
-                   digits = NULL) {
+                   digits = NULL, print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -6211,4 +6259,5 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   )
   class(ret) <- "jst_alpha"
   invisible(ret)
+  })
 }

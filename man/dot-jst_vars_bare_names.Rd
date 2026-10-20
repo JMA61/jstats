@@ -11,7 +11,9 @@
   data_name,
   mc,
   fn,
-  dot_names = character(0)
+  dot_names = character(0),
+  as_c = FALSE,
+  force = NULL
 )
 }
 \arguments{
@@ -26,6 +28,9 @@
 \item{fn}{The function's name.}
 
 \item{dot_names}{Character; variables also given in the dots.}
+
+\item{as_c, force}{As \code{.jst_vars_dots_line()} (Session 378,
+\code{jrelabel()}).}
 }
 \value{
 Invisible NULL; stops on bare names.

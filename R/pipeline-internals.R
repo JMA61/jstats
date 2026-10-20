@@ -1476,6 +1476,14 @@
                   digits = 3,
                   missing.notice = TRUE)
 )
+# silent (Capability Slate C3, Session 378; the Session 70 item): the
+# analysis functions print nothing and return their results; every other
+# function prints as at standard, so the level's settings are standard's
+# (a result made under silent holds what a standard call's would, and
+# jload()'s notice and the recode family's reminders stay). Kept as a copy,
+# not a reference, so that a later change to standard is a decision about
+# both.
+.jst_output_defaults$silent <- .jst_output_defaults$standard
 
 # -- joptions defaults --------------------------------------------------------
 #
@@ -1741,6 +1749,49 @@
 #' @keywords internal
 .jst_notes_on <- function() {
   !identical(getOption(".jst_output_level", "standard"), "minimal")
+}
+
+#' Internal helper: does this analysis call print?
+#'
+#' The per-call \code{print} argument of the analysis functions, read against
+#' the \code{joutput("silent")} level (Capability Slate C3, Session 378; the
+#' Session 70 item): \code{TRUE} prints, \code{FALSE} does not, and
+#' \code{NULL} (the default) prints unless the level is silent.
+#'
+#' @param print The call's \code{print} argument.
+#' @return Logical(1).
+#' @keywords internal
+.jst_print_on <- function(print) {
+  if (!is.null(print)) return(isTRUE(print))
+  !identical(getOption(".jst_output_level", "standard"), "silent")
+}
+
+#' Internal helper: run an analysis function's body, printing or silent
+#'
+#' Wraps the whole body of each analysis function (jdesc, jfreq, jt, jaov,
+#' jcrosstab, jlm, jlogistic, jcorr, jalpha, jscreen). When the call prints
+#' (\code{.jst_print_on()}), the body runs as it is. When it does not, its
+#' standard output goes to a null file (every table and title is written
+#' with \code{cat()}, and the stdout emitter's prose with it) and its
+#' messages are muffled (every note goes through \code{message()}), while
+#' warnings and errors pass: a warning is a condition the handler leaves
+#' alone, and an error unwinds through the sink's \code{on.exit}, so both
+#' show as they always have. The body's own \code{return()} calls,
+#' \code{on.exit()} calls, \code{sys.call()} and \code{match.call()} work
+#' as before: the body is a promise evaluated in the function's own frame.
+#' The value is the body's, visible or not as the body left it.
+#'
+#' @param print The call's \code{print} argument, already checked.
+#' @param body The function's body, braced.
+#' @return The body's value.
+#' @keywords internal
+.jst_output_scope <- function(print, body) {
+  if (.jst_print_on(print)) return(body)
+  zz <- file(nullfile(), open = "w")
+  sink(zz)
+  on.exit({ sink(); close(zz) }, add = TRUE)
+  withCallingHandlers(body,
+                      message = function(m) invokeRestart("muffleMessage"))
 }
 
 #' Internal helper: the note under a significant Levene's test

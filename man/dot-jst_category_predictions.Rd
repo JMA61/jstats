@@ -5,7 +5,13 @@
 \title{Internal helper: the prediction at each category of a dummy-coded
 variable}
 \usage{
-.jst_category_predictions(model, group, at_vals, logistic = FALSE)
+.jst_category_predictions(
+  model,
+  group,
+  at_vals,
+  logistic = FALSE,
+  link = FALSE
+)
 }
 \arguments{
 \item{model}{The fitted \code{lm} or \code{glm}.}
@@ -15,6 +21,9 @@ variable}
 \item{at_vals}{The held values, by model column.}
 
 \item{logistic}{Logical; TRUE for a \code{glm} on the logit link.}
+
+\item{link}{Logical; with \code{logistic}, TRUE keeps the prediction
+and its interval on the logit scale (the logit plot, Session 378).}
 }
 \value{
 A data frame: \code{x} (a factor of the categories),

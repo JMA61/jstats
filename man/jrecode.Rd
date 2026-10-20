@@ -4,7 +4,7 @@
 \alias{jrecode}
 \title{Recode a variable with explicit value mapping and optional labels}
 \usage{
-jrecode(data, orig.var, map, labels = NULL, convention = NULL)
+jrecode(data, orig.var, map, labels = NULL, convention = NULL, ...)
 }
 \arguments{
 \item{data}{A data frame containing the original variable.}
@@ -137,7 +137,11 @@ the stored markers take the convention's letter case (lowercase
 Stata-style under \code{"stata"}, uppercase SAS-style under
 \code{"sas"}). Also decides what the \code{missing} keyword
 produces. Inert when neither a marker nor \code{missing} appears in
-either argument.
+either argument.}
+
+\item{...}{Not used. An input \code{jrecode()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".
 
 When \code{NULL}, the convention is resolved from
 the \code{missing.convention} setting in \code{\link{joptions}}; if that

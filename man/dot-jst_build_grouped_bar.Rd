@@ -4,7 +4,12 @@
 \alias{.jst_build_grouped_bar}
 \title{Internal helper: build grouped bar chart (2 categorical variables)}
 \usage{
-.jst_build_grouped_bar(data, variable_names, axis_labels = NULL)
+.jst_build_grouped_bar(
+  data,
+  variable_names,
+  axis_labels = NULL,
+  facet_name = NULL
+)
 }
 \description{
 Internal helper: build grouped bar chart (2 categorical variables)

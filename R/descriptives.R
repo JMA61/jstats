@@ -162,10 +162,21 @@
 #'   Processing table itself prints only when a filter or listwise
 #'   deletion excluded cases; otherwise a one-line N statement takes its
 #'   place. See \code{?joutput} (\code{case.processing}).
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
                   numeric = NULL, categorical = NULL, count = NULL,
                   value.id = NULL, case.processing.detail = NULL,
-                  digits = NULL) {
+                  digits = NULL, print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -749,6 +760,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   )
   class(ret) <- "jst_desc"
   invisible(ret)
+  })
 }
 
 
@@ -973,9 +985,20 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 #'   excluded no cases); otherwise a one-line N statement takes its
 #'   place. See \code{?joutput}
 #'   (\code{case.processing}).
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
                   value.id = NULL, missing.detail = NULL,
-                  case.processing.detail = NULL) {
+                  case.processing.detail = NULL, print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -1712,6 +1735,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   )
   class(ret) <- "jst_freq"
   invisible(ret)
+  })
 }
 
 
@@ -1861,6 +1885,12 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' @param digits Integer or NULL. Number of decimal places for the Mean and
 #'   Median columns. NULL (default) defers to \code{joutput()}'s \code{digits}
 #'   setting (default 3).
+#' @param print Logical or NULL. \code{FALSE} prints nothing -- no table,
+#'   no title, no note -- and returns the result as every call does;
+#'   errors and warnings still show. \code{TRUE} prints even under
+#'   \code{joutput("silent")}. \code{NULL} (the default) prints unless
+#'   the level is silent. For a script that keeps many results and
+#'   wants no output: see \code{\link{joutput}}.
 #'
 #' @return Invisibly returns a data frame of the screening results, with one
 #'   row per variable and columns including the Base R type, the jstats
@@ -1906,7 +1936,12 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
 #' @export
 jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL,
                     value.id = NULL, types = TRUE, issues = TRUE, r.type = FALSE,
-                    stats = FALSE, digits = NULL) {
+                    stats = FALSE, digits = NULL, print = NULL) {
+  # print = FALSE, or joutput("silent"): the body runs inside a scope that
+  # discards its output and muffles its notes; errors and warnings pass
+  # (Capability Slate C3, Session 378; .jst_output_scope()).
+  .jst_check_flag(print, "print", null.ok = TRUE)
+  .jst_output_scope(print, {
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -2520,6 +2555,7 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
   screen_table$Star <- NULL
   screen_table$Plausibility <- NULL
   invisible(screen_table)
+  })
 }
 
 #' Internal: the date shapes jscreen() recognizes in text

@@ -4,11 +4,15 @@
 \alias{juse}
 \title{Set or display the default data frame for jstats functions}
 \usage{
-juse(data)
+juse(data, ...)
 }
 \arguments{
 \item{data}{A data frame (unquoted). If omitted, prints the current
 default. Use \code{juse(NULL)} to clear the default.}
+
+\item{...}{Not used. An input \code{juse()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect of

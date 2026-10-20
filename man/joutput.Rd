@@ -20,13 +20,15 @@ joutput(
   model.layout = NULL,
   missing.notice = NULL,
   digits = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  ...
 )
 }
 \arguments{
 \item{level}{Character. One of \code{minimal}, \code{standard}
-(default), or \code{full}. If omitted, prints the current settings.
-If \code{NULL}, resets to defaults (standard with no toggle overrides).
+(default), \code{full}, or \code{silent}. If omitted, prints the
+current settings. If \code{NULL}, resets to defaults (standard with
+no toggle overrides).
 \describe{
 \item{minimal}{Stripped-down output for power users. Core results
 only -- no Case Processing table (a one-line N statement in its
@@ -47,6 +49,20 @@ intervals, post-hoc tests, and the Case
 Processing table on every call, with the per-code missing
 breakdown. Diagnostic output is not part of it: see
 \code{diagnostics}.}
+\item{silent}{For a script that runs many analyses and keeps their
+results -- a loop over models, a table built from several calls.
+The analysis functions (\code{jdesc}, \code{jfreq}, \code{jt},
+\code{jaov}, \code{jcrosstab}, \code{jlm}, \code{jlogistic},
+\code{jcorr}, \code{jalpha}, \code{jscreen}) print nothing, their
+notes included, and return their results as they always do;
+errors and warnings still show. Every other function prints as at
+standard, so a load's notice and the recode family's reminders
+stay, and the settings are standard's: a result made under silent
+holds what a standard call's would. A result is still there to
+keep: \code{m <- jlm(...)} saves it, as it does at any level.
+The same for one call:
+\code{print = FALSE} on any analysis function; and
+\code{print = TRUE} prints one call under a silent level.}
 }}
 
 \item{effect.size}{Logical or NULL. Override the level's default for
@@ -233,6 +249,10 @@ levels default to 3.}
 level/toggle change silently (nothing is printed). A bare joutput()
 status query, and a \code{joutput("setting")} query, always print
 regardless of quiet.}
+
+\item{...}{Not used. An input \code{joutput()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly returns NULL. Called for its side effect of setting
@@ -244,7 +264,9 @@ a setting call touched.
 \description{
 Controls what analysis functions display by default. Three preset levels
 are available, and individual toggles can override specific settings
-within any level. Per-call arguments on analysis functions always take
+within any level; a fourth, \code{silent}, prints nothing from the
+analysis functions and is for a script that keeps their results.
+Per-call arguments on analysis functions always take
 precedence over joutput() settings.
 }
 \details{

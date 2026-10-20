@@ -28,7 +28,8 @@ jplot(x, which = "core", ...)
   labels = NULL,
   numeric = NULL,
   categorical = NULL,
-  count = NULL
+  count = NULL,
+  facet = NULL
 )
 
 \method{jplot}{jst_lm}(
@@ -70,9 +71,9 @@ unquoted variable names (1 or 2).}
 \item{by}{Unquoted variable name for group-coloring (data-first form).}
 
 \item{type}{Character. Plot type override for the data-first form. One
-of \code{histogram}, \code{bar}, \code{scatter}, \code{box},
-\code{grouped_bar}. If NULL (default), auto-detected from variable
-types.}
+of \code{histogram}, \code{density}, \code{bar}, \code{scatter},
+\code{box}, \code{grouped_bar}. If NULL (default), auto-detected
+from variable types; \code{density} is never the automatic choice.}
 
 \item{line}{Controls a line overlay on data-first scatter plots. One of
 \code{FALSE} (default; no line), \code{TRUE} (alias for \code{lm}),
@@ -130,6 +131,10 @@ variable cannot be listed in both \code{categorical} and
 several with \code{c()}. A
 count is numeric-like for plotting, so it draws the same as \code{numeric};
 it is provided for symmetry with the other analysis functions.}
+
+\item{facet}{Unquoted variable name for one panel per group
+(variable-list form: a histogram, density plot, bar chart or grouped
+bar chart), bare or in quotes. See Details.}
 
 \item{focal}{Unquoted name of the independent variable to place on the
 x-axis for \code{jst_lm} / \code{jst_logistic} \code{fit} and
@@ -196,7 +201,12 @@ Valid plot names by class (for the result-object form):
 \item \code{jst_lm}: \code{fit}, \code{predicted}, \code{effects},
 \code{coef}, \code{residuals}, \code{qq},
 \code{scale}, \code{cooks}, \code{leverage}
-\item \code{jst_logistic}: \code{probability}, \code{roc},
+\item \code{jst_logistic}: \code{probability}, \code{logit} (the
+same fitted line on the log-odds scale, where it is straight: the
+linear predictor and its 95\% band against the focal variable, the
+cases as a rug along the axis, those with the outcome at the top
+and the others at the bottom; at a dummy-coded focal variable's
+categories, the log-odds at each), \code{roc},
 \code{calibration}, \code{binned}, \code{cooks}, \code{leverage},
 \code{coef}
 \item \code{jst_ttest}, \code{jst_anova}: \code{box} (the default),
@@ -224,8 +234,20 @@ predictors
 (\code{y ~ 1}), the plots that need a predictor, or that are drawn
 against the fitted values or the leverage, are left out with a note.
 
-Valid plot types for the data-first form: \code{histogram}, \code{bar},
-\code{scatter}, \code{box}, \code{grouped_bar}.
+Valid plot types for the data-first form: \code{histogram},
+\code{density}, \code{bar}, \code{scatter}, \code{box},
+\code{grouped_bar}. A density plot is the histogram's alternative for a
+numeric variable -- its kernel density estimate, one curve, or one per
+group of \code{by =} laid over each other -- and is drawn only when
+asked for with \code{type = "density"}.
+
+In the variable-list form \code{facet =} draws one panel per group of
+the variable named, with the groups' value labels as the panel titles:
+the alternative to \code{by =} when the groups are many, since colors
+laid over each other stop being readable past a handful. The two can be
+combined, \code{by =} coloring the groups of one variable within each
+panel of another. A scatterplot or boxplot by groups takes \code{by =}
+in the formula form; \code{facet =} is refused there.
 
 Valid \code{line} values: \code{FALSE} (default), \code{TRUE} (alias for
 \code{lm}), \code{lm}, \code{loess}, \code{connect}.

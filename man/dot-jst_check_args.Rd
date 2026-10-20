@@ -4,7 +4,7 @@
 \alias{.jst_check_args}
 \title{Internal helper: validate named arguments captured via ...}
 \usage{
-.jst_check_args(dots, aliases, fn_name)
+.jst_check_args(dots, aliases, fn_name, positional = "pass")
 }
 \arguments{
 \item{dots}{The arguments in \code{...}, captured unevaluated with
@@ -21,6 +21,14 @@ to suggest in the error message.}
 
 \item{fn_name}{Character. The calling function's name, used in the
 error message.}
+
+\item{positional}{\code{"pass"} (the default) lets an unnamed item
+through: in the data-first functions the dots carry the variables.
+\code{"refuse"} is for a function whose \code{...} exists only to
+catch what it does not take (Capability Slate C3, Session 378: the
+ten functions that had no \code{...} and stopped in R's own words):
+an unnamed item is an unused input too, shown as typed
+(\code{unused input: "x"}), never evaluated.}
 }
 \value{
 \code{invisible(NULL)}. Called for its side effect of

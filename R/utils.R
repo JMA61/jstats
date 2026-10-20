@@ -100,7 +100,8 @@
 #'   \item \code{\link{jcomplete}} -- activate listwise filtering on
 #'     selected variables
 #'   \item \code{\link{joutput}} -- set session-level output verbosity
-#'     (minimal / standard / full)
+#'     (minimal / standard / full, or silent for a script that keeps
+#'     results and prints nothing)
 #'   \item \code{\link{joptions}} -- set or display session-level
 #'     package options (missing-value convention, data folder, and
 #'     others)

@@ -4,13 +4,22 @@
 \alias{jrelabel}
 \title{Apply variable and value labels to a variable}
 \usage{
-jrelabel(data, var, labels = NULL, var.label = NULL)
+jrelabel(
+  data,
+  var,
+  labels = NULL,
+  var.label = NULL,
+  vars = NULL,
+  modify = FALSE,
+  ...
+)
 }
 \arguments{
 \item{data}{A data frame containing the variable.}
 
 \item{var}{The variable to label (unquoted, e.g. \code{StatusR}; a
-quoted name is accepted).}
+quoted name is accepted), or a \code{c()} of two or more for the list
+form (see the section below).}
 
 \item{labels}{Optional. A quoted string specifying value labels using the
 format \code{"code=Label Text"} with rules separated by semicolons.
@@ -29,17 +38,35 @@ Examples:
 \item{var.label}{Optional. A quoted string to use as the variable label
 (the description shown by \code{jdesc()}, \code{jfreq()}, etc.).
 If omitted, any existing variable label is preserved. If the variable
-has no existing label, no variable label is set.}
+has no existing label, no variable label is set. One-variable form
+only.}
+
+\item{vars}{Optional. For the list form: the variables' names in quotes,
+a stored or computed list such as \code{vars = items} or
+\code{vars = c("Q1", "Q2")}. Names typed without quotes go after the
+data frame, in a \code{c()}.}
+
+\item{modify}{Logical. \code{TRUE} labels the variable(s) in the data
+frame directly, so no assignment is needed; the data frame must be given
+by its name (or set with \code{juse()}). Optional in the one-variable
+form, which still returns the variable; required in the list form.
+Default \code{FALSE}.}
+
+\item{...}{Not used. An input \code{jrelabel()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
-The variable with the requested labels applied, returned
-invisibly (nothing prints at the console). The variable keeps
+The one-variable form: the variable with the requested labels
+applied, returned invisibly (nothing prints at the console), with or
+without \code{modify = TRUE}. The variable keeps
 its class: haven-labelled input stays haven-labelled with any declared
 SPSS-style or Stata-style missing values intact; plain numeric and
 logical input becomes \code{haven_labelled} when value labels are
 applied; any other type is returned unchanged apart from the labels.
-Assign the result to a column to keep it. Two assignment forms do
-that job:
+Without \code{modify = TRUE}, assign the result to a column to keep it
+(at the standard and full output levels a note says so after each
+call). Two assignment forms do that job:
 
 \itemize{
 \item Preserving:
@@ -53,7 +80,10 @@ the values, so there is normally nothing to keep a copy of.
 
 SPSS users will recognize the pair from \code{RECODE ... INTO new.}
 and bare \code{RECODE}; for labels, SPSS's \code{VALUE LABELS} and
-\code{VARIABLE LABELS} always label in place, the overwrite form.
+\code{VARIABLE LABELS} always label in place, the overwrite form --
+which \code{modify = TRUE} gives directly.
+
+The list form: the changed data frame, invisibly.
 }
 \description{
 \code{jrelabel()} attaches a variable label and/or value labels to any
@@ -61,6 +91,15 @@ variable in a data frame. It is designed as a simple label applicator ---
 it does not recode values, convert types, or compare variables. Use it to
 add labels after a recode, to fix missing labels, or to label any variable
 that needs them.
+
+It has two forms. The one-variable form,
+\code{jrelabel(MyData, Q1, labels = ...)}, returns the labeled variable
+for you to assign to a column, or with \code{modify = TRUE} labels the
+variable in the data frame directly. The list form,
+\code{jrelabel(MyData, c(Q1, Q2, Q3), labels = ..., modify = TRUE)},
+gives several variables the same value labels in one call -- the way a
+set of survey items sharing one response scale is labeled -- and always
+changes the data frame itself, so it takes \code{modify = TRUE}.
 
 A variable label (\code{var.label}) can be attached to a variable of any
 type --- the variable is returned unchanged apart from the new label, so
@@ -85,15 +124,43 @@ marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
 re-supply it by its marker, e.g. \code{labels = "1=Low; .c=Refused"}.
 
-Both the \code{labels} and \code{var.label} arguments are optional. If
-neither is supplied, the function returns the variable unchanged.
+Both the \code{labels} and \code{var.label} arguments are optional in the
+one-variable form. If neither is supplied, the function returns the
+variable unchanged.
 }
+\section{The list form}{
+
+A \code{c()} of two or more variables after the data frame -- or a
+stored list of names in quotes, \code{vars = items} -- applies the same
+value labels to each variable, in the data frame itself:
+\preformatted{
+jrelabel(MyData, c(Q1, Q2, Q3),
+         labels = "1=Never; 2=Sometimes; 3=Often", modify = TRUE)
+}
+The SPSS equivalent is \code{VALUE LABELS Q1 Q2 Q3 1 'Never'
+2 'Sometimes' 3 'Often'.} The form takes \code{modify = TRUE} and stops
+without it, offering the call with it added: a call that changes several
+variables returns the whole data frame, and assigning that to one column
+(\code{MyData$Q1 <- jrelabel(...)}) would put the data frame inside the
+column. It also returns the changed data frame, so
+\code{e <- jrelabel(d, c(Q1, Q2), ..., modify = TRUE)} labels \code{d}
+and keeps a copy in \code{e}. Every variable is checked before any is
+changed, so a call that stops changes nothing. A variable label names one
+variable and is refused in this form; give each its own call. A list in
+\code{vars =} follows these rules whatever its length, so a script that
+builds its list of names behaves the same when the list holds one name;
+\code{c(Q1)} after the data frame is the one-variable form.
+}
+
 \examples{
 # Add value labels after a recode
 df <- data.frame(Status = c(1, 2, 1, 2, 1, 2))
 df$StatusR <- ifelse(df$Status == 1, 1, 0)
 df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No",
                        var.label = "Status (recoded)")
+
+# The same, labeling the variable in the data frame directly
+jrelabel(df, StatusR, labels = "1=Yes; 0=No", modify = TRUE)
 
 # The data frame may also be given by name
 df$StatusR <- jrelabel(data = df, StatusR, labels = "1=Yes; 0=No")
@@ -109,9 +176,20 @@ df$Enrolled <- as.Date(c("2024-01-15", "2024-02-01", "2024-01-20",
                          "2024-03-05", "2024-02-14", "2024-01-30"))
 df$Enrolled <- jrelabel(df, Enrolled, var.label = "Enrollment date")
 
+# Several items that share one response scale: the list form
+sv <- data.frame(Q1 = c(1, 3, 2), Q2 = c(2, 2, 3), Q3 = c(3, 1, 1))
+jrelabel(sv, c(Q1, Q2, Q3), labels = "1=Never; 2=Sometimes; 3=Often",
+         modify = TRUE)
+
+# The same from a stored list of names
+items <- c("Q1", "Q2", "Q3")
+jrelabel(sv, vars = items, labels = "1=Never; 2=Sometimes; 3=Often",
+         modify = TRUE)
+
 # Using juse() default
 juse(df)
 df$StatusR <- jrelabel(StatusR, labels = "1=Active; 0=Inactive")
+juse(NULL)
 
 }
 \seealso{

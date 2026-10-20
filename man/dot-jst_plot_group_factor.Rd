@@ -2,9 +2,10 @@
 % Please edit documentation in R/plot.R
 \name{.jst_plot_group_factor}
 \alias{.jst_plot_group_factor}
-\title{Internal helper: a box plot's groups, labeled as the descriptives label
-them}
+\title{Internal helper: a grouping variable as a factor, value labels kept}
 \usage{
+.jst_plot_group_factor(x, groups = NULL)
+
 .jst_plot_group_factor(x, groups = NULL)
 }
 \arguments{
@@ -15,8 +16,15 @@ or \code{NULL}.}
 }
 \value{
 A factor.
+
+A factor.
 }
 \description{
+The form the \code{by =} and \code{facet =} variables take for
+plotting: a haven-labelled variable with value labels through
+\code{haven::as_factor()}, so the labels name the groups, and anything
+else through \code{factor()}.
+
 \code{jplot()} on a \code{jt()} or \code{jaov()} result drew its boxes
 over the codes -- 1, 2, 3, 4 -- where the Group Descriptives table of the
 same result reads "1: Control", "2: CBT" (Session 347; the S344 item).

@@ -4,7 +4,7 @@
 \alias{.jst_plot_title}
 \title{Internal helper: build a red-title string for jplot.default output}
 \usage{
-.jst_plot_title(plot_type, variable_names, by_name = NULL)
+.jst_plot_title(plot_type, variable_names, by_name = NULL, facet_name = NULL)
 }
 \arguments{
 \item{plot_type}{Character, one of the valid resolved types.}
@@ -12,6 +12,8 @@
 \item{variable_names}{Character vector of 1 or 2 variable names.}
 
 \item{by_name}{Optional character string for the by-variable.}
+
+\item{facet_name}{Optional character string for the facet variable.}
 }
 \description{
 Produces titles like:
@@ -24,5 +26,8 @@ Produces titles like:
 }
 Appends " by <by_name>" when a by-variable is supplied.
 Uses variable names (not labels), matching the user's typed call.
+}
+\details{
+A facet variable (Session 378) adds ", one panel per <facet_name>".
 }
 \keyword{internal}

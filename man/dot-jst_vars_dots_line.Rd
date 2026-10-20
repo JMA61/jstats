@@ -4,7 +4,7 @@
 \alias{.jst_vars_dots_line}
 \title{Internal helper: the call rebuilt with its variables after the data frame}
 \usage{
-.jst_vars_dots_line(mc, fn, vars)
+.jst_vars_dots_line(mc, fn, vars, as_c = FALSE, force = NULL)
 }
 \arguments{
 \item{mc}{The call, from \code{match.call()} in the exported function.}
@@ -12,6 +12,11 @@
 \item{fn}{The function's name.}
 
 \item{vars}{Character; the variables, in the order they go in.}
+
+\item{as_c}{Logical; the variables as one \code{c()}.}
+
+\item{force}{Named character; arguments set on the line, replacing the
+call's own (\code{c(modify = "TRUE")}).}
 }
 \value{
 A list: \code{pre} ("" or the naming line with its newline),
@@ -27,5 +32,13 @@ variables listed bare straight after the data frame -- the house form,
 argument is kept as typed. A data frame given as an expression is
 named first (\code{mydata <- mk()}), as every offered line names it
 (S343).
+}
+\details{
+\code{jrelabel()} (Session 378) takes its list in one slot, as a
+\code{c()}: \code{as_c = TRUE} gives the variables as one \code{c()}
+(one name bare) and drops the call's own \code{var}; \code{force} sets
+arguments the line must carry -- its list form runs only with
+\code{modify = TRUE}, so the line carries it (ruling R23: no line that
+stops next).
 }
 \keyword{internal}

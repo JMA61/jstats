@@ -332,10 +332,19 @@
 #'   numbers, rows and columns that may not be data, a CSV file's encoding)
 #'   are still shown, as is the coded-missing scan report; turn that off
 #'   with \code{check.missing = FALSE}.
+#' @param ... Not used. An input \code{jload()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                   package = FALSE, check.missing = TRUE, sheet = NULL,
                   skip = 0, header = TRUE, preserve.declarations = TRUE,
-                  missing.notice = NULL, quiet = FALSE) {
+                  missing.notice = NULL, quiet = FALSE, ...) {
+  # An input jload() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jload", positional = "refuse")
   # Validate TRUE/FALSE flags up front (display toggles also accept
   # NULL, meaning defer to joutput()).
   .jst_check_flag(use, "use")
@@ -5783,6 +5792,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   way \code{\link{jload}} changes names R cannot use; the data frame
 #'   keeps its own names, each old name becomes the variable's label in the
 #'   file where it has none, and a note lists the changes.
+#' @param ... Not used. An input \code{jsave()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #'
 #' @return Invisibly returns \code{NULL}. Called for its side effect of
 #'   writing a file to disk.
@@ -5909,7 +5921,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'
 #' @export
 jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
-                  clean.names = FALSE) {
+                  clean.names = FALSE, ...) {
+  # An input jsave() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jsave", positional = "refuse")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(overwrite, "overwrite")
   .jst_check_flag(preserve.declarations, "preserve.declarations")
@@ -6763,6 +6781,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
 #'   name already exists in your environment, and the script was run by
 #'   pasting or with RStudio's Run button, the call stops with an error.
 #' @param quiet Logical; if TRUE, suppress the confirmation message.
+#' @param ... Not used. An input \code{jcopy()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #' @return Invisibly NULL. Called for its side effect: the copy is assigned into
 #'   the calling environment under \code{name}, and its registrations are cloned
 #'   onto that name.
@@ -6777,7 +6798,13 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
 #' }
 #' @seealso \code{\link{jload}}, \code{\link{jsave}}, \code{\link{juse}}
 #' @export
-jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE) {
+jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
+  # An input jcopy() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jcopy", positional = "refuse")
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(overwrite, "overwrite")
   .jst_check_flag(quiet, "quiet")

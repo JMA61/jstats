@@ -21,7 +21,8 @@ jlm(
   digits = NULL,
   ...,
   value.id = NULL,
-  model.layout = NULL
+  model.layout = NULL,
+  print = NULL
 )
 }
 \arguments{
@@ -206,6 +207,13 @@ the Coefficients table first and the fit block after it;
 model as a whole before its coefficients. The Case Processing block,
 the diagnostics and the other tables stay where they are. NULL
 (default) defers to \code{joutput()}'s \code{model.layout} setting.}
+
+\item{print}{Logical or NULL. \code{FALSE} prints nothing -- no table,
+no title, no note -- and returns the result as every call does;
+errors and warnings still show. \code{TRUE} prints even under
+\code{joutput("silent")}. \code{NULL} (the default) prints unless
+the level is silent. For a script that keeps many results and
+wants no output: see \code{\link{joutput}}.}
 }
 \value{
 Invisibly returns a list of class \code{jst_lm} containing:

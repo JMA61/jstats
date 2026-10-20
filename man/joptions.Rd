@@ -11,7 +11,8 @@ joptions(
   corr.layout = NULL,
   missing.detail = NULL,
   message.width = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  ...
 )
 }
 \arguments{
@@ -40,6 +41,10 @@ convention nudge, and the note that a data folder was created (the
 folder is created all the same). It has no effect on a status query, which
 makes no change to silence: the bare joptions() panel and a
 joptions("slot") query both print regardless.}
+
+\item{...}{Not used. An input \code{joptions()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly returns \code{NULL}. Called for the side effect of

@@ -16,6 +16,15 @@
 #' add labels after a recode, to fix missing labels, or to label any variable
 #' that needs them.
 #'
+#' It has two forms. The one-variable form,
+#' \code{jrelabel(MyData, Q1, labels = ...)}, returns the labeled variable
+#' for you to assign to a column, or with \code{modify = TRUE} labels the
+#' variable in the data frame directly. The list form,
+#' \code{jrelabel(MyData, c(Q1, Q2, Q3), labels = ..., modify = TRUE)},
+#' gives several variables the same value labels in one call -- the way a
+#' set of survey items sharing one response scale is labeled -- and always
+#' changes the data frame itself, so it takes \code{modify = TRUE}.
+#'
 #' A variable label (\code{var.label}) can be attached to a variable of any
 #' type --- the variable is returned unchanged apart from the new label, so
 #' dates stay dates, factors stay factors, and text stays text. Value labels
@@ -39,12 +48,36 @@
 #' replacement set that leaves it out removes that declaration too;
 #' re-supply it by its marker, e.g. \code{labels = "1=Low; .c=Refused"}.
 #'
-#' Both the \code{labels} and \code{var.label} arguments are optional. If
-#' neither is supplied, the function returns the variable unchanged.
+#' Both the \code{labels} and \code{var.label} arguments are optional in the
+#' one-variable form. If neither is supplied, the function returns the
+#' variable unchanged.
+#'
+#' @section The list form:
+#' A \code{c()} of two or more variables after the data frame -- or a
+#' stored list of names in quotes, \code{vars = items} -- applies the same
+#' value labels to each variable, in the data frame itself:
+#' \preformatted{
+#' jrelabel(MyData, c(Q1, Q2, Q3),
+#'          labels = "1=Never; 2=Sometimes; 3=Often", modify = TRUE)
+#' }
+#' The SPSS equivalent is \code{VALUE LABELS Q1 Q2 Q3 1 'Never'
+#' 2 'Sometimes' 3 'Often'.} The form takes \code{modify = TRUE} and stops
+#' without it, offering the call with it added: a call that changes several
+#' variables returns the whole data frame, and assigning that to one column
+#' (\code{MyData$Q1 <- jrelabel(...)}) would put the data frame inside the
+#' column. It also returns the changed data frame, so
+#' \code{e <- jrelabel(d, c(Q1, Q2), ..., modify = TRUE)} labels \code{d}
+#' and keeps a copy in \code{e}. Every variable is checked before any is
+#' changed, so a call that stops changes nothing. A variable label names one
+#' variable and is refused in this form; give each its own call. A list in
+#' \code{vars =} follows these rules whatever its length, so a script that
+#' builds its list of names behaves the same when the list holds one name;
+#' \code{c(Q1)} after the data frame is the one-variable form.
 #'
 #' @param data A data frame containing the variable.
 #' @param var The variable to label (unquoted, e.g. \code{StatusR}; a
-#'   quoted name is accepted).
+#'   quoted name is accepted), or a \code{c()} of two or more for the list
+#'   form (see the section below).
 #' @param labels Optional. A quoted string specifying value labels using the
 #'   format \code{"code=Label Text"} with rules separated by semicolons.
 #'   Accepted on haven-labelled, plain numeric, and logical variables only.
@@ -62,16 +95,31 @@
 #' @param var.label Optional. A quoted string to use as the variable label
 #'   (the description shown by \code{jdesc()}, \code{jfreq()}, etc.).
 #'   If omitted, any existing variable label is preserved. If the variable
-#'   has no existing label, no variable label is set.
+#'   has no existing label, no variable label is set. One-variable form
+#'   only.
+#' @param vars Optional. For the list form: the variables' names in quotes,
+#'   a stored or computed list such as \code{vars = items} or
+#'   \code{vars = c("Q1", "Q2")}. Names typed without quotes go after the
+#'   data frame, in a \code{c()}.
+#' @param modify Logical. \code{TRUE} labels the variable(s) in the data
+#'   frame directly, so no assignment is needed; the data frame must be given
+#'   by its name (or set with \code{juse()}). Optional in the one-variable
+#'   form, which still returns the variable; required in the list form.
+#'   Default \code{FALSE}.
+#' @param ... Not used. An input \code{jrelabel()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #'
-#' @return The variable with the requested labels applied, returned
-#'   invisibly (nothing prints at the console). The variable keeps
+#' @return The one-variable form: the variable with the requested labels
+#'   applied, returned invisibly (nothing prints at the console), with or
+#'   without \code{modify = TRUE}. The variable keeps
 #'   its class: haven-labelled input stays haven-labelled with any declared
 #'   SPSS-style or Stata-style missing values intact; plain numeric and
 #'   logical input becomes \code{haven_labelled} when value labels are
 #'   applied; any other type is returned unchanged apart from the labels.
-#'   Assign the result to a column to keep it. Two assignment forms do
-#'   that job:
+#'   Without \code{modify = TRUE}, assign the result to a column to keep it
+#'   (at the standard and full output levels a note says so after each
+#'   call). Two assignment forms do that job:
 #'
 #'   \itemize{
 #'     \item Preserving:
@@ -85,7 +133,10 @@
 #'
 #'   SPSS users will recognize the pair from \code{RECODE ... INTO new.}
 #'   and bare \code{RECODE}; for labels, SPSS's \code{VALUE LABELS} and
-#'   \code{VARIABLE LABELS} always label in place, the overwrite form.
+#'   \code{VARIABLE LABELS} always label in place, the overwrite form --
+#'   which \code{modify = TRUE} gives directly.
+#'
+#'   The list form: the changed data frame, invisibly.
 #'
 #' @examples
 #' # Add value labels after a recode
@@ -93,6 +144,9 @@
 #' df$StatusR <- ifelse(df$Status == 1, 1, 0)
 #' df$StatusR <- jrelabel(df, StatusR, labels = "1=Yes; 0=No",
 #'                        var.label = "Status (recoded)")
+#'
+#' # The same, labeling the variable in the data frame directly
+#' jrelabel(df, StatusR, labels = "1=Yes; 0=No", modify = TRUE)
 #'
 #' # The data frame may also be given by name
 #' df$StatusR <- jrelabel(data = df, StatusR, labels = "1=Yes; 0=No")
@@ -108,9 +162,20 @@
 #'                          "2024-03-05", "2024-02-14", "2024-01-30"))
 #' df$Enrolled <- jrelabel(df, Enrolled, var.label = "Enrollment date")
 #'
+#' # Several items that share one response scale: the list form
+#' sv <- data.frame(Q1 = c(1, 3, 2), Q2 = c(2, 2, 3), Q3 = c(3, 1, 1))
+#' jrelabel(sv, c(Q1, Q2, Q3), labels = "1=Never; 2=Sometimes; 3=Often",
+#'          modify = TRUE)
+#'
+#' # The same from a stored list of names
+#' items <- c("Q1", "Q2", "Q3")
+#' jrelabel(sv, vars = items, labels = "1=Never; 2=Sometimes; 3=Often",
+#'          modify = TRUE)
+#'
 #' # Using juse() default
 #' juse(df)
 #' df$StatusR <- jrelabel(StatusR, labels = "1=Active; 0=Inactive")
+#' juse(NULL)
 #'
 #' @seealso \code{\link{jrecode}} for recoding values with optional labels
 #'   in a single step.
@@ -118,55 +183,215 @@
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
+jrelabel <- function(data, var, labels = NULL, var.label = NULL,
+                     vars = NULL, modify = FALSE, ...) {
+  # An input jrelabel() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jrelabel", positional = "refuse")
   .fn <- "jrelabel"
+  cl  <- sys.call()
+
+  # Captured before `data` is reassigned below: substitute() on the
+  # rebound variable would return the value, not the caller's expression.
+  data_sub_expr <- substitute(data)
+  vars_sub      <- substitute(vars)
+  labels_sub    <- if (missing(labels)) NULL else substitute(labels)
 
   # --- Resolve first argument -----------------------------------------------
   arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
+    data_sub      = data_sub_expr,
     data_missing  = missing(data),
     fn_name       = "jrelabel",
     envir         = parent.frame(),
     accept_vector = FALSE
   )
 
-  data <- arg1$data
+  data         <- arg1$data
+  data_name    <- arg1$name
+  default_used <- arg1$mode %in% c("default", "symbol_with_default")
+  # What the data argument was: a name (or the juse() default), a place
+  # (lst$d), or an expression (mk()) -- what modify = TRUE can write back
+  # to, and what the offered lines name (Session 378, as jdeclare_missing()).
+  data_kind <- if (arg1$mode == "explicit") .jst_data_arg_kind(data_sub_expr)
+               else "name"
 
-  # Determine variable name. If the user typed jrelabel(VarName, labels = ...)
-  # — data omitted, named labels — the helper captured VarName as first_arg_sub.
-  # Otherwise var is supplied positionally.
+  # The variable slot. If the user typed jrelabel(VarName, labels = ...)
+  # -- data omitted, named labels -- the helper captured VarName as
+  # first_arg_sub. Otherwise var is supplied positionally.
   if (arg1$mode == "symbol_with_default") {
     if (!missing(var)) {
-      .jst_named_args_stop("jrelabel", arg1, data, arg1$name, sys.call(),
+      .jst_named_args_stop("jrelabel", arg1, data, arg1$name, cl,
                            "labels")
     }
-    var_name <- .jst_one_var_name(arg1$first_arg_sub, .fn)   # R18, S356
+    slot <- arg1$first_arg_sub
   } else {
-    var_name <- if (missing(var)) "" else
-      .jst_one_var_name(substitute(var), .fn)              # R18, S356
+    slot <- if (missing(var)) NULL else substitute(var)
   }
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
     .jst_stop("The first argument must be a data frame.")
   }
+  .jst_check_flag(modify, "modify")
+
+  # Variables listed one after another, as the data-first functions take
+  # them -- jrelabel(d, Q1, Q2, Q3, labels = ...) -- where jrelabel() takes
+  # one, or a c() (Session 378). Read before anything is evaluated: Q2 was
+  # bound to var.label, and a workspace object of that name became the
+  # variable label without a word. An unnamed argument that is a name of
+  # the data frame's variables, other than the variable itself, is taken
+  # as such a variable (ruling R18: the data frame's variable, never a
+  # separate object with the same name).
+  extra <- .jst_relabel_extra_vars(cl, data, data_sub_expr, slot)
+  if (length(extra) > 0L) {
+    first <- .jst_relabel_slot_names(slot)
+    all_v <- unique(c(first, extra))
+    mc    <- match.call()
+    lab   <- mc$labels
+    if (is.symbol(lab) && as.character(lab) %in% extra) lab <- NULL
+    if (is.null(lab)) {
+      strs <- Filter(function(a) is.character(a) && length(a) == 1L,
+                     as.list(cl)[-1L])
+      if (length(strs) > 0L) lab <- strs[[1L]]
+    }
+    .jst_stop("only one variable goes after the data frame, and this call ",
+              "gives ", .jst_and_list(all_v), ".\n",
+              "To label them all at once, list them in c() and add ",
+              "modify = TRUE:\n",
+              .jst_relabel_list_lines(data_sub_expr, data_kind, default_used,
+                                      .jst_relabel_c(all_v), lab),
+              fn = .fn)
+  }
+
+  # --- The list form (Session 378; rulings R30 and its S378 corrections) --
+  slot_list  <- .jst_relabel_slot_names(slot, several_only = TRUE)
+  vars_given <- !is.null(vars_sub)
+  if (vars_given) {
+    one <- if (length(slot_list) > 0L) slot_list
+           else if (!is.null(slot)) .jst_one_var_name(slot, .fn)
+           else character(0)
+    # Names typed bare in vars = (ruling R18): the call with them in a c()
+    # after the data frame, modify = TRUE carried.
+    .jst_vars_bare_names(vars_sub, parent.frame(), data, data_name,
+                         match.call(), .fn, one, as_c = TRUE,
+                         force = c(modify = "TRUE"))
+    if (length(one) > 0L) {
+      .jst_vars_twice_stop(match.call(), .fn, one, vars, as_c = TRUE,
+                           force = c(modify = "TRUE"))
+    }
+    if (!is.character(vars) || length(vars) == 0L || anyNA(vars)) {
+      .jst_stop("`vars` must be one or more variable names in quotes, ",
+                "for example:\n",
+                "  vars = c(\"Age\", \"Income\")")
+    }
+  }
+  if (vars_given || length(slot_list) >= 2L) {
+    target_vars <- if (vars_given) vars else slot_list
+    # How the offered lines name the variables: as the call gave them.
+    vtxt <- if (vars_given) {
+      paste0("vars = ", .jst_term_text(vars_sub))
+    } else {
+      .jst_relabel_c(target_vars)
+    }
+    if (anyDuplicated(target_vars) > 0L) {
+      dups <- unique(target_vars[duplicated(target_vars)])
+      .jst_stop(.jst_plural(length(dups), "variable name"),
+                " given more than once: ",
+                paste0("'", dups, "'", collapse = ", "), ".", fn = .fn)
+    }
+    .jst_check_vars(data, target_vars, data_name, default_used = default_used)
+
+    if (!is.null(var.label)) {
+      .jst_stop("var.label = names one variable, so it cannot go with a ",
+                "list of variables.\n",
+                "Give each variable its label in a call of its own, for ",
+                "example:\n",
+                .jst_relabel_assign_line(data_sub_expr, data_kind,
+                                         default_used, data_name,
+                                         target_vars[1L],
+                                         paste0("var.label = ",
+                                                .jst_term_text(substitute(var.label)))),
+                fn = .fn)
+    }
+    if (is.null(labels)) {
+      .jst_stop("no labels specified.\n",
+                "A list of variables takes the value labels to apply to ",
+                "each, for example:\n",
+                "  labels = \"1=Yes; 0=No\"", fn = .fn)
+    }
+    if (!is.character(labels) || length(labels) != 1) {
+      .jst_stop("the labels must be one quoted string, for example:\n",
+                "  labels = \"1=Yes; 0=No\"")
+    }
+    # Every variable checked before any is changed.
+    probs <- lapply(target_vars, function(v) .jst_relabel_type_problem(data[[v]]))
+    bad   <- !vapply(probs, is.null, logical(1))
+    if (any(bad)) {
+      kinds <- vapply(probs[bad], `[[`, character(1), "kind")
+      conv  <- any(vapply(probs[bad], `[[`, logical(1), "convert"))
+      nb    <- sum(bad)
+      .jst_stop(.jst_and_list(paste0("'", target_vars[bad], "' is ", kinds)),
+                "; value labels can only be applied to numeric variables.\n",
+                "Nothing was changed. ",
+                if (conv) {
+                  paste0("Convert ", if (nb == 1L) "it" else "them",
+                         " to numbers first with jencode(), or leave ",
+                         if (nb == 1L) "it" else "them", " out of the list.")
+                } else {
+                  paste0("Leave ", if (nb == 1L) "it" else "them",
+                         " out of the list.")
+                }, fn = .fn)
+    }
+    parsed_labels <- tryCatch(
+      .jst_parse_labels(labels),
+      error = function(e) .jst_stop(paste0("Error in labels argument: ",
+                                           conditionMessage(e))))
+    attr(parsed_labels, "tagged_raw") <- NULL
+    # modify = TRUE, required: the form returns the data frame, which
+    # assigned to one column (d$Q1 <- ...) would put the data frame inside
+    # it (Jeff, S377: "a multivariable relabel would require a modify = true
+    # argument specification"). Without it the call stops before anything
+    # and offers the call with it added.
+    if (!isTRUE(modify)) {
+      .jst_stop("labelling several variables changes ",
+                if (identical(data_kind, "name")) data_name
+                else "the data frame", " itself, so it needs modify = TRUE:\n",
+                .jst_relabel_list_lines(data_sub_expr, data_kind,
+                                        default_used, vtxt, labels_sub),
+                fn = .fn)
+    }
+    if (!identical(data_kind, "name")) {
+      .jst_stop("modify = TRUE can only change a data frame that has a ",
+                "name.\n",
+                "Name the data first, then rerun with modify = TRUE:\n",
+                .jst_relabel_list_lines(data_sub_expr, data_kind,
+                                        default_used, vtxt, labels_sub),
+                fn = .fn)
+    }
+    for (v in target_vars) {
+      data[[v]] <- .jst_relabel_apply(data[[v]], parsed_labels, NULL)
+    }
+    modify_target <- if (arg1$mode == "explicit") as.character(data_sub_expr)
+                     else arg1$name
+    assign(modify_target, data, envir = parent.frame())
+    .jst_relabel_done(target_vars, data_name, TRUE, FALSE)
+    return(invisible(data))
+  }
+
+  # --- The one-variable form ------------------------------------------------
+  var_name <- if (is.null(slot)) "" else .jst_one_var_name(slot, .fn)  # R18, S356
   # No variable named (Session 370, Fix Slate 18), as jrecode().
   if (!nzchar(var_name)) .jst_no_var_stop("jrelabel")
   if (!var_name %in% names(data)) {
     # The package's one not-found sentence (S338; S343 here).
     .jst_check_vars(data, var_name, arg1$name,
-                    default_used = arg1$mode %in%
-                      c("default", "symbol_with_default"))
+                    default_used = default_used)
   }
 
   x <- data[[var_name]]
-
-  # In-place contract: `result` IS the caller's column. Labels are attached
-  # to it directly, so its class and every attribute it carries (value
-  # labels, SPSS-style na_values / na_range, Stata-style tagged values,
-  # variable label) survive unless an argument below replaces them. The
-  # column is never rebuilt or converted. (Session 215)
-  result <- x
 
   # --- Validate var.label ---
   if (!is.null(var.label)) {
@@ -175,13 +400,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
     }
   }
 
-  # --- Apply value labels ---
+  # --- Validate labels ---
   # Value labels attach only where the carrier is determined by the
   # column's CLASS alone: haven-labelled (numeric-backed), plain numeric,
   # and logical (stored as 1/0 --- a total, lossless mapping). Factor,
   # character, and date/time columns are refused with a fix, because
   # whether they could be converted depends on the column's CONTENTS, and
   # jrelabel() never converts. Mirrors jdeclare_missing()'s type guard.
+  parsed_labels <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
       .jst_stop("the labels must be one quoted string, for example:\n",
@@ -206,32 +432,345 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
       .jst_stop("'", var_name, "' is of type ", typeof(x),
                 " and cannot carry value labels.")
     }
-
-    if (is.logical(result)) result <- as.numeric(result)
-
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
       error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e)))
-    )
+                                      conditionMessage(e))))
     # S249: jrelabel does not quote markers back, and this vector becomes the
     # column's value labels on the very next line. Drop the raw-spelling
     # record at the parse so it cannot reach a column.
     attr(parsed_labels, "tagged_raw") <- NULL
-    labelled::val_labels(result) <- parsed_labels
   }
 
-  # --- Apply variable label (any column type, in place) ---
+  # modify = TRUE writes the variable back into the data frame, so the
+  # data must arrive as a name (Session 378, as jdeclare_missing()): a place
+  # gets the assignment that changes it, an expression the naming line.
+  # Checked before anything is changed.
+  if (isTRUE(modify) && !identical(data_kind, "name")) {
+    if (identical(data_kind, "place")) {
+      .jst_stop("modify = TRUE can only change a data frame that has a ",
+                "name.\n",
+                "To change ", .jst_term_text(data_sub_expr), " itself, ",
+                "assign the result to its variable:\n",
+                .jst_relabel_assign_line(data_sub_expr, data_kind,
+                                         default_used, data_name, var_name,
+                                         .jst_relabel_rest(cl)),
+                fn = .fn)
+    }
+    rest <- .jst_relabel_rest(cl)
+    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
+              "Name the data first, then rerun with modify = TRUE:\n",
+              "  mydata <- ", .jst_term_text(data_sub_expr), "\n",
+              "  jrelabel(mydata, ", var_name,
+              if (nzchar(rest)) paste0(", ", rest), ", modify = TRUE)",
+              fn = .fn)
+  }
+
+  # In-place contract: `result` IS the caller's column, labels attached to
+  # it directly, its class and every attribute it carries kept unless an
+  # argument replaces them (Session 215; .jst_relabel_apply()).
+  result <- .jst_relabel_apply(x, parsed_labels, var.label)
+
+  if (isTRUE(modify)) {
+    data[[var_name]] <- result
+    modify_target <- if (arg1$mode == "explicit") as.character(data_sub_expr)
+                     else arg1$name
+    assign(modify_target, data, envir = parent.frame())
+    .jst_relabel_done(var_name, data_name, !is.null(labels),
+                      !is.null(var.label))
+  } else if (!identical(getOption(".jst_output_level", "standard"),
+                        "minimal")) {
+    # The assign-or-lose reminder (Session 378; Jeff's okay), as jrecode(),
+    # jencode(), jsum() and javg() give theirs. A function cannot see
+    # whether its result is being assigned, so it prints on every call of
+    # this form -- worded to be true either way -- and not at
+    # joutput("minimal"), nor with modify = TRUE.
+    .jst_msg(.jst_relabel_reminder(data_sub_expr, data_kind, data_name,
+                                   var_name))
+  }
+
+  return(invisible(result))
+}
+
+
+#' Internal helper: the names of jrelabel()'s variable slot
+#'
+#' A bare or quoted name, or a \code{c()} of them (ruling R18), as
+#' character. With \code{several_only = TRUE}, \code{character(0)} unless
+#' the slot is a \code{c()} of two or more -- the list form (Session 378);
+#' \code{c(Q1)} is one variable. Anything else gives \code{character(0)}.
+#'
+#' @param sub The slot as typed, or NULL.
+#' @param several_only Logical.
+#' @return Character.
+#' @keywords internal
+.jst_relabel_slot_names <- function(sub, several_only = FALSE) {
+  if (is.null(sub)) return(character(0))
+  if (is.symbol(sub)) return(if (several_only) character(0) else as.character(sub))
+  if (is.character(sub) && length(sub) == 1L && !is.na(sub)) {
+    return(if (several_only) character(0) else sub)
+  }
+  if (is.call(sub) && is.symbol(sub[[1L]]) &&
+      identical(as.character(sub[[1L]]), "c") && length(sub) > 1L) {
+    items <- as.list(sub)[-1L]
+    plain <- all(vapply(items, function(a) {
+      (is.symbol(a) && nzchar(as.character(a))) ||
+        (is.character(a) && length(a) == 1L && !is.na(a))
+    }, logical(1))) && is.null(names(items))
+    if (!plain) return(character(0))
+    nms <- vapply(items, as.character, character(1))
+    if (several_only && length(nms) < 2L) return(character(0))
+    return(nms)
+  }
+  character(0)
+}
+
+#' Internal helper: variables listed one after another in a jrelabel() call
+#'
+#' The unnamed arguments of the call, other than the data frame and the
+#' variable slot, that are names of the data frame's variables:
+#' \code{jrelabel(d, Q1, Q2, Q3, labels = ...)} gives Q2 and Q3 (Session
+#' 378). Read from the call as typed, so nothing is evaluated.
+#'
+#' @param cl The call (\code{sys.call()}).
+#' @param data The data frame.
+#' @param data_sub The data argument as typed.
+#' @param slot The variable slot as typed, or NULL.
+#' @return Character.
+#' @keywords internal
+.jst_relabel_extra_vars <- function(cl, data, data_sub, slot) {
+  args <- as.list(cl)[-1L]
+  an   <- names(args)
+  if (is.null(an)) an <- rep("", length(args))
+  un <- args[!nzchar(an)]
+  out <- character(0)
+  for (a in un) {
+    if (!is.symbol(a)) next
+    nm <- as.character(a)
+    if (!nzchar(nm) || !nm %in% names(data)) next
+    if (identical(a, data_sub) || identical(a, slot)) next
+    out <- c(out, nm)
+  }
+  unique(out)
+}
+
+#' Internal helper: names as one c(), or one name bare
+#'
+#' @param nms Character.
+#' @return Character(1).
+#' @keywords internal
+.jst_relabel_c <- function(nms) {
+  if (length(nms) == 1L) nms else paste0("c(", paste(nms, collapse = ", "), ")")
+}
+
+#' Internal helper: the lines that run jrelabel()'s list form
+#'
+#' The call with \code{modify = TRUE} (Session 378): on a data frame's name,
+#' or under the \code{juse()} default, one line; on an expression, the line
+#' that names it first (\code{mydata <- mk()}); on a place
+#' (\code{lst$d}), that and the line that puts the result back.
+#'
+#' @param data_sub The data argument as typed.
+#' @param data_kind "name", "place" or "expression".
+#' @param default_used Logical.
+#' @param vtxt Character(1); the variables as the line gives them.
+#' @param labels_sub The labels as typed, or NULL.
+#' @return Character(1), the indented lines.
+#' @keywords internal
+.jst_relabel_list_lines <- function(data_sub, data_kind, default_used, vtxt,
+                                    labels_sub) {
+  ltxt <- if (!is.null(labels_sub)) {
+    paste0(", labels = ", .jst_term_text(labels_sub))
+  } else ""
+  if (isTRUE(default_used)) {
+    return(paste0("  jrelabel(", vtxt, ltxt, ", modify = TRUE)"))
+  }
+  if (identical(data_kind, "name")) {
+    return(paste0("  jrelabel(", .jst_term_text(data_sub), ", ", vtxt, ltxt,
+                  ", modify = TRUE)"))
+  }
+  out <- c(paste0("  mydata <- ", .jst_term_text(data_sub)),
+           paste0("  jrelabel(mydata, ", vtxt, ltxt, ", modify = TRUE)"))
+  if (identical(data_kind, "place")) {
+    out <- c(out, paste0("  ", .jst_term_text(data_sub), " <- mydata"))
+  }
+  paste(out, collapse = "\n")
+}
+
+#' Internal helper: the arguments of a jrelabel() call after its variable
+#'
+#' Every named argument of the call as typed but \code{data}, \code{var},
+#' \code{vars} and \code{modify}, joined with commas, for a line that
+#' rebuilds the call (Session 378).
+#'
+#' @param cl The call (\code{sys.call()}).
+#' @return Character(1), "" when there are none.
+#' @keywords internal
+.jst_relabel_rest <- function(cl) {
+  ns  <- topenv(environment(.jst_relabel_rest))
+  mc  <- tryCatch(match.call(get("jrelabel", envir = ns), cl),
+                  error = function(e) NULL)
+  if (is.null(mc)) return("")
+  a  <- as.list(mc)[-1L]
+  nm <- names(a)
+  keep <- nm %in% c("labels", "var.label")
+  if (!any(keep)) return("")
+  paste(vapply(which(keep), function(i) {
+    paste0(nm[i], " = ", .jst_term_text(a[[i]]))
+  }, character(1)), collapse = ", ")
+}
+
+#' Internal helper: the line that assigns jrelabel()'s variable to its column
+#'
+#' \code{d$Q1 <- jrelabel(d, Q1, <rest>)} (Session 378): on a place,
+#' \code{lst$d$Q1 <- jrelabel(lst$d, Q1, <rest>)}; on an expression, the
+#' naming line first; under the \code{juse()} default, the data frame left
+#' out of the call. A name R cannot read bare is backticked after the
+#' \code{$}.
+#'
+#' @param data_sub The data argument as typed.
+#' @param data_kind "name", "place" or "expression".
+#' @param default_used Logical.
+#' @param data_name Character(1); the data frame's name.
+#' @param var_name Character(1).
+#' @param rest Character(1); the arguments after the variable.
+#' @return Character(1), the indented line(s).
+#' @keywords internal
+.jst_relabel_assign_line <- function(data_sub, data_kind, default_used,
+                                     data_name, var_name, rest) {
+  col  <- if (identical(make.names(var_name), var_name)) var_name
+          else paste0("`", var_name, "`")
+  rtxt <- if (nzchar(rest)) paste0(", ", rest) else ""
+  if (isTRUE(default_used)) {
+    return(paste0("  ", data_name, "$", col, " <- jrelabel(", var_name,
+                  rtxt, ")"))
+  }
+  if (identical(data_kind, "expression")) {
+    return(paste0("  mydata <- ", .jst_term_text(data_sub), "\n",
+                  "  mydata$", col, " <- jrelabel(mydata, ", var_name, rtxt,
+                  ")"))
+  }
+  dt <- .jst_term_text(data_sub)
+  paste0("  ", dt, "$", col, " <- jrelabel(", dt, ", ", var_name, rtxt, ")")
+}
+
+#' Internal helper: what keeps a variable from carrying value labels
+#'
+#' NULL for a haven-labelled numeric, a plain numeric or a logical
+#' variable; otherwise a list: \code{kind} ("a factor", "a character (text)
+#' variable", "a date/time variable", "of type list") and \code{convert}
+#' (TRUE where jencode() is the way to numbers). The list form's refusal
+#' (Session 378); the one-variable form keeps its own sentences.
+#'
+#' @param x The variable.
+#' @return NULL or a list.
+#' @keywords internal
+.jst_relabel_type_problem <- function(x) {
+  if (inherits(x, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
+    return(list(kind = "a date/time variable", convert = FALSE))
+  }
+  if (is.factor(x)) return(list(kind = "a factor", convert = TRUE))
+  if (is.character(x) ||
+      (haven::is.labelled(x) && typeof(x) == "character")) {
+    return(list(kind = "a character (text) variable", convert = TRUE))
+  }
+  if (!is.numeric(x) && !is.logical(x) && !haven::is.labelled(x)) {
+    return(list(kind = paste0("of type ", typeof(x)), convert = FALSE))
+  }
+  NULL
+}
+
+#' Internal helper: attach labels to one variable, in place
+#'
+#' The in-place contract (Session 215): the variable IS the caller's
+#' column; value labels and the variable label are attached to it directly,
+#' so its class and every attribute it carries -- value labels, SPSS-style
+#' \code{na_values} / \code{na_range}, Stata-style tagged values, the
+#' variable label, haven's display format -- survive unless an argument
+#' replaces them. A logical variable is stored as 1/0 first. Shared by both
+#' forms of \code{jrelabel()} (Session 378); the checks are the caller's.
+#'
+#' @param x The variable.
+#' @param parsed_labels The parsed value labels, or NULL.
+#' @param var.label Character(1) or NULL.
+#' @return The labeled variable.
+#' @keywords internal
+.jst_relabel_apply <- function(x, parsed_labels, var.label) {
+  result <- x
+  if (!is.null(parsed_labels)) {
+    if (is.logical(result)) result <- as.numeric(result)
+    labelled::val_labels(result) <- parsed_labels
+  }
   if (!is.null(var.label)) {
     labelled::var_label(result) <- var.label
   }
-
   # labelled::val_labels<- rebuilds the column and keeps only what it is
   # told, so a haven display format (format.spss, format.stata) and the
   # Data Editor width would leave here (S299). Restore the passengers.
-  result <- .jst_carry_col_attrs(x, result)
+  .jst_carry_col_attrs(x, result)
+}
 
-  return(invisible(result))
+#' Internal helper: the line after jrelabel(..., modify = TRUE)
+#'
+#' "Value labels applied to Q1, Q2 and Q3 in d." (Session 378), at the
+#' standard and full output levels; nothing when the call applied nothing.
+#'
+#' @param vars Character; the variables labeled.
+#' @param data_name Character(1).
+#' @param values,variable Logical; value labels, a variable label applied.
+#' @return Invisible NULL.
+#' @keywords internal
+.jst_relabel_done <- function(vars, data_name, values, variable) {
+  if (identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    return(invisible(NULL))
+  }
+  what <- if (values && variable) "Value labels and a variable label"
+          else if (values) "Value labels"
+          else if (variable) "Variable label"
+          else return(invisible(NULL))
+  .jst_msg(what, " applied to ", .jst_and_list(vars), " in ", data_name, ".")
+  invisible(NULL)
+}
+
+#' Internal helper: jrelabel()'s assign-or-lose reminder
+#'
+#' Printed after a one-variable call without \code{modify = TRUE}, at the
+#' standard and full output levels (Session 378; Jeff's okay), as
+#' \code{jrecode()}, \code{jencode()}, \code{jsum()} and \code{javg()} print
+#' theirs. A function cannot see whether its result is assigned, so it
+#' prints on every such call and is worded to be true either way. On a
+#' name (or the juse() default): the assignment line and the
+#' \code{modify = TRUE} line; on a place, the assignment alone
+#' (\code{modify = TRUE} needs a name); on an expression, the naming line
+#' first. The call's own arguments are elided to "..." (voice Rule K).
+#'
+#' @param data_sub The data argument as typed.
+#' @param data_kind "name", "place" or "expression".
+#' @param data_name Character(1).
+#' @param var_name Character(1).
+#' @return Character(1).
+#' @keywords internal
+.jst_relabel_reminder <- function(data_sub, data_kind, data_name, var_name) {
+  col <- if (identical(make.names(var_name), var_name)) var_name
+         else paste0("`", var_name, "`")
+  if (identical(data_kind, "expression")) {
+    return(paste0(
+      "Note: The result is kept only if you assign it.\n",
+      "Name the data frame first, then assign the result to a variable in ",
+      "it:\n",
+      "  mydata <- ", .jst_term_text(data_sub), "\n",
+      "  mydata$", col, " <- jrelabel(mydata, ...)"))
+  }
+  out <- paste0("Note: This call changes ", data_name,
+                " only if you assign the result:\n",
+                "  ", data_name, "$", col, " <- jrelabel(...)")
+  if (identical(data_kind, "name")) {
+    out <- paste0(out, "\n\n",
+                  "To label ", var_name, " in ", data_name,
+                  " directly, rerun with modify = TRUE:\n",
+                  "  jrelabel(..., modify = TRUE)")
+  }
+  out
 }
 
 
@@ -1101,6 +1640,9 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   \code{"sas"}). Also decides what the \code{missing} keyword
 #'   produces. Inert when neither a marker nor \code{missing} appears in
 #'   either argument.
+#' @param ... Not used. An input \code{jrecode()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #'
 #'   When \code{NULL}, the convention is resolved from
 #'   the \code{missing.convention} setting in \code{\link{joptions}}; if that
@@ -1355,7 +1897,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL) {
 #'   workflow conventions, and complete function listing.
 #'
 #' @export
-jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
+jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
+                    ...) {
+  # An input jrecode() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jrecode", positional = "refuse")
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -3924,6 +4473,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   under \code{"stata"}, uppercase SAS-style under \code{"sas"}).
 #'   Also decides what the \code{missing} keyword produces. Inert when
 #'   neither a marker nor \code{missing} appears in the map.
+#' @param ... Not used. An input \code{jencode()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 #'
 #'   When \code{NULL}, the convention is resolved from
 #'   the \code{missing.convention} setting in \code{\link{joptions}}; if that
@@ -4072,7 +4624,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL) {
 #'   \code{\link{jfreq}} for checking an encoding landed correctly.
 #'
 #' @export
-jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL) {
+jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
+                    ...) {
+  # An input jencode() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "jencode", positional = "refuse")
   .fn <- "jencode"
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
@@ -9135,14 +9694,24 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' named first (\code{mydata <- mk()}), as every offered line names it
 #' (S343).
 #'
+#' \code{jrelabel()} (Session 378) takes its list in one slot, as a
+#' \code{c()}: \code{as_c = TRUE} gives the variables as one \code{c()}
+#' (one name bare) and drops the call's own \code{var}; \code{force} sets
+#' arguments the line must carry -- its list form runs only with
+#' \code{modify = TRUE}, so the line carries it (ruling R23: no line that
+#' stops next).
+#'
 #' @param mc The call, from \code{match.call()} in the exported function.
 #' @param fn The function's name.
 #' @param vars Character; the variables, in the order they go in.
+#' @param as_c Logical; the variables as one \code{c()}.
+#' @param force Named character; arguments set on the line, replacing the
+#'   call's own (\code{c(modify = "TRUE")}).
 #' @return A list: \code{pre} ("" or the naming line with its newline),
 #'   \code{line} (the call, indented), and \code{framed} (TRUE when the call
 #'   named its data frame).
 #' @keywords internal
-.jst_vars_dots_line <- function(mc, fn, vars) {
+.jst_vars_dots_line <- function(mc, fn, vars, as_c = FALSE, force = NULL) {
   args <- as.list(mc)[-1L]
   nm   <- names(args)
   if (is.null(nm)) nm <- rep("", length(args))
@@ -9157,10 +9726,15 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       data_t <- .jst_term_text(d)
     }
   }
-  keep <- !(nm %in% c("data", "vars")) & nzchar(nm)
+  keep <- !(nm %in% c("data", "vars", if (as_c) "var", names(force))) &
+    nzchar(nm)
   rest <- vapply(which(keep), function(i) {
     paste0(nm[i], " = ", paste(deparse(args[[i]]), collapse = " "))
   }, character(1))
+  if (length(force)) rest <- c(rest, paste0(names(force), " = ", force))
+  if (as_c && length(vars) > 1L) {
+    vars <- paste0("c(", paste(vars, collapse = ", "), ")")
+  }
   list(pre = pre,
        line = paste0("  ", fn, "(",
                      paste(c(data_t, vars, rest), collapse = ", "), ")"),
@@ -9190,10 +9764,13 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' @param mc The call, from \code{match.call()}.
 #' @param fn The function's name.
 #' @param dot_names Character; variables also given in the dots.
+#' @param as_c,force As \code{.jst_vars_dots_line()} (Session 378,
+#'   \code{jrelabel()}).
 #' @return Invisible NULL; stops on bare names.
 #' @keywords internal
 .jst_vars_bare_names <- function(vars_sub, env, data, data_name, mc, fn,
-                                 dot_names = character(0)) {
+                                 dot_names = character(0), as_c = FALSE,
+                                 force = NULL) {
   if (is.null(vars_sub)) return(invisible(NULL))
   syms <- if (is.symbol(vars_sub)) {
     list(vars_sub)
@@ -9217,7 +9794,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     }
   }
   .jst_check_vars(data, nms, data_name)
-  ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, nms)))
+  ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, nms)), as_c, force)
   .jst_stop("vars = takes names in quotes. To name the variables without ",
             "quotes, list them ",
             if (ln$framed) "after the data frame:" else "first:", "\n",
@@ -9235,12 +9812,15 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 #' @param mc The call, from \code{match.call()}.
 #' @param fn The function's name.
 #' @param dot_names Character; the variables given after the data frame.
+#' @param as_c,force As \code{.jst_vars_dots_line()} (Session 378,
+#'   \code{jrelabel()}).
 #' @param vars The evaluated \code{vars}.
 #' @return Does not return.
 #' @keywords internal
-.jst_vars_twice_stop <- function(mc, fn, dot_names, vars) {
+.jst_vars_twice_stop <- function(mc, fn, dot_names, vars, as_c = FALSE,
+                                 force = NULL) {
   if (is.character(vars) && length(vars) > 0L && !anyNA(vars)) {
-    ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, vars)))
+    ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, vars)), as_c, force)
     .jst_stop("the variables are named twice: after the data frame and in ",
               "vars =. Name them in one place:\n",
               ln$pre, ln$line, fn = fn)

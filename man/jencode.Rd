@@ -4,7 +4,7 @@
 \alias{jencode}
 \title{Encode a text or factor variable as labelled numbers}
 \usage{
-jencode(data, var, map = NULL, labels = NULL, convention = NULL)
+jencode(data, var, map = NULL, labels = NULL, convention = NULL, ...)
 }
 \arguments{
 \item{data}{A data frame containing the variable to encode. Can be
@@ -69,7 +69,11 @@ targets. Marker letters are matched case-insensitively; the stored
 markers take the convention's letter case (lowercase Stata-style
 under \code{"stata"}, uppercase SAS-style under \code{"sas"}).
 Also decides what the \code{missing} keyword produces. Inert when
-neither a marker nor \code{missing} appears in the map.
+neither a marker nor \code{missing} appears in the map.}
+
+\item{...}{Not used. An input \code{jencode()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".
 
 When \code{NULL}, the convention is resolved from
 the \code{missing.convention} setting in \code{\link{joptions}}; if that

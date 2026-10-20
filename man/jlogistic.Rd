@@ -22,7 +22,8 @@ jlogistic(
   ...,
   value.id = NULL,
   model.layout = NULL,
-  std = "gelman"
+  std = "gelman",
+  print = NULL
 )
 }
 \arguments{
@@ -161,6 +162,13 @@ outcome's standard deviation, which a binary outcome does not have,
 and is not available here. The returned object carries both columns'
 full values (\code{beta_gelman}, \code{beta_product}) whichever is
 shown.}
+
+\item{print}{Logical or NULL. \code{FALSE} prints nothing -- no table,
+no title, no note -- and returns the result as every call does;
+errors and warnings still show. \code{TRUE} prints even under
+\code{joutput("silent")}. \code{NULL} (the default) prints unless
+the level is silent. For a script that keeps many results and
+wants no output: see \code{\link{joutput}}.}
 }
 \value{
 Invisibly returns a list of class \code{jst_logistic} containing:

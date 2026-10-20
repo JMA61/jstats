@@ -7,7 +7,9 @@
 #'
 #' Controls what analysis functions display by default. Three preset levels
 #' are available, and individual toggles can override specific settings
-#' within any level. Per-call arguments on analysis functions always take
+#' within any level; a fourth, \code{silent}, prints nothing from the
+#' analysis functions and is for a script that keeps their results.
+#' Per-call arguments on analysis functions always take
 #' precedence over joutput() settings.
 #'
 #' Diagnostic output -- Levene's test, the VIF table, the regression
@@ -16,8 +18,9 @@
 #' call.
 #'
 #' @param level Character. One of \code{minimal}, \code{standard}
-#'   (default), or \code{full}. If omitted, prints the current settings.
-#'   If \code{NULL}, resets to defaults (standard with no toggle overrides).
+#'   (default), \code{full}, or \code{silent}. If omitted, prints the
+#'   current settings. If \code{NULL}, resets to defaults (standard with
+#'   no toggle overrides).
 #'   \describe{
 #'     \item{minimal}{Stripped-down output for power users. Core results
 #'       only -- no Case Processing table (a one-line N statement in its
@@ -38,6 +41,20 @@
 #'       Processing table on every call, with the per-code missing
 #'       breakdown. Diagnostic output is not part of it: see
 #'       \code{diagnostics}.}
+#'     \item{silent}{For a script that runs many analyses and keeps their
+#'       results -- a loop over models, a table built from several calls.
+#'       The analysis functions (\code{jdesc}, \code{jfreq}, \code{jt},
+#'       \code{jaov}, \code{jcrosstab}, \code{jlm}, \code{jlogistic},
+#'       \code{jcorr}, \code{jalpha}, \code{jscreen}) print nothing, their
+#'       notes included, and return their results as they always do;
+#'       errors and warnings still show. Every other function prints as at
+#'       standard, so a load's notice and the recode family's reminders
+#'       stay, and the settings are standard's: a result made under silent
+#'       holds what a standard call's would. A result is still there to
+#'       keep: \code{m <- jlm(...)} saves it, as it does at any level.
+#'       The same for one call:
+#'       \code{print = FALSE} on any analysis function; and
+#'       \code{print = TRUE} prints one call under a silent level.}
 #'   }
 #' @param effect.size Logical or NULL. Override the level's default for
 #'   effect size display.
@@ -295,6 +312,9 @@
 #'   level/toggle change silently (nothing is printed). A bare joutput()
 #'   status query, and a \code{joutput("setting")} query, always print
 #'   regardless of quiet.
+#' @param ... Not used. An input \code{joutput()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 joutput <- function(level, effect.size = NULL,
                     regression.ci = NULL, means.ci = NULL,
                     posthoc = NULL, diagnostics = NULL,
@@ -303,13 +323,20 @@ joutput <- function(level, effect.size = NULL,
                     variable.id = NULL, value.id = NULL,
                     ref.categories = NULL, model.layout = NULL,
                     missing.notice = NULL,
-                    digits = NULL, quiet = FALSE) {
+                    digits = NULL, quiet = FALSE, ...) {
+  # An input joutput() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "joutput", positional = "refuse")
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
                  c(.jst_word_specs("variable.id", "value.id",
                                    "case.processing.detail", "diagnostics"),
                    list(level = .jst_word_spec(c("minimal", "standard", "full",
+                                                 "silent",
                                                  .jst_output_toggle_names),
                                                "a level or setting name"),
                         case.processing.filter = .jst_word_spec(
@@ -330,7 +357,7 @@ joutput <- function(level, effect.size = NULL,
   .jst_check_flag(ref.categories, "ref.categories", null.ok = TRUE)
   .jst_check_flag(missing.notice, "missing.notice", null.ok = TRUE)
 
-  valid_levels <- c("minimal", "standard", "full")
+  valid_levels <- c("minimal", "standard", "full", "silent")
 
   # Which settings did the call NAME? Every setting argument defaults to
   # NULL, so the values alone cannot tell joutput(digits = NULL) from a
@@ -483,7 +510,8 @@ joutput <- function(level, effect.size = NULL,
 
   # Validate level
   if (!is.character(level) || length(level) != 1 || !(level %in% valid_levels)) {
-    .jst_stop_arg("joutput", "level", choices = c("minimal", "standard", "full"))
+    .jst_stop_arg("joutput", "level",
+                  choices = c("minimal", "standard", "full", "silent"))
   }
 
   # Set level and toggles. A level call clears the earlier overrides --
@@ -563,7 +591,12 @@ joutput <- function(level, effect.size = NULL,
   partial <- !is.null(slots)
 
   .cat_red("Output Settings\n")
-  if (!partial) cat("Level: ", level, "\n", sep = "")
+  if (!partial) {
+    cat("Level: ", level,
+        if (identical(level, "silent"))
+          " (the analysis functions print nothing; see ?joutput)",
+        "\n", sep = "")
+  }
 
   # Show effective value for each toggle
   defaults     <- .jst_output_defaults[[level]]
@@ -1152,10 +1185,19 @@ joutput <- function(level, effect.size = NULL,
 #'   folder is created all the same). It has no effect on a status query, which
 #'   makes no change to silence: the bare joptions() panel and a
 #'   joptions("slot") query both print regardless.
+#' @param ... Not used. An input \code{joptions()} does not take -- a
+#'   misspelled argument -- stops with "unused input" and the name as
+#'   typed, in place of R's own "unused argument".
 joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
                      data.dir = NULL, corr.layout = NULL,
                      missing.detail = NULL, message.width = NULL,
-                     quiet = FALSE) {
+                     quiet = FALSE, ...) {
+  # An input joptions() does not take -- a misspelled argument, or a value in
+  # a place it has none -- stops here, read by name and never evaluated
+  # (Capability Slate C3, Session 378; until then R stopped first, in its
+  # own words).
+  .jst_check_args(rlang::enquos(...), aliases = character(0),
+                  fn_name = "joptions", positional = "refuse")
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),

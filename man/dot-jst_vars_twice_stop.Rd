@@ -4,7 +4,7 @@
 \alias{.jst_vars_twice_stop}
 \title{Internal helper: variables named both after the data frame and in vars =}
 \usage{
-.jst_vars_twice_stop(mc, fn, dot_names, vars)
+.jst_vars_twice_stop(mc, fn, dot_names, vars, as_c = FALSE, force = NULL)
 }
 \arguments{
 \item{mc}{The call, from \code{match.call()}.}
@@ -14,6 +14,9 @@
 \item{dot_names}{Character; the variables given after the data frame.}
 
 \item{vars}{The evaluated \code{vars}.}
+
+\item{as_c, force}{As \code{.jst_vars_dots_line()} (Session 378,
+\code{jrelabel()}).}
 }
 \value{
 Does not return.

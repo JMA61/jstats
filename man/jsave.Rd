@@ -9,7 +9,8 @@ jsave(
   file,
   overwrite = FALSE,
   preserve.declarations = TRUE,
-  clean.names = FALSE
+  clean.names = FALSE,
+  ...
 )
 }
 \arguments{
@@ -51,6 +52,10 @@ given. If \code{TRUE}, those names are changed in the file only, the
 way \code{\link{jload}} changes names R cannot use; the data frame
 keeps its own names, each old name becomes the variable's label in the
 file where it has none, and a note lists the changes.}
+
+\item{...}{Not used. An input \code{jsave()} does not take -- a
+misspelled argument -- stops with "unused input" and the name as
+typed, in place of R's own "unused argument".}
 }
 \value{
 Invisibly returns \code{NULL}. Called for its side effect of
