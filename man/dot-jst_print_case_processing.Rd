@@ -8,7 +8,7 @@
   sample_info,
   analysis_type = "listwise",
   detail = NULL,
-  notification_template = NULL,
+  notification_template = .jst_listwise_note,
   data = NULL,
   analysis_vars = NULL
 )
@@ -24,8 +24,14 @@ pipeline counts plus pre_pipeline_data / surviving_ids / analysis_vars).}
 \item{detail}{Per-call case.processing.detail override (NULL, "none",
 "totals", "per_code"). NULL defers to the joutput tier default.}
 
-\item{notification_template, data, analysis_vars}{Listwise-discrepancy
-notification inputs (per-variable layouts only); see the closure below.}
+\item{notification_template}{The listwise-discrepancy note (per-variable
+layouts only). The default, \code{.jst_listwise_note}, is the sentence
+jdesc() and jfreq() print; a \code{\%s} in it takes the count with its
+noun ("6 cases", "1 case"). The note under a jcomplete() that covers
+only some of the variables is built below, not from it.}
+
+\item{data, analysis_vars}{Listwise-discrepancy notification inputs
+(per-variable layouts only); see the closure below.}
 }
 \value{
 Invisibly, a list: \code{mode}, \code{render_top},

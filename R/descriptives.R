@@ -474,11 +474,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # all its variables.
     .jst_print_case_processing(
       sample_info,
-      analysis_type         = "per_var_desc",
-      detail                = case.processing.detail,
-      notification_template = paste0(
-        "Note: Listwise deletion using jcomplete() first would leave %d cases."
-      ),
+      analysis_type = "per_var_desc",
+      detail        = case.processing.detail,
       data          = data[!is.na(data[[by_name]]), , drop = FALSE],
       analysis_vars = good_vars)
 
@@ -634,11 +631,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
 
   .jst_print_case_processing(
     sample_info,
-    analysis_type         = "per_var_desc",
-    detail                = case.processing.detail,
-    notification_template = paste0(
-      "Note: Listwise deletion using jcomplete() first would leave %d cases."
-    ),
+    analysis_type = "per_var_desc",
+    detail        = case.processing.detail,
     data          = data,
     analysis_vars = good_vars
   )
@@ -1129,11 +1123,8 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
   # for API uniformity but is a no-op here.
   .jst_print_case_processing(
     sample_info,
-    analysis_type         = "per_var_freq",
-    detail                = case.processing.detail,
-    notification_template = paste0(
-      "Note: Listwise deletion using jcomplete() first would leave %d cases."
-    ),
+    analysis_type = "per_var_freq",
+    detail        = case.processing.detail,
     data          = data,
     analysis_vars = var_names_check
   )
@@ -2268,6 +2259,8 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     di <- .jst_date_text_format(col)
     if (is.null(di)) next
     screen_table$SubClass[i] <- "date (unparsed)"
+    # Session 382: the label, which the footnote's as.Date() line drops.
+    di$label <- attr(col, "label", exact = TRUE)
     date_info[[v]] <- di
   }
 
@@ -2618,8 +2611,11 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
 #' table, the as.Date() line for each variable whose Sub-class is "date
 #' (unparsed)" -- two lines when its values fit day/month and month/day --
 #' then, for a two-digit year, a consequential note with the range() line
-#' that shows the years as.Date() gives.
-#' @param date_info Named list of \code{.jst_date_text_format()} results.
+#' that shows the years as.Date() gives. Since Session 382 a variable with a
+#' label gets, after its line or lines, the line that puts the label back
+#' (\code{.jst_label_line()}), since as.Date() drops it.
+#' @param date_info Named list of \code{.jst_date_text_format()} results,
+#'   each with the variable's \code{label} added by jscreen().
 #' @param data_name The data frame's name, for the printed lines; one that
 #'   is not a name gives \code{mydata}.
 #' @keywords internal
@@ -2643,16 +2639,25 @@ jscreen <- function(data, ..., outlier.sd = 3, subset = NULL, variable.id = NULL
     paste0("  ", dn, "$", v, " <- as.Date(", dn, "$", v, ", format = \"", f,
            "\")")
   }
+  # Session 382 (Fix Slate 25): as.Date() drops every attribute, so a
+  # variable with a label gets, after its line or lines, the one that puts
+  # the label back (.jst_label_line(), as jload()'s as.numeric() lines).
+  lab_line <- function(v) {
+    .jst_label_line(paste0(dn, "$", v), date_info[[v]]$label)
+  }
   one   <- names(date_info)[lengths(lapply(date_info, `[[`, "fmt")) == 1L]
   two   <- setdiff(names(date_info), one)
   lines <- c("date (unparsed): text in a date format, which as.Date() makes a date:",
              pre)
-  for (v in one) lines <- c(lines, conv(v, date_info[[v]]$fmt))
+  for (v in one) lines <- c(lines, conv(v, date_info[[v]]$fmt), lab_line(v))
   for (v in two) {
+    ll <- lab_line(v)
     lines <- c(lines,
                paste0(v, "'s values fit day/month and month/day; ",
-                      "run the line that fits:"),
-               conv(v, date_info[[v]]$fmt[1L]), conv(v, date_info[[v]]$fmt[2L]))
+                      "run the line that fits",
+                      if (length(ll)) ", then the attr() line" else "", ":"),
+               conv(v, date_info[[v]]$fmt[1L]), conv(v, date_info[[v]]$fmt[2L]),
+               ll)
   }
   cat("\n")
   .jst_msg_out(paste(lines, collapse = "\n"))

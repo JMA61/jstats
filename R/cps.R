@@ -332,6 +332,17 @@
   }
 }
 
+#' Internal constant: the listwise-deletion note of jdesc() and jfreq()
+#'
+#' Session 382 (Fix Slate 25): the sentence's one home, the default of
+#' \code{.jst_print_case_processing()}'s \code{notification_template}, where
+#' the three calls that print it -- jdesc() grouped and ungrouped, and
+#' jfreq() -- each carried a copy. The \code{\%s} takes the count with its
+#' noun. "first" was dropped from it at Jeff's word (S381: "awkward and
+#' unnecessary").
+#' @keywords internal
+.jst_listwise_note <- "Note: Listwise deletion using jcomplete() would leave %s."
+
 #' Internal helper: print the Case Processing Summary (CPS)
 #'
 #' Resolves a render spec from the .jst_cps_*_rules tables (via
@@ -353,8 +364,13 @@
 #'   (Session 320, jscreen).
 #' @param detail Per-call case.processing.detail override (NULL, "none",
 #'   "totals", "per_code"). NULL defers to the joutput tier default.
-#' @param notification_template,data,analysis_vars Listwise-discrepancy
-#'   notification inputs (per-variable layouts only); see the closure below.
+#' @param notification_template The listwise-discrepancy note (per-variable
+#'   layouts only). The default, \code{.jst_listwise_note}, is the sentence
+#'   jdesc() and jfreq() print; a \code{\%s} in it takes the count with its
+#'   noun ("6 cases", "1 case"). The note under a jcomplete() that covers
+#'   only some of the variables is built below, not from it.
+#' @param data,analysis_vars Listwise-discrepancy notification inputs
+#'   (per-variable layouts only); see the closure below.
 #' @return Invisibly, a list: \code{mode}, \code{render_top},
 #'   \code{render_n_line}, \code{n_line_form}, and \code{header_excluded}
 #'   -- the count a header-family caller (jscreen) appends to its own Cases
@@ -366,7 +382,7 @@
 .jst_print_case_processing <- function(sample_info,
                                        analysis_type        = "listwise",
                                        detail                = NULL,
-                                       notification_template = NULL,
+                                       notification_template = .jst_listwise_note,
                                        data                  = NULL,
                                        analysis_vars         = NULL) {
 
@@ -441,8 +457,12 @@
              .jst_format_var_list(uncovered, and = TRUE),
              ". Listwise deletion across all of these variables would leave ",
              listwise_n, " ", .jst_plural(listwise_n, "case", "cases"), ".")
-    } else if (grepl("%d", notification_template, fixed = TRUE)) {
-      sprintf(notification_template, listwise_n)
+    } else if (grepl("%s", notification_template, fixed = TRUE)) {
+      # Session 382 (Fix Slate 25): the count and its noun go in together, so
+      # one case reads "1 case" (the S338 rule), where the callers' "%d
+      # cases" said "1 cases".
+      sprintf(notification_template,
+              paste(listwise_n, .jst_plural(listwise_n, "case", "cases")))
     } else notification_template
     # S286: routed through the stdout emitter so it width-wraps (it was a
     # bare cat() at 82 columns against the 76 pin), then the one blank line

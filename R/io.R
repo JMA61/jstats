@@ -3309,12 +3309,28 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                     paste0(" %in% c(", paste(q, collapse = ", "), ")"),
                   "] <- NA")
   }
-  out <- c(out, paste0("  ", v, " <- as.numeric(", v, ")"))
-  if (length(label) == 1L && !is.na(label)) {
-    out <- c(out, paste0("  attr(", v, ", \"label\") <- \"",
-                         .jst_dq_escape(label), "\""))
+  c(out, paste0("  ", v, " <- as.numeric(", v, ")"), .jst_label_line(v, label))
+}
+
+#' Internal: the line that puts back a variable's label
+#'
+#' Session 382 (Fix Slate 25). as.numeric() and as.Date() drop every
+#' attribute, the variable label among them, so a conversion line jstats
+#' offers is followed, where the variable has a label, by the line that puts
+#' it back: \code{attr(d$v, "label") <- "..."}, the label escaped. jload()'s
+#' as.numeric() lines (\code{.jst_numeric_lines()}, Session 381) and
+#' jscreen()'s as.Date() lines (\code{.jst_date_text_report()}) share it.
+#' @param v The variable as the line names it (\code{d$v}).
+#' @param label The variable's label, or NA or NULL.
+#' @return Character: the line, indented two spaces; none when there is no
+#'   label.
+#' @keywords internal
+.jst_label_line <- function(v, label) {
+  if (!is.character(label) || length(label) != 1L || is.na(label) ||
+      !nzchar(label)) {
+    return(character(0))
   }
-  out
+  paste0("  attr(", v, ", \"label\") <- \"", .jst_dq_escape(label), "\"")
 }
 
 #' Internal: a data frame's name made from a file's name
