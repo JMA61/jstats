@@ -9,7 +9,7 @@ accept `...` as a safety net (not for substantive variable-passing).
 ## Usage
 
 ``` r
-.jst_check_args(dots, aliases, fn_name)
+.jst_check_args(dots, aliases, fn_name, positional = "pass")
 ```
 
 ## Arguments
@@ -33,6 +33,15 @@ accept `...` as a safety net (not for substantive variable-passing).
 - fn_name:
 
   Character. The calling function's name, used in the error message.
+
+- positional:
+
+  `"pass"` (the default) lets an unnamed item through: in the data-first
+  functions the dots carry the variables. `"refuse"` is for a function
+  whose `...` exists only to catch what it does not take (Capability
+  Slate C3, Session 378: the ten functions that had no `...` and stopped
+  in R's own words): an unnamed item is an unused input too, shown as
+  typed (`unused input: "x"`), never evaluated.
 
 ## Value
 

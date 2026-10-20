@@ -1,4 +1,10 @@
-# Internal helper: a box plot's groups, labeled as the descriptives label them
+# Internal helper: a grouping variable as a factor, value labels kept
+
+The form the `by =` and `facet =` variables take for plotting: a
+haven-labelled variable with value labels through
+[`haven::as_factor()`](https://forcats.tidyverse.org/reference/as_factor.html),
+so the labels name the groups, and anything else through
+[`factor()`](https://rdrr.io/r/base/factor.html).
 
 [`jplot()`](https://jma61.github.io/jstats/reference/jplot.md) on a
 [`jt()`](https://jma61.github.io/jstats/reference/jt.md) or
@@ -16,6 +22,8 @@ frame (one made by an older version) keeps the old axis.
 
 ``` r
 .jst_plot_group_factor(x, groups = NULL)
+
+.jst_plot_group_factor(x, groups = NULL)
 ```
 
 ## Arguments
@@ -29,5 +37,7 @@ frame (one made by an older version) keeps the old axis.
   Character; the Group column of the result's descriptives, or `NULL`.
 
 ## Value
+
+A factor.
 
 A factor.

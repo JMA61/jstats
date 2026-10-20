@@ -21,7 +21,7 @@ Uses variable names (not labels), matching the user's typed call."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,7 +58,7 @@ Uses variable names (not labels), matching the user's typed call.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_plot_title</span><span class="op">(</span><span class="va">plot_type</span>, <span class="va">variable_names</span>, by_name <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_plot_title</span><span class="op">(</span><span class="va">plot_type</span>, <span class="va">variable_names</span>, by_name <span class="op">=</span> <span class="cn">NULL</span>, facet_name <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -76,7 +76,15 @@ Uses variable names (not labels), matching the user's typed call.</p>
 <dt id="arg-by-name">by_name<a class="anchor" aria-label="anchor" href="#arg-by-name"></a></dt>
 <dd><p>Optional character string for the by-variable.</p></dd>
 
+
+<dt id="arg-facet-name">facet_name<a class="anchor" aria-label="anchor" href="#arg-facet-name"></a></dt>
+<dd><p>Optional character string for the facet variable.</p></dd>
+
 </dl></div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>A facet variable (Session 378) adds ", one panel per &lt;facet_name&gt;".</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

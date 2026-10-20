@@ -15,7 +15,7 @@ Warns when variables may be categorical rather than continuous."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,7 +62,8 @@ Warns when variables may be categorical rather than continuous.</p>
 <span>  value.id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  layout <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  case.processing.detail <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  digits <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  digits <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  print <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -166,6 +167,15 @@ whole numbers with no trailing decimal point). Does not affect p-values,
 percentages, or integer quantities (counts, N, degrees of freedom),
 which keep their own fixed conventions. NULL (default) defers to
 <code><a href="joutput.html">joutput()</a></code>'s <code>digits</code> setting (default 3).</p></dd>
+
+
+<dt id="arg-print">print<a class="anchor" aria-label="anchor" href="#arg-print"></a></dt>
+<dd><p>Logical or NULL. <code>FALSE</code> prints nothing – no table,
+no title, no note – and returns the result as every call does;
+errors and warnings still show. <code>TRUE</code> prints even under
+<code>joutput("silent")</code>. <code>NULL</code> (the default) prints unless
+the level is silent. For a script that keeps many results and
+wants no output: see <code><a href="joutput.html">joutput</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

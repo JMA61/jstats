@@ -10,7 +10,13 @@ and the S-curve compute theirs.
 ## Usage
 
 ``` r
-.jst_category_predictions(model, group, at_vals, logistic = FALSE)
+.jst_category_predictions(
+  model,
+  group,
+  at_vals,
+  logistic = FALSE,
+  link = FALSE
+)
 ```
 
 ## Arguments
@@ -30,6 +36,11 @@ and the S-curve compute theirs.
 - logistic:
 
   Logical; TRUE for a `glm` on the logit link.
+
+- link:
+
+  Logical; with `logistic`, TRUE keeps the prediction and its interval
+  on the logit scale (the logit plot, Session 378).
 
 ## Value
 

@@ -17,7 +17,7 @@ as the fitted line and the S-curve compute theirs."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,13 @@ as the fitted line and the S-curve compute theirs.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_category_predictions</span><span class="op">(</span><span class="va">model</span>, <span class="va">group</span>, <span class="va">at_vals</span>, logistic <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_category_predictions</span><span class="op">(</span></span>
+<span>  <span class="va">model</span>,</span>
+<span>  <span class="va">group</span>,</span>
+<span>  <span class="va">at_vals</span>,</span>
+<span>  logistic <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  link <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -74,6 +80,11 @@ as the fitted line and the S-curve compute theirs.</p>
 
 <dt id="arg-logistic">logistic<a class="anchor" aria-label="anchor" href="#arg-logistic"></a></dt>
 <dd><p>Logical; TRUE for a <code>glm</code> on the logit link.</p></dd>
+
+
+<dt id="arg-link">link<a class="anchor" aria-label="anchor" href="#arg-link"></a></dt>
+<dd><p>Logical; with <code>logistic</code>, TRUE keeps the prediction
+and its interval on the logit scale (the logit plot, Session 378).</p></dd>
 
 </dl></div>
     <div class="section level2">

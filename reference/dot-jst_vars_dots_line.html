@@ -21,7 +21,7 @@ named first (mydata &amp;lt;- mk()), as every offered line names it
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,7 +59,7 @@ named first (<code>mydata &lt;- mk()</code>), as every offered line names it
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_vars_dots_line</span><span class="op">(</span><span class="va">mc</span>, <span class="va">fn</span>, <span class="va">vars</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_vars_dots_line</span><span class="op">(</span><span class="va">mc</span>, <span class="va">fn</span>, <span class="va">vars</span>, as_c <span class="op">=</span> <span class="cn">FALSE</span>, force <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -77,12 +77,30 @@ named first (<code>mydata &lt;- mk()</code>), as every offered line names it
 <dt id="arg-vars">vars<a class="anchor" aria-label="anchor" href="#arg-vars"></a></dt>
 <dd><p>Character; the variables, in the order they go in.</p></dd>
 
+
+<dt id="arg-as-c">as_c<a class="anchor" aria-label="anchor" href="#arg-as-c"></a></dt>
+<dd><p>Logical; the variables as one <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>.</p></dd>
+
+
+<dt id="arg-force">force<a class="anchor" aria-label="anchor" href="#arg-force"></a></dt>
+<dd><p>Named character; arguments set on the line, replacing the
+call's own (<code>c(modify = "TRUE")</code>).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list: <code>pre</code> ("" or the naming line with its newline),
 <code>line</code> (the call, indented), and <code>framed</code> (TRUE when the call
 named its data frame).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><code><a href="jrelabel.html">jrelabel()</a></code> (Session 378) takes its list in one slot, as a
+<code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>: <code>as_c = TRUE</code> gives the variables as one <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>
+(one name bare) and drops the call's own <code>var</code>; <code>force</code> sets
+arguments the line must carry – its list form runs only with
+<code>modify = TRUE</code>, so the line carries it (ruling R23: no line that
+stops next).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -9,7 +9,7 @@ gives the call with every variable named once, after the data frame
 ## Usage
 
 ``` r
-.jst_vars_twice_stop(mc, fn, dot_names, vars)
+.jst_vars_twice_stop(mc, fn, dot_names, vars, as_c = FALSE, force = NULL)
 ```
 
 ## Arguments
@@ -30,6 +30,13 @@ gives the call with every variable named once, after the data frame
 - vars:
 
   The evaluated `vars`.
+
+- as_c, force:
+
+  As
+  [`.jst_vars_dots_line()`](https://jma61.github.io/jstats/reference/dot-jst_vars_dots_line.md)
+  (Session 378,
+  [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md)).
 
 ## Value
 

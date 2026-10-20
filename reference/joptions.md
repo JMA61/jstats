@@ -27,7 +27,8 @@ joptions(
   corr.layout = NULL,
   missing.detail = NULL,
   message.width = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  ...
 )
 ```
 
@@ -69,6 +70,12 @@ joptions(
   created all the same). It has no effect on a status query, which makes
   no change to silence: the bare joptions() panel and a joptions("slot")
   query both print regardless.
+
+- ...:
+
+  Not used. An input `joptions()` does not take – a misspelled argument
+  – stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 
@@ -292,11 +299,11 @@ joptions(missing.convention.codes = c(-99, -98))      # set, echo, no scan
 #> 
 joptions(data.dir = file.path(tempdir(), "Data")) # set save/load folder
 #> Options Settings
-#> Data folder: /tmp/RtmpCViAy2/Data
+#> Data folder: /tmp/RtmpcROuO9/Data
 #> Run joptions() to see all settings.
 #> 
 #> Created the data folder:
-#>   /tmp/RtmpCViAy2/Data
+#>   /tmp/RtmpcROuO9/Data
 #> 
                                                   # (created if absent)
 joptions(data.dir = NULL)                         # back to the working directory

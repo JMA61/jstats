@@ -11,7 +11,7 @@ the two together across a rename or copy.
 ## Usage
 
 ``` r
-jcopy(data, name, overwrite = FALSE, quiet = FALSE)
+jcopy(data, name, overwrite = FALSE, quiet = FALSE, ...)
 ```
 
 ## Arguments
@@ -38,6 +38,12 @@ jcopy(data, name, overwrite = FALSE, quiet = FALSE)
 - quiet:
 
   Logical; if TRUE, suppress the confirmation message.
+
+- ...:
+
+  Not used. An input `jcopy()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 

@@ -40,6 +40,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_break_arg.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_build_bar.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_build_box.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_build_density.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_build_grouped_bar.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_build_histogram.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_build_sample_info.html</loc></url>
@@ -333,6 +334,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_orientation_text.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_orientation_version.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_orientation_version_in.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_output_scope.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_output_status.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_package_datasets.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_package_not_found.html</loc></url>
@@ -348,6 +350,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_place_assign_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_place_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plain_frame.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_facets.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_focal.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_group_factor.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_group_qq.html</loc></url>
@@ -368,6 +371,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_legends.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_legends_at.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_msgs.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_on.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_outcome_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_table.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_print_vif.html</loc></url>
@@ -385,7 +389,17 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registration_expression_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registration_name_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registry_status.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_apply.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_assign_line.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_c.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_coef_names.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_done.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_extra_vars.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_list_lines.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_reminder.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_rest.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_slot_names.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_type_problem.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_remove_registrations.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_rename_label_line.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_rename_lines.html</loc></url>

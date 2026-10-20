@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,8 @@
 <span>  labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  numeric <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  categorical <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  count <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  count <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  facet <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'jst_lm'</span></span>
@@ -117,9 +118,9 @@ unquoted variable names (1 or 2).</p></dd>
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
 <dd><p>Character. Plot type override for the data-first form. One
-of <code>histogram</code>, <code>bar</code>, <code>scatter</code>, <code>box</code>,
-<code>grouped_bar</code>. If NULL (default), auto-detected from variable
-types.</p></dd>
+of <code>histogram</code>, <code>density</code>, <code>bar</code>, <code>scatter</code>,
+<code>box</code>, <code>grouped_bar</code>. If NULL (default), auto-detected
+from variable types; <code>density</code> is never the automatic choice.</p></dd>
 
 
 <dt id="arg-line">line<a class="anchor" aria-label="anchor" href="#arg-line"></a></dt>
@@ -197,6 +198,12 @@ count is numeric-like for plotting, so it draws the same as <code>numeric</code>
 it is provided for symmetry with the other analysis functions.</p></dd>
 
 
+<dt id="arg-facet">facet<a class="anchor" aria-label="anchor" href="#arg-facet"></a></dt>
+<dd><p>Unquoted variable name for one panel per group
+(variable-list form: a histogram, density plot, bar chart or grouped
+bar chart), bare or in quotes. See Details.</p></dd>
+
+
 <dt id="arg-focal">focal<a class="anchor" aria-label="anchor" href="#arg-focal"></a></dt>
 <dd><p>Unquoted name of the independent variable to place on the
 x-axis for <code>jst_lm</code> / <code>jst_logistic</code> <code>fit</code> and
@@ -259,7 +266,12 @@ equation/R-squared/band annotations.</p>
 <p>Valid plot names by class (for the result-object form):</p><ul><li><p><code>jst_lm</code>: <code>fit</code>, <code>predicted</code>, <code>effects</code>,
 <code>coef</code>, <code>residuals</code>, <code>qq</code>,
 <code>scale</code>, <code>cooks</code>, <code>leverage</code></p></li>
-<li><p><code>jst_logistic</code>: <code>probability</code>, <code>roc</code>,
+<li><p><code>jst_logistic</code>: <code>probability</code>, <code>logit</code> (the
+same fitted line on the log-odds scale, where it is straight: the
+linear predictor and its 95% band against the focal variable, the
+cases as a rug along the axis, those with the outcome at the top
+and the others at the bottom; at a dummy-coded focal variable's
+categories, the log-odds at each), <code>roc</code>,
 <code>calibration</code>, <code>binned</code>, <code>cooks</code>, <code>leverage</code>,
 <code>coef</code></p></li>
 <li><p><code>jst_ttest</code>, <code>jst_anova</code>: <code>box</code> (the default),
@@ -283,8 +295,19 @@ combination of the others has no effect to draw. For a model with no
 predictors
 (<code>y ~ 1</code>), the plots that need a predictor, or that are drawn
 against the fitted values or the leverage, are left out with a note.</p>
-<p>Valid plot types for the data-first form: <code>histogram</code>, <code>bar</code>,
-<code>scatter</code>, <code>box</code>, <code>grouped_bar</code>.</p>
+<p>Valid plot types for the data-first form: <code>histogram</code>,
+<code>density</code>, <code>bar</code>, <code>scatter</code>, <code>box</code>,
+<code>grouped_bar</code>. A density plot is the histogram's alternative for a
+numeric variable – its kernel density estimate, one curve, or one per
+group of <code>by =</code> laid over each other – and is drawn only when
+asked for with <code>type = "density"</code>.</p>
+<p>In the variable-list form <code>facet =</code> draws one panel per group of
+the variable named, with the groups' value labels as the panel titles:
+the alternative to <code>by =</code> when the groups are many, since colors
+laid over each other stop being readable past a handful. The two can be
+combined, <code>by =</code> coloring the groups of one variable within each
+panel of another. A scatterplot or boxplot by groups takes <code>by =</code>
+in the formula form; <code>facet =</code> is refused there.</p>
 <p>Valid <code>line</code> values: <code>FALSE</code> (default), <code>TRUE</code> (alias for
 <code>lm</code>), <code>lm</code>, <code>loess</code>, <code>connect</code>.</p>
 <p>Valid <code>band</code> values: <code>ci</code> (default confidence band around the

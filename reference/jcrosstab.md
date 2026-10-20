@@ -23,7 +23,9 @@ jcrosstab(
   value.id = NULL,
   case.processing.detail = NULL,
   digits = NULL,
-  categorical = NULL
+  categorical = NULL,
+  print = NULL,
+  ...
 )
 ```
 
@@ -151,6 +153,21 @@ jcrosstab(
   otherwise stops the call, since a variable measured on a scale – an
   age, a score – makes a table too large to read; the message gives the
   call with this argument. NULL (default) names none.
+
+- print:
+
+  Logical or NULL. `FALSE` prints nothing – no table, no title, no note
+  – and returns the result as every call does; errors and warnings still
+  show. `TRUE` prints even under `joutput("silent")`. `NULL` (the
+  default) prints unless the level is silent. For a script that keeps
+  many results and wants no output: see
+  [`joutput`](https://jma61.github.io/jstats/reference/joutput.md).
+
+- ...:
+
+  Not used. An input `jcrosstab()` does not take – a misspelled argument
+  – stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 

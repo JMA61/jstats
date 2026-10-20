@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,7 +86,8 @@ extension). Use the <code>name</code> argument to specify a different name.</p>
 <span>  header <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  preserve.declarations <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  missing.notice <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -209,6 +210,12 @@ or found (variable names changed, a title row, names that are all
 numbers, rows and columns that may not be data, a CSV file's encoding)
 are still shown, as is the coded-missing scan report; turn that off
 with <code>check.missing = FALSE</code>.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Not used. An input <code>jload()</code> does not take – a
+misspelled argument – stops with "unused input" and the name as
+typed, in place of R's own "unused argument".</p></dd>
 
 </dl></div>
     <div class="section level2">

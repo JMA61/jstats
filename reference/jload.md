@@ -31,7 +31,8 @@ jload(
   header = TRUE,
   preserve.declarations = TRUE,
   missing.notice = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  ...
 )
 ```
 
@@ -151,6 +152,12 @@ jload(
   columns that may not be data, a CSV file's encoding) are still shown,
   as is the coded-missing scan report; turn that off with
   `check.missing = FALSE`.
+
+- ...:
+
+  Not used. An input `jload()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 

@@ -12,7 +12,7 @@ function calls.
 ## Usage
 
 ``` r
-juse(data)
+juse(data, ...)
 ```
 
 ## Arguments
@@ -21,6 +21,12 @@ juse(data)
 
   A data frame (unquoted). If omitted, prints the current default. Use
   `juse(NULL)` to clear the default.
+
+- ...:
+
+  Not used. An input `juse()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 

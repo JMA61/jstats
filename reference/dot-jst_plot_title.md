@@ -18,7 +18,7 @@ names (not labels), matching the user's typed call.
 ## Usage
 
 ``` r
-.jst_plot_title(plot_type, variable_names, by_name = NULL)
+.jst_plot_title(plot_type, variable_names, by_name = NULL, facet_name = NULL)
 ```
 
 ## Arguments
@@ -34,3 +34,11 @@ names (not labels), matching the user's typed call.
 - by_name:
 
   Optional character string for the by-variable.
+
+- facet_name:
+
+  Optional character string for the facet variable.
+
+## Details
+
+A facet variable (Session 378) adds ", one panel per \<facet_name\>".

@@ -4,6 +4,14 @@ variable in a data frame. It is designed as a simple label applicator —
 it does not recode values, convert types, or compare variables. Use it to
 add labels after a recode, to fix missing labels, or to label any variable
 that needs them.
+It has two forms. The one-variable form,
+jrelabel(MyData, Q1, labels = ...), returns the labeled variable
+for you to assign to a column, or with modify = TRUE labels the
+variable in the data frame directly. The list form,
+jrelabel(MyData, c(Q1, Q2, Q3), labels = ..., modify = TRUE),
+gives several variables the same value labels in one call – the way a
+set of survey items sharing one response scale is labeled – and always
+changes the data frame itself, so it takes modify = TRUE.
 A variable label (var.label) can be attached to a variable of any
 type — the variable is returned unchanged apart from the new label, so
 dates stay dates, factors stay factors, and text stays text. Value labels
@@ -25,12 +33,21 @@ keep it. On a column with Stata-style or SAS-style missing values, a
 marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
 re-supply it by its marker, e.g. labels = &quot;1=Low; .c=Refused&quot;.
-Both the labels and var.label arguments are optional. If
-neither is supplied, the function returns the variable unchanged."><meta property="og:description" content="jrelabel() attaches a variable label and/or value labels to any
+Both the labels and var.label arguments are optional in the
+one-variable form. If neither is supplied, the function returns the
+variable unchanged."><meta property="og:description" content="jrelabel() attaches a variable label and/or value labels to any
 variable in a data frame. It is designed as a simple label applicator —
 it does not recode values, convert types, or compare variables. Use it to
 add labels after a recode, to fix missing labels, or to label any variable
 that needs them.
+It has two forms. The one-variable form,
+jrelabel(MyData, Q1, labels = ...), returns the labeled variable
+for you to assign to a column, or with modify = TRUE labels the
+variable in the data frame directly. The list form,
+jrelabel(MyData, c(Q1, Q2, Q3), labels = ..., modify = TRUE),
+gives several variables the same value labels in one call – the way a
+set of survey items sharing one response scale is labeled – and always
+changes the data frame itself, so it takes modify = TRUE.
 A variable label (var.label) can be attached to a variable of any
 type — the variable is returned unchanged apart from the new label, so
 dates stay dates, factors stay factors, and text stays text. Value labels
@@ -52,8 +69,9 @@ keep it. On a column with Stata-style or SAS-style missing values, a
 marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
 re-supply it by its marker, e.g. labels = &quot;1=Low; .c=Refused&quot;.
-Both the labels and var.label arguments are optional. If
-neither is supplied, the function returns the variable unchanged."></head><body>
+Both the labels and var.label arguments are optional in the
+one-variable form. If neither is supplied, the function returns the
+variable unchanged."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -61,7 +79,7 @@ neither is supplied, the function returns the variable unchanged."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.250</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.252</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,6 +110,14 @@ variable in a data frame. It is designed as a simple label applicator —
 it does not recode values, convert types, or compare variables. Use it to
 add labels after a recode, to fix missing labels, or to label any variable
 that needs them.</p>
+<p>It has two forms. The one-variable form,
+<code>jrelabel(MyData, Q1, labels = ...)</code>, returns the labeled variable
+for you to assign to a column, or with <code>modify = TRUE</code> labels the
+variable in the data frame directly. The list form,
+<code>jrelabel(MyData, c(Q1, Q2, Q3), labels = ..., modify = TRUE)</code>,
+gives several variables the same value labels in one call – the way a
+set of survey items sharing one response scale is labeled – and always
+changes the data frame itself, so it takes <code>modify = TRUE</code>.</p>
 <p>A variable label (<code>var.label</code>) can be attached to a variable of any
 type — the variable is returned unchanged apart from the new label, so
 dates stay dates, factors stay factors, and text stays text. Value labels
@@ -113,13 +139,22 @@ keep it. On a column with Stata-style or SAS-style missing values, a
 marker that no case carries is declared only by its label, so a
 replacement set that leaves it out removes that declaration too;
 re-supply it by its marker, e.g. <code>labels = "1=Low; .c=Refused"</code>.</p>
-<p>Both the <code>labels</code> and <code>var.label</code> arguments are optional. If
-neither is supplied, the function returns the variable unchanged.</p>
+<p>Both the <code>labels</code> and <code>var.label</code> arguments are optional in the
+one-variable form. If neither is supplied, the function returns the
+variable unchanged.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jrelabel</span><span class="op">(</span><span class="va">data</span>, <span class="va">var</span>, labels <span class="op">=</span> <span class="cn">NULL</span>, var.label <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">jrelabel</span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
+<span>  <span class="va">var</span>,</span>
+<span>  labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  var.label <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  modify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -132,7 +167,8 @@ neither is supplied, the function returns the variable unchanged.</p>
 
 <dt id="arg-var">var<a class="anchor" aria-label="anchor" href="#arg-var"></a></dt>
 <dd><p>The variable to label (unquoted, e.g. <code>StatusR</code>; a
-quoted name is accepted).</p></dd>
+quoted name is accepted), or a <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> of two or more for the list
+form (see the section below).</p></dd>
 
 
 <dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>
@@ -152,19 +188,43 @@ reads as it is written.</p>
 <dd><p>Optional. A quoted string to use as the variable label
 (the description shown by <code><a href="jdesc.html">jdesc()</a></code>, <code><a href="jfreq.html">jfreq()</a></code>, etc.).
 If omitted, any existing variable label is preserved. If the variable
-has no existing label, no variable label is set.</p></dd>
+has no existing label, no variable label is set. One-variable form
+only.</p></dd>
+
+
+<dt id="arg-vars">vars<a class="anchor" aria-label="anchor" href="#arg-vars"></a></dt>
+<dd><p>Optional. For the list form: the variables' names in quotes,
+a stored or computed list such as <code>vars = items</code> or
+<code>vars = c("Q1", "Q2")</code>. Names typed without quotes go after the
+data frame, in a <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>.</p></dd>
+
+
+<dt id="arg-modify">modify<a class="anchor" aria-label="anchor" href="#arg-modify"></a></dt>
+<dd><p>Logical. <code>TRUE</code> labels the variable(s) in the data
+frame directly, so no assignment is needed; the data frame must be given
+by its name (or set with <code><a href="juse.html">juse()</a></code>). Optional in the one-variable
+form, which still returns the variable; required in the list form.
+Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Not used. An input <code>jrelabel()</code> does not take – a
+misspelled argument – stops with "unused input" and the name as
+typed, in place of R's own "unused argument".</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>The variable with the requested labels applied, returned
-invisibly (nothing prints at the console). The variable keeps
+    <p>The one-variable form: the variable with the requested labels
+applied, returned invisibly (nothing prints at the console), with or
+without <code>modify = TRUE</code>. The variable keeps
 its class: haven-labelled input stays haven-labelled with any declared
 SPSS-style or Stata-style missing values intact; plain numeric and
 logical input becomes <code>haven_labelled</code> when value labels are
 applied; any other type is returned unchanged apart from the labels.
-Assign the result to a column to keep it. Two assignment forms do
-that job:</p>
+Without <code>modify = TRUE</code>, assign the result to a column to keep it
+(at the standard and full output levels a note says so after each
+call). Two assignment forms do that job:</p>
 <ul><li><p>Preserving:
 <code>MyData$VarNameL &lt;- jrelabel(MyData, VarName, ...)</code> adds a
 labeled copy and keeps the original as it was.</p></li>
@@ -174,7 +234,31 @@ the variable in place. Labels change how values are shown, not
 the values, so there is normally nothing to keep a copy of.</p></li>
 </ul><p>SPSS users will recognize the pair from <code>RECODE ... INTO new.</code>
 and bare <code>RECODE</code>; for labels, SPSS's <code>VALUE LABELS</code> and
-<code>VARIABLE LABELS</code> always label in place, the overwrite form.</p>
+<code>VARIABLE LABELS</code> always label in place, the overwrite form –
+which <code>modify = TRUE</code> gives directly.</p>
+<p>The list form: the changed data frame, invisibly.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="the-list-form">The list form<a class="anchor" aria-label="anchor" href="#the-list-form"></a></h2>
+
+
+<p>A <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code> of two or more variables after the data frame – or a
+stored list of names in quotes, <code>vars = items</code> – applies the same
+value labels to each variable, in the data frame itself:</p><div class="sourceCode"><pre><code><span></span>
+<span><span class="fu"><a href="../reference/jrelabel.html">jrelabel</a></span><span class="op">(</span><span class="va">MyData</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">Q1</span>, <span class="va">Q2</span>, <span class="va">Q3</span><span class="op">)</span>,</span>
+<span>         labels <span class="op">=</span> <span class="st">"1=Never; 2=Sometimes; 3=Often"</span>, modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div><p>The SPSS equivalent is <code>VALUE LABELS Q1 Q2 Q3 1 'Never'
+2 'Sometimes' 3 'Often'.</code> The form takes <code>modify = TRUE</code> and stops
+without it, offering the call with it added: a call that changes several
+variables returns the whole data frame, and assigning that to one column
+(<code>MyData$Q1 &lt;- jrelabel(...)</code>) would put the data frame inside the
+column. It also returns the changed data frame, so
+<code>e &lt;- jrelabel(d, c(Q1, Q2), ..., modify = TRUE)</code> labels <code>d</code>
+and keeps a copy in <code>e</code>. Every variable is checked before any is
+changed, so a call that stops changes nothing. A variable label names one
+variable and is refused in this form; give each its own call. A list in
+<code>vars =</code> follows these rules whatever its length, so a script that
+builds its list of names behaves the same when the list holds one name;
+<code>c(Q1)</code> after the data frame is the one-variable form.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -191,25 +275,73 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">Status</span> <span class="op">==</span> <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span><span class="va">df</span>, <span class="va">StatusR</span>, labels <span class="op">=</span> <span class="st">"1=Yes; 0=No"</span>,</span></span>
 <span class="r-in"><span>                       var.label <span class="op">=</span> <span class="st">"Status (recoded)"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$StatusR &lt;- jrelabel(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To label StatusR in df directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jrelabel(..., modify = TRUE)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The same, labeling the variable in the data frame directly</span></span></span>
+<span class="r-in"><span><span class="fu">jrelabel</span><span class="op">(</span><span class="va">df</span>, <span class="va">StatusR</span>, labels <span class="op">=</span> <span class="st">"1=Yes; 0=No"</span>, modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Value labels applied to StatusR in df.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The data frame may also be given by name</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span>data <span class="op">=</span> <span class="va">df</span>, <span class="va">StatusR</span>, labels <span class="op">=</span> <span class="st">"1=Yes; 0=No"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$StatusR &lt;- jrelabel(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To label StatusR in df directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jrelabel(..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add just a variable label</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span><span class="va">df</span>, <span class="va">StatusR</span>, var.label <span class="op">=</span> <span class="st">"Employment Status"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$StatusR &lt;- jrelabel(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To label StatusR in df directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jrelabel(..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Add just value labels</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span><span class="va">df</span>, <span class="va">StatusR</span>, labels <span class="op">=</span> <span class="st">"1=Yes; 0=No"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$StatusR &lt;- jrelabel(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To label StatusR in df directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jrelabel(..., modify = TRUE)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Label a date variable (the variable stays a Date)</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">Enrolled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2024-01-15"</span>, <span class="st">"2024-02-01"</span>, <span class="st">"2024-01-20"</span>,</span></span>
 <span class="r-in"><span>                         <span class="st">"2024-03-05"</span>, <span class="st">"2024-02-14"</span>, <span class="st">"2024-01-30"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">Enrolled</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span><span class="va">df</span>, <span class="va">Enrolled</span>, var.label <span class="op">=</span> <span class="st">"Enrollment date"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$Enrolled &lt;- jrelabel(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To label Enrolled in df directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jrelabel(..., modify = TRUE)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Several items that share one response scale: the list form</span></span></span>
+<span class="r-in"><span><span class="va">sv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>Q1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span>, <span class="fl">2</span><span class="op">)</span>, Q2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>, Q3 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jrelabel</span><span class="op">(</span><span class="va">sv</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">Q1</span>, <span class="va">Q2</span>, <span class="va">Q3</span><span class="op">)</span>, labels <span class="op">=</span> <span class="st">"1=Never; 2=Sometimes; 3=Often"</span>,</span></span>
+<span class="r-in"><span>         modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Value labels applied to Q1, Q2, and Q3 in sv.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The same from a stored list of names</span></span></span>
+<span class="r-in"><span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Q1"</span>, <span class="st">"Q2"</span>, <span class="st">"Q3"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">jrelabel</span><span class="op">(</span><span class="va">sv</span>, vars <span class="op">=</span> <span class="va">items</span>, labels <span class="op">=</span> <span class="st">"1=Never; 2=Sometimes; 3=Often"</span>,</span></span>
+<span class="r-in"><span>         modify <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Value labels applied to Q1, Q2, and Q3 in sv.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">df</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame set to: df</span>
 <span class="r-in"><span><span class="va">df</span><span class="op">$</span><span class="va">StatusR</span> <span class="op">&lt;-</span> <span class="fu">jrelabel</span><span class="op">(</span><span class="va">StatusR</span>, labels <span class="op">=</span> <span class="st">"1=Active; 0=Inactive"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Note: This call changes df only if you assign the result:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   df$StatusR &lt;- jrelabel(...)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> To label StatusR in df directly, rerun with modify = TRUE:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   jrelabel(..., modify = TRUE)</span>
+<span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Default data frame cleared.</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

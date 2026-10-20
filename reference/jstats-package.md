@@ -119,7 +119,8 @@ package's GitHub repository.
   activate listwise filtering on selected variables
 
 - [`joutput`](https://jma61.github.io/jstats/reference/joutput.md) – set
-  session-level output verbosity (minimal / standard / full)
+  session-level output verbosity (minimal / standard / full, or silent
+  for a script that keeps results and prints nothing)
 
 - [`joptions`](https://jma61.github.io/jstats/reference/joptions.md) –
   set or display session-level package options (missing-value

@@ -14,7 +14,8 @@ jfreq(
   variable.id = NULL,
   value.id = NULL,
   missing.detail = NULL,
-  case.processing.detail = NULL
+  case.processing.detail = NULL,
+  print = NULL
 )
 ```
 
@@ -90,6 +91,15 @@ jfreq(
   takes its place. See
   [`?joutput`](https://jma61.github.io/jstats/reference/joutput.md)
   (`case.processing`).
+
+- print:
+
+  Logical or NULL. `FALSE` prints nothing – no table, no title, no note
+  – and returns the result as every call does; errors and warnings still
+  show. `TRUE` prints even under `joutput("silent")`. `NULL` (the
+  default) prints unless the level is silent. For a script that keeps
+  many results and wants no output: see
+  [`joutput`](https://jma61.github.io/jstats/reference/joutput.md).
 
 ## Value
 

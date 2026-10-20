@@ -15,7 +15,7 @@ patterns under each convention.
 ## Usage
 
 ``` r
-jrecode(data, orig.var, map, labels = NULL, convention = NULL)
+jrecode(data, orig.var, map, labels = NULL, convention = NULL, ...)
 ```
 
 ## Arguments
@@ -165,6 +165,12 @@ jrecode(data, orig.var, map, labels = NULL, convention = NULL)
   Stata-style under `"stata"`, uppercase SAS-style under `"sas"`). Also
   decides what the `missing` keyword produces. Inert when neither a
   marker nor `missing` appears in either argument.
+
+- ...:
+
+  Not used. An input `jrecode()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
   When `NULL`, the convention is resolved from the `missing.convention`
   setting in

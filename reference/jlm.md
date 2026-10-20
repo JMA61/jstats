@@ -27,7 +27,8 @@ jlm(
   digits = NULL,
   ...,
   value.id = NULL,
-  model.layout = NULL
+  model.layout = NULL,
+  print = NULL
 )
 ```
 
@@ -260,6 +261,15 @@ jlm(
   tables stay where they are. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `model.layout` setting.
+
+- print:
+
+  Logical or NULL. `FALSE` prints nothing – no table, no title, no note
+  – and returns the result as every call does; errors and warnings still
+  show. `TRUE` prints even under `joutput("silent")`. `NULL` (the
+  default) prints unless the level is silent. For a script that keeps
+  many results and wants no output: see
+  [`joutput`](https://jma61.github.io/jstats/reference/joutput.md).
 
 ## Value
 

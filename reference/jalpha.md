@@ -17,7 +17,8 @@ jalpha(
   variable.id = NULL,
   value.id = NULL,
   case.processing.detail = NULL,
-  digits = NULL
+  digits = NULL,
+  print = NULL
 )
 ```
 
@@ -85,6 +86,15 @@ jalpha(
   own fixed conventions. NULL (default) defers to
   [`joutput()`](https://jma61.github.io/jstats/reference/joutput.md)'s
   `digits` setting (default 3).
+
+- print:
+
+  Logical or NULL. `FALSE` prints nothing – no table, no title, no note
+  – and returns the result as every call does; errors and warnings still
+  show. `TRUE` prints even under `joutput("silent")`. `NULL` (the
+  default) prints unless the level is silent. For a script that keeps
+  many results and wants no output: see
+  [`joutput`](https://jma61.github.io/jstats/reference/joutput.md).
 
 ## Value
 

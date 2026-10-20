@@ -13,7 +13,7 @@ first (`mydata <- mk()`), as every offered line names it (S343).
 ## Usage
 
 ``` r
-.jst_vars_dots_line(mc, fn, vars)
+.jst_vars_dots_line(mc, fn, vars, as_c = FALSE, force = NULL)
 ```
 
 ## Arguments
@@ -32,7 +32,26 @@ first (`mydata <- mk()`), as every offered line names it (S343).
 
   Character; the variables, in the order they go in.
 
+- as_c:
+
+  Logical; the variables as one [`c()`](https://rdrr.io/r/base/c.html).
+
+- force:
+
+  Named character; arguments set on the line, replacing the call's own
+  (`c(modify = "TRUE")`).
+
 ## Value
 
 A list: `pre` ("" or the naming line with its newline), `line` (the
 call, indented), and `framed` (TRUE when the call named its data frame).
+
+## Details
+
+[`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md)
+(Session 378) takes its list in one slot, as a
+[`c()`](https://rdrr.io/r/base/c.html): `as_c = TRUE` gives the
+variables as one [`c()`](https://rdrr.io/r/base/c.html) (one name bare)
+and drops the call's own `var`; `force` sets arguments the line must
+carry – its list form runs only with `modify = TRUE`, so the line
+carries it (ruling R23: no line that stops next).

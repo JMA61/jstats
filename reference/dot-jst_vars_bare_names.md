@@ -26,7 +26,9 @@ form.
   data_name,
   mc,
   fn,
-  dot_names = character(0)
+  dot_names = character(0),
+  as_c = FALSE,
+  force = NULL
 )
 ```
 
@@ -56,6 +58,13 @@ form.
 - dot_names:
 
   Character; variables also given in the dots.
+
+- as_c, force:
+
+  As
+  [`.jst_vars_dots_line()`](https://jma61.github.io/jstats/reference/dot-jst_vars_dots_line.md)
+  (Session 378,
+  [`jrelabel()`](https://jma61.github.io/jstats/reference/jrelabel.md)).
 
 ## Value
 

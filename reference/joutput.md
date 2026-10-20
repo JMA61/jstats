@@ -2,8 +2,10 @@
 
 Controls what analysis functions display by default. Three preset levels
 are available, and individual toggles can override specific settings
-within any level. Per-call arguments on analysis functions always take
-precedence over joutput() settings.
+within any level; a fourth, `silent`, prints nothing from the analysis
+functions and is for a script that keeps their results. Per-call
+arguments on analysis functions always take precedence over joutput()
+settings.
 
 ## Usage
 
@@ -24,7 +26,8 @@ joutput(
   model.layout = NULL,
   missing.notice = NULL,
   digits = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  ...
 )
 ```
 
@@ -32,9 +35,9 @@ joutput(
 
 - level:
 
-  Character. One of `minimal`, `standard` (default), or `full`. If
-  omitted, prints the current settings. If `NULL`, resets to defaults
-  (standard with no toggle overrides).
+  Character. One of `minimal`, `standard` (default), `full`, or
+  `silent`. If omitted, prints the current settings. If `NULL`, resets
+  to defaults (standard with no toggle overrides).
 
   minimal
 
@@ -60,6 +63,21 @@ joutput(
       intervals, post-hoc tests, and the Case Processing table on every
       call, with the per-code missing breakdown. Diagnostic output is
       not part of it: see `diagnostics`.
+
+  silent
+
+  :   For a script that runs many analyses and keeps their results – a
+      loop over models, a table built from several calls. The analysis
+      functions (`jdesc`, `jfreq`, `jt`, `jaov`, `jcrosstab`, `jlm`,
+      `jlogistic`, `jcorr`, `jalpha`, `jscreen`) print nothing, their
+      notes included, and return their results as they always do; errors
+      and warnings still show. Every other function prints as at
+      standard, so a load's notice and the recode family's reminders
+      stay, and the settings are standard's: a result made under silent
+      holds what a standard call's would. A result is still there to
+      keep: `m <- jlm(...)` saves it, as it does at any level. The same
+      for one call: `print = FALSE` on any analysis function; and
+      `print = TRUE` prints one call under a silent level.
 
 - effect.size:
 
@@ -279,6 +297,12 @@ joutput(
   Logical; default FALSE. When TRUE, joutput() applies the level/toggle
   change silently (nothing is printed). A bare joutput() status query,
   and a `joutput("setting")` query, always print regardless of quiet.
+
+- ...:
+
+  Not used. An input `joutput()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 

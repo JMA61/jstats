@@ -10,6 +10,7 @@ Internal helper: build bar chart (1 categorical variable)
   x_name,
   by_name = NULL,
   axis_labels = NULL,
-  by_label = NULL
+  by_label = NULL,
+  facet_name = NULL
 )
 ```

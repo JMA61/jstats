@@ -10,7 +10,7 @@ always convert to their own value, never to a rank.
 ## Usage
 
 ``` r
-jencode(data, var, map = NULL, labels = NULL, convention = NULL)
+jencode(data, var, map = NULL, labels = NULL, convention = NULL, ...)
 ```
 
 ## Arguments
@@ -87,6 +87,12 @@ jencode(data, var, map = NULL, labels = NULL, convention = NULL)
   uppercase SAS-style under `"sas"`). Also decides what the `missing`
   keyword produces. Inert when neither a marker nor `missing` appears in
   the map.
+
+- ...:
+
+  Not used. An input `jencode()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
   When `NULL`, the convention is resolved from the `missing.convention`
   setting in

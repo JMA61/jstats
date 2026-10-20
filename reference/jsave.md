@@ -30,7 +30,8 @@ jsave(
   file,
   overwrite = FALSE,
   preserve.declarations = TRUE,
-  clean.names = FALSE
+  clean.names = FALSE,
+  ...
 )
 ```
 
@@ -83,6 +84,12 @@ jsave(
   names R cannot use; the data frame keeps its own names, each old name
   becomes the variable's label in the file where it has none, and a note
   lists the changes.
+
+- ...:
+
+  Not used. An input `jsave()` does not take – a misspelled argument –
+  stops with "unused input" and the name as typed, in place of R's own
+  "unused argument".
 
 ## Value
 
@@ -202,11 +209,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpCViAy2/community.sav
+#> Saved community to /tmp/RtmpcROuO9/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpCViAy2/community.sav
+#> Saved community to /tmp/RtmpcROuO9/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{
