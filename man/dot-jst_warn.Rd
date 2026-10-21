@@ -31,5 +31,10 @@ default session. warn = 2 converts warnings to errors with R's own
 "converted from warning" chrome; that is a developer setting and is out
 of scope -- recorded here, not budgeted. (Session 256; supersedes the
 Session 254 reserve-0 rationale.)
+
+R stores a warning's text cut to \code{getOption("warning.length")}
+bytes when it is signalled, so \code{.jst_print_room()} raises the
+setting for a longer one and it is put back as this function returns
+(Session 387, as in \code{.jst_stop()}).
 }
 \keyword{internal}

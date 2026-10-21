@@ -1989,10 +1989,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 }
 
 #' Internal: jsave()'s pre-flight section for refused names
+#'
+#' Ruling R33 (Session 387): in a stop with other things to fix, above the
+#' minimal level, this part offers no save line of its own -- run where it
+#' sits, before the other parts' fixes, it could only stop -- and says that
+#' the save closing the message makes the change; that save carries
+#' clean.names = TRUE. Alone, the part keeps its line, which is the save.
 #' @param probs From .jst_save_name_problems().
 #' @param ext The target.
 #' @param data_name The data frame's name, for the prose.
-#' @param line The jsave() call that saves with clean.names = TRUE.
+#' @param line The jsave() call that saves with clean.names = TRUE, or NULL
+#'   in a combined stop, where the closing save carries it.
 #' @return Character(1).
 #' @keywords internal
 .jst_save_names_error_msg <- function(probs, ext, data_name, line) {
@@ -2006,9 +2013,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   paste0(n, " variable ", .jst_plural(n, "name", "names"), " in the ",
          data_name, " data frame cannot be used in ", fmt, ":\n",
          paste(lines, collapse = "\n"), "\n",
-         "To save the file with ", .jst_plural(n, "this name", "these names"),
-         " (the ", data_name, " data frame keeps its own):\n",
-         line)
+         if (is.null(line)) {
+           paste0("The save at the end gives ",
+                  .jst_plural(n, "it this name", "them these names"),
+                  " in the file (the ", data_name,
+                  " data frame keeps its own).")
+         } else {
+           paste0("To save the file with ",
+                  .jst_plural(n, "this name", "these names"),
+                  " (the ", data_name, " data frame keeps its own):\n",
+                  line)
+         })
 }
 
 #' Internal: jsave()'s note after clean.names = TRUE renamed in the file
@@ -5929,21 +5944,30 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' parts above -- and the closing line names the save that works on it,
 #' since the expression run again stops as before.
 #'
+#' Given a name or a place, the message closes on "run jsave() again"
+#' unless a part names variables the format refuses: then the call as typed
+#' would stop on them, and the closing line is the save that works, with
+#' clean.names = TRUE (ruling R33, Session 387).
+#'
 #' @param sections List of pre-built section messages, one per fired check.
 #' @param data_name Character. The data frame's name, for the header.
 #' @param ext Lowercase target extension ("sav", "dta", "xpt").
 #' @param assign_line Character(1) or NULL: "  mydata <- <the expression>",
 #'   for data given as an expression.
-#' @param save_line Character(1) or NULL: the jsave() line on mydata that
-#'   closes the message, for data given as an expression.
+#' @param save_line Character(1) or NULL: the jsave() line that closes the
+#'   message -- on mydata for data given as an expression, on the data
+#'   frame's own name or place when a part names refused variables.
 #' @param copy_of Character(1): what the copy is made from, "your d data
 #'   frame" when the expression names one data frame, else "your data".
+#' @param save_name Character(1): what the closing line says it saves,
+#'   "mydata" or the data frame's name or place.
 #' @return Character scalar suitable for \code{stop(call. = FALSE)}.
 #' @keywords internal
 .jst_jsave_combined_error_msg <- function(sections, data_name, ext,
                                           assign_line = NULL,
                                           save_line = NULL,
-                                          copy_of = "your data") {
+                                          copy_of = "your data",
+                                          save_name = "mydata") {
   if (length(sections) == 1L) return(sections[[1L]])
 
   output_level <- getOption(".jst_output_level", "standard")
@@ -5972,7 +5996,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 "Make the copy first:\n", assign_line, "\n\n"),
     paste(numbered, collapse = "\n\n"), "\n\n",
     if (is.null(save_line)) "Fix the above, then run jsave() again."
-    else paste0("Fix the above, then save mydata:\n", save_line)
+    else paste0("Fix the above, then save ", save_name, ":\n", save_line)
   )
 }
 #' Internal: build jsave's case-correction note for .dta export
@@ -7136,17 +7160,11 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     # finding, Session 362). haven and ReadStat checked them in their own
     # words and one at a time; .jst_save_name_problems() holds each
     # format's rules and names every refused name at once, with the name
-    # clean.names = TRUE would give it in the file.
+    # clean.names = TRUE would give it in the file. The part is built after
+    # the others, below, and goes first: whether it offers its own save line
+    # depends on whether it stands alone (ruling R33, Session 387).
     name_probs <- .jst_save_name_problems(names(data), ext)
-    if (nrow(name_probs) > 0L && !clean.names) {
-      cn_line <- paste0("  jsave(", code_name, ", \"",
-                        .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)),
-                        "\"", if (isTRUE(overwrite)) ", overwrite = TRUE",
-                        if (!preserve.declarations) ", preserve.declarations = FALSE",
-                        ", clean.names = TRUE)")
-      sections[[length(sections) + 1L]] <-
-        .jst_save_names_error_msg(name_probs, ext, data_name, cn_line)
-    }
+    names_part <- nrow(name_probs) > 0L && !clean.names
     # A factor whose category is longer than 120 characters (.sav): haven
     # writes a factor's categories as value labels, which SPSS holds to 120
     # characters, and refused it in its own words (Session 362). The check
@@ -7189,11 +7207,16 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     # equal-standing carve-out). overwrite = TRUE rides when it was given.
     # The file as typed, slashes swapped (jload()'s leading-digit line does
     # the same, S241): a bare name resolved through data.dir stays bare, so
-    # the line saves where this call would have.
+    # the line saves where this call would have. clean.names = TRUE rides
+    # when it was given or a part names variables the format refuses
+    # (ruling R33, Session 387): without it, the save stopped on the names.
     pd_line <- paste0("  jsave(", code_name, ", \"",
                       .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)),
                       "\"", if (isTRUE(overwrite)) ", overwrite = TRUE",
-                      ", preserve.declarations = FALSE)")
+                      ", preserve.declarations = FALSE",
+                      if (isTRUE(clean.names) || nrow(name_probs) > 0L)
+                        ", clean.names = TRUE",
+                      ")")
     if (ext == "sav") {
       tagged_vars <- .jst_has_tagged_na(data)
       if (length(tagged_vars) > 0) {
@@ -7268,19 +7291,35 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     # building on it -- a line in each part had made mydata again, undoing
     # the parts above -- and the closing line the save on mydata, the
     # call's own arguments kept and clean.names = TRUE where a part names
-    # variables the format refuses (that part's one route). A single part
-    # keeps a line per block (S352), whose blocks are alternatives; a name
-    # or a place keeps "run jsave() again".
+    # variables the format refuses. A single part keeps a line per block
+    # (S352), whose blocks are alternatives. Ruling R33 (Session 387): every
+    # line a part offers runs where it sits, the lines taken top to bottom.
+    # The names part, first, offers no save of its own in a combined stop --
+    # it ran before the other parts' fixes and stopped on them -- and a name
+    # or a place whose stop has that part closes on the save that works
+    # (the call as typed would stop on the names); without it, "run jsave()
+    # again". The minimal level keeps its compact form.
+    combined_std <- (length(sections) + names_part) > 1L &&
+      !identical(getOption(".jst_output_level", "standard"), "minimal")
+    if (names_part) {
+      cn_line <- paste0("  jsave(", code_name, ", \"",
+                        .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)),
+                        "\"", if (isTRUE(overwrite)) ", overwrite = TRUE",
+                        if (!preserve.declarations) ", preserve.declarations = FALSE",
+                        ", clean.names = TRUE)")
+      sections <- c(list(.jst_save_names_error_msg(
+        name_probs, ext, data_name, if (combined_std) NULL else cn_line)),
+        sections)
+    }
     if (length(sections) > 0) {
-      if (identical(data_kind, "expression") && length(sections) > 1L &&
-          !identical(getOption(".jst_output_level", "standard"), "minimal")) {
-        save_line <- paste0(
-          "  jsave(mydata, \"",
-          .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)), "\"",
-          if (isTRUE(overwrite)) ", overwrite = TRUE",
-          if (!preserve.declarations) ", preserve.declarations = FALSE",
-          if (isTRUE(clean.names) || nrow(name_probs) > 0L) ", clean.names = TRUE",
-          ")")
+      save_call <- function(nm) paste0(
+        "  jsave(", nm, ", \"",
+        .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)), "\"",
+        if (isTRUE(overwrite)) ", overwrite = TRUE",
+        if (!preserve.declarations) ", preserve.declarations = FALSE",
+        if (isTRUE(clean.names) || nrow(name_probs) > 0L) ", clean.names = TRUE",
+        ")")
+      if (identical(data_kind, "expression") && combined_std) {
         # The copy is named for the user's data frame (Jeff, S386: "I'm
         # using the name of the user's data frame since that's what's
         # really important"): the one data frame the expression names, else
@@ -7292,7 +7331,12 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
         .jst_stop(.jst_jsave_combined_error_msg(
           sections, data_name, ext,
           assign_line = paste0("  mydata <- ", .jst_term_text(data_sub)),
-          save_line = save_line, copy_of = copy_of))
+          save_line = save_call("mydata"), copy_of = copy_of))
+      }
+      if (names_part && combined_std) {
+        .jst_stop(.jst_jsave_combined_error_msg(
+          sections, data_name, ext,
+          save_line = save_call(code_name), save_name = code_name))
       }
       .jst_stop(expr_lines(
         .jst_jsave_combined_error_msg(sections, data_name, ext)))

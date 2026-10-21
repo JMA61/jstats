@@ -10,7 +10,8 @@
   ext,
   assign_line = NULL,
   save_line = NULL,
-  copy_of = "your data"
+  copy_of = "your data",
+  save_name = "mydata"
 )
 }
 \arguments{
@@ -23,11 +24,15 @@
 \item{assign_line}{Character(1) or NULL: "  mydata <- \if{html}{\out{<the expression>}}",
 for data given as an expression.}
 
-\item{save_line}{Character(1) or NULL: the jsave() line on mydata that
-closes the message, for data given as an expression.}
+\item{save_line}{Character(1) or NULL: the jsave() line that closes the
+message -- on mydata for data given as an expression, on the data
+frame's own name or place when a part names refused variables.}
 
 \item{copy_of}{Character(1): what the copy is made from, "your d data
 frame" when the expression names one data frame, else "your data".}
+
+\item{save_name}{Character(1): what the closing line says it saves,
+"mydata" or the data frame's name or place.}
 }
 \value{
 Character scalar suitable for \code{stop(call. = FALSE)}.
@@ -49,5 +54,10 @@ line that makes mydata comes once, under the header, so the parts' lines
 run top to bottom on one copy -- each part repeating it had undone the
 parts above -- and the closing line names the save that works on it,
 since the expression run again stops as before.
+
+Given a name or a place, the message closes on "run jsave() again"
+unless a part names variables the format refuses: then the call as typed
+would stop on them, and the closing line is the save that works, with
+clean.names = TRUE (ruling R33, Session 387).
 }
 \keyword{internal}

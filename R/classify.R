@@ -913,6 +913,40 @@
   NULL
 }
 
+#' Internal helper: room for a long message when R prints it
+#'
+#' R prints an error at the prompt, and stores a warning for printing, cut
+#' to \code{getOption("warning.length")} bytes -- 1,000 unless the user set
+#' another value, the "Error: " prefix counted -- and says nothing about
+#' the cut (Session 387: jsave()'s three-part stop on an expression lost
+#' its closing save line in the RStudio Console). The emitters call this
+#' just before they signal: when the text is longer than the setting allows,
+#' the setting is raised to the text's length in bytes plus 50 (room for
+#' R's own prefix in any language), at most R's ceiling of 8,170, and the
+#' old setting is returned for the emitter to put back as it exits. A
+#' setting already large enough is never touched, so a user's own value is
+#' never lowered, and the setting is not a session option of the package:
+#' it is restored within the call, so it is not in
+#' \code{.jst_session_option_keys}. Guarded: an emitter must never fail to
+#' emit, so any error here means no change.
+#'
+#' @param text Character(1), the message as the condition carries it.
+#' @return The list \code{options()} returns for the old setting, to pass
+#'   back to \code{options()}; NULL when nothing was changed.
+#' @keywords internal
+.jst_print_room <- function(text) {
+  tryCatch({
+    need <- nchar(text, type = "bytes") + 50L
+    have <- getOption("warning.length", 1000L)
+    if (!is.numeric(have) || length(have) != 1L || is.na(have) ||
+        need <= have) {
+      NULL
+    } else {
+      options(warning.length = as.integer(min(need, 8170L)))
+    }
+  }, error = function(e) NULL)
+}
+
 #' Internal helper: signal an error in the package house voice
 #'
 #' Concatenates its ... arguments into a message and raises a stop() prefixed
@@ -941,6 +975,12 @@
 #' its new indent. Nested as caught, a line wrapped for the full width was
 #' indented and broken again mid-phrase. The error itself is unchanged: a
 #' simpleError with no call, as \code{stop(..., call. = FALSE)} makes.
+#'
+#' A message longer than R prints whole (Session 387): R cuts an error
+#' printed at the prompt to \code{getOption("warning.length")} bytes,
+#' silently, so a long stop lost its last lines -- usually the line to run.
+#' \code{.jst_print_room()} raises the setting for this one message, and
+#' it is put back as the stop unwinds, after R has printed it.
 #' @param ... Message parts, concatenated with paste0().
 #' @param fn Optional function name (without parentheses); auto-detected when NULL.
 #' @return Never returns; always signals an error.
@@ -959,6 +999,11 @@
                    error = function(e) raw)
   cond <- simpleError(paste0(prefix, body))
   cond$raw <- paste0(prefix, raw)
+  # Session 387: room for a message longer than R prints whole. R prints the
+  # error while this frame is still on the stack, and the old setting comes
+  # back as the stop unwinds it.
+  room <- .jst_print_room(conditionMessage(cond))
+  if (!is.null(room)) on.exit(options(room), add = TRUE)
   stop(cond)
 }
 
@@ -1153,6 +1198,11 @@
 #' of scope -- recorded here, not budgeted. (Session 256; supersedes the
 #' Session 254 reserve-0 rationale.)
 #'
+#' R stores a warning's text cut to \code{getOption("warning.length")}
+#' bytes when it is signalled, so \code{.jst_print_room()} raises the
+#' setting for a longer one and it is put back as this function returns
+#' (Session 387, as in \code{.jst_stop()}).
+#'
 #' @param ... Message parts, concatenated with paste0().
 #' @return Invisibly NULL; called for the warning it signals.
 #' @keywords internal
@@ -1160,6 +1210,8 @@
   body <- paste0(...)
   body <- tryCatch(.jst_wrap_message(body, reserve = 9L),
                    error = function(e) body)
+  room <- .jst_print_room(body)
+  if (!is.null(room)) on.exit(options(room), add = TRUE)
   warning(body, call. = FALSE)
   invisible(NULL)
 }

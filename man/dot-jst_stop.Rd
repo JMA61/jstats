@@ -42,5 +42,11 @@ name -- takes \code{raw}, so the outer emitter wraps the text once, at
 its new indent. Nested as caught, a line wrapped for the full width was
 indented and broken again mid-phrase. The error itself is unchanged: a
 simpleError with no call, as \code{stop(..., call. = FALSE)} makes.
+
+A message longer than R prints whole (Session 387): R cuts an error
+printed at the prompt to \code{getOption("warning.length")} bytes,
+silently, so a long stop lost its last lines -- usually the line to run.
+\code{.jst_print_room()} raises the setting for this one message, and
+it is put back as the stop unwinds, after R has printed it.
 }
 \keyword{internal}
