@@ -3320,6 +3320,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' it back: \code{attr(d$v, "label") <- "..."}, the label escaped. jload()'s
 #' as.numeric() lines (\code{.jst_numeric_lines()}, Session 381) and
 #' jscreen()'s as.Date() lines (\code{.jst_date_text_report()}) share it.
+#' Since Session 384 (Fix Slate 26) jsave()'s as.POSIXct() and
+#' as.character() lines too (\code{.jst_jsave_unsupported_type_error_msg()},
+#' \code{.jst_jsave_long_category_error_msg()}), which drop it the same way.
 #' @param v The variable as the line names it (\code{d$v}).
 #' @param label The variable's label, or NA or NULL.
 #' @return Character: the line, indented two spaces; none when there is no
@@ -5778,17 +5781,23 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' produces one clean package-level error that names the column(s) and
 #' their type(s) and gives the right remedy for each: complex/list/raw have
 #' no sensible conversion and are dropped, while POSIXlt converts faithfully
-#' to POSIXct (the same instant, which the formats can store).
+#' to POSIXct (the same instant, which the formats can store). Since Session
+#' 384 (Fix Slate 26) a POSIXlt column with a label gets, after its
+#' as.POSIXct() line, the line that puts the label back
+#' (\code{.jst_label_line()}), since as.POSIXct() drops it.
 #'
 #' @param vars Character vector of offending column names.
 #' @param types Character vector of the columns' types, parallel to
 #'   \code{vars} ("complex", "list", "raw", or "POSIXlt").
 #' @param ext The target extension ("sav", "dta", or "xpt").
 #' @param data_name The data frame's name, used in the suggested fix code.
+#' @param labels A list parallel to \code{vars}: each column's "label"
+#'   attribute, or NULL where it has none. NULL gives no label lines.
 #'
 #' @return Character scalar suitable for \code{stop(call. = FALSE)}.
 #' @keywords internal
-.jst_jsave_unsupported_type_error_msg <- function(vars, types, ext, data_name) {
+.jst_jsave_unsupported_type_error_msg <- function(vars, types, ext, data_name,
+                                                  labels = NULL) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n     <- length(vars)
@@ -5813,9 +5822,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
            paste0("\"", drop_vars, "\"", collapse = ", "),
            ")] <- NULL")
   } else NULL
+  # Session 384 (Fix Slate 26): as.POSIXct() drops every attribute, so a
+  # column with a label gets, after its line, the one that puts the label
+  # back (.jst_label_line(), as jload()'s as.numeric() lines).
+  convert_labels <- if (is.null(labels)) NULL else labels[types == "POSIXlt"]
   convert_lines <- if (length(convert_vars) > 0) {
-    paste0("  ", data_name, "$", convert_vars, " <- as.POSIXct(",
-           data_name, "$", convert_vars, ")", collapse = "\n")
+    paste(unlist(lapply(seq_along(convert_vars), function(i) {
+      dv <- paste0(data_name, "$", convert_vars[i])
+      c(paste0("  ", dv, " <- as.POSIXct(", dv, ")"),
+        .jst_label_line(dv, convert_labels[[i]]))
+    })), collapse = "\n")
   } else NULL
 
   # --- Minimal tier -------------------------------------------------------
@@ -5853,6 +5869,46 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     )
   }
   sub("\n$", "", out)
+}
+
+#' Internal: jsave's .sav section for a factor category SPSS cannot hold
+#'
+#' Session 362: haven writes a factor's categories as value labels, which
+#' SPSS holds to 120 characters, and refused a longer one in its own words.
+#' jsave()'s .sav pre-flight names every factor with a category longer than
+#' 120 characters and offers the line that keeps it as text, which SPSS
+#' keeps whole. Moved out of jsave() at Session 384 (split on touch, in
+#' the Build Procedure). Since Session 384 (Fix Slate 26) a
+#' factor with a label gets, after its line, the line that puts the label
+#' back (\code{.jst_label_line()}), since as.character() drops it.
+#'
+#' @param data The data frame being saved.
+#' @param code_name The data frame's name as the offered lines name it.
+#'
+#' @return Character scalar, the section's message, or NULL when no factor
+#'   has a category longer than 120 characters.
+#' @keywords internal
+.jst_jsave_long_category_error_msg <- function(data, code_name) {
+  long_lv <- names(data)[vapply(data, function(col) {
+    is.factor(col) && any(nchar(levels(col)) > 120L, na.rm = TRUE)
+  }, logical(1))]
+  if (length(long_lv) == 0L) return(NULL)
+  n_lv <- length(long_lv)
+  # Session 384 (Fix Slate 26): as.character() drops every attribute, so a
+  # factor with a label gets, after its line, the one that puts the label
+  # back (.jst_label_line(), as jload()'s as.numeric() lines).
+  lines <- unlist(lapply(long_lv, function(v) {
+    dv <- paste0(code_name, "$", v)
+    c(paste0("  ", dv, " <- as.character(", dv, ")"),
+      .jst_label_line(dv, attr(data[[v]], "label", exact = TRUE)))
+  }))
+  paste0(
+    .jst_and_list(long_lv), " ", .jst_plural(n_lv, "has", "have"),
+    " a category longer than 120 characters, which SPSS format ",
+    "(.sav) cannot store as a value label.\n",
+    "Save ", .jst_plural(n_lv, "it", "them"), " as text, which SPSS ",
+    "keeps whole:\n",
+    paste(lines, collapse = "\n"))
 }
 
 #' Internal: assemble jsave's combined pre-flight error
@@ -7074,22 +7130,12 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     }
     # A factor whose category is longer than 120 characters (.sav): haven
     # writes a factor's categories as value labels, which SPSS holds to 120
-    # characters, and refused it in its own words (Session 362).
+    # characters, and refused it in its own words (Session 362). The check
+    # and its message are .jst_jsave_long_category_error_msg() since
+    # Session 384.
     if (ext == "sav") {
-      long_lv <- names(data)[vapply(data, function(col) {
-        is.factor(col) && any(nchar(levels(col)) > 120L, na.rm = TRUE)
-      }, logical(1))]
-      if (length(long_lv) > 0L) {
-        n_lv <- length(long_lv)
-        sections[[length(sections) + 1L]] <- paste0(
-          .jst_and_list(long_lv), " ", .jst_plural(n_lv, "has", "have"),
-          " a category longer than 120 characters, which SPSS format ",
-          "(.sav) cannot store as a value label.\n",
-          "Save ", .jst_plural(n_lv, "it", "them"), " as text, which SPSS ",
-          "keeps whole:\n",
-          paste0("  ", code_name, "$", long_lv, " <- as.character(",
-                 code_name, "$", long_lv, ")", collapse = "\n"))
-      }
+      long_msg <- .jst_jsave_long_category_error_msg(data, code_name)
+      if (!is.null(long_msg)) sections[[length(sections) + 1L]] <- long_msg
     }
 
     # (1) Unsupported column types -- shared across the three formats.
@@ -7110,7 +7156,10 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     unsup_vars <- !is.na(type_of)
     if (any(unsup_vars)) {
       sections[[length(sections) + 1L]] <- .jst_jsave_unsupported_type_error_msg(
-        names(data)[unsup_vars], unname(type_of[unsup_vars]), ext, code_name)
+        names(data)[unsup_vars], unname(type_of[unsup_vars]), ext, code_name,
+        labels = lapply(unname(which(unsup_vars)), function(k) {
+          attr(data[[k]], "label", exact = TRUE)
+        }))
     }
 
     # (2) Missing-value incompatibilities -- format-specific. Each refusal

@@ -22,5 +22,8 @@ offers is followed, where the variable has a label, by the line that puts
 it back: \code{attr(d$v, "label") <- "..."}, the label escaped. jload()'s
 as.numeric() lines (\code{.jst_numeric_lines()}, Session 381) and
 jscreen()'s as.Date() lines (\code{.jst_date_text_report()}) share it.
+Since Session 384 (Fix Slate 26) jsave()'s as.POSIXct() and
+as.character() lines too (\code{.jst_jsave_unsupported_type_error_msg()},
+\code{.jst_jsave_long_category_error_msg()}), which drop it the same way.
 }
 \keyword{internal}
