@@ -233,7 +233,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
-    .jst_stop("The first argument must be a data frame.")
+    .jst_stop(.jst_txt_first_arg_frame)
   }
   .jst_check_flag(modify, "modify")
 
@@ -283,9 +283,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                            force = c(modify = "TRUE"))
     }
     if (!is.character(vars) || length(vars) == 0L || anyNA(vars)) {
-      .jst_stop("`vars` must be one or more variable names in quotes, ",
-                "for example:\n",
-                "  vars = c(\"Age\", \"Income\")")
+      .jst_stop(.jst_txt_vars_quoted)
     }
   }
   if (vars_given || length(slot_list) >= 2L) {
@@ -323,8 +321,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                 "  labels = \"1=Yes; 0=No\"", fn = .fn)
     }
     if (!is.character(labels) || length(labels) != 1) {
-      .jst_stop("the labels must be one quoted string, for example:\n",
-                "  labels = \"1=Yes; 0=No\"")
+      .jst_one_string_stop("labels", "1=Yes; 0=No")
     }
     # Every variable checked before any is changed.
     probs <- lapply(target_vars, function(v) .jst_relabel_type_problem(data[[v]]))
@@ -364,9 +361,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                 fn = .fn)
     }
     if (!identical(data_kind, "name")) {
-      .jst_stop("modify = TRUE can only change a data frame that has a ",
-                "name.\n",
-                "Name the data first, then rerun with modify = TRUE:\n",
+      .jst_stop(.jst_txt_modify_unnamed, .jst_txt_name_first,
                 .jst_relabel_list_lines(data_sub_expr, data_kind,
                                         default_used, vtxt, labels_sub),
                 fn = .fn)
@@ -410,8 +405,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   parsed_labels <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
-      .jst_stop("the labels must be one quoted string, for example:\n",
-                "  labels = \"1=Yes; 0=No\"")
+      .jst_one_string_stop("labels", "1=Yes; 0=No")
     }
     if (inherits(x, c("Date", "POSIXct", "POSIXlt", "difftime"))) {
       .jst_stop("'", var_name, "' is a date/time variable; value labels can ",
@@ -420,13 +414,13 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
     if (is.factor(x)) {
       .jst_stop("'", var_name, "' is a factor; value labels can only be ",
                 "applied to numeric variables.\n",
-                "Convert it to numbers first with jencode().")
+                .jst_txt_jencode_first)
     }
     if (is.character(x) ||
         (haven::is.labelled(x) && typeof(x) == "character")) {
       .jst_stop("'", var_name, "' is a character (text) variable; value ",
                 "labels can only be applied to numeric variables.\n",
-                "Convert it to numbers first with jencode().")
+                .jst_txt_jencode_first)
     }
     if (!is.numeric(x) && !is.logical(x) && !haven::is.labelled(x)) {
       .jst_stop("'", var_name, "' is of type ", typeof(x),
@@ -448,8 +442,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   # Checked before anything is changed.
   if (isTRUE(modify) && !identical(data_kind, "name")) {
     if (identical(data_kind, "place")) {
-      .jst_stop("modify = TRUE can only change a data frame that has a ",
-                "name.\n",
+      .jst_stop(.jst_txt_modify_unnamed,
                 "To change ", .jst_term_text(data_sub_expr), " itself, ",
                 "assign the result to its variable:\n",
                 .jst_relabel_assign_line(data_sub_expr, data_kind,
@@ -458,8 +451,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                 fn = .fn)
     }
     rest <- .jst_relabel_rest(cl)
-    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
-              "Name the data first, then rerun with modify = TRUE:\n",
+    .jst_stop(.jst_txt_modify_unnamed, .jst_txt_name_first,
               "  mydata <- ", .jst_term_text(data_sub_expr), "\n",
               "  jrelabel(mydata, ", var_name,
               if (nzchar(rest)) paste0(", ", rest), ", modify = TRUE)",
@@ -755,9 +747,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
          else paste0("`", var_name, "`")
   if (identical(data_kind, "expression")) {
     return(paste0(
-      "Note: The result is kept only if you assign it.\n",
-      "Name the data frame first, then assign the result to a variable in ",
-      "it:\n",
+      .jst_txt_assign_expr,
       "  mydata <- ", .jst_term_text(data_sub), "\n",
       "  mydata$", col, " <- jrelabel(mydata, ...)"))
   }
@@ -1940,7 +1930,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
 
   # --- Input checks ---
   if (!is.data.frame(data)) {
-    .jst_stop("The first argument must be a data frame.")
+    .jst_stop(.jst_txt_first_arg_frame)
   }
   # No variable named (Session 370, Fix Slate 18): it had reached the
   # blank-name guard, "Variable names cannot be blank."
@@ -1973,8 +1963,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
               "map = \"1=1; 2=0\")")
   }
   if (!is.character(map) || length(map) != 1) {
-    .jst_stop("the map must be one quoted string, for example:\n",
-              "  map = \"1=1; 2=0\"")
+    .jst_one_string_stop("map", "1=1; 2=0")
   }
 
   # Validate convention argument up front so an invalid value errors
@@ -2006,13 +1995,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   if (is.factor(orig)) {
     .jst_stop("'", orig_name, "' is a factor; values can only be recoded ",
               "on numeric variables.\n",
-              "Convert it to numbers first with jencode().")
+              .jst_txt_jencode_first)
   }
   if (is.character(orig) ||
       (haven::is.labelled(orig) && typeof(orig) == "character")) {
     .jst_stop("'", orig_name, "' is a character (text) variable; values can ",
               "only be recoded on numeric variables.\n",
-              "Convert it to numbers first with jencode().")
+              .jst_txt_jencode_first)
   }
   if (!is.numeric(orig) && !is.logical(orig) && !haven::is.labelled(orig)) {
     .jst_stop("'", orig_name, "' is of type ", typeof(orig),
@@ -2037,8 +2026,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   labels_tagged_raw <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1) {
-      .jst_stop("the labels must be one quoted string, for example:\n",
-                "  labels = \"1=Male; 0=Female\"")
+      .jst_one_string_stop("labels", "1=Male; 0=Female")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels, convention),
@@ -2143,12 +2131,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
     # S355 (the S256 item): the token quoted in all three places, so it
     # cannot read as an adjective ("labels names missing" read as "the
     # labels' names are absent"), and "to label" dropped.
-    .jst_stop(
-      paste0(
-        "labels names 'missing', but the map has no target for it."), "\n",
-      paste0(
-        "Add 'missing' to the map (for example '8=missing'), or label the ",
-        "value directly."))
+    .jst_stop(.jst_missing_label_text("8=missing"))
   }
 
   tok_mint_code  <- NULL     # numeric; spss arm only
@@ -2372,12 +2355,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
           rule_txt <- paste(paste0(hit_lhs, "=", .jst_fmt_code(tok_mint_code)),
                             collapse = "; ")
           .jst_stop(
-            paste0(head_txt, "the map also assigns ",
-                   .jst_fmt_code(tok_mint_code),
-                   " as an ordinary value (", rule_txt,
-                   "), and declaring it would make those cases missing ",
-                   "too."), "\n",
-            "To make both missing, use missing for both:\n",
+            .jst_ordinary_value_head(head_txt, .jst_fmt_code(tok_mint_code),
+                                     rule_txt), "\n",
+            .jst_txt_both_missing,
             "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
             .jst_data_name, ", ", orig_name, ", map = \"",
             .jst_render_map_string(parsed_map,
@@ -3253,9 +3233,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   if (!is.null(parsed_map$na_rule)) {
     n_plain_na <- sum(is.na(orig_num) & is.na(haven::na_tag(orig_num)))
     if (n_plain_na == 0) {
-      .note(advisory = TRUE, paste0(
-        "Note: '", orig_name, "' contained no NA values -- nothing was ",
-        "recoded for the NA rule."))
+      .note(advisory = TRUE, .jst_no_na_rule_text(orig_name, "recoded"))
     } else if (is.null(parsed_map$na_rule$tagged) &&
                !is.na(parsed_map$na_rule$new_val) &&
                !isTRUE(parsed_map$na_rule$missing)) {
@@ -3613,9 +3591,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
           d1_pair
         } else {
           paste0(d1_pair, "\n",
-                 "To make them one missing value instead, map ",
-                 if (length(flagged) == 2L) "both" else "them all",
-                 " to missing.")
+                 .jst_one_missing_line(length(flagged), "missing"))
         }
         # S352 (ruling R8's offered declarations): on a recoded variable of
         # Stata or SAS form the lines above can stop. The declaration gives
@@ -3649,9 +3625,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
               if (identical(convention, res_conv)) d1_conv_arg
               else .jst_marker_conv_arg(res_conv), ")",
               if (!one) paste0(
-                "\nTo make them one missing value instead, map ",
-                if (length(flagged) == 2L) "both" else "them all",
-                " to .", d1_free[1L], "."))
+                "\n",
+                .jst_one_missing_line(length(flagged), paste0(".", d1_free[1L]))))
           }
         }
         .note(paste0(
@@ -4668,7 +4643,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
 
   # --- Input checks ---------------------------------------------------------
   if (!is.data.frame(data)) {
-    .jst_stop("The first argument must be a data frame.")
+    .jst_stop(.jst_txt_first_arg_frame)
   }
   # No variable named (Session 370, Fix Slate 18), as jrecode().
   if (!nzchar(var_name)) .jst_no_var_stop("jencode")
@@ -4685,12 +4660,10 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
   data_typed <- if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)
   if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
   if (!is.null(map) && (!is.character(map) || length(map) != 1)) {
-    .jst_stop("the map must be one quoted string, for example:\n",
-              "  map = \"Bail=1; Parole=2\"")
+    .jst_one_string_stop("map", "Bail=1; Parole=2")
   }
   if (!is.null(labels) && (!is.character(labels) || length(labels) != 1)) {
-    .jst_stop("the labels must be one quoted string, for example:\n",
-              "  labels = \"1=Bail; 2=Parole\"")
+    .jst_one_string_stop("labels", "1=Bail; 2=Parole")
   }
 
   # Validate convention up front so an invalid value errors whether or not
@@ -5061,12 +5034,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
     tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
 
     if (!is.null(tok_missing_label) && !has_missing_token) {
-      .jst_stop(                                # S355, as jrecode's twin
-        paste0(
-          "labels names 'missing', but the map has no target for it."), "\n",
-        paste0(
-          "Add 'missing' to the map (for example 'Refused=missing'), or ",
-          "label the value directly."))
+      # S355, as jrecode's twin
+      .jst_stop(.jst_missing_label_text("Refused=missing"))
     }
 
     tok_tag <- NULL
@@ -5380,11 +5349,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
           hit_who  <- c(hit_who, "NA")
         }
         .jst_stop(
-          paste0(col_head, "the map also assigns ", col_fmt,
-                 " as an ordinary value (", paste(rule_txt, collapse = "; "),
-                 "), and declaring it would make those cases missing ",
-                 "too."), "\n",
-          "To make both missing, use missing for both:\n",
+          .jst_ordinary_value_head(col_head, col_fmt,
+                                   paste(rule_txt, collapse = "; ")), "\n",
+          .jst_txt_both_missing,
           "  ", .jst_data_name, "$", var_name, "R <- jencode(",
           .jst_data_name, ", ", var_name, ", map = \"",
           gsub("\"", "\\\"",
@@ -5566,9 +5533,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
     if (!is.null(parsed_map$na_rule)) {
       n_plain_na <- sum(na_mask)
       if (n_plain_na == 0) {
-        .adv_note(paste0(
-          "Note: '", var_name, "' contained no NA values -- nothing was ",
-          "encoded for the NA rule."))
+        .adv_note(.jst_no_na_rule_text(var_name, "encoded"))
       } else {
         if (!is.null(parsed_map$na_rule$tagged)) {
           new_num[na_mask] <- haven::tagged_na(parsed_map$na_rule$tagged)
@@ -5877,9 +5842,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
             d1_pair)
         } else {
           paste0(d1_pair, "\n",
-                 "To make them one missing value instead, map ",
-                 if (length(flagged) == 2L) "both" else "them all",
-                 " to missing.")
+                 .jst_one_missing_line(length(flagged), "missing"))
         }
         # S352 (ruling R8's offered declarations; see the jrecode twin): a
         # map that gives a word a lettered marker makes the encoded variable
@@ -5925,9 +5888,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
               if (identical(convention, enc_conv)) d1_conv_arg
               else .jst_marker_conv_arg(enc_conv), ")",
               if (!one) paste0(
-                "\nTo make them one missing value instead, map ",
-                if (length(flagged) == 2L) "both" else "them all",
-                " to .", d1_free[1L], "."))
+                "\n",
+                .jst_one_missing_line(length(flagged), paste0(".", d1_free[1L]))))
           }
         }
         msgs <- c(msgs, paste0(
@@ -6496,7 +6458,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                else "name"
 
   if (!is.data.frame(data)) {
-    .jst_stop("The first argument must be a data frame.")
+    .jst_stop(.jst_txt_first_arg_frame)
   }
 
   # --- Resolve variable list (... vs vars; mutually exclusive) --------------
@@ -6533,9 +6495,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     .jst_vars_twice_stop(match.call(), "jdeclare_missing", dot_names, vars)
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
-    .jst_stop("`vars` must be one or more variable names in quotes, ",
-         "for example:\n",
-         "  vars = c(\"Age\", \"Income\")")
+    .jst_stop(.jst_txt_vars_quoted)
   }
 
   if (length(dot_names) > 0) {
@@ -6679,16 +6639,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     # the S345 item): the two lines offered before named mydata, which
     # changed a copy and left the list as it was. The form every offered
     # line for a place takes since v0.9.218 (.jst_place_lines()).
-    if (identical(.jst_data_arg_kind(data_sub_expr), "place")) {
-      .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
-                "To change ", .jst_term_text(data_sub_expr),
-                " itself, assign the result to it:\n",
-                .jst_place_assign_line(sys.call(), data_sub_expr))
-    }
-    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
-         "Name the data first, then rerun with modify = TRUE:\n",
-         "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "), "\n",
-         "  jdeclare_missing(mydata, ..., modify = TRUE)")
+    .jst_modify_name_stop(data_sub_expr, sys.call(), "jdeclare_missing")
   }
 
   # Validate convention argument up front.
@@ -6782,8 +6733,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   labels_tagged_raw <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1L) {
-      .jst_stop("the labels must be one quoted string, for example:\n",
-                "  labels = \"-99=Refused; -98=Don't know\"")
+      .jst_one_string_stop("labels", "-99=Refused; -98=Don't know")
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels, convention),
@@ -6811,17 +6761,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     # "Option A" were the help page's names for them, opaque with the page
     # closed.
     if (partial_names) {
-      .jst_stop("`codes` names some of its codes and not others. Name ",
-                "every code, as in codes = c(Refused = -99, Unknown = -98), ",
-                "or name none and give the labels with labels =.",
+      .jst_stop(.jst_codes_partial_text("Refused = -99, Unknown = -98"),
                 fn = "jdeclare_missing")
     }
 
     if (has_all_names && !is.null(labels)) {
-      .jst_stop("the codes are labeled twice: by their names in `codes` ",
-                "and by `labels`. Use one: the names, as in ",
-                "codes = c(Refused = -99), or labels = with codes that ",
-                "carry no names.",
+      .jst_stop(.jst_codes_twice_text("Refused = -99"),
                 fn = "jdeclare_missing")
     }
   } else {
@@ -7036,7 +6981,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       if (is.factor(col)) {
         .jst_stop("'", vn, "' is a factor; missing values can be declared ",
                   "on numeric and text variables only.\n",
-                  "Convert it to numbers first with jencode().")
+                  .jst_txt_jencode_first)
       }
 
       # --- Read existing UDM info on the column ----------------------------
@@ -9009,17 +8954,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   .jst_check_flag(modify, "modify")
   if (isTRUE(modify) && arg1$mode == "explicit" &&
       !is.symbol(data_sub_expr)) {
-    if (identical(.jst_data_arg_kind(data_sub_expr), "place")) {
-      .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
-                "To change ", .jst_term_text(data_sub_expr),
-                " itself, assign the result to it:\n",
-                .jst_place_assign_line(cl, data_sub_expr), fn = fn)
-    }
-    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
-              "Name the data first, then rerun with modify = TRUE:\n",
-              "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "),
-              "\n",
-              "  jdeclare_missing(mydata, ..., modify = TRUE)", fn = fn)
+    .jst_modify_name_stop(data_sub_expr, cl, "jdeclare_missing", fn = fn)
   }
 
   # The codes' shape, whatever their type, ahead of the numbers refusal
@@ -9038,16 +8973,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     all_named <- !is.null(cn) && all(!is.na(cn) & nzchar(cn))
     any_named <- !is.null(cn) && any(!is.na(cn) & nzchar(cn))
     if (any_named && !all_named) {
-      .jst_stop("`codes` names some of its codes and not others. Name ",
-                "every code, as in codes = c(Refused = \"REF\", Unknown = ",
-                "\"UNK\"), or name none and give the labels with labels =.",
+      .jst_stop(.jst_codes_partial_text("Refused = \"REF\", Unknown = \"UNK\""),
                 fn = fn)
     }
     if (all_named && !is.null(labels)) {
-      .jst_stop("the codes are labeled twice: by their names in `codes` ",
-                "and by `labels`. Use one: the names, as in ",
-                "codes = c(Refused = \"REF\"), or labels = with codes that ",
-                "carry no names.", fn = fn)
+      .jst_stop(.jst_codes_twice_text("Refused = \"REF\""), fn = fn)
     }
   }
 
@@ -9106,8 +9036,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   parsed_labels <- NULL
   if (!is.null(labels)) {
     if (!is.character(labels) || length(labels) != 1L || is.na(labels)) {
-      .jst_stop("the labels must be one quoted string, for example:\n",
-                "  labels = \"REF=Refused; UNKNOWN=Unknown\"", fn = fn)
+      .jst_one_string_stop("labels", "REF=Refused; UNKNOWN=Unknown", fn = fn)
     }
     parsed_labels <- tryCatch(
       .jst_parse_text_labels(labels),
@@ -10174,7 +10103,7 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
         .jst_wrap_indent(paste0(
           "Numeric missing codes become Stata-style missing values ",
           "(.a-.z)."), indent = 6L), "\n",
-        .jst_wrap_indent("Lowercase markers behave as true NAs in base R.",
+        .jst_wrap_indent(.jst_txt_stata_markers_na,
           indent = 6L), "\n",
         "  to = \"spss\"\n",
         # S250 (Rule H): the second clause paraphrased the first instead
@@ -10226,16 +10155,7 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
     # the S345 item): the two lines offered before named mydata, which
     # changed a copy and left the list as it was. The form every offered
     # line for a place takes since v0.9.218 (.jst_place_lines()).
-    if (identical(.jst_data_arg_kind(data_sub_expr), "place")) {
-      .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
-                "To change ", .jst_term_text(data_sub_expr),
-                " itself, assign the result to it:\n",
-                .jst_place_assign_line(sys.call(), data_sub_expr))
-    }
-    .jst_stop("modify = TRUE can only change a data frame that has a name.\n",
-         "Name the data first, then rerun with modify = TRUE:\n",
-         "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "), "\n",
-         "  jconvert(mydata, ..., modify = TRUE)")
+    .jst_modify_name_stop(data_sub_expr, sys.call(), "jconvert")
   }
 
   # --- Resolve variable list (... vs vars; mutually exclusive) ---------------
@@ -10271,9 +10191,7 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
     .jst_vars_twice_stop(match.call(), "jconvert", dot_names, vars)
   }
   if (!is.null(vars) && (!is.character(vars) || length(vars) == 0L)) {
-    .jst_stop("`vars` must be one or more variable names in quotes, ",
-         "for example:\n",
-         "  vars = c(\"Age\", \"Income\")")
+    .jst_stop(.jst_txt_vars_quoted)
   }
 
   if (length(dot_names) > 0) {

@@ -1017,7 +1017,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     ok <- .jst_confirm(
       paste0("'", obj_name, "' already exists in your environment. ",
              "Overwrite? (y/n): "),
-      "Add overwrite = TRUE to the call, then run it again."
+      .jst_txt_add_overwrite
     )
     if (!ok) {
       .jst_msg("Load cancelled.")
@@ -1272,7 +1272,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # overwrite check); a note, so a blank line sets the Loaded line off from
   # it (ruling R6).
   if (replaced) {
-    .jst_msg("'", obj_name, "' already existed and has been replaced.")
+    .jst_replaced_note(obj_name)
     .jst_note_fired <- TRUE
   }
   assign(obj_name, df, envir = target_env)
@@ -5277,7 +5277,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       "Convert first, then save again:",
       calls,
       if (!is.null(route)) route$note,
-      if (!is.null(pd_line)) c("Or save every declared missing value as plain NA instead:", pd_line)), collapse = "\n"))
+      if (!is.null(pd_line)) c(.jst_txt_pd_instead, pd_line)), collapse = "\n"))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -5299,7 +5299,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       paste0("Or turn ", .jst_plural(length(text_vars), "it", "each"),
              " into a numeric variable first with jencode().")),
     # Session 361 (the S218 item): the save that blanks them instead.
-    if (!is.null(pd_line)) c("Or save every declared missing value as plain NA instead:", pd_line)),
+    if (!is.null(pd_line)) c(.jst_txt_pd_instead, pd_line)),
     collapse = "\n")
 }
 
@@ -5582,7 +5582,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       style_phrase, ", incompatible with the .sav format.\n",
       "Convert first, then save again:\n",
       "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)",
-      if (!is.null(pd_line)) paste0("\n", "Or save every declared missing value as plain NA instead:", "\n", pd_line)))
+      if (!is.null(pd_line)) paste0("\n", .jst_txt_pd_instead, "\n", pd_line)))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -5594,7 +5594,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "with:\n",
     "  jconvert(", data_name, ", to = \"spss\", modify = TRUE)",
     # Session 361 (the S218 item): the save that blanks them instead.
-    if (!is.null(pd_line)) paste0("\n", "Or save every declared missing value as plain NA instead:", "\n", pd_line)
+    if (!is.null(pd_line)) paste0("\n", .jst_txt_pd_instead, "\n", pd_line)
   )
 }
 
@@ -5658,7 +5658,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       } else {
         "Save as R format (.rds) to keep all the codes, or reduce them first."
       },
-      if (!is.null(pd_line)) paste0("\n", "Or save every declared missing value as plain NA instead:", "\n", pd_line)
+      if (!is.null(pd_line)) paste0("\n", .jst_txt_pd_instead, "\n", pd_line)
     ))
   }
 
@@ -5688,7 +5688,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # Session 361 (the S218 item): SPSS format, every declared missing
     # value saved as plain NA.
     if (!is.null(pd_line)) c(
-      "To save as SPSS format (.sav) with every declared missing value as plain NA:",
+      .jst_txt_pd_sav,
       pd_line),
     "Or reduce each variable's declared missing values to fit."
   ), collapse = "\n")
@@ -5757,7 +5757,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
            if (n_c == 1L) "it:" else "them:"),
     sprintf("  jsave(%s, \"%s.rds\")", data_name, stem),
     if (!is.null(pd_line)) c(
-      "To save as SPSS format (.sav) with every declared missing value as plain NA:",
+      .jst_txt_pd_sav,
       pd_line),
     paste0("To make ", if (n_v == 1L) first else "a variable",
            " numbers first, whose missing values SPSS format keeps in ",
@@ -6150,10 +6150,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @keywords internal
 .jst_jsave_blanked_note <- function(n) {
   if (n > 0L) {
-    paste0("Note: ", n, " ",
-           .jst_plural(n, "cell holding a declared missing value was",
-                       "cells holding declared missing values were"),
-           " blanked (preserve.declarations = FALSE).")
+    paste0("Note: ", .jst_blanked_phrase(n))
   } else {
     paste0("Note: no cell held a declared missing value; the declarations ",
            "were dropped (preserve.declarations = FALSE).")
@@ -6252,11 +6249,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # preserve.declarations = FALSE that blanked SPSS-style codes -> confirm.
   if (!preserve.declarations && has_spss && n_blanked > 0) {
-    blanked <- paste0(
-      n_blanked, " ",
-      .jst_plural(n_blanked, "cell holding a declared missing value was",
-                  "cells holding declared missing values were"),
-      " blanked (preserve.declarations = FALSE).")
+    blanked <- .jst_blanked_phrase(n_blanked)
     ll <- labels_line(FALSE)
     return(.jst_wrap_message(paste0(
       # Rule E and the count's number (the Session 123 sweep; Session 357).
@@ -7258,7 +7251,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     ok <- .jst_confirm(
       paste0("File '", .jst_norm_path(out_path),
              "' already exists. Overwrite? (y/n): "),
-      "Add overwrite = TRUE to the call, then run it again."
+      .jst_txt_add_overwrite
     )
     if (!ok) {
       .jst_msg("Save cancelled.")
@@ -7645,14 +7638,14 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
       ok <- .jst_confirm(
         paste0("'", dest_name, "' already exists in your environment. ",
                "Overwrite? (y/n): "),
-        "Add overwrite = TRUE to the call, then run it again."
+        .jst_txt_add_overwrite
       )
       if (!ok) {
         .jst_msg("Copy cancelled.")
         return(invisible(NULL))
       }
     } else {
-      .jst_msg("'", dest_name, "' already existed and has been replaced.")
+      .jst_replaced_note(dest_name)
     }
   }
 

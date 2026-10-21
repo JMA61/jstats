@@ -1235,7 +1235,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
   cat("\n", sub("\n+$", "", info), "\n\n", sep = "")
   .jst_confirm(
     "Proceed? (y/n): ",
-    "Set path = to name the destination folder and rerun.",
+    .jst_txt_jai_set_path,
     subject = "confirmation"
   )
 }
@@ -1285,8 +1285,8 @@ jai <- function(setup = NULL, path = NULL, ...) {
   } else ""
 
   if (!interactive() && !explicit) {
-    .jst_stop("writing needs confirmation, and this session cannot ask.\n",
-              "Set path = to name the destination folder and rerun.")
+    .jst_stop(.jst_txt_jai_cannot_ask,
+              .jst_txt_jai_set_path)
   }
 
   keep_note <- paste0("Keep your own additions outside the marked block; ",
@@ -1478,8 +1478,8 @@ jai <- function(setup = NULL, path = NULL, ...) {
   had    <- file.exists(target)
 
   if (!interactive() && !explicit) {
-    .jst_stop("writing needs confirmation, and this session cannot ask.\n",
-              "Set path = to name the destination folder and rerun.")
+    .jst_stop(.jst_txt_jai_cannot_ask,
+              .jst_txt_jai_set_path)
   }
   if (!explicit) {
     info <- if (had) {
@@ -2019,9 +2019,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     if (isTRUE(lead)) "\n" else "",
     if (identical(data_kind, "expression")) {
       paste0(
-        "Note: The result is kept only if you assign it.\n",
-        "Name the data frame first, then assign the result to a variable ",
-        "in it:\n")
+        .jst_txt_assign_expr)
     } else {
       paste0("Note: This call changes ", data_name,
              " only if you assign the result:\n")
@@ -4046,4 +4044,396 @@ jai <- function(setup = NULL, path = NULL, ...) {
       })
   }
   paste(out, collapse = "\n")
+}
+
+# ==============================================================================
+# Shared message text (Session 383, the hygiene slate)
+# ==============================================================================
+# One home for each message that more than one function prints, so its
+# wording is changed once. Each value is the text the sites printed before
+# the merge, byte for byte: the merge changed no output. A message repeated
+# inside one function stays there, read and changed together; so do the
+# deliberate per-variable, listwise and pairwise forms, and words two
+# messages share by coincidence. The builders below take the parts a site
+# supplies (a name, an example) and return the text, or raise the stop.
+# The helpers that check and stop sit beside their callers:
+# .jst_need_ggplot(), .jst_check_cat_clash() and .jst_plot_result_stop() in
+# plot.R, .jst_beta_legends() in models.R, .jst_min_valid_threshold() and
+# .jst_scale_udm_note() in scales.R.
+
+#' Internal: message text shared by more than one function
+#'
+#' Constants holding the fixed text of messages that several functions
+#' print, each used where its message is built, so the wording is changed
+#' in one place (Session 383, the hygiene slate; the S381 item). Each value
+#' is the text its sites printed before the merge, byte for byte.
+#'
+#' \describe{
+#'   \item{\code{.jst_txt_jencode_first}}{the type refusals' remedy for a
+#'     factor or text variable: jrecode(), jrelabel(), jdeclare_missing(),
+#'     the registration verbs, a computed formula term.}
+#'   \item{\code{.jst_txt_modify_unnamed}, \code{.jst_txt_name_first}}{the
+#'     first two sentences of the stop for modify = TRUE on a data frame
+#'     given as an expression or a place: jrelabel(), jdeclare_missing(),
+#'     jconvert().}
+#'   \item{\code{.jst_txt_pd_instead}, \code{.jst_txt_pd_sav}}{the lead
+#'     of the preserve.declarations = FALSE route in jsave()'s .dta and
+#'     .sav refusals.}
+#'   \item{\code{.jst_txt_plot_nav}}{the line under a list of plots.}
+#'   \item{\code{.jst_txt_new_column}, \code{.jst_txt_new_column_it}}{the
+#'     remedy for a formula term jstats cannot use as written.}
+#'   \item{\code{.jst_txt_first_arg_frame}}{the recode family's stop for a
+#'     first argument that is not a data frame.}
+#'   \item{\code{.jst_txt_vars_quoted}}{the stop for vars = that does not
+#'     hold names in quotes.}
+#'   \item{\code{.jst_txt_add_overwrite}}{what the overwrite question says
+#'     when the session cannot ask it: jload(), jsave(), jcopy().}
+#'   \item{\code{.jst_txt_map_commas}, \code{.jst_txt_na_longhand},
+#'     \code{.jst_txt_na_one_rule}, \code{.jst_txt_map_empty}}{the map
+#'     parsers' messages, numeric and text.}
+#'   \item{\code{.jst_txt_frame_each_var}}{the close of the stops for a
+#'     variable given with its data frame attached.}
+#'   \item{\code{.jst_txt_default_route}}{the lead of the second route
+#'     when no data frame is named.}
+#'   \item{\code{.jst_txt_provide_two_vars}}{jcorr(), jsum() and javg()
+#'     given fewer than two variables.}
+#'   \item{\code{.jst_txt_jai_cannot_ask}, \code{.jst_txt_jai_set_path}}{
+#'     jai()'s writing setups.}
+#'   \item{\code{.jst_txt_value_id}}{value.id given to a function that
+#'     shows no value labels.}
+#'   \item{\code{.jst_txt_qq_produced}}{jt() and jaov()'s Q-Q plot line.}
+#'   \item{\code{.jst_txt_full_distribution}}{the close of jsum() and
+#'     javg()'s keep-it note.}
+#'   \item{\code{.jst_txt_levene_caption}}{the title of Levene's test in
+#'     jt() and jaov().}
+#'   \item{\code{.jst_txt_stata_markers_na}}{the stata option's line in
+#'     the convention menus.}
+#'   \item{\code{.jst_txt_ggplot_note}}{the note when the regression plots
+#'     cannot be drawn.}
+#'   \item{\code{.jst_txt_assign_expr}}{the assign-or-lose reminder's lead
+#'     for data given as an expression.}
+#'   \item{\code{.jst_txt_null_remedy}}{the stop for NULL given as the
+#'     data.}
+#'   \item{\code{.jst_txt_both_missing}}{jrecode() and jencode()'s stop
+#'     for a code the map also assigns as an ordinary value.}
+#' }
+#' @name .jst_shared_text
+#' @keywords internal
+NULL
+
+.jst_txt_jencode_first <- "Convert it to numbers first with jencode()."
+.jst_txt_modify_unnamed <- paste0("modify = TRUE can only change a data frame ",
+                                  "that has a name.\n")
+.jst_txt_name_first <- "Name the data first, then rerun with modify = TRUE:\n"
+.jst_txt_pd_instead <- paste0("Or save every declared missing value as plain NA ",
+                              "instead:")
+.jst_txt_pd_sav <- paste0("To save as SPSS format (.sav) with every declared ",
+                          "missing value as plain NA:")
+.jst_txt_plot_nav <- paste0("(use the arrow buttons in RStudio's Plots pane to ",
+                            "navigate):")
+.jst_txt_new_column <- paste0("Create the transformed variable as a new column ",
+                              "first, then use that column in the formula")
+.jst_txt_new_column_it <- paste0("Create it as a new column first, then use ",
+                                 "that column in the formula.")
+.jst_txt_first_arg_frame <- "The first argument must be a data frame."
+.jst_txt_vars_quoted <- paste0("`vars` must be one or more variable names in ",
+                               "quotes, for example:\n",
+                               "  vars = c(\"Age\", \"Income\")")
+.jst_txt_add_overwrite <- "Add overwrite = TRUE to the call, then run it again."
+.jst_txt_map_commas <- paste0("It looks like commas were used to separate ",
+                              "rules in the map string. Use semicolons ",
+                              "instead:\n")
+.jst_txt_na_longhand <- paste0("The NA(a) longhand is not supported in the ",
+                               "map argument.")
+.jst_txt_na_one_rule <- paste0("NA appears as an old value in more than one ",
+                               "map rule. Name NA (or System / SYSMIS) in at ",
+                               "most one rule.")
+.jst_txt_map_empty <- paste0("The map argument is empty.\n",
+                             "Provide at least one rule, for example:\n")
+.jst_txt_frame_each_var <- paste0("Name the data frame first, and each ",
+                                  "variable on its own.")
+.jst_txt_default_route <- "Or set a default first, then run the call:\n"
+.jst_txt_provide_two_vars <- paste0("Provide two or more variable names, ",
+                                    "for example:\n")
+.jst_txt_jai_cannot_ask <- paste0("writing needs confirmation, and this ",
+                                  "session cannot ask.\n")
+.jst_txt_jai_set_path <- "Set path = to name the destination folder and rerun."
+.jst_txt_value_id <- paste0("value.id is not supported here; it does not ",
+                            "display value labels.")
+.jst_txt_qq_produced <- "\n(Diagnostic plot produced: Normal Q-Q)\n"
+.jst_txt_full_distribution <- paste0("For the full distribution (min, max, ",
+                                     "SD), run jdesc() on the new column.")
+.jst_txt_levene_caption <- "Levene's Test for Homogeneity of Variance"
+.jst_txt_stata_markers_na <- "Lowercase markers behave as true NAs in base R."
+.jst_txt_ggplot_note <- paste0("Note: Install ggplot2 for diagnostic plots: ",
+                               "install.packages(\"ggplot2\")\n")
+.jst_txt_assign_expr <- paste0("Note: The result is kept only if you assign ",
+                               "it.\n",
+                               "Name the data frame first, then assign the ",
+                               "result to a variable in it:\n")
+.jst_txt_null_remedy <- paste0("Provide a data frame, or set a default first ",
+                               "with juse().")
+.jst_txt_both_missing <- "To make both missing, use missing for both:\n"
+
+#' Internal: the stop for a call that names no variables
+#'
+#' "no variables specified." and the function's own example on a line of
+#' its own, for jcomplete(), jdummy(), jnumeric(), jcount(), jlikert(),
+#' jdesc(), jfreq() and jplot() (Sessions 338, 369 and 370). One home since
+#' Session 383; the recode family's singular form is
+#' \code{.jst_no_var_stop()}.
+#'
+#' @param example Character(1). The example call, without its indent.
+#' @param fn Character or NULL. The function to name in the prefix; NULL
+#'   takes it from the call stack, as \code{.jst_stop()} does.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_no_vars_stop <- function(example, fn = NULL) {
+  .jst_stop("no variables specified.\n",
+            "Provide one or more variable names, for example:\n",
+            "  ", example, fn = fn)
+}
+
+#' Internal: the stop for labels = or map = that is not one quoted string
+#'
+#' jrecode(), jencode(), jrelabel() and jdeclare_missing(), each with an
+#' example of its own (Session 383).
+#'
+#' @param arg Character(1). "labels" or "map".
+#' @param example Character(1). The example string, without its quotes.
+#' @param fn Character or NULL. As for \code{.jst_no_vars_stop()}.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_one_string_stop <- function(arg, example, fn = NULL) {
+  .jst_stop("the ", arg, " must be one quoted string, for example:\n",
+            "  ", arg, " = \"", example, "\"", fn = fn)
+}
+
+#' Internal: the stop for modify = TRUE on data with no name
+#'
+#' jdeclare_missing() (numeric and text) and jconvert(): a place
+#' (lst$d) gets the call assigned back to it, without modify = TRUE
+#' (Session 352); an expression gets the naming line and the call on
+#' mydata (Session 383 gave the two one home; jrelabel() builds its own
+#' lines from the same two sentences).
+#'
+#' @param data_sub_expr The data argument as typed.
+#' @param call The call as made, from \code{sys.call()} in the exported
+#'   function (or the call the caller holds).
+#' @param fn_name Character(1). The function named in the offered line.
+#' @param fn Character or NULL. As for \code{.jst_no_vars_stop()}.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_modify_name_stop <- function(data_sub_expr, call, fn_name, fn = NULL) {
+  if (identical(.jst_data_arg_kind(data_sub_expr), "place")) {
+    .jst_stop(.jst_txt_modify_unnamed,
+              "To change ", .jst_term_text(data_sub_expr),
+              " itself, assign the result to it:\n",
+              .jst_place_assign_line(call, data_sub_expr), fn = fn)
+  }
+  .jst_stop(.jst_txt_modify_unnamed, .jst_txt_name_first,
+            "  mydata <- ", paste(deparse(data_sub_expr), collapse = " "), "\n",
+            "  ", fn_name, "(mydata, ..., modify = TRUE)", fn = fn)
+}
+
+#' Internal: a single = in a condition, and the remedy's lead
+#'
+#' The first two lines of the stop for a condition typed with one equals
+#' sign, in a variable list and in a filter (Session 383).
+#'
+#' @param lead Character(1). The input as typed.
+#' @param and_frame Character(1). ", and name the data frame" or "".
+#' @return Character(1), ending in a newline.
+#' @keywords internal
+.jst_single_eq_head <- function(lead, and_frame) {
+  paste0(lead, " uses a single =, which does not test equality in R.\n",
+         "Use == (two equals signs)", and_frame, ":\n")
+}
+
+#' Internal: a map rule's new value the parsers do not take
+#'
+#' The numeric and the text map parsers (Session 383).
+#'
+#' @param rhs,rule Character(1). The value and the rule as typed.
+#' @param one Character(1). The marker form in force, from
+#'   \code{.jst_marker_syntax()}.
+#' @return Character(1).
+#' @keywords internal
+.jst_map_rhs_text <- function(rhs, rule, one) {
+  paste0("Invalid new value '", rhs, "' in map rule '", rule, "'. ",
+         "New values must be numeric, the word missing, a system-NA ",
+         "alias (NA, System, or SYSMIS), or ", one, ".")
+}
+
+#' Internal: a map rule with no equals sign
+#'
+#' @param rule Character(1). The rule as typed.
+#' @param example Character(1). The parser's example map, without quotes.
+#' @return Character(1).
+#' @keywords internal
+.jst_map_no_eq_text <- function(rule, example) {
+  paste0("Invalid rule '", rule, "' in map argument: each rule must contain ",
+         "'=', for example:\n",
+         "  map = \"", example, "\"")
+}
+
+#' Internal: the cells jsave() blanked under preserve.declarations = FALSE
+#'
+#' The count and its sentence, for the save note and the label-loss note
+#' (Session 383).
+#'
+#' @param n Integer. The cells blanked.
+#' @return Character(1).
+#' @keywords internal
+.jst_blanked_phrase <- function(n) {
+  paste0(n, " ",
+         .jst_plural(n, "cell holding a declared missing value was",
+                     "cells holding declared missing values were"),
+         " blanked (preserve.declarations = FALSE).")
+}
+
+#' Internal: the note that a name in the workspace was replaced
+#'
+#' jload() and jcopy() in a session that cannot ask (Session 383).
+#'
+#' @param name Character(1). The name replaced.
+#' @return NULL, invisibly; the note is emitted.
+#' @keywords internal
+.jst_replaced_note <- function(name) {
+  .jst_msg("'", name, "' already existed and has been replaced.")
+}
+
+#' Internal: an NA rule with no plain NA to act on
+#'
+#' jrecode() and jencode() (Session 383).
+#'
+#' @param name Character(1). The variable.
+#' @param verb Character(1). "recoded" or "encoded".
+#' @return Character(1).
+#' @keywords internal
+.jst_no_na_rule_text <- function(name, verb) {
+  paste0("Note: '", name, "' contained no NA values -- nothing was ",
+         verb, " for the NA rule.")
+}
+
+#' Internal: a data frame's name that holds NULL
+#'
+#' The formula family's front door and the data-first resolver (Session
+#' 383).
+#'
+#' @param name Character(1). The name as typed.
+#' @return Character(1).
+#' @keywords internal
+.jst_null_frame_text <- function(name) {
+  paste0("'", name, "' exists but contains nothing (it is NULL).\n",
+         "This can happen when it was created by a call that returns nothing, ",
+         "such as ", name, " <- jload(...).\n",
+         "Rebuild or reload '", name, "', then rerun.")
+}
+
+#' Internal: the stop for an outcome with no variation within any group
+#'
+#' jt() and jaov() (Session 383).
+#'
+#' @param dv,group Character(1). The outcome and the grouping variable.
+#' @param test Character(1). "A t-test" or "An ANOVA".
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_no_variation_stop <- function(dv, group, test) {
+  .jst_stop("'", dv, "' has the same value for every case in each ",
+            "category of '", group, "'.\n",
+            test, " requires variation within at least one category.")
+}
+
+#' Internal: the stop for one variable as both outcome and group
+#'
+#' jt() and jaov() (Session 383).
+#'
+#' @param dup_var Character(1). The variable.
+#' @param test Character(1). "A t-test" or "An ANOVA".
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_dup_group_stop <- function(dup_var, test) {
+  .jst_stop(paste0("'", dup_var, "' appears as both the outcome variable ",
+                   "and the grouping variable.\n",
+                   test, " requires two different variables."))
+}
+
+#' Internal: the stop for one variable on both sides of a model
+#'
+#' jlm() and jlogistic() (Session 383).
+#'
+#' @param dup_var Character(1). The variable.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_dup_regression_stop <- function(dup_var) {
+  .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
+                   "and an independent variable.\n",
+                   "Each variable can only play one role in a regression."))
+}
+
+#' Internal: a code the map also assigns as an ordinary value
+#'
+#' The first sentence of jrecode() and jencode()'s stop; the second is
+#' \code{.jst_txt_both_missing} (Session 383).
+#'
+#' @param head Character(1). The sentence's opening, as the caller built it.
+#' @param code Character(1). The code, formatted.
+#' @param rules Character(1). The rules that assign it.
+#' @return Character(1).
+#' @keywords internal
+.jst_ordinary_value_head <- function(head, code, rules) {
+  paste0(head, "the map also assigns ", code, " as an ordinary value (",
+         rules, "), and declaring it would make those cases missing too.")
+}
+
+#' Internal: codes named in part
+#'
+#' jdeclare_missing(), numeric and text, each with its own example
+#' (Session 383).
+#'
+#' @param example Character(1). What goes inside c().
+#' @return Character(1).
+#' @keywords internal
+.jst_codes_partial_text <- function(example) {
+  paste0("`codes` names some of its codes and not others. Name every code, ",
+         "as in codes = c(", example, "), or name none and give the labels ",
+         "with labels =.")
+}
+
+#' Internal: codes labelled both by name and by labels =
+#'
+#' @param example Character(1). What goes inside c().
+#' @return Character(1).
+#' @keywords internal
+.jst_codes_twice_text <- function(example) {
+  paste0("the codes are labeled twice: by their names in `codes` and by ",
+         "`labels`. Use one: the names, as in codes = c(", example, "), or ",
+         "labels = with codes that carry no names.")
+}
+
+#' Internal: labels = names missing, and the map has no missing
+#'
+#' jrecode() and jencode() (Session 355; one home since Session 383).
+#'
+#' @param example Character(1). A map rule sending a value to missing.
+#' @return Character(1).
+#' @keywords internal
+.jst_missing_label_text <- function(example) {
+  paste0("labels names 'missing', but the map has no target for it.\n",
+         "Add 'missing' to the map (for example '", example, "'), or label ",
+         "the value directly.")
+}
+
+#' Internal: the line that maps several codes to one missing value
+#'
+#' jrecode() and jencode()'s D1 notes (Session 383).
+#'
+#' @param n Integer. How many codes were flagged.
+#' @param target Character(1). "missing", or a marker such as ".b".
+#' @return Character(1).
+#' @keywords internal
+.jst_one_missing_line <- function(n, target) {
+  paste0("To make them one missing value instead, map ",
+         if (n == 2L) "both" else "them all", " to ", target, ".")
 }

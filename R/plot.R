@@ -523,10 +523,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "data frame.", call. = FALSE)
   }
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   # Capture variable names
   variables <- rlang::enquos(...)
@@ -558,9 +555,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # Income, by = Region), which stops: two numeric variables want the
   # formula form.
   if (n_vars == 0) {
-    .jst_stop("no variables specified.\n",
-              "Provide one or more variable names, for example:\n",
-              "  jplot(community, Age)", fn = "jplot")
+    .jst_no_vars_stop("jplot(community, Age)", fn = "jplot")
   }
   if (n_vars > 2) {
     .jst_stop("only 1 or 2 variables can be plotted at once.\n",
@@ -614,11 +609,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
   # A variable cannot be both categorical and numeric-like (the assertions
   # contradict). numeric and count are both numeric-like, so they do not clash.
-  .cat_clash <- intersect(categorical, c(numeric, count))
-  if (length(.cat_clash) > 0) {
-    .jst_stop(paste0("'", .cat_clash, "'", collapse = ", "),
-         " listed in both categorical and numeric/count arguments.")
-  }
+  .jst_check_cat_clash(categorical, numeric, count)
 
   # Validate band argument
   valid_bands <- c("ci", "pi", "see", "none")
@@ -1092,11 +1083,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       }
     }
   }
-  .cat_clash <- intersect(categorical, c(numeric, count))
-  if (length(.cat_clash) > 0) {
-    .jst_stop(paste0("'", .cat_clash, "'", collapse = ", "),
-         " listed in both categorical and numeric/count arguments.")
-  }
+  .jst_check_cat_clash(categorical, numeric, count)
   # Per-variable override role for .jst_is_categorical (NULL when unasserted).
   .ov_for <- function(v) {
     if (v %in% categorical) "categorical"
@@ -1118,10 +1105,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "\"lm\", \"loess\", \"connect\".")
   }
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   # -- Apply pipeline --------------------------------------------------------
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
@@ -2440,10 +2424,7 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   # No "vif" since Session 376 (Jeff: the bar chart added nothing the VIF
   # table does not give, and the commercial packages draw none).
@@ -2806,10 +2787,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   # No "vif" since Session 376, as in jplot.jst_lm(). "logit" since
   # Session 378: the probability plot's companion, not in the core set.
@@ -3218,8 +3196,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
     cat("(Diagnostic plot produced: ", drawn, ")\n", sep = "")
   } else {
     .jst_msg_out(length(drawn), " plots produced\n",
-                 "(use the arrow buttons in RStudio's Plots pane to ",
-                 "navigate):")
+                 .jst_txt_plot_nav)
     for (i in seq_along(drawn)) cat("  ", i, ". ", drawn[i], "\n", sep = "")
   }
   cat("\n")
@@ -3240,10 +3217,7 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   plot_set <- .jst_resolve_which(which, core = "box",
                                  all_plots = c("box", "qq"),
@@ -3304,10 +3278,7 @@ jplot.jst_anova <- function(x, which = "core", ...) {
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   plot_set <- .jst_resolve_which(which, core = "box",
                                  all_plots = c("box", "qq"),
@@ -3367,10 +3338,7 @@ jplot.jst_corr <- function(x, which = "core", ...) {
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   r_matrix <- x$r
   n_vars   <- nrow(r_matrix)
@@ -3488,10 +3456,7 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-         "Install with: install.packages(\"ggplot2\")")
-  }
+  .jst_need_ggplot()
 
   plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
                                  class_name = "jst_crosstab")
@@ -3539,8 +3504,7 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
 #' @describeIn jplot (planned) direct plotting of a \code{jdesc()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_desc <- function(x, which = "core", ...) {
-  .jst_stop("Plotting jst_desc result objects is not supported.\n",
-       "Call jplot() with the data frame instead, for example:\n",
+  .jst_plot_result_stop("jst_desc",
        "  jplot(community, Age)       # histogram\n",
        "  jplot(community, Region)    # bar chart\n",
        "  jplot(WellbeingScore ~ Region, community, categorical = \"Region\")  # boxplot")
@@ -3549,9 +3513,52 @@ jplot.jst_desc <- function(x, which = "core", ...) {
 #' @describeIn jplot (planned) direct plotting of a \code{jfreq()} result is not yet available; this method points you to the data-first form, for example \code{jplot(data, Variable)}.
 #' @export
 jplot.jst_freq <- function(x, which = "core", ...) {
-  .jst_stop("Plotting jst_freq result objects is not supported.\n",
-       "Call jplot() with the data frame instead, for example:\n",
+  .jst_plot_result_stop("jst_freq",
        "  jplot(community, Region)    # bar chart\n",
        "  jplot(community, Region, Volunteer, ",
        "categorical = c(\"Region\", \"Volunteer\"))  # grouped bar chart")
+}
+
+#' Internal: stop when ggplot2 is not installed
+#'
+#' Every jplot() method and the formula form (Session 383 gave the eight
+#' copies one home).
+#'
+#' @return TRUE, invisibly, when ggplot2 is available; otherwise stops.
+#' @keywords internal
+.jst_need_ggplot <- function() {
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    .jst_stop("Package 'ggplot2' is required for jplot(). ",
+              "Install with: install.packages(\"ggplot2\")")
+  }
+  invisible(TRUE)
+}
+
+#' Internal: stop when a variable is named both categorical and numeric
+#'
+#' jplot()'s data-first and formula forms (Session 383). numeric and count
+#' are both numeric-like, so they do not clash with each other.
+#'
+#' @param categorical,numeric,count Character. The names in each argument.
+#' @return NULL, invisibly; stops on a clash.
+#' @keywords internal
+.jst_check_cat_clash <- function(categorical, numeric, count) {
+  clash <- intersect(categorical, c(numeric, count))
+  if (length(clash) > 0) {
+    .jst_stop(paste0("'", clash, "'", collapse = ", "),
+              " listed in both categorical and numeric/count arguments.")
+  }
+  invisible(NULL)
+}
+
+#' Internal: the stop for a jdesc() or jfreq() result given to jplot()
+#'
+#' @param cls Character(1). "jst_desc" or "jst_freq".
+#' @param ... The example lines, each indented and ending in a newline but
+#'   the last.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_plot_result_stop <- function(cls, ...) {
+  .jst_stop("Plotting ", cls, " result objects is not supported.\n",
+            "Call jplot() with the data frame instead, for example:\n", ...)
 }

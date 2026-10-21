@@ -875,11 +875,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
       e
     }
     fixed <- dep(fix_eq(raw_expr))
-    .jst_stop(
-      lead, " uses a single =, which does not test equality in R.\n",
-      "Use == (two equals signs)", and_frame, ":\n",
-      fixline(fixed)
-    )
+    .jst_stop(.jst_single_eq_head(lead, and_frame), fixline(fixed))
   }
 
   invisible(NULL)
@@ -1458,9 +1454,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   # theirs (S370) -- the refusal's line, jcomplete(mydata), stopped again.
   if (arg1$mode == "explicit" && length(dots_raw) == 0L &&
       identical(.jst_data_arg_kind(raw_data), "expression")) {
-    .jst_stop("no variables specified.\n",
-              "Provide one or more variable names, for example:\n",
-              "  jcomplete(community, Age, Income)")
+    .jst_no_vars_stop("jcomplete(community, Age, Income)")
   }
   if (arg1$mode == "explicit" &&
       identical(.jst_data_arg_kind(raw_data), "expression")) {
@@ -1506,9 +1500,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     # One sentence a line, the example on a line of its own (Session 369,
     # Fix Slate 17): a generic line on community, never the call's data
     # frame (Session 338).
-    .jst_stop("no variables specified.\n",
-              "Provide one or more variable names, for example:\n",
-              "  jcomplete(community, Age, Income)")
+    .jst_no_vars_stop("jcomplete(community, Age, Income)")
   }
 
   .jst_check_vars(data, variable_names, .jst_data_name, default_used = .jst_default_used)
@@ -1973,10 +1965,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
   # remove and clear forms are on the help page and in jdummy()'s status
   # display (voice Rule D).
   if (length(var_names) == 0L) {
-    .jst_stop("no variables specified.\n",
-              "Provide one or more variable names, for example:\n",
-              "  jdummy(community, Region)",
-              fn = "jdummy")
+    .jst_no_vars_stop("jdummy(community, Region)", fn = "jdummy")
   }
 
   .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
@@ -2318,9 +2307,7 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     # One sentence a line, the example on a line of its own (Session 370,
     # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
     # named the call's data frame beside placeholder variables.
-    .jst_stop("no variables specified.\n",
-              "Provide one or more variable names, for example:\n",
-              "  jnumeric(community, Environment2)")
+    .jst_no_vars_stop("jnumeric(community, Environment2)")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -2446,9 +2433,7 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
     # named the call's data frame beside placeholder variables.
     # community holds no count, so the example is a placeholder (MyData).
-    .jst_stop("no variables specified.\n",
-              "Provide one or more variable names, for example:\n",
-              "  jcount(MyData, Arrests)")
+    .jst_no_vars_stop("jcount(MyData, Arrests)")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 
@@ -2585,9 +2570,7 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
     # One sentence a line, the example on a line of its own (Session 370,
     # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
     # named the call's data frame beside placeholder variables.
-    .jst_stop("no variables specified.\n",
-              "Provide one or more variable names, for example:\n",
-              "  jlikert(community, Environment1, Environment2)")
+    .jst_no_vars_stop("jlikert(community, Environment1, Environment2)")
   }
   var_names <- vapply(variables, rlang::quo_name, character(1))
 

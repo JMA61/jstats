@@ -227,17 +227,11 @@
       if (identical(data_name, "NULL")) {
         .jst_stop(
           "NULL is not a valid data frame. ",
-          "Provide a data frame, or set a default first with juse().",
+          .jst_txt_null_remedy,
           fn = fn
         )
       }
-      .jst_stop(
-        "'", data_name, "' exists but contains nothing (it is NULL).\n",
-        "This can happen when it was created by a call that returns nothing, ",
-        "such as ", data_name, " <- jload(...).\n",
-        "Rebuild or reload '", data_name, "', then rerun.",
-        fn = fn
-      )
+      .jst_stop(.jst_null_frame_text(data_name), fn = fn)
     }
     # A data frame's name in quotes (ruling R18, Session 356): the call as
     # typed without them, when the string names a data frame the caller
@@ -1075,8 +1069,7 @@
         if (is.null(fr)) fr <- "MyData"
         and_frame <- ", and name the data frame"
       }
-      .jst_stop(typed, " uses a single =, which does not test equality in R.\n",
-                "Use == (two equals signs)", and_frame, ":\n",
+      .jst_stop(.jst_single_eq_head(typed, and_frame),
                 "  jsubset(", if (!is.null(fr)) paste0(fr, ", "),
                 fixed, ")", fn = fn_name)
     }
@@ -1310,7 +1303,7 @@
   .jst_stop(data_str, " is not a data frame.\n",
             "Name the data frame first:\n",
             "  ", .jst_term_text(offered), "\n",
-            "Or set a default first, then run the call:\n",
+            .jst_txt_default_route,
             "  juse(", fr, ")\n",
             "  ", .jst_term_text(.jst_default_route(fn_name, as.call(it))),
             fn = fn_name)
@@ -1899,7 +1892,7 @@
   .jst_stop(lead,
             first, "\n",
             "  ", .jst_term_text(as.call(new)), "\n",
-            "Or set a default first, then run the call:\n",
+            .jst_txt_default_route,
             "  juse(", fr, ")\n",
             "  ", .jst_term_text(.jst_default_route(fn, cl)),
             fn = fn)
@@ -2399,7 +2392,7 @@
                   first_arg_sub = NULL, first_arg_value = NULL))
     }
     .jst_stop("NULL is not a valid data argument. ",
-              "Provide a data frame, or set a default first with juse().",
+              .jst_txt_null_remedy,
               fn = fn_name)
   }
 
@@ -2447,13 +2440,7 @@
   # cryptic names<- length error (S205 finding). Stop cleanly instead.
   if (!eval_result$failed && is.null(eval_result$value)) {
     data_str <- paste(deparse(data_sub), collapse = "")
-    .jst_stop(
-      "'", data_str, "' exists but contains nothing (it is NULL).\n",
-      "This can happen when it was created by a call that returns nothing, ",
-      "such as ", data_str, " <- jload(...).\n",
-      "Rebuild or reload '", data_str, "', then rerun.",
-      fn = fn_name
-    )
+    .jst_stop(.jst_null_frame_text(data_str), fn = fn_name)
   }
 
   # -- A data frame's name in quotes (ruling R18, Session 356) --------------
@@ -2606,7 +2593,7 @@
     .jst_stop(
       head,
       "  ", line1, "\n",
-      "Or set a default first, then run the call:\n",
+      .jst_txt_default_route,
       "  juse(", fr, ")\n",
       "  ", line2,
     fn = fn_name)
@@ -2652,7 +2639,7 @@
               "  jsubset(", fr, ", ", .jst_term_text(s$expr), ")",
               fn = fn_name)
   }
-  .jst_stop(head, "Name the data frame first, and each variable on its own.",
+  .jst_stop(head, .jst_txt_frame_each_var,
             fn = fn_name)
 }
 
@@ -2721,7 +2708,7 @@
   if (!is.null(fix)) {
     .jst_stop(head, "Name the data frame first:\n  ", fix, fn = fn_name)
   }
-  .jst_stop(head, "Name the data frame first, and each variable on its own.",
+  .jst_stop(head, .jst_txt_frame_each_var,
             fn = fn_name)
 }
 
@@ -2913,7 +2900,7 @@
   # built from the text read jfreq(d$Sex[d, Age > 40], Grp).
   computed <- isTRUE(wrapped$computed)
   first    <- if (computed)
-    "Name the data frame first, and each variable on its own." else
+    .jst_txt_frame_each_var else
     "Name the data frame first:\n"
   # The placeholder frame gives way to the one data frame in the caller's
   # workspace that has every variable the line names (Session 356, ruling

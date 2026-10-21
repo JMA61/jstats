@@ -141,8 +141,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
   # joutput(value.id=) never arrives here as a per-call arg, so a non-NULL
   # value.id can only be an explicit per-call argument. (Session 62, Option A)
   if (!is.null(value.id)) {
-    .jst_stop("value.id is not supported here; it does not display ",
-         "value labels.")
+    .jst_stop(.jst_txt_value_id)
   }
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -227,7 +226,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       else "Only 1 was provided.\n",
       # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
       # no-variables stop gives: never the call's data frame (Session 338).
-      "Provide two or more variable names, for example:\n",
+      .jst_txt_provide_two_vars,
       "  jcorr(community, Income, Age, WellbeingScore)"
     ))
   }
@@ -1529,7 +1528,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                                      lead = TRUE) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
+    cat(.jst_txt_ggplot_note)
     return(invisible(NULL))
   }
 
@@ -1803,7 +1802,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                                            list = TRUE) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cat("Note: Install ggplot2 for diagnostic plots: install.packages(\"ggplot2\")\n")
+    cat(.jst_txt_ggplot_note)
     return(invisible(NULL))
   }
 
@@ -2012,8 +2011,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # The parenthesis on a line of its own (Jeff, S375): wrapped, it split
     # the instruction mid-phrase.
     .jst_msg_out(length(produced), " diagnostic plots produced\n",
-                 "(use the arrow buttons in RStudio's Plots pane to ",
-                 "navigate):")
+                 .jst_txt_plot_nav)
     for (i in seq_along(produced)) {
       cat("  ", i, ". ", produced[i], "\n", sep = "")
     }
@@ -3029,9 +3027,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # rewrite the right-hand side.
   dup_var <- .jst_formula_dup_var(formula)
   if (!is.null(dup_var)) {
-    .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
-                     "and an independent variable.\n",
-                     "Each variable can only play one role in a regression."))
+    .jst_dup_regression_stop(dup_var)
   }
 
   # Type gate (Session 46): the response must be numeric; predictors may be
@@ -3917,45 +3913,8 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                               logical(1))]
       hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
 
-      legends <- character(0)
-      if (identical(std, "product")) {
-        p_int <- has_int || any(!hand_sq)
-        p_pow <- has_pow || any(hand_sq)
-        if (p_int || p_pow) {
-          legends <- c(legends, paste0(
-            beta_header, " treats ",
-            .jst_term_kinds_phrase(p_int, p_pow, pow_noun, each = TRUE),
-            " as an ordinary predictor, as some other software does.\n",
-            "See ?jlm."))
-        }
-      } else {
-        if (has_int || has_pow) {
-          legends <- c(legends, paste0(
-            "In a model with ",
-            .jst_term_kinds_phrase(has_int, has_pow, pow_noun), ", ",
-            beta_header, " comes from centered predictors: a ", beta_header,
-            " can have the opposite sign from its b, and other software may ",
-            "report different ", beta_header, " values.\n",
-            "See ?jlm."))
-        }
-        if (length(hand) > 0L) {
-          what <- vapply(hand, function(h) {
-            if (identical(h$a, h$b)) paste0(h$col, " is ", h$a, " squared")
-            else paste0(h$col, " is ", h$a, " * ", h$b)
-          }, character(1))
-          one <- length(hand) == 1L
-          legends <- c(legends, paste0(
-            .jst_format_var_list(what, and = TRUE),
-            if (one) " entered as its own variable, so "
-            else ", each entered as its own variable, so ",
-            beta_header,
-            if (one) " treats it as an ordinary predictor, not as "
-            else " treats them as ordinary predictors, not as ",
-            .jst_term_kinds_phrase(any(!hand_sq), any(hand_sq), "squared term"),
-            ".\n",
-            "See ?jlm."))
-        }
-      }
+      legends <- .jst_beta_legends(std, beta_header, has_int, has_pow,
+                                   pow_noun, hand, hand_sq, "jlm")
       for (lg in legends) {
         cat("\n")
         .jst_msg_out(lg)
@@ -4050,8 +4009,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
         # two said one thing two ways, this one "use the back arrow in the
         # Plots pane to view all".
         .jst_msg_out("\n", length(plot_which), " diagnostic plots produced\n",
-                     "(use the arrow buttons in RStudio's Plots pane to ",
-                     "navigate):")
+                     .jst_txt_plot_nav)
         for (i in seq_along(plot_which)) {
           cat("  ", i, ". ", plot_labels[plot_which[i]], "\n", sep = "")
         }
@@ -4742,9 +4700,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # right-hand side.
   dup_var <- .jst_formula_dup_var(formula)
   if (!is.null(dup_var)) {
-    .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
-                     "and an independent variable.\n",
-                     "Each variable can only play one role in a regression."))
+    .jst_dup_regression_stop(dup_var)
   }
 
   # Type gate (Session 46): the response is binary and may be a recognized
@@ -5507,44 +5463,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
                             logical(1))]
     hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
-    if (identical(std, "product")) {
-      p_int <- has_int || any(!hand_sq)
-      p_pow <- has_pow || any(hand_sq)
-      if (p_int || p_pow) {
-        legends <- c(legends, paste0(
-          beta_header, " treats ",
-          .jst_term_kinds_phrase(p_int, p_pow, pow_noun, each = TRUE),
-          " as an ordinary predictor, as some other software does.\n",
-          "See ?jlogistic."))
-      }
-    } else {
-      if (has_int || has_pow) {
-        legends <- c(legends, paste0(
-          "In a model with ",
-          .jst_term_kinds_phrase(has_int, has_pow, pow_noun), ", ",
-          beta_header, " comes from centered predictors: a ", beta_header,
-          " can have the opposite sign from its b, and other software may ",
-          "report different ", beta_header, " values.\n",
-          "See ?jlogistic."))
-      }
-      if (length(hand) > 0L) {
-        what <- vapply(hand, function(h) {
-          if (identical(h$a, h$b)) paste0(h$col, " is ", h$a, " squared")
-          else paste0(h$col, " is ", h$a, " * ", h$b)
-        }, character(1))
-        one <- length(hand) == 1L
-        legends <- c(legends, paste0(
-          .jst_format_var_list(what, and = TRUE),
-          if (one) " entered as its own variable, so "
-          else ", each entered as its own variable, so ",
-          beta_header,
-          if (one) " treats it as an ordinary predictor, not as "
-          else " treats them as ordinary predictors, not as ",
-          .jst_term_kinds_phrase(any(!hand_sq), any(hand_sq), "squared term"),
-          ".\n",
-          "See ?jlogistic."))
-      }
-    }
+    legends <- c(legends,
+                 .jst_beta_legends(std, beta_header, has_int, has_pow,
+                                   pow_noun, hand, hand_sq, "jlogistic"))
   }
 
   # Profile-likelihood CI on the odds-ratio scale, computed once regardless of
@@ -5764,8 +5685,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
             plot_labels[plot_which[1]], ")\n", sep = "")
       } else {
         .jst_msg_out("\n", length(plot_which), " diagnostic plots produced\n",
-                     "(use the arrow buttons in RStudio's Plots pane to ",
-                     "navigate):")
+                     .jst_txt_plot_nav)
         for (i in seq_along(plot_which)) {
           cat("  ", i, ". ", plot_labels[plot_which[i]], "\n", sep = "")
         }
@@ -5999,8 +5919,7 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   # arg, so a non-NULL value.id can only be an explicit per-call argument.
   # (Session 62, Option A)
   if (!is.null(value.id)) {
-    .jst_stop("value.id is not supported here; it does not display ",
-         "value labels.")
+    .jst_stop(.jst_txt_value_id)
   }
 
   # Resolve the first argument: explicit data frame, juse default,
@@ -6260,4 +6179,68 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   class(ret) <- "jst_alpha"
   invisible(ret)
   })
+}
+
+#' Internal: the legends under a table of standardized coefficients
+#'
+#' The notes jlm() and jlogistic() print under their tables when a model
+#' holds interactions, powers or a product entered by hand: what the
+#' product method treats as an ordinary predictor, and what the centered
+#' methods change (Sessions 347 and 375). The two functions built them in
+#' one block each, the help page aside; Session 383 gave them one home.
+#'
+#' @param std Character(1). The standardization method.
+#' @param beta_header Character(1). The column's header.
+#' @param has_int,has_pow Logical(1). Whether the formula holds an
+#'   interaction, and a power.
+#' @param pow_noun Character(1). "squared term" or "power term".
+#' @param hand List. The products entered by hand, from
+#'   \code{.jst_hand_products()}.
+#' @param hand_sq Logical. Which of them square one variable.
+#' @param fn Character(1). The function whose help page the legends name.
+#' @return Character: the legends, possibly none.
+#' @keywords internal
+.jst_beta_legends <- function(std, beta_header, has_int, has_pow, pow_noun,
+                              hand, hand_sq, fn) {
+  see <- paste0("See ?", fn, ".")
+  legends <- character(0)
+  if (identical(std, "product")) {
+    p_int <- has_int || any(!hand_sq)
+    p_pow <- has_pow || any(hand_sq)
+    if (p_int || p_pow) {
+      legends <- c(legends, paste0(
+        beta_header, " treats ",
+        .jst_term_kinds_phrase(p_int, p_pow, pow_noun, each = TRUE),
+        " as an ordinary predictor, as some other software does.\n",
+        see))
+    }
+  } else {
+    if (has_int || has_pow) {
+      legends <- c(legends, paste0(
+        "In a model with ",
+        .jst_term_kinds_phrase(has_int, has_pow, pow_noun), ", ",
+        beta_header, " comes from centered predictors: a ", beta_header,
+        " can have the opposite sign from its b, and other software may ",
+        "report different ", beta_header, " values.\n",
+        see))
+    }
+    if (length(hand) > 0L) {
+      what <- vapply(hand, function(h) {
+        if (identical(h$a, h$b)) paste0(h$col, " is ", h$a, " squared")
+        else paste0(h$col, " is ", h$a, " * ", h$b)
+      }, character(1))
+      one <- length(hand) == 1L
+      legends <- c(legends, paste0(
+        .jst_format_var_list(what, and = TRUE),
+        if (one) " entered as its own variable, so "
+        else ", each entered as its own variable, so ",
+        beta_header,
+        if (one) " treats it as an ordinary predictor, not as "
+        else " treats them as ordinary predictors, not as ",
+        .jst_term_kinds_phrase(any(!hand_sq), any(hand_sq), "squared term"),
+        ".\n",
+        see))
+    }
+  }
+  legends
 }

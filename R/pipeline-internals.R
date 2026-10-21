@@ -2425,7 +2425,7 @@
     "Choose one for this session:",
     "  joptions(missing.convention = \"stata\")",
     paste0(
-      .jst_wrap_indent("Lowercase markers behave as true NAs in base R.",
+      .jst_wrap_indent(.jst_txt_stata_markers_na,
                        indent = 6L), "\n",
       .jst_wrap_indent(paste0("Recommended if you also run base R or ",
                               "AI-generated code."), indent = 6L)))

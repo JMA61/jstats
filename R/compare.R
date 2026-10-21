@@ -313,9 +313,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
   dup_var <- .jst_formula_dup_var(formula)
   if (!is.null(dup_var)) {
-    .jst_stop(paste0("'", dup_var, "' appears as both the outcome variable ",
-                     "and the grouping variable.\n",
-                     "A t-test requires two different variables."))
+    .jst_dup_group_stop(dup_var, "A t-test")
   }
 
   .jst_check_dummy_outcome(.jst_data_name, dv_name, "jt")
@@ -464,9 +462,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
       sqrt(sum((n_g - 1) * v_g) / (sum(n_g) - 2) * sum(1 / n_g))
     }
     if (se_d < 10 * .Machine$double.eps * max(abs(as.numeric(shape$mean)))) {
-      .jst_stop("'", dv_name, "' has the same value for every case in each ",
-                "category of '", group_name, "'.\n",
-                "A t-test requires variation within at least one category.")
+      .jst_no_variation_stop(dv_name, group_name, "A t-test")
     }
   }
 
@@ -564,7 +560,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     # centered under it. On the default alignment F (numeric) sat flush
     # right and p (text) flush left.
     .jst_print_table(levene_table,
-                     caption = "Levene's Test for Homogeneity of Variance",
+                     caption = .jst_txt_levene_caption,
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
                      align = rep("bc", 4L),
@@ -736,7 +732,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     if (length(rn) == length(t_resid)) names(t_resid) <- rn
   }
   if (qq_plot) {
-    cat("\n(Diagnostic plot produced: Normal Q-Q)\n")
+    cat(.jst_txt_qq_produced)
     .jst_plot_group_qq(t_resid, paired = paired)
   }
 
@@ -1107,9 +1103,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
 
   dup_var <- .jst_formula_dup_var(formula)
   if (!is.null(dup_var)) {
-    .jst_stop(paste0("'", dup_var, "' appears as both the outcome variable ",
-                     "and the grouping variable.\n",
-                     "An ANOVA requires two different variables."))
+    .jst_dup_group_stop(dup_var, "An ANOVA")
   }
 
   .jst_check_dummy_outcome(.jst_data_name, dv_name, "jaov")
@@ -1250,9 +1244,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     else data[[dv_name]],
     data[[group_name]])
   if (all(shape$flat | shape$n == 1L)) {
-    .jst_stop("'", dv_name, "' has the same value for every case in each ",
-              "category of '", group_name, "'.\n",
-              "An ANOVA requires variation within at least one category.")
+    .jst_no_variation_stop(dv_name, group_name, "An ANOVA")
   }
   if (welch && any(shape$flat)) {
     flat <- names(shape$flat)[shape$flat]
@@ -1323,7 +1315,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     # centered under it. On the default alignment F (numeric) sat flush
     # right and p (text) flush left.
     .jst_print_table(levene_table,
-                     caption = "Levene's Test for Homogeneity of Variance",
+                     caption = .jst_txt_levene_caption,
                      col.names = c("F", "df1", "df2", "p"),
                      row.names = FALSE,
                      align = rep("bc", 4L),
@@ -1604,7 +1596,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   aov_resid <- .jst_group_std_resid(aov_y, data[[group_name]],
                                     pooled = !welch)
   if (qq_plot) {
-    cat("\n(Diagnostic plot produced: Normal Q-Q)\n")
+    cat(.jst_txt_qq_produced)
     .jst_plot_group_qq(aov_resid)
   }
 

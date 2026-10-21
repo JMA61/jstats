@@ -829,11 +829,11 @@
   }
   if (is.factor(x)) {
     .jst_stop("'", var_name, "' is a factor", only, "\n",
-              "Convert it to numbers first with jencode().", fn = fn)
+              .jst_txt_jencode_first, fn = fn)
   }
   if (is.character(x)) {
     .jst_stop("'", var_name, "' is a character (text) variable", only, "\n",
-              "Convert it to numbers first with jencode().", fn = fn)
+              .jst_txt_jencode_first, fn = fn)
   }
   if (is.logical(x)) {
     .jst_stop("'", var_name, "' is a logical (TRUE/FALSE) variable", only,

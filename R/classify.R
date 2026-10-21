@@ -1259,14 +1259,12 @@
       var_txt  <- as.character(v[[2L]])
       new_col  <- paste0(var_txt, "_", fn_txt)
       .jst_stop("The formula applies a function to a variable: ", term_txt,
-                ".\nCreate the transformed variable as a new column first, ",
-                "then use that column in the formula:\n  ",
+                ".\n", .jst_txt_new_column, ":\n  ",
                 data_name, "$", new_col, " <- ", fn_txt, "(",
                 data_name, "$", var_txt, ")")
     }
     .jst_stop("The formula applies a function to a variable: ", term_txt,
-              ".\nCreate the transformed variable as a new column first, ",
-              "then use that column in the formula.")
+              ".\n", .jst_txt_new_column, ".")
   }
   invisible(NULL)
 }
@@ -2059,8 +2057,7 @@
     if (is.factor(res) || is.character(res)) {
       .jst_stop("The formula term ", .jst_term_text(rec$term),
                 " produces a categorical variable, not a numeric one.\n",
-                "Create it as a new column first, then use that column ",
-                "in the formula.")
+                .jst_txt_new_column_it)
     }
   }
   txt <- .jst_frame_object_text(rec, .jst_term_text(rec$term), data,
@@ -2520,7 +2517,7 @@
         }
         if (is.factor(data[[vn]]) || is.character(data[[vn]])) {
           .jst_stop(lead, "\n",
-                    "Convert it to numbers first with jencode().")
+                    .jst_txt_jencode_first)
         }
         .jst_stop(lead)
       }
@@ -2532,8 +2529,7 @@
     if (inherits(res, "error")) {
       .jst_stop("The formula term ", term_txt, " could not be computed (",
                 conditionMessage(res), ").\n",
-                "Create the transformed variable as a new column first, ",
-                "then use that column in the formula.")
+                .jst_txt_new_column, ".")
     }
 
     n_col <- NCOL(res)
@@ -2548,28 +2544,24 @@
     if (is.factor(res) || is.character(res)) {
       .jst_stop("The formula term ", term_txt, " produces a categorical ",
                 "variable, not a numeric one.\n",
-                "Create it as a new column first, then use that column ",
-                "in the formula.")
+                .jst_txt_new_column_it)
     }
     if (!is.numeric(res) && !is.logical(res)) {
       .jst_stop("The formula term ", term_txt, " does not produce a ",
                 "numeric variable.\n",
-                "Create the transformed variable as a new column first, ",
-                "then use that column in the formula.")
+                .jst_txt_new_column, ".")
     }
 
     res <- as.vector(res)
     if (length(res) == 1L && nrow(data) != 1L) {
       .jst_stop("The formula term ", term_txt, " produces a single value, ",
                 "not a variable with one value per case.\n",
-                "Create the transformed variable as a new column first, ",
-                "then use that column in the formula.")
+                .jst_txt_new_column, ".")
     }
     if (length(res) != nrow(data)) {
       .jst_stop("The formula term ", term_txt, " produces ", length(res),
                 " values for ", nrow(data), " cases.\n",
-                "Create the transformed variable as a new column first, ",
-                "then use that column in the formula.")
+                .jst_txt_new_column, ".")
     }
 
     # Non-finite guard (AUDIT-024): log(0) evaluates to -Inf, which base R
@@ -3421,7 +3413,7 @@
   rules <- rules[nchar(rules) > 0]
 
   if (length(rules) == 0) {
-    stop("The map argument is empty.\nProvide at least one rule, for example:\n",
+    stop(.jst_txt_map_empty,
          "  map = \"1=1; 2=0\"", call. = FALSE)
   }
 
@@ -3438,11 +3430,7 @@
   for (rule in rules) {
 
     if (!grepl("=", rule)) {
-      stop(paste0(
-        "Invalid rule '", rule, "' in map argument: each rule must contain ",
-        "'=', for example:\n",
-        "  map = \"1=0; 2,3=1\""
-      ), call. = FALSE)
+      stop(.jst_map_no_eq_text(rule, "1=0; 2,3=1"), call. = FALSE)
     }
 
     eq_pos <- regexpr("=", rule)[1]
@@ -3468,8 +3456,7 @@
       } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. ",
-          ms$rule, " The NA(a) ",
-          "longhand is not supported in the map argument."
+          ms$rule, " ", .jst_txt_na_longhand
         ), call. = FALSE)
       } else {
         # S355: "(Stata convention only)" since S240 meant Stata or SAS;
@@ -3493,8 +3480,7 @@
     if (any(is_na_alias)) {
       if (!is.null(result$na_rule)) {
         stop(paste0(
-          "NA appears as an old value in more than one map rule. ",
-          "Name NA (or System / SYSMIS) in at most one rule."
+          .jst_txt_na_one_rule
         ), call. = FALSE)
       }
       na_rhs <- .jst_parse_rhs_token(rhs, rule, convention)
@@ -3503,16 +3489,11 @@
         if (is.na(na_val)) {
           if (grepl(",", rhs) && grepl("=", rhs)) {
             stop(paste0(
-              "It looks like commas were used to separate rules in the map string. ",
-              "Use semicolons instead:\n",
+              .jst_txt_map_commas,
               "  map = \"1=5; 2=4; 3=3\""
             ), call. = FALSE)
           }
-          stop(paste0(
-            "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-            "New values must be numeric, the word missing, a system-NA ",
-            "alias (NA, System, or SYSMIS), or ", ms$one, "."
-          ), call. = FALSE)
+          stop(.jst_map_rhs_text(rhs, rule, ms$one), call. = FALSE)
         }
         na_rhs <- list(new_val = na_val, tagged = NULL)
       }
@@ -3569,16 +3550,11 @@
         # Detect commas used instead of semicolons between rules
         if (grepl(",", rhs) && grepl("=", rhs)) {
           stop(paste0(
-            "It looks like commas were used to separate rules in the map string. ",
-            "Use semicolons instead:\n",
+            .jst_txt_map_commas,
             "  map = \"1=5; 2=4; 3=3\""
           ), call. = FALSE)
         }
-        stop(paste0(
-          "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-          "New values must be numeric, the word missing, a system-NA ",
-          "alias (NA, System, or SYSMIS), or ", ms$one, "."
-        ), call. = FALSE)
+        stop(.jst_map_rhs_text(rhs, rule, ms$one), call. = FALSE)
       }
     }
 
@@ -3883,8 +3859,7 @@
   if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
     stop(paste0(
       "Invalid new value '", rhs_str, "' in map rule '", rule_str, "'. ",
-      .jst_marker_syntax(convention)$rule, " The NA(a) ",
-      "longhand is not supported in the map argument."
+      .jst_marker_syntax(convention)$rule, " ", .jst_txt_na_longhand
     ), call. = FALSE)
   }
 
@@ -4131,7 +4106,7 @@
   rules <- rules[nchar(rules) > 0]
 
   if (length(rules) == 0) {
-    stop("The map argument is empty.\nProvide at least one rule, for example:\n",
+    stop(.jst_txt_map_empty,
          "  map = \"Bail=1; Parole=2\"", call. = FALSE)
   }
 
@@ -4145,11 +4120,7 @@
 
     parts <- as.character(.jst_split_unquoted(rule, "="))
     if (length(parts) < 2L) {
-      stop(paste0(
-        "Invalid rule '", rule, "' in map argument: each rule must contain ",
-        "'=', for example:\n",
-        "  map = \"Bail=1; Remand,Parole=2\""
-      ), call. = FALSE)
+      stop(.jst_map_no_eq_text(rule, "Bail=1; Remand,Parole=2"), call. = FALSE)
     }
     # Split on the FIRST unquoted equals sign; anything after it rejoins,
     # so an unquoted equals sign inside the target is reported by the
@@ -4177,8 +4148,7 @@
       } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
         stop(paste0(
           "Invalid else action '", rhs, "' in map argument. ",
-          ms$rule, " The NA(a) ",
-          "longhand is not supported in the map argument."
+          ms$rule, " ", .jst_txt_na_longhand
         ), call. = FALSE)
       } else {
         # S355: "(Stata convention only)" since S240 meant Stata or SAS;
@@ -4203,8 +4173,7 @@
     if (any(is_na_alias)) {
       if (!is.null(result$na_rule)) {
         stop(paste0(
-          "NA appears as an old value in more than one map rule. ",
-          "Name NA (or System / SYSMIS) in at most one rule."
+          .jst_txt_na_one_rule
         ), call. = FALSE)
       }
       na_rhs <- .jst_parse_rhs_token(rhs, rule, convention)
@@ -4304,15 +4273,9 @@
 .jst_text_map_rhs_error <- function(rhs, rule, convention = NULL) {
   if (grepl(",", rhs) && grepl("=", rhs)) {
     return(paste0(
-      "It looks like commas were used to separate rules in the map string. ",
-      "Use semicolons instead:\n",
+      .jst_txt_map_commas,
       "  map = \"Bail=1; Parole=2; Remand=3\""
     ))
   }
-  paste0(
-    "Invalid new value '", rhs, "' in map rule '", rule, "'. ",
-    "New values must be numeric, the word missing, a system-NA ",
-    "alias (NA, System, or SYSMIS), or ",
-    .jst_marker_syntax(convention)$one, "."
-  )
+  .jst_map_rhs_text(rhs, rule, .jst_marker_syntax(convention)$one)
 }

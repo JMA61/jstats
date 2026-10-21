@@ -211,7 +211,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
     # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
     # no-variables stop gives: never the call's data frame (Session 338).
     .jst_stop("At least 2 variables are required.\n",
-              "Provide two or more variable names, for example:\n",
+              .jst_txt_provide_two_vars,
               "  community$EnvTotal <- jsum(community, Environment1, Environment3)")
   }
 
@@ -253,23 +253,8 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   n_vars  <- length(var_names)
   n_cases <- nrow(items)
 
-  # Determine minimum valid threshold
-  if (is.null(min.valid)) {
-    threshold <- n_vars   # Default: all must be non-missing
-  } else {
-    if (!is.numeric(min.valid) || length(min.valid) != 1L ||
-        is.na(min.valid) || min.valid != as.integer(min.valid) ||
-        min.valid < 1) {
-      .jst_stop_arg("jsum", "min.valid", "a positive integer.")
-    }
-    threshold <- as.integer(min.valid)
-    if (threshold > n_vars) {
-      .jst_stop(
-        "min.valid (", threshold, ") cannot exceed the number of variables (",
-        n_vars, ")."
-      )
-    }
-  }
+  # Determine minimum valid threshold (all must be non-missing by default)
+  threshold <- .jst_min_valid_threshold(min.valid, n_vars, "jsum")
 
   # Compute row-wise sums
   mat        <- as.matrix(items)
@@ -330,16 +315,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
   # missing values were masked above, report where, mirroring how the
   # analysis pipeline surfaces its auto-conversions. SPSS is silent
   # here too, so this stays off at standard/minimal.
-  if (length(.udm_conv$converted) > 0) {
-    conv_parts <- vapply(names(.udm_conv$converted), function(v) {
-      nc <- .udm_conv$converted[[v]]$n_cells
-      paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
-    }, character(1))
-    .jst_advisory_note(paste0(
-      "\nNote: declared SPSS-style missing values were treated as missing ",
-      "for this calculation -- ", paste(conv_parts, collapse = ", "), "."
-    ))
-  }
+  .jst_scale_udm_note(.udm_conv)
 
   # Assign-or-lose reminder (standard + full): jsum() returns the totals
   # invisibly, so an unassigned top-level call silently drops them. The
@@ -354,7 +330,7 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
       .jst_assign_lines("jsum", .jst_data_name,
                         if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub),
                         if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)),
-      "For the full distribution (min, max, SD), run jdesc() on the new column."
+      .jst_txt_full_distribution
     )
   }
 
@@ -495,7 +471,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
     # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
     # no-variables stop gives: never the call's data frame (Session 338).
     .jst_stop("At least 2 variables are required.\n",
-              "Provide two or more variable names, for example:\n",
+              .jst_txt_provide_two_vars,
               "  community$EnvAvg <- javg(community, Environment1, Environment3)")
   }
 
@@ -537,23 +513,8 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   n_vars  <- length(var_names)
   n_cases <- nrow(items)
 
-  # Determine minimum valid threshold
-  if (is.null(min.valid)) {
-    threshold <- n_vars   # Default: all must be non-missing
-  } else {
-    if (!is.numeric(min.valid) || length(min.valid) != 1L ||
-        is.na(min.valid) || min.valid != as.integer(min.valid) ||
-        min.valid < 1) {
-      .jst_stop_arg("javg", "min.valid", "a positive integer.")
-    }
-    threshold <- as.integer(min.valid)
-    if (threshold > n_vars) {
-      .jst_stop(
-        "min.valid (", threshold, ") cannot exceed the number of variables (",
-        n_vars, ")."
-      )
-    }
-  }
+  # Determine minimum valid threshold (all must be non-missing by default)
+  threshold <- .jst_min_valid_threshold(min.valid, n_vars, "javg")
 
   # Compute row-wise means
   mat      <- as.matrix(items)
@@ -622,16 +583,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   # missing values were masked above, report where, mirroring how the
   # analysis pipeline surfaces its auto-conversions. SPSS is silent
   # here too, so this stays off at standard/minimal.
-  if (length(.udm_conv$converted) > 0) {
-    conv_parts <- vapply(names(.udm_conv$converted), function(v) {
-      nc <- .udm_conv$converted[[v]]$n_cells
-      paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
-    }, character(1))
-    .jst_advisory_note(paste0(
-      "\nNote: declared SPSS-style missing values were treated as missing ",
-      "for this calculation -- ", paste(conv_parts, collapse = ", "), "."
-    ))
-  }
+  .jst_scale_udm_note(.udm_conv)
 
   # Assign-or-lose reminder (standard + full): javg() returns the scores
   # invisibly, so an unassigned top-level call silently drops them. The
@@ -643,7 +595,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
       .jst_assign_lines("javg", .jst_data_name,
                         if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub),
                         if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)),
-      "For the full distribution (min, max, SD), run jdesc() on the new column."
+      .jst_txt_full_distribution
     )
   }
 
@@ -656,4 +608,56 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   }
 
   return(invisible(result))
+}
+
+#' Internal: jsum() and javg()'s min.valid, checked
+#'
+#' NULL means every variable must be present; otherwise a positive whole
+#' number no larger than the number of variables (Session 383 gave the two
+#' copies one home).
+#'
+#' @param min.valid The argument as given.
+#' @param n_vars Integer. The number of variables.
+#' @param fn Character(1). "jsum" or "javg", for the argument stop.
+#' @return Integer(1): the threshold.
+#' @keywords internal
+.jst_min_valid_threshold <- function(min.valid, n_vars, fn) {
+  if (is.null(min.valid)) return(n_vars)
+  if (!is.numeric(min.valid) || length(min.valid) != 1L ||
+      is.na(min.valid) || min.valid != as.integer(min.valid) ||
+      min.valid < 1) {
+    .jst_stop_arg(fn, "min.valid", "a positive integer.")
+  }
+  threshold <- as.integer(min.valid)
+  if (threshold > n_vars) {
+    .jst_stop(
+      "min.valid (", threshold, ") cannot exceed the number of variables (",
+      n_vars, ")."
+    )
+  }
+  threshold
+}
+
+#' Internal: jsum() and javg()'s note on declared SPSS-style values
+#'
+#' At joutput("full") only: where declared SPSS-style missing values were
+#' treated as missing for the calculation, as the analysis pipeline reports
+#' its conversions (Session 383 gave the two copies one home).
+#'
+#' @param udm_conv List. The conversion record, with a converted element
+#'   holding each variable's n_cells.
+#' @return NULL, invisibly.
+#' @keywords internal
+.jst_scale_udm_note <- function(udm_conv) {
+  if (length(udm_conv$converted) > 0) {
+    conv_parts <- vapply(names(udm_conv$converted), function(v) {
+      nc <- udm_conv$converted[[v]]$n_cells
+      paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
+    }, character(1))
+    .jst_advisory_note(paste0(
+      "\nNote: declared SPSS-style missing values were treated as missing ",
+      "for this calculation -- ", paste(conv_parts, collapse = ", "), "."
+    ))
+  }
+  invisible(NULL)
 }
