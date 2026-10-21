@@ -88,10 +88,6 @@ is the text its sites printed before the merge, byte for byte.
 
   the stata option's line in the convention menus.
 
-- `.jst_txt_ggplot_note`:
-
-  the note when the regression plots cannot be drawn.
-
 - `.jst_txt_assign_expr`:
 
   the assign-or-lose reminder's lead for data given as an expression.
