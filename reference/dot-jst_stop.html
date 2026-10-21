@@ -15,7 +15,7 @@ rather than erroring. Always signals with call. = FALSE.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.259</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.260</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,6 +91,11 @@ name – takes <code>raw</code>, so the outer emitter wraps the text once, at
 its new indent. Nested as caught, a line wrapped for the full width was
 indented and broken again mid-phrase. The error itself is unchanged: a
 simpleError with no call, as <code>stop(..., call. = FALSE)</code> makes.</p>
+<p>A message longer than R prints whole (Session 387): R cuts an error
+printed at the prompt to <code>getOption("warning.length")</code> bytes,
+silently, so a long stop lost its last lines – usually the line to run.
+<code><a href="dot-jst_print_room.html">.jst_print_room()</a></code> raises the setting for this one message, and
+it is put back as the stop unwinds, after R has printed it.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

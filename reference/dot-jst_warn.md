@@ -35,3 +35,10 @@ warn = 1) from a user's default session. warn = 2 converts warnings to
 errors with R's own "converted from warning" chrome; that is a developer
 setting and is out of scope – recorded here, not budgeted. (Session 256;
 supersedes the Session 254 reserve-0 rationale.)
+
+R stores a warning's text cut to `getOption("warning.length")` bytes
+when it is signalled, so
+[`.jst_print_room()`](https://jma61.github.io/jstats/reference/dot-jst_print_room.md)
+raises the setting for a longer one and it is put back as this function
+returns (Session 387, as in
+[`.jst_stop()`](https://jma61.github.io/jstats/reference/dot-jst_stop.md)).

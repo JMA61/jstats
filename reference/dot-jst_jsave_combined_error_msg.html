@@ -23,7 +23,7 @@ byte identical to the pre-accumulation behavior."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.259</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.260</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,8 @@ byte identical to the pre-accumulation behavior.</p>
 <span>  <span class="va">ext</span>,</span>
 <span>  assign_line <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  save_line <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  copy_of <span class="op">=</span> <span class="st">"your data"</span></span>
+<span>  copy_of <span class="op">=</span> <span class="st">"your data"</span>,</span>
+<span>  save_name <span class="op">=</span> <span class="st">"mydata"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -95,13 +96,19 @@ for data given as an expression.</the></p></dd>
 
 
 <dt id="arg-save-line">save_line<a class="anchor" aria-label="anchor" href="#arg-save-line"></a></dt>
-<dd><p>Character(1) or NULL: the jsave() line on mydata that
-closes the message, for data given as an expression.</p></dd>
+<dd><p>Character(1) or NULL: the jsave() line that closes the
+message – on mydata for data given as an expression, on the data
+frame's own name or place when a part names refused variables.</p></dd>
 
 
 <dt id="arg-copy-of">copy_of<a class="anchor" aria-label="anchor" href="#arg-copy-of"></a></dt>
 <dd><p>Character(1): what the copy is made from, "your d data
 frame" when the expression names one data frame, else "your data".</p></dd>
+
+
+<dt id="arg-save-name">save_name<a class="anchor" aria-label="anchor" href="#arg-save-name"></a></dt>
+<dd><p>Character(1): what the closing line says it saves,
+"mydata" or the data frame's name or place.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -115,6 +122,10 @@ line that makes mydata comes once, under the header, so the parts' lines
 run top to bottom on one copy – each part repeating it had undone the
 parts above – and the closing line names the save that works on it,
 since the expression run again stops as before.</p>
+<p>Given a name or a place, the message closes on "run jsave() again"
+unless a part names variables the format refuses: then the call as typed
+would stop on them, and the closing line is the save that works, with
+clean.names = TRUE (ruling R33, Session 387).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -50,3 +50,10 @@ on several variables, which nests each variable's refusal under its name
 indent. Nested as caught, a line wrapped for the full width was indented
 and broken again mid-phrase. The error itself is unchanged: a
 simpleError with no call, as `stop(..., call. = FALSE)` makes.
+
+A message longer than R prints whole (Session 387): R cuts an error
+printed at the prompt to `getOption("warning.length")` bytes, silently,
+so a long stop lost its last lines – usually the line to run.
+[`.jst_print_room()`](https://jma61.github.io/jstats/reference/dot-jst_print_room.md)
+raises the setting for this one message, and it is put back as the stop
+unwinds, after R has printed it.
