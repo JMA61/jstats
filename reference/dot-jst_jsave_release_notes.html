@@ -31,7 +31,7 @@ declare-then-resave pair."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.260</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.261</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,7 +75,14 @@ declare-then-resave pair.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_release_notes</span><span class="op">(</span><span class="va">data</span>, <span class="va">data_name</span>, <span class="va">file_arg</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_release_notes</span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
+<span>  <span class="va">data_name</span>,</span>
+<span>  <span class="va">file_arg</span>,</span>
+<span>  code_name <span class="op">=</span> <span class="va">data_name</span>,</span>
+<span>  assign_line <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  clean_names <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -84,7 +91,8 @@ declare-then-resave pair.</p>
 
 <dl><dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>The data frame as written (post any preserve.declarations
-collapse, so a stripped frame has no evidence and stays silent).</p></dd>
+collapse, so a stripped frame has no evidence and stays silent),
+carrying the data frame's own variable names.</p></dd>
 
 
 <dt id="arg-data-name">data_name<a class="anchor" aria-label="anchor" href="#arg-data-name"></a></dt>
@@ -97,10 +105,38 @@ path, echoed into the resave line. Never the raw file argument: a
 Windows backslash path inside the quoted recipe is a parse error
 on paste.</p></dd>
 
+
+<dt id="arg-code-name">code_name<a class="anchor" aria-label="anchor" href="#arg-code-name"></a></dt>
+<dd><p>Character. The data frame as the lines name it:
+<code>data_name</code>, or mydata for data given as an expression.</p></dd>
+
+
+<dt id="arg-assign-line">assign_line<a class="anchor" aria-label="anchor" href="#arg-assign-line"></a></dt>
+<dd><p>Character(1) or NULL: the line that makes mydata,
+<code>"  mydata &lt;- &lt;the expression&gt;"</code>, first in the block.</p></dd>
+
+
+<dt id="arg-clean-names">clean_names<a class="anchor" aria-label="anchor" href="#arg-clean-names"></a></dt>
+<dd><p>Logical: the call's <code>clean.names</code>, kept in the
+save line.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Character scalar note, or <code>NULL</code> when nothing fires.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Since Session 388 (Fix Slate 27; printed calls run, S343) the lines run
+as printed after every save that gives the note. After clean.names =
+TRUE the note names the data frame's own variable, which jsave() passes
+in place of the file's name – the declare line named the file's name,
+which the data frame does not hold – and the save line keeps
+clean.names = TRUE, without which it stopped on the names. A name that
+R reads only in backticks gets them. Given an expression as the data,
+the lines name mydata after the line that makes it, the S339 form,
+where both had named the expression: modify = TRUE stopped on it, and
+the save wrote the unchanged data again.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

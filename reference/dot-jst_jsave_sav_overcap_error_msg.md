@@ -18,7 +18,8 @@ reduction.
   text_vars = character(0),
   prose_name = data_name,
   stem = data_name,
-  pd_line = NULL
+  pd_line = NULL,
+  dta_names = FALSE
 )
 ```
 
@@ -60,6 +61,14 @@ reduction.
   indented, or NULL (Session 361, the S218 item): the save that makes
   every declared missing value plain NA in the file, offered beside the
   conversion.
+
+- dta_names:
+
+  Logical: does the data frame hold a variable name that Stata format
+  (.dta) refuses? Then the Stata route's jsave() line carries
+  `clean.names = TRUE`, without which it stopped on that name – SPSS
+  takes long and in, which Stata reserves (Session 388, Fix Slate 27;
+  ruling R33, every line a part offers runs where it sits).
 
 ## Value
 
