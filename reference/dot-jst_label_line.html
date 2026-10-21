@@ -4,12 +4,18 @@ attribute, the variable label among them, so a conversion line jstats
 offers is followed, where the variable has a label, by the line that puts
 it back: attr(d$v, &quot;label&quot;) &amp;lt;- &quot;...&quot;, the label escaped. jload()'s
 as.numeric() lines (.jst_numeric_lines(), Session 381) and
-jscreen()'s as.Date() lines (.jst_date_text_report()) share it."><meta property="og:description" content="Session 382 (Fix Slate 25). as.numeric() and as.Date() drop every
+jscreen()'s as.Date() lines (.jst_date_text_report()) share it.
+Since Session 384 (Fix Slate 26) jsave()'s as.POSIXct() and
+as.character() lines too (.jst_jsave_unsupported_type_error_msg(),
+.jst_jsave_long_category_error_msg()), which drop it the same way."><meta property="og:description" content="Session 382 (Fix Slate 25). as.numeric() and as.Date() drop every
 attribute, the variable label among them, so a conversion line jstats
 offers is followed, where the variable has a label, by the line that puts
 it back: attr(d$v, &quot;label&quot;) &amp;lt;- &quot;...&quot;, the label escaped. jload()'s
 as.numeric() lines (.jst_numeric_lines(), Session 381) and
-jscreen()'s as.Date() lines (.jst_date_text_report()) share it."></head><body>
+jscreen()'s as.Date() lines (.jst_date_text_report()) share it.
+Since Session 384 (Fix Slate 26) jsave()'s as.POSIXct() and
+as.character() lines too (.jst_jsave_unsupported_type_error_msg(),
+.jst_jsave_long_category_error_msg()), which drop it the same way."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -17,7 +23,7 @@ jscreen()'s as.Date() lines (.jst_date_text_report()) share it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.257</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.258</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,7 +55,10 @@ attribute, the variable label among them, so a conversion line jstats
 offers is followed, where the variable has a label, by the line that puts
 it back: <code>attr(d$v, "label") &lt;- "..."</code>, the label escaped. jload()'s
 as.numeric() lines (<code><a href="dot-jst_numeric_lines.html">.jst_numeric_lines()</a></code>, Session 381) and
-jscreen()'s as.Date() lines (<code><a href="dot-jst_date_text_report.html">.jst_date_text_report()</a></code>) share it.</p>
+jscreen()'s as.Date() lines (<code><a href="dot-jst_date_text_report.html">.jst_date_text_report()</a></code>) share it.
+Since Session 384 (Fix Slate 26) jsave()'s as.POSIXct() and
+as.character() lines too (<code><a href="dot-jst_jsave_unsupported_type_error_msg.html">.jst_jsave_unsupported_type_error_msg()</a></code>,
+<code><a href="dot-jst_jsave_long_category_error_msg.html">.jst_jsave_long_category_error_msg()</a></code>), which drop it the same way.</p>
     </div>
 
     <div class="section level2">

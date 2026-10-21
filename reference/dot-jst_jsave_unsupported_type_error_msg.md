@@ -9,11 +9,21 @@ produces one clean package-level error that names the column(s) and
 their type(s) and gives the right remedy for each: complex/list/raw have
 no sensible conversion and are dropped, while POSIXlt converts
 faithfully to POSIXct (the same instant, which the formats can store).
+Since Session 384 (Fix Slate 26) a POSIXlt column with a label gets,
+after its as.POSIXct() line, the line that puts the label back
+([`.jst_label_line()`](https://jma61.github.io/jstats/reference/dot-jst_label_line.md)),
+since as.POSIXct() drops it.
 
 ## Usage
 
 ``` r
-.jst_jsave_unsupported_type_error_msg(vars, types, ext, data_name)
+.jst_jsave_unsupported_type_error_msg(
+  vars,
+  types,
+  ext,
+  data_name,
+  labels = NULL
+)
 ```
 
 ## Arguments
@@ -34,6 +44,11 @@ faithfully to POSIXct (the same instant, which the formats can store).
 - data_name:
 
   The data frame's name, used in the suggested fix code.
+
+- labels:
+
+  A list parallel to `vars`: each column's "label" attribute, or NULL
+  where it has none. NULL gives no label lines.
 
 ## Value
 

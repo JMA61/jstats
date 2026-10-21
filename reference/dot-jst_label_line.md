@@ -8,7 +8,11 @@ jload()'s as.numeric() lines
 ([`.jst_numeric_lines()`](https://jma61.github.io/jstats/reference/dot-jst_numeric_lines.md),
 Session 381) and jscreen()'s as.Date() lines
 ([`.jst_date_text_report()`](https://jma61.github.io/jstats/reference/dot-jst_date_text_report.md))
-share it.
+share it. Since Session 384 (Fix Slate 26) jsave()'s as.POSIXct() and
+as.character() lines too
+([`.jst_jsave_unsupported_type_error_msg()`](https://jma61.github.io/jstats/reference/dot-jst_jsave_unsupported_type_error_msg.md),
+[`.jst_jsave_long_category_error_msg()`](https://jma61.github.io/jstats/reference/dot-jst_jsave_long_category_error_msg.md)),
+which drop it the same way.
 
 ## Usage
 

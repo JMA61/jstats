@@ -7,7 +7,10 @@ list..." for a POSIXlt column, which is list-backed). This helper
 produces one clean package-level error that names the column(s) and
 their type(s) and gives the right remedy for each: complex/list/raw have
 no sensible conversion and are dropped, while POSIXlt converts faithfully
-to POSIXct (the same instant, which the formats can store).'><meta property="og:description" content='The statistical interchange formats (.sav, .dta, .xpt) cannot store
+to POSIXct (the same instant, which the formats can store). Since Session
+384 (Fix Slate 26) a POSIXlt column with a label gets, after its
+as.POSIXct() line, the line that puts the label back
+(.jst_label_line()), since as.POSIXct() drops it.'><meta property="og:description" content='The statistical interchange formats (.sav, .dta, .xpt) cannot store
 complex, list, raw, or POSIXlt columns; the underlying writers abort
 mid-write with a low-level message that does not name the offending
 column (e.g. "Columns of type complex not supported yet", or "...type
@@ -15,7 +18,10 @@ list..." for a POSIXlt column, which is list-backed). This helper
 produces one clean package-level error that names the column(s) and
 their type(s) and gives the right remedy for each: complex/list/raw have
 no sensible conversion and are dropped, while POSIXlt converts faithfully
-to POSIXct (the same instant, which the formats can store).'></head><body>
+to POSIXct (the same instant, which the formats can store). Since Session
+384 (Fix Slate 26) a POSIXlt column with a label gets, after its
+as.POSIXct() line, the line that puts the label back
+(.jst_label_line()), since as.POSIXct() drops it.'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -23,7 +29,7 @@ to POSIXct (the same instant, which the formats can store).'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.257</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.258</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,12 +64,21 @@ list..." for a POSIXlt column, which is list-backed). This helper
 produces one clean package-level error that names the column(s) and
 their type(s) and gives the right remedy for each: complex/list/raw have
 no sensible conversion and are dropped, while POSIXlt converts faithfully
-to POSIXct (the same instant, which the formats can store).</p>
+to POSIXct (the same instant, which the formats can store). Since Session
+384 (Fix Slate 26) a POSIXlt column with a label gets, after its
+as.POSIXct() line, the line that puts the label back
+(<code><a href="dot-jst_label_line.html">.jst_label_line()</a></code>), since as.POSIXct() drops it.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_unsupported_type_error_msg</span><span class="op">(</span><span class="va">vars</span>, <span class="va">types</span>, <span class="va">ext</span>, <span class="va">data_name</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">.jst_jsave_unsupported_type_error_msg</span><span class="op">(</span></span>
+<span>  <span class="va">vars</span>,</span>
+<span>  <span class="va">types</span>,</span>
+<span>  <span class="va">ext</span>,</span>
+<span>  <span class="va">data_name</span>,</span>
+<span>  labels <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -85,6 +100,11 @@ to POSIXct (the same instant, which the formats can store).</p>
 
 <dt id="arg-data-name">data_name<a class="anchor" aria-label="anchor" href="#arg-data-name"></a></dt>
 <dd><p>The data frame's name, used in the suggested fix code.</p></dd>
+
+
+<dt id="arg-labels">labels<a class="anchor" aria-label="anchor" href="#arg-labels"></a></dt>
+<dd><p>A list parallel to <code>vars</code>: each column's "label"
+attribute, or NULL where it has none. NULL gives no label lines.</p></dd>
 
 </dl></div>
     <div class="section level2">
