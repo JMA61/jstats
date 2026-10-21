@@ -4,11 +4,19 @@
 \alias{.jst_jsave_release_notes}
 \title{Internal helper: jsave's undeclared-stray release note}
 \usage{
-.jst_jsave_release_notes(data, data_name, file_arg)
+.jst_jsave_release_notes(
+  data,
+  data_name,
+  file_arg,
+  code_name = data_name,
+  assign_line = NULL,
+  clean_names = FALSE
+)
 }
 \arguments{
 \item{data}{The data frame as written (post any preserve.declarations
-collapse, so a stripped frame has no evidence and stays silent).}
+collapse, so a stripped frame has no evidence and stays silent),
+carrying the data frame's own variable names.}
 
 \item{data_name}{Character. The frame's display name.}
 
@@ -16,6 +24,15 @@ collapse, so a stripped frame has no evidence and stays silent).}
 path, echoed into the resave line. Never the raw file argument: a
 Windows backslash path inside the quoted recipe is a parse error
 on paste.}
+
+\item{code_name}{Character. The data frame as the lines name it:
+\code{data_name}, or mydata for data given as an expression.}
+
+\item{assign_line}{Character(1) or NULL: the line that makes mydata,
+\code{"  mydata <- <the expression>"}, first in the block.}
+
+\item{clean_names}{Logical: the call's \code{clean.names}, kept in the
+save line.}
 }
 \value{
 Character scalar note, or \code{NULL} when nothing fires.
@@ -34,5 +51,17 @@ strays); and an undeclared suspicious code sits on a column. Silent
 when the frame declares nothing anywhere (the pure-guess case).
 Groups by column when codes differ; the remedy is a runnable
 declare-then-resave pair.
+}
+\details{
+Since Session 388 (Fix Slate 27; printed calls run, S343) the lines run
+as printed after every save that gives the note. After clean.names =
+TRUE the note names the data frame's own variable, which jsave() passes
+in place of the file's name -- the declare line named the file's name,
+which the data frame does not hold -- and the save line keeps
+clean.names = TRUE, without which it stopped on the names. A name that
+R reads only in backticks gets them. Given an expression as the data,
+the lines name mydata after the line that makes it, the S339 form,
+where both had named the expression: modify = TRUE stopped on it, and
+the save wrote the unchanged data again.
 }
 \keyword{internal}

@@ -5647,6 +5647,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   \code{preserve.declarations = FALSE}, indented, or NULL (Session 361,
 #'   the S218 item): the save that makes every declared missing value
 #'   plain NA in the file, offered beside the conversion.
+#' @param dta_names Logical: does the data frame hold a variable name that
+#'   Stata format (.dta) refuses? Then the Stata route's jsave() line
+#'   carries \code{clean.names = TRUE}, without which it stopped on that
+#'   name -- SPSS takes long and in, which Stata reserves (Session 388, Fix
+#'   Slate 27; ruling R33, every line a part offers runs where it sits).
 #'
 #' @return Character scalar suitable as a \code{.jst_jsave_combined_error_msg}
 #'   section (no \code{jsave():} prefix; that is added on emission).
@@ -5655,7 +5660,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                                              text_vars = character(0),
                                              prose_name = data_name,
                                              stem = data_name,
-                                             pd_line = NULL) {
+                                             pd_line = NULL,
+                                             dta_names = FALSE) {
 
   output_level <- getOption(".jst_output_level", "standard")
   n     <- length(overcap_info)
@@ -5699,10 +5705,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "",
     "To save in R format (.rds) instead, keeping all the codes:",
     sprintf("  jsave(%s, \"%s.rds\")", data_name, stem),
+    # Session 388 (Fix Slate 27): the save carries clean.names = TRUE when
+    # Stata refuses a name the data frame holds, or it stopped on the name.
     if (stata_route) c(
       "To convert to Stata and save as Stata format (.dta), also keeping all the codes:",
       sprintf("  jconvert(%s, to = \"stata\", modify = TRUE)", data_name),
-      sprintf("  jsave(%s, \"%s.dta\")", data_name, stem)),
+      sprintf("  jsave(%s, \"%s.dta\"%s)", data_name, stem,
+              if (isTRUE(dta_names)) ", clean.names = TRUE" else "")),
     # Session 361 (the S218 item): SPSS format, every declared missing
     # value saved as plain NA.
     if (!is.null(pd_line)) c(
@@ -6122,18 +6131,39 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Groups by column when codes differ; the remedy is a runnable
 #' declare-then-resave pair.
 #'
+#' Since Session 388 (Fix Slate 27; printed calls run, S343) the lines run
+#' as printed after every save that gives the note. After clean.names =
+#' TRUE the note names the data frame's own variable, which jsave() passes
+#' in place of the file's name -- the declare line named the file's name,
+#' which the data frame does not hold -- and the save line keeps
+#' clean.names = TRUE, without which it stopped on the names. A name that
+#' R reads only in backticks gets them. Given an expression as the data,
+#' the lines name mydata after the line that makes it, the S339 form,
+#' where both had named the expression: modify = TRUE stopped on it, and
+#' the save wrote the unchanged data again.
+#'
 #' @param data The data frame as written (post any preserve.declarations
-#'   collapse, so a stripped frame has no evidence and stays silent).
+#'   collapse, so a stripped frame has no evidence and stays silent),
+#'   carrying the data frame's own variable names.
 #' @param data_name Character. The frame's display name.
 #' @param file_arg Character. The normalized (forward-slash) target
 #'   path, echoed into the resave line. Never the raw file argument: a
 #'   Windows backslash path inside the quoted recipe is a parse error
 #'   on paste.
+#' @param code_name Character. The data frame as the lines name it:
+#'   \code{data_name}, or mydata for data given as an expression.
+#' @param assign_line Character(1) or NULL: the line that makes mydata,
+#'   \code{"  mydata <- <the expression>"}, first in the block.
+#' @param clean_names Logical: the call's \code{clean.names}, kept in the
+#'   save line.
 #'
 #' @return Character scalar note, or \code{NULL} when nothing fires.
 #'
 #' @keywords internal
-.jst_jsave_release_notes <- function(data, data_name, file_arg) {
+.jst_jsave_release_notes <- function(data, data_name, file_arg,
+                                     code_name = data_name,
+                                     assign_line = NULL,
+                                     clean_names = FALSE) {
   # Evidence columns (Reading 2, S239): numeric-code (SPSS-form)
   # declarations. Tag-form columns are self-declaring and do not testify
   # about numeric strays, so they are neither evidence nor exempt.
@@ -6218,19 +6248,25 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       paste0("c(", paste(vapply(cs, .jst_fmt_code, character(1)),
                          collapse = ", "), ")")
     }
-    paste0("  jdeclare_missing(", data_name, ", ", vn, ", codes = ", ct,
-           rel_carg, ", modify = TRUE)")
+    # The variable as a line of R takes it: in backticks when it needs them
+    # (Session 388), since the data frame's own name, which the line now
+    # gives, can be one a format refuses for a space or a symbol.
+    paste0("  jdeclare_missing(", code_name, ", ",
+           paste(deparse(as.name(vn), backtick = TRUE), collapse = ""),
+           ", codes = ", ct, rel_carg, ", modify = TRUE)")
   }, character(1))
-  jsave_line <- paste0("  jsave(", data_name, ", \"", file_arg,
-                       "\", overwrite = TRUE)")
-  n_lines <- length(decl_lines) + 1L
+  # The save as the call made it (Session 388): clean.names = TRUE kept,
+  # without which the save stopped on the names the file had changed.
+  jsave_line <- paste0("  jsave(", code_name, ", \"", .jst_dq_escape(file_arg),
+                       "\", overwrite = TRUE",
+                       if (isTRUE(clean_names)) ", clean.names = TRUE", ")")
+  lines <- c(assign_line, decl_lines, jsave_line)
   intro <- paste0("To declare ", if (plural) "them" else "it",
                   " and save again, run",
-                  if (n_lines == 2L) " both:" else ":")
+                  if (length(lines) == 2L) " both:" else ":")
 
   paste0(head1, "\n", head2, "\n",
-         intro, "\n", paste(decl_lines, collapse = "\n"), "\n",
-         jsave_line)
+         intro, "\n", paste(lines, collapse = "\n"))
 }
 
 
@@ -7239,12 +7275,16 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
         }
       }
       if (length(overcap_info) > 0) {
+        # The Stata route's save carries clean.names = TRUE when Stata
+        # refuses a name the data frame holds (Session 388, Fix Slate 27).
+        dta_refused <- nrow(.jst_save_name_problems(names(data), "dta")) > 0L
         sections[[length(sections) + 1L]] <-
           .jst_jsave_sav_overcap_error_msg(overcap_info, code_name,
                                            .jst_declared_text_vars(data),
                                            prose_name = data_name,
                                            stem       = code_stem,
-                                           pd_line    = pd_line)
+                                           pd_line    = pd_line,
+                                           dta_names  = dta_refused)
       }
       # A text variable's declared value over 8 bytes (the S372 item, Slate
       # E5): a .sav keeps 8 bytes of a string missing value, so the value is
@@ -7422,6 +7462,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # frame labels of .dta and .xpt shortened here, between characters
   # (ReadStat cut a .dta label inside a character), and .sav's long labels
   # noted, which ReadStat shortens cleanly (.jst_save_label_limits()).
+  # The data frame's own names are kept for the release note's lines
+  # (Session 388), which run on the data frame, not the file.
+  names_given   <- names(data)
   names_changed <- NULL
   if (ext %in% c("sav", "dta", "xpt") && isTRUE(clean.names)) {
     probs <- .jst_save_name_problems(names(data), ext)
@@ -7598,9 +7641,19 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     # The resave recipe echoes the NORMALIZED path (the same
     # .jst_norm_path form the Saved line prints), never the raw file
     # argument: a Windows backslash path inside the quoted recipe is a
-    # parse error on paste (S241 walk finding).
-    release_note <- .jst_jsave_release_notes(data, data_name,
-                                             .jst_norm_path(out_path))
+    # parse error on paste (S241 walk finding). Since Session 388 (Fix
+    # Slate 27) the note reads the frame with the data frame's own names --
+    # its lines run on the data frame, whose names clean.names = TRUE left
+    # alone -- keeps clean.names = TRUE in its save, and given an expression
+    # names mydata after the line that makes it.
+    note_data <- data
+    if (!is.null(names_changed)) names(note_data) <- names_given
+    release_note <- .jst_jsave_release_notes(
+      note_data, data_name, .jst_norm_path(out_path),
+      code_name   = code_name,
+      assign_line = if (identical(data_kind, "expression"))
+        paste0("  mydata <- ", .jst_term_text(data_sub)),
+      clean_names = clean.names)
     if (!is.null(release_note)) loss_notes <- c(loss_notes, release_note)
   }
 
