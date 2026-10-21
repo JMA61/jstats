@@ -3351,6 +3351,73 @@
 }
 
 
+#' Internal: a map's else rule read
+#'
+#' else=NA (or System, SYSMIS), else=copy, or else= a marker (.a; the letter
+#' as typed kept, S245); a marker spelled otherwise, NA(...), or any other
+#' word stops, in the parsers' plain voice (the calling recode re-frames
+#' it). .jst_parse_map() and .jst_parse_text_map() each held this block
+#' (Session 386, the twin build).
+#'
+#' @param result The map being parsed.
+#' @param rhs Character(1): the else rule's right side.
+#' @param ms The parser's marker phrasing (.jst_marker_syntax()).
+#' @return The map, its else fields set.
+#' @keywords internal
+.jst_parse_else_rhs <- function(result, rhs, ms) {
+  rhs_lower <- tolower(rhs)
+  if (rhs_lower %in% c("na", "sysmis", "system")) {
+    result$else_action   <- "na"
+    result$else_tag      <- NULL
+    result$else_explicit <- TRUE
+  } else if (rhs_lower == "copy") {
+    result$else_action   <- "copy"
+    result$else_tag      <- NULL
+    result$else_explicit <- TRUE
+  } else if (grepl("^\\.[a-z]$", rhs_lower)) {
+    result$else_action   <- "tagged"
+    result$else_tag      <- substr(rhs_lower, 2L, 2L)
+    result$else_tag_raw  <- substr(rhs, 2L, 2L)   # as typed (S245)
+    result$else_explicit <- TRUE
+  } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
+    stop(paste0(
+      "Invalid else action '", rhs, "' in map argument. ",
+      ms$rule, " ", .jst_txt_na_longhand
+    ), call. = FALSE)
+  } else {
+    # S355: "(Stata convention only)" since S240 meant Stata or SAS;
+    # under SPSS convention a marker in a map is refused.
+    stop(paste0(
+      "Invalid else action '", rhs, "' in map argument. Use ",
+      "'else=NA', 'else=copy', or ", ms$eg,
+      " (Stata or SAS convention only)."
+    ), call. = FALSE)
+  }
+  result
+}
+
+#' Internal: a map rule's right side, as the map stores it
+#'
+#' A token (a marker, the word missing) as .jst_parse_rhs_token() read it,
+#' else the number the parser read: new_val, tagged, tagged_raw and missing,
+#' in that order. .jst_parse_map() and .jst_parse_text_map() each held this
+#' block (Session 386, the twin build); each keeps its own stop for a right
+#' side that is neither.
+#'
+#' @param rhs_parsed The token read, or NULL.
+#' @param new_val The number read (used only when rhs_parsed is NULL).
+#' @return list(new_val, tagged, tagged_raw, missing).
+#' @keywords internal
+.jst_map_rule_entry <- function(rhs_parsed, new_val) {
+  if (!is.null(rhs_parsed)) {
+    return(list(new_val    = rhs_parsed$new_val,
+                tagged     = rhs_parsed$tagged,
+                tagged_raw = rhs_parsed$tagged_raw,
+                missing    = isTRUE(rhs_parsed$missing)))
+  }
+  list(new_val = new_val, tagged = NULL, tagged_raw = NULL, missing = FALSE)
+}
+
 #' Internal helper: parse a recoding-map string into a structured rule list
 #'
 #' Parses a map string of the form \code{"1=1; 2,3=2; 4,5=3; else=copy"}
@@ -3439,34 +3506,8 @@
 
     # else rule
     if (tolower(lhs) == "else") {
-      rhs_lower <- tolower(rhs)
-      if (rhs_lower %in% c("na", "sysmis", "system")) {
-        result$else_action   <- "na"
-        result$else_tag      <- NULL
-        result$else_explicit <- TRUE
-      } else if (rhs_lower == "copy") {
-        result$else_action   <- "copy"
-        result$else_tag      <- NULL
-        result$else_explicit <- TRUE
-      } else if (grepl("^\\.[a-z]$", rhs_lower)) {
-        result$else_action   <- "tagged"
-        result$else_tag      <- substr(rhs_lower, 2L, 2L)
-        result$else_tag_raw  <- substr(rhs, 2L, 2L)   # as typed (S245)
-        result$else_explicit <- TRUE
-      } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
-        stop(paste0(
-          "Invalid else action '", rhs, "' in map argument. ",
-          ms$rule, " ", .jst_txt_na_longhand
-        ), call. = FALSE)
-      } else {
-        # S355: "(Stata convention only)" since S240 meant Stata or SAS;
-        # under SPSS convention a marker in a map is refused.
-        stop(paste0(
-          "Invalid else action '", rhs, "' in map argument. Use ",
-          "'else=NA', 'else=copy', or ", ms$eg,
-          " (Stata or SAS convention only)."
-        ), call. = FALSE)
-      }
+      # The else rule's action (.jst_parse_else_rhs(), both parsers; S386).
+      result <- .jst_parse_else_rhs(result, rhs, ms)
       next
     }
 
@@ -3536,15 +3577,7 @@
     # new value
     rhs_parsed <- .jst_parse_rhs_token(rhs, rule, convention)
 
-    if (!is.null(rhs_parsed)) {
-      new_val     <- rhs_parsed$new_val
-      tagged      <- rhs_parsed$tagged
-      tagged_raw  <- rhs_parsed$tagged_raw
-      tok_missing <- isTRUE(rhs_parsed$missing)
-    } else {
-      tagged      <- NULL
-      tagged_raw  <- NULL
-      tok_missing <- FALSE
+    if (is.null(rhs_parsed)) {
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
         # Detect commas used instead of semicolons between rules
@@ -3558,15 +3591,13 @@
       }
     }
 
-    result$mappings[[length(result$mappings) + 1]] <- list(
-      old_vals     = old_vals,
-      old_tags     = old_tags,
-      old_tags_raw = old_tags_raw,
-      new_val      = new_val,
-      tagged       = tagged,
-      tagged_raw   = tagged_raw,
-      missing      = tok_missing
-    )
+    # The rule's right side: a token's code or marker, else the number
+    # (.jst_map_rule_entry(), both parsers; Session 386).
+    result$mappings[[length(result$mappings) + 1]] <- c(
+      list(old_vals     = old_vals,
+           old_tags     = old_tags,
+           old_tags_raw = old_tags_raw),
+      .jst_map_rule_entry(rhs_parsed, new_val))
   }
 
   if (length(result$mappings) == 0 && is.null(result$na_rule)) {
@@ -4131,34 +4162,8 @@
     # --- else clause (reserved; recognized unquoted only) -------------------
     lhs_word <- .jst_unquote_word(lhs)
     if (!lhs_word$quoted && identical(tolower(lhs_word$text), "else")) {
-      rhs_lower <- tolower(rhs)
-      if (rhs_lower %in% c("na", "sysmis", "system")) {
-        result$else_action   <- "na"
-        result$else_tag      <- NULL
-        result$else_explicit <- TRUE
-      } else if (rhs_lower == "copy") {
-        result$else_action   <- "copy"
-        result$else_tag      <- NULL
-        result$else_explicit <- TRUE
-      } else if (grepl("^\\.[a-z]$", rhs_lower)) {
-        result$else_action   <- "tagged"
-        result$else_tag      <- substr(rhs_lower, 2L, 2L)
-        result$else_tag_raw  <- substr(rhs, 2L, 2L)   # as typed (S245)
-        result$else_explicit <- TRUE
-      } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
-        stop(paste0(
-          "Invalid else action '", rhs, "' in map argument. ",
-          ms$rule, " ", .jst_txt_na_longhand
-        ), call. = FALSE)
-      } else {
-        # S355: "(Stata convention only)" since S240 meant Stata or SAS;
-        # under SPSS convention a marker in a map is refused.
-        stop(paste0(
-          "Invalid else action '", rhs, "' in map argument. Use ",
-          "'else=NA', 'else=copy', or ", ms$eg,
-          " (Stata or SAS convention only)."
-        ), call. = FALSE)
-      }
+      # The else rule's action (.jst_parse_else_rhs(), both parsers; S386).
+      result <- .jst_parse_else_rhs(result, rhs, ms)
       next
     }
 
@@ -4220,28 +4225,17 @@
     # --- new value ----------------------------------------------------------
     rhs_parsed <- .jst_parse_rhs_token(rhs, rule, convention)
 
-    if (!is.null(rhs_parsed)) {
-      new_val     <- rhs_parsed$new_val
-      tagged      <- rhs_parsed$tagged
-      tagged_raw  <- rhs_parsed$tagged_raw
-      tok_missing <- isTRUE(rhs_parsed$missing)
-    } else {
-      tagged      <- NULL
-      tagged_raw  <- NULL
-      tok_missing <- FALSE
+    if (is.null(rhs_parsed)) {
       new_val <- suppressWarnings(as.numeric(rhs))
       if (is.na(new_val)) {
         stop(.jst_text_map_rhs_error(rhs, rule, convention), call. = FALSE)
       }
     }
 
-    result$mappings[[length(result$mappings) + 1]] <- list(
-      old_vals   = old_vals,
-      new_val    = new_val,
-      tagged     = tagged,
-      tagged_raw = tagged_raw,
-      missing    = tok_missing
-    )
+    # The rule's right side (.jst_map_rule_entry(), both parsers; S386).
+    result$mappings[[length(result$mappings) + 1]] <- c(
+      list(old_vals = old_vals),
+      .jst_map_rule_entry(rhs_parsed, new_val))
   }
 
   # An else-only map is legal here (unlike the numeric parser): it is the

@@ -1527,11 +1527,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 .jst_plot_lm_diagnostics <- function(model, which, n_label = 3,
                                      lead = TRUE) {
 
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cat(.jst_txt_ggplot_note)
-    return(invisible(NULL))
-  }
-
   plots <- list()
 
   fitted_vals   <- stats::fitted(model)
@@ -1800,11 +1795,6 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 #' @importFrom rlang .data
 .jst_plot_logistic_diagnostics <- function(model, which, n_label = 3,
                                            list = TRUE) {
-
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    cat(.jst_txt_ggplot_note)
-    return(invisible(NULL))
-  }
 
   observed  <- stats::model.frame(model)[, 1]
   if (is.factor(observed)) observed <- as.numeric(observed) - 1
@@ -2366,6 +2356,696 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
 
 # -- jlm ----------------------------------------------------------------------
 
+#' Internal: a model's value.id and variable.id, checked and resolved
+#'
+#' value.id's legend modes are refused (the coefficient table has no
+#' legend for values); value_mode_coef folds a global legend setting into
+#' "both". variable.id governs the coefficient rows and the variable-label
+#' legend. jlm() and jlogistic() each held this block (Session 386, the
+#' twin build), before any output.
+#'
+#' @param value.id,variable.id The call's arguments.
+#' @return list(value_mode, value_mode_coef, vlmode).
+#' @keywords internal
+.jst_model_id_modes <- function(value.id, variable.id) {
+  if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
+    .jst_stop("value.id '", value.id, "' is not supported here.")
+  }
+  value_mode      <- .jst_resolve_value_id(value.id,
+                                           allowed = c("both", "values", "labels"))
+  value_mode_coef <- if (value_mode %in% c("legend", "legend.bottom")) {
+    "both"
+  } else {
+    value_mode
+  }
+  vlmode          <- .jst_resolve_variable_id(variable.id)
+  list(value_mode = value_mode, value_mode_coef = value_mode_coef,
+       vlmode = vlmode)
+}
+
+#' Internal: a model's formula variables, name arguments and terms
+#'
+#' The formula's variables checked (lm()'s reading of a computed term;
+#' S323), numeric =, categorical = and count = read as names (ruling R18,
+#' S376), the bare powers found on the formula as typed (S321), the
+#' formula's environment kept for the standardized refits (S375), the
+#' transformed terms computed (AUDIT-021) and a computed logical made 0/1
+#' (AUDIT-028). jlm() and jlogistic() each held this block (Session 386,
+#' the twin build).
+#'
+#' @param formula,data The call's formula and the pipeline's data.
+#' @param .jst_data_name,.jst_default_used The data frame's name and
+#'   whether it is the juse() default.
+#' @param pipeline The pipeline's result.
+#' @param name_subs list(numeric, categorical, count) of the arguments'
+#'   expressions (substitute() in the caller).
+#' @param envir The caller's calling frame.
+#' @return list(raw_vars, numeric, categorical, count, bare_powers,
+#'   term_enclos, resolved, formula, data).
+#' @keywords internal
+.jst_model_terms <- function(formula, data, .jst_data_name, .jst_default_used,
+                             pipeline, name_subs, envir) {
+  raw_vars <- .jst_check_formula_vars(
+    formula, data, .jst_data_name, default_used = .jst_default_used,
+    n_frame = pipeline$pipeline_counts$n_original)
+
+  # numeric =, categorical = and count = name variables, bare or in quotes
+  # (ruling R18; Fix Slate 22, Session 376): read here, before anything
+  # evaluates them. categorical = Region had stopped with R's own "object
+  # 'Region' not found".
+  .name_args  <- .jst_model_name_args(
+    name_subs,
+    envir, data, .jst_data_name,
+    example = c(setdiff(c(raw_vars[-1L], names(data)), raw_vars[1L]),
+                "Age")[1L], default_used = .jst_default_used)
+  numeric     <- .name_args$numeric
+  categorical <- .name_args$categorical
+  count       <- .name_args$count
+
+  # A single term raised to a power outside I() -- x^2 -- is R's formula
+  # operator for interactions, not arithmetic, and enters the model as the
+  # term alone (Session 321). Found on the formula as typed, before the
+  # resolver rewrites it; the warning is emitted once the model is fitted.
+  # The formula's own environment is kept for the constants a computed
+  # term may name, which the standardized refits re-evaluate below.
+  bare_powers <- .jst_formula_bare_powers(formula)
+  term_enclos <- environment(formula)
+  if (is.null(term_enclos)) term_enclos <- envir
+
+  # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
+  # refusal): compute log(x), I(x^2), and the like once on the analysis
+  # copy and rewrite the formula to reference the computed column, so the
+  # model, the descriptives, and the standardized-beta refit all see the
+  # same values under the name the user typed.
+  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
+  formula  <- resolved$formula
+  data     <- resolved$data
+
+  # A resolver-computed logical -- e.g. I(ScreenTime > 4) -- enters the
+  # model as a numeric 0/1 column, exactly like a saved indicator column:
+  # the flat-dichotomy beta suppression and the two-level coefficient
+  # annotation then apply through the same machinery (AUDIT-028).
+  for (.cv in resolved$computed) {
+    if (is.logical(data[[.cv]])) data[[.cv]] <- as.numeric(data[[.cv]])
+  }
+  list(raw_vars = raw_vars, numeric = numeric, categorical = categorical,
+       count = count, bare_powers = bare_powers, term_enclos = term_enclos,
+       resolved = resolved, formula = formula, data = data)
+}
+
+#' Internal: a model's predictors, checked and made ready to fit
+#'
+#' The name arguments checked against the predictors (the outcome left out
+#' of numeric = and count =, and a note when categorical = names it; a
+#' name that is not a predictor stops; a variable in two of them stops),
+#' then each predictor: a per-call override (numeric =, count =,
+#' categorical =), a computed term left as it is, else the classifier --
+#' categorical by intent gets an in-flight dummy registration, otherwise
+#' it enters as numbers, with the dichotomy note or one seems-categorical
+#' warning for all -- and the in-flight registrations expanded into dummy
+#' columns. jlm() and jlogistic() each held the loop and the expansion
+#' (Session 386, the twin build); the checks were jlm()'s alone, and
+#' jlogistic() gains them (D2, the S385 drift finding).
+#'
+#' @param data,formula,model_vars The data, formula and its variables.
+#' @param dv_name Character(1): the outcome.
+#' @param iv_names Character: the predictors.
+#' @param numeric,categorical,count The name arguments, read.
+#' @param dummy_coef_names,expanded_originals jdummy()'s columns and the
+#'   variables they replaced.
+#' @param resolved The transforms' resolution (its computed columns).
+#' @param pipeline,data_in The pipeline's result and the data before it.
+#' @param .jst_data_name,.jst_data_kind,.jst_default_used,formula_typed The
+#'   data's name and kind, the default flag and the formula as typed.
+#' @param auto_ref_cats,auto_cat_regs,one_cat_in_call,seems_cat Their
+#'   values so far.
+#' @param fn Character(1): the calling function.
+#' @param skip_absent Logical(1): pass over a predictor not in the data
+#'   (jlogistic()'s guard).
+#' @return list(data, formula, model_vars, dummy_coef_names, auto_cat_regs,
+#'   auto_ref_cats, one_cat_in_call, numeric, categorical, count).
+#' @keywords internal
+.jst_model_iv_loop <- function(data, formula, model_vars, dv_name, iv_names,
+                               numeric, categorical, count, dummy_coef_names,
+                               expanded_originals, resolved, pipeline,
+                               data_in, .jst_data_name, .jst_data_kind,
+                               .jst_default_used, formula_typed,
+                               auto_ref_cats, auto_cat_regs, one_cat_in_call,
+                               seems_cat, fn, skip_absent) {
+  # jlm()'s iv_names already leave out the jdummy() originals; jlogistic()'s
+  # are left out here, as its loop skipped them.
+  iv_names <- setdiff(iv_names, expanded_originals)
+
+  if (!is.null(numeric)) {
+    # A numeric = naming the DV asserts a continuous DV for this call,
+    # silencing the count / categorical-like DV note (consumed into
+    # dv_override above). Modelling is unchanged (the DV is always numeric),
+    # so drop it from the IV-override set silently -- the absence of the
+    # note is the confirmation.
+    numeric <- setdiff(numeric, dv_name)
+    if (length(numeric) == 0) numeric <- NULL
+  }
+
+  if (!is.null(count)) {
+    # A count = naming the DV asserts a count DV for this call (consumed into
+    # dv_override above -> de-hedged count caveat). Drop it from the IV set;
+    # any remaining count = names are IV predictors, treated as numeric and
+    # validated below.
+    count <- setdiff(count, dv_name)
+    if (length(count) == 0) count <- NULL
+  }
+
+  if (!is.null(categorical)) {
+    # Check if any categorical overrides refer to the DV
+    dv_in_cat <- intersect(categorical, dv_name)
+    if (length(dv_in_cat) > 0) {
+      .jst_msg(
+        "Note: '", dv_in_cat, "' is the dependent variable and is always ",
+        "treated as numeric.\n",
+        "The categorical argument is only needed for independent variables."
+      )
+      categorical <- setdiff(categorical, dv_name)
+      if (length(categorical) == 0) categorical <- NULL
+    }
+  }
+
+  # Handle both cases for numeric / categorical arguments:
+  #
+  #   - Dummy-registered variable (name listed in expanded_originals):
+  #       `categorical = "X"` → redundant with jdummy, warning, continue.
+  #       `numeric = "X"`     → jdummy wins regardless, argument is ignored;
+  #                             tailored warning explaining how to undo the
+  #                             registration. Model still runs with the
+  #                             dummy-expanded variable.
+  #   - Unknown variable (not in expanded_originals, not in iv_names):
+  #       Genuine typo or name that isn't in the formula. Stop with an
+  #       error rather than silently running a model that ignores the
+  #       user's stated intent.
+
+  if (!is.null(numeric)) {
+    # Any unmatched numeric = name is a genuine typo: it is neither a model IV
+    # nor a registered dummy (a registered dummy named here was skipped from
+    # expansion upstream under Option B and so remains an IV).
+    bad <- setdiff(numeric, iv_names)
+    if (length(bad) > 0) {
+      .jst_stop(
+        "numeric argument: ",
+        paste0("'", bad, "'", collapse = ", "),
+        " not found among independent variables in ", .jst_data_name,
+        ". Check for typos."
+      )
+    }
+    numeric <- intersect(numeric, iv_names)
+  }
+
+  if (!is.null(categorical)) {
+    bad <- setdiff(categorical, iv_names)
+    if (length(bad) > 0) {
+      bad_registered <- intersect(bad, expanded_originals)
+      bad_unknown    <- setdiff(bad, expanded_originals)
+      if (length(bad_registered) > 0) {
+        .jst_warn(
+          "categorical = was ignored for ",
+          paste0(bad_registered, collapse = ", "),
+          " (already registered as a dummy via jdummy; categorical ",
+          "treatment is automatic)."
+        )
+      }
+      if (length(bad_unknown) > 0) {
+        .jst_stop(
+          "categorical argument: ",
+          paste0("'", bad_unknown, "'", collapse = ", "),
+          " not found among independent variables in ", .jst_data_name,
+          ". Check for typos."
+        )
+      }
+      categorical <- intersect(categorical, iv_names)
+    }
+  }
+
+  if (!is.null(count)) {
+    # Remaining count = names (DV already consumed) are IV predictors; a count
+    # IV is just a numeric predictor, so validate exactly like numeric =. Any
+    # unmatched name is a typo (a registered dummy named here was skipped from
+    # expansion upstream under Option B and remains an IV).
+    bad <- setdiff(count, iv_names)
+    if (length(bad) > 0) {
+      .jst_stop(
+        "count argument: ",
+        paste0("'", bad, "'", collapse = ", "),
+        " not found among independent variables in ", .jst_data_name,
+        ". Check for typos."
+      )
+    }
+    count <- intersect(count, iv_names)
+  }
+
+  # Check for conflicts between numeric and categorical
+  if (!is.null(numeric) && !is.null(categorical)) {
+    conflict <- intersect(numeric, categorical)
+    if (length(conflict) > 0) {
+      .jst_stop(
+        paste0("'", conflict, "'", collapse = ", "),
+        " listed in both numeric and categorical arguments."
+      )
+    }
+  }
+
+  # A variable cannot be both a count and a categorical (the assertions
+  # contradict). count and numeric both mean "numeric-like", so they are not
+  # treated as a conflict.
+  if (!is.null(count) && !is.null(categorical)) {
+    conflict <- intersect(count, categorical)
+    if (length(conflict) > 0) {
+      .jst_stop(
+        paste0("'", conflict, "'", collapse = ", "),
+        " listed in both count and categorical arguments."
+      )
+    }
+  }
+
+  for (v in iv_names) {
+    if (v %in% dummy_coef_names)   next   # Dummy columns created by jdummy()
+    if (v %in% expanded_originals) next   # Original vars replaced by jdummy()
+    if (skip_absent && !(v %in% names(data))) next
+
+    # --- Override: numeric = "Var" forces numeric ---
+    if (v %in% numeric) {
+      if (haven::is.labelled(data[[v]])) {
+        data[[v]] <- .jst_as_numeric(data[[v]])
+      }
+      # Plain numeric stays as-is
+      next
+    }
+
+    # --- Override: count = "Var" forces numeric (a count predictor enters
+    # the model as a numeric predictor; the Count subclass matters only for
+    # the DV count caveat, not for IV handling). ---
+    if (v %in% count) {
+      if (haven::is.labelled(data[[v]])) {
+        data[[v]] <- .jst_as_numeric(data[[v]])
+      }
+      next
+    }
+
+    # --- Override: categorical = "Var" forces categorical ---
+    if (v %in% categorical) {
+      .jst_stop_if_filter_kept_one(data[[v]], v,
+                                   pipeline$pipeline_counts$subset_expr,
+                                   .jst_data_name)
+      # One category: set aside, and stopped under the Case Processing
+      # block in the registered predictor's words (Session 347).
+      if (.jst_n_categories(data[[v]]) < 2L) {
+        if (is.null(one_cat_in_call)) {
+          one_cat_in_call <- list(v = v, x = data[[v]])
+        }
+        next
+      }
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
+                                   data_name = .jst_data_name)
+      auto_cat_regs[[v]] <- reg
+      for (n in reg$notes) .jst_msg_out(n)
+      for (w in reg$warnings_msg) .jst_warn(w)
+      auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
+      next
+    }
+
+    # Resolver-computed columns never enter the auto-categorical machinery
+    # (AUDIT-028): the structural hedges below steer to jdummy()/jrecode()
+    # calls that cannot take an inline term. An explicit categorical =
+    # naming the term still wins in the branch above, per the resolution
+    # stack (per-call assertions beat structural guesses).
+    if (v %in% resolved$computed) next
+
+    # --- Auto-detection (two-helper classifier) ---
+    #
+    # Intent helper first: only treat the IV as categorical when the user
+    # has explicitly signalled categorical (jdummy-registered, or
+    # factor/logical/character class). jdummy-registered IVs are handled
+    # upstream by .jst_expand_dummies() and won't reach this block; the
+    # Rule A check inside .jst_is_categorical() is defensive.
+    #
+    # If the intent helper returns FALSE, the IV enters the model as
+    # numeric. The structural helper (.jst_is_discrete_integer()) is then
+    # consulted purely to decide whether to warn the user: if the variable
+    # has categorical-looking structure (haven-labelled with labels in
+    # data, or small-range whole-number numeric), the user may have meant
+    # to register with jdummy() or pass categorical = instead.
+    if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
+      .jst_stop_if_filter_kept_one(data[[v]], v,
+                                   pipeline$pipeline_counts$subset_expr,
+                                   .jst_data_name)
+      # One category: set aside, and stopped under the Case Processing
+      # block in the registered predictor's words (Session 347).
+      if (.jst_n_categories(data[[v]]) < 2L) {
+        if (is.null(one_cat_in_call)) {
+          one_cat_in_call <- list(v = v, x = data[[v]])
+        }
+        next
+      }
+      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
+                                   data_name = .jst_data_name)
+      auto_cat_regs[[v]] <- reg
+      for (n in reg$notes) .jst_msg_out(n)
+      for (w in reg$warnings_msg) .jst_warn(w)
+      auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
+    } else {
+      # Not intent-categorical. Strip haven class if present, leave as
+      # numeric in the model.
+      if (haven::is.labelled(data[[v]])) {
+        data[[v]] <- .jst_as_numeric(data[[v]])
+      }
+      # Check for dichotomy first: dichotomies are valid as numeric IVs
+      # in linear regression (the slope is the mean difference). They do
+      # not need dummy-coding, and the discrete-integer hedge below would
+      # be misleading for them. Coding-specific notes only (off-minimal;
+      # the fitted result is identical either way -- Rule Q: the steer is
+      # data-shape, not a different model):
+      #   - 0/1, factor, character, logical: no note, clean run.
+      #   - 1/2: registering as a dummy clarifies the intercept.
+      #   - other (e.g., 5/10): non-0/1 codes; same dummy/recode steer.
+      # The last line states the state to reach, not a method (voice Rule
+      # X, Session 347): it ended "Or recode to a permanent 0/1 variable
+      # with jrecode()."
+      iv_dich <- .jst_is_dichotomy(data[[v]])
+      if (iv_dich$is_dichotomy) {
+        if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+          if (iv_dich$coding %in% c("1/2", "other")) {
+            .jst_msg(.jst_dichotomy_note(v, iv_dich$coding, data_in[[v]],
+                                         .jst_data_name, .jst_data_kind))
+          }
+        }
+        # 0/1, factor, character, logical: no note.
+      } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
+                 !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
+        # Non-dichotomous but categorical-like structure: emit the
+        # informational warning so the user can confirm continuous
+        # treatment or switch to categorical. Suppressed when the user has
+        # asserted a numeric/count role (jnumeric/jcount) -- the hedge is a
+        # guess they have already answered. (A per-call numeric=/count= IV
+        # short-circuits earlier, so only registration reaches this gate.)
+        # The rerun lines are built from the formula as typed (Session
+        # 346; see .jst_seems_categorical_msg()). Collected, so that several
+        # get one warning (Session 347).
+        seems_cat <- c(seems_cat, v)
+      }
+    }
+    }
+  if (length(seems_cat) > 0L) {
+    .jst_warn(.jst_seems_categorical_msg(
+      fn, seems_cat, formula_typed, .jst_data_name, .jst_data_kind,
+      .jst_default_used, categorical))
+  }
+
+  # -- Apply auto-categorical expansions ------------------------------------
+  # For variables that were determined to be categorical (via categorical =
+  # argument or auto-detection), an in-flight registration was built but
+  # the formula/data weren't yet updated. Apply those expansions now using
+  # the same .jst_expand_one_dummy() helper that .jst_expand_dummies()
+  # uses for jdummy registrations, so naming is uniform across pathways.
+  if (length(auto_cat_regs) > 0) {
+    for (vname in names(auto_cat_regs)) {
+      reg <- auto_cat_regs[[vname]]
+      reg$var_name <- vname
+      expanded2 <- .jst_expand_one_dummy(data, formula, reg)
+      data             <- expanded2$data
+      formula          <- expanded2$formula
+      dummy_coef_names <- c(dummy_coef_names, expanded2$dummy_coef_names)
+    }
+    model_vars <- all.vars(formula)
+  }
+  list(data = data, formula = formula, model_vars = model_vars,
+       dummy_coef_names = dummy_coef_names, auto_cat_regs = auto_cat_regs,
+       auto_ref_cats = auto_ref_cats, one_cat_in_call = one_cat_in_call,
+       numeric = numeric, categorical = categorical, count = count)
+}
+
+#' Internal: a model's sample checked and its absent categories pruned
+#'
+#' A predictor dummy-coded in the call with one category stops (S347); the
+#' categories the analysis sample lacks are pruned from the model frame,
+#' the formula and the registrations (.jst_prune_absent_categories()); a
+#' predictor constant in the sample stops; no more cases than coefficients
+#' stops (S347). jlm() and jlogistic() each held this block (Session 386,
+#' the twin build), differing only in the noun.
+#'
+#' @param mf,data,formula The model frame, the data and the formula.
+#' @param dummy_regs,expanded_originals,auto_cat_regs,dummy_coef_names,ref_cats,auto_ref_cats
+#'   The registrations and their columns.
+#' @param value_mode_coef The value-label mode of the coefficient rows.
+#' @param sample_info,.jst_data_name The Case Processing counts and the data
+#'   frame's name.
+#' @param pipeline_data The pipeline's data, for the constant-predictor stop.
+#' @param one_cat_in_call A one-category predictor set aside, or NULL.
+#' @param noun Character(1): "A regression" or "A logistic regression".
+#' @return list(formula, mf, dummy_regs, auto_cat_regs, dummy_coef_names,
+#'   ref_cats, auto_ref_cats, all_ref_cats).
+#' @keywords internal
+.jst_model_prefit <- function(mf, data, formula, dummy_regs, expanded_originals,
+                              auto_cat_regs, dummy_coef_names, ref_cats,
+                              auto_ref_cats, value_mode_coef, sample_info,
+                              .jst_data_name, pipeline_data, one_cat_in_call,
+                              noun) {
+  .jst_stop_one_category_in_call(one_cat_in_call, sample_info, .jst_data_name)
+
+  pruned <- .jst_prune_absent_categories(
+    mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
+    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef,
+    sample_info, .jst_data_name)
+  formula          <- pruned$formula
+  mf               <- pruned$mf
+  dummy_regs       <- pruned$dummy_regs
+  auto_cat_regs    <- pruned$auto_cat_regs
+  dummy_coef_names <- pruned$dummy_coef_names
+  ref_cats         <- pruned$ref_cats
+  auto_ref_cats    <- pruned$auto_ref_cats
+
+  # Reference categories are printed later, under the Outcome: line (just above
+  # the Coefficients table they describe). Build the vector here unconditionally
+  # because downstream code (the return object) uses it regardless of display.
+  all_ref_cats <- c(ref_cats, auto_ref_cats)
+
+  # Zero-variance predictor check: any IV with only one unique value in
+  # the analytic sample. Skip the response (column 1 of mf) and intercept.
+  iv_cols <- mf[, -1L, drop = FALSE]
+  if (ncol(iv_cols) > 0L) {
+    n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
+    constant_ivs <- names(n_unique)[n_unique < 2L]
+    if (length(constant_ivs) > 0L) {
+      .jst_stop_constant_predictors(constant_ivs, sample_info,
+                                    .jst_data_name, pipeline_data)
+    }
+  }
+
+  # No more cases than coefficients (Session 347): an exact fit with no
+  # residual df, printed as NaN standard errors and a blank p column.
+  .jst_stop_too_few_cases(
+    sample_info,
+    tryCatch(ncol(stats::model.matrix(formula, mf)),
+             error = function(e) NA_integer_),
+    noun)
+  list(formula = formula, mf = mf, dummy_regs = dummy_regs,
+       auto_cat_regs = auto_cat_regs, dummy_coef_names = dummy_coef_names,
+       ref_cats = ref_cats, auto_ref_cats = auto_ref_cats,
+       all_ref_cats = all_ref_cats)
+}
+
+#' Internal: the model frame Gelman's standardization refits
+#'
+#' Each numeric column but the outcome centered, and divided by two SDs
+#' unless it has two values (a 0/1 column is centered only); a power or a
+#' product computed from the rescaled inputs, never rescaled itself
+#' (.jst_rescale_poly_terms(); S321). jlm() and jlogistic() each held this
+#' block (Session 386, the twin build); each refits it its own way.
+#'
+#' @param mf,data The model frame and the data.
+#' @param computed Character: the computed terms' columns.
+#' @param enclos The formula's environment.
+#' @return The rescaled model frame.
+#' @keywords internal
+.jst_gelman_frame <- function(mf, data, computed, enclos) {
+  mf_gel <- mf
+  for (nm in names(mf_gel)[-1L]) {
+    col <- mf_gel[[nm]]
+    if (!is.numeric(col)) next
+    n_uni <- length(unique(col[!is.na(col)]))
+    ctr   <- col - mean(col, na.rm = TRUE)
+    mf_gel[[nm]] <- if (n_uni <= 2L) ctr
+                    else ctr / (2 * stats::sd(col, na.rm = TRUE))
+  }
+  mf_gel <- .jst_rescale_poly_terms(
+    mf_gel, mf, data, computed,
+    rescale = function(v) {
+      ctr <- v - mean(v)
+      if (length(unique(v)) <= 2L) ctr else ctr / (2 * stats::sd(v))
+    },
+    enclos  = enclos)
+  mf_gel
+}
+
+#' Internal: the inputs of a model's beta-column legends
+#'
+#' The computed terms read as powers or products (.jst_poly_term()), the
+#' highest power, whether the model has an interaction or a power, and the
+#' products computed by hand in the data, those the fit dropped left out
+#' (.jst_hand_products()). jlm() and jlogistic() each held this block
+#' (Session 386, the twin build); each then calls .jst_beta_legends() as
+#' before, jlogistic() appending to what it has (the S383 caution).
+#'
+#' @param computed Character: the computed terms' columns.
+#' @param mf,data The model frame and the data.
+#' @param enclos The formula's environment.
+#' @param term_keys The design matrix's coefficient names.
+#' @param dummy_coef_names jdummy()'s columns.
+#' @param model The fitted model.
+#' @return list(poly_info, poly_kinds, pow_max, has_int, has_pow, pow_noun,
+#'   hand, fit_b, hand_sq).
+#' @keywords internal
+.jst_beta_legend_inputs <- function(computed, mf, data, enclos, term_keys,
+                                    dummy_coef_names, model) {
+  poly_info  <- lapply(intersect(computed, names(mf)[-1L]),
+                       .jst_poly_term, data_names = names(data),
+                       enclos = enclos)
+  poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
+  poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
+  pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
+                                `[[`, numeric(1), "power")))
+  has_int  <- any(grepl(":", term_keys, fixed = TRUE)) ||
+              any(poly_kinds == "interaction")
+  has_pow  <- any(poly_kinds == "power")
+  pow_noun <- if (pow_max > 2) "power term" else "squared term"
+  hand     <- .jst_hand_products(mf, skip = c(computed,
+                                              dummy_coef_names))
+  fit_b    <- stats::coef(model)
+  names(fit_b) <- .jst_unbacktick(names(fit_b))
+  hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
+                          logical(1))]
+  hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
+  list(poly_info = poly_info, poly_kinds = poly_kinds, pow_max = pow_max,
+       has_int = has_int, has_pow = has_pow, pow_noun = pow_noun,
+       hand = hand, fit_b = fit_b, hand_sq = hand_sq)
+}
+
+#' Internal: a model's coefficient rows made ready to print
+#'
+#' Under variable.id = "labels" the rows are relabeled; the categorical
+#' predictors' dummy rows are grouped under their variable
+#' (.jst_collect_multicat_regs(), .jst_group_dummy_coefs()). jlm() and
+#' jlogistic() each held this block (Session 386, the twin build).
+#'
+#' @param out_coefs The formatted coefficient table.
+#' @param vlmode,lab_src,formula The variable-id mode, the label source and
+#'   the formula.
+#' @param dummy_regs,auto_cat_regs,dummy_coef_names The registrations.
+#' @param value_mode_coef,show_ref_categories The display settings.
+#' @return list(coef_disp, multi_cat_regs).
+#' @keywords internal
+.jst_coef_display <- function(out_coefs, vlmode, lab_src, formula, dummy_regs,
+                              auto_cat_regs, dummy_coef_names, value_mode_coef,
+                              show_ref_categories) {
+  out_coefs_disp <- out_coefs
+  if (identical(vlmode, "labels")) {
+    rownames(out_coefs_disp) <- .jst_relabel_coef_names(
+      rownames(out_coefs), lab_src, all.vars(formula)[-1])
+  }
+  # The outcome is named beneath the Coefficients table (not above), via
+  # .jst_print_outcome_line(); under the variable.id legend modes it is carried
+  # by the legend's Outcome section instead, so no standalone line prints.
+  # (Outcome placement moved below the table this session; previously above,
+  # per Session 62/63.)
+  # The reference category is no longer printed on its own line; it is folded
+  # into each multi-category variable's header below (e.g.
+  # "Employment (ref = 1: Employed full-time)"), governed by value.id and the
+  # ref.categories toggle. all_ref_cats still feeds the returned object.
+  #
+  # Multi-category dummy predictors are grouped: a header row carrying the
+  # variable name (its label under variable.id = "labels") with the reference
+  # folded in, and the categories indented two spaces beneath with value.id
+  # labels. Single-contrast (dichotomous) predictors and continuous predictors
+  # are left as flat rows. The display label rides in a leading column printed
+  # with "ln" (left, no-trim) alignment so the indent survives; the returned
+  # object is untouched.
+  multi_cat_regs <- .jst_collect_multicat_regs(dummy_regs, auto_cat_regs,
+                                               dummy_coef_names)
+  coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
+                                      value_mode_coef, vlmode, lab_src,
+                                      show_ref_categories)
+  list(coef_disp = coef_disp, multi_cat_regs = multi_cat_regs)
+}
+
+#' Internal: the seam between a model's coefficient and fit blocks
+#'
+#' Under variable.id = "legend" the variable-label legend, after a blank
+#' line; otherwise the blank line alone. jlm() and jlogistic() each held
+#' this closure (Session 386, the twin build).
+#'
+#' @param vlmode The variable-id mode.
+#' @param lab_src The label source.
+#' @param vars Character: the formula's variables as typed, outcome first.
+#' @return NULL, invisibly.
+#' @keywords internal
+.jst_print_model_seam <- function(vlmode, lab_src, vars) {
+  if (identical(vlmode, "legend")) {
+    cat("\n")
+    .print_model_var_labels(lab_src, vars[1], vars[-1])
+  } else {
+    cat("\n")
+  }
+  invisible(NULL)
+}
+
+#' Internal: a model's blocks in the order model.layout gives them
+#'
+#' "fit" prints the fit block, the seam, then the coefficients; the default
+#' the coefficients, the seam, then the fit block (S375). jlm() and
+#' jlogistic() each held this block (Session 386, the twin build).
+#'
+#' @param model_layout "fit" or "coefficients".
+#' @param coef_fn,fit_fn,seam_fn The three printers, each a function of no
+#'   arguments.
+#' @return NULL, invisibly.
+#' @keywords internal
+.jst_print_model_layout <- function(model_layout, coef_fn, fit_fn, seam_fn) {
+  if (identical(model_layout, "fit")) {
+    fit_fn()
+    seam_fn()
+    coef_fn()
+  } else {
+    coef_fn()
+    seam_fn()
+    fit_fn()
+  }
+  invisible(NULL)
+}
+
+#' Internal: the list of a model's diagnostic plots
+#'
+#' One plot: "(Diagnostic plot produced: ...)"; two or more: jplot()'s line
+#' for a model, word for word (S347), and the numbered list. jlm() and
+#' jlogistic() each held this block (Session 386, the twin build); each
+#' then draws with its own plotter.
+#'
+#' @param plot_which Character: the plots to draw.
+#' @param plot_labels Named character: each plot's label.
+#' @return NULL, invisibly.
+#' @keywords internal
+.jst_print_plot_list <- function(plot_which, plot_labels) {
+  if (length(plot_which) == 1) {
+    cat("\n(Diagnostic plot produced: ",
+        plot_labels[plot_which[1]], ")\n", sep = "")
+  } else {
+    # jplot()'s line for jlogistic(), word for word (Session 347): the
+    # two said one thing two ways, this one "use the back arrow in the
+    # Plots pane to view all".
+    .jst_msg_out("\n", length(plot_which), " diagnostic plots produced\n",
+                 .jst_txt_plot_nav)
+    for (i in seq_along(plot_which)) {
+      cat("  ", i, ". ", plot_labels[plot_which[i]], "\n", sep = "")
+    }
+  }
+  invisible(NULL)
+}
+
 #' SPSS-like linear regression output with standardized coefficients
 #'
 #' Fits a linear model using \code{stats::lm()} and prints SPSS-style output,
@@ -2863,23 +3543,12 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # tolerated and folded to "both" (so a bare call does not break). Only that
   # global-default path can reach the fold, since an explicit legend value is
   # rejected here. The variable.id legend block is unrelated (handled later).
-  if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
-    .jst_stop("value.id '", value.id, "' is not supported here.")
-  }
-  value_mode      <- .jst_resolve_value_id(value.id,
-                                           allowed = c("both", "values", "labels"))
-  value_mode_coef <- if (value_mode %in% c("legend", "legend.bottom")) {
-    "both"
-  } else {
-    value_mode
-  }
-
-  # variable.id is likewise validated before any output (same fail-fast
-  # reason). It governs variable-name display in the coefficient table and
-  # whether/where the variable-label legend prints: "legend" between the
-  # Coefficients table and the fit block, "legend.bottom" at the very end,
-  # "labels" relabels the coefficient-row terms (display only).
-  vlmode          <- .jst_resolve_variable_id(variable.id)
+  # value.id and variable.id, checked and resolved before any output
+  # (.jst_model_id_modes(), jlm()'s and jlogistic()'s; Session 386).
+  .jst_ids        <- .jst_model_id_modes(value.id, variable.id)
+  value_mode      <- .jst_ids$value_mode
+  value_mode_coef <- .jst_ids$value_mode_coef
+  vlmode          <- .jst_ids$vlmode
 
   # Front-door check: the formula goes first, then the data. A swapped or
   # misplaced formula otherwise crashes deep inside the data pipeline with
@@ -2902,17 +3571,14 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   .jst_data_kind <- if (missing(data)) "name"
                     else .jst_data_arg_kind(substitute(data))
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
+  # Resolve default data frame if not specified (.jst_formula_front(), one
+  # home for the five formula functions; Session 386). The data given is
+  # not touched here: it is read where it always was.
+  .jst_front        <- .jst_formula_front(missing(data), substitute(data),
+                                          parent.frame())
+  if (.jst_front$default_used) data <- .jst_front$data
+  .jst_default_used <- .jst_front$default_used
+  .jst_data_name    <- .jst_front$data_name
 
   # Red title
   .cat_red("Linear Regression\n")
@@ -2963,50 +3629,24 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # is left out of the list; a bare name is still a variable, and a name
   # found nowhere still stops. A data frame named inside a term, and a power
   # terms() cannot read (y ~ x^k), are refused here.
-  raw_vars <- .jst_check_formula_vars(
-    formula, data, .jst_data_name, default_used = .jst_default_used,
-    n_frame = pipeline$pipeline_counts$n_original)
-
-  # numeric =, categorical = and count = name variables, bare or in quotes
-  # (ruling R18; Fix Slate 22, Session 376): read here, before anything
-  # evaluates them. categorical = Region had stopped with R's own "object
-  # 'Region' not found".
-  .name_args  <- .jst_model_name_args(
+  # The formula's variables, the name arguments (bare or quoted, ruling
+  # R18), the bare powers, the formula's environment and the computed terms
+  # (.jst_model_terms(), jlm()'s and jlogistic()'s; Session 386). The name
+  # arguments are captured here, before anything evaluates them.
+  .jst_mt <- .jst_model_terms(
+    formula, data, .jst_data_name, .jst_default_used, pipeline,
     list(numeric = substitute(numeric), categorical = substitute(categorical),
          count = substitute(count)),
-    parent.frame(), data, .jst_data_name,
-    example = c(setdiff(c(raw_vars[-1L], names(data)), raw_vars[1L]),
-                "Age")[1L], default_used = .jst_default_used)
-  numeric     <- .name_args$numeric
-  categorical <- .name_args$categorical
-  count       <- .name_args$count
-
-  # A single term raised to a power outside I() -- x^2 -- is R's formula
-  # operator for interactions, not arithmetic, and enters the model as the
-  # term alone (Session 321). Found on the formula as typed, before the
-  # resolver rewrites it; the warning is emitted once the model is fitted.
-  # The formula's own environment is kept for the constants a computed
-  # term may name, which the standardized refits re-evaluate below.
-  bare_powers <- .jst_formula_bare_powers(formula)
-  term_enclos <- environment(formula)
-  if (is.null(term_enclos)) term_enclos <- parent.frame()
-
-  # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
-  # refusal): compute log(x), I(x^2), and the like once on the analysis
-  # copy and rewrite the formula to reference the computed column, so the
-  # model, the descriptives, and the standardized-beta refit all see the
-  # same values under the name the user typed.
-  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
-  formula  <- resolved$formula
-  data     <- resolved$data
-
-  # A resolver-computed logical -- e.g. I(ScreenTime > 4) -- enters the
-  # model as a numeric 0/1 column, exactly like a saved indicator column:
-  # the flat-dichotomy beta suppression and the two-level coefficient
-  # annotation then apply through the same machinery (AUDIT-028).
-  for (.cv in resolved$computed) {
-    if (is.logical(data[[.cv]])) data[[.cv]] <- as.numeric(data[[.cv]])
-  }
+    parent.frame())
+  raw_vars    <- .jst_mt$raw_vars
+  numeric     <- .jst_mt$numeric
+  categorical <- .jst_mt$categorical
+  count       <- .jst_mt$count
+  bare_powers <- .jst_mt$bare_powers
+  term_enclos <- .jst_mt$term_enclos
+  resolved    <- .jst_mt$resolved
+  formula     <- .jst_mt$formula
+  data        <- .jst_mt$data
 
   model_vars            <- all.vars(formula)
   # Preserve the original (pre-expansion) variable names for use in
@@ -3149,289 +3789,31 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   dummy_regs <- .jst_get_dummy(.jst_data_name)
   iv_names   <- setdiff(iv_names, expanded_originals)
 
-  if (!is.null(numeric)) {
-    # A numeric = naming the DV asserts a continuous DV for this call,
-    # silencing the count / categorical-like DV note (consumed into
-    # dv_override above). Modelling is unchanged (the DV is always numeric),
-    # so drop it from the IV-override set silently -- the absence of the
-    # note is the confirmation.
-    numeric <- setdiff(numeric, dv_name)
-    if (length(numeric) == 0) numeric <- NULL
+  # The outcome is always numeric: made so here, ahead of the predictors, as
+  # the loop below did when it reached it first (Session 386).
+  if (!(dv_name %in% dummy_coef_names) && !(dv_name %in% expanded_originals) &&
+      haven::is.labelled(data[[dv_name]])) {
+    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
   }
 
-  if (!is.null(count)) {
-    # A count = naming the DV asserts a count DV for this call (consumed into
-    # dv_override above -> de-hedged count caveat). Drop it from the IV set;
-    # any remaining count = names are IV predictors, treated as numeric and
-    # validated below.
-    count <- setdiff(count, dv_name)
-    if (length(count) == 0) count <- NULL
-  }
-
-  if (!is.null(categorical)) {
-    # Check if any categorical overrides refer to the DV
-    dv_in_cat <- intersect(categorical, dv_name)
-    if (length(dv_in_cat) > 0) {
-      .jst_msg(
-        "Note: '", dv_in_cat, "' is the dependent variable and is always ",
-        "treated as numeric.\n",
-        "The categorical argument is only needed for independent variables."
-      )
-      categorical <- setdiff(categorical, dv_name)
-      if (length(categorical) == 0) categorical <- NULL
-    }
-  }
-
-  # Handle both cases for numeric / categorical arguments:
-  #
-  #   - Dummy-registered variable (name listed in expanded_originals):
-  #       `categorical = "X"` → redundant with jdummy, warning, continue.
-  #       `numeric = "X"`     → jdummy wins regardless, argument is ignored;
-  #                             tailored warning explaining how to undo the
-  #                             registration. Model still runs with the
-  #                             dummy-expanded variable.
-  #   - Unknown variable (not in expanded_originals, not in iv_names):
-  #       Genuine typo or name that isn't in the formula. Stop with an
-  #       error rather than silently running a model that ignores the
-  #       user's stated intent.
-
-  if (!is.null(numeric)) {
-    # Any unmatched numeric = name is a genuine typo: it is neither a model IV
-    # nor a registered dummy (a registered dummy named here was skipped from
-    # expansion upstream under Option B and so remains an IV).
-    bad <- setdiff(numeric, iv_names)
-    if (length(bad) > 0) {
-      .jst_stop(
-        "numeric argument: ",
-        paste0("'", bad, "'", collapse = ", "),
-        " not found among independent variables in ", .jst_data_name,
-        ". Check for typos."
-      )
-    }
-    numeric <- intersect(numeric, iv_names)
-  }
-
-  if (!is.null(categorical)) {
-    bad <- setdiff(categorical, iv_names)
-    if (length(bad) > 0) {
-      bad_registered <- intersect(bad, expanded_originals)
-      bad_unknown    <- setdiff(bad, expanded_originals)
-      if (length(bad_registered) > 0) {
-        .jst_warn(
-          "categorical = was ignored for ",
-          paste0(bad_registered, collapse = ", "),
-          " (already registered as a dummy via jdummy; categorical ",
-          "treatment is automatic)."
-        )
-      }
-      if (length(bad_unknown) > 0) {
-        .jst_stop(
-          "categorical argument: ",
-          paste0("'", bad_unknown, "'", collapse = ", "),
-          " not found among independent variables in ", .jst_data_name,
-          ". Check for typos."
-        )
-      }
-      categorical <- intersect(categorical, iv_names)
-    }
-  }
-
-  if (!is.null(count)) {
-    # Remaining count = names (DV already consumed) are IV predictors; a count
-    # IV is just a numeric predictor, so validate exactly like numeric =. Any
-    # unmatched name is a typo (a registered dummy named here was skipped from
-    # expansion upstream under Option B and remains an IV).
-    bad <- setdiff(count, iv_names)
-    if (length(bad) > 0) {
-      .jst_stop(
-        "count argument: ",
-        paste0("'", bad, "'", collapse = ", "),
-        " not found among independent variables in ", .jst_data_name,
-        ". Check for typos."
-      )
-    }
-    count <- intersect(count, iv_names)
-  }
-
-  # Check for conflicts between numeric and categorical
-  if (!is.null(numeric) && !is.null(categorical)) {
-    conflict <- intersect(numeric, categorical)
-    if (length(conflict) > 0) {
-      .jst_stop(
-        paste0("'", conflict, "'", collapse = ", "),
-        " listed in both numeric and categorical arguments."
-      )
-    }
-  }
-
-  # A variable cannot be both a count and a categorical (the assertions
-  # contradict). count and numeric both mean "numeric-like", so they are not
-  # treated as a conflict.
-  if (!is.null(count) && !is.null(categorical)) {
-    conflict <- intersect(count, categorical)
-    if (length(conflict) > 0) {
-      .jst_stop(
-        paste0("'", conflict, "'", collapse = ", "),
-        " listed in both count and categorical arguments."
-      )
-    }
-  }
-
-  for (v in model_vars) {
-    if (v %in% dummy_coef_names) next   # Dummy columns created by jdummy()
-    if (v %in% expanded_originals) next # Original vars replaced by jdummy()
-
-    if (v == dv_name) {
-      # DV — always numeric
-      if (haven::is.labelled(data[[v]])) data[[v]] <- .jst_as_numeric(data[[v]])
-      next
-    }
-
-    # --- Override: numeric = "Var" forces numeric ---
-    if (v %in% numeric) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- .jst_as_numeric(data[[v]])
-      }
-      # Plain numeric stays as-is
-      next
-    }
-
-    # --- Override: count = "Var" forces numeric (a count predictor enters
-    # the model as a numeric predictor; the Count subclass matters only for
-    # the DV count caveat, not for IV handling). ---
-    if (v %in% count) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- .jst_as_numeric(data[[v]])
-      }
-      next
-    }
-
-    # --- Override: categorical = "Var" forces categorical ---
-    if (v %in% categorical) {
-      .jst_stop_if_filter_kept_one(data[[v]], v,
-                                   pipeline$pipeline_counts$subset_expr,
-                                   .jst_data_name)
-      # One category: set aside, and stopped under the Case Processing
-      # block in the registered predictor's words (Session 347).
-      if (.jst_n_categories(data[[v]]) < 2L) {
-        if (is.null(one_cat_in_call)) {
-          one_cat_in_call <- list(v = v, x = data[[v]])
-        }
-        next
-      }
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
-                                   data_name = .jst_data_name)
-      auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) .jst_msg_out(n)
-      for (w in reg$warnings_msg) .jst_warn(w)
-      auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
-      next
-    }
-
-    # Resolver-computed columns never enter the auto-categorical machinery
-    # (AUDIT-028): the structural hedges below steer to jdummy()/jrecode()
-    # calls that cannot take an inline term. An explicit categorical =
-    # naming the term still wins in the branch above, per the resolution
-    # stack (per-call assertions beat structural guesses).
-    if (v %in% resolved$computed) next
-
-    # --- Auto-detection (two-helper classifier) ---
-    #
-    # Intent helper first: only treat the IV as categorical when the user
-    # has explicitly signalled categorical (jdummy-registered, or
-    # factor/logical/character class). jdummy-registered IVs are handled
-    # upstream by .jst_expand_dummies() and won't reach this block; the
-    # Rule A check inside .jst_is_categorical() is defensive.
-    #
-    # If the intent helper returns FALSE, the IV enters the model as
-    # numeric. The structural helper (.jst_is_discrete_integer()) is then
-    # consulted purely to decide whether to warn the user: if the variable
-    # has categorical-looking structure (haven-labelled with labels in
-    # data, or small-range whole-number numeric), the user may have meant
-    # to register with jdummy() or pass categorical = instead.
-    if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      .jst_stop_if_filter_kept_one(data[[v]], v,
-                                   pipeline$pipeline_counts$subset_expr,
-                                   .jst_data_name)
-      # One category: set aside, and stopped under the Case Processing
-      # block in the registered predictor's words (Session 347).
-      if (.jst_n_categories(data[[v]]) < 2L) {
-        if (is.null(one_cat_in_call)) {
-          one_cat_in_call <- list(v = v, x = data[[v]])
-        }
-        next
-      }
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
-                                   data_name = .jst_data_name)
-      auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) .jst_msg_out(n)
-      for (w in reg$warnings_msg) .jst_warn(w)
-      auto_ref_cats <- c(auto_ref_cats, paste0(v, " = ", reg$ref_label))
-    } else {
-      # Not intent-categorical. Strip haven class if present, leave as
-      # numeric in the model.
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- .jst_as_numeric(data[[v]])
-      }
-      # Check for dichotomy first: dichotomies are valid as numeric IVs
-      # in linear regression (the slope is the mean difference). They do
-      # not need dummy-coding, and the discrete-integer hedge below would
-      # be misleading for them. Coding-specific notes only (off-minimal;
-      # the fitted result is identical either way -- Rule Q: the steer is
-      # data-shape, not a different model):
-      #   - 0/1, factor, character, logical: no note, clean run.
-      #   - 1/2: registering as a dummy clarifies the intercept.
-      #   - other (e.g., 5/10): non-0/1 codes; same dummy/recode steer.
-      # The last line states the state to reach, not a method (voice Rule
-      # X, Session 347): it ended "Or recode to a permanent 0/1 variable
-      # with jrecode()."
-      iv_dich <- .jst_is_dichotomy(data[[v]])
-      if (iv_dich$is_dichotomy) {
-        if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-          if (iv_dich$coding %in% c("1/2", "other")) {
-            .jst_msg(.jst_dichotomy_note(v, iv_dich$coding, data_in[[v]],
-                                         .jst_data_name, .jst_data_kind))
-          }
-        }
-        # 0/1, factor, character, logical: no note.
-      } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
-                 !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
-        # Non-dichotomous but categorical-like structure: emit the
-        # informational warning so the user can confirm continuous
-        # treatment or switch to categorical. Suppressed when the user has
-        # asserted a numeric/count role (jnumeric/jcount) -- the hedge is a
-        # guess they have already answered. (A per-call numeric=/count= IV
-        # short-circuits earlier, so only registration reaches this gate.)
-        # The rerun lines are built from the formula as typed (Session
-        # 346; see .jst_seems_categorical_msg()). Collected, so that several
-        # get one warning (Session 347).
-        seems_cat <- c(seems_cat, v)
-      }
-    }
-  }
-  if (length(seems_cat) > 0L) {
-    .jst_warn(.jst_seems_categorical_msg(
-      "jlm", seems_cat, formula_typed, .jst_data_name, .jst_data_kind,
-      .jst_default_used, categorical))
-  }
-
-  # -- Apply auto-categorical expansions ------------------------------------
-  # For variables that were determined to be categorical (via categorical =
-  # argument or auto-detection), an in-flight registration was built but
-  # the formula/data weren't yet updated. Apply those expansions now using
-  # the same .jst_expand_one_dummy() helper that .jst_expand_dummies()
-  # uses for jdummy registrations, so naming is uniform across pathways.
-  if (length(auto_cat_regs) > 0) {
-    for (vname in names(auto_cat_regs)) {
-      reg <- auto_cat_regs[[vname]]
-      reg$var_name <- vname
-      expanded2 <- .jst_expand_one_dummy(data, formula, reg)
-      data             <- expanded2$data
-      formula          <- expanded2$formula
-      dummy_coef_names <- c(dummy_coef_names, expanded2$dummy_coef_names)
-    }
-    model_vars <- all.vars(formula)
-  }
+  # The name arguments checked, then each predictor, then the dummy
+  # expansions (.jst_model_iv_loop(), jlm()'s and jlogistic()'s; S386).
+  .jst_iv <- .jst_model_iv_loop(
+    data, formula, model_vars, dv_name, iv_names, numeric, categorical,
+    count, dummy_coef_names, expanded_originals, resolved, pipeline, data_in,
+    .jst_data_name, .jst_data_kind, .jst_default_used, formula_typed,
+    auto_ref_cats, auto_cat_regs, one_cat_in_call, seems_cat,
+    fn = "jlm", skip_absent = FALSE)
+  data             <- .jst_iv$data
+  formula          <- .jst_iv$formula
+  model_vars       <- .jst_iv$model_vars
+  dummy_coef_names <- .jst_iv$dummy_coef_names
+  auto_cat_regs    <- .jst_iv$auto_cat_regs
+  auto_ref_cats    <- .jst_iv$auto_ref_cats
+  one_cat_in_call  <- .jst_iv$one_cat_in_call
+  numeric          <- .jst_iv$numeric
+  categorical      <- .jst_iv$categorical
+  count            <- .jst_iv$count
 
   # Build model frame and sample_info early so case processing block can
   # use them. Listwise deletion is applied here via na.action = na.omit.
@@ -3477,44 +3859,20 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # all-zero dummy under its internal column name.
   # A predictor dummy-coded in the call that has one category (Session
   # 347): stopped here, as a registered one is in the step below.
-  .jst_stop_one_category_in_call(one_cat_in_call, sample_info, .jst_data_name)
-
-  pruned <- .jst_prune_absent_categories(
+  # The sample checked and absent categories pruned (.jst_model_prefit(),
+  # jlm()'s and jlogistic()'s; Session 386).
+  .jst_pf <- .jst_model_prefit(
     mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
-    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef,
-    sample_info, .jst_data_name)
-  formula          <- pruned$formula
-  mf               <- pruned$mf
-  dummy_regs       <- pruned$dummy_regs
-  auto_cat_regs    <- pruned$auto_cat_regs
-  dummy_coef_names <- pruned$dummy_coef_names
-  ref_cats         <- pruned$ref_cats
-  auto_ref_cats    <- pruned$auto_ref_cats
-
-  # Reference categories are printed later, under the Outcome: line (just above
-  # the Coefficients table they describe). Build the vector here unconditionally
-  # because downstream code (the return object) uses it regardless of display.
-  all_ref_cats <- c(ref_cats, auto_ref_cats)
-
-  # Zero-variance predictor check: any IV with only one unique value in
-  # the analytic sample. Skip the response (column 1 of mf) and intercept.
-  iv_cols <- mf[, -1L, drop = FALSE]
-  if (ncol(iv_cols) > 0L) {
-    n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
-    constant_ivs <- names(n_unique)[n_unique < 2L]
-    if (length(constant_ivs) > 0L) {
-      .jst_stop_constant_predictors(constant_ivs, sample_info,
-                                    .jst_data_name, pipeline$data)
-    }
-  }
-
-  # No more cases than coefficients (Session 347): an exact fit with no
-  # residual df, printed as NaN standard errors and a blank p column.
-  .jst_stop_too_few_cases(
-    sample_info,
-    tryCatch(ncol(stats::model.matrix(formula, mf)),
-             error = function(e) NA_integer_),
-    "A regression")
+    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef, sample_info,
+    .jst_data_name, pipeline$data, one_cat_in_call, "A regression")
+  formula          <- .jst_pf$formula
+  mf               <- .jst_pf$mf
+  dummy_regs       <- .jst_pf$dummy_regs
+  auto_cat_regs    <- .jst_pf$auto_cat_regs
+  dummy_coef_names <- .jst_pf$dummy_coef_names
+  ref_cats         <- .jst_pf$ref_cats
+  auto_ref_cats    <- .jst_pf$auto_ref_cats
+  all_ref_cats     <- .jst_pf$all_ref_cats
 
   model         <- stats::lm(formula, data = mf)
   model_summary <- summary(model)
@@ -3613,22 +3971,10 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # never the square itself (Session 321; until then the term was rescaled
   # as its own column here, as in the regular refit above). Any other
   # computed term (log(x), a condition) is an input of its own.
-  mf_gel <- mf
-  for (nm in names(mf_gel)[-1L]) {
-    col <- mf_gel[[nm]]
-    if (!is.numeric(col)) next
-    n_uni <- length(unique(col[!is.na(col)]))
-    ctr   <- col - mean(col, na.rm = TRUE)
-    mf_gel[[nm]] <- if (n_uni <= 2L) ctr
-                    else ctr / (2 * stats::sd(col, na.rm = TRUE))
-  }
-  mf_gel <- .jst_rescale_poly_terms(
-    mf_gel, mf, data, resolved$computed,
-    rescale = function(v) {
-      ctr <- v - mean(v)
-      if (length(unique(v)) <= 2L) ctr else ctr / (2 * stats::sd(v))
-    },
-    enclos  = term_enclos)
+  # The Gelman inputs: each continuous predictor centered and divided by two
+  # SDs, a 0/1 column centered, powers and products recomputed from the
+  # rescaled inputs (.jst_gelman_frame(); Session 386).
+  mf_gel <- .jst_gelman_frame(mf, data, resolved$computed, term_enclos)
   gelman_coefs        <- stats::coef(stats::lm(formula, data = mf_gel))
   names(gelman_coefs) <- .jst_unbacktick(names(gelman_coefs))
   gelman_b            <- rep(NA_real_, nrow(coefs))
@@ -3714,10 +4060,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # (coefficients, SEs, t, standardized beta). P-values keep their own
   # fixed convention (above). A value that rounds to zero from below prints
   # as a plain "0.000", not a signed "-0.000" (which reads as an error).
-  fmt3 <- function(x) {
-    s <- sprintf(paste0("%.", digits_n, "f"), as.numeric(x))
-    ifelse(startsWith(s, "-") & !grepl("[1-9]", s), sub("^-", "", s), s)
-  }
+  # The package's formatter (Session 386: this function's copy printed "NA"
+  # for a value that cannot be computed, where .jst_make_fmt() prints "").
+  fmt3 <- .jst_make_fmt(digits_n)
 
   # Clean up factor coefficient names for readability
   rownames(coefs) <- .jst_clean_coef_names(rownames(coefs), data,
@@ -3805,33 +4150,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # No leading blank here: the CPS block closes with one blank line in every
   # mode (N line or table), so a cat("\n") at this point doubled it.
   # (Session 287; the S284 N line made the doubling visible everywhere.)
-  out_coefs_disp <- out_coefs
-  if (identical(vlmode, "labels")) {
-    rownames(out_coefs_disp) <- .jst_relabel_coef_names(
-      rownames(out_coefs), lab_src, all.vars(formula)[-1])
-  }
-  # The outcome is named beneath the Coefficients table (not above), via
-  # .jst_print_outcome_line(); under the variable.id legend modes it is carried
-  # by the legend's Outcome section instead, so no standalone line prints.
-  # (Outcome placement moved below the table this session; previously above,
-  # per Session 62/63.)
-  # The reference category is no longer printed on its own line; it is folded
-  # into each multi-category variable's header below (e.g.
-  # "Employment (ref = 1: Employed full-time)"), governed by value.id and the
-  # ref.categories toggle. all_ref_cats still feeds the returned object.
-  #
-  # Multi-category dummy predictors are grouped: a header row carrying the
-  # variable name (its label under variable.id = "labels") with the reference
-  # folded in, and the categories indented two spaces beneath with value.id
-  # labels. Single-contrast (dichotomous) predictors and continuous predictors
-  # are left as flat rows. The display label rides in a leading column printed
-  # with "ln" (left, no-trim) alignment so the indent survives; the returned
-  # object is untouched.
-  multi_cat_regs <- .jst_collect_multicat_regs(dummy_regs, auto_cat_regs,
-                                               dummy_coef_names)
-  coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
-                                      value_mode_coef, vlmode, lab_src,
-                                      show_ref_categories)
+  # The coefficient rows relabeled and the categorical predictors grouped
+  # (.jst_coef_display(), jlm()'s and jlogistic()'s; Session 386).
+  .jst_cd <- .jst_coef_display(out_coefs, vlmode, lab_src, formula,
+                               dummy_regs, auto_cat_regs, dummy_coef_names,
+                               value_mode_coef, show_ref_categories)
+  multi_cat_regs <- .jst_cd$multi_cat_regs
+  coef_disp      <- .jst_cd$coef_disp
   # The standardized-beta header carries the regime: bare "\u03b2" for the
   # regular betas (default and "all"), "Gelman \u03b2" for the Gelman regime so
   # the value is not misread as a classic beta, "Product \u03b2" for the
@@ -3892,26 +4217,19 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     #     interaction and power as an ordinary predictor, as some other
     #     software does.
     if (show_beta_col) {
-      poly_info  <- lapply(intersect(resolved$computed, names(mf)[-1L]),
-                           .jst_poly_term, data_names = names(data),
-                           enclos = term_enclos)
-      poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
-      poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
-      pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
-                                    `[[`, numeric(1), "power")))
-      has_int  <- any(grepl(":", term_keys, fixed = TRUE)) ||
-                  any(poly_kinds == "interaction")
-      has_pow  <- any(poly_kinds == "power")
-      pow_noun <- if (pow_max > 2) "power term" else "squared term"
-      hand     <- .jst_hand_products(mf, skip = c(resolved$computed,
-                                                  dummy_coef_names))
-      # One the fit dropped as aliased (the same product also entered as an
-      # interaction) has no row to explain; the collinearity warning covers it.
-      fit_b    <- stats::coef(model)
-      names(fit_b) <- .jst_unbacktick(names(fit_b))
-      hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
-                              logical(1))]
-      hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
+      # The inputs of the legends under the beta column (.jst_beta_legend_inputs(),
+      # jlm()'s and jlogistic()'s; Session 386).
+      .jst_bl <- .jst_beta_legend_inputs(resolved$computed, mf, data, term_enclos,
+                                         term_keys, dummy_coef_names, model)
+      poly_info  <- .jst_bl$poly_info
+      poly_kinds <- .jst_bl$poly_kinds
+      pow_max    <- .jst_bl$pow_max
+      has_int    <- .jst_bl$has_int
+      has_pow    <- .jst_bl$has_pow
+      pow_noun   <- .jst_bl$pow_noun
+      hand       <- .jst_bl$hand
+      fit_b      <- .jst_bl$fit_b
+      hand_sq    <- .jst_bl$hand_sq
 
       legends <- .jst_beta_legends(std, beta_header, has_int, has_pow,
                                    pow_noun, hand, hand_sq, "jlm")
@@ -3945,28 +4263,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     cat("  Residual:   ", sprintf(paste0("%.", digits_n, "f"), ss_residual),   "\n", sep = "")
     cat("  Total:      ", sprintf(paste0("%.", digits_n, "f"), ss_total),      "\n", sep = "")
   }
+  # The seam between the blocks, and the order model.layout gives them
+  # (.jst_print_model_seam(), .jst_print_model_layout(); Session 386).
   print_seam <- function() {
-    # "legend" (mid): between the Coefficients table and the R-squared/fit block.
-    # In legend mode the roster's trailing blank line doubles as the separator
-    # before the fit block (matching jlogistic); otherwise one blank is emitted
-    # here. The R-squared line carries no leading newline, so exactly one blank
-    # precedes the fit block in every variable.id mode.
-    if (identical(vlmode, "legend")) {
-      cat("\n")
-      .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
-    } else {
-      cat("\n")
-    }
+    .jst_print_model_seam(vlmode, lab_src, original_formula_vars)
   }
-  if (identical(model_layout, "fit")) {
-    print_fit_block()
-    print_seam()
-    print_coef_block()
-  } else {
-    print_coef_block()
-    print_seam()
-    print_fit_block()
-  }
+  .jst_print_model_layout(model_layout, print_coef_block, print_fit_block,
+                          print_seam)
 
   # -- Diagnostics (VIF + plots) --------------------------------------------
   vif_values <- NULL
@@ -4001,19 +4304,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     no_pred_dropped <- attr(plot_which, "dropped")
     plot_which <- as.vector(plot_which)
     if (length(plot_which) > 0) {
-      if (length(plot_which) == 1) {
-        cat("\n(Diagnostic plot produced: ",
-            plot_labels[plot_which[1]], ")\n", sep = "")
-      } else {
-        # jplot()'s line for jlogistic(), word for word (Session 347): the
-        # two said one thing two ways, this one "use the back arrow in the
-        # Plots pane to view all".
-        .jst_msg_out("\n", length(plot_which), " diagnostic plots produced\n",
-                     .jst_txt_plot_nav)
-        for (i in seq_along(plot_which)) {
-          cat("  ", i, ". ", plot_labels[plot_which[i]], "\n", sep = "")
-        }
-      }
+      .jst_print_plot_list(plot_which, plot_labels)
       .jst_plot_lm_diagnostics(model, which = plot_which)
     }
     if (length(no_pred_dropped) > 0L) {
@@ -4538,23 +4829,12 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # tolerated and folded to "both" (so a bare call does not break). Only that
   # global-default path can reach the fold, since an explicit legend value is
   # rejected here. The variable.id legend block is unrelated (handled later).
-  if (!is.null(value.id) && value.id %in% c("legend", "legend.bottom")) {
-    .jst_stop("value.id '", value.id, "' is not supported here.")
-  }
-  value_mode      <- .jst_resolve_value_id(value.id,
-                                           allowed = c("both", "values", "labels"))
-  value_mode_coef <- if (value_mode %in% c("legend", "legend.bottom")) {
-    "both"
-  } else {
-    value_mode
-  }
-
-  # variable.id is likewise validated before any output (same fail-fast
-  # reason). It governs variable-name display in the coefficient table and
-  # whether/where the variable-label legend prints: "legend" just below the
-  # Coefficients table (the coefficients/fit seam), "legend.bottom" at the
-  # very end, "labels" relabels the coefficient-row terms (display only).
-  vlmode          <- .jst_resolve_variable_id(variable.id)
+  # value.id and variable.id, checked and resolved before any output
+  # (.jst_model_id_modes(), jlm()'s and jlogistic()'s; Session 386).
+  .jst_ids        <- .jst_model_id_modes(value.id, variable.id)
+  value_mode      <- .jst_ids$value_mode
+  value_mode_coef <- .jst_ids$value_mode_coef
+  vlmode          <- .jst_ids$vlmode
 
   # Front-door check: the formula goes first, then the data. A swapped or
   # misplaced formula otherwise crashes deep inside the data pipeline with
@@ -4577,17 +4857,14 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   .jst_data_kind <- if (missing(data)) "name"
                     else .jst_data_arg_kind(substitute(data))
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
+  # Resolve default data frame if not specified (.jst_formula_front(), one
+  # home for the five formula functions; Session 386). The data given is
+  # not touched here: it is read where it always was.
+  .jst_front        <- .jst_formula_front(missing(data), substitute(data),
+                                          parent.frame())
+  if (.jst_front$default_used) data <- .jst_front$data
+  .jst_default_used <- .jst_front$default_used
+  .jst_data_name    <- .jst_front$data_name
 
   if (full) {
     if (is.null(ci))          ci          <- TRUE
@@ -4628,49 +4905,24 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # is left out of the list; a bare name is still a variable, and a name
   # found nowhere still stops. A data frame named inside a term, and a power
   # terms() cannot read (y ~ x^k), are refused here.
-  raw_vars <- .jst_check_formula_vars(
-    formula, data, .jst_data_name, default_used = .jst_default_used,
-    n_frame = pipeline$pipeline_counts$n_original)
-
-  # numeric =, categorical = and count = name variables, bare or in quotes
-  # (ruling R18; Fix Slate 22, Session 376): read here, before anything
-  # evaluates them. categorical = Region had stopped with R's own "object
-  # 'Region' not found".
-  .name_args  <- .jst_model_name_args(
+  # The formula's variables, the name arguments (bare or quoted, ruling
+  # R18), the bare powers, the formula's environment and the computed terms
+  # (.jst_model_terms(), jlm()'s and jlogistic()'s; Session 386). The name
+  # arguments are captured here, before anything evaluates them.
+  .jst_mt <- .jst_model_terms(
+    formula, data, .jst_data_name, .jst_default_used, pipeline,
     list(numeric = substitute(numeric), categorical = substitute(categorical),
          count = substitute(count)),
-    parent.frame(), data, .jst_data_name,
-    example = c(setdiff(c(raw_vars[-1L], names(data)), raw_vars[1L]),
-                "Age")[1L], default_used = .jst_default_used)
-  numeric     <- .name_args$numeric
-  categorical <- .name_args$categorical
-  count       <- .name_args$count
-
-  # A single term raised to a power outside I() enters as the term alone;
-  # found here on the formula as typed, warned once the model is fitted.
-  # See the matching block in jlm (Session 321).
-  bare_powers <- .jst_formula_bare_powers(formula)
-  # The formula's own environment, for the constants a computed term may
-  # name, which the standardized refits re-evaluate below (Session 375, as
-  # in jlm()).
-  term_enclos <- environment(formula)
-  if (is.null(term_enclos)) term_enclos <- parent.frame()
-
-  # Transformed-term front door (AUDIT-021; supersedes the AUDIT-005
-  # refusal): compute log(x), I(x^2), and the like once on the analysis
-  # copy and rewrite the formula to reference the computed column. See the
-  # matching block in jlm.
-  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
-  formula  <- resolved$formula
-  data     <- resolved$data
-
-  # A resolver-computed logical -- e.g. I(ScreenTime > 4) -- enters the
-  # model as a numeric 0/1 column, exactly like a saved indicator column:
-  # the flat-dichotomy beta suppression and the two-level coefficient
-  # annotation then apply through the same machinery (AUDIT-028).
-  for (.cv in resolved$computed) {
-    if (is.logical(data[[.cv]])) data[[.cv]] <- as.numeric(data[[.cv]])
-  }
+    parent.frame())
+  raw_vars    <- .jst_mt$raw_vars
+  numeric     <- .jst_mt$numeric
+  categorical <- .jst_mt$categorical
+  count       <- .jst_mt$count
+  bare_powers <- .jst_mt$bare_powers
+  term_enclos <- .jst_mt$term_enclos
+  resolved    <- .jst_mt$resolved
+  formula     <- .jst_mt$formula
+  data        <- .jst_mt$data
 
   model_vars            <- all.vars(formula)
   dv_name               <- model_vars[1]
@@ -4746,7 +4998,6 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   .jst_check_dummy_outcome(.jst_data_name, dv_name, "jlogistic")
   iv_names <- setdiff(model_vars, c(dv_name, dummy_coef_names))
 
-  auto_detected  <- character(0)
   auto_ref_cats  <- character(0)
   auto_cat_regs  <- list()  # in-flight registrations for auto-cat / categorical = vars
   one_cat_in_call <- NULL   # a predictor dummy-coded in the call with one category
@@ -4761,143 +5012,25 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # registration list) is still needed downstream by .jst_collect_multicat_regs().
   dummy_regs <- .jst_get_dummy(.jst_data_name)
 
-  for (v in iv_names) {
-    if (v %in% dummy_coef_names)   next
-    if (v %in% expanded_originals) next
-    if (!(v %in% names(data)))     next
-
-    # --- Override: numeric = "Var" forces continuous ---
-    if (!is.null(numeric) && v %in% numeric) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- .jst_as_numeric(data[[v]])
-      }
-      next
-    }
-
-    # --- Override: count = "Var" forces numeric (a count predictor enters the
-    # model as a numeric predictor; the Count subclass carries no special IV
-    # handling, only the DV count caveat in jlm, which does not apply here). ---
-    if (!is.null(count) && v %in% count) {
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- .jst_as_numeric(data[[v]])
-      }
-      next
-    }
-
-    # --- Override: categorical = "Var" forces categorical ---
-    if (!is.null(categorical) && v %in% categorical) {
-      .jst_stop_if_filter_kept_one(data[[v]], v,
-                                   pipeline$pipeline_counts$subset_expr,
-                                   .jst_data_name)
-      # One category: set aside, and stopped under the Case Processing
-      # block in the registered predictor's words (Session 347).
-      if (.jst_n_categories(data[[v]]) < 2L) {
-        if (is.null(one_cat_in_call)) {
-          one_cat_in_call <- list(v = v, x = data[[v]])
-        }
-        next
-      }
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
-                                   data_name = .jst_data_name)
-      auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) .jst_msg_out(n)
-      for (w in reg$warnings_msg) .jst_warn(w)
-      auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", reg$ref_label))
-      next
-    }
-
-    # Resolver-computed columns never enter the auto-categorical machinery
-    # (AUDIT-028): the structural hedges below steer to jdummy()/jrecode()
-    # calls that cannot take an inline term. An explicit categorical =
-    # naming the term still wins in the branch above, per the resolution
-    # stack (per-call assertions beat structural guesses).
-    if (v %in% resolved$computed) next
-
-    # --- Auto-detection via unified classifier ---
-    if (.jst_is_categorical(data[[v]], v, .jst_data_name)) {
-      .jst_stop_if_filter_kept_one(data[[v]], v,
-                                   pipeline$pipeline_counts$subset_expr,
-                                   .jst_data_name)
-      # One category: set aside, and stopped under the Case Processing
-      # block in the registered predictor's words (Session 347).
-      if (.jst_n_categories(data[[v]]) < 2L) {
-        if (is.null(one_cat_in_call)) {
-          one_cat_in_call <- list(v = v, x = data[[v]])
-        }
-        next
-      }
-      reg <- .jst_make_dummy_names(data[[v]], v, ref = "auto",
-                                   data_name = .jst_data_name)
-      auto_cat_regs[[v]] <- reg
-      for (n in reg$notes) .jst_msg_out(n)
-      for (w in reg$warnings_msg) .jst_warn(w)
-      auto_detected <- c(auto_detected, v)
-      auto_ref_cats <- c(auto_ref_cats,
-                         paste0(v, " = ", reg$ref_label))
-    } else {
-      # Not intent-categorical. Strip haven class if present, leave as
-      # numeric in the model.
-      if (haven::is.labelled(data[[v]])) {
-        data[[v]] <- .jst_as_numeric(data[[v]])
-      }
-      # Check for dichotomy first: dichotomies are valid as numeric IVs
-      # in logistic regression (the slope on the log-odds is the
-      # contrast). They do not need dummy-coding, and the discrete-integer
-      # hedge below would be misleading for them. Coding-specific notes
-      # only (off-minimal; the fitted result is identical either way --
-      # Rule Q: the steer is data-shape, not a different model):
-      #   - 0/1, factor, character, logical: no note, clean run.
-      #   - 1/2: registering as a dummy clarifies the intercept.
-      #   - other (e.g., 5/10): non-0/1 codes; same dummy/recode steer.
-      # The last line states the state to reach, not a method (voice Rule
-      # X, Session 347): it ended "Or recode to a permanent 0/1 variable
-      # with jrecode()."
-      iv_dich <- .jst_is_dichotomy(data[[v]])
-      if (iv_dich$is_dichotomy) {
-        if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-          if (iv_dich$coding %in% c("1/2", "other")) {
-            .jst_msg(.jst_dichotomy_note(v, iv_dich$coding, data_in[[v]],
-                                         .jst_data_name, .jst_data_kind))
-          }
-        }
-        # 0/1, factor, character, logical: no note.
-      } else if (.jst_is_discrete_integer(data[[v]], v, .jst_data_name) &&
-                 !.jst_role_asserted_numeric(data[[v]], v, .jst_data_name)) {
-        # Non-dichotomous but categorical-like structure: emit the
-        # informational warning so the user can confirm continuous
-        # treatment or switch to categorical. Suppressed when the user has
-        # asserted a numeric/count role (jnumeric/jcount).
-        # The rerun lines are built from the formula as typed (Session
-        # 346; see .jst_seems_categorical_msg()). Collected, so that several
-        # get one warning (Session 347).
-        seems_cat <- c(seems_cat, v)
-      }
-    }
-  }
-  if (length(seems_cat) > 0L) {
-    .jst_warn(.jst_seems_categorical_msg(
-      "jlogistic", seems_cat, formula_typed, .jst_data_name, .jst_data_kind,
-      .jst_default_used, categorical))
-  }
-
+  # The name arguments checked (jlm()'s checks, gained at Session 386), then
+  # each predictor, then the dummy expansions (.jst_model_iv_loop()).
+  .jst_iv <- .jst_model_iv_loop(
+    data, formula, model_vars, dv_name, iv_names, numeric, categorical,
+    count, dummy_coef_names, expanded_originals, resolved, pipeline, data_in,
+    .jst_data_name, .jst_data_kind, .jst_default_used, formula_typed,
+    auto_ref_cats, auto_cat_regs, one_cat_in_call, seems_cat,
+    fn = "jlogistic", skip_absent = TRUE)
+  data             <- .jst_iv$data
+  formula          <- .jst_iv$formula
+  model_vars       <- .jst_iv$model_vars
+  dummy_coef_names <- .jst_iv$dummy_coef_names
+  auto_cat_regs    <- .jst_iv$auto_cat_regs
+  auto_ref_cats    <- .jst_iv$auto_ref_cats
+  one_cat_in_call  <- .jst_iv$one_cat_in_call
+  numeric          <- .jst_iv$numeric
+  categorical      <- .jst_iv$categorical
+  count            <- .jst_iv$count
   all_ref_cats <- c(ref_cats, auto_ref_cats)
-
-  # -- Apply auto-categorical expansions ------------------------------------
-  # Same pattern as jlm: in-flight registrations built above are now
-  # applied via .jst_expand_one_dummy() so dummy column names are uniform
-  # across pathways.
-  if (length(auto_cat_regs) > 0) {
-    for (vname in names(auto_cat_regs)) {
-      reg <- auto_cat_regs[[vname]]
-      reg$var_name <- vname
-      expanded2 <- .jst_expand_one_dummy(data, formula, reg)
-      data             <- expanded2$data
-      formula          <- expanded2$formula
-      dummy_coef_names <- c(dummy_coef_names, expanded2$dummy_coef_names)
-    }
-    model_vars <- all.vars(formula)
-  }
 
   # -- Resolve and validate the binary response -----------------------------
   # .jst_is_dichotomy() is the single source of truth for numeric dichotomy
@@ -5219,41 +5352,20 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # the absent category's all-zero dummy under its internal column name.
   # A predictor dummy-coded in the call that has one category (Session
   # 347): stopped here, as a registered one is in the step below.
-  .jst_stop_one_category_in_call(one_cat_in_call, sample_info, .jst_data_name)
-
-  pruned <- .jst_prune_absent_categories(
+  # The sample checked and absent categories pruned (.jst_model_prefit(),
+  # jlm()'s and jlogistic()'s; Session 386).
+  .jst_pf <- .jst_model_prefit(
     mf, data, formula, dummy_regs, expanded_originals, auto_cat_regs,
-    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef,
-    sample_info, .jst_data_name)
-  formula          <- pruned$formula
-  mf               <- pruned$mf
-  dummy_regs       <- pruned$dummy_regs
-  auto_cat_regs    <- pruned$auto_cat_regs
-  dummy_coef_names <- pruned$dummy_coef_names
-  ref_cats         <- pruned$ref_cats
-  auto_ref_cats    <- pruned$auto_ref_cats
-  all_ref_cats     <- c(ref_cats, auto_ref_cats)
-
-  # Zero-variance predictor check: any IV with only one unique value in
-  # the analytic sample. Skip the response (column 1 of mf) and intercept.
-  iv_cols <- mf[, -1L, drop = FALSE]
-  if (ncol(iv_cols) > 0L) {
-    n_unique <- vapply(iv_cols, function(x) length(unique(x)), integer(1))
-    constant_ivs <- names(n_unique)[n_unique < 2L]
-    if (length(constant_ivs) > 0L) {
-      .jst_stop_constant_predictors(constant_ivs, sample_info,
-                                    .jst_data_name, pipeline$data)
-    }
-  }
-
-  # No more cases than coefficients (Session 347), as in jlm(): glm()
-  # warned of fitted probabilities of 0 or 1 dozens of times and printed
-  # an Exp(B) of 62 digits.
-  .jst_stop_too_few_cases(
-    sample_info,
-    tryCatch(ncol(stats::model.matrix(formula, mf)),
-             error = function(e) NA_integer_),
-    "A logistic regression")
+    dummy_coef_names, ref_cats, auto_ref_cats, value_mode_coef, sample_info,
+    .jst_data_name, pipeline$data, one_cat_in_call, "A logistic regression")
+  formula          <- .jst_pf$formula
+  mf               <- .jst_pf$mf
+  dummy_regs       <- .jst_pf$dummy_regs
+  auto_cat_regs    <- .jst_pf$auto_cat_regs
+  dummy_coef_names <- .jst_pf$dummy_coef_names
+  ref_cats         <- .jst_pf$ref_cats
+  auto_ref_cats    <- .jst_pf$auto_ref_cats
+  all_ref_cats     <- .jst_pf$all_ref_cats
 
   model <- stats::glm(formula, data = data, family = stats::binomial,
                        na.action = stats::na.omit)
@@ -5342,10 +5454,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # (coefficients, SEs, Wald, Exp(b), CI bounds). The Wald p-value and df
   # keep their own fixed conventions. A value that rounds to zero from below
   # prints as a plain "0.000", not a signed "-0.000" (which reads as an error).
-  fmt3 <- function(x) {
-    s <- sprintf(paste0("%.", digits_n, "f"), as.numeric(x))
-    ifelse(startsWith(s, "-") & !grepl("[1-9]", s), sub("^-", "", s), s)
-  }
+  # The package's formatter (Session 386: this function's copy printed "NA"
+  # for a value that cannot be computed, where .jst_make_fmt() prints "").
+  fmt3 <- .jst_make_fmt(digits_n)
 
   # Machine term keys (raw design-matrix coefficient names), captured BEFORE
   # the display rownames are cleaned below -- the stable alignment key the
@@ -5365,22 +5476,10 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # as it stands, a product and a power included -- b times two standard
   # deviations of the column, a binary column's b as it is. Both carried on
   # the return whichever is shown.
-  mf_gel <- mf
-  for (nm in names(mf_gel)[-1L]) {
-    col <- mf_gel[[nm]]
-    if (!is.numeric(col)) next
-    n_uni <- length(unique(col[!is.na(col)]))
-    ctr   <- col - mean(col, na.rm = TRUE)
-    mf_gel[[nm]] <- if (n_uni <= 2L) ctr
-                    else ctr / (2 * stats::sd(col, na.rm = TRUE))
-  }
-  mf_gel <- .jst_rescale_poly_terms(
-    mf_gel, mf, data, resolved$computed,
-    rescale = function(v) {
-      ctr <- v - mean(v)
-      if (length(unique(v)) <= 2L) ctr else ctr / (2 * stats::sd(v))
-    },
-    enclos  = term_enclos)
+  # The Gelman inputs: each continuous predictor centered and divided by two
+  # SDs, a 0/1 column centered, powers and products recomputed from the
+  # rescaled inputs (.jst_gelman_frame(); Session 386).
+  mf_gel <- .jst_gelman_frame(mf, data, resolved$computed, term_enclos)
   gelman_coefs <- tryCatch(
     suppressWarnings(stats::coef(stats::glm(formula, data = mf_gel,
                                             family = stats::binomial))),
@@ -5445,24 +5544,19 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # coefficients explains.
   legends <- character(0)
   if (show_beta_col) {
-    poly_info  <- lapply(intersect(resolved$computed, names(mf)[-1L]),
-                         .jst_poly_term, data_names = names(data),
-                         enclos = term_enclos)
-    poly_info  <- poly_info[!vapply(poly_info, is.null, logical(1))]
-    poly_kinds <- vapply(poly_info, `[[`, character(1), "kind")
-    pow_max    <- max(c(0, vapply(poly_info[poly_kinds == "power"],
-                                  `[[`, numeric(1), "power")))
-    has_int  <- any(grepl(":", term_keys, fixed = TRUE)) ||
-                any(poly_kinds == "interaction")
-    has_pow  <- any(poly_kinds == "power")
-    pow_noun <- if (pow_max > 2) "power term" else "squared term"
-    hand     <- .jst_hand_products(mf, skip = c(resolved$computed,
-                                                dummy_coef_names))
-    fit_b    <- stats::coef(model)
-    names(fit_b) <- .jst_unbacktick(names(fit_b))
-    hand     <- hand[vapply(hand, function(h) !is.na(fit_b[h$col]),
-                            logical(1))]
-    hand_sq  <- vapply(hand, function(h) identical(h$a, h$b), logical(1))
+    # The inputs of the legends under the beta column (.jst_beta_legend_inputs(),
+    # jlm()'s and jlogistic()'s; Session 386).
+    .jst_bl <- .jst_beta_legend_inputs(resolved$computed, mf, data, term_enclos,
+                                       term_keys, dummy_coef_names, model)
+    poly_info  <- .jst_bl$poly_info
+    poly_kinds <- .jst_bl$poly_kinds
+    pow_max    <- .jst_bl$pow_max
+    has_int    <- .jst_bl$has_int
+    has_pow    <- .jst_bl$has_pow
+    pow_noun   <- .jst_bl$pow_noun
+    hand       <- .jst_bl$hand
+    fit_b      <- .jst_bl$fit_b
+    hand_sq    <- .jst_bl$hand_sq
     legends <- c(legends,
                  .jst_beta_legends(std, beta_header, has_int, has_pow,
                                    pow_noun, hand, hand_sq, "jlogistic"))
@@ -5503,33 +5597,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # No leading blank here: the CPS block closes with one blank line in every
   # mode (N line or table), so a cat("\n") at this point doubled it.
   # (Session 287; the S284 N line made the doubling visible everywhere.)
-  out_coefs_disp <- out_coefs
-  if (identical(vlmode, "labels")) {
-    rownames(out_coefs_disp) <- .jst_relabel_coef_names(
-      rownames(out_coefs), lab_src, all.vars(formula)[-1])
-  }
-  # The outcome is named beneath the Coefficients table (not above), via
-  # .jst_print_outcome_line(); under the variable.id legend modes it is carried
-  # by the legend's Outcome section instead, so no standalone line prints.
-  # (Outcome placement moved below the table this session; previously above,
-  # per Session 62/63.)
-  # The reference category is no longer printed on its own line; it is folded
-  # into each multi-category variable's header below (e.g.
-  # "Employment (ref = 1: Employed full-time)"), governed by value.id and the
-  # ref.categories toggle. all_ref_cats still feeds the returned object.
-  #
-  # Multi-category dummy predictors are grouped: a header row carrying the
-  # variable name (its label under variable.id = "labels") with the reference
-  # folded in, and the categories indented two spaces beneath with value.id
-  # labels. Single-contrast (dichotomous) predictors and continuous predictors
-  # are left as flat rows. The display label rides in a leading column printed
-  # with "ln" (left, no-trim) alignment so the indent survives; the
-  # returned object is untouched.
-  multi_cat_regs <- .jst_collect_multicat_regs(dummy_regs, auto_cat_regs,
-                                               dummy_coef_names)
-  coef_disp <- .jst_group_dummy_coefs(out_coefs_disp, multi_cat_regs,
-                                      value_mode_coef, vlmode, lab_src,
-                                      show_ref_categories)
+  # The coefficient rows relabeled and the categorical predictors grouped
+  # (.jst_coef_display(), jlm()'s and jlogistic()'s; Session 386).
+  .jst_cd <- .jst_coef_display(out_coefs, vlmode, lab_src, formula,
+                               dummy_regs, auto_cat_regs, dummy_coef_names,
+                               value_mode_coef, show_ref_categories)
+  multi_cat_regs <- .jst_cd$multi_cat_regs
+  coef_disp      <- .jst_cd$coef_disp
   # Block-centered ("bc") since Session 328, as jlm's: the df column then
   # follows the same rule as the Omnibus table's below it (the two
   # disagreed, " 1" above "2 ", while this table was decimal-tabbed).
@@ -5585,28 +5659,13 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                      digits = c(neg2LL = digits_n, CoxSnellR2 = digits_n,
                                 NagelkerkeR2 = digits_n, AIC = digits_n))
   }
+  # The seam between the blocks, and the order model.layout gives them
+  # (.jst_print_model_seam(), .jst_print_model_layout(); Session 386).
   print_seam <- function() {
-    # -- Fit block (coefficient-first layout: prints after the Coefficients
-    # table). The variable.id "legend" roster sits at this coefficients/fit
-    # seam, mirroring jlm. (Session 63)
-    if (identical(vlmode, "legend")) {
-      cat("\n")
-      .print_model_var_labels(lab_src, original_formula_vars[1], original_formula_vars[-1])
-      # the roster's trailing blank line doubles as the separator before the
-      # fit block, so no extra blank is emitted here.
-    } else {
-      cat("\n")
-    }
+    .jst_print_model_seam(vlmode, lab_src, original_formula_vars)
   }
-  if (identical(model_layout, "fit")) {
-    print_fit_block()
-    print_seam()
-    print_coef_block()
-  } else {
-    print_coef_block()
-    print_seam()
-    print_fit_block()
-  }
+  .jst_print_model_layout(model_layout, print_coef_block, print_fit_block,
+                          print_seam)
 
   # -- Classification table (optional) ---------------------------------------
   if (classification) {
@@ -5680,16 +5739,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     no_pred_dropped <- attr(plot_which, "dropped")
     plot_which <- as.vector(plot_which)
     if (length(plot_which) > 0) {
-      if (length(plot_which) == 1) {
-        cat("\n(Diagnostic plot produced: ",
-            plot_labels[plot_which[1]], ")\n", sep = "")
-      } else {
-        .jst_msg_out("\n", length(plot_which), " diagnostic plots produced\n",
-                     .jst_txt_plot_nav)
-        for (i in seq_along(plot_which)) {
-          cat("  ", i, ". ", plot_labels[plot_which[i]], "\n", sep = "")
-        }
-      }
+      .jst_print_plot_list(plot_which, plot_labels)
       .jst_plot_logistic_diagnostics(model, which = plot_which, list = FALSE)
     }
     if (length(no_pred_dropped) > 0L) {

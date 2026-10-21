@@ -7,6 +7,248 @@
 
 # -- jt -----------------------------------------------------------------------
 
+#' Internal: a formula function's data frame, named or the juse() default
+#'
+#' jt(), jaov(), jcrosstab(), jlm() and jlogistic() each held this block
+#' (Session 386, the twin build). Given no data frame, the juse() default
+#' is resolved, or the resolver's stop raised; given one, its name is the
+#' expression as typed (deparse()), and the data are left for the caller to
+#' read where it always has.
+#'
+#' @param data_missing Logical(1): missing(data) in the caller.
+#' @param data_sub The data argument's expression (substitute(data)).
+#' @param envir The caller's calling frame (parent.frame()).
+#' @return list(data, data_name, default_used); data is NULL when a data
+#'   frame was given.
+#' @keywords internal
+.jst_formula_front <- function(data_missing, data_sub, envir) {
+  if (data_missing) {
+    resolved <- .jst_resolve_data(envir = envir)
+    return(list(data = resolved$data, data_name = resolved$name,
+                default_used = TRUE))
+  }
+  list(data = NULL, data_name = deparse(data_sub), default_used = FALSE)
+}
+
+#' Internal: the group comparison's front, from the pipeline to the groups
+#'
+#' jt() and jaov() each held this block (Session 386, the twin build): the
+#' data pipeline, the formula's variables and transforms, the duplicate,
+#' dummy-outcome and type checks, the Case Processing block and the
+#' empty-sample stop, then the grouping variable made a factor of its
+#' groups. A group is counted on the cases the test can use
+#' (count_on_outcome), as jaov() always and jt() for an independent test
+#' (Session 346).
+#'
+#' @param formula,data The call's formula and data frame.
+#' @param .jst_data_name,.jst_default_used The data frame's name and
+#'   whether it is the juse() default.
+#' @param subset_expr The call's subset = expression (substitute(subset)).
+#' @param envir The calling frame (parent.frame()).
+#' @param case.processing.detail The call's setting.
+#' @param fn Character(1): the calling function.
+#' @param noun Character(1): "a t-test" or "an ANOVA".
+#' @param count_on_outcome Logical(1): drop a group's cases missing on the
+#'   outcome before the groups are counted.
+#' @return A list: data, formula, terms, dv_name, group_name, lab_src, mf,
+#'   sample_info, n_groups_data, is_labelled, original_codes,
+#'   group_val_labels (the last two NULL when the group is not labelled).
+#' @keywords internal
+.jst_group_front <- function(formula, data, .jst_data_name, .jst_default_used,
+                             subset_expr, envir, case.processing.detail, fn,
+                             noun, count_on_outcome) {
+  noun_cap <- paste0(toupper(substring(noun, 1L, 1L)), substring(noun, 2L))
+
+  # Apply data pipeline (jcomplete, jsubset, subset)
+  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
+                                  subset_expr = subset_expr, envir = envir,
+                                  vars = all.vars(formula))
+  data     <- pipeline$data
+  .jst_print_msgs(pipeline$msgs)
+
+  # Raw-name existence check first, so the transform resolver below can
+  # assume every plain variable in the formula exists.
+  # Underlying variable names (pre-transform). Drives the existence check
+  # and, below, the case-processing breakdown -- so a transformed term is
+  # reported against its source column, which the pre-pipeline snapshot
+  # contains (the computed column is not in that snapshot). Since Session
+  # 323 the names are read as lm() reads them: a constant named inside a
+  # computed term (I(x > cutoff)) resolves in the formula's environment and
+  # is left out of the list; a bare name is still a variable, and a name
+  # found nowhere still stops. A data frame named inside a term, and a power
+  # terms() cannot read (y ~ x^k), are refused here.
+  raw_vars <- .jst_check_formula_vars(
+    formula, data, .jst_data_name, default_used = .jst_default_used,
+    n_frame = pipeline$pipeline_counts$n_original)
+
+  # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
+  # the like once on the analysis copy and rewrite the formula to reference
+  # the computed column, so the test and its tables describe the same values under the name the user typed.
+  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
+  formula  <- resolved$formula
+  data     <- resolved$data
+
+  terms      <- all.vars(formula)
+  dv_name    <- terms[1]
+  group_name <- terms[2]
+
+  dup_var <- .jst_formula_dup_var(formula)
+  if (!is.null(dup_var)) {
+    .jst_dup_group_stop(dup_var, noun_cap)
+  }
+
+  .jst_check_dummy_outcome(.jst_data_name, dv_name, fn)
+  # Type gate (Session 46): refuse a date DV (would coerce silently to a day
+  # count) or a text/complex DV (would crash); grouping variable may be
+  # categorical. See .jst_check_analysis_var.
+  .jst_check_analysis_var(data[[terms[1L]]], terms[1L], TRUE, noun)
+  for (.gv in terms[-1L]) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, noun)
+
+  # Pre-conversion label source: variable labels survive here intact (mf's
+  # row subset would drop them from plain-numeric columns; the DV's haven ->
+  # numeric coercion below would drop them from labelled columns). Frozen by
+  # copy-on-modify, so later data[[...]] <- conversions do not affect it.
+  lab_src <- data
+
+  # Build analysis-level data frame (listwise on all formula vars) and
+  # sample_info early so the Case Processing Summary can use them.
+  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
+             terms, drop = FALSE]
+
+  sample_info <- .jst_build_sample_info(
+    pipeline_counts = pipeline$pipeline_counts,
+    data            = pipeline$data,
+    analysis_vars   = raw_vars,
+    n_analysis      = nrow(mf),
+    transform_na    = resolved$introduced_na
+  )
+
+  # Case Processing Summary
+  .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
+
+  # No case left: one stop, ahead of the group count (Session 346).
+  .jst_stop_empty_sample(sample_info)
+
+  # A text grouping variable's blank cells are one group, <blank> (S340).
+  group_var   <- .jst_label_blanks(data[[group_name]])
+
+  # A group is counted on the cases the test can use (Session 346). A group
+  # whose cases are all missing on the outcome was still counted: with two
+  # groups in the data the descriptives printed its row with N 0 and R
+  # stopped on "grouping factor must have exactly 2 levels", and with three
+  # the test was refused as an ANOVA's although two groups had cases. Not
+  # for a paired test, which pairs the two groups' rows by position before
+  # it drops a pair with a missing value (AUDIT-001).
+  n_groups_data <- length(unique(unclass(group_var)[!is.na(group_var)]))
+  if (count_on_outcome) group_var[is.na(data[[dv_name]])] <- NA
+
+  is_labelled <- haven::is.labelled(group_var)
+  original_codes   <- NULL
+  group_val_labels <- NULL
+  if (is_labelled) {
+    original_codes <- .jst_group_codes(group_var)
+    group_val_labels <- labelled::val_labels(group_var)
+  }
+
+  if (is_labelled) {
+    data[[group_name]] <- haven::as_factor(group_var)
+  } else {
+    data[[group_name]] <- if (is.factor(group_var)) group_var
+                          else .jst_text_factor(group_var)
+  }
+
+  # Drop empty factor levels (pipeline filtering may leave empty levels)
+  data[[group_name]] <- droplevels(data[[group_name]])
+
+  list(data = data, formula = formula, terms = terms, dv_name = dv_name,
+       group_name = group_name, lab_src = lab_src, mf = mf,
+       sample_info = sample_info, n_groups_data = n_groups_data,
+       is_labelled = is_labelled, original_codes = original_codes,
+       group_val_labels = group_val_labels)
+}
+
+#' Internal: Levene's test for jt() and jaov(), printed and returned
+#'
+#' The test on the absolute deviations from each group's mean, its table
+#' and, when Welch's test is not the one run, the note's verdict
+#' (.jst_levene_note()). jt() and jaov() each held this block (Session
+#' 386, the twin build); jt() runs it for an independent test only.
+#'
+#' @param data The analysis copy, the grouping variable a factor.
+#' @param dv_name,group_name Character(1): the outcome and the group.
+#' @param digits_n Integer(1): the digits setting.
+#' @param welch Logical(1): whether Welch's test is the one run.
+#' @param fn Character(1): the calling function, for the note.
+#' @return list(F, df1, df2, p, note): the result jt() and jaov() return.
+#' @keywords internal
+.jst_levene_block <- function(data, dv_name, group_name, digits_n, welch,
+                              fn) {
+  group_factor  <- data[[group_name]]
+  dv_vals       <- data[[dv_name]]
+  group_means   <- tapply(dv_vals, group_factor, mean, na.rm = TRUE)
+  abs_devs      <- abs(dv_vals - group_means[group_factor])
+  levene_model  <- stats::aov(abs_devs ~ group_factor)
+  levene_result <- summary(levene_model)[[1]]
+  levene_f      <- round(levene_result$`F value`[1], digits_n)
+  levene_p      <- levene_result$`Pr(>F)`[1]
+  levene_p_fmt  <- .jst_fmt_p(levene_p)
+
+  levene_table <- data.frame(
+    F_value = levene_f,
+    df1     = levene_result$Df[1],
+    df2     = levene_result$Df[2],
+    p_value = levene_p_fmt,
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+
+  # Block-centered columns and trimmed lines (Session 327): each header
+  # centered over its column, each value right-justified in a block
+  # centered under it. On the default alignment F (numeric) sat flush
+  # right and p (text) flush left.
+  .jst_print_table(levene_table,
+                   caption = .jst_txt_levene_caption,
+                   col.names = c("F", "df1", "df2", "p"),
+                   row.names = FALSE,
+                   align = rep("bc", 4L),
+                   digits = c(F_value = digits_n))
+
+  # The note under a significant test, in one of three forms (Session
+  # 346; .jst_levene_note()). Not when Welch's test is the one run.
+  levene_note <- if (!welch) .jst_levene_note(levene_p, dv_vals,
+                                              group_factor, fn)
+                 else NA_character_
+  levene_ret <- list(F = levene_result$`F value`[1],
+                     df1 = levene_result$Df[1], df2 = levene_result$Df[2],
+                     p = levene_p, note = levene_note)
+  cat("\n")
+  levene_ret
+}
+
+#' Internal: the outcome of jt() or jaov() made ready for the test
+#'
+#' The assumption-check warning when the outcome looks categorical
+#' (Likert outcomes and an asserted numeric role are exempt, inside
+#' .jst_warns_seems_categorical()), then a labelled outcome made plain
+#' numbers. jt() and jaov() each held this block (Session 386, the twin
+#' build), after their one-category and one-case stops.
+#'
+#' @param data The analysis copy.
+#' @param dv_name Character(1): the outcome.
+#' @param data_name Character(1): the data frame's name.
+#' @param fn Character(1): the calling function.
+#' @return The data, the outcome numeric.
+#' @keywords internal
+.jst_group_dv_ready <- function(data, dv_name, data_name, fn) {
+  if (.jst_warns_seems_categorical(data[[dv_name]], dv_name, data_name)) {
+    .jst_warn(.jst_assumption_warning(dv_name, fn))
+  }
+  if (haven::is.labelled(data[[dv_name]])) {
+    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
+  }
+  data
+}
+
 #' Independent samples or paired samples t-test
 #'
 #' Runs a t-test and prints formatted group descriptives and test results.
@@ -240,17 +482,14 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     fn         = "jt"
   )
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
+  # Resolve default data frame if not specified (.jst_formula_front(), one
+  # home for the five formula functions; Session 386). The data given is
+  # not touched here: it is read where it always was.
+  .jst_front        <- .jst_formula_front(missing(data), substitute(data),
+                                          parent.frame())
+  if (.jst_front$default_used) data <- .jst_front$data
+  .jst_default_used <- .jst_front$default_used
+  .jst_data_name    <- .jst_front$data_name
 
   if (full) {
     if (is.null(effect.size)) effect.size <- TRUE
@@ -275,107 +514,25 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   }
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jsubset, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset) through the groups made
+  # a factor: one front for jt() and jaov() (.jst_group_front(); Session 386).
   subset_expr <- substitute(subset)
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame(),
-                                  vars = all.vars(formula))
-  data     <- pipeline$data
-  .jst_print_msgs(pipeline$msgs)
-
-  # Raw-name existence check first, so the transform resolver below can
-  # assume every plain variable in the formula exists.
-  # Underlying variable names (pre-transform). Drives the existence check
-  # and, below, the case-processing breakdown -- so a transformed term is
-  # reported against its source column, which the pre-pipeline snapshot
-  # contains (the computed column is not in that snapshot). Since Session
-  # 323 the names are read as lm() reads them: a constant named inside a
-  # computed term (I(x > cutoff)) resolves in the formula's environment and
-  # is left out of the list; a bare name is still a variable, and a name
-  # found nowhere still stops. A data frame named inside a term, and a power
-  # terms() cannot read (y ~ x^k), are refused here.
-  raw_vars <- .jst_check_formula_vars(
-    formula, data, .jst_data_name, default_used = .jst_default_used,
-    n_frame = pipeline$pipeline_counts$n_original)
-
-  # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
-  # the like once on the analysis copy and rewrite the formula to reference
-  # the computed column, so the t-test (both the independent formula path
-  # and the paired by-name path) and the Group Descriptives table describe
-  # the same values under the name the user typed.
-  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
-  formula  <- resolved$formula
-  data     <- resolved$data
-
-  terms      <- all.vars(formula)
-  dv_name    <- terms[1]
-  group_name <- terms[2]
-
-  dup_var <- .jst_formula_dup_var(formula)
-  if (!is.null(dup_var)) {
-    .jst_dup_group_stop(dup_var, "A t-test")
-  }
-
-  .jst_check_dummy_outcome(.jst_data_name, dv_name, "jt")
-  # Type gate (Session 46): refuse a date DV (would coerce silently to a day
-  # count) or a text/complex DV (would crash); grouping variable may be
-  # categorical. See .jst_check_analysis_var.
-  .jst_check_analysis_var(data[[terms[1L]]], terms[1L], TRUE, "a t-test")
-  for (.gv in terms[-1L]) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "a t-test")
-
-  # Pre-conversion label source: variable labels survive here intact (mf's
-  # row subset would drop them from plain-numeric columns; the DV's haven ->
-  # numeric coercion below would drop them from labelled columns). Frozen by
-  # copy-on-modify, so later data[[...]] <- conversions do not affect it.
-  lab_src <- data
-
-  # Build analysis-level data frame (listwise on all formula vars) and
-  # sample_info early so the Case Processing Summary can use them.
-  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
-             terms, drop = FALSE]
-
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = raw_vars,
-    n_analysis      = nrow(mf),
-    transform_na    = resolved$introduced_na
-  )
-
-  # Case Processing Summary
-  .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
-
-  # No case left: one stop, ahead of the group count (Session 346).
-  .jst_stop_empty_sample(sample_info)
-
-  # A text grouping variable's blank cells are one group, <blank> (S340).
-  group_var   <- .jst_label_blanks(data[[group_name]])
-
-  # A group is counted on the cases the test can use (Session 346). A group
-  # whose cases are all missing on the outcome was still counted: with two
-  # groups in the data the descriptives printed its row with N 0 and R
-  # stopped on "grouping factor must have exactly 2 levels", and with three
-  # the test was refused as an ANOVA's although two groups had cases. Not
-  # for a paired test, which pairs the two groups' rows by position before
-  # it drops a pair with a missing value (AUDIT-001).
-  n_groups_data <- length(unique(unclass(group_var)[!is.na(group_var)]))
-  if (!paired) group_var[is.na(data[[dv_name]])] <- NA
-
-  is_labelled <- haven::is.labelled(group_var)
-  if (is_labelled) {
-    original_codes <- .jst_group_codes(group_var)
-    group_val_labels <- labelled::val_labels(group_var)
-  }
-
-  if (is_labelled) {
-    data[[group_name]] <- haven::as_factor(group_var)
-  } else {
-    data[[group_name]] <- if (is.factor(group_var)) group_var
-                          else .jst_text_factor(group_var)
-  }
-
-  # Drop empty factor levels (pipeline filtering may leave empty levels)
-  data[[group_name]] <- droplevels(data[[group_name]])
+  .jst_gf <- .jst_group_front(formula, data, .jst_data_name, .jst_default_used,
+                              subset_expr, parent.frame(),
+                              case.processing.detail, "jt", "a t-test",
+                              count_on_outcome = !paired)
+  data             <- .jst_gf$data
+  formula          <- .jst_gf$formula
+  terms            <- .jst_gf$terms
+  dv_name          <- .jst_gf$dv_name
+  group_name       <- .jst_gf$group_name
+  lab_src          <- .jst_gf$lab_src
+  mf               <- .jst_gf$mf
+  sample_info      <- .jst_gf$sample_info
+  n_groups_data    <- .jst_gf$n_groups_data
+  is_labelled      <- .jst_gf$is_labelled
+  original_codes   <- .jst_gf$original_codes
+  group_val_labels <- .jst_gf$group_val_labels
 
   n_levels <- nlevels(data[[group_name]])
   # Said under a group count that missing data lowered, so the count can be
@@ -469,13 +626,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # Assumption-check warning (audit): the outcome looks categorical where a
   # continuous outcome is expected. Likert outcomes and an asserted numeric
   # role are exempt (handled inside .jst_warns_seems_categorical).
-  if (.jst_warns_seems_categorical(data[[dv_name]], dv_name, .jst_data_name)) {
-    .jst_warn(.jst_assumption_warning(dv_name, "jt"))
-  }
-
-  if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
-  }
+  data <- .jst_group_dv_ready(data, dv_name, .jst_data_name, "jt")
 
   levels      <- levels(data[[group_name]])
   # which() (rather than direct logical indexing) keeps rows with a missing
@@ -536,45 +687,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # `levene_ret` is NULL when the test was not run.
   levene_ret <- NULL
   if (levene && !paired) {
-    group_factor  <- data[[group_name]]
-    dv_vals       <- data[[dv_name]]
-    group_means   <- tapply(dv_vals, group_factor, mean, na.rm = TRUE)
-    abs_devs      <- abs(dv_vals - group_means[group_factor])
-    levene_model  <- stats::aov(abs_devs ~ group_factor)
-    levene_result <- summary(levene_model)[[1]]
-    levene_f      <- round(levene_result$`F value`[1], digits_n)
-    levene_p      <- levene_result$`Pr(>F)`[1]
-    levene_p_fmt  <- .jst_fmt_p(levene_p)
-
-    levene_table <- data.frame(
-      F_value = levene_f,
-      df1     = levene_result$Df[1],
-      df2     = levene_result$Df[2],
-      p_value = levene_p_fmt,
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-
-    # Block-centered columns and trimmed lines (Session 327): each header
-    # centered over its column, each value right-justified in a block
-    # centered under it. On the default alignment F (numeric) sat flush
-    # right and p (text) flush left.
-    .jst_print_table(levene_table,
-                     caption = .jst_txt_levene_caption,
-                     col.names = c("F", "df1", "df2", "p"),
-                     row.names = FALSE,
-                     align = rep("bc", 4L),
-                     digits = c(F_value = digits_n))
-
-    # The note under a significant test, in one of three forms (Session
-    # 346; .jst_levene_note()). Not when Welch's test is the one run.
-    levene_note <- if (!welch) .jst_levene_note(levene_p, dv_vals,
-                                                group_factor, "jt")
-                   else NA_character_
-    levene_ret <- list(F = levene_result$`F value`[1],
-                       df1 = levene_result$Df[1], df2 = levene_result$Df[2],
-                       p = levene_p, note = levene_note)
-    cat("\n")
+    levene_ret <- .jst_levene_block(data, dv_name, group_name, digits_n,
+                                    welch, "jt")
   } else if (levene && paired && !is.null(diagnostics)) {
     # Said only when this call asked for Levene's test (Session 347). Under
     # joutput(diagnostics = TRUE) every paired t-test printed the note,
@@ -1030,17 +1144,14 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     fn         = "jaov"
   )
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
+  # Resolve default data frame if not specified (.jst_formula_front(), one
+  # home for the five formula functions; Session 386). The data given is
+  # not touched here: it is read where it always was.
+  .jst_front        <- .jst_formula_front(missing(data), substitute(data),
+                                          parent.frame())
+  if (.jst_front$default_used) data <- .jst_front$data
+  .jst_default_used <- .jst_front$default_used
+  .jst_data_name    <- .jst_front$data_name
 
   if (full) {
     if (is.null(posthoc))     posthoc     <- TRUE
@@ -1065,102 +1176,25 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   }
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
-  # Apply data pipeline (jcomplete, jsubset, subset)
+  # Apply data pipeline (jcomplete, jsubset, subset) through the groups made
+  # a factor: one front for jt() and jaov() (.jst_group_front(); Session 386).
   subset_expr <- substitute(subset)
-  pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
-                                  subset_expr = subset_expr, envir = parent.frame(),
-                                  vars = all.vars(formula))
-  data     <- pipeline$data
-  .jst_print_msgs(pipeline$msgs)
-
-  # Raw-name existence check first, so the transform resolver below can
-  # assume every plain variable in the formula exists.
-  # Underlying variable names (pre-transform). Drives the existence check
-  # and, below, the case-processing breakdown -- so a transformed term is
-  # reported against its source column, which the pre-pipeline snapshot
-  # contains (the computed column is not in that snapshot). Since Session
-  # 323 the names are read as lm() reads them: a constant named inside a
-  # computed term (I(x > cutoff)) resolves in the formula's environment and
-  # is left out of the list; a bare name is still a variable, and a name
-  # found nowhere still stops. A data frame named inside a term, and a power
-  # terms() cannot read (y ~ x^k), are refused here.
-  raw_vars <- .jst_check_formula_vars(
-    formula, data, .jst_data_name, default_used = .jst_default_used,
-    n_frame = pipeline$pipeline_counts$n_original)
-
-  # Transformed-term front door (AUDIT-021): compute log(x), I(x^2), and
-  # the like once on the analysis copy and rewrite the formula to reference
-  # the computed column, so the F test, Levene's test, the post hoc
-  # comparisons, and the descriptives all describe the same values under
-  # the name the user typed.
-  resolved <- .jst_resolve_formula_transforms(formula, data, .jst_data_name)
-  formula  <- resolved$formula
-  data     <- resolved$data
-
-  terms      <- all.vars(formula)
-  dv_name    <- terms[1]
-  group_name <- terms[2]
-
-  dup_var <- .jst_formula_dup_var(formula)
-  if (!is.null(dup_var)) {
-    .jst_dup_group_stop(dup_var, "An ANOVA")
-  }
-
-  .jst_check_dummy_outcome(.jst_data_name, dv_name, "jaov")
-  # Type gate (Session 46): response must be numeric; grouping variable may be
-  # categorical. Date/time and complex/list/raw refused. See .jst_check_analysis_var.
-  .jst_check_analysis_var(data[[terms[1L]]], terms[1L], TRUE, "an ANOVA")
-  for (.gv in terms[-1L]) .jst_check_analysis_var(data[[.gv]], .gv, FALSE, "an ANOVA")
-
-  # Pre-conversion label source (see jt): variable labels survive here intact;
-  # mf's row subset and the DV's haven -> numeric coercion below would drop
-  # them. Frozen by copy-on-modify.
-  lab_src <- data
-
-  # Build analysis-level data frame (listwise on all formula vars) and
-  # sample_info early so the Case Processing Summary can use them.
-  mf <- data[stats::complete.cases(data[, terms, drop = FALSE]),
-             terms, drop = FALSE]
-
-  sample_info <- .jst_build_sample_info(
-    pipeline_counts = pipeline$pipeline_counts,
-    data            = pipeline$data,
-    analysis_vars   = raw_vars,
-    n_analysis      = nrow(mf),
-    transform_na    = resolved$introduced_na
-  )
-
-  # Case Processing Summary
-  .jst_print_case_processing(sample_info, analysis_type = "listwise", detail = case.processing.detail)
-
-  # No case left: one stop, ahead of the group count (Session 346).
-  .jst_stop_empty_sample(sample_info)
-
-  # A text grouping variable's blank cells are one group, <blank> (S340).
-  group_var   <- .jst_label_blanks(data[[group_name]])
-
-  # A group is counted on the cases the test can use, as in jt() (Session
-  # 346): a group whose cases are all missing on the outcome printed a
-  # descriptives row with N 0, and with two groups in the data R stopped on
-  # "contrasts can be applied only to factors with 2 or more levels".
-  n_groups_data <- length(unique(unclass(group_var)[!is.na(group_var)]))
-  group_var[is.na(data[[dv_name]])] <- NA
-
-  is_labelled <- haven::is.labelled(group_var)
-  if (is_labelled) {
-    original_codes <- .jst_group_codes(group_var)
-    group_val_labels <- labelled::val_labels(group_var)
-  }
-
-  if (is_labelled) {
-    data[[group_name]] <- haven::as_factor(group_var)
-  } else {
-    data[[group_name]] <- if (is.factor(group_var)) group_var
-                          else .jst_text_factor(group_var)
-  }
-
-  # Drop empty factor levels (pipeline filtering may leave empty levels)
-  data[[group_name]] <- droplevels(data[[group_name]])
+  .jst_gf <- .jst_group_front(formula, data, .jst_data_name, .jst_default_used,
+                              subset_expr, parent.frame(),
+                              case.processing.detail, "jaov", "an ANOVA",
+                              count_on_outcome = TRUE)
+  data             <- .jst_gf$data
+  formula          <- .jst_gf$formula
+  terms            <- .jst_gf$terms
+  dv_name          <- .jst_gf$dv_name
+  group_name       <- .jst_gf$group_name
+  lab_src          <- .jst_gf$lab_src
+  mf               <- .jst_gf$mf
+  sample_info      <- .jst_gf$sample_info
+  n_groups_data    <- .jst_gf$n_groups_data
+  is_labelled      <- .jst_gf$is_labelled
+  original_codes   <- .jst_gf$original_codes
+  group_val_labels <- .jst_gf$group_val_labels
 
   # Check minimum group levels
   n_levels <- nlevels(data[[group_name]])
@@ -1262,13 +1296,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # Assumption-check warning (audit): the outcome looks categorical where a
   # continuous outcome is expected. Likert outcomes and an asserted numeric
   # role are exempt (handled inside .jst_warns_seems_categorical).
-  if (.jst_warns_seems_categorical(data[[dv_name]], dv_name, .jst_data_name)) {
-    .jst_warn(.jst_assumption_warning(dv_name, "jaov"))
-  }
-
-  if (haven::is.labelled(data[[dv_name]])) {
-    data[[dv_name]] <- .jst_as_numeric(data[[dv_name]])
-  }
+  data <- .jst_group_dv_ready(data, dv_name, .jst_data_name, "jaov")
 
   # Variable label display mode. jaov is a collapse layout: under "labels"
   # the DV and grouping-variable names are swapped for their labels wherever
@@ -1291,45 +1319,8 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # `levene_ret` is NULL when the test was not run.
   levene_ret <- NULL
   if (levene) {
-    group_factor  <- data[[group_name]]
-    dv_vals       <- data[[dv_name]]
-    group_means   <- tapply(dv_vals, group_factor, mean, na.rm = TRUE)
-    abs_devs      <- abs(dv_vals - group_means[group_factor])
-    levene_model  <- stats::aov(abs_devs ~ group_factor)
-    levene_result <- summary(levene_model)[[1]]
-    levene_f      <- round(levene_result$`F value`[1], digits_n)
-    levene_p      <- levene_result$`Pr(>F)`[1]
-    levene_p_fmt  <- .jst_fmt_p(levene_p)
-
-    levene_table <- data.frame(
-      F_value = levene_f,
-      df1     = levene_result$Df[1],
-      df2     = levene_result$Df[2],
-      p_value = levene_p_fmt,
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-
-    # Block-centered columns and trimmed lines (Session 327): each header
-    # centered over its column, each value right-justified in a block
-    # centered under it. On the default alignment F (numeric) sat flush
-    # right and p (text) flush left.
-    .jst_print_table(levene_table,
-                     caption = .jst_txt_levene_caption,
-                     col.names = c("F", "df1", "df2", "p"),
-                     row.names = FALSE,
-                     align = rep("bc", 4L),
-                     digits = c(F_value = digits_n))
-
-    # The note under a significant test, in one of three forms (Session
-    # 346; .jst_levene_note()). Not when Welch's test is the one run.
-    levene_note <- if (!welch) .jst_levene_note(levene_p, dv_vals,
-                                                group_factor, "jaov")
-                   else NA_character_
-    levene_ret <- list(F = levene_result$`F value`[1],
-                       df1 = levene_result$Df[1], df2 = levene_result$Df[2],
-                       p = levene_p, note = levene_note)
-    cat("\n")
+    levene_ret <- .jst_levene_block(data, dv_name, group_name, digits_n,
+                                    welch, "jaov")
   }
 
   # Group descriptives
@@ -2086,17 +2077,14 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   }
   show_adj_res <- identical(residuals, "adjusted")
 
-  # Resolve default data frame if not specified
-  .jst_default_used <- FALSE
-  .jst_data_name    <- NULL
-  if (missing(data)) {
-    resolved <- .jst_resolve_data(envir = parent.frame())
-    data <- resolved$data
-    .jst_default_used <- TRUE
-    .jst_data_name    <- resolved$name
-  } else {
-    .jst_data_name <- deparse(substitute(data))
-  }
+  # Resolve default data frame if not specified (.jst_formula_front(), one
+  # home for the five formula functions; Session 386). The data given is
+  # not touched here: it is read where it always was.
+  .jst_front        <- .jst_formula_front(missing(data), substitute(data),
+                                          parent.frame())
+  if (.jst_front$default_used) data <- .jst_front$data
+  .jst_default_used <- .jst_front$default_used
+  .jst_data_name    <- .jst_front$data_name
 
   # Red title. It prints once the formula and the data frame are in hand,
   # as in jt(), jaov(), jlm() and jlogistic() (Session 338; AUDIT-026). It

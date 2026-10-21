@@ -101,6 +101,216 @@
 
 # -- jsum ----------------------------------------------------------------------
 
+#' Internal: jsum()'s and javg()'s one worker
+#'
+#' jsum() and javg() were one body twice over (Session 386, the twin build):
+#' the first argument resolved, the variables read, the declared missing
+#' values masked, each case's sum or mean computed against min.valid, the
+#' summary line, the assign-or-lose reminder and the label. The captures
+#' -- the data argument as typed, whether it was given, the variables in
+#' ..., the calling frame -- are made in the function the user called and
+#' passed here; data_sub is read only where jsum() read it, since it is
+#' R's missing-argument marker when the data were left out under a juse()
+#' default (S371).
+#'
+#' @param what "sum" or "mean".
+#' @param fn Character(1): "jsum" or "javg".
+#' @param data_sub The data argument's expression (substitute(data)).
+#' @param data_missing Logical(1): missing(data) in the caller.
+#' @param quos_list The variables (rlang::enquos(...) in the caller).
+#' @param envir The caller's calling frame.
+#' @param min.valid,var.label The call's arguments.
+#' @param fixed Logical(1): javg()'s fixed denominator (FALSE for jsum()).
+#' @param example Character(1): the example line of the two-variables stop.
+#' @param call,fun sys.call() and sys.function() of the caller, for the
+#'   resolver's rebuilt lines.
+#' @return The new variable, invisibly.
+#' @keywords internal
+.jst_row_score <- function(what, fn, data_sub, data_missing, quos_list,
+                           envir, min.valid, fixed, var.label, example,
+                           call, fun) {
+
+  # Resolve the first argument: explicit data frame, juse default,
+  # or bare-symbol-as-variable-name (leading comma omitted).
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = data_sub,
+    data_missing  = data_missing,
+    fn_name       = fn,
+    envir         = envir,
+    accept_vector = FALSE,
+    caller_call   = call,
+    caller_fun    = fun
+  )
+
+  data           <- arg1$data
+  .jst_data_name <- arg1$name
+  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
+
+  # Resolve variable names (handles colon ranges)
+  .jst_check_named_variables(quos_list, arg1$data, fn)   # S290
+
+  # Leading-comma-omitted: prepend the captured symbol to quos list
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
+                                    env = envir)
+    quos_list <- c(list(extra_quo), quos_list)
+    class(quos_list) <- "quosures"
+  }
+  quos_list <- .jst_expand_vars(quos_list)   # c() of names (ruling R18, S356)
+
+  resolved    <- .jst_resolve_varrange(quos_list, data, fn, .jst_data_name,
+                                       default_used = .jst_default_used)
+  var_names   <- resolved$var_names
+  label_parts <- resolved$label_parts
+
+  if (length(var_names) < 2) {
+    # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
+    # no-variables stop gives: never the call's data frame (Session 338).
+    .jst_stop("At least 2 variables are required.\n",
+              .jst_txt_provide_two_vars,
+              example)
+  }
+
+  .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
+
+  # Assumption-check warning (audit): nudge only on a declared contradiction --
+  # a variable the user registered as categorical via jdummy() and is now
+  # summing. Structural categoricals (e.g. a labelled nominal), counts, Likert
+  # items, and logicals stay silent: combining small-integer items is the point
+  # of jsum(), so the warning fires only when the categorical intent is explicit.
+  .dummy_regs <- .jst_get_dummy(.jst_data_name)
+  if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
+    for (v in var_names) {
+      if (any(vapply(.dummy_regs,
+                     function(r) identical(r$var_name, v), logical(1)))) {
+        .jst_warn(.jst_assumption_warning(v, fn))
+      }
+    }
+  }
+
+  # Extract columns. Mask declared SPSS-form UDM cells to NA on this
+  # analysis-only copy BEFORE stripping the haven class, so declared
+  # missing codes (e.g. -98) are excluded rather than summed as literal
+  # data. The user's data frame is unchanged (na_values / na_range stay
+  # attached for round-trip fidelity). Stata-form tagged NAs are zapped
+  # to plain NA by the same helper (AUDIT-039); they were already
+  # is.na()-TRUE, so the non-missing count is unchanged either way.
+  # Applies the UDM auto-conversion helper directly rather
+  # than routing through .jst_apply_pipeline, whose jsubset/jcomplete
+  # filtering would drop rows and misalign this row-wise result with
+  # the data frame.
+  items     <- data[, var_names, drop = FALSE]
+  .udm_conv <- .jst_apply_declared_udms_as_na(items)
+  items     <- .udm_conv$data
+  for (v in var_names) {
+    items[[v]] <- .jst_as_numeric(items[[v]])
+  }
+
+  n_vars  <- length(var_names)
+  n_cases <- nrow(items)
+
+  # Determine minimum valid threshold (all must be non-missing by default)
+  threshold <- .jst_min_valid_threshold(min.valid, n_vars, fn)
+
+  # Compute row-wise sums, or means: over the values present, or over every
+  # variable with fixed = TRUE (javg()).
+  mat      <- as.matrix(items)
+  non_na   <- rowSums(!is.na(mat))
+  row_sums <- rowSums(mat, na.rm = TRUE)
+  row_vals <- if (identical(what, "sum")) row_sums
+              else if (fixed) row_sums / n_vars
+              else ifelse(non_na > 0, row_sums / non_na, NA_real_)
+  result   <- ifelse(non_na >= threshold, row_vals, NA_real_)
+
+  # Count cases set to NA due to missingness
+  n_na_result <- sum(is.na(result) & non_na > 0)
+  n_all_na    <- sum(non_na == 0)
+  n_valid     <- sum(!is.na(result))
+  n_partial   <- if (!is.null(min.valid)) sum(!is.na(result) & non_na < n_vars) else 0L
+
+  # Summary message
+  denom_note <- if (identical(what, "mean") && fixed) " (fixed denominator)" else ""
+  msg_parts <- paste0(
+    if (identical(what, "sum")) "Sum of " else "Mean of ", n_vars,
+    " variables computed for ", n_cases, " cases", denom_note
+  )
+
+  detail_parts <- character(0)
+  if (!is.null(min.valid)) {
+    if (n_partial > 0) {
+      detail_parts <- c(detail_parts,
+        paste0(n_partial, " case", if (n_partial != 1) "s" else "",
+               " used partial data"))
+    }
+  }
+  if (n_na_result > 0) {
+    detail_parts <- c(detail_parts,
+      paste0(n_na_result, " set to NA due to missing values"))
+  }
+  if (n_all_na > 0) {
+    detail_parts <- c(detail_parts,
+      paste0(n_all_na, " set to NA (all values missing)"))
+  }
+
+  if (length(detail_parts) > 0) {
+    if (!is.null(min.valid)) {
+      msg_parts <- paste0(msg_parts, " (min.valid = ", threshold, ": ",
+                          paste(detail_parts, collapse = ", "), ").")
+    } else {
+      msg_parts <- paste0(msg_parts, " (", paste(detail_parts, collapse = ", "), ").")
+    }
+  } else {
+    msg_parts <- paste0(msg_parts, ".")
+  }
+
+  # Headline: mean of the resulting values (joutput digits; suppressed when
+  # every case came out NA, so the message never shows "Mean: NaN").
+  if (n_valid > 0L) {
+    digits_n <- .jst_resolve_digits(NULL)
+    headline_mean <- sprintf(paste0("%.", digits_n, "f"), mean(result, na.rm = TRUE))
+    msg_parts <- paste0(msg_parts,
+                        "\nMean of the new variable: ", headline_mean, ".")
+  }
+  .jst_msg(msg_parts)
+
+  # Default-silent FYI (joutput "full" only): if declared SPSS-style
+  # missing values were masked above, report where, mirroring how the
+  # analysis pipeline surfaces its auto-conversions. SPSS is silent
+  # here too, so this stays off at standard/minimal.
+  .jst_scale_udm_note(.udm_conv)
+
+  # Assign-or-lose reminder (standard + full): jsum() returns the totals and
+  # javg() the scores
+  # invisibly, so an unassigned top-level call silently drops them. The
+  # leading blank line keeps it clear of any advisory note above (Rule F).
+  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    # An expression given as the data gets the naming line first (S343);
+    # the data left out under a default is the default frame's name (S371:
+    # jsum(, A, B) printed its totals, then stopped on R's "argument
+    # "data_sub" is missing").
+    .jst_msg(
+      "\nNote: ", fn, "() returns the ",
+      if (identical(what, "sum")) "totals" else "scores",
+      "; assign them to a column to keep them:\n",
+      .jst_assign_lines(fn, .jst_data_name,
+                        if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub),
+                        if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)),
+      .jst_txt_full_distribution
+    )
+  }
+
+  # Attach variable label
+  if (!is.null(var.label)) {
+    labelled::var_label(result) <- var.label
+  } else {
+    auto_label <- paste0(if (identical(what, "sum")) "Sum of " else "Mean of ",
+                         paste(label_parts, collapse = ", "))
+    labelled::var_label(result) <- auto_label
+  }
+
+  return(invisible(result))
+}
+
 #' Compute a row-wise sum across multiple variables
 #'
 #' @description
@@ -173,176 +383,14 @@
 #'
 #' @export
 jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
-
-  # Resolve the first argument: explicit data frame, juse default,
-  # or bare-symbol-as-variable-name (leading comma omitted).
+  # One worker for jsum() and javg() (.jst_row_score(); Session 386, the twin
+  # build). The captures are made here, in the function the user called.
   data_sub <- substitute(data)
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = data_sub,
-    data_missing  = missing(data),
-    fn_name       = "jsum",
-    envir         = parent.frame(),
-    accept_vector = FALSE
-  )
-
-  data           <- arg1$data
-  .jst_data_name <- arg1$name
-  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
-
-  # Resolve variable names (handles colon ranges)
-  quos_list <- rlang::enquos(...)
-  .jst_check_named_variables(quos_list, arg1$data, "jsum")   # S290
-
-  # Leading-comma-omitted: prepend the captured symbol to quos list
-  if (arg1$mode == "symbol_with_default") {
-    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
-                                    env = parent.frame())
-    quos_list <- c(list(extra_quo), quos_list)
-    class(quos_list) <- "quosures"
-  }
-  quos_list <- .jst_expand_vars(quos_list)   # c() of names (ruling R18, S356)
-
-  resolved    <- .jst_resolve_varrange(quos_list, data, "jsum", .jst_data_name,
-                                       default_used = .jst_default_used)
-  var_names   <- resolved$var_names
-  label_parts <- resolved$label_parts
-
-  if (length(var_names) < 2) {
-    # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
-    # no-variables stop gives: never the call's data frame (Session 338).
-    .jst_stop("At least 2 variables are required.\n",
-              .jst_txt_provide_two_vars,
-              "  community$EnvTotal <- jsum(community, Environment1, Environment3)")
-  }
-
-  .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
-
-  # Assumption-check warning (audit): nudge only on a declared contradiction --
-  # a variable the user registered as categorical via jdummy() and is now
-  # summing. Structural categoricals (e.g. a labelled nominal), counts, Likert
-  # items, and logicals stay silent: combining small-integer items is the point
-  # of jsum(), so the warning fires only when the categorical intent is explicit.
-  .dummy_regs <- .jst_get_dummy(.jst_data_name)
-  if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
-    for (v in var_names) {
-      if (any(vapply(.dummy_regs,
-                     function(r) identical(r$var_name, v), logical(1)))) {
-        .jst_warn(.jst_assumption_warning(v, "jsum"))
-      }
-    }
-  }
-
-  # Extract columns. Mask declared SPSS-form UDM cells to NA on this
-  # analysis-only copy BEFORE stripping the haven class, so declared
-  # missing codes (e.g. -98) are excluded rather than summed as literal
-  # data. The user's data frame is unchanged (na_values / na_range stay
-  # attached for round-trip fidelity). Stata-form tagged NAs are zapped
-  # to plain NA by the same helper (AUDIT-039); they were already
-  # is.na()-TRUE, so the non-missing count is unchanged either way.
-  # Applies the UDM auto-conversion helper directly rather
-  # than routing through .jst_apply_pipeline, whose jsubset/jcomplete
-  # filtering would drop rows and misalign this row-wise result with
-  # the data frame.
-  items     <- data[, var_names, drop = FALSE]
-  .udm_conv <- .jst_apply_declared_udms_as_na(items)
-  items     <- .udm_conv$data
-  for (v in var_names) {
-    items[[v]] <- .jst_as_numeric(items[[v]])
-  }
-
-  n_vars  <- length(var_names)
-  n_cases <- nrow(items)
-
-  # Determine minimum valid threshold (all must be non-missing by default)
-  threshold <- .jst_min_valid_threshold(min.valid, n_vars, "jsum")
-
-  # Compute row-wise sums
-  mat        <- as.matrix(items)
-  non_na     <- rowSums(!is.na(mat))
-  row_sums   <- rowSums(mat, na.rm = TRUE)
-  result     <- ifelse(non_na >= threshold, row_sums, NA_real_)
-
-  # Count cases set to NA due to missingness
-  n_na_result <- sum(is.na(result) & non_na > 0)
-  n_all_na    <- sum(non_na == 0)
-  n_valid     <- sum(!is.na(result))
-  n_partial   <- if (!is.null(min.valid)) sum(!is.na(result) & non_na < n_vars) else 0L
-
-  # Summary message
-  msg_parts <- paste0(
-    "Sum of ", n_vars, " variables computed for ", n_cases, " cases"
-  )
-
-  detail_parts <- character(0)
-  if (!is.null(min.valid)) {
-    if (n_partial > 0) {
-      detail_parts <- c(detail_parts,
-        paste0(n_partial, " case", if (n_partial != 1) "s" else "",
-               " used partial data"))
-    }
-  }
-  if (n_na_result > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_na_result, " set to NA due to missing values"))
-  }
-  if (n_all_na > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_all_na, " set to NA (all values missing)"))
-  }
-
-  if (length(detail_parts) > 0) {
-    if (!is.null(min.valid)) {
-      msg_parts <- paste0(msg_parts, " (min.valid = ", threshold, ": ",
-                          paste(detail_parts, collapse = ", "), ").")
-    } else {
-      msg_parts <- paste0(msg_parts, " (", paste(detail_parts, collapse = ", "), ").")
-    }
-  } else {
-    msg_parts <- paste0(msg_parts, ".")
-  }
-
-  # Headline: mean of the resulting values (joutput digits; suppressed when
-  # every case came out NA, so the message never shows "Mean: NaN").
-  if (n_valid > 0L) {
-    digits_n <- .jst_resolve_digits(NULL)
-    headline_mean <- sprintf(paste0("%.", digits_n, "f"), mean(result, na.rm = TRUE))
-    msg_parts <- paste0(msg_parts,
-                        "\nMean of the new variable: ", headline_mean, ".")
-  }
-  .jst_msg(msg_parts)
-
-  # Default-silent FYI (joutput "full" only): if declared SPSS-style
-  # missing values were masked above, report where, mirroring how the
-  # analysis pipeline surfaces its auto-conversions. SPSS is silent
-  # here too, so this stays off at standard/minimal.
-  .jst_scale_udm_note(.udm_conv)
-
-  # Assign-or-lose reminder (standard + full): jsum() returns the totals
-  # invisibly, so an unassigned top-level call silently drops them. The
-  # leading blank line keeps it clear of any advisory note above (Rule F).
-  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    # An expression given as the data gets the naming line first (S343);
-    # the data left out under a default is the default frame's name (S371:
-    # jsum(, A, B) printed its totals, then stopped on R's "argument
-    # "data_sub" is missing").
-    .jst_msg(
-      "\nNote: jsum() returns the totals; assign them to a column to keep them:\n",
-      .jst_assign_lines("jsum", .jst_data_name,
-                        if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub),
-                        if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)),
-      .jst_txt_full_distribution
-    )
-  }
-
-  # Attach variable label
-  if (!is.null(var.label)) {
-    labelled::var_label(result) <- var.label
-  } else {
-    auto_label <- paste0("Sum of ", paste(label_parts, collapse = ", "))
-    labelled::var_label(result) <- auto_label
-  }
-
-  return(invisible(result))
+  .jst_row_score("sum", "jsum", data_sub, missing(data), rlang::enquos(...),
+                 parent.frame(), min.valid, fixed = FALSE,
+                 var.label = var.label,
+                 example = "  community$EnvTotal <- jsum(community, Environment1, Environment3)",
+                 call = sys.call(), fun = sys.function())
 }
 
 
@@ -433,181 +481,14 @@ jsum <- function(data, ..., min.valid = NULL, var.label = NULL) {
 javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(fixed, "fixed")
-
-  # Resolve the first argument: explicit data frame, juse default,
-  # or bare-symbol-as-variable-name (leading comma omitted).
+  # One worker for jsum() and javg() (.jst_row_score(); Session 386, the twin
+  # build). The captures are made here, in the function the user called.
   data_sub <- substitute(data)
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = data_sub,
-    data_missing  = missing(data),
-    fn_name       = "javg",
-    envir         = parent.frame(),
-    accept_vector = FALSE
-  )
-
-  data           <- arg1$data
-  .jst_data_name <- arg1$name
-  .jst_default_used <- arg1$mode %in% c("default", "symbol_with_default")
-
-  # Resolve variable names (handles colon ranges)
-  quos_list <- rlang::enquos(...)
-  .jst_check_named_variables(quos_list, arg1$data, "javg")   # S290
-
-  # Leading-comma-omitted: prepend the captured symbol to quos list
-  if (arg1$mode == "symbol_with_default") {
-    extra_quo <- rlang::new_quosure(arg1$first_arg_sub,
-                                    env = parent.frame())
-    quos_list <- c(list(extra_quo), quos_list)
-    class(quos_list) <- "quosures"
-  }
-  quos_list <- .jst_expand_vars(quos_list)   # c() of names (ruling R18, S356)
-
-  resolved    <- .jst_resolve_varrange(quos_list, data, "javg", .jst_data_name,
-                                       default_used = .jst_default_used)
-  var_names   <- resolved$var_names
-  label_parts <- resolved$label_parts
-
-  if (length(var_names) < 2) {
-    # A generic example line (Session 369, Fix Slate 16), as jdesc()'s
-    # no-variables stop gives: never the call's data frame (Session 338).
-    .jst_stop("At least 2 variables are required.\n",
-              .jst_txt_provide_two_vars,
-              "  community$EnvAvg <- javg(community, Environment1, Environment3)")
-  }
-
-  .jst_check_vars(data, var_names, .jst_data_name, default_used = .jst_default_used)
-
-  # Assumption-check warning (audit): nudge only on a declared contradiction --
-  # a variable the user registered as categorical via jdummy() and is now
-  # averaging. Structural categoricals (e.g. a labelled nominal), counts, Likert
-  # items, and logicals stay silent: combining small-integer items is the point
-  # of javg(), so the warning fires only when the categorical intent is explicit.
-  .dummy_regs <- .jst_get_dummy(.jst_data_name)
-  if (!is.null(.dummy_regs) && length(.dummy_regs) > 0) {
-    for (v in var_names) {
-      if (any(vapply(.dummy_regs,
-                     function(r) identical(r$var_name, v), logical(1)))) {
-        .jst_warn(.jst_assumption_warning(v, "javg"))
-      }
-    }
-  }
-
-  # Extract columns. Mask declared SPSS-form UDM cells to NA on this
-  # analysis-only copy BEFORE stripping the haven class, so declared
-  # missing codes (e.g. -98) are excluded rather than summed as literal
-  # data. The user's data frame is unchanged (na_values / na_range stay
-  # attached for round-trip fidelity). Stata-form tagged NAs are zapped
-  # to plain NA by the same helper (AUDIT-039); they were already
-  # is.na()-TRUE, so the non-missing count is unchanged either way.
-  # Applies the UDM auto-conversion helper directly rather
-  # than routing through .jst_apply_pipeline, whose jsubset/jcomplete
-  # filtering would drop rows and misalign this row-wise result with
-  # the data frame.
-  items     <- data[, var_names, drop = FALSE]
-  .udm_conv <- .jst_apply_declared_udms_as_na(items)
-  items     <- .udm_conv$data
-  for (v in var_names) {
-    items[[v]] <- .jst_as_numeric(items[[v]])
-  }
-
-  n_vars  <- length(var_names)
-  n_cases <- nrow(items)
-
-  # Determine minimum valid threshold (all must be non-missing by default)
-  threshold <- .jst_min_valid_threshold(min.valid, n_vars, "javg")
-
-  # Compute row-wise means
-  mat      <- as.matrix(items)
-  non_na   <- rowSums(!is.na(mat))
-  row_sums <- rowSums(mat, na.rm = TRUE)
-
-  if (fixed) {
-    row_means <- row_sums / n_vars
-  } else {
-    row_means <- ifelse(non_na > 0, row_sums / non_na, NA_real_)
-  }
-
-  result <- ifelse(non_na >= threshold, row_means, NA_real_)
-
-  # Count cases set to NA due to missingness
-  n_na_result <- sum(is.na(result) & non_na > 0)
-  n_all_na    <- sum(non_na == 0)
-  n_valid     <- sum(!is.na(result))
-  n_partial   <- if (!is.null(min.valid)) sum(!is.na(result) & non_na < n_vars) else 0L
-
-  # Summary message
-  denom_note <- if (fixed) " (fixed denominator)" else ""
-  msg_parts <- paste0(
-    "Mean of ", n_vars, " variables computed for ", n_cases, " cases", denom_note
-  )
-
-  detail_parts <- character(0)
-  if (!is.null(min.valid)) {
-    if (n_partial > 0) {
-      detail_parts <- c(detail_parts,
-        paste0(n_partial, " case", if (n_partial != 1) "s" else "",
-               " used partial data"))
-    }
-  }
-  if (n_na_result > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_na_result, " set to NA due to missing values"))
-  }
-  if (n_all_na > 0) {
-    detail_parts <- c(detail_parts,
-      paste0(n_all_na, " set to NA (all values missing)"))
-  }
-
-  if (length(detail_parts) > 0) {
-    if (!is.null(min.valid)) {
-      msg_parts <- paste0(msg_parts, " (min.valid = ", threshold, ": ",
-                          paste(detail_parts, collapse = ", "), ").")
-    } else {
-      msg_parts <- paste0(msg_parts, " (", paste(detail_parts, collapse = ", "), ").")
-    }
-  } else {
-    msg_parts <- paste0(msg_parts, ".")
-  }
-
-  # Headline: mean of the resulting values (joutput digits; suppressed when
-  # every case came out NA, so the message never shows "Mean: NaN").
-  if (n_valid > 0L) {
-    digits_n <- .jst_resolve_digits(NULL)
-    headline_mean <- sprintf(paste0("%.", digits_n, "f"), mean(result, na.rm = TRUE))
-    msg_parts <- paste0(msg_parts,
-                        "\nMean of the new variable: ", headline_mean, ".")
-  }
-  .jst_msg(msg_parts)
-
-  # Default-silent FYI (joutput "full" only): if declared SPSS-style
-  # missing values were masked above, report where, mirroring how the
-  # analysis pipeline surfaces its auto-conversions. SPSS is silent
-  # here too, so this stays off at standard/minimal.
-  .jst_scale_udm_note(.udm_conv)
-
-  # Assign-or-lose reminder (standard + full): javg() returns the scores
-  # invisibly, so an unassigned top-level call silently drops them. The
-  # leading blank line keeps it clear of any advisory note above (Rule F).
-  if (!identical(getOption(".jst_output_level", "standard"), "minimal")) {
-    # An expression given as the data gets the naming line first (S343).
-    .jst_msg(
-      "\nNote: javg() returns the scores; assign them to a column to keep them:\n",
-      .jst_assign_lines("javg", .jst_data_name,
-                        if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub),
-                        if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)),
-      .jst_txt_full_distribution
-    )
-  }
-
-  # Attach variable label
-  if (!is.null(var.label)) {
-    labelled::var_label(result) <- var.label
-  } else {
-    auto_label <- paste0("Mean of ", paste(label_parts, collapse = ", "))
-    labelled::var_label(result) <- auto_label
-  }
-
-  return(invisible(result))
+  .jst_row_score("mean", "javg", data_sub, missing(data), rlang::enquos(...),
+                 parent.frame(), min.valid, fixed = fixed,
+                 var.label = var.label,
+                 example = "  community$EnvAvg <- javg(community, Environment1, Environment3)",
+                 call = sys.call(), fun = sys.function())
 }
 
 #' Internal: jsum() and javg()'s min.valid, checked

@@ -1486,6 +1486,269 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
 
 # -- jrecode -----------------------------------------------------------------
 
+#' Internal: jrecode()'s and jencode()'s front
+#'
+#' The first argument resolved (a data frame, the juse() default, or the
+#' variable typed with the data left out), the variable named from either
+#' slot (ruling R18: a quoted name read as the bare one), the frame and
+#' not-found checks, and the data's kind for the lines offered: an
+#' expression given as the data is named mydata (S343), and the data left
+#' out under a default is the default frame's name (S371) -- data_sub, R's
+#' missing-argument marker then, is read only for explicit data. jrecode()
+#' and jencode() each held this block (Session 386, the twin build).
+#'
+#' @param fn Character(1): "jrecode" or "jencode".
+#' @param data_sub,data_missing substitute(data) and missing(data).
+#' @param var_sub,var_missing The variable slot's expression and whether it
+#'   was given (orig.var for jrecode(), var for jencode()).
+#' @param envir,call,fun parent.frame(), sys.call() and sys.function() of
+#'   the caller.
+#' @return list(data, data_name, var_name, data_kind, data_typed, arg1).
+#' @keywords internal
+.jst_recode_front <- function(fn, data_sub, data_missing, var_sub,
+                              var_missing, envir, call, fun) {
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = data_sub,
+    data_missing  = data_missing,
+    fn_name       = fn,
+    envir         = envir,
+    accept_vector = FALSE,
+    caller_call   = call,
+    caller_fun    = fun
+  )
+
+  data           <- arg1$data
+  .jst_data_name <- arg1$name
+
+  if (arg1$mode == "symbol_with_default") {
+    if (!var_missing) {
+      .jst_named_args_stop(fn, arg1, data, .jst_data_name, call, "map")
+    }
+    var_name <- .jst_one_var_name(arg1$first_arg_sub, fn)   # R18, S356
+  } else {
+    var_name <- if (var_missing) "" else
+      .jst_one_var_name(var_sub, fn)                        # R18, S356
+  }
+
+  if (!is.data.frame(data)) {
+    .jst_stop(.jst_txt_first_arg_frame)
+  }
+  # No variable named (Session 370, Fix Slate 18).
+  if (!nzchar(var_name)) .jst_no_var_stop(fn)
+  if (!var_name %in% names(data)) {
+    # The package's one not-found sentence (S338), with the juse() default
+    # hint.
+    .jst_check_vars(data, var_name, .jst_data_name,
+                    default_used = arg1$mode %in%
+                      c("default", "symbol_with_default"))
+  }
+  data_kind  <- if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub)
+  data_typed <- if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)
+  if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
+  list(data = data, data_name = .jst_data_name, var_name = var_name,
+       data_kind = data_kind, data_typed = data_typed, arg1 = arg1)
+}
+
+#' Internal: the convention = argument, lowercased and checked
+#'
+#' Platform specs are case-insensitive ("SPSS", "Stata" ...); anything but
+#' one of "spss", "stata" or "sas" stops in the choice-error form. Called
+#' when convention is not NULL. jrecode(), jencode(), jdeclare_missing() and
+#' its text path each held this block (Session 386, the twin build);
+#' joptions() keeps its own, which offers the nearest value.
+#'
+#' @param convention The call's convention argument (not NULL).
+#' @return The convention, lowercased.
+#' @keywords internal
+.jst_convention_arg <- function(convention) {
+  if (is.character(convention) && length(convention) == 1L &&
+      !is.na(convention)) {
+    convention <- tolower(convention)
+  }
+  if (!is.character(convention) || length(convention) != 1L ||
+      !convention %in% c("spss", "stata", "sas")) {
+    .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
+  }
+  convention
+}
+
+#' Internal: a labels = string parsed, its raw marker spellings harvested
+#'
+#' The labels parsed (.jst_parse_labels(); a parse error stops as "Error in
+#' labels argument: ..."), then the raw-spelling record of each marker
+#' harvested and stripped, so the labels can become a column's value labels
+#' while a message can still quote a marker as typed (a .B stays .B; S249,
+#' S283). jrecode(), jencode() and jdeclare_missing() each held this block
+#' (Session 386, the twin build); each checks the string's shape first.
+#'
+#' @param labels Character(1): the labels string.
+#' @param convention The convention in force for the parse.
+#' @return list(parsed_labels, labels_tagged_raw).
+#' @keywords internal
+.jst_parse_labels_arg <- function(labels, convention) {
+  parsed_labels <- tryCatch(
+    .jst_parse_labels(labels, convention),
+    error = function(e) .jst_stop(paste0("Error in labels argument: ",
+                                         conditionMessage(e)))
+  )
+  labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
+  attr(parsed_labels, "tagged_raw") <- NULL
+  list(parsed_labels = parsed_labels, labels_tagged_raw = labels_tagged_raw)
+}
+
+#' Internal: the word missing in a map, found
+#'
+#' The rules whose new value is the word missing, whether the NA rule is
+#' one, and the label labels = "missing=..." gives it; a label for the word
+#' with no rule using it stops (S355: the token quoted, so it cannot read as
+#' an adjective). jrecode() and jencode() each held this block (Session
+#' 386, the twin build).
+#'
+#' @param parsed_map,parsed_labels The parsed map and labels.
+#' @param example Character(1): the stop's example rule.
+#' @return list(tok_rule_idx, tok_in_na, has_missing_token,
+#'   tok_missing_label).
+#' @keywords internal
+.jst_missing_token_rules <- function(parsed_map, parsed_labels, example) {
+  tok_rule_idx <- which(vapply(parsed_map$mappings,
+                               function(r) isTRUE(r$missing), logical(1)))
+  tok_in_na    <- !is.null(parsed_map$na_rule) &&
+                  isTRUE(parsed_map$na_rule$missing)
+  has_missing_token <- length(tok_rule_idx) > 0L || tok_in_na
+  tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
+  if (!is.null(tok_missing_label) && !has_missing_token) {
+    .jst_stop(.jst_missing_label_text(example))
+  }
+  list(tok_rule_idx = tok_rule_idx, tok_in_na = tok_in_na,
+       has_missing_token = has_missing_token,
+       tok_missing_label = tok_missing_label)
+}
+
+#' Internal: the word missing given its code or marker
+#'
+#' Under spss each rule using the word missing takes the code minted for it
+#' (tok_mint_code), elsewhere the marker (tok_tag); labels =
+#' "missing=Label" then labels whichever was minted. jrecode() and
+#' jencode() each held this block (Session 386, the twin build); jrecode()
+#' checks its source's cells against the code first.
+#'
+#' @param parsed_map,parsed_labels The parsed map and labels.
+#' @param tok_rule_idx,tok_in_na The rules using the word, and the NA rule.
+#' @param spss Logical(1): whether the word takes a code.
+#' @param tok_mint_code The code (spss), else NULL.
+#' @param tok_tag The marker (stata, sas); read only there.
+#' @param tok_missing_label The label labels = gives the word, or NULL.
+#' @return list(parsed_map, parsed_labels).
+#' @keywords internal
+.jst_apply_missing_token <- function(parsed_map, parsed_labels, tok_rule_idx,
+                                     tok_in_na, spss, tok_mint_code, tok_tag,
+                                     tok_missing_label) {
+  if (spss) {
+    for (i in tok_rule_idx) {
+      parsed_map$mappings[[i]]$new_val <- tok_mint_code
+      parsed_map$mappings[[i]]$tagged  <- NULL
+    }
+    if (tok_in_na) {
+      parsed_map$na_rule$new_val <- tok_mint_code
+      parsed_map$na_rule$tagged  <- NULL
+    }
+  } else {
+    for (i in tok_rule_idx) {
+      parsed_map$mappings[[i]]$new_val <- NA_real_
+      parsed_map$mappings[[i]]$tagged  <- tok_tag
+    }
+    if (tok_in_na) {
+      parsed_map$na_rule$new_val <- NA_real_
+      parsed_map$na_rule$tagged  <- tok_tag
+    }
+  }
+  if (!is.null(tok_missing_label)) {
+    entry <- if (!is.null(tok_mint_code)) tok_mint_code
+             else haven::tagged_na(tok_tag)
+    names(entry) <- tok_missing_label
+    parsed_labels <- c(parsed_labels, entry)
+  }
+  list(parsed_map = parsed_map, parsed_labels = parsed_labels)
+}
+
+#' Internal: the gate for a marker in a map or in labels =
+#'
+#' When the map or the labels carry a Stata-style or SAS-style marker, the
+#' convention it needs is resolved (the choose-first gate fires inside
+#' .jst_resolve_convention()), and an spss resolution stops with
+#' .jst_jrecode_convention_error(). jrecode() and jencode() each held this
+#' block (Session 386, the twin build); jrecode() then checks its source's
+#' SPSS-style declarations (S302), naming the marker.
+#'
+#' @param parsed_map,parsed_labels The parsed map and labels.
+#' @param labels_tagged_raw The markers as typed in labels =.
+#' @param convention The call's convention.
+#' @param fn Character(1): the calling function.
+#' @return NULL when neither carries a marker; else list(convention,
+#'   marker): the resolved convention and the first marker as typed.
+#' @keywords internal
+.jst_tagged_gate <- function(parsed_map, parsed_labels, labels_tagged_raw,
+                             convention, fn) {
+  map_has_tag <- any(!vapply(parsed_map$mappings,
+                             function(r) is.null(r$tagged), logical(1))) ||
+                 identical(parsed_map$else_action, "tagged") ||
+                 (!is.null(parsed_map$na_rule) &&
+                  !is.null(parsed_map$na_rule$tagged))
+  labels_has_tag <- if (!is.null(parsed_labels)) {
+    any(!is.na(haven::na_tag(parsed_labels)))
+  } else FALSE
+  if (!(map_has_tag || labels_has_tag)) return(NULL)
+  gate_marker <- .jst_first_typed_marker(parsed_map, parsed_labels,
+                                         labels_tagged_raw)
+  resolved_convention <- .jst_resolve_convention(convention,
+                                                 act    = "tagged",
+                                                 fn     = fn,
+                                                 marker = gate_marker)
+  if (identical(resolved_convention, "spss")) {
+    err_msg <- .jst_jrecode_convention_error(
+      parsed_map          = parsed_map,
+      parsed_labels       = parsed_labels,
+      per_call_convention = convention,
+      labels_tagged_raw   = labels_tagged_raw
+    )
+    .jst_stop(err_msg)
+  }
+  list(convention = resolved_convention, marker = gate_marker)
+}
+
+#' Internal: a map's markers in the convention's case
+#'
+#' Every marker in the map's rules, its else rule and its NA rule, written
+#' in the resolved convention's case (lowercase for stata, uppercase for
+#' sas; .jst_canonical_tag()). jrecode() and jencode() each held this block
+#' (Session 386, the twin build); each still treats the labels' markers
+#' itself, jrecode() deferring a label's letter to a marker the result
+#' carries (S345).
+#'
+#' @param parsed_map The parsed map.
+#' @param resolved_convention "stata" or "sas".
+#' @return The parsed map.
+#' @keywords internal
+.jst_canonicalize_map_tags <- function(parsed_map, resolved_convention) {
+  for (i in seq_along(parsed_map$mappings)) {
+    if (!is.null(parsed_map$mappings[[i]]$tagged)) {
+      parsed_map$mappings[[i]]$tagged <-
+        .jst_canonical_tag(parsed_map$mappings[[i]]$tagged,
+                           resolved_convention)
+    }
+  }
+  if (!is.null(parsed_map$else_tag)) {
+    parsed_map$else_tag <- .jst_canonical_tag(parsed_map$else_tag,
+                                              resolved_convention)
+  }
+  if (!is.null(parsed_map$na_rule) &&
+      !is.null(parsed_map$na_rule$tagged)) {
+    parsed_map$na_rule$tagged <-
+      .jst_canonical_tag(parsed_map$na_rule$tagged, resolved_convention)
+  }
+  parsed_map
+}
+
 #' Recode a variable with explicit value mapping and optional labels
 #'
 #' @description
@@ -1889,6 +2152,14 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
 #' @export
 jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
                     ...) {
+  # Message text printed at two sites of this function, one copy each
+  # (Session 386, the twin build: the within-function repeats).
+  .txt_use_declared <- "Use one of the declared codes instead:\n"
+  .txt_convert_first <- "Convert the data frame first, then recode:\n"
+  .txt_share_one <- ", so the two would share one missing value."
+  .txt_keep_distinct <- "To keep them distinct, give missing a marker "
+  .txt_plain_na_one <- "To convert it to a plain NA instead, add "
+  .txt_plain_na_many <- "To convert them to plain NA instead, map them to NA "
   # An input jrecode() does not take -- a misspelled argument, or a value in
   # a place it has none -- stops here, read by name and never evaluated
   # (Capability Slate C3, Session 378; until then R stopped first, in its
@@ -1901,58 +2172,21 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
                  .jst_word_specs("convention"),
                  "jrecode")
 
-  # --- Resolve first argument -----------------------------------------------
+  # --- Resolve first argument and the variable --------------------------------
+  # One front for jrecode() and jencode() (.jst_recode_front(); Session 386):
+  # the data argument as typed or the juse() default, the variable from
+  # either slot, the frame and not-found checks, and the data's kind for the
+  # lines offered (an expression is named mydata).
   data_sub <- substitute(data)
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = data_sub,
-    data_missing  = missing(data),
-    fn_name       = "jrecode",
-    envir         = parent.frame(),
-    accept_vector = FALSE
-  )
-
-  data           <- arg1$data
-  .jst_data_name <- arg1$name
-
-  # Determine variable name. If the user typed jrecode(VarName, map = "...")
-  # — data omitted, named map — the helper captured VarName as first_arg_sub.
-  # Otherwise orig.var is supplied positionally.
-  if (arg1$mode == "symbol_with_default") {
-    if (!missing(orig.var)) {
-      .jst_named_args_stop("jrecode", arg1, data, .jst_data_name, sys.call(),
-                           "map")
-    }
-    orig_name <- .jst_one_var_name(arg1$first_arg_sub, "jrecode")   # R18, S356
-  } else {
-    orig_name <- if (missing(orig.var)) "" else
-      .jst_one_var_name(substitute(orig.var), "jrecode")   # R18, S356
-  }
-
-  # --- Input checks ---
-  if (!is.data.frame(data)) {
-    .jst_stop(.jst_txt_first_arg_frame)
-  }
-  # No variable named (Session 370, Fix Slate 18): it had reached the
-  # blank-name guard, "Variable names cannot be blank."
-  if (!nzchar(orig_name)) .jst_no_var_stop("jrecode")
-  if (!orig_name %in% names(data)) {
-    # The package's one not-found sentence (S338), with the juse() default
-    # hint. Until Session 343: "Variable 'Agee' not found in 'd'."
-    .jst_check_vars(data, orig_name, .jst_data_name,
-                    default_used = arg1$mode %in%
-                      c("default", "symbol_with_default"))
-  }
-  # An expression given as the data -- jrecode(mk(), Age, ...) -- is never
-  # pasted into a line the user is meant to run: every such line below
-  # names mydata, and the closing reminder says how mydata is made (S343;
-  # the S339 rule, Internals "Notes -- S339").
-  # The data argument left out under a juse() default -- jrecode(orig.var = Age, ...), jrecode(, Age, ...) --
-  # holds R's missing-argument marker, which stops R itself when read
-  # ("argument "data_sub" is missing, with no default"; Session 371, the
-  # remedy-line audit): the default frame is a name.
-  data_kind  <- if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub)
-  data_typed <- if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)
-  if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
+  .jst_rf <- .jst_recode_front("jrecode", data_sub, missing(data),
+                               substitute(orig.var), missing(orig.var),
+                               parent.frame(), sys.call(), sys.function())
+  arg1           <- .jst_rf$arg1
+  data           <- .jst_rf$data
+  .jst_data_name <- .jst_rf$data_name
+  orig_name      <- .jst_rf$var_name
+  data_kind      <- .jst_rf$data_kind
+  data_typed     <- .jst_rf$data_typed
   # One sentence a line and the example on its own (Session 371, item 8;
   # voice Rule L): "e.g. map = ..." had been inline. No map at all gets the
   # function's own example, which runs.
@@ -1970,15 +2204,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   # whether or not the recode actually uses tagged-NA tokens. The
   # resolved convention is consulted only when tokens are present.
   if (!is.null(convention)) {
-    # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
-    if (is.character(convention) && length(convention) == 1L &&
-        !is.na(convention)) {
-      convention <- tolower(convention)
-    }
-    if (!is.character(convention) || length(convention) != 1L ||
-        !convention %in% c("spss", "stata", "sas")) {
-      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
-    }
+    # Case-insensitive, then checked (.jst_convention_arg(); Session 386).
+    convention <- .jst_convention_arg(convention)
   }
 
   orig <- data[[orig_name]]
@@ -2028,21 +2255,11 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
     if (!is.character(labels) || length(labels) != 1) {
       .jst_one_string_stop("labels", "1=Male; 0=Female")
     }
-    parsed_labels <- tryCatch(
-      .jst_parse_labels(labels, convention),
-      error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e)))
-    )
-    # S249 stripped the raw-spelling record here on the reasoning that
-    # jrecode does not quote markers back (Rule Y retired the refusal's
-    # echo-back at S246). It does: the choose-first gate's head and the
-    # spss-conflict refusal's head both quote the first marker, and a
-    # marker seen only in labels was falling back to the display case --
-    # a typed .B echoed as '.b' (S283). So harvest first, as
-    # jdeclare_missing does, then strip: these labels become the column's
-    # value labels, and the record must not reach a column.
-    labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
-    attr(parsed_labels, "tagged_raw") <- NULL
+    # Parsed, the raw marker spellings harvested, then stripped from the
+    # labels (.jst_parse_labels_arg(); Session 386).
+    .jst_pl <- .jst_parse_labels_arg(labels, convention)
+    parsed_labels     <- .jst_pl$parsed_labels
+    labels_tagged_raw <- .jst_pl$labels_tagged_raw
   }
 
   # --- Declarations on the source (Session 302) -----------------------------
@@ -2120,19 +2337,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   # block never branches on "no setting chosen", so the Decision 11
   # choose-first gate (shipped S244) fires at the resolver without this
   # block knowing about it.
-  tok_rule_idx <- which(vapply(parsed_map$mappings,
-                               function(r) isTRUE(r$missing), logical(1)))
-  tok_in_na    <- !is.null(parsed_map$na_rule) &&
-                  isTRUE(parsed_map$na_rule$missing)
-  has_missing_token <- length(tok_rule_idx) > 0L || tok_in_na
-  tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
-
-  if (!is.null(tok_missing_label) && !has_missing_token) {
-    # S355 (the S256 item): the token quoted in all three places, so it
-    # cannot read as an adjective ("labels names missing" read as "the
-    # labels' names are absent"), and "to label" dropped.
-    .jst_stop(.jst_missing_label_text("8=missing"))
-  }
+  # The word missing in the map, and labels = "missing=..." without it
+  # (.jst_missing_token_rules(); Session 386).
+  .jst_mt <- .jst_missing_token_rules(parsed_map, parsed_labels, "8=missing")
+  tok_rule_idx      <- .jst_mt$tok_rule_idx
+  tok_in_na         <- .jst_mt$tok_in_na
+  has_missing_token <- .jst_mt$has_missing_token
+  tok_missing_label <- .jst_mt$tok_missing_label
 
   tok_mint_code  <- NULL     # numeric; spss arm only
   tok_reused     <- FALSE    # spss arm: code already declared on the source
@@ -2232,7 +2443,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
                    " as ", if (n_car == 1L) "a second" else "another",
                    " code."), "\n",
             if (n_car == 1L) "Use the declared code instead:\n"
-            else "Use one of the declared codes instead:\n",
+            else .txt_use_declared,
             "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
             .jst_data_name, ", ", orig_name, ", map = \"",
             .jst_render_map_string(parsed_map,
@@ -2257,7 +2468,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
               " SPSS-style missing values (", surv_txt, ")", cap_txt,
               ". 'missing' would add ", .jst_fmt_code(tok_mint_code),
               " as a fourth."), "\n",
-            "Use one of the declared codes instead:\n",
+            .txt_use_declared,
             "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
             .jst_data_name, ", ", orig_name, ", map = \"",
             .jst_render_map_string(parsed_map,
@@ -2367,34 +2578,19 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
                    " a different code."))
         }
       }
-      for (i in tok_rule_idx) {
-        parsed_map$mappings[[i]]$new_val <- tok_mint_code
-        parsed_map$mappings[[i]]$tagged  <- NULL
-      }
-      if (tok_in_na) {
-        parsed_map$na_rule$new_val <- tok_mint_code
-        parsed_map$na_rule$tagged  <- NULL
-      }
     } else {
       tok_tag <- .jst_canonical_tag("a", tok_conv)
-      for (i in tok_rule_idx) {
-        parsed_map$mappings[[i]]$new_val <- NA_real_
-        parsed_map$mappings[[i]]$tagged  <- tok_tag
-      }
-      if (tok_in_na) {
-        parsed_map$na_rule$new_val <- NA_real_
-        parsed_map$na_rule$tagged  <- tok_tag
-      }
     }
 
     # labels = "missing=Label": the entry labels whatever the token just
     # minted -- the numeric code under spss, the tagged marker otherwise.
-    if (!is.null(tok_missing_label)) {
-      entry <- if (!is.null(tok_mint_code)) tok_mint_code
-               else haven::tagged_na(tok_tag)
-      names(entry) <- tok_missing_label
-      parsed_labels <- c(parsed_labels, entry)
-    }
+    .jst_tok <- .jst_apply_missing_token(parsed_map, parsed_labels,
+                                         tok_rule_idx, tok_in_na,
+                                         identical(tok_conv, "spss"),
+                                         tok_mint_code, tok_tag,
+                                         tok_missing_label)
+    parsed_map    <- .jst_tok$parsed_map
+    parsed_labels <- .jst_tok$parsed_labels
   }
 
   # --- Cross-convention validation ---
@@ -2404,44 +2600,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   # out without rewriting the call (Rule Y, S246). Under Stata
   # convention the tokens are accepted and flow through to the recode
   # loop.
-  map_has_tag <- any(!vapply(parsed_map$mappings,
-                             function(r) is.null(r$tagged), logical(1))) ||
-                 identical(parsed_map$else_action, "tagged") ||
-                 (!is.null(parsed_map$na_rule) &&
-                  !is.null(parsed_map$na_rule$tagged))
-  labels_has_tag <- if (!is.null(parsed_labels)) {
-    any(!is.na(haven::na_tag(parsed_labels)))
-  } else FALSE
-
-  if (map_has_tag || labels_has_tag) {
-    # First tagged spelling in the user's call, for the choose-first
-    # gate's head echo. Quoted AS TYPED: the parsers normalize the
-    # letter to lowercase (input case is accepted either way per
-    # Decision 13) and record the typed spelling alongside it
-    # (tagged_raw), so the echo reads from the record and falls back to
-    # the normalized letter only where no record exists. S283: the
-    # gate had read the normalized letter, echoing a typed .A as
-    # '.a' while the spss-conflict refusal two lines below quoted the
-    # same token correctly. Token-minted tags cannot reach the gate:
-    # minting them required a resolution, so a second resolution here
-    # cannot fall to level 4.
-    # The walk is .jst_first_typed_marker() since S345 (the S283 item):
-    # jencode() carried a copy of it.
-    gate_marker <- .jst_first_typed_marker(parsed_map, parsed_labels,
-                                           labels_tagged_raw)
-    resolved_convention <- .jst_resolve_convention(convention,
-                                                   act    = "tagged",
-                                                   fn     = "jrecode",
-                                                   marker = gate_marker)
-    if (identical(resolved_convention, "spss")) {
-      err_msg <- .jst_jrecode_convention_error(
-        parsed_map          = parsed_map,
-        parsed_labels       = parsed_labels,
-        per_call_convention = convention,
-        labels_tagged_raw   = labels_tagged_raw
-      )
-      .jst_stop(err_msg)
-    }
+  # Does the map or labels = carry a marker? Then the convention the
+  # marker needs, refused under spss (.jst_tagged_gate(); Session 386).
+  .jst_gate <- .jst_tagged_gate(parsed_map, parsed_labels,
+                                labels_tagged_raw, convention, "jrecode")
+  if (!is.null(.jst_gate)) {
+    gate_marker         <- .jst_gate$marker
+    resolved_convention <- .jst_gate$convention
     # else: Stata or SAS convention — proceed; tagged-NA tokens are valid.
 
     # Marker refusal (S302). The source is SPSS-form and part of that
@@ -2474,7 +2639,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
                if (has_band) "" else " that the map leaves in place",
                ", so the marker ", gate_marker,
                " cannot be added to it."), "\n",
-        "Convert the data frame first, then recode:\n",
+        .txt_convert_first,
         # S352 (the S351 item): the route that runs for a frame holding a
         # text variable with declared missing values.
         {
@@ -2505,22 +2670,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
     # Preserved tags from the ORIGINAL column are deliberately NOT
     # canonicalized -- display follows the stored tag, never the setting;
     # canonical case governs minting only. (Session 231)
-    for (i in seq_along(parsed_map$mappings)) {
-      if (!is.null(parsed_map$mappings[[i]]$tagged)) {
-        parsed_map$mappings[[i]]$tagged <-
-          .jst_canonical_tag(parsed_map$mappings[[i]]$tagged,
-                             resolved_convention)
-      }
-    }
-    if (!is.null(parsed_map$else_tag)) {
-      parsed_map$else_tag <- .jst_canonical_tag(parsed_map$else_tag,
-                                                resolved_convention)
-    }
-    if (!is.null(parsed_map$na_rule) &&
-        !is.null(parsed_map$na_rule$tagged)) {
-      parsed_map$na_rule$tagged <-
-        .jst_canonical_tag(parsed_map$na_rule$tagged, resolved_convention)
-    }
+    parsed_map <- .jst_canonicalize_map_tags(parsed_map, resolved_convention)
     if (!is.null(parsed_labels)) {
       label_tags <- haven::na_tag(parsed_labels)
       tagged_idx <- which(!is.na(label_tags))
@@ -2626,19 +2776,19 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
         head1  <- paste0("'missing' would use ", target, " under ",
                          if (identical(tok_conv, "sas")) "SAS" else "Stata",
                          " convention, but ", orig_name, " already carries ",
-                         held, ", so the two would share one missing value.")
+                         held, .txt_share_one)
         used <- c(unlist(lapply(parsed_map$mappings, `[[`, "tagged")),
                   parsed_map$na_rule$tagged, parsed_map$else_tag,
                   if (is.double(parsed_labels)) haven::na_tag(parsed_labels),
                   .jst_marker_tags(orig)$all)
         free <- .jst_free_tags(used, tok_conv, 1L)
         apart <- if (length(free) == 1L) paste0(
-          "To keep them distinct, give missing a marker ", orig_name,
+          .txt_keep_distinct, orig_name,
           " does not use:\n",
           line(.jst_render_map_string(parsed_map,
                                       missing_as = paste0(".", free)),
                r8_labels_arg(paste0(".", free))))
-        else paste0("To keep them distinct, give missing a marker ",
+        else paste0(.txt_keep_distinct,
                     orig_name, " does not use, after freeing one: every ",
                     "letter is in use.")
       } else {
@@ -2647,7 +2797,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
         target <- .jst_fmt_code(tok_mint_code)
         head1  <- paste0("'missing' would use ", target, ", from ", cc_src,
                          ", but ", orig_name, " already declares ", held,
-                         ", so the two would share one missing value.")
+                         .txt_share_one)
         # A code the variable does not use: the next convention code not
         # declared, inside the range, held as a value or named by the map.
         cc_all <- as.numeric(getOption(
@@ -3061,7 +3211,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
                "holds SPSS-style missing values or lettered markers, not ",
                "both."), "\n",
         if (convert1) paste0(
-          "Convert the data frame first, then recode:\n",
+          .txt_convert_first,
           "  jconvert(", .jst_data_name, ", to = \"spss\", modify = TRUE)\n")
         else "",
         if (length(surv) > 0) paste0(
@@ -3130,13 +3280,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
       .note(paste0(
         "Note: ", rendered, " is a declared missing value and was kept on ",
         "the recoded variable.\n",
-        "To convert it to a plain NA instead, add ", preserved_udm_codes[1],
+        .txt_plain_na_one, preserved_udm_codes[1],
         "=NA to the map."))
     } else {
       .note(paste0(
         "Note: ", rendered, " are declared missing values and were kept on ",
         "the recoded variable.\n",
-        "To convert them to plain NA instead, map them to NA ",
+        .txt_plain_na_many,
         "(for example ", preserved_udm_codes[1], "=NA)."))
     }
   }
@@ -3162,13 +3312,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
       .note(paste0(
         "Note: ", rendered, " is inside the declared missing-value range ",
         band_txt, " and was kept on the recoded variable.\n",
-        "To convert it to a plain NA instead, add ",
+        .txt_plain_na_one,
         .jst_fmt_code(preserved_band_vals[1]), "=NA to the map."))
     } else {
       .note(paste0(
         "Note: ", rendered, " are inside the declared missing-value range ",
         band_txt, " and were kept on the recoded variable.\n",
-        "To convert them to plain NA instead, map them to NA ",
+        .txt_plain_na_many,
         "(for example ", .jst_fmt_code(preserved_band_vals[1]), "=NA)."))
     }
   }
@@ -4601,6 +4751,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
 #' @export
 jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
                     ...) {
+  # Message text printed at two sites of this function (Session 386).
+  .txt_case_only <- "\" only in capitalization -- matching is case-sensitive."
   # An input jencode() does not take -- a misspelled argument, or a value in
   # a place it has none -- stops here, read by name and never evaluated
   # (Capability Slate C3, Session 378; until then R stopped first, in its
@@ -4614,51 +4766,21 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
                  .jst_word_specs("convention"),
                  "jencode")
 
-  # --- Resolve first argument -----------------------------------------------
+  # --- Resolve first argument and the variable --------------------------------
+  # One front for jrecode() and jencode() (.jst_recode_front(); Session 386):
+  # the data argument as typed or the juse() default, the variable from
+  # either slot, the frame and not-found checks, and the data's kind for the
+  # lines offered (an expression is named mydata).
   data_sub <- substitute(data)
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = data_sub,
-    data_missing  = missing(data),
-    fn_name       = "jencode",
-    envir         = parent.frame(),
-    accept_vector = FALSE
-  )
-
-  data           <- arg1$data
-  .jst_data_name <- arg1$name
-
-  # Determine variable name. If the user typed jencode(VarName, map = "...")
-  # -- data omitted, named map -- the helper captured VarName as
-  # first_arg_sub. Otherwise var is supplied positionally.
-  if (arg1$mode == "symbol_with_default") {
-    if (!missing(var)) {
-      .jst_named_args_stop("jencode", arg1, data, .jst_data_name, sys.call(),
-                           "map")
-    }
-    var_name <- .jst_one_var_name(arg1$first_arg_sub, .fn)   # R18, S356
-  } else {
-    var_name <- if (missing(var)) "" else
-      .jst_one_var_name(substitute(var), .fn)              # R18, S356
-  }
-
-  # --- Input checks ---------------------------------------------------------
-  if (!is.data.frame(data)) {
-    .jst_stop(.jst_txt_first_arg_frame)
-  }
-  # No variable named (Session 370, Fix Slate 18), as jrecode().
-  if (!nzchar(var_name)) .jst_no_var_stop("jencode")
-  if (!var_name %in% names(data)) {
-    # The package's one not-found sentence (S338; S343 here), as jrecode().
-    .jst_check_vars(data, var_name, .jst_data_name,
-                    default_used = arg1$mode %in%
-                      c("default", "symbol_with_default"))
-  }
-  # An expression given as the data: see jrecode() (S343). The data left out
-  # under a default -- jencode(var = Name), jencode(, Name) -- is the default
-  # frame's name (S371), as in jrecode().
-  data_kind  <- if (identical(arg1$mode, "default")) "name" else .jst_data_arg_kind(data_sub)
-  data_typed <- if (identical(arg1$mode, "default")) .jst_data_name else .jst_term_text(data_sub)
-  if (identical(data_kind, "expression")) .jst_data_name <- "mydata"
+  .jst_rf <- .jst_recode_front("jencode", data_sub, missing(data),
+                               substitute(var), missing(var),
+                               parent.frame(), sys.call(), sys.function())
+  arg1           <- .jst_rf$arg1
+  data           <- .jst_rf$data
+  .jst_data_name <- .jst_rf$data_name
+  var_name       <- .jst_rf$var_name
+  data_kind      <- .jst_rf$data_kind
+  data_typed     <- .jst_rf$data_typed
   if (!is.null(map) && (!is.character(map) || length(map) != 1)) {
     .jst_one_string_stop("map", "Bail=1; Parole=2")
   }
@@ -4669,15 +4791,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
   # Validate convention up front so an invalid value errors whether or not
   # the map actually uses tagged-NA tokens (jrecode's rule, inherited).
   if (!is.null(convention)) {
-    # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
-    if (is.character(convention) && length(convention) == 1L &&
-        !is.na(convention)) {
-      convention <- tolower(convention)
-    }
-    if (!is.character(convention) || length(convention) != 1L ||
-        !convention %in% c("spss", "stata", "sas")) {
-      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
-    }
+    # Case-insensitive, then checked (.jst_convention_arg(); Session 386).
+    convention <- .jst_convention_arg(convention)
   }
 
   orig <- data[[var_name]]
@@ -5003,18 +5118,11 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
     parsed_labels     <- NULL
     labels_tagged_raw <- NULL
     if (!is.null(labels)) {
-      parsed_labels <- tryCatch(
-        .jst_parse_labels(labels, convention),
-        error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                             conditionMessage(e)))
-      )
-      # S283: harvest the raw-spelling record, then strip it -- jencode
-      # shares jrecode's gate and refusal, both of which quote the first
-      # marker as typed (see jrecode's labels parse for the history).
-      # These labels become the column's value labels, so the record
-      # must not reach a column.
-      labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
-      attr(parsed_labels, "tagged_raw") <- NULL
+      # Parsed, the raw marker spellings harvested, then stripped from the
+      # labels (.jst_parse_labels_arg(); Session 386).
+      .jst_pl <- .jst_parse_labels_arg(labels, convention)
+      parsed_labels     <- .jst_pl$parsed_labels
+      labels_tagged_raw <- .jst_pl$labels_tagged_raw
     }
 
     # --- The missing token (Decision 14, Session 241) ----------------------
@@ -5026,17 +5134,13 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
     # ordinary value of the result stops at the collision guard (S304),
     # after the incomplete-map error. The unset-state behavior stays
     # inside .jst_resolve_convention() -- see jrecode's token block.
-    tok_rule_idx <- which(vapply(parsed_map$mappings,
-                                 function(r) isTRUE(r$missing), logical(1)))
-    tok_in_na    <- !is.null(parsed_map$na_rule) &&
-                    isTRUE(parsed_map$na_rule$missing)
-    has_missing_token <- length(tok_rule_idx) > 0L || tok_in_na
-    tok_missing_label <- attr(parsed_labels, "missing_label", exact = TRUE)
-
-    if (!is.null(tok_missing_label) && !has_missing_token) {
-      # S355, as jrecode's twin
-      .jst_stop(.jst_missing_label_text("Refused=missing"))
-    }
+    # The word missing in the map, and labels = "missing=..." without it
+    # (.jst_missing_token_rules(); Session 386).
+    .jst_mt <- .jst_missing_token_rules(parsed_map, parsed_labels, "Refused=missing")
+    tok_rule_idx      <- .jst_mt$tok_rule_idx
+    tok_in_na         <- .jst_mt$tok_in_na
+    has_missing_token <- .jst_mt$has_missing_token
+    tok_missing_label <- .jst_mt$tok_missing_label
 
     tok_tag <- NULL
     if (has_missing_token) {
@@ -5046,64 +5150,27 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
         cc <- getOption(".jst_options_missing_convention_codes",
                         .jst_options_defaults$missing.convention.codes)
         tok_mint_code <- as.numeric(cc[1])
-        for (i in tok_rule_idx) {
-          parsed_map$mappings[[i]]$new_val <- tok_mint_code
-          parsed_map$mappings[[i]]$tagged  <- NULL
-        }
-        if (tok_in_na) {
-          parsed_map$na_rule$new_val <- tok_mint_code
-          parsed_map$na_rule$tagged  <- NULL
-        }
       } else {
         tok_tag <- .jst_canonical_tag("a", tok_conv)
-        for (i in tok_rule_idx) {
-          parsed_map$mappings[[i]]$new_val <- NA_real_
-          parsed_map$mappings[[i]]$tagged  <- tok_tag
-        }
-        if (tok_in_na) {
-          parsed_map$na_rule$new_val <- NA_real_
-          parsed_map$na_rule$tagged  <- tok_tag
-        }
       }
-      if (!is.null(tok_missing_label)) {
-        entry <- if (!is.null(tok_mint_code)) tok_mint_code
-                 else haven::tagged_na(tok_tag)
-        names(entry) <- tok_missing_label
-        parsed_labels <- c(parsed_labels, entry)
-      }
+      .jst_tok <- .jst_apply_missing_token(parsed_map, parsed_labels,
+                                           tok_rule_idx, tok_in_na,
+                                           identical(tok_conv, "spss"),
+                                           tok_mint_code, tok_tag,
+                                           tok_missing_label)
+      parsed_map    <- .jst_tok$parsed_map
+      parsed_labels <- .jst_tok$parsed_labels
     }
 
     # --- Cross-convention validation (E11 gate, inherited exactly) ---------
     resolved_convention <- NULL
-    map_has_tag <- any(!vapply(parsed_map$mappings,
-                               function(r) is.null(r$tagged), logical(1))) ||
-                   identical(parsed_map$else_action, "tagged") ||
-                   (!is.null(parsed_map$na_rule) &&
-                    !is.null(parsed_map$na_rule$tagged))
-    labels_has_tag <- if (!is.null(parsed_labels)) {
-      any(!is.na(haven::na_tag(parsed_labels)))
-    } else FALSE
-
-    if (map_has_tag || labels_has_tag) {
-      # First tagged spelling in the user's call, for the choose-first
-      # gate's head echo, quoted AS TYPED from the parsers' tagged_raw
-      # record (S283; see jrecode's tagged site for the rationale and
-      # the token-minted-tags argument).
-      gate_marker <- .jst_first_typed_marker(parsed_map, parsed_labels,
-                                             labels_tagged_raw)
-      resolved_convention <- .jst_resolve_convention(convention,
-                                                     act    = "tagged",
-                                                     fn     = "jencode",
-                                                     marker = gate_marker)
-      if (identical(resolved_convention, "spss")) {
-        err_msg <- .jst_jrecode_convention_error(
-          parsed_map          = parsed_map,
-          parsed_labels       = parsed_labels,
-          per_call_convention = convention,
-          labels_tagged_raw   = labels_tagged_raw
-        )
-        .jst_stop(err_msg)
-      }
+    # Does the map or labels = carry a marker? Then the convention the
+    # marker needs, refused under spss (.jst_tagged_gate(); Session 386).
+    .jst_gate <- .jst_tagged_gate(parsed_map, parsed_labels,
+                                  labels_tagged_raw, convention, "jencode")
+    if (!is.null(.jst_gate)) {
+      gate_marker         <- .jst_gate$marker
+      resolved_convention <- .jst_gate$convention
       # else: Stata or SAS convention -- tagged-NA tokens are valid.
 
       # Canonicalize the parsed tag letters to the resolved convention's
@@ -5111,22 +5178,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
       # every mint site and the label attachment inherit the same case;
       # minting an uppercase cell against a lowercase label would silently
       # fail to match. sas is handled from birth here (S237).
-      for (i in seq_along(parsed_map$mappings)) {
-        if (!is.null(parsed_map$mappings[[i]]$tagged)) {
-          parsed_map$mappings[[i]]$tagged <-
-            .jst_canonical_tag(parsed_map$mappings[[i]]$tagged,
-                               resolved_convention)
-        }
-      }
-      if (!is.null(parsed_map$else_tag)) {
-        parsed_map$else_tag <- .jst_canonical_tag(parsed_map$else_tag,
-                                                  resolved_convention)
-      }
-      if (!is.null(parsed_map$na_rule) &&
-          !is.null(parsed_map$na_rule$tagged)) {
-        parsed_map$na_rule$tagged <-
-          .jst_canonical_tag(parsed_map$na_rule$tagged, resolved_convention)
-      }
+      parsed_map <- .jst_canonicalize_map_tags(parsed_map, resolved_convention)
       if (!is.null(parsed_labels)) {
         label_tags <- haven::na_tag(parsed_labels)
         tagged_idx <- which(!is.na(label_tags))
@@ -5219,7 +5271,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
         if (length(hit) > 0) {
           lines <- c(lines, paste0(
             "\"", w, "\" differs from the map's \"", hit[1],
-            "\" only in capitalization -- matching is case-sensitive."))
+            .txt_case_only))
         }
       }
       if (blank_unhandled) {
@@ -5516,7 +5568,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
           if (length(hit) > 0) {
             near <- c(near, paste0(
               "\"", w, "\" differs from the map's \"", hit[1],
-              "\" only in capitalization -- matching is case-sensitive."))
+              .txt_case_only))
           }
         }
         msgs <- c(msgs, paste(c(absent_note, near), collapse = "\n"))
@@ -6644,15 +6696,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   # Validate convention argument up front.
   if (!is.null(convention)) {
-    # Platform specs are case-insensitive (accept "SPSS", "Stata", ...).
-    if (is.character(convention) && length(convention) == 1L &&
-        !is.na(convention)) {
-      convention <- tolower(convention)
-    }
-    if (!is.character(convention) || length(convention) != 1L ||
-        !convention %in% c("spss", "stata", "sas")) {
-      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
-    }
+    # Case-insensitive, then checked (.jst_convention_arg(); Session 386).
+    convention <- .jst_convention_arg(convention)
   }
 
   # --- Validate range (call-level) ------------------------------------------
@@ -6735,17 +6780,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     if (!is.character(labels) || length(labels) != 1L) {
       .jst_one_string_stop("labels", "-99=Refused; -98=Don't know")
     }
-    parsed_labels <- tryCatch(
-      .jst_parse_labels(labels, convention),
-      error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                       conditionMessage(e)))
-    )
-    # S249: jdeclare_missing IS the caller that quotes markers back, so it keeps
-    # the raw-spelling record -- but in a local, not on the vector. Stripping
-    # here rather than downstream means parsed_labels flows on exactly as it
-    # did before, including into label_residue and the in-range label path.
-    labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
-    attr(parsed_labels, "tagged_raw") <- NULL
+    # Parsed, the raw marker spellings harvested, then stripped from the
+    # labels (.jst_parse_labels_arg(); Session 386).
+    .jst_pl <- .jst_parse_labels_arg(labels, convention)
+    parsed_labels     <- .jst_pl$parsed_labels
+    labels_tagged_raw <- .jst_pl$labels_tagged_raw
   }
 
   # --- Argument disambiguation (Option A vs Option C) ----------------------
@@ -8989,14 +9028,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   # convention = : checked as everywhere; "stata" or "sas" refused (R26).
   if (!is.null(convention)) {
-    if (is.character(convention) && length(convention) == 1L &&
-        !is.na(convention)) {
-      convention <- tolower(convention)
-    }
-    if (!is.character(convention) || length(convention) != 1L ||
-        !convention %in% c("spss", "stata", "sas")) {
-      .jst_stop_arg(arg = "convention", choices = c("spss", "stata", "sas"))
-    }
+    convention <- .jst_convention_arg(convention)
     if (convention %in% c("stata", "sas")) {
       one <- length(text_vars) == 1L
       .jst_stop(subj(text_vars), ", and ",

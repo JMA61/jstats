@@ -50,8 +50,6 @@ javg()'s keep-it note.}
 jt() and jaov().}
 \item{\code{.jst_txt_stata_markers_na}}{the stata option's line in
 the convention menus.}
-\item{\code{.jst_txt_ggplot_note}}{the note when the regression plots
-cannot be drawn.}
 \item{\code{.jst_txt_assign_expr}}{the assign-or-lose reminder's lead
 for data given as an expression.}
 \item{\code{.jst_txt_null_remedy}}{the stop for NULL given as the

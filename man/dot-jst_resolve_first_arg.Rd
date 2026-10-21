@@ -11,7 +11,9 @@
   envir = parent.frame(),
   allow_null = FALSE,
   accept_vector = FALSE,
-  pre_eval = NULL
+  pre_eval = NULL,
+  caller_call = NULL,
+  caller_fun = NULL
 )
 }
 \arguments{

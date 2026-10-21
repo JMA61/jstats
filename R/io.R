@@ -5923,12 +5923,27 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' single firing is returned unchanged, so single-issue saves are byte-for-
 #' byte identical to the pre-accumulation behavior.
 #'
+#' Given an expression as the data (ruling S386, the (S384) item), the
+#' line that makes mydata comes once, under the header, so the parts' lines
+#' run top to bottom on one copy -- each part repeating it had undone the
+#' parts above -- and the closing line names the save that works on it,
+#' since the expression run again stops as before.
+#'
 #' @param sections List of pre-built section messages, one per fired check.
 #' @param data_name Character. The data frame's name, for the header.
 #' @param ext Lowercase target extension ("sav", "dta", "xpt").
+#' @param assign_line Character(1) or NULL: "  mydata <- <the expression>",
+#'   for data given as an expression.
+#' @param save_line Character(1) or NULL: the jsave() line on mydata that
+#'   closes the message, for data given as an expression.
+#' @param copy_of Character(1): what the copy is made from, "your d data
+#'   frame" when the expression names one data frame, else "your data".
 #' @return Character scalar suitable for \code{stop(call. = FALSE)}.
 #' @keywords internal
-.jst_jsave_combined_error_msg <- function(sections, data_name, ext) {
+.jst_jsave_combined_error_msg <- function(sections, data_name, ext,
+                                          assign_line = NULL,
+                                          save_line = NULL,
+                                          copy_of = "your data") {
   if (length(sections) == 1L) return(sections[[1L]])
 
   output_level <- getOption(".jst_output_level", "standard")
@@ -5951,9 +5966,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                      character(1))
   paste0(
     data_name, " cannot be saved to ", fmt, " yet -- ",
-    length(sections), " things to fix:\n\n",
+    length(sections), " things to fix",
+    if (is.null(assign_line)) ":\n\n"
+    else paste0(".\nThe fixes shown below work on a copy of ", copy_of, ".\n",
+                "Make the copy first:\n", assign_line, "\n\n"),
     paste(numbered, collapse = "\n\n"), "\n\n",
-    "Fix the above, then run jsave() again."
+    if (is.null(save_line)) "Fix the above, then run jsave() again."
+    else paste0("Fix the above, then save mydata:\n", save_line)
   )
 }
 #' Internal: build jsave's case-correction note for .dta export
@@ -7244,7 +7263,37 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     }
 
     # Report all blocking issues at once (single message when only one fired).
+    # Given an expression and two or more parts (ruling S386, the (S384)
+    # item): the line that makes mydata once, under the header, every part
+    # building on it -- a line in each part had made mydata again, undoing
+    # the parts above -- and the closing line the save on mydata, the
+    # call's own arguments kept and clean.names = TRUE where a part names
+    # variables the format refuses (that part's one route). A single part
+    # keeps a line per block (S352), whose blocks are alternatives; a name
+    # or a place keeps "run jsave() again".
     if (length(sections) > 0) {
+      if (identical(data_kind, "expression") && length(sections) > 1L &&
+          !identical(getOption(".jst_output_level", "standard"), "minimal")) {
+        save_line <- paste0(
+          "  jsave(mydata, \"",
+          .jst_dq_escape(gsub("\\", "/", file, fixed = TRUE)), "\"",
+          if (isTRUE(overwrite)) ", overwrite = TRUE",
+          if (!preserve.declarations) ", preserve.declarations = FALSE",
+          if (isTRUE(clean.names) || nrow(name_probs) > 0L) ", clean.names = TRUE",
+          ")")
+        # The copy is named for the user's data frame (Jeff, S386: "I'm
+        # using the name of the user's data frame since that's what's
+        # really important"): the one data frame the expression names, else
+        # "your data" (mk(), merge(a, b)).
+        frames  <- tryCatch(.jst_frame_refs(data_sub, character(0), parent.frame()),
+                            error = function(e) character(0))
+        copy_of <- if (length(frames) == 1L) paste0("your ", frames, " data frame")
+                   else "your data"
+        .jst_stop(.jst_jsave_combined_error_msg(
+          sections, data_name, ext,
+          assign_line = paste0("  mydata <- ", .jst_term_text(data_sub)),
+          save_line = save_line, copy_of = copy_of))
+      }
       .jst_stop(expr_lines(
         .jst_jsave_combined_error_msg(sections, data_name, ext)))
     }

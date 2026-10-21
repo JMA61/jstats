@@ -2190,6 +2190,97 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
 
 # -- jnumeric / jcount ---------------------------------------------------------
 
+#' Internal: jnumeric()'s, jcount()'s and jlikert()'s one front
+#'
+#' The three registration verbs were one body three times over (Session
+#' 386, the twin build), differing only in the kind registered, the
+#' function's name and the no-variables example. Each verb passes its
+#' captures as typed -- missing(data), substitute(data), ...length(), the
+#' dots' expressions, rlang::enquos(...), parent.frame() and sys.call() --
+#' and each is read here where the verb read it. jdummy() keeps its own.
+#'
+#' @param kind "numeric", "count" or "likert".
+#' @param fn Character(1): the verb's name.
+#' @param example Character(1): the no-variables stop's example line.
+#' @param data_missing,data_sub missing(data) and substitute(data).
+#' @param dots_n,dots_subs ...length() and the dots' expressions.
+#' @param quos rlang::enquos(...).
+#' @param remove,clear.all The call's arguments.
+#' @param envir,call,fun parent.frame(), sys.call() and sys.function().
+#' @return As the verb returns.
+#' @keywords internal
+.jst_register_front <- function(kind, fn, example, data_missing, data_sub,
+                                dots_n, dots_subs, quos, remove,
+                                clear.all, envir, call, fun) {
+  # jnumeric(clear.all = TRUE): clear numeric registrations on every frame.
+  if (isTRUE(clear.all)) return(.jst_handle_clear(kind, clear.all = TRUE))
+  # jnumeric() with no arguments: show the session-wide registry status.
+  if (data_missing && dots_n == 0L) return(.jst_registry_status())
+  raw_data <- if (!data_missing) data_sub else NULL
+  # jnumeric(NULL): clear the default frame (or the sole registered frame, or
+  # ask) -- never a silent all-frames wipe (use clear.all = TRUE for that).
+  if (!data_missing && is.null(raw_data)) {
+    return(.jst_handle_clear(kind,
+             default_name = getOption(".jst_default_data", default = NULL)))
+  }
+  # jnumeric(z, NULL) and jnumeric(z, v, remove = TRUE) with z no longer a data
+  # frame: served by name, before the resolver would refuse z (S342).
+  if (.jst_registration_by_name(kind, raw_data, dots_subs, remove, envir)) {
+    return(invisible(NULL))
+  }
+
+  arg1 <- .jst_resolve_first_arg(
+    data_sub      = data_sub,
+    data_missing  = data_missing,
+    fn_name       = fn,
+    envir         = envir,
+    accept_vector = FALSE,
+    caller_call   = call,
+    caller_fun    = fun
+  )
+  data         <- arg1$data
+  data_name    <- arg1$name
+  default_used <- arg1$mode %in% c("default", "symbol_with_default")
+  # An expression given as the data has no name to store a registration
+  # under (S342); a place (lst$d) is accepted and saved by its last part.
+  # A call naming no variables -- jnumeric(mk()) -- gets the no-variables
+  # stop below instead (Session 370, Fix Slate 18): the line this one
+  # offered, jnumeric(mydata), stopped there.
+  if (arg1$mode == "explicit" && dots_n > 0L &&
+      identical(.jst_data_arg_kind(raw_data), "expression")) {
+    .jst_registration_expression_stop(
+      raw_data, fn, call,
+      registering = !isTRUE(remove) &&
+        !(dots_n == 1L && is.null(dots_subs[[1L]])))
+  }
+  file_stem <- if (arg1$mode == "explicit")
+    .jst_data_file_stem(raw_data, data_name) else data_name
+
+  variables <- quos
+  .jst_check_named_variables(variables, arg1$data, fn)   # S290
+  if (arg1$mode == "symbol_with_default") {
+    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = envir)
+    variables <- c(list(extra_quo), variables)
+    class(variables) <- "quosures"
+  }
+  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
+  # jnumeric(data, NULL): clear this frame's numeric registrations (mirrors
+  # jdummy(data, NULL); the lone NULL sits in the variable slot).
+  if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
+    return(.jst_handle_clear(kind, explicit_frame = data_name))
+  }
+  if (length(variables) == 0) {
+    # One sentence a line, the example on a line of its own (Session 370,
+    # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
+    # named the call's data frame beside placeholder variables.
+    .jst_no_vars_stop(example)
+  }
+  var_names <- vapply(variables, rlang::quo_name, character(1))
+
+  .jst_register_intent(kind, data, data_name, default_used,
+                       var_names, remove, file_stem = file_stem)
+}
+
 #' Register variables as numeric for analysis
 #'
 #' \code{jnumeric()} tells jstats to treat one or more variables as numeric
@@ -2245,74 +2336,16 @@ jnumeric <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(remove, "remove")
   .jst_check_flag(clear.all, "clear.all")
-  # jnumeric(clear.all = TRUE): clear numeric registrations on every frame.
-  if (isTRUE(clear.all)) return(.jst_handle_clear("numeric", clear.all = TRUE))
-  # jnumeric() with no arguments: show the session-wide registry status.
-  if (missing(data) && ...length() == 0L) return(.jst_registry_status())
-  raw_data <- if (!missing(data)) substitute(data) else NULL
-  # jnumeric(NULL): clear the default frame (or the sole registered frame, or
-  # ask) -- never a silent all-frames wipe (use clear.all = TRUE for that).
-  if (!missing(data) && is.null(raw_data)) {
-    return(.jst_handle_clear("numeric",
-             default_name = getOption(".jst_default_data", default = NULL)))
-  }
-  # jnumeric(z, NULL) and jnumeric(z, v, remove = TRUE) with z no longer a data
-  # frame: served by name, before the resolver would refuse z (S342).
-  if (.jst_registration_by_name("numeric", raw_data,
-                                as.list(substitute(list(...)))[-1L],
-                                remove, parent.frame())) {
-    return(invisible(NULL))
-  }
-
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
-    data_missing  = missing(data),
-    fn_name       = "jnumeric",
-    envir         = parent.frame(),
-    accept_vector = FALSE
-  )
-  data         <- arg1$data
-  data_name    <- arg1$name
-  default_used <- arg1$mode %in% c("default", "symbol_with_default")
-  # An expression given as the data has no name to store a registration
-  # under (S342); a place (lst$d) is accepted and saved by its last part.
-  # A call naming no variables -- jnumeric(mk()) -- gets the no-variables
-  # stop below instead (Session 370, Fix Slate 18): the line this one
-  # offered, jnumeric(mydata), stopped there.
-  if (arg1$mode == "explicit" && ...length() > 0L &&
-      identical(.jst_data_arg_kind(raw_data), "expression")) {
-    .jst_registration_expression_stop(
-      raw_data, "jnumeric", sys.call(),
-      registering = !isTRUE(remove) &&
-        !(...length() == 1L &&
-          is.null(as.list(substitute(list(...)))[[2L]])))
-  }
-  file_stem <- if (arg1$mode == "explicit")
-    .jst_data_file_stem(raw_data, data_name) else data_name
-
-  variables <- rlang::enquos(...)
-  .jst_check_named_variables(variables, arg1$data, "jnumeric")   # S290
-  if (arg1$mode == "symbol_with_default") {
-    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
-    variables <- c(list(extra_quo), variables)
-    class(variables) <- "quosures"
-  }
-  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
-  # jnumeric(data, NULL): clear this frame's numeric registrations (mirrors
-  # jdummy(data, NULL); the lone NULL sits in the variable slot).
-  if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
-    return(.jst_handle_clear("numeric", explicit_frame = data_name))
-  }
-  if (length(variables) == 0) {
-    # One sentence a line, the example on a line of its own (Session 370,
-    # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
-    # named the call's data frame beside placeholder variables.
-    .jst_no_vars_stop("jnumeric(community, Environment2)")
-  }
-  var_names <- vapply(variables, rlang::quo_name, character(1))
-
-  .jst_register_intent("numeric", data, data_name, default_used,
-                       var_names, remove, file_stem = file_stem)
+  # One front for jnumeric(), jcount() and jlikert() (.jst_register_front();
+  # Session 386, the twin build). Each capture is passed as typed and read
+  # there where this function read it.
+  .jst_register_front("numeric", "jnumeric", "jnumeric(community, Environment2)",
+                      data_missing = missing(data),
+                      data_sub = substitute(data), dots_n = ...length(),
+                      dots_subs = as.list(substitute(list(...)))[-1L],
+                      quos = rlang::enquos(...), remove = remove,
+                      clear.all = clear.all, envir = parent.frame(),
+                      call = sys.call(), fun = sys.function())
 }
 
 
@@ -2371,74 +2404,16 @@ jcount <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(remove, "remove")
   .jst_check_flag(clear.all, "clear.all")
-  # jcount(clear.all = TRUE): clear count registrations on every frame.
-  if (isTRUE(clear.all)) return(.jst_handle_clear("count", clear.all = TRUE))
-  # jcount() with no arguments: show the session-wide registry status.
-  if (missing(data) && ...length() == 0L) return(.jst_registry_status())
-  raw_data <- if (!missing(data)) substitute(data) else NULL
-  # jcount(NULL): clear the default frame (or the sole registered frame, or
-  # ask) -- never a silent all-frames wipe (use clear.all = TRUE for that).
-  if (!missing(data) && is.null(raw_data)) {
-    return(.jst_handle_clear("count",
-             default_name = getOption(".jst_default_data", default = NULL)))
-  }
-  # jcount(z, NULL) and jcount(z, v, remove = TRUE) with z no longer a data
-  # frame: served by name, before the resolver would refuse z (S342).
-  if (.jst_registration_by_name("count", raw_data,
-                                as.list(substitute(list(...)))[-1L],
-                                remove, parent.frame())) {
-    return(invisible(NULL))
-  }
-
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
-    data_missing  = missing(data),
-    fn_name       = "jcount",
-    envir         = parent.frame(),
-    accept_vector = FALSE
-  )
-  data         <- arg1$data
-  data_name    <- arg1$name
-  default_used <- arg1$mode %in% c("default", "symbol_with_default")
-  # An expression given as the data has no name to store a registration
-  # under (S342); a place (lst$d) is accepted and saved by its last part.
-  # A call naming no variables -- jcount(mk()) -- gets the no-variables
-  # stop below instead (Session 370, Fix Slate 18): the line this one
-  # offered, jcount(mydata), stopped there.
-  if (arg1$mode == "explicit" && ...length() > 0L &&
-      identical(.jst_data_arg_kind(raw_data), "expression")) {
-    .jst_registration_expression_stop(
-      raw_data, "jcount", sys.call(),
-      registering = !isTRUE(remove) &&
-        !(...length() == 1L &&
-          is.null(as.list(substitute(list(...)))[[2L]])))
-  }
-  file_stem <- if (arg1$mode == "explicit")
-    .jst_data_file_stem(raw_data, data_name) else data_name
-
-  variables <- rlang::enquos(...)
-  .jst_check_named_variables(variables, arg1$data, "jcount")   # S290
-  if (arg1$mode == "symbol_with_default") {
-    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
-    variables <- c(list(extra_quo), variables)
-    class(variables) <- "quosures"
-  }
-  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
-  # jcount(data, NULL): clear this frame's count registrations.
-  if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
-    return(.jst_handle_clear("count", explicit_frame = data_name))
-  }
-  if (length(variables) == 0) {
-    # One sentence a line, the example on a line of its own (Session 370,
-    # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
-    # named the call's data frame beside placeholder variables.
-    # community holds no count, so the example is a placeholder (MyData).
-    .jst_no_vars_stop("jcount(MyData, Arrests)")
-  }
-  var_names <- vapply(variables, rlang::quo_name, character(1))
-
-  .jst_register_intent("count", data, data_name, default_used,
-                       var_names, remove, file_stem = file_stem)
+  # One front for jnumeric(), jcount() and jlikert() (.jst_register_front();
+  # Session 386, the twin build). Each capture is passed as typed and read
+  # there where this function read it.
+  .jst_register_front("count", "jcount", "jcount(MyData, Arrests)",
+                      data_missing = missing(data),
+                      data_sub = substitute(data), dots_n = ...length(),
+                      dots_subs = as.list(substitute(list(...)))[-1L],
+                      quos = rlang::enquos(...), remove = remove,
+                      clear.all = clear.all, envir = parent.frame(),
+                      call = sys.call(), fun = sys.function())
 }
 
 
@@ -2509,71 +2484,14 @@ jlikert <- function(data, ..., remove = FALSE, clear.all = FALSE) {
   # Validate TRUE/FALSE flags up front.
   .jst_check_flag(remove, "remove")
   .jst_check_flag(clear.all, "clear.all")
-  # jlikert(clear.all = TRUE): clear Likert registrations on every frame.
-  if (isTRUE(clear.all)) return(.jst_handle_clear("likert", clear.all = TRUE))
-  # jlikert() with no arguments: show the session-wide registry status.
-  if (missing(data) && ...length() == 0L) return(.jst_registry_status())
-  raw_data <- if (!missing(data)) substitute(data) else NULL
-  # jlikert(NULL): clear the default frame (or the sole registered frame, or
-  # ask) -- never a silent all-frames wipe (use clear.all = TRUE for that).
-  if (!missing(data) && is.null(raw_data)) {
-    return(.jst_handle_clear("likert",
-             default_name = getOption(".jst_default_data", default = NULL)))
-  }
-  # jlikert(z, NULL) and jlikert(z, v, remove = TRUE) with z no longer a data
-  # frame: served by name, before the resolver would refuse z (S342).
-  if (.jst_registration_by_name("likert", raw_data,
-                                as.list(substitute(list(...)))[-1L],
-                                remove, parent.frame())) {
-    return(invisible(NULL))
-  }
-
-  arg1 <- .jst_resolve_first_arg(
-    data_sub      = substitute(data),
-    data_missing  = missing(data),
-    fn_name       = "jlikert",
-    envir         = parent.frame(),
-    accept_vector = FALSE
-  )
-  data         <- arg1$data
-  data_name    <- arg1$name
-  default_used <- arg1$mode %in% c("default", "symbol_with_default")
-  # An expression given as the data has no name to store a registration
-  # under (S342); a place (lst$d) is accepted and saved by its last part.
-  # A call naming no variables -- jlikert(mk()) -- gets the no-variables
-  # stop below instead (Session 370, Fix Slate 18): the line this one
-  # offered, jlikert(mydata), stopped there.
-  if (arg1$mode == "explicit" && ...length() > 0L &&
-      identical(.jst_data_arg_kind(raw_data), "expression")) {
-    .jst_registration_expression_stop(
-      raw_data, "jlikert", sys.call(),
-      registering = !isTRUE(remove) &&
-        !(...length() == 1L &&
-          is.null(as.list(substitute(list(...)))[[2L]])))
-  }
-  file_stem <- if (arg1$mode == "explicit")
-    .jst_data_file_stem(raw_data, data_name) else data_name
-
-  variables <- rlang::enquos(...)
-  .jst_check_named_variables(variables, arg1$data, "jlikert")   # S290
-  if (arg1$mode == "symbol_with_default") {
-    extra_quo <- rlang::new_quosure(arg1$first_arg_sub, env = parent.frame())
-    variables <- c(list(extra_quo), variables)
-    class(variables) <- "quosures"
-  }
-  variables <- .jst_expand_vars(variables)   # c() of names (ruling R18, S356)
-  # jlikert(data, NULL): clear this frame's Likert registrations.
-  if (length(variables) == 1L && rlang::quo_is_null(variables[[1]])) {
-    return(.jst_handle_clear("likert", explicit_frame = data_name))
-  }
-  if (length(variables) == 0) {
-    # One sentence a line, the example on a line of its own (Session 370,
-    # Fix Slate 18; Rules E, L and AC): it was inline after "e.g." and
-    # named the call's data frame beside placeholder variables.
-    .jst_no_vars_stop("jlikert(community, Environment1, Environment2)")
-  }
-  var_names <- vapply(variables, rlang::quo_name, character(1))
-
-  .jst_register_intent("likert", data, data_name, default_used,
-                       var_names, remove, file_stem = file_stem)
+  # One front for jnumeric(), jcount() and jlikert() (.jst_register_front();
+  # Session 386, the twin build). Each capture is passed as typed and read
+  # there where this function read it.
+  .jst_register_front("likert", "jlikert", "jlikert(community, Environment1, Environment2)",
+                      data_missing = missing(data),
+                      data_sub = substitute(data), dots_n = ...length(),
+                      dots_subs = as.list(substitute(list(...)))[-1L],
+                      quos = rlang::enquos(...), remove = remove,
+                      clear.all = clear.all, envir = parent.frame(),
+                      call = sys.call(), fun = sys.function())
 }

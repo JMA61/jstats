@@ -523,8 +523,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "data frame.", call. = FALSE)
   }
 
-  .jst_need_ggplot()
-
   # Capture variable names
   variables <- rlang::enquos(...)
   .jst_check_named_variables(variables, arg1$data, "jplot")   # S290
@@ -772,36 +770,9 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
 
   # -- Note about arguments ignored for this plot type ----------------------
-  # line/band/equation/r2 apply only to scatter plots with line = "lm".
-  # If the user explicitly passed any of these but the resolved plot type
-  # doesn't use them, emit a single consolidated yellow note.
-  called_args   <- names(jplot_call)
-  explicit_args <- called_args[nzchar(called_args)]
-
-  is_scatter_lm <- resolved_type == "scatter" &&
-                   (identical(line, "lm") || identical(line, TRUE))
-
-  ignored <- character(0)
-  if ("line" %in% explicit_args && resolved_type != "scatter") {
-    ignored <- c(ignored, "line")
-  }
-  if ("band" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "band")
-  }
-  if ("equation" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "equation")
-  }
-  if ("r2" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "r2")
-  }
-  if (length(ignored) > 0) {
-    .cat_yellow(paste0(
-      "(Note: ", paste(ignored, collapse = ", "),
-      " not applicable to ", resolved_type,
-      if (resolved_type == "scatter") " without line = \"lm\"" else "",
-      " -- ignored)\n"
-    ))
-  }
+  # line/band/equation/r2 apply only to scatter plots with line = "lm"; one
+  # note names any the call gave a plot that does not use them.
+  .jst_plot_ignored_note(jplot_call, resolved_type, line)
 
   # -- Capture axis labels BEFORE factor conversion strips them ------------
   # Variable label display mode. jplot is a collapse layout where the
@@ -848,25 +819,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # (vapply over variable_names), so var_types[i] would carry the variable's
   # name and identical(named, "categorical") is always FALSE -- which silently
   # skipped the as_factor branch and bared the value labels off labelled bars.
-  for (i in seq_along(variable_names)) {
-    v <- variable_names[i]
-    if (!haven::is.labelled(data[[v]])) next
-    if (identical(var_types[[i]], "categorical")) {
-      data[[v]] <- haven::as_factor(data[[v]])
-    } else {
-      data[[v]] <- as.numeric(data[[v]])
-    }
-  }
-  if (has_by && haven::is.labelled(data[[by_name]])) {
-    val_labs <- labelled::val_labels(data[[by_name]])
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      data[[by_name]] <- haven::as_factor(data[[by_name]])
-    } else {
-      data[[by_name]] <- factor(data[[by_name]])
-    }
-  } else if (has_by && !is.factor(data[[by_name]])) {
-    data[[by_name]] <- factor(data[[by_name]])
-  }
+  data <- .jst_plot_convert_labelled(data, variable_names, var_types,
+                                     by_name, has_by)
   # The facet variable as the by variable: a factor, its value labels as the
   # panel titles.
   if (has_facet) data[[facet_name]] <- .jst_plot_group_factor(data[[facet_name]])
@@ -1105,8 +1059,6 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "\"lm\", \"loess\", \"connect\".")
   }
 
-  .jst_need_ggplot()
-
   # -- Apply pipeline --------------------------------------------------------
   pipeline <- .jst_apply_pipeline(data, .jst_data_name, .jst_default_used,
                                   subset_expr = subset_expr,
@@ -1187,56 +1139,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # scatter/box error on a discrete axis. variable_names and var_types are both
   # ordered (x, y), so positional indexing aligns. Index with [[i]] (drops any
   # name) so identical() matches even if var_types is ever built named.
-  for (i in seq_along(variable_names)) {
-    v <- variable_names[i]
-    if (!haven::is.labelled(data[[v]])) next
-    if (identical(var_types[[i]], "categorical")) {
-      data[[v]] <- haven::as_factor(data[[v]])
-    } else {
-      data[[v]] <- as.numeric(data[[v]])
-    }
-  }
-  if (has_by && haven::is.labelled(data[[by_name]])) {
-    val_labs <- labelled::val_labels(data[[by_name]])
-    if (!is.null(val_labs) && length(val_labs) > 0) {
-      data[[by_name]] <- haven::as_factor(data[[by_name]])
-    } else {
-      data[[by_name]] <- factor(data[[by_name]])
-    }
-  } else if (has_by && !is.factor(data[[by_name]])) {
-    data[[by_name]] <- factor(data[[by_name]])
-  }
+  data <- .jst_plot_convert_labelled(data, variable_names, var_types,
+                                     by_name, has_by)
 
   if (vlmode %in% c("legend", "legend.bottom")) {
     .print_var_labels(data, check_names)
   }
 
   # -- Ignored-argument note (e.g. band = ... without line = "lm") ----------
-  called_args   <- names(jplot_call)
-  explicit_args <- called_args[nzchar(called_args)]
-  is_scatter_lm <- resolved_type == "scatter" &&
-                   (identical(line, "lm") || identical(line, TRUE))
-  ignored <- character(0)
-  if ("line" %in% explicit_args && resolved_type != "scatter") {
-    ignored <- c(ignored, "line")
-  }
-  if ("band" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "band")
-  }
-  if ("equation" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "equation")
-  }
-  if ("r2" %in% explicit_args && !is_scatter_lm) {
-    ignored <- c(ignored, "r2")
-  }
-  if (length(ignored) > 0) {
-    .cat_yellow(paste0(
-      "(Note: ", paste(ignored, collapse = ", "),
-      " not applicable to ", resolved_type,
-      if (resolved_type == "scatter") " without line = \"lm\"" else "",
-      " -- ignored)\n"
-    ))
-  }
+  .jst_plot_ignored_note(jplot_call, resolved_type, line)
 
   # -- Dispatch to builder --------------------------------------------------
   p <- switch(
@@ -2424,8 +2335,6 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  .jst_need_ggplot()
-
   # No "vif" since Session 376 (Jeff: the bar chart added nothing the VIF
   # table does not give, and the commercial packages draw none).
   all_plots <- c("fit", "predicted", "effects", "coef",
@@ -2786,8 +2695,6 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
-
-  .jst_need_ggplot()
 
   # No "vif" since Session 376, as in jplot.jst_lm(). "logit" since
   # Session 378: the probability plot's companion, not in the core set.
@@ -3217,8 +3124,6 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  .jst_need_ggplot()
-
   plot_set <- .jst_resolve_which(which, core = "box",
                                  all_plots = c("box", "qq"),
                                  class_name = "jst_ttest")
@@ -3278,8 +3183,6 @@ jplot.jst_anova <- function(x, which = "core", ...) {
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  .jst_need_ggplot()
-
   plot_set <- .jst_resolve_which(which, core = "box",
                                  all_plots = c("box", "qq"),
                                  class_name = "jst_anova")
@@ -3337,8 +3240,6 @@ jplot.jst_corr <- function(x, which = "core", ...) {
                 show = "which", type = "which"),
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
-
-  .jst_need_ggplot()
 
   r_matrix <- x$r
   n_vars   <- nrow(r_matrix)
@@ -3456,8 +3357,6 @@ jplot.jst_crosstab <- function(x, which = "core", ...) {
     fn_name = "jplot"   # the function the user typed (Session 377)
   )
 
-  .jst_need_ggplot()
-
   plot_set <- .jst_resolve_which(which, core = "bar", all_plots = "bar",
                                  class_name = "jst_crosstab")
 
@@ -3519,19 +3418,91 @@ jplot.jst_freq <- function(x, which = "core", ...) {
        "categorical = c(\"Region\", \"Volunteer\"))  # grouped bar chart")
 }
 
-#' Internal: stop when ggplot2 is not installed
+#' Internal: jplot()'s note on arguments the plot drawn does not use
 #'
-#' Every jplot() method and the formula form (Session 383 gave the eight
-#' copies one home).
+#' line, band, equation and r2 apply only to a scatter plot with line =
+#' "lm". When the call names any of them for a plot that does not use
+#' them, one yellow note lists them. jplot.default() and
+#' .jst_jplot_formula() each held this block (Session 386, the twin
+#' build).
 #'
-#' @return TRUE, invisibly, when ggplot2 is available; otherwise stops.
+#' @param jplot_call The call as typed (match.call()).
+#' @param resolved_type Character(1): the plot type drawn.
+#' @param line The call's line argument.
+#' @return NULL, invisibly; prints the note when one applies.
 #' @keywords internal
-.jst_need_ggplot <- function() {
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    .jst_stop("Package 'ggplot2' is required for jplot(). ",
-              "Install with: install.packages(\"ggplot2\")")
+.jst_plot_ignored_note <- function(jplot_call, resolved_type, line) {
+  called_args   <- names(jplot_call)
+  explicit_args <- called_args[nzchar(called_args)]
+  is_scatter_lm <- resolved_type == "scatter" &&
+                   (identical(line, "lm") || identical(line, TRUE))
+  ignored <- character(0)
+  if ("line" %in% explicit_args && resolved_type != "scatter") {
+    ignored <- c(ignored, "line")
   }
-  invisible(TRUE)
+  if ("band" %in% explicit_args && !is_scatter_lm) {
+    ignored <- c(ignored, "band")
+  }
+  if ("equation" %in% explicit_args && !is_scatter_lm) {
+    ignored <- c(ignored, "equation")
+  }
+  if ("r2" %in% explicit_args && !is_scatter_lm) {
+    ignored <- c(ignored, "r2")
+  }
+  if (length(ignored) > 0) {
+    .cat_yellow(paste0(
+      "(Note: ", paste(ignored, collapse = ", "),
+      " not applicable to ", resolved_type,
+      if (resolved_type == "scatter") " without line = \"lm\"" else "",
+      " -- ignored)\n"
+    ))
+  }
+  invisible(NULL)
+}
+
+#' Internal: jplot()'s labelled variables made ready to draw
+#'
+#' Conversion follows each variable's resolved class (var_types), never
+#' the presence of value labels: a categorical-typed labelled variable
+#' becomes a factor of its labels (haven::as_factor()), any other
+#' labelled variable its underlying numbers, so the geometry and the
+#' conversion agree (a labelled Likert as a histogram, a labelled outcome
+#' on a scatter or a box's y-axis). var_types is indexed with \code{[[i]]}, which
+#' drops a name, so identical() matches whether or not it was built named.
+#' The by variable becomes a factor, of its value labels when it has
+#' them. jplot.default() and .jst_jplot_formula() each held this block
+#' (Session 386, the twin build).
+#'
+#' @param data The data frame being plotted.
+#' @param variable_names Character: the plotted variables, in the order of
+#'   var_types.
+#' @param var_types Character: each variable's resolved class.
+#' @param by_name Character(1) or NULL: the by variable.
+#' @param has_by Logical(1): whether a by variable is in use.
+#' @return The data frame, converted.
+#' @keywords internal
+.jst_plot_convert_labelled <- function(data, variable_names, var_types,
+                                       by_name, has_by) {
+  for (i in seq_along(variable_names)) {
+    v <- variable_names[i]
+    if (!haven::is.labelled(data[[v]])) next
+    if (identical(var_types[[i]], "categorical")) {
+      data[[v]] <- haven::as_factor(data[[v]])
+    } else {
+      data[[v]] <- as.numeric(data[[v]])
+    }
+  }
+  if (has_by && haven::is.labelled(data[[by_name]])) {
+    val_labs <- labelled::val_labels(data[[by_name]])
+    if (!is.null(val_labs) && length(val_labs) > 0) {
+      data[[by_name]] <- haven::as_factor(data[[by_name]])
+    } else {
+      data[[by_name]] <- factor(data[[by_name]])
+    }
+  } else if (has_by && !is.factor(data[[by_name]])) {
+    data[[by_name]] <- factor(data[[by_name]])
+  }
+  data
 }
 
 #' Internal: stop when a variable is named both categorical and numeric

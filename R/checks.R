@@ -2374,7 +2374,13 @@
                                    envir         = parent.frame(),
                                    allow_null    = FALSE,
                                    accept_vector = FALSE,
-                                   pre_eval      = NULL) {
+                                   pre_eval      = NULL,
+                                   caller_call   = NULL,
+                                   caller_fun    = NULL) {
+  # caller_call and caller_fun (Session 386): the user's function's call and
+  # function, given by a front helper that stands between it and this
+  # resolver (.jst_row_score(), .jst_register_front(), .jst_recode_front()),
+  # so a rebuilt line is the call the user typed. NULL reads the caller.
 
   # -- Case 1: data argument truly missing ----------------------------------
   if (data_missing) {
@@ -2415,8 +2421,8 @@
                       frame_col$frame)
     }
     if (!accept_vector) {
-      caller_call <- sys.call(sys.parent())
-      caller_fun  <- sys.function(sys.parent())
+      if (is.null(caller_call)) caller_call <- sys.call(sys.parent())
+      if (is.null(caller_fun))  caller_fun  <- sys.function(sys.parent())
       .jst_frame_column_stop(data_sub, frame_col, fn_name,
                              cl = caller_call, fun = caller_fun,
                              envir = envir)
@@ -2450,7 +2456,8 @@
   # workspace gets the pointer, the call as typed without the quotes. Any
   # other string stays what it is: a text vector on the vector path.
   .jst_quoted_frame_stop(data_sub, eval_result, fn_name, envir,
-                         cl = sys.call(sys.parent()))
+                         cl = if (is.null(caller_call)) sys.call(sys.parent())
+                              else caller_call)
 
   # -- Case 3: evaluated to a data frame ------------------------------------
   if (!eval_result$failed && is.data.frame(eval_result$value)) {
@@ -2507,7 +2514,8 @@
     frames <- .jst_frame_refs(data_sub, character(0), envir)
     if (length(frames) > 0L) {
       .jst_frame_first_stop(data_sub, frames, fn_name,
-                            cl = sys.call(sys.parent()), envir = envir)
+                            cl = if (is.null(caller_call)) sys.call(sys.parent())
+                                 else caller_call, envir = envir)
     }
     # The first sentence says what was checked (S334): an input that did
     # not evaluate was "not found"; one that evaluated to something other

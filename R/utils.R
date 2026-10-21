@@ -4057,8 +4057,8 @@ jai <- function(setup = NULL, path = NULL, ...) {
 # messages share by coincidence. The builders below take the parts a site
 # supplies (a name, an example) and return the text, or raise the stop.
 # The helpers that check and stop sit beside their callers:
-# .jst_need_ggplot(), .jst_check_cat_clash() and .jst_plot_result_stop() in
-# plot.R, .jst_beta_legends() in models.R, .jst_min_valid_threshold() and
+# .jst_check_cat_clash() and .jst_plot_result_stop() in plot.R,
+# .jst_beta_legends() in models.R, .jst_min_valid_threshold() and
 # .jst_scale_udm_note() in scales.R.
 
 #' Internal: message text shared by more than one function
@@ -4108,8 +4108,6 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #'     jt() and jaov().}
 #'   \item{\code{.jst_txt_stata_markers_na}}{the stata option's line in
 #'     the convention menus.}
-#'   \item{\code{.jst_txt_ggplot_note}}{the note when the regression plots
-#'     cannot be drawn.}
 #'   \item{\code{.jst_txt_assign_expr}}{the assign-or-lose reminder's lead
 #'     for data given as an expression.}
 #'   \item{\code{.jst_txt_null_remedy}}{the stop for NULL given as the
@@ -4165,8 +4163,6 @@ NULL
                                      "SD), run jdesc() on the new column.")
 .jst_txt_levene_caption <- "Levene's Test for Homogeneity of Variance"
 .jst_txt_stata_markers_na <- "Lowercase markers behave as true NAs in base R."
-.jst_txt_ggplot_note <- paste0("Note: Install ggplot2 for diagnostic plots: ",
-                               "install.packages(\"ggplot2\")\n")
 .jst_txt_assign_expr <- paste0("Note: The result is kept only if you assign ",
                                "it.\n",
                                "Name the data frame first, then assign the ",
