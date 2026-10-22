@@ -26,3 +26,15 @@ both route through this one helper so they cannot drift.
 ## Value
 
 Single string: the deparsed term with normalized spacing.
+
+## Details
+
+Since Session 390 the collapse is made BETWEEN tokens only: a quoted
+string or a backquoted name keeps its spaces as they are. Collapsing
+inside them changed the user's text in every call the package offers
+through
+[`.jst_call_with()`](https://jma61.github.io/jstats/reference/dot-jst_call_with.md)
+– a file named "my data.csv" was offered as "my data.csv", a line that
+then stopped on a file not found, and an ideographic space inside a
+Chinese or Japanese label became a plain one. Outside the quotes the
+spacing is normalized as before.

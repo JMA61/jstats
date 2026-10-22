@@ -100,3 +100,10 @@ is the text its sites printed before the merge, byte for byte.
 
   jrecode() and jencode()'s stop for a code the map also assigns as an
   ordinary value.
+
+- `.jst_txt_sav_bytes`:
+
+  what SPSS's limits in bytes mean in letters, in jsave()'s note on
+  shortened labels and its stop for a long factor category (Session 390:
+  the note said "fewer letters when they are accented", which says
+  nothing of Chinese, where 120 bytes is 40 characters).

@@ -25,7 +25,7 @@ both route through this one helper so they cannot drift."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.262</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.263</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,6 +80,16 @@ both route through this one helper so they cannot drift.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Single string: the deparsed term with normalized spacing.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Since Session 390 the collapse is made BETWEEN tokens only: a quoted
+string or a backquoted name keeps its spaces as they are. Collapsing
+inside them changed the user's text in every call the package offers
+through <code><a href="dot-jst_call_with.html">.jst_call_with()</a></code> – a file named "my  data.csv" was
+offered as "my data.csv", a line that then stopped on a file not found,
+and an ideographic space inside a Chinese or Japanese label became a
+plain one. Outside the quotes the spacing is normalized as before.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
