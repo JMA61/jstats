@@ -336,7 +336,15 @@ as its label. Use
 add labels after loading if needed. Row 1 of the sheet is read as the
 variable names; when the names are lower down, `skip` gives the number
 of rows above them, and when there are none, `header = FALSE` reads row
-1 as data. Each variable's type is read from every row of the sheet.
+1 as data. Each variable's type is read from every row of the sheet. In
+a text variable, an empty cell and a cell holding only spaces are read
+as blank text, as in a CSV file: one category, `<blank>`, counted as a
+valid value and never assumed missing. To treat them as missing, declare
+them with
+[`jdeclare_missing()`](https://jma61.github.io/jstats/reference/jdeclare_missing.md)
+and `codes = ""`. An empty cell in a variable of numbers, or of numbers
+stored as text, is missing. With `na = ""` every empty cell is read as
+missing.
 
 **Missing-value declarations:** Missing-value declarations are stored in
 the file itself, but they only survive the trip back if the reader

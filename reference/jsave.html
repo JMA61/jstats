@@ -35,7 +35,7 @@ juse() is used."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.261</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.262</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -198,11 +198,12 @@ format cannot hold can also be saved as plain NA with
 <code>preserve.declarations = FALSE</code>, which the message offers
 beside the conversion.</p></li>
 <li><p>SPSS (<code>.sav</code>), Stata (<code>.dta</code>), SAS interchange
-(<code>.xpt</code>) and CSV (<code>.csv</code>) have no missing value for text:
-a text variable's missing cells are saved as blank text, and read
-back as blank, not missing. A note says so when it happens. R format
-(<code>.rds</code>) and Excel (<code>.xlsx</code>) keep them missing. In a CSV
-file the same holds for a factor, which is written as its labels.</p></li>
+(<code>.xpt</code>), CSV (<code>.csv</code>) and Excel (<code>.xlsx</code>) have no
+missing value for text: a text variable's missing cells are saved as
+blank text (in Excel, empty cells), and read back as blank, not
+missing. A note says so when it happens. R format (<code>.rds</code>) keeps
+them missing. In a CSV or Excel file the same holds for a factor,
+which is written as its labels.</p></li>
 <li><p>Variable names each format can hold: SPSS (<code>.sav</code>), a
 letter or @ first, then letters, digits and . _ $ # @, not ending in
 a period, at most 64 bytes, not a word SPSS reserves (ALL, AND, BY,
@@ -246,11 +247,11 @@ workflow conventions, and complete function listing.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A runnable save into R's session temporary folder</span></span></span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span><span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpK1yKpC/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/Rtmp4otXUT/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span><span class="fu">jsave</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"community.sav"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>      overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>                   <span class="co"># the data frame given by name</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/RtmpK1yKpC/community.sav</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Saved community to /tmp/Rtmp4otXUT/community.sav</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> (SPSS format; 103 cases, 15 variables)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>

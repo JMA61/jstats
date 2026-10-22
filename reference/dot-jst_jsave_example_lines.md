@@ -39,3 +39,10 @@ meant for that object.
 
 Character(1); the "Provide a data frame, for example:" heading and the
 call, two lines.
+
+## Details
+
+Since Session 389 (Fix Slate 28) the line carries `clean.names = TRUE`
+when the data frame it names holds a name the file's format refuses
+([`.jst_example_clean_names()`](https://jma61.github.io/jstats/reference/dot-jst_example_clean_names.md)):
+run as printed, it stopped on that name.

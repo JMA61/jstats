@@ -153,12 +153,12 @@ and shows it written with forward slashes.
   also be saved as plain NA with `preserve.declarations = FALSE`, which
   the message offers beside the conversion.
 
-- SPSS (`.sav`), Stata (`.dta`), SAS interchange (`.xpt`) and CSV
-  (`.csv`) have no missing value for text: a text variable's missing
-  cells are saved as blank text, and read back as blank, not missing. A
-  note says so when it happens. R format (`.rds`) and Excel (`.xlsx`)
-  keep them missing. In a CSV file the same holds for a factor, which is
-  written as its labels.
+- SPSS (`.sav`), Stata (`.dta`), SAS interchange (`.xpt`), CSV (`.csv`)
+  and Excel (`.xlsx`) have no missing value for text: a text variable's
+  missing cells are saved as blank text (in Excel, empty cells), and
+  read back as blank, not missing. A note says so when it happens. R
+  format (`.rds`) keeps them missing. In a CSV or Excel file the same
+  holds for a factor, which is written as its labels.
 
 - Variable names each format can hold: SPSS (`.sav`), a letter or @
   first, then letters, digits and . \_ \$ \# @, not ending in a period,
@@ -209,11 +209,11 @@ listing.
 ``` r
 # A runnable save into R's session temporary folder
 jsave(community, file.path(tempdir(), "community.sav"), overwrite = TRUE)
-#> Saved community to /tmp/RtmpK1yKpC/community.sav
+#> Saved community to /tmp/Rtmp4otXUT/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 jsave(data = community, file.path(tempdir(), "community.sav"),
       overwrite = TRUE)                   # the data frame given by name
-#> Saved community to /tmp/RtmpK1yKpC/community.sav
+#> Saved community to /tmp/Rtmp4otXUT/community.sav
 #> (SPSS format; 103 cases, 15 variables)
 
 if (FALSE) { # \dontrun{

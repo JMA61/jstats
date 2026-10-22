@@ -31,7 +31,7 @@ extension). Use the name argument to specify a different name."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.261</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.262</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -387,7 +387,13 @@ name as its label. Use <code><a href="jrelabel.html">jrelabel()</a></code> to ad
 if needed. Row 1 of the sheet is read as the variable names; when the
 names are lower down, <code>skip</code> gives the number of rows above them,
 and when there are none, <code>header = FALSE</code> reads row 1 as data.
-Each variable's type is read from every row of the sheet.</p>
+Each variable's type is read from every row of the sheet.
+In a text variable, an empty cell and a cell holding only spaces are read
+as blank text, as in a CSV file: one category, <code>&lt;blank&gt;</code>, counted as
+a valid value and never assumed missing. To treat them as missing,
+declare them with <code><a href="jdeclare_missing.html">jdeclare_missing()</a></code> and <code>codes = ""</code>. An
+empty cell in a variable of numbers, or of numbers stored as text, is
+missing. With <code>na = ""</code> every empty cell is read as missing.</p>
 <p><strong>Missing-value declarations:</strong>
 Missing-value declarations are stored in the file itself, but they
 only survive the trip back if the reader requests them.
