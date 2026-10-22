@@ -27,8 +27,8 @@ and compound the misalignment.
 
 - remedy:
 
-  One sentence naming the caller-specific fix; becomes the error's final
-  line.
+  The caller-specific fix, one sentence a line; becomes the error's last
+  lines.
 
 - subject:
 
@@ -56,16 +56,19 @@ cancel – the operation does not happen either way, so nothing is at risk
 default, so it never promised Enter would answer it.
 
 Message shape (Rules D and I): the question, the received text on its
-own line, and ONE corrective action. The received text carries the
-diagnosis, so no sentence explains the mechanism – it would be accurate
-for the script case and wrong for a user who simply typed "yep", and
-both readers act on the same fix. The text is shown unquoted because a
-consumed line is often itself quoted. The two truncation bounds differ
-ON PURPOSE: clipping starts only past 70 characters but cuts to 60, so a
-line just over the display width is shown whole rather than losing a
-character or two to an ellipsis that saves nothing. The empty case takes
-a two-line form of its own, since "It received:" followed by nothing
-reads as a rendering fault.
+own line, and the corrective action. Since Session 391 (the (S298) E8
+item) the overwrite question's action is the two ways out, the way to
+keep what exists on the first line and the way to replace it on the
+second, where the one action it gave was the destructive one. The
+received text carries the diagnosis, so no sentence explains the
+mechanism – it would be accurate for the script case and wrong for a
+user who simply typed "yep", and both readers act on the same fix. The
+text is shown unquoted because a consumed line is often itself quoted.
+The two truncation bounds differ ON PURPOSE: clipping starts only past
+70 characters but cuts to 60, so a line just over the display width is
+shown whole rather than losing a character or two to an ellipsis that
+saves nothing. The empty case takes a two-line form of its own, since
+"It received:" followed by nothing reads as a rendering fault.
 
 The error routes through .jst_stop(), whose stack walk skips this helper
 (no j-prefix) and prefixes the user-facing caller's name.

@@ -142,6 +142,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declaration_plausibility.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declare_codes_are_text.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declare_gate_lead.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_declared_labels_kept.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_declared_text_vars.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_default_route.html</loc></url>
@@ -153,6 +154,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_category_values.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_groups.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_ref_line.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_dummy_registered.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dup_group_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_dup_regression_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_durability_note.html</loc></url>
@@ -199,6 +201,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_format_var_list.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_bad_power.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_bare_powers.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_data_found.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_dot_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_dup_var.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_formula_examples.html</loc></url>
@@ -264,6 +267,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_is_number_text.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_is_package_dataset.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jai_chat.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_jai_check_writable.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jai_confirm.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jai_declined.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_jai_machine.html</loc></url>
@@ -345,6 +349,8 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_missing_info.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_missing_label_text.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_missing_token_rules.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_misspelled_frame.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_misspelled_frame_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_model_id_modes.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_model_iv_loop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_model_name_args.html</loc></url>
@@ -415,6 +421,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_place_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plain_frame.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_convert_labelled.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_discrete_redirect.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_facets.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_focal.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_plot_group_factor.html</loc></url>
@@ -460,6 +467,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_register_intent.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registration_by_name.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registration_expression_stop.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_registration_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registration_name_stop.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_registry_status.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_apply.html</loc></url>
@@ -468,6 +476,7 @@
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_coef_names.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_done.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_extra_vars.html</loc></url>
+<url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_kept_note.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_list_lines.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_reminder.html</loc></url>
 <url><loc>https://jma61.github.io/jstats/reference/dot-jst_relabel_rest.html</loc></url>

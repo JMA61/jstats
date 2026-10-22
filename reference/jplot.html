@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.263</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.264</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -261,6 +261,19 @@ given either positionally or as <code>data = </code>:
 (1 numeric), bar charts (1 categorical), and grouped bar charts (2
 categorical). Calls that would otherwise auto-detect to a scatter or
 boxplot produce a helpful error directing you to the formula form.</p>
+<p><strong>A labelled variable with a few categories</strong>, such as Region –
+six values or fewer with at least one of them labelled, or whole
+numbers from 0 to 6 – is drawn as categories when nothing says
+otherwise: alone, as a bar chart;
+beside another variable in the variable-list form, as one of a grouped
+bar chart's two variables or as a boxplot's groups (the error then gives
+the formula line); on the right of a formula, as the groups of a
+boxplot. This is for the plot only: the analysis functions read such a
+variable as numbers unless it is registered or asserted (see
+<code><a href="jdummy.html">jdummy</a></code>). <code>numeric =</code> or <code>count =</code>, a
+<code><a href="jnumeric.html">jnumeric()</a></code> or <code><a href="jcount.html">jcount()</a></code> registration, a
+<code>type</code>, or <code>line</code>, <code>band</code>, <code>equation</code> or <code>r2</code>
+(which only a scatter plot draws) keeps the numbers.</p>
 <p>Supports pipeline integration (<code>jsubset</code>, <code>jcomplete</code>, per-call
 <code>subset</code>), grouping via <code>by = </code>, and regression lines with
 equation/R-squared/band annotations.</p>
@@ -408,14 +421,21 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> <span style="color: #00BB00;">fill</span> : <span style="color: #0000BB;">"Volunteer"</span></span>
 <span class="r-plt img"><img src="jplot-10.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Boxplot: assert the grouping variable as categorical (labelled</span></span></span>
-<span class="r-in"><span><span class="co"># variables otherwise enter numerically; jdummy() registration also works)</span></span></span>
-<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, <span class="va">community</span>, categorical <span class="op">=</span> <span class="st">"Region"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Boxplot: a labelled variable with a few categories, such as Region,</span></span></span>
+<span class="r-in"><span><span class="co"># is drawn as groups on the right of the formula (for the plot only)</span></span></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, <span class="va">community</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Boxplot: WellbeingScore and Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-plt img"><img src="jplot-11.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="co"># categorical = asserts it in any variable; numeric = keeps the codes</span></span></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Region</span>, <span class="va">community</span>, categorical <span class="op">=</span> <span class="st">"Region"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Boxplot: WellbeingScore and Region</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-plt img"><img src="jplot-12.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Variable-list form (distributions and counts)</span></span></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Age</span><span class="op">)</span>                      <span class="co"># histogram</span></span></span>
@@ -423,26 +443,25 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-12.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-13.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span>data <span class="op">=</span> <span class="va">community</span>, <span class="va">Age</span><span class="op">)</span>               <span class="co"># the same, data frame as data =</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Histogram: Age</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-13.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-14.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span><span class="op">)</span>                   <span class="co"># bar chart</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Bar Chart: Region</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-14.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, <span class="va">Volunteer</span>,        <span class="co"># grouped bar chart</span></span></span>
-<span class="r-in"><span>      categorical <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Region"</span>, <span class="st">"Volunteer"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="jplot-15.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">community</span>, <span class="va">Region</span>, <span class="va">Volunteer</span><span class="op">)</span>        <span class="co"># grouped bar chart</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Grouped Bar Chart: Region and Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-15.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-16.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Using juse() default (omit the data frame in either form)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="juse.html">juse</a></span><span class="op">(</span><span class="va">community</span><span class="op">)</span></span></span>
@@ -453,29 +472,28 @@ workflow conventions, and complete function listing.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-16.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-17.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">WellbeingScore</span> <span class="op">~</span> <span class="va">Income</span>, line <span class="op">=</span> <span class="st">"lm"</span><span class="op">)</span>  <span class="co"># + regression line</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Scatterplot: WellbeingScore and Income</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 97 (6 Excluded)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-17.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-18.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">Age</span><span class="op">)</span>                                   <span class="co"># histogram</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Histogram: Age</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-18.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">Region</span>, <span class="va">Volunteer</span>,                     <span class="co"># grouped bar chart</span></span></span>
-<span class="r-in"><span>      categorical <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Region"</span>, <span class="st">"Volunteer"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="jplot-19.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu">jplot</span><span class="op">(</span><span class="va">Region</span>, <span class="va">Volunteer</span><span class="op">)</span>                     <span class="co"># grouped bar chart</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Grouped Bar Chart: Region and Volunteer</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using default data frame: community</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis N: 103</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-plt img"><img src="jplot-19.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="jplot-20.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

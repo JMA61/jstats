@@ -30,14 +30,16 @@ fix.
 labels, SPSS-style missing values (`na_values` / `na_range`),
 Stata-style missing values, and the variable's class all pass through
 untouched unless an argument you supply replaces them: new value labels
-replace the full existing set (as `VALUE LABELS` does in SPSS), and a
-new variable label replaces the old one. A replacement set clears any
-labels attached to declared missing-value codes; the declaration itself
-is unaffected, but re-supply its label alongside the new value labels to
-keep it. On a column with Stata-style or SAS-style missing values, a
-marker that no case carries is declared only by its label, so a
-replacement set that leaves it out removes that declaration too;
-re-supply it by its marker, e.g. `labels = "1=Low; .c=Refused"`.
+replace the existing ones (as `VALUE LABELS` does in SPSS), except that
+a declared missing value keeps its label unless the new set names it, as
+[`jrecode()`](https://jma61.github.io/jstats/reference/jrecode.md)'s
+`labels` argument keeps them, and a note names the labels kept; a new
+variable label replaces the old one. To change a declared value's label,
+name it in the new set, e.g. `labels = "1=Low; 2=High; -99=No answer"`.
+On a column with Stata-style or SAS-style missing values, a marker that
+no case carries is declared only by its label, and it stays declared;
+name it by its marker to relabel it, e.g.
+`labels = "1=Low; .c=Refused"`.
 
 Both the `labels` and `var.label` arguments are optional in the
 one-variable form. If neither is supplied, the function returns the

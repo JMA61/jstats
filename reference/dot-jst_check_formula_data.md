@@ -11,7 +11,16 @@ seq_len() error. (Session 106.)
 ## Usage
 
 ``` r
-.jst_check_formula_data(formula, data, first_name, data_name, example, fn)
+.jst_check_formula_data(
+  formula,
+  data,
+  first_name,
+  data_name,
+  example,
+  fn,
+  data_sub = NULL,
+  envir = parent.frame(2L)
+)
 ```
 
 ## Arguments
@@ -41,6 +50,17 @@ seq_len() error. (Session 106.)
 - fn:
 
   The public function's name, for the error prefix and examples.
+
+- data_sub:
+
+  The data argument as typed (`substitute(data)`), or NULL when it was
+  missing: a name that is no object stops in the house voice, ruling
+  R36's line offered when it holds (Session 391,
+  [`.jst_formula_data_found()`](https://jma61.github.io/jstats/reference/dot-jst_formula_data_found.md)).
+
+- envir:
+
+  The caller's environment, where the names typed are looked up.
 
 ## Value
 

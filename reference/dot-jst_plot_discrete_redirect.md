@@ -1,0 +1,46 @@
+# Internal helper: a labelled variable jplot() draws as categories
+
+The display redirect (display only; it never changes how an analysis
+classifies the variable, under classification Rule B). An unasserted
+haven-labelled variable reads as a number, which drew a histogram that
+errored on its discrete axis; when the structural detector finds it
+discrete (.jst_is_discrete_integer()), jplot() draws it as categories.
+Since Session 391 (ruling R38; Jeff: "Your recommendation") it applies
+to each of two variables in the variable-list form and to the right side
+of a formula, where only one variable had been redirected: jplot(d,
+Region, OwnsHome) draws the grouped bar chart and jplot(WellbeingScore ~
+Region, d) the boxplot, where both drew scatters of the codes. A numeric
+= or count = assertion, and a jnumeric() or jcount() registration, keep
+the number; the callers also skip it for two variables when a type = or
+one of the scatter plot's own arguments (line, band, equation, r2) is
+given, and the variable-list form's scatter stop carries the call's
+numeric =, count = or type = into its line when its IV is such a
+variable.
+
+## Usage
+
+``` r
+.jst_plot_discrete_redirect(col, v, data_name, asserted_numeric)
+```
+
+## Arguments
+
+- col:
+
+  The variable, after the pipeline.
+
+- v:
+
+  Character(1). Its name.
+
+- data_name:
+
+  Character(1) or NULL. The data frame's name, for the registrations.
+
+- asserted_numeric:
+
+  Logical(1). TRUE when numeric = or count = names it.
+
+## Value
+
+Logical(1).

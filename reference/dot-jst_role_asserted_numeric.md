@@ -7,8 +7,9 @@ Used by the analysis functions to suppress the structural "seems
 categorical" hedge: that hedge is only a guess, and a user who has
 asserted a numeric role has already answered it. A structural (inferred)
 Numeric, or any Categorical (including a jdummy-asserted one), returns
-FALSE so the hedge fires as before – the jdummy/jcorr/jdesc interaction
-is deliberately left to its own (parked) design.
+FALSE. Since Session 391 (the (Session 80) item, decided: a warning, no
+refusal) jdesc() and jcorr() give a jdummy-registered variable the
+definitive warning ahead of this hedge (.jst_dummy_registered()).
 
 ## Usage
 

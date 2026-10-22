@@ -43,8 +43,17 @@ is the text its sites printed before the merge, byte for byte.
 
 - `.jst_txt_add_overwrite`:
 
-  what the overwrite question says when the session cannot ask it:
-  jload(), jsave(), jcopy().
+  the way to replace, under the way to keep, in the stop the overwrite
+  question gives when its answer is not y or n – jload(), jsave(),
+  jcopy() – and in jsave()'s stop where the session cannot ask. Since
+  Session 391 (the (S298) E8 item, Jeff's okay of the lean) the stop
+  names both ways out, the way to keep first, where it had offered only
+  the destructive one ("Add overwrite = TRUE to the call, then run it
+  again.").
+
+- `.jst_txt_keep_file`:
+
+  jsave()'s way to keep the file, in the same two stops (Session 391).
 
 - `.jst_txt_map_commas`, `.jst_txt_na_longhand`, `.jst_txt_na_one_rule`,
   `.jst_txt_map_empty`:
@@ -67,6 +76,11 @@ is the text its sites printed before the merge, byte for byte.
 - `.jst_txt_jai_cannot_ask`, `.jst_txt_jai_set_path`:
 
   jai()'s writing setups.
+
+- `.jst_txt_jai_other_folder`:
+
+  jai()'s line naming path =, under a declined write and a folder R
+  cannot write to (Session 391).
 
 - `.jst_txt_value_id`:
 
