@@ -167,6 +167,63 @@
        group_val_labels = group_val_labels)
 }
 
+#' Internal: jt()'s stop for a grouping variable of more than 2 categories
+#'
+#' "'g' has 4 categories." / "A t-test requires exactly 2." / "Use jaov()
+#' for more than 2 categories." (Session 338). A text grouping variable's
+#' blank cells are a category of their own, \code{<blank>} (Session 340),
+#' and the stop did not say so: a "Male"/"Female" variable with empty cells
+#' read "'Gender' has 3 categories" and was pointed to jaov(), with nothing
+#' to say what the third category was or how to leave it out (Session 389,
+#' Fix Slate 28; found putting ruling R34, under which a sheet's empty text
+#' cells are \code{<blank>} as a CSV file's are). With \code{<blank>} among
+#' the categories the stop names them, the blank last, and, when the
+#' categories besides the blank are two, gives the declaration that leaves
+#' the blank cells out before the jaov() line. The declaration names the
+#' values the variable already declares as well
+#' (\code{.jst_text_declare_args()}), since a declaration replaces them. No
+#' declaration line for a factor, which jdeclare_missing() refuses, for data
+#' given as an expression, which it cannot change, past a text variable's
+#' three declared values, or when three or more categories would remain,
+#' where the line would lead to this stop again (ruling R23). Without a
+#' \code{<blank>} category the stop is as it was.
+#'
+#' @param has Character(1); the count line, "'g' has 4 categories".
+#' @param lv Character; the categories, the analysis factor's levels.
+#' @param col The grouping variable as the user's data frame holds it, or
+#'   NULL when it is not a column of that data frame.
+#' @param group_name,data_name Character(1); the variable, and the data
+#'   frame as the call names it.
+#' @param data_kind What the call gave as its data
+#'   (\code{.jst_data_arg_kind()}).
+#' @return Character(1); the stop's text.
+#' @keywords internal
+.jst_t_categories_stop_text <- function(has, lv, col, group_name, data_name,
+                                        data_kind) {
+  if (!.jst_blank_label %in% lv) {
+    return(paste0(has, ".\n", "A t-test requires exactly 2.\n",
+                  "Use jaov() for more than 2 categories."))
+  }
+  named <- lv[lv != .jst_blank_label]
+  shown <- .jst_short_list(c(named, .jst_blank_label), 5L)
+  decl  <- NULL
+  if (length(named) == 2L && !is.null(col) && !is.factor(col) &&
+      is.character(unclass(col)) && !identical(data_kind, "expression")) {
+    decl <- .jst_text_declare_args(col, "")$arg
+  }
+  if (is.null(decl)) {
+    return(paste0(has, ": ", shown, ".\n", "A t-test requires exactly 2.\n",
+                  "Use jaov() for more than 2 categories."))
+  }
+  paste0(has, ": ", shown, ".\n",
+         "A t-test requires exactly 2.\n",
+         "To leave out the blank cells, declare them missing:\n",
+         "  jdeclare_missing(", data_name, ", ",
+         paste(deparse(as.name(group_name), backtick = TRUE), collapse = ""),
+         ", ", decl, ", modify = TRUE)\n",
+         "Or use jaov() for more than 2 categories.")
+}
+
 #' Internal: Levene's test for jt() and jaov(), printed and returned
 #'
 #' The test on the absolute deviations from each group's mean, its table
@@ -514,6 +571,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   }
   if (.jst_default_used) .jst_default_note(.jst_data_name)
 
+  # The data as the call gave it, and its kind, for the category stop's
+  # declaration line (Session 389): the front below hands back the analysis
+  # copy in its place.
+  .jst_user_data <- data
+  .jst_data_kind <- if (.jst_default_used) "name" else
+    .jst_data_arg_kind(substitute(data))
+
   # Apply data pipeline (jcomplete, jsubset, subset) through the groups made
   # a factor: one front for jt() and jaov() (.jst_group_front(); Session 386).
   subset_expr <- substitute(subset)
@@ -550,10 +614,16 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     # more than 2 categories."
     has <- paste0("'", group_name, "' has ", n_levels, " ",
                   .jst_plural(n_levels, "category", "categories"))
+    # A blank category is named, with the line that leaves it out (Session
+    # 389, Fix Slate 28; .jst_t_categories_stop_text()).
     if (n_levels > 2) {
-      .jst_stop(has, ".\n",
-                "A t-test requires exactly 2.\n",
-                "Use jaov() for more than 2 categories.")
+      .jst_stop(.jst_t_categories_stop_text(
+        has, levels(data[[group_name]]),
+        if (is.data.frame(.jst_user_data) &&
+            group_name %in% names(.jst_user_data)) {
+          .jst_user_data[[group_name]]
+        } else NULL,
+        group_name, .jst_data_name, .jst_data_kind))
     }
     # A filter that names the grouping variable kept one category of it
     # (Session 346): the stop said "'g' has 1 category" and nothing of the

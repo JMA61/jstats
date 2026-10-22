@@ -760,3 +760,84 @@
          lab$arg, .jst_marker_conv_arg(conv), ")",
          if (nzchar(lab$note)) paste0("\n", lab$note) else "")
 }
+
+#' Internal helper: a convention gate's line when dropping convention =
+#' would meet a marker the variable carries
+#'
+#' Session 389 (Fix Slate 28; the remedy-line audit's finding B).
+#' jdeclare_missing()'s two convention gates -- a column of one form given
+#' another convention for the call ("To follow the column's form, drop
+#' convention = ..."), and a column carrying both forms given convention =
+#' "spss" under a stata or sas setting ("To use the setting, drop
+#' convention = ...") -- offered the call without convention =, which turns
+#' the codes into markers from the start of the alphabet. On a variable
+#' already carrying those markers that line stopped at the marker-collision
+#' refusal (S345): a remedy leading to another stop. Ruling R8's rule for an
+#' offered declaration (Session 352) applies: what runs is the codes sent to
+#' markers the variable does not use, in a new variable
+#' (\code{.jst_marker_recode_line()}). The test is the refusal's own -- the
+#' first letters of the convention's alphabet, in its case, against the
+#' markers the cells and the value labels carry -- read under the
+#' convention the call without convention = resolves, which a variable of
+#' both forms takes from the setting (\code{.jst_marker_clash()} reads the
+#' variable's own form only). Given an expression as the data, the line
+#' that makes mydata comes first (the S343 rule). A call the gates cannot
+#' echo -- named codes, a labels string -- gets the same line, each code's
+#' label carried to its marker: its fallback, "drop convention = ... from
+#' the call.", led to the same refusal.
+#'
+#' @param col The variable.
+#' @param codes The call's numeric codes.
+#' @param conv "stata" or "sas": the convention the call would resolve
+#'   without its convention = argument.
+#' @param data_name,data_kind The data argument as the call gave it, and
+#'   what kind it is (\code{.jst_data_arg_kind()}).
+#' @param vn The variable's name.
+#' @param lead Character(1); the sentence's opening, "To follow the column's
+#'   form" or "To use the setting".
+#' @param labels Optional character vector parallel to \code{codes}: the
+#'   label the call gave each code ("" for none).
+#' @return Character(1), the sentence and its lines, ending in a newline;
+#'   NULL when the call without convention = runs as offered, or when too
+#'   few letters are free.
+#' @keywords internal
+.jst_gate_marker_route <- function(col, codes, conv, data_name, data_kind,
+                                   vn, lead, labels = NULL) {
+  if (!is.numeric(codes) || length(codes) == 0L || !is.double(col) ||
+      length(conv) != 1L || is.na(conv) || !conv %in% c("stata", "sas")) {
+    return(NULL)
+  }
+  tags <- .jst_marker_tags(col)$all
+  need <- (if (identical(conv, "sas")) LETTERS else letters)[
+    seq_len(min(length(codes), 26L))]
+  if (!any(need %in% tags)) return(NULL)
+  expr <- identical(data_kind, "expression")
+  if (!is.null(labels) && !any(nzchar(labels))) labels <- NULL
+  line <- .jst_marker_recode_line(if (expr) "mydata" else data_name, vn,
+                                  as.numeric(codes), conv, tags,
+                                  labels = labels)
+  if (is.null(line)) return(NULL)
+  fmt <- function(v) format(v, trim = TRUE, scientific = FALSE)
+  paste0(lead, ", recode ",
+         if (length(codes) == 1L) paste0(fmt(codes), " to a marker ")
+         else "the codes to markers ",
+         vn, " does not use:\n",
+         if (expr) paste0("  mydata <- ", data_name, "\n") else "",
+         line, "\n")
+}
+
+#' Internal helper: can a convention gate send the call's codes to markers?
+#'
+#' Session 389. The codes \code{.jst_gate_marker_route()} can send to
+#' markers: plain numbers, at least one, none of them a marker already, and
+#' no range in the call.
+#'
+#' @param parsed_codes jdeclare_missing()'s codes, named by their labels.
+#' @param range The call's range, or NULL.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_gate_codes_plain <- function(parsed_codes, range) {
+  is.null(range) && is.numeric(parsed_codes) && length(parsed_codes) > 0L &&
+    !anyNA(unclass(parsed_codes)[is.na(haven::na_tag(parsed_codes))]) &&
+    all(is.na(haven::na_tag(parsed_codes)))
+}

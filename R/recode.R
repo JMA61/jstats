@@ -2187,6 +2187,13 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   orig_name      <- .jst_rf$var_name
   data_kind      <- .jst_rf$data_kind
   data_typed     <- .jst_rf$data_typed
+  # An expression given as the data: every block of offered lines naming
+  # mydata opens on the line that makes it, notes and stops alike, until
+  # this call returns (Session 389; .jst_expr_context).
+  if (identical(data_kind, "expression")) {
+    .jst_expr_context$typed <- data_typed
+    on.exit(.jst_expr_context$typed <- NULL, add = TRUE)
+  }
   # One sentence a line and the example on its own (Session 371, item 8;
   # voice Rule L): "e.g. map = ..." had been inline. No map at all gets the
   # function's own example, which runs.
@@ -4781,6 +4788,13 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
   var_name       <- .jst_rf$var_name
   data_kind      <- .jst_rf$data_kind
   data_typed     <- .jst_rf$data_typed
+  # An expression given as the data: every block of offered lines naming
+  # mydata opens on the line that makes it, notes and stops alike, until
+  # this call returns (Session 389; .jst_expr_context).
+  if (identical(data_kind, "expression")) {
+    .jst_expr_context$typed <- data_typed
+    on.exit(.jst_expr_context$typed <- NULL, add = TRUE)
+  }
   if (!is.null(map) && (!is.character(map) || length(map) != 1)) {
     .jst_one_string_stop("map", "Bail=1; Parole=2")
   }
@@ -7163,7 +7177,23 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           all(is.na(haven::na_tag(codes))) &&
           (is.null(names(codes)) || !any(nzchar(names(codes)))) &&
           is.null(labels) && is.null(range)
-        conf_alt <- if (conf_echo_ok) {
+        # Session 389 (Fix Slate 28; the remedy-line audit): on a column of
+        # Stata or SAS form already carrying the markers the codes would
+        # take, the call without convention = stopped at the marker-
+        # collision refusal; the line is the codes sent to markers the
+        # column does not use (.jst_gate_marker_route()).
+        # A call it cannot echo (named codes, a labels string) gets the
+        # same line, the labels carried: "drop convention = ... from the
+        # call." led to the same refusal.
+        conf_route <- if (.jst_gate_codes_plain(parsed_codes, range)) {
+          .jst_gate_marker_route(col, unname(parsed_codes), existing_conv,
+                                 data_name, data_kind, vn,
+                                 "To follow the column's form",
+                                 labels = names(parsed_codes))
+        } else NULL
+        conf_alt <- if (!is.null(conf_route)) {
+          conf_route
+        } else if (conf_echo_ok) {
           paste0(
             "To follow the column's form, drop convention = \"",
             convention, "\":\n",
@@ -7268,30 +7298,61 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           all(is.na(haven::na_tag(codes))) &&
           (is.null(names(codes)) || !any(nzchar(names(codes)))) &&
           is.null(labels) && is.null(range)
+        # Session 389 (Fix Slate 28): the call under the setting meets the
+        # markers the column carries in that case -- .a under stata on a
+        # column holding .a -- and stopped at the collision refusal; the
+        # line is then the codes sent to markers it does not use, for a
+        # call echoed or not.
+        mix_route <- if (identical(convention, "spss") &&
+                         isTRUE(mix_setting %in% c("stata", "sas")) &&
+                         .jst_gate_codes_plain(parsed_codes, range)) {
+          .jst_gate_marker_route(col, unname(parsed_codes), mix_setting,
+                                 data_name, data_kind, vn,
+                                 "To use the setting",
+                                 labels = names(parsed_codes))
+        } else NULL
         if (identical(convention, "spss") &&
             isTRUE(mix_setting %in% c("stata", "sas")) && mix_echo_ok) {
           .jst_stop(
             mix_head, "\n",
             "This call sets convention = \"spss\", but your ",
             "missing.convention setting is \"", mix_setting, "\". ",
+            if (!is.null(mix_route)) sub("\n$", "", mix_route) else paste0(
             "To use the setting, drop convention = \"spss\":\n",
             "  jdeclare_missing(", data_name, ", ", vn, ", codes = c(",
             paste(format(codes, trim = TRUE, scientific = FALSE),
                   collapse = ", "),
-            ")", if (isTRUE(modify)) ", modify = TRUE" else "", ")")
+            ")", if (isTRUE(modify)) ", modify = TRUE" else "", ")"))
         } else if (identical(convention, "spss") &&
                    isTRUE(mix_setting %in% c("stata", "sas"))) {
           .jst_stop(
             mix_head, "\n",
             "This call sets convention = \"spss\", but your ",
             "missing.convention setting is \"", mix_setting, "\". ",
+            if (!is.null(mix_route)) sub("\n$", "", mix_route) else paste0(
             "To use the setting, drop convention = \"spss\" from the ",
-            "call.")
+            "call."))
         } else {
+          # Session 389: only a convention the declaration runs under is
+          # named -- under stata the numeric codes take .a, .b, ..., under
+          # sas .A, .B, ..., and a marker the column carries in that case
+          # stopped it (.jst_marker_clash()'s test). Both are named when
+          # both run, and when neither does: each then refuses with the
+          # line that sends the codes to markers the column does not use.
+          n3 <- if (is.numeric(parsed_codes)) {
+            sum(is.na(haven::na_tag(parsed_codes)))
+          } else 0L
+          carried3 <- .jst_marker_tags(col)$all
+          runs3 <- c(stata = !any(letters[seq_len(min(n3, 26L))] %in% carried3),
+                     sas   = !any(LETTERS[seq_len(min(n3, 26L))] %in% carried3))
           .jst_stop(
             mix_head, "\n",
-            "Set convention = \"stata\" or convention = \"sas\" on ",
-            "this call.")
+            if (sum(runs3) == 1L) {
+              paste0("Set convention = \"", names(runs3)[runs3],
+                     "\" on this call.")
+            } else {
+              "Set convention = \"stata\" or convention = \"sas\" on this call."
+            })
         }
       }
 

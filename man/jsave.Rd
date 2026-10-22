@@ -130,11 +130,12 @@ format cannot hold can also be saved as plain NA with
 \code{preserve.declarations = FALSE}, which the message offers
 beside the conversion.
 \item SPSS (\code{.sav}), Stata (\code{.dta}), SAS interchange
-(\code{.xpt}) and CSV (\code{.csv}) have no missing value for text:
-a text variable's missing cells are saved as blank text, and read
-back as blank, not missing. A note says so when it happens. R format
-(\code{.rds}) and Excel (\code{.xlsx}) keep them missing. In a CSV
-file the same holds for a factor, which is written as its labels.
+(\code{.xpt}), CSV (\code{.csv}) and Excel (\code{.xlsx}) have no
+missing value for text: a text variable's missing cells are saved as
+blank text (in Excel, empty cells), and read back as blank, not
+missing. A note says so when it happens. R format (\code{.rds}) keeps
+them missing. In a CSV or Excel file the same holds for a factor,
+which is written as its labels.
 \item Variable names each format can hold: SPSS (\code{.sav}), a
 letter or @ first, then letters, digits and . _ $ # @, not ending in
 a period, at most 64 bytes, not a word SPSS reserves (ALL, AND, BY,

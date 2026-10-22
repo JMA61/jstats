@@ -33,4 +33,10 @@ offered \code{jsave(community, "community.sav")}. An object that exists
 but is not a data frame keeps the example file, since the file the call
 named was meant for that object.
 }
+\details{
+Since Session 389 (Fix Slate 28) the line carries \code{clean.names =
+TRUE} when the data frame it names holds a name the file's format
+refuses (\code{.jst_example_clean_names()}): run as printed, it stopped
+on that name.
+}
 \keyword{internal}

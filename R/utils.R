@@ -2069,26 +2069,80 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' @return Character(1).
 #' @keywords internal
 .jst_expr_assign_lines <- function(msg, typed) {
-  ln  <- strsplit(msg, "\n", fixed = TRUE)[[1L]]
-  ind <- grepl("^  ", ln)
+  ln <- strsplit(msg, "\n", fixed = TRUE)[[1L]]
+  paste(.jst_expr_open_blocks(ln, typed), collapse = "\n")
+}
+
+#' Internal helper: the blocks of a message's lines that name mydata, each
+#' opened on the line that makes it
+#'
+#' The block rule of \code{.jst_expr_assign_lines()} (Session 352), one home
+#' since Session 389 for it and the message wrapper
+#' (\code{.jst_expr_open_lines()}): a block is a run of lines indented two
+#' spaces or more, and one that names mydata gets "mydata <- <expression>"
+#' as its first line, unless its first line already makes mydata.
+#'
+#' @param lines Character; the message's lines.
+#' @param typed Character(1): the expression as typed.
+#' @return Character; the lines, each such block opened.
+#' @keywords internal
+.jst_expr_open_blocks <- function(lines, typed) {
+  ind <- grepl("^  ", lines)
   out <- character(0)
   i   <- 1L
-  while (i <= length(ln)) {
+  while (i <= length(lines)) {
     if (!ind[i]) {
-      out <- c(out, ln[i])
+      out <- c(out, lines[i])
       i   <- i + 1L
       next
     }
     j <- i
-    while (j < length(ln) && ind[j + 1L]) j <- j + 1L
-    blk <- ln[i:j]
-    if (any(grepl("\\bmydata\\b", blk))) {
+    while (j < length(lines) && ind[j + 1L]) j <- j + 1L
+    blk <- lines[i:j]
+    if (any(grepl("\\bmydata\\b", blk)) &&
+        !startsWith(blk[1L], "  mydata <- ")) {
       blk <- c(paste0("  mydata <- ", typed), blk)
     }
     out <- c(out, blk)
     i   <- j + 1L
   }
-  paste(out, collapse = "\n")
+  out
+}
+
+# -- Internal: the expression a recode is running on --------------------------
+#
+# Session 389 (Fix Slate 28; the remedy-line audit's finding A). jrecode()
+# and jencode() name an expression given as the data mydata in every line
+# they offer (the S343 rule), and the reminder printed last opens on
+# "mydata <- mk()" -- but the notes printed above it, and every stop, offered
+# lines on mydata with nothing that made it, so pasted top to bottom the
+# first one stopped: "'mydata' not found". While such a call runs, the
+# expression as typed is held here ($typed, set by the function and cleared
+# by its on.exit()), and the message wrapper opens every block that names
+# mydata on "mydata <- <expression>" (.jst_expr_open_lines()) -- once, where
+# every message is wrapped, as .jst_place_lines() is for a place. An
+# environment in the namespace, not an options() key: nothing outlives the
+# call, and nothing is left for .onUnload() to clear.
+#
+# Plain comments rather than roxygen, matching .jst_width_tokens.
+
+#' @keywords internal
+.jst_expr_context <- new.env(parent = emptyenv())
+
+#' Internal helper: the message wrapper's step for a recode on an expression
+#'
+#' \code{.jst_expr_open_blocks()} on a message's lines when a jrecode() or
+#' jencode() call given an expression as its data is running
+#' (\code{.jst_expr_context}); the lines as they are otherwise. Called by
+#' \code{.jst_wrap_message()} after \code{.jst_place_lines()}.
+#'
+#' @param lines Character; the message's lines.
+#' @return Character; the lines.
+#' @keywords internal
+.jst_expr_open_lines <- function(lines) {
+  typed <- .jst_expr_context$typed
+  if (is.null(typed) || length(lines) == 0L) return(lines)
+  .jst_expr_open_blocks(lines, typed)
 }
 
 #' Internal helper: the file name a data argument is saved under
@@ -4020,6 +4074,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
   if (length(lines) == 0L) return(text)
   lines <- .jst_join_calls(lines)
   lines <- .jst_place_lines(lines)
+  lines <- .jst_expr_open_lines(lines)
   out <- character(length(lines))
   for (i in seq_along(lines)) {
     ln  <- lines[i]

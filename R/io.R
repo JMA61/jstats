@@ -266,6 +266,12 @@
 #' names are lower down, \code{skip} gives the number of rows above them,
 #' and when there are none, \code{header = FALSE} reads row 1 as data.
 #' Each variable's type is read from every row of the sheet.
+#' In a text variable, an empty cell and a cell holding only spaces are read
+#' as blank text, as in a CSV file: one category, \code{<blank>}, counted as
+#' a valid value and never assumed missing. To treat them as missing,
+#' declare them with \code{jdeclare_missing()} and \code{codes = ""}. An
+#' empty cell in a variable of numbers, or of numbers stored as text, is
+#' missing. With \code{na = ""} every empty cell is read as missing.
 #'
 #' \strong{Missing-value declarations:}
 #' Missing-value declarations are stored in the file itself, but they
@@ -1203,6 +1209,22 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       }, header = header)
     } else if (!is.null(title_rows)) {
       markers <- list()
+    }
+    # Ruling R34 (Jeff, Session 389): a sheet's blank text cells -- empty,
+    # or holding only spaces, both of which readxl reads as missing -- are
+    # the <blank> category, as a CSV file's are (.jst_sheet_blank_text()).
+    if (sheet_file) {
+      df <- .jst_sheet_blank_text(
+        df, text_pos,
+        vapply(markers, function(m) as.integer(m$pos), integer(1)), na,
+        function(cols) {
+          ct <- rep("skip", ncol(df))
+          ct[cols] <- "text"
+          a <- read_args
+          a$na <- ""
+          a$col_types <- ct
+          suppressWarnings(suppressMessages(do.call(readxl::read_excel, a)))
+        })
     }
     cl <- .jst_clean_import_names(raw_nm)
     if (any(cl$changed)) {
@@ -2975,6 +2997,86 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 .jst_first_is_word <- function(x) {
   length(x) > 0L && !is.na(x[1L]) && nzchar(trimws(x[1L])) &&
     !.jst_is_number_text(x[1L])
+}
+
+#' Internal: a sheet's blank text cells, read as a CSV file's are
+#'
+#' Ruling R34 (Jeff, Session 389: "Let's go with your recommendation on the
+#' excel issue."). readxl reads every blank cell of a sheet as missing -- an
+#' empty cell, a cell holding an empty string, and a cell holding only
+#' spaces, whose spaces its XML parser drops before readxl sees them, under
+#' every option (\code{trim_ws = FALSE}, \code{na = character(0)}) -- so a
+#' text variable's blank cells loaded as missing, where the same cells in a
+#' CSV file are the \code{<blank>} category, counted as valid
+#' (Cross-cutting 7 (3): a blank is reported, never assumed missing; the
+#' (S362) item). They become empty strings here, so a sheet's text variable
+#' reads as a CSV file's does (\code{.jst_csv_type_columns()}):
+#' \itemize{
+#'   \item a variable of words gets \code{""} in its blank cells, and so
+#'     does one whose values are T and F standing alone, kept as written;
+#'   \item a variable whose values are all numbers, or the words TRUE and
+#'     FALSE, stored as text keeps them missing, as a CSV file's variable of
+#'     numbers does, a variable kept as text for a leading zero or a long
+#'     number among them, and so does one the note on a few cells names;
+#'   \item a \code{text =} variable gets \code{""}, being read as written.
+#' }
+#' Cells \code{na =} names stay missing: with \code{na =} given, the
+#' variables are read again with \code{na = ""} alone, and only the cells
+#' missing in that read are blank; \code{na = ""} itself keeps every blank
+#' cell missing. The spaces cannot be recovered, so a cell of spaces becomes
+#' an empty string, the one \code{<blank>} category either way. An Excel
+#' error cell (#N/A), which readxl also reads as missing, becomes
+#' \code{<blank>} in a variable of words with them (a CSV file holds it as
+#' the word #N/A, also valid).
+#'
+#' @param df The sheet as read.
+#' @param text_pos Positions named in \code{text =}.
+#' @param marker_pos Positions the note on a few cells names
+#'   (\code{.jst_marker_columns()}).
+#' @param na jload()'s \code{na =}, or NULL.
+#' @param reread A function of positions giving those variables read again
+#'   as text with \code{na = ""} alone.
+#' @return \code{df}, its blank text cells empty strings.
+#' @keywords internal
+.jst_sheet_blank_text <- function(df, text_pos, marker_pos, na, reread) {
+  if (length(na) > 0L && "" %in% na) return(df)
+  chr <- which(vapply(df, is.character, logical(1)))
+  if (length(chr) == 0L) return(df)
+  words <- vapply(chr, function(j) {
+    if (j %in% text_pos) return(TRUE)
+    if (j %in% marker_pos) return(FALSE)
+    x <- df[[j]]
+    core <- x[!is.na(x) & x != "NA"]
+    if (length(core) == 0L) return(TRUE)
+    t <- utils::type.convert(core, as.is = TRUE, na.strings = character(0),
+                             numerals = "allow.loss")
+    if (is.numeric(t)) return(FALSE)
+    if (is.logical(t)) {
+      # T and F standing alone stay text, as written (ruling R31,
+      # question 3), the test .jst_csv_type_columns() makes.
+      return(any(core %in% c("T", "F")) ||
+               any(trimws(core[startsWith(core, " ") | endsWith(core, " ")]) %in%
+                     c("T", "F")))
+    }
+    TRUE
+  }, logical(1))
+  cols <- chr[words]
+  if (length(cols) == 0L) return(df)
+  blank <- if (length(na) == 0L) {
+    lapply(cols, function(j) is.na(df[[j]]))
+  } else {
+    rr <- tryCatch(reread(cols), error = function(e) NULL)
+    if (is.null(rr) || ncol(rr) != length(cols) || nrow(rr) != nrow(df)) {
+      return(df)
+    }
+    lapply(seq_along(cols), function(q) is.na(rr[[q]]))
+  }
+  for (q in seq_along(cols)) {
+    j <- cols[q]
+    b <- blank[[q]] & is.na(df[[j]])
+    if (any(b)) df[[j]][b] <- ""
+  }
+  df
 }
 
 #' Internal: a sheet's variables of numbers made text by a few cells
@@ -6491,11 +6593,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' \code{<blank>} category, counted as valid (the S340 decision: a blank is
 #' reported, never assumed missing, and a file cannot say which blanks were
 #' once missing). So jsave() says so when it happens: the variables, the
-#' cells, and the two formats that keep them (.rds, .xlsx). The .xpt format
-#' and a factor in a CSV file (written as its labels) lose the same way,
-#' probed at S351 and added on Jeff's lean. A missing NUMBER survives every
-#' format. A loss note, as the label and declaration losses are: not gated
-#' to the joutput() levels.
+#' cells, and the format that keeps them (.rds). The .xpt format and a
+#' factor in a CSV file (written as its labels) lose the same way, probed at
+#' S351 and added on Jeff's lean. A missing NUMBER survives every format. A
+#' loss note, as the label and declaration losses are: not gated to the
+#' joutput() levels.
+#'
+#' Since Session 389 (ruling R34) Excel format (.xlsx) is one of them: it
+#' writes a text NA as an empty cell, as it writes a blank, and jload() now
+#' reads a sheet's blank text cells as \code{<blank>}, as a CSV file's, so
+#' the cell comes back counted as valid. A factor's NA goes the same way
+#' (written as its labels, as in a CSV file). R format (.rds) alone keeps
+#' them missing.
 #'
 #' @param data The data frame as written.
 #' @param ext Lowercase target extension.
@@ -6503,9 +6612,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'   none.
 #' @keywords internal
 .jst_jsave_text_na_note <- function(data, ext) {
-  if (!ext %in% c("sav", "dta", "xpt", "csv")) return(NULL)
+  if (!ext %in% c("sav", "dta", "xpt", "csv", "xlsx")) return(NULL)
   is_text <- function(col) {
-    is.character(col) || (identical(ext, "csv") && is.factor(col))
+    is.character(col) || (ext %in% c("csv", "xlsx") && is.factor(col))
   }
   # unclass(): is.na() on a declared string counts its declared values too.
   counts <- vapply(data, function(col) {
@@ -6531,8 +6640,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     "value in ", kind, ".\n",
     total, " missing ", .jst_plural(total, "cell", "cells"), " in ", where,
     " ", .jst_plural(total, "was", "were"), " saved as blank text.\n",
-    "R format (.rds) and Excel format (.xlsx) keep ",
-    .jst_plural(total, "it", "them"), " missing.")
+    "R format (.rds) keeps ", .jst_plural(total, "it", "them"), " missing.")
 }
 
 #' Internal helper: jsave()'s stop for a file with no data frame to save
@@ -6575,6 +6683,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                         vapply(others, .jst_term_text, character(1)),
                         collapse = ", "))
   } else ""
+  # The data frame named holds a name the file's format refuses: both lines
+  # carry clean.names = TRUE, or each stopped on that name when run
+  # (Session 389, Fix Slate 28; .jst_example_clean_names()).
+  if (!"clean.names" %in% names(args)) {
+    rest <- paste0(rest, .jst_example_clean_names(
+      if (identical(fr, "MyData")) NULL else get0(fr, envir = envir),
+      file_val))
+  }
   file_arg <- paste0(if ("file" %in% names(args)) "file = ", deparse(file_val))
   .jst_stop(lead,
             first, "\n",
@@ -6601,6 +6717,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' but is not a data frame keeps the example file, since the file the call
 #' named was meant for that object.
 #'
+#' Since Session 389 (Fix Slate 28) the line carries \code{clean.names =
+#' TRUE} when the data frame it names holds a name the file's format
+#' refuses (\code{.jst_example_clean_names()}): run as printed, it stopped
+#' on that name.
+#'
 #' @param mc The call, matched (\code{match.call()} in jsave()).
 #' @param envir The caller's environment, where the data frames are looked
 #'   for.
@@ -6614,8 +6735,39 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   f  <- if (keep_file && "file" %in% names(mc)) mc[["file"]] else NULL
   f  <- if (is.character(f) && length(f) == 1L && !is.na(f) && nzchar(f))
           f else "mydata.sav"
+  cn <- .jst_example_clean_names(
+    if (identical(fr, "MyData")) NULL else get0(fr, envir = envir), f)
   paste0("Provide a data frame, for example:\n",
-         "  jsave(", fr, ", ", deparse(f), ")")
+         "  jsave(", fr, ", ", deparse(f), cn, ")")
+}
+
+#' Internal helper: clean.names = TRUE for an example save that needs it
+#'
+#' Session 389 (Fix Slate 28; the (S388) item). The example jsave() lines
+#' jsave()'s stops offer -- the no-filename stop's, the front-door stops'
+#' (\code{.jst_jsave_example_lines()}), the no-data-frame stop's
+#' (\code{.jst_jsave_no_frame_stop()}) -- name a data frame and a file. When
+#' the data frame holds a name the file's format refuses, the line as printed
+#' stopped on that name (\code{jsave(d, "mydata.sav")} for a d holding a
+#' variable named with, which SPSS reserves): a remedy that leads to another
+#' stop (ruling R23). Such a line carries \code{clean.names = TRUE}, as the
+#' save that closes jsave()'s own stop does since ruling R33.
+#'
+#' @param df The data frame the line saves, or NULL when the line names a
+#'   placeholder.
+#' @param file Character(1); the file the line names.
+#' @return \code{", clean.names = TRUE"}, or \code{""} when the format takes
+#'   every name (or there is no data frame to read).
+#' @keywords internal
+.jst_example_clean_names <- function(df, file) {
+  if (!is.data.frame(df) || !is.character(file) || length(file) != 1L ||
+      is.na(file)) {
+    return("")
+  }
+  ext <- tolower(tools::file_ext(file))
+  if (!ext %in% c("sav", "dta", "xpt")) return("")
+  if (nrow(.jst_save_name_problems(names(df), ext)) == 0L) return("")
+  ", clean.names = TRUE"
 }
 
 
@@ -6731,11 +6883,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #'     \code{preserve.declarations = FALSE}, which the message offers
 #'     beside the conversion.
 #'   \item SPSS (\code{.sav}), Stata (\code{.dta}), SAS interchange
-#'     (\code{.xpt}) and CSV (\code{.csv}) have no missing value for text:
-#'     a text variable's missing cells are saved as blank text, and read
-#'     back as blank, not missing. A note says so when it happens. R format
-#'     (\code{.rds}) and Excel (\code{.xlsx}) keep them missing. In a CSV
-#'     file the same holds for a factor, which is written as its labels.
+#'     (\code{.xpt}), CSV (\code{.csv}) and Excel (\code{.xlsx}) have no
+#'     missing value for text: a text variable's missing cells are saved as
+#'     blank text (in Excel, empty cells), and read back as blank, not
+#'     missing. A note says so when it happens. R format (\code{.rds}) keeps
+#'     them missing. In a CSV or Excel file the same holds for a factor,
+#'     which is written as its labels.
 #'   \item Variable names each format can hold: SPSS (\code{.sav}), a
 #'     letter or @ first, then letters, digits and . _ $ # @, not ending in
 #'     a period, at most 64 bytes, not a word SPSS reserves (ALL, AND, BY,
@@ -7014,12 +7167,16 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # --- Validate file argument ------------------------------------------------
   # The example call on a line of its own, naming the data frame being saved
   # (Session 368, Fix Slate 15), where it sat after "e.g." on the sentence's
-  # line and named MyData.
+  # line and named MyData. With clean.names = TRUE when the data frame holds
+  # a name SPSS refuses (Session 389, Fix Slate 28): jsave(d, "mydata.sav")
+  # stopped on that name when run.
   if (missing(file) || !is.character(file) || length(file) != 1 ||
       nchar(trimws(file)) == 0) {
     .jst_stop(
       expr_lines(paste0("Provide a filename with extension, for example:\n",
-                        "  jsave(", code_name, ", \"mydata.sav\")")), "\n",
+                        "  jsave(", code_name, ", \"mydata.sav\"",
+                        .jst_example_clean_names(data, "mydata.sav"), ")")),
+      "\n",
       "Supported formats:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
@@ -7601,7 +7758,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # A text variable's missing cells (ruling R13, Jeff, S345; built Session
   # 351): .sav, .dta, .xpt and .csv have no missing value for text, and
   # write one as an empty string, which jload() reads back as the <blank>
-  # category, counted valid. Read on the frame as written.
+  # category, counted valid; since ruling R34 (Session 389) .xlsx with them,
+  # its empty cell read back as <blank>. Read on the frame as written.
   text_na_note <- .jst_jsave_text_na_note(data, ext)
   if (!is.null(text_na_note)) loss_notes <- c(loss_notes, text_na_note)
 
