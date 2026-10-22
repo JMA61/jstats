@@ -39,8 +39,8 @@
     }
     if (is.null(data)) {
       .jst_stop(
-        "data = NULL: no data frame supplied. Pass a data frame as the ",
-        "data argument, or set a default with juse() first."
+        "data = NULL: no data frame supplied. Give a data frame, or set a ",
+        "default with juse() first."
       )
     }
     if (is.matrix(data)) {
@@ -53,8 +53,7 @@
     # Catch-all: non-data-frame R object of some other type.
     label <- if (!is.null(data_name)) data_name else "data"
     .jst_stop(
-      "'", label, "' is a ", class(data)[1], " object, not a data frame. ",
-      "The data argument requires a data frame."
+      "'", label, "' is not a data frame."
     )
   }
 
@@ -231,6 +230,24 @@
     if (!is.null(data_sub)) {
       .jst_formula_data_found(data_sub, formula, envir,
                               sys.call(sys.parent()), fn)
+    }
+    # An expression given as the data that cannot be evaluated (Session 392,
+    # the (S391) expression-typo item): jt(Score ~ Group, dd[dd$Age > 40, ])
+    # gave R's own "object 'dd' not found" at the read below. It is read
+    # here, inside a handler, and its reason said in the house voice; read
+    # once, the value then serves the checks below. One that gives no rows
+    # by reading a column its frame lacks is said the same way, and R's own
+    # warnings are given back only when the call goes on.
+    if (!is.null(data_sub) && is.call(data_sub)) {
+      ev <- .jst_read_held(function() data)
+      if (isTRUE(ev$failed)) {
+        .jst_expr_data_stop(data_sub, ev$error, fn, envir,
+                            sys.call(sys.parent()),
+                            vars = all.vars(formula), relay = "always")
+      } else {
+        .jst_expr_empty_stop(data_sub, ev$value, envir)
+      }
+      .jst_release_warnings(ev$warnings)
     }
     # Formula slot is fine. If data was supplied but is NULL, fail fast with
     # a clear message: the caller collapses a missing data argument to NULL
@@ -1331,6 +1348,427 @@
   .jst_stop("'", nm, "' not found.", fn = fn)
 }
 
+#' Internal helper: an expression given as the data that cannot be evaluated
+#'
+#' The (S391) expression-typo item (Session 392): with \code{d} holding
+#' Score, Group and Age and \code{dd} a typo for it,
+#' \code{jt(Score ~ Group, dd[dd$Age > 40, ])} printed R's own "object 'dd'
+#' not found", with no prefix -- ruling R36 reads a NAME, and the data here
+#' is an expression -- and the data-first functions read the expression as
+#' a variable: \code{jfreq(dd[dd$Age > 40, ], Group)} said it "needs a data
+#' frame" and offered \code{jfreq(MyData, dd[dd$Age > 40, ])}, Group
+#' dropped, and under a \code{juse()} default said it "was not found in the
+#' d data frame". When the expression a call gives as its data stops, the
+#' reason is said in the house voice, the first that applies:
+#' \enumerate{
+#'   \item a column its data frame lacks -- after \code{$}, in a literal
+#'     \code{[[ ]]}, or a name in \code{subset()}'s condition or
+#'     \code{select} that is neither a variable of that frame nor an
+#'     object (\code{.jst_expr_missing_columns()}):
+#'     \code{.jst_check_vars()}'s sentence, "Agee was not found in the d
+#'     data frame." / "Check the spelling.";
+#'   \item a name that is no object and no variable of any data frame,
+#'     R's message naming one of them (\code{.jst_quoted_in()}): "'dd' not
+#'     found.", several named together (ruling R25), with \code{tail} after
+#'     it when the caller has a line of its own to give. When it is one
+#'     name, ruling R36's offer is tried first
+#'     (\code{.jst_expr_misspelled_offer()});
+#'   \item any other reason, by \code{relay}: "always" gives "<expr> could
+#'     not be evaluated." / "R reported:" and R's message;
+#'     "unless_variable" gives it unless R's message names a variable of a
+#'     data frame -- \code{jsubset(Age > 40)} with no frame named, an
+#'     expression of variables that needs a data frame, which the caller
+#'     says -- and "never" leaves every other reason to the caller.
+#' }
+#'
+#' @param data_sub The expression as typed.
+#' @param err The condition the evaluation raised, or R's message.
+#' @param fn Character(1). The user-facing function's name.
+#' @param envir The caller's environment.
+#' @param cl The call as typed, for the offered line; NULL for none.
+#' @param vars Character. The variables the call names besides the data;
+#'   NULL reads them from \code{cl}, its unnamed arguments.
+#' @param offer Logical. FALSE for a function that refuses an expression
+#'   as the data (jsubset(), jcomplete() and the registration verbs), whose
+#'   offered line would stop there.
+#' @param relay "always", "unless_variable" or "never".
+#' @param tail Character or NULL. Lines after "'dd' not found." when no
+#'   line is offered.
+#' @param vector_ok Logical. TRUE for jdesc(), jfreq() and jscreen(), which
+#'   take a single column: the offered expression may give one
+#'   (\code{jfreq(d$Age)} for \code{jfreq(dd$Age)}).
+#' @return Invisible NULL when the caller is to go on; otherwise stops.
+#' @keywords internal
+.jst_expr_data_stop <- function(data_sub, err, fn, envir, cl = NULL,
+                                vars = NULL, offer = TRUE,
+                                relay = c("always", "unless_variable",
+                                          "never"),
+                                tail = NULL, vector_ok = FALSE) {
+  relay <- match.arg(relay)
+  if (!is.call(data_sub)) return(invisible(NULL))
+  r_msg <- if (inherits(err, "condition")) conditionMessage(err) else err
+  r_msg <- if (length(r_msg) == 1L && !is.na(r_msg)) as.character(r_msg) else ""
+  # R's message on one line, without the color codes a package may add.
+  r_msg <- gsub("\033\\[[0-9;]*m", "", r_msg)
+  r_msg <- gsub("[[:space:]]+", " ", trimws(r_msg))
+  if (is.null(vars)) vars <- .jst_call_vars(cl, data_sub)
+
+  # 1. A column its data frame lacks.
+  miss <- .jst_expr_missing_columns(data_sub, envir)
+  if (!is.null(miss)) .jst_check_vars(miss$value, miss$cols, miss$frame)
+
+  # 2. A name that is no object and no variable of any data frame.
+  syms  <- .jst_expr_symbols(data_sub)
+  unb   <- syms[!vapply(syms, exists, logical(1), envir = envir,
+                        USE.NAMES = FALSE)]
+  isvar <- vapply(unb, function(nm) length(.jst_frames_holding(nm, envir)) > 0L,
+                  logical(1), USE.NAMES = FALSE)
+  gone  <- unb[!isvar]
+  named <- function(nms) any(vapply(nms, .jst_quoted_in, logical(1),
+                                    msg = r_msg, USE.NAMES = FALSE))
+  if (length(gone) > 0L && named(gone)) {
+    if (length(gone) == 1L && isTRUE(offer)) {
+      .jst_expr_misspelled_offer(data_sub, gone, fn, envir, cl, vars,
+                                 vector_ok = vector_ok)
+    }
+    .jst_stop(.jst_and_list(paste0("'", gone, "'")), " not found.",
+              if (length(tail)) paste0("\n", paste(tail, collapse = "\n")),
+              fn = fn)
+  }
+
+  # 3. Any other reason. With no message from R there is nothing to relay.
+  if (identical(relay, "never") || !nzchar(r_msg)) return(invisible(NULL))
+  if (identical(relay, "unless_variable") && length(unb[isvar]) > 0L &&
+      named(unb[isvar])) {
+    return(invisible(NULL))
+  }
+  .jst_stop(.jst_term_text(data_sub), " could not be evaluated.\n",
+            "R reported:\n",
+            "  ", r_msg,
+            fn = fn)
+}
+
+#' Internal helper: ruling R36's offer for a name inside an expression
+#'
+#' For \code{.jst_expr_data_stop()}: the one name found nowhere in the
+#' expression given as the data is read as a data frame's name typed wrong
+#' when ruling R36's conditions hold for it (\code{.jst_misspelled_frame()})
+#' -- the variables counted are those the call names and those the
+#' expression reads from the name (\code{.jst_expr_columns()}) -- and the
+#' expression with that frame in its place (\code{.jst_expr_rename()})
+#' gives a data frame holding the call's variables, so the line offered
+#' runs: \code{jt(Score ~ Group, d[d$Age > 40, ])}. Evaluating that
+#' expression is evaluating the user's own, one name changed. The stop is
+#' \code{.jst_misspelled_frame_stop()}'s, which also checks the line for
+#' ruling R23.
+#'
+#' @param data_sub The expression as typed.
+#' @param nm Character(1). The name found nowhere.
+#' @param fn Character(1). The user-facing function's name.
+#' @param envir The caller's environment.
+#' @param cl The call as typed.
+#' @param vars Character. The variables the call names besides the data.
+#' @param vector_ok Logical. The function takes a single column, so the
+#'   expression may give one.
+#' @return Invisible NULL when nothing is offered; otherwise stops.
+#' @keywords internal
+.jst_expr_misspelled_offer <- function(data_sub, nm, fn, envir, cl, vars,
+                                       vector_ok = FALSE) {
+  if (!is.call(cl)) return(invisible(NULL))
+  cols <- .jst_expr_columns(data_sub, nm, envir)
+  fr <- .jst_misspelled_frame(nm, unique(c(vars, cols)), envir)
+  if (is.null(fr)) return(invisible(NULL))
+  fixed <- .jst_expr_rename(data_sub, nm, fr)
+  val <- tryCatch(suppressWarnings(suppressMessages(eval(fixed, envir))),
+                  error = function(e) NULL)
+  is_col <- isTRUE(vector_ok) && length(vars) == 0L && length(val) > 0L &&
+    (is.atomic(val) || is.factor(val)) && is.null(dim(val))
+  if (!is_col && (!is.data.frame(val) || !all(vars %in% names(val)))) {
+    return(invisible(NULL))
+  }
+  it  <- as.list(cl)
+  pos <- which(vapply(it[-1L], identical, logical(1), data_sub))
+  if (length(pos) == 0L) return(invisible(NULL))
+  it[[pos[1L] + 1L]] <- fixed
+  if (is_col) {
+    # A single column runs on its own, so ruling R23's check, which counts
+    # the variables named after a data frame, does not apply.
+    .jst_stop("'", nm, "' not found.\n",
+              "If you meant the data frame ", fr, ":\n",
+              "  ", .jst_term_text(as.call(it)),
+              fn = fn)
+  }
+  .jst_misspelled_frame_stop(fn, nm, fr, as.call(it), envir, cl = cl)
+}
+
+#' Internal helper: is an expression shaped as data?
+#'
+#' For the data-first resolver (Session 392): an expression in the data's
+#' place that stopped is read as data -- a data frame's name typed wrong in
+#' it said, \code{.jst_expr_data_stop()} -- only when it has the shape of
+#' one: the object of \code{[}, \code{[[}, \code{$} or \code{@}, or a call
+#' of a function that takes a data frame and gives one back
+#' (\code{subset()}, \code{head()}, \code{na.omit()}, \code{merge()} and
+#' kin), parentheses read through. A condition or a computed vector --
+#' \code{Agee > 40}, \code{log(Income)} -- is not, and keeps the
+#' resolver's stops, which name the default frame where one is set.
+#'
+#' @param e The expression.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_expr_data_shaped <- function(e) {
+  while (is.call(e) && identical(e[[1L]], as.name("("))) e <- e[[2L]]
+  if (!is.call(e)) return(FALSE)
+  h <- e[[1L]]
+  if (is.call(h) && length(h) == 3L &&
+      as.character(h[[1L]]) %in% c("::", ":::")) {
+    h <- h[[3L]]
+  }
+  if (!is.symbol(h)) return(FALSE)
+  as.character(h) %in% c("[", "[[", "$", "@", "subset", "head", "tail",
+                         "na.omit", "merge", "rbind", "cbind", "transform",
+                         "within", "droplevels", "unique", "as.data.frame")
+}
+
+#' Internal helper: the variables a call names besides its data
+#'
+#' The names its unnamed arguments read, the one typed as the data left
+#' out: \code{jfreq(dd[dd$Age > 40, ], Group)} names Group. For ruling
+#' R36's match inside an expression (\code{.jst_expr_data_stop()}).
+#'
+#' @param cl The call as typed, or NULL.
+#' @param data_sub The argument given as the data.
+#' @return Character, possibly empty.
+#' @keywords internal
+.jst_call_vars <- function(cl, data_sub) {
+  if (!is.call(cl)) return(character(0))
+  it <- as.list(cl)[-1L]
+  nn <- names(it)
+  if (is.null(nn)) nn <- rep("", length(it))
+  out <- character(0)
+  for (k in seq_along(it)) {
+    if (nzchar(nn[k])) next
+    if (identical(it[[k]], substitute())) next
+    if (identical(it[[k]], data_sub)) next
+    out <- c(out, all.vars(it[[k]]))
+  }
+  unique(out)
+}
+
+#' Internal helper: the variables an expression reads from one name
+#'
+#' What \code{dd[dd$Age > 40, ]} or \code{subset(dd, Age > 40)} reads from
+#' \code{dd}: a component after \code{$} or \code{@}, a literal
+#' \code{[[ ]]} name, and any other name the expression reads that is no
+#' object -- a variable read by \code{subset()}'s condition. For ruling
+#' R36's match inside an expression.
+#'
+#' @param e The expression.
+#' @param nm Character(1). The name.
+#' @param envir The caller's environment.
+#' @return Character, possibly empty.
+#' @keywords internal
+.jst_expr_columns <- function(e, nm, envir) {
+  out <- character(0)
+  walk <- function(x) {
+    if (!is.call(x)) return(invisible(NULL))
+    h  <- x[[1L]]
+    hn <- if (is.symbol(h)) as.character(h) else ""
+    if (hn %in% c("::", ":::", "function")) return(invisible(NULL))
+    if (hn %in% c("$", "@", "[[") && length(x) == 3L &&
+        is.symbol(x[[2L]]) && identical(as.character(x[[2L]]), nm)) {
+      col <- x[[3L]]
+      if ((hn != "[[" && is.symbol(col)) ||
+          (is.character(col) && length(col) == 1L)) {
+        out <<- c(out, as.character(col))
+      }
+    }
+    if (!is.symbol(h)) walk(h)
+    for (k in seq_along(x)[-1L]) {
+      if (identical(as.list(x)[[k]], substitute())) next
+      walk(x[[k]])
+    }
+    invisible(NULL)
+  }
+  walk(e)
+  other <- setdiff(.jst_expr_symbols(e), nm)
+  other <- other[!vapply(other, exists, logical(1), envir = envir,
+                         USE.NAMES = FALSE)]
+  unique(c(out, other))
+}
+
+#' Internal helper: a name put in another's place in an expression
+#'
+#' Every place \code{from} is read as a value -- the places
+#' \code{.jst_expr_symbols()} collects: not a call's function, not the
+#' component after \code{$} or \code{@}, not inside \code{::} or an inline
+#' function -- becomes \code{to}: \code{dd[dd$Age > 40, ]} becomes
+#' \code{d[d$Age > 40, ]}.
+#'
+#' @param e The expression.
+#' @param from,to Character(1). The names.
+#' @return The expression.
+#' @keywords internal
+.jst_expr_rename <- function(e, from, to) {
+  if (is.symbol(e)) {
+    return(if (identical(as.character(e), from)) as.name(to) else e)
+  }
+  if (!is.call(e)) return(e)
+  h  <- e[[1L]]
+  hn <- if (is.symbol(h)) as.character(h) else ""
+  if (hn %in% c("::", ":::", "function")) return(e)
+  if (!is.symbol(h)) e[[1L]] <- .jst_expr_rename(h, from, to)
+  ks <- seq_along(e)[-1L]
+  if (hn %in% c("$", "@")) ks <- intersect(ks, 2L)
+  for (k in ks) {
+    if (identical(as.list(e)[[k]], substitute())) next
+    if (is.null(e[[k]])) next
+    e[[k]] <- .jst_expr_rename(e[[k]], from, to)
+  }
+  e
+}
+
+#' Internal helper: a column an expression reads that its data frame lacks
+#'
+#' For \code{.jst_expr_data_stop()}. Walks the expression for a data frame
+#' of the caller's -- a name holding one -- read with \code{$} or a literal
+#' \code{[[ ]]}, or given to \code{subset()}, and collects the columns it
+#' reads that the frame does not have: \code{d$Agee}, \code{d[["Agee"]]},
+#' or a name in \code{subset(d, Agee > 40)}'s condition or \code{select}
+#' that is neither a variable of \code{d} nor an object. The first frame
+#' with such a column is the one reported, every column it lacks named.
+#'
+#' @param e The expression.
+#' @param envir The caller's environment.
+#' @return NULL, or a list of \code{frame} (its name), \code{value} (the
+#'   data frame) and \code{cols} (the columns it lacks).
+#' @keywords internal
+.jst_expr_missing_columns <- function(e, envir) {
+  found <- NULL
+  frame_of <- function(x) {
+    if (!is.symbol(x)) return(NULL)
+    nm <- as.character(x)
+    if (!nzchar(nm) || !exists(nm, envir = envir)) return(NULL)
+    v <- tryCatch(get(nm, envir = envir), error = function(err) NULL)
+    if (is.data.frame(v)) list(name = nm, value = v) else NULL
+  }
+  add <- function(fr, cols) {
+    cols <- setdiff(cols, names(fr$value))
+    if (length(cols) == 0L) return(invisible(NULL))
+    if (is.null(found)) {
+      found <<- list(frame = fr$name, value = fr$value, cols = cols)
+    } else if (identical(found$frame, fr$name)) {
+      found$cols <<- unique(c(found$cols, cols))
+    }
+    invisible(NULL)
+  }
+  unbound <- function(sub) {
+    if (is.null(sub)) return(character(0))
+    nms <- .jst_expr_symbols(sub)
+    nms[!vapply(nms, exists, logical(1), envir = envir, USE.NAMES = FALSE)]
+  }
+  walk <- function(x) {
+    if (!is.call(x)) return(invisible(NULL))
+    h  <- x[[1L]]
+    hn <- if (is.symbol(h)) as.character(h) else ""
+    if (hn %in% c("::", ":::", "function")) return(invisible(NULL))
+    if (hn %in% c("$", "[[") && length(x) == 3L) {
+      fr  <- frame_of(x[[2L]])
+      col <- x[[3L]]
+      colnm <- if (hn == "$" && (is.symbol(col) || is.character(col))) {
+        as.character(col)
+      } else if (hn == "[[" && is.character(col) && length(col) == 1L) {
+        col
+      } else {
+        NULL
+      }
+      if (!is.null(fr) && length(colnm) == 1L) add(fr, colnm)
+    }
+    if (identical(hn, "subset")) {
+      mc <- tryCatch(match.call(function(x, subset, select, drop = FALSE,
+                                         ...) NULL, x),
+                     error = function(err) NULL)
+      if (!is.null(mc)) {
+        fr <- frame_of(mc$x)
+        if (!is.null(fr)) add(fr, c(unbound(mc$subset), unbound(mc$select)))
+      }
+    }
+    if (!is.symbol(h)) walk(h)
+    for (k in seq_along(x)[-1L]) {
+      if (identical(as.list(x)[[k]], substitute())) next
+      walk(x[[k]])
+    }
+    invisible(NULL)
+  }
+  walk(e)
+  found
+}
+
+#' Internal helper: an expression given as the data, read with its warnings
+#' held
+#'
+#' For the reads of an expression given as the data (Session 392): its
+#' value, or the error it raised, with any warning R raised on the way held
+#' back rather than printed. A read that stops the call drops them -- a
+#' tibble's "Unknown or uninitialised column" after the not-found sentence
+#' said the same thing again -- and one that goes on gives them back
+#' (\code{.jst_release_warnings()}), as the stored filter's read does.
+#'
+#' @param f A function of no arguments that reads the expression.
+#' @return A list: \code{value}, \code{failed}, \code{error} (when it
+#'   failed) and \code{warnings}.
+#' @keywords internal
+.jst_read_held <- function(f) {
+  held <- list()
+  out <- tryCatch(
+    withCallingHandlers(
+      list(value = f(), failed = FALSE),
+      warning = function(w) {
+        held[[length(held) + 1L]] <<- w
+        invokeRestart("muffleWarning")
+      }),
+    error = function(e) list(value = NULL, failed = TRUE, error = e))
+  out$warnings <- held
+  out
+}
+
+#' Internal helper: give back the warnings a read held
+#'
+#' @param held A list of warning conditions, from \code{.jst_read_held()};
+#'   NULL for none.
+#' @return Invisible NULL.
+#' @keywords internal
+.jst_release_warnings <- function(held) {
+  for (w in held) warning(w)
+  invisible(NULL)
+}
+
+#' Internal helper: an expression that gave an empty data frame by reading
+#' a column its data frame lacks
+#'
+#' A data frame's \code{$} gives NULL for a name the frame lacks, so
+#' \code{d[d$Agee > 40, ]} is not an error but a data frame with no rows
+#' (Session 392), and the stop that followed said the frame "has no rows".
+#' When an expression given as the data gives a data frame with no rows
+#' and reads a column its frame lacks (\code{.jst_expr_missing_columns()}),
+#' the not-found sentence is given instead, as for an expression that
+#' stops; a tibble's \code{[} stops on the same input, and reaches the
+#' sentence through \code{.jst_expr_data_stop()}.
+#'
+#' @param data_sub The expression as typed.
+#' @param value Its value.
+#' @param envir The caller's environment.
+#' @return Invisible NULL when the caller is to go on; otherwise stops.
+#' @keywords internal
+.jst_expr_empty_stop <- function(data_sub, value, envir) {
+  if (!is.call(data_sub) || !is.data.frame(value) || nrow(value) > 0L) {
+    return(invisible(NULL))
+  }
+  miss <- .jst_expr_missing_columns(data_sub, envir)
+  if (!is.null(miss)) .jst_check_vars(miss$value, miss$cols, miss$frame)
+  invisible(NULL)
+}
+
 #' Internal helper: a data frame's name typed in quotes where the frame goes
 #'
 #' Ruling R18 (Session 356): \code{jdesc("d", Age)}, \code{jsave("d",
@@ -2398,8 +2836,8 @@
     names(it) <- nn
     fixed <- .jst_term_text(as.call(it))
   }
-  .jst_stop("when the data argument is omitted, all subsequent arguments ",
-            "must be named.",
+  .jst_stop("when the data frame is omitted, every input after the ",
+            "variable must be named.",
             if (!is.null(fixed)) paste0("\nName the ", slot, ":\n  ", fixed),
             fn = fn)
 }
@@ -2604,7 +3042,7 @@
                   data = NULL, name = NULL,
                   first_arg_sub = NULL, first_arg_value = NULL))
     }
-    .jst_stop("NULL is not a valid data argument. ",
+    .jst_stop("NULL is not a valid data frame. ",
               .jst_txt_null_remedy,
               fn = fn_name)
   }
@@ -2639,10 +3077,17 @@
   # -- Try to evaluate the substituted first argument -----------------------
   # A caller that has already evaluated the argument passes the result in
   # (pre_eval), so the user's expression runs exactly once (AUDIT-052).
-  eval_result <- if (!is.null(pre_eval)) pre_eval else tryCatch(
-    list(value = eval(data_sub, envir = envir), failed = FALSE),
-    error = function(e) list(value = NULL, failed = TRUE)
-  )
+  # R's warnings on the way are held (Session 392): a read that fails stops
+  # the call below, and they are given back only when it gives a value.
+  eval_result <- if (!is.null(pre_eval)) pre_eval else
+    .jst_read_held(function() eval(data_sub, envir = envir))
+  # An expression that gave no rows by reading a column its frame lacks
+  # (Session 392): the not-found sentence, where the pipeline said the
+  # frame "has no rows".
+  if (!eval_result$failed) {
+    .jst_expr_empty_stop(data_sub, eval_result$value, envir)
+    if (is.null(pre_eval)) .jst_release_warnings(eval_result$warnings)
+  }
 
   # -- Guard: existing object that evaluated to NULL ------------------------
   # A literal NULL was handled at Case 2. Reaching here with a NULL VALUE
@@ -2710,6 +3155,29 @@
 
   # -- Case 5: bare symbol that didn't evaluate (or non-data-frame value
   #            when accept_vector = FALSE). Treat as a variable name. -------
+  # An expression that stopped is not a variable name (Session 392, the
+  # (S391) expression-typo item): jfreq(dd[dd$Age > 40, ], Group) had been
+  # offered jfreq(MyData, dd[dd$Age > 40, ]), Group dropped, and under a
+  # juse() default was "not found in the d data frame". A name in it found
+  # nowhere, or a column its data frame lacks, is said, default or none; an
+  # expression of variables that needs a data frame (jsubset(Age > 40))
+  # goes on to the stops below. The functions that refuse an expression as
+  # the data offer no line on one.
+  # Only an expression shaped as data is read so (.jst_expr_data_shaped()):
+  # a condition or a computed vector in the data's place -- jsubset(Agee >
+  # 40) under a default, jdesc(log(Income)) -- keeps the stops below, which
+  # name the default frame where one is set.
+  if (!is.symbol(data_sub) && isTRUE(eval_result$failed) &&
+      .jst_expr_data_shaped(data_sub)) {
+    .jst_expr_data_stop(
+      data_sub, eval_result$error, fn_name, envir,
+      cl = if (is.null(caller_call))
+             tryCatch(.jst_caller_call(), error = function(e) NULL)
+           else caller_call,
+      offer = !fn_name %in% c("jsubset", "jcomplete", "jnumeric", "jcount",
+                              "jlikert", "jdummy"),
+      relay = "unless_variable", vector_ok = accept_vector)
+  }
   if (is.null(default_name)) {
     # A condition or computed value naming a data frame, typed where the
     # frame goes (Session 330, the S324 item): jsubset(d$Age > 40) with no

@@ -285,8 +285,8 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     if (!is.null(.val)) {
       .bad <- setdiff(.val, variable_names)
       if (length(.bad) > 0) {
-        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the variables passed to jdesc(). Check for typos.")
+        .jst_stop(.jst_not_among_text(.arg, .bad,
+                                      "the variables given to jdesc()"))
       }
     }
   }
@@ -438,7 +438,7 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
     # likewise renders once for the whole by-group output (per-variable
     # layouts render CPS once; locked CPS rendering design).
     .cat_red(paste0("Descriptive Statistics by ", by_name,
-                    " (", length(group_levels), " levels)\n"))
+                    " (", .jst_fmt_n(length(group_levels)), " levels)\n"))
     if (.jst_default_used) .jst_default_note(.jst_data_name,
                                            vars = c(variable_names, by_name),
                                            envir = parent.frame())
@@ -1424,7 +1424,7 @@ jfreq <- function(data, ..., subset = NULL, variable.id = NULL,
               # total. Worded "values in range" rather than "unlabelled
               # values": labelled rows can be among those dropped.
               overflow_row <- data.frame(
-                Value = sprintf("%d more %s in range", nrow(dropped),
+                Value = sprintf("%s more %s in range", .jst_fmt_n(nrow(dropped)),
                                 if (nrow(dropped) == 1L) "value" else "values"),
                 Freq  = as.integer(sum(dropped$count)),
                 Sort  = Inf,

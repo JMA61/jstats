@@ -329,9 +329,9 @@
     content <- as.character(content)
     n <- length(content)
     if (n <= max_items) return(paste(content, collapse = ", "))
-    sprintf("%s, +%d more",
+    sprintf("%s, +%s more",
             paste(content[seq_len(max_items)], collapse = ", "),
-            n - max_items)
+            .jst_fmt_n(n - max_items))
   } else {
     .jst_truncate_ellipsis(content, max_width = max_width)
   }
@@ -461,13 +461,13 @@
       paste0("Note: jcomplete() is not set on ",
              .jst_format_var_list(uncovered, and = TRUE),
              ". Listwise deletion across all of these variables would leave ",
-             listwise_n, " ", .jst_plural(listwise_n, "case", "cases"), ".")
+             .jst_fmt_n(listwise_n), " ", .jst_plural(listwise_n, "case", "cases"), ".")
     } else if (grepl("%s", notification_template, fixed = TRUE)) {
       # Session 382 (Fix Slate 25): the count and its noun go in together, so
       # one case reads "1 case" (the S338 rule), where the callers' "%d
       # cases" said "1 cases".
       sprintf(notification_template,
-              paste(listwise_n, .jst_plural(listwise_n, "case", "cases")))
+              paste(.jst_fmt_n(listwise_n), .jst_plural(listwise_n, "case", "cases")))
     } else notification_template
     # S286: routed through the stdout emitter so it width-wraps (it was a
     # bare cat() at 82 columns against the 76 pin), then the one blank line

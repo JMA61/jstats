@@ -1548,12 +1548,12 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
                    align     = c("l", "bc", "bc", "bc"),
                    row.names = FALSE)
 
-  cat("\n  Complete cases: ", n_complete, " of ", n_total,
+  cat("\n  Complete cases: ", .jst_fmt_n(n_complete), " of ", .jst_fmt_n(n_total),
       " (", sprintf("%.1f", n_complete / n_total * 100), "%)\n", sep = "")
   if (n_excluded > 0) {
     # Rule O: the count is in hand, so the noun agrees ("1 case", "5 cases";
     # it read "1 cases" until Session 312).
-    .jst_msg_out("  Listwise filter activated -- ", n_excluded,
+    .jst_msg_out("  Listwise filter activated -- ", .jst_fmt_n(n_excluded),
                  if (n_excluded == 1L) " case" else " cases",
                  " will be excluded from subsequent analyses.")
   } else {
@@ -1857,8 +1857,8 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
       cat("  Variable: ", regn$var_name, "\n", sep = "")
       cat(.jst_dummy_ref_line(regn, with.code = TRUE))
       cat("  Dummy variables: ", paste(regn$dummy_names, collapse = ", "), "\n", sep = "")
-      cat("  Cases: ", regn$n_total,
-          " (", regn$n_missing, " missing)\n", sep = "")
+      cat("  Cases: ", .jst_fmt_n(regn$n_total),
+          " (", .jst_fmt_n(regn$n_missing), " missing)\n", sep = "")
 
       # Show coding scheme if requested
       if (!identical(show, FALSE)) {
@@ -1991,7 +1991,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
         cat(.jst_dummy_ref_line(reg))
         cat("  Dummy variables: ", paste(reg$dummy_names, collapse = ", "),
             "\n", sep = "")
-        cat("  Cases: ", reg$n_total, " (", reg$n_missing, " missing)\n",
+        cat("  Cases: ", .jst_fmt_n(reg$n_total), " (", .jst_fmt_n(reg$n_missing), " missing)\n",
             sep = "")
 
         cat("\n  Dummy Coding Scheme:\n\n")
@@ -2089,7 +2089,7 @@ jdummy <- function(data, ..., ref = "auto", show = FALSE,
     cat(.jst_dummy_ref_line(reg))
     cat("  Dummy variables: ", paste(built$dummy_names, collapse = ", "),
         "\n", sep = "")
-    cat("  Cases: ", n_total, " (", n_missing, " missing)\n", sep = "")
+    cat("  Cases: ", .jst_fmt_n(n_total), " (", .jst_fmt_n(n_missing), " missing)\n", sep = "")
 
     if (!identical(show, FALSE)) {
       cat("\n  Dummy Coding Scheme:\n\n")

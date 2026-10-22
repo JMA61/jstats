@@ -231,15 +231,15 @@
   # Summary message
   denom_note <- if (identical(what, "mean") && fixed) " (fixed denominator)" else ""
   msg_parts <- paste0(
-    if (identical(what, "sum")) "Sum of " else "Mean of ", n_vars,
-    " variables computed for ", n_cases, " cases", denom_note
+    if (identical(what, "sum")) "Sum of " else "Mean of ", .jst_fmt_n(n_vars),
+    " variables computed for ", .jst_fmt_n(n_cases), " cases", denom_note
   )
 
   detail_parts <- character(0)
   if (!is.null(min.valid)) {
     if (n_partial > 0) {
       detail_parts <- c(detail_parts,
-        paste0(n_partial, " case", if (n_partial != 1) "s" else "",
+        paste0(.jst_fmt_n(n_partial), " case", if (n_partial != 1) "s" else "",
                " used partial data"))
     }
   }
@@ -533,7 +533,7 @@ javg <- function(data, ..., min.valid = NULL, fixed = FALSE, var.label = NULL) {
   if (length(udm_conv$converted) > 0) {
     conv_parts <- vapply(names(udm_conv$converted), function(v) {
       nc <- udm_conv$converted[[v]]$n_cells
-      paste0(v, " (", nc, " cell", if (nc != 1L) "s" else "", ")")
+      paste0(v, " (", .jst_fmt_n(nc), " cell", if (nc != 1L) "s" else "", ")")
     }, character(1))
     .jst_advisory_note(paste0(
       "\nNote: declared SPSS-style missing values were treated as missing ",

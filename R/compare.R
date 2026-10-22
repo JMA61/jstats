@@ -614,7 +614,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     # (.jst_settings_context()). Until then a single category with the
     # frame named in the call read "has 1 categories ... Use jaov() for
     # more than 2 categories."
-    has <- paste0("'", group_name, "' has ", n_levels, " ",
+    has <- paste0("'", group_name, "' has ", .jst_fmt_n(n_levels), " ",
                   .jst_plural(n_levels, "category", "categories"))
     # A blank category is named, with the line that leaves it out (Session
     # 389, Fix Slate 28; .jst_t_categories_stop_text()).
@@ -720,8 +720,8 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     # both reflect the pairs actually analyzed.
     if (length(group1_data) != length(group2_data)) {
       .jst_stop("A paired t-test requires the same number of cases in each group.\n",
-                "\"", levels[1], "\" has ", length(group1_data), " cases; \"",
-                levels[2], "\" has ", length(group2_data), ".")
+                "\"", levels[1], "\" has ", .jst_fmt_n(length(group1_data)), " cases; \"",
+                levels[2], "\" has ", .jst_fmt_n(length(group2_data)), ".")
     }
     pair_complete   <- !is.na(group1_data) & !is.na(group2_data)
     n_pairs_dropped <- sum(!pair_complete)
@@ -730,13 +730,13 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
 
     if (length(group1_data) < 2) {
       .jst_stop("A paired t-test requires at least 2 complete pairs; only ",
-                length(group1_data),
+                .jst_fmt_n(length(group1_data)),
                 if (length(group1_data) == 1) " remains" else " remain",
                 " after removing pairs with a missing value.")
     }
 
     if (n_pairs_dropped > 0) {
-      .jst_msg("Note: ", n_pairs_dropped,
+      .jst_msg("Note: ", .jst_fmt_n(n_pairs_dropped),
                if (n_pairs_dropped == 1) " pair" else " pairs",
                " removed because a measurement was missing.")
     }
@@ -1274,7 +1274,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   n_levels <- nlevels(data[[group_name]])
   if (n_levels < 2) {
     # Number agreement and one sentence per line, as in jt() (Session 338).
-    has <- paste0("'", group_name, "' has ", n_levels, " ",
+    has <- paste0("'", group_name, "' has ", .jst_fmt_n(n_levels), " ",
                   .jst_plural(n_levels, "category", "categories"))
     uncounted <- if (n_levels < n_groups_data) {
       paste0("\nCases with a missing '", dv_name, "' are not counted.")
@@ -1330,7 +1330,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     solo   <- names(solo_n)[solo_n == 1L]
     if (length(solo) > 0L) {
       .jst_stop(
-        "'", group_name, "' has ", length(solo), " ",
+        "'", group_name, "' has ", .jst_fmt_n(length(solo)), " ",
         .jst_plural(length(solo), "category", "categories"),
         " with only 1 case (", .jst_format_var_list(solo, and = TRUE), ").\n",
         "Welch's ANOVA requires at least 2 cases in every category.\n",
@@ -1357,7 +1357,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   if (welch && any(shape$flat)) {
     flat <- names(shape$flat)[shape$flat]
     .jst_stop(
-      "'", group_name, "' has ", length(flat), " ",
+      "'", group_name, "' has ", .jst_fmt_n(length(flat)), " ",
       .jst_plural(length(flat), "category", "categories"),
       " in which '", dv_name, "' does not vary (",
       .jst_format_var_list(flat, and = TRUE), ").\n",
@@ -1538,7 +1538,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
       n_low <- sum(!is.na(posthoc_tbl$df) & is.na(posthoc_tbl$p))
       if (n_low > 0L) {
         .jst_msg_out(
-          "\nNote: ", n_low, " ",
+          "\nNote: ", .jst_fmt_n(n_low), " ",
           .jst_plural(n_low,
                       "comparison has fewer than 2 degrees of freedom, so its ",
                       "comparisons have fewer than 2 degrees of freedom, so their "),
@@ -2329,7 +2329,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
                  paste0(", subset = ", .jst_term_text(subset_expr)),
                ")")
       } else ""
-      .jst_stop("'", check_info$name, "' has ", n_lvls, " ",
+      .jst_stop("'", check_info$name, "' has ", .jst_fmt_n(n_lvls), " ",
                 .jst_plural(n_lvls, "category", "categories"),
                 .jst_settings_context(.jst_data_name), ".\n",
                 "A cross-tabulation requires at least 2 categories ",
@@ -2574,7 +2574,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
       # TRUE when the expected frequencies it speaks of are not in the
       # table above it (Jeff: "The note speaks about expected frequencies
       # but we're not showing the expected frequencies in this output").
-      .jst_msg_out("\nNote: ", n_below_5,
+      .jst_msg_out("\nNote: ", .jst_fmt_n(n_below_5),
                    if (n_below_5 == 1L) " cell has an expected frequency"
                    else " cells have expected frequencies",
                    " less than 5 (minimum = ",
@@ -2598,7 +2598,7 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     .jst_advisory_note(
       "Note: Adjusted residuals are approximately normal under independence.\n",
       "A value beyond +/-1.96 (marked *) departs from expected at p < .05.\n",
-      "With ", n_cells, " cells, a Bonferroni-adjusted cutoff is +/-",
+      "With ", .jst_fmt_n(n_cells), " cells, a Bonferroni-adjusted cutoff is +/-",
       sprintf("%.2f", bonf), " (marked **)."
     )
     # The note prints at joutput("full") only -- exactly when the cells are

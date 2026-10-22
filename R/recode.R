@@ -349,8 +349,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
-      error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                           conditionMessage(e))))
+      error = function(e) .jst_stop(conditionMessage(e)))
     attr(parsed_labels, "tagged_raw") <- NULL
     # modify = TRUE, required: the form returns the data frame, which
     # assigned to one column (d$Q1 <- ...) would put the data frame inside
@@ -401,7 +400,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   # --- Validate var.label ---
   if (!is.null(var.label)) {
     if (!is.character(var.label) || length(var.label) != 1) {
-      .jst_stop("The var.label argument must be a single quoted string.")
+      .jst_stop("var.label = must be a single quoted string.")
     }
   }
 
@@ -438,8 +437,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
     }
     parsed_labels <- tryCatch(
       .jst_parse_labels(labels),
-      error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                      conditionMessage(e))))
+      error = function(e) .jst_stop(conditionMessage(e)))
     # S249: jrelabel does not quote markers back, and this vector becomes the
     # column's value labels on the very next line. Drop the raw-spelling
     # record at the parse so it cannot reach a column.
@@ -1700,8 +1698,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
 .jst_parse_labels_arg <- function(labels, convention) {
   parsed_labels <- tryCatch(
     .jst_parse_labels(labels, convention),
-    error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                         conditionMessage(e)))
+    error = function(e) .jst_stop(conditionMessage(e))
   )
   labels_tagged_raw <- attr(parsed_labels, "tagged_raw", exact = TRUE)
   attr(parsed_labels, "tagged_raw") <- NULL
@@ -2363,8 +2360,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   # --- Parse map string ---
   parsed_map <- tryCatch(
     .jst_parse_map(map, convention),
-    error = function(e) .jst_stop(
-      "Error in map argument: ", conditionMessage(e))
+    error = function(e) .jst_stop(conditionMessage(e))
   )
 
   # --- Parse labels string (if supplied) ---
@@ -2650,7 +2646,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
             .jst_stop(
               paste0(head_txt, orig_name, " holds ",
                      .jst_fmt_code(tok_mint_code),
-                     " as an ordinary value in ", n_cells,
+                     " as an ordinary value in ", .jst_fmt_n(n_cells),
                      if (n_cells == 1L) " case" else " cases",
                      ", and declaring it would make ",
                      if (n_cells == 1L) "that case" else "those cases",
@@ -3427,7 +3423,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
     rendered <- paste(vapply(shown, .code_with_label, character(1)),
                       collapse = ", ")
     if (n_band > length(shown)) {
-      rendered <- paste0(rendered, " and ", n_band - length(shown), " more")
+      rendered <- paste0(rendered, " and ", .jst_fmt_n(n_band - length(shown)), " more")
     }
     # Rule F's blank line before it, when a note has printed, is .note()'s.
     if (n_band == 1L) {
@@ -4175,7 +4171,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
 
       if (is_collapsing) {
         .note("Note: Categories were collapsed.\n",
-              "Use labels argument or jrelabel() to assign new value labels.")
+              "Use labels = or jrelabel() to assign new value labels.")
         # The collapse note covers the recoded categories only. Kept
         # declared values (codes and in-band values) are never part of a
         # collapse, so their labels ride here; otherwise a kept code would
@@ -5232,8 +5228,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
     # =======================================================================
     parsed_map <- tryCatch(
       .jst_parse_text_map(map, convention),
-      error = function(e) .jst_stop(
-        "Error in map argument: ", conditionMessage(e))
+      error = function(e) .jst_stop(conditionMessage(e))
     )
 
     # else=copy is refused wholesale: words cannot live in a numeric column,
@@ -5857,7 +5852,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
         }
         collapse_msg <- paste0(collapse_msg, "\n",
           paste0(
-            "Name each combined number with the labels argument, or later ",
+            "Name each combined number with labels =, or later ",
             "with jrelabel()."))
         msgs <- c(msgs, collapse_msg)
       }
@@ -7063,7 +7058,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         vapply(bad, function(i) sprintf(".%s=%s", res_tags[i],
                                         names(label_residue)[i]),
                character(1)), collapse = "; ")
-      .jst_stop("labels argument contains ",
+      .jst_stop("labels = contains ",
                 .jst_convention_label(.jst_phrasing_convention(convention)),
                 " token entries that ",
                 "do not match any token in `codes`: ", bad_render, ".\n",
@@ -7485,7 +7480,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       inband_labels <- NULL
       if (has_residue) {
         if (resolved_convention != "spss") {
-          .jst_stop("labels argument contains entries that do not match ",
+          .jst_stop("labels = contains entries that do not match ",
                "any value in `codes`: ",
                .jst_render_label_entries(label_residue), ".\n",
                "Only SPSS-form columns can carry in-range value labels.",
@@ -7496,7 +7491,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           if (!is.null(er) && length(er) == 2L) as.numeric(sort(er)) else NULL
         }
         if (is.null(band)) {
-          .jst_stop("labels argument contains entries that do not match ",
+          .jst_stop("labels = contains entries that do not match ",
                "any value in `codes`, and '", vn, "' has no ",
                "missing-value range they could fall inside: ",
                .jst_render_label_entries(label_residue), ".",
@@ -7505,7 +7500,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         res_vals <- as.numeric(label_residue)
         outside  <- res_vals < band[1] | res_vals > band[2]
         if (any(outside)) {
-          .jst_stop("labels argument contains entries that match no value ",
+          .jst_stop("labels = contains entries that match no value ",
                "in `codes` and fall outside the missing-value range (",
                format(band[1]), " to ", format(band[2]), ") on '", vn,
                "': ",
@@ -8043,7 +8038,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     # is named first; the Stata convention second.
     .jst_stop("SPSS-style missing values are limited to 3 codes ",
               "per variable, or a range, or a range plus 1 code; ",
-              "you supplied ", length(code_vals), " codes.\n",
+              "you supplied ", .jst_fmt_n(length(code_vals)), " codes.\n",
               "To declare a band of consecutive codes, use ",
               "range = c(low, high); to declare more than 3 unrelated ",
               "codes, use Stata convention (convention = \"stata\").",
@@ -8881,7 +8876,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     }
   }
   if (nzchar(q)) {
-    stop(paste0("Unbalanced quotation mark in the labels argument. A ",
+    stop(paste0("Unbalanced quotation mark in the labels. A ",
                 "quoted value or label must open and close with the same ",
                 "mark, as in \"Not stated\"=\"Not stated\"."),
          call. = FALSE)
@@ -8907,7 +8902,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 .jst_parse_text_labels <- function(labels_str) {
   rules <- .jst_split_text_label_rules(labels_str)
   if (length(rules) == 0L) {
-    stop("The labels argument is empty. Provide at least one label, for ",
+    stop("The labels are empty. Provide at least one label, for ",
          "example labels = \"REF=Refused\".", call. = FALSE)
   }
   vals <- character(0)
@@ -9261,8 +9256,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     }
     parsed_labels <- tryCatch(
       .jst_parse_text_labels(labels),
-      error = function(e) .jst_stop(paste0("Error in labels argument: ",
-                                           conditionMessage(e)), fn = fn))
+      error = function(e) .jst_stop(conditionMessage(e), fn = fn))
   }
 
   # The codes as declared: names are labels ("" for none). The labels-only
@@ -9386,7 +9380,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       rows <- paste0("  ", .jst_text_code_show(nm$values[seq_len(show)]),
                      " (", vapply(nm$n[seq_len(show)], .jst_fmt_n,
                                   character(1)), ")")
-      if (k > show) rows <- c(rows, paste0("  and ", k - show, " more"))
+      if (k > show) rows <- c(rows, paste0("  and ", .jst_fmt_n(k - show), " more"))
       # Treated as a suspected missing value (Jeff, S373): the line that
       # declares it with the values declared here -- a declaration replaces
       # a variable's values -- or, past a text variable's three, why there
@@ -9722,11 +9716,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                                  " missing values on ")
     )
     header <- if (isTRUE(modify)) {
-      paste0(header, length(vn_set),
+      paste0(header, .jst_fmt_n(length(vn_set)),
              if (length(vn_set) == 1L) " variable in " else " variables in ",
              data_name, ":")
     } else {
-      paste0(header, length(vn_set),
+      paste0(header, .jst_fmt_n(length(vn_set)),
              if (length(vn_set) == 1L) " variable:" else " variables:")
     }
     # Echo the variable list: the user supplied it via vars= or the dots,
@@ -10698,11 +10692,11 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
                 paste(vapply(convention_codes, .jst_fmt_code, character(1)),
                       collapse = ", "))
       } else {
-        sprintf(paste0("at most %d lettered %s per variable can be ",
+        sprintf(paste0("at most %s lettered %s per variable can be ",
                        "converted because your missing.convention.codes ",
-                       "setting currently has only %d %s."),
-                n_codes, if (n_codes == 1L) "marker" else "markers",
-                n_codes, if (n_codes == 1L) "code" else "codes")
+                       "setting currently has only %s %s."),
+                .jst_fmt_n(n_codes), if (n_codes == 1L) "marker" else "markers",
+                .jst_fmt_n(n_codes), if (n_codes == 1L) "code" else "codes")
       }
       # Rule O: the remedy's object agrees with the flagged-variable count.
       reduce_obj <- if (n_over == 1L) "its markers" else
@@ -10875,12 +10869,12 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       over_lines <- .jst_cap_var_lines(vapply(over_cap_vars,
         function(e) {
           if (e$n_band > 0L) {
-            sprintf("  %s: %d values (%d declared code%s + %d range value%s)",
-                    e$var, e$n_total,
-                    e$n_codes, if (e$n_codes == 1L) "" else "s",
-                    e$n_band,  if (e$n_band  == 1L) "" else "s")
+            sprintf("  %s: %s values (%s declared code%s + %s range value%s)",
+                    e$var, .jst_fmt_n(e$n_total),
+                    .jst_fmt_n(e$n_codes), if (e$n_codes == 1L) "" else "s",
+                    .jst_fmt_n(e$n_band),  if (e$n_band  == 1L) "" else "s")
           } else {
-            sprintf("  %s: %d codes", e$var, e$n_total)
+            sprintf("  %s: %s codes", e$var, .jst_fmt_n(e$n_total))
           }
         }, character(1)))
 
@@ -11312,7 +11306,7 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
         sas   = "Converted to SAS-style missing values in"
       )
       msg_lines <- c(msg_lines, paste0(
-        header_verb, " ", n_converted, " variable",
+        header_verb, " ", .jst_fmt_n(n_converted), " variable",
         if (n_converted == 1L) "" else "s", ":"))
 
       # Long form (S319, 0.9.196): one row per missing value, the column's
@@ -11367,14 +11361,14 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
         band_reason <- if (length(convention_codes) >= 3L) {
           "the 3 separate missing-value codes SPSS allows"
         } else {
-          sprintf("the %d codes in your missing.convention.codes setting",
-                  length(convention_codes))
+          sprintf("the %s codes in your missing.convention.codes setting",
+                  .jst_fmt_n(length(convention_codes)))
         }
         note <- if (length(banded_spss) == 1L) {
-          sprintf(paste0("Note: %s has %d lettered markers, more than %s, ",
+          sprintf(paste0("Note: %s has %s lettered markers, more than %s, ",
                          "so its codes were declared as a missing-value ",
                          "range."),
-                  banded_spss, length(spss_plan[[banded_spss]]), band_reason)
+                  banded_spss, .jst_fmt_n(length(spss_plan[[banded_spss]])), band_reason)
         } else {
           sprintf(paste0("Note: %s have more lettered markers than %s, so ",
                          "their codes were declared as missing-value ",

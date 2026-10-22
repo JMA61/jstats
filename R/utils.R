@@ -4318,7 +4318,7 @@ NULL
                               "first, then use that column in the formula")
 .jst_txt_new_column_it <- paste0("Create it as a new column first, then use ",
                                  "that column in the formula.")
-.jst_txt_first_arg_frame <- "The first argument must be a data frame."
+.jst_txt_first_arg_frame <- "The first input must be a data frame."
 .jst_txt_vars_quoted <- paste0("`vars` must be one or more variable names in ",
                                "quotes, for example:\n",
                                "  vars = c(\"Age\", \"Income\")")
@@ -4329,11 +4329,11 @@ NULL
                               "rules in the map string. Use semicolons ",
                               "instead:\n")
 .jst_txt_na_longhand <- paste0("The NA(a) longhand is not supported in the ",
-                               "map argument.")
+                               "map.")
 .jst_txt_na_one_rule <- paste0("NA appears as an old value in more than one ",
                                "map rule. Name NA (or System / SYSMIS) in at ",
                                "most one rule.")
-.jst_txt_map_empty <- paste0("The map argument is empty.\n",
+.jst_txt_map_empty <- paste0("The map is empty.\n",
                              "Provide at least one rule, for example:\n")
 .jst_txt_frame_each_var <- paste0("Name the data frame first, and each ",
                                   "variable on its own.")
@@ -4459,7 +4459,7 @@ NULL
 #' @return Character(1).
 #' @keywords internal
 .jst_map_no_eq_text <- function(rule, example) {
-  paste0("Invalid rule '", rule, "' in map argument: each rule must contain ",
+  paste0("Invalid rule '", rule, "' in the map: each rule must contain ",
          "'=', for example:\n",
          "  map = \"", example, "\"")
 }
@@ -4473,7 +4473,7 @@ NULL
 #' @return Character(1).
 #' @keywords internal
 .jst_blanked_phrase <- function(n) {
-  paste0(n, " ",
+  paste0(.jst_fmt_n(n), " ",
          .jst_plural(n, "cell holding a declared missing value was",
                      "cells holding declared missing values were"),
          " blanked (preserve.declarations = FALSE).")
@@ -4623,4 +4623,25 @@ NULL
 .jst_one_missing_line <- function(n, target) {
   paste0("To make them one missing value instead, map ",
          if (n == 2L) "both" else "them all", " to ", target, ".")
+}
+
+#' Internal: a name in numeric =, categorical = or count = that the call's
+#' variables do not include
+#'
+#' jdesc(), jcorr(), both forms of jplot(), and jlm() and jlogistic()
+#' (Session 392, the (S282) item: the word "argument" left runtime text by
+#' voice Rule B's S355 form, the input named with its "="). Each had said
+#' "numeric argument: 'x' not found among ...", the names joined by commas.
+#'
+#' @param arg Character(1). "numeric", "categorical" or "count".
+#' @param bad Character. The names not found.
+#' @param among Character(1). What they are not among: "the variables
+#'   given to jdesc()", "the independent variables in d".
+#' @return Character(1).
+#' @keywords internal
+.jst_not_among_text <- function(arg, bad, among) {
+  paste0(arg, " = names ", .jst_and_list(paste0("'", bad, "'")), ", ",
+         .jst_plural(length(bad), "which is", "which are"), " not among ",
+         among, ".\n",
+         "Check for typos.")
 }

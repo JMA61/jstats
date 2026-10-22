@@ -127,7 +127,7 @@
     if (is.logical(expr)) "is a single value"
     else paste0("is a single value (", as.character(mask), ")")
   } else if (length(mask) != n_rows) {
-    paste0("has ", length(mask), " values for ", n_rows,
+    paste0("has ", .jst_fmt_n(length(mask)), " values for ", .jst_fmt_n(n_rows),
            if (n_rows == 1L) " case" else " cases")
   } else {
     NULL
@@ -158,8 +158,8 @@
     obj_lead <- paste0(op, " is not in ", frame_ref,
                        "; it is a separate object in your workspace")
     if (origin %in% c("stored", "reactivate", "status")) {
-      reason <- paste0(obj_lead, ", with ", object$n, " values for ",
-                       n_rows, if (n_rows == 1L) " case" else " cases")
+      reason <- paste0(obj_lead, ", with ", .jst_fmt_n(object$n), " values for ",
+                       .jst_fmt_n(n_rows), if (n_rows == 1L) " case" else " cases")
       if (origin == "status") {
         .jst_filter_status_signal(paste0("It cannot be applied: ", reason,
                                          "."))
@@ -175,13 +175,13 @@
       paste0("In ", typed, ", ", obj_lead, ".")
     }
     where <- if (!is.null(n_frame) && n_frame != n_rows) {
-      paste0("the ", n_rows, if (n_rows == 1L) " case" else " cases",
+      paste0("the ", .jst_fmt_n(n_rows), if (n_rows == 1L) " case" else " cases",
              " left after filtering")
     } else {
-      paste0("the ", n_rows, if (n_rows == 1L) " case" else " cases",
+      paste0("the ", .jst_fmt_n(n_rows), if (n_rows == 1L) " case" else " cases",
              " in ", frame_ref)
     }
-    second <- paste0("It has ", object$n, " values for ", where,
+    second <- paste0("It has ", .jst_fmt_n(object$n), " values for ", where,
                      ", not one TRUE or FALSE for every case.")
     if (origin == "call") {
       .jst_stop(first, "\n", second, "\n",
@@ -607,19 +607,36 @@
   nms <- nms[!vapply(nms, exists, logical(1), envir = envir,
                      USE.NAMES = FALSE)]
   if (length(nms) == 0L) return(character(0))
-  mark   <- function(ch) nzchar(ch) && !grepl("[[:alnum:][:space:]._]", ch)
-  quoted <- function(nm) {
-    at <- gregexpr(nm, r_msg, fixed = TRUE)[[1L]]
-    if (at[1L] < 0L) return(FALSE)
-    any(vapply(at, function(p) {
-      mark(substr(r_msg, p - 1L, p - 1L)) &&
-        mark(substr(r_msg, p + nchar(nm), p + nchar(nm)))
-    }, logical(1)))
-  }
-  if (!any(vapply(nms, quoted, logical(1), USE.NAMES = FALSE))) {
+  if (!any(vapply(nms, .jst_quoted_in, logical(1), msg = r_msg,
+                  USE.NAMES = FALSE))) {
     return(character(0))
   }
   nms
+}
+
+#' Internal helper: does R's message name this name between marks?
+#'
+#' The test \code{.jst_filter_unbound()} has made since Session 330, given a
+#' home of its own at Session 392 so that the expression given as the data
+#' (\code{.jst_expr_data_stop()}) asks it the same way: the name appears in
+#' the message between two characters that are not spaces and could not be
+#' part of a name -- the quotation marks R puts around the first missing
+#' object in every language it is translated into. Requiring the marks keeps
+#' a one-letter name from matching a word of the message.
+#'
+#' @param nm Character(1). The name.
+#' @param msg Character(1). R's message.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.jst_quoted_in <- function(nm, msg) {
+  if (length(msg) != 1L || is.na(msg) || !nzchar(nm)) return(FALSE)
+  mark <- function(ch) nzchar(ch) && !grepl("[[:alnum:][:space:]._]", ch)
+  at <- gregexpr(nm, msg, fixed = TRUE)[[1L]]
+  if (at[1L] < 0L) return(FALSE)
+  any(vapply(at, function(p) {
+    mark(substr(msg, p - 1L, p - 1L)) &&
+      mark(substr(msg, p + nchar(nm), p + nchar(nm)))
+  }, logical(1)))
 }
 
 #' Internal helper: evaluate a filter and refuse one that cannot select rows
@@ -788,10 +805,10 @@
       op <- .jst_term_text(rec$operand)
       stored_stop(if (is.symbol(rec$operand) || .jst_is_fetch(rec$operand)) {
         paste0(op, " is not in the ", data_name, " data frame; it is a ",
-               "separate object in your workspace, with ", rec$n,
-               " values for ", n_rows, " cases")
+               "separate object in your workspace, with ", .jst_fmt_n(rec$n),
+               " values for ", .jst_fmt_n(n_rows), " cases")
       } else {
-        paste0(op, " has ", rec$n, " values for ", n_rows, " cases")
+        paste0(op, " has ", .jst_fmt_n(rec$n), " values for ", .jst_fmt_n(n_rows), " cases")
       })
     }
     .jst_recycled_stop(rec, typed, n_rows, data_name,
@@ -2832,7 +2849,7 @@
     }
   }
   if (nzchar(q)) {
-    stop(paste0("Unbalanced quotation mark in the labels argument. A ",
+    stop(paste0("Unbalanced quotation mark in the labels. A ",
                 "quoted label must open and close with the same mark, as ",
                 "in 9=\"Refused; not asked\"."), call. = FALSE)
   }

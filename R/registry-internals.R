@@ -1111,7 +1111,7 @@
     .jst_msg(fn_label, " cleared for ", dnames[1L], " (", payloads[1L], ").")
   } else {
     lines <- paste0("  - ", dnames, " (", payloads, ")")
-    .jst_msg(fn_label, " cleared (", n, " data frames):\n",
+    .jst_msg(fn_label, " cleared (", .jst_fmt_n(n), " data frames):\n",
              paste(lines, collapse = "\n"))
   }
   invisible(NULL)
@@ -1156,7 +1156,7 @@
     tags <- ifelse(unusable, paste0(tags, ", cannot be applied"), tags)
   }
   lines  <- paste0("  - ", dnames, ": ", payloads, "  [", tags, "]")
-  .jst_msg(fn_label, " settings (", length(dnames), " data frames):\n",
+  .jst_msg(fn_label, " settings (", .jst_fmt_n(length(dnames)), " data frames):\n",
            paste(lines, collapse = "\n"))
   invisible(NULL)
 }
@@ -1370,14 +1370,14 @@
                             "jdummy")
     if (via_dummy) {
       .jst_stop(
-        "'", var_name, "' has ", n_cats, " categories, the default limit is ",
+        "'", var_name, "' has ", .jst_fmt_n(n_cats), " categories, the default limit is ",
         max.categories, ".\n",
         "You can raise the limit with:\n",
         raise_line
       )
     } else {
       .jst_stop(
-        "'", var_name, "' has ", n_cats, " categories, more than the ",
+        "'", var_name, "' has ", .jst_fmt_n(n_cats), " categories, more than the ",
         max.categories, "-category limit for dummy coding.\n",
         "To dummy-code this many, register it with jdummy and raise the limit:\n",
         raise_line

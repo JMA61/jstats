@@ -205,8 +205,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     if (!is.null(.val)) {
       .bad <- setdiff(.val, variable_names)
       if (length(.bad) > 0) {
-        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the variables passed to jcorr(). Check for typos.")
+        .jst_stop(.jst_not_among_text(.arg, .bad,
+                                      "the variables given to jcorr()"))
       }
     }
   }
@@ -2524,7 +2524,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       .jst_msg(
         "Note: '", dv_in_cat, "' is the dependent variable and is always ",
         "treated as numeric.\n",
-        "The categorical argument is only needed for independent variables."
+        "categorical = is only needed for independent variables."
       )
       categorical <- setdiff(categorical, dv_name)
       if (length(categorical) == 0) categorical <- NULL
@@ -2550,12 +2550,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # expansion upstream under Option B and so remains an IV).
     bad <- setdiff(numeric, iv_names)
     if (length(bad) > 0) {
-      .jst_stop(
-        "numeric argument: ",
-        paste0("'", bad, "'", collapse = ", "),
-        " not found among independent variables in ", .jst_data_name,
-        ". Check for typos."
-      )
+      .jst_stop(.jst_not_among_text(
+        "numeric", bad, paste0("the independent variables in ", .jst_data_name)))
     }
     numeric <- intersect(numeric, iv_names)
   }
@@ -2574,12 +2570,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
         )
       }
       if (length(bad_unknown) > 0) {
-        .jst_stop(
-          "categorical argument: ",
-          paste0("'", bad_unknown, "'", collapse = ", "),
-          " not found among independent variables in ", .jst_data_name,
-          ". Check for typos."
-        )
+        .jst_stop(.jst_not_among_text(
+          "categorical", bad_unknown,
+          paste0("the independent variables in ", .jst_data_name)))
       }
       categorical <- intersect(categorical, iv_names)
     }
@@ -2592,12 +2585,8 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # expansion upstream under Option B and remains an IV).
     bad <- setdiff(count, iv_names)
     if (length(bad) > 0) {
-      .jst_stop(
-        "count argument: ",
-        paste0("'", bad, "'", collapse = ", "),
-        " not found among independent variables in ", .jst_data_name,
-        ". Check for typos."
-      )
+      .jst_stop(.jst_not_among_text(
+        "count", bad, paste0("the independent variables in ", .jst_data_name)))
     }
     count <- intersect(count, iv_names)
   }
@@ -2607,8 +2596,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     conflict <- intersect(numeric, categorical)
     if (length(conflict) > 0) {
       .jst_stop(
-        paste0("'", conflict, "'", collapse = ", "),
-        " listed in both numeric and categorical arguments."
+        .jst_and_list(paste0("'", conflict, "'")),
+        .jst_plural(length(conflict), " is", " are"),
+        " listed in both numeric = and categorical =."
       )
     }
   }
@@ -2620,8 +2610,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     conflict <- intersect(count, categorical)
     if (length(conflict) > 0) {
       .jst_stop(
-        paste0("'", conflict, "'", collapse = ", "),
-        " listed in both count and categorical arguments."
+        .jst_and_list(paste0("'", conflict, "'")),
+        .jst_plural(length(conflict), " is", " are"),
+        " listed in both count = and categorical =."
       )
     }
   }
@@ -5107,7 +5098,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
       all_show <- unique(.jst_label_blanks(nonmiss))
       n_show   <- all_show[seq_len(min(5L, length(all_show)))]
       .jst_stop(paste0(
-        "'", dv_name, "' has ", length(u_norm),
+        "'", dv_name, "' has ", .jst_fmt_n(length(u_norm)),
         if (length(u_norm) == 1L) " category" else " categories",
         " (", paste(n_show, collapse = ", "),
         if (length(all_show) > 5L) ", ..." else "", ").\n",

@@ -487,7 +487,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     !is.null(.jst_frame_column(substitute(x), parent.frame()))
   x_eval <- if (missing(x) || x_col) NULL else
     tryCatch(list(value = x, failed = FALSE),
-             error = function(e) list(value = NULL, failed = TRUE))
+             error = function(e) list(value = NULL, failed = TRUE, error = e))
   if (!is.null(x_eval) && !x_eval$failed && inherits(x_eval$value, "formula")) {
     by_sub <- substitute(by)
     # facet = is the variable-list form's (Capability Slate C3, Session
@@ -614,8 +614,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     if (!is.null(.val)) {
       .bad <- setdiff(.val, variable_names)
       if (length(.bad) > 0) {
-        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the variables passed to jplot(). Check for typos.")
+        .jst_stop(.jst_not_among_text(.arg, .bad,
+                                      "the variables given to jplot()"))
       }
     }
   }
@@ -887,6 +887,45 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 }
 
 
+#' Internal helper: the data frame jplot()'s formula form is given, read
+#'
+#' The five formula functions read their data at the front door
+#' (\code{.jst_check_formula_data()}); jplot()'s formula form reads it from
+#' its dots, and a name found nowhere -- \code{jplot(Score ~ Group, dd)} --
+#' or an expression that could not be evaluated gave R's own "object 'dd'
+#' not found". Read here, a name found nowhere gets ruling R36's stop
+#' (\code{.jst_formula_data_found()}) and an expression the expression stop
+#' (\code{.jst_expr_data_stop()}), or, where it gave no rows by reading a
+#' column its frame lacks, the not-found sentence
+#' (\code{.jst_expr_empty_stop()}), as in those functions (Session 392).
+#'
+#' @param q The quosure of the argument given as the data.
+#' @param formula The formula.
+#' @return The argument's value.
+#' @keywords internal
+.jst_jplot_data_value <- function(q, formula) {
+  e   <- rlang::quo_get_expr(q)
+  env <- rlang::quo_get_env(q)
+  if (!is.environment(env)) env <- parent.frame()
+  ucl <- tryCatch(.jst_caller_call(), error = function(err) NULL)
+  if (is.symbol(e) && nzchar(as.character(e)) &&
+      !exists(as.character(e), envir = env)) {
+    .jst_formula_data_found(e, formula, env, ucl, "jplot")
+  }
+  val <- .jst_read_held(function() rlang::eval_tidy(q))
+  if (isTRUE(val$failed)) {
+    if (is.call(e)) {
+      .jst_expr_data_stop(e, val$error, "jplot", env, ucl,
+                          vars = all.vars(formula), relay = "always")
+    }
+    stop(val$error)
+  }
+  .jst_expr_empty_stop(e, val$value, env)
+  .jst_release_warnings(val$warnings)
+  val$value
+}
+
+
 #' Internal helper: handle the formula-first form of jplot
 #'
 #' Called by \code{jplot.default} when the first argument is a formula.
@@ -932,10 +971,19 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   if (is.null(dot_names)) dot_names <- rep("", length(dots_q))
   .jst_check_args(dots_q[nzchar(dot_names) & dot_names != "data"],
                   aliases = character(0), fn_name = "jplot")
-  positional_dots <- lapply(dots_q[!nzchar(dot_names)], rlang::eval_tidy)
+  # The data frame is read through .jst_jplot_data_value() (Session 392): a
+  # name found nowhere, or an expression that cannot be evaluated, gave R's
+  # own "object 'dd' not found" here; ruling R36's stop and the expression
+  # stop are the five formula functions'.
+  pos_q <- dots_q[!nzchar(dot_names)]
+  positional_dots <- lapply(seq_along(pos_q), function(i) {
+    if (i == 1L) .jst_jplot_data_value(pos_q[[1L]], formula)
+    else rlang::eval_tidy(pos_q[[i]])
+  })
   has_data_named  <- "data" %in% dot_names
   dots <- if (has_data_named)
-    list(data = rlang::eval_tidy(dots_q[[match("data", dot_names)]])) else list()
+    list(data = .jst_jplot_data_value(dots_q[[match("data", dot_names)]],
+                                      formula)) else list()
 
   # The frame's expression as typed, recovered from the captured call, for
   # messages and for the registry lookups keyed on it (jsubset, jcomplete,
@@ -993,7 +1041,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
 
   if (!is.data.frame(data)) {
-    .jst_stop("the data argument after the formula must be a data frame.",
+    .jst_stop("the data after the formula must be a data frame.",
               fn = "jplot")
   }
 
@@ -1066,8 +1114,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     if (!is.null(.val)) {
       .bad <- setdiff(.val, .plot_vars)
       if (length(.bad) > 0) {
-        .jst_stop(.arg, " argument: ", paste0("'", .bad, "'", collapse = ", "),
-             " not found among the formula variables in jplot(). Check for typos.")
+        .jst_stop(.jst_not_among_text(.arg, .bad,
+                                      "the variables in the formula"))
       }
     }
   }
@@ -2714,7 +2762,7 @@ jplot.jst_lm <- function(x, which = "core", focal = NULL, at = "zero",
       ""
     }
     .jst_msg_out("(", .jst_plural(n_effects, "1 effect plot produced",
-                                  paste0(n_effects, " effect plots produced, ",
+                                  paste0(.jst_fmt_n(n_effects), " effect plots produced, ",
                                          "one per variable")), gone, ")")
     cat("\n")
   }
@@ -3188,7 +3236,7 @@ jplot.jst_logistic <- function(x, which = "core", focal = NULL, at = "zero",
   if (length(drawn) == 1L) {
     cat("(Diagnostic plot produced: ", drawn, ")\n", sep = "")
   } else {
-    .jst_msg_out(length(drawn), " plots produced\n",
+    .jst_msg_out(.jst_fmt_n(length(drawn)), " plots produced\n",
                  .jst_txt_plot_nav)
     for (i in seq_along(drawn)) cat("  ", i, ". ", drawn[i], "\n", sep = "")
   }
@@ -3602,8 +3650,9 @@ jplot.jst_freq <- function(x, which = "core", ...) {
 .jst_check_cat_clash <- function(categorical, numeric, count) {
   clash <- intersect(categorical, c(numeric, count))
   if (length(clash) > 0) {
-    .jst_stop(paste0("'", clash, "'", collapse = ", "),
-              " listed in both categorical and numeric/count arguments.")
+    .jst_stop(.jst_and_list(paste0("'", clash, "'")),
+              .jst_plural(length(clash), " is", " are"),
+              " listed in both categorical = and numeric = or count =.")
   }
   invisible(NULL)
 }

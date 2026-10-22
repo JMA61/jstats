@@ -278,12 +278,31 @@
 # "satisfied"), so a one-pole-only scale does not fire. English-centric by
 # design; a non-English scale is reached through the battery test or declared
 # with jlikert(). Deliberately small and easily extended. (Session 87)
+# Session 392 (the (Session 88) tuning item, Jeff's okay of the lean): eleven
+# pairs added after a measurement of 33 common single-question wordings, of
+# which the five families caught 7 -- a scale the anchors miss is not only
+# shown as categorical but draws jdesc()'s and jcorr()'s "seems categorical"
+# warning. Two give the frequency and quality families a second pair ("Never"
+# ... "Very often"; "Very poor" ... "Very good"). The "Not at all X" ...
+# "Extremely X" scales, whose poles are a modifier and a stem rather than two
+# words, are a separate decision and are not here.
 .jst_likert_anchor_families <- list(
-  agreement    = c("agree",     "disagree"),
-  satisfaction = c("satisfied", "dissatisfied"),
-  frequency    = c("never",     "always"),
-  likelihood   = c("likely",    "unlikely"),
-  quality      = c("poor",      "excellent")
+  agreement     = c("agree",       "disagree"),
+  satisfaction  = c("satisfied",   "dissatisfied"),
+  frequency     = c("never",       "always"),
+  frequency2    = c("never",       "often"),
+  likelihood    = c("likely",      "unlikely"),
+  quality       = c("poor",        "excellent"),
+  quality2      = c("poor",        "good"),
+  approval      = c("approve",     "disapprove"),
+  support       = c("support",     "oppose"),
+  safety        = c("safe",        "unsafe"),
+  truth         = c("true",        "false"),
+  goodness      = c("good",        "bad"),
+  change        = c("better",      "worse"),
+  ease          = c("easy",        "difficult"),
+  happiness     = c("happy",       "unhappy"),
+  comfort       = c("comfortable", "uncomfortable")
 )
 
 
@@ -1978,7 +1997,7 @@
   if (rec$n != n_frame) {
     return(list(lead = lead, lines = c(
       lines,
-      paste0("It has ", rec$n, " values, one for each case left after ",
+      paste0("It has ", .jst_fmt_n(rec$n), " values, one for each case left after ",
              "filtering; ", frame_ref, " has ", n_frame, "."),
       "Use a single value, or add the values to the data frame as a variable."
     )))
@@ -2147,7 +2166,7 @@
                                n_frame = NULL, tail = "") {
   if (is.null(n_frame)) n_frame <- n_rows
   op   <- .jst_term_text(rec$operand)
-  cases <- function(k) paste0(k, if (k == 1L) " case" else " cases")
+  cases <- function(k) paste0(.jst_fmt_n(k), if (k == 1L) " case" else " cases")
   frame_ref <- if (!is.null(data_name) && nzchar(data_name)) {
     paste0("the ", data_name, " data frame")
   } else {
@@ -2161,11 +2180,11 @@
   if (is.symbol(rec$operand) || .jst_is_fetch(rec$operand)) {
     .jst_stop("In ", typed, ", ", op, " is not in ", frame_ref,
               "; it is a separate object in your workspace.\n",
-              "It has ", rec$n, " values for ", where, ".\n",
+              "It has ", .jst_fmt_n(rec$n), " values for ", where, ".\n",
               "Use a single value, or add the values to the data frame as ",
               "a variable.", tail)
   }
-  .jst_stop("In ", typed, ", ", op, " has ", rec$n, " values for ", where,
+  .jst_stop("In ", typed, ", ", op, " has ", .jst_fmt_n(rec$n), " values for ", where,
             ".\n", "Use a single value, or one value for each case.", tail)
 }
 
@@ -2623,8 +2642,8 @@
                 .jst_txt_new_column, ".")
     }
     if (length(res) != nrow(data)) {
-      .jst_stop("The formula term ", term_txt, " produces ", length(res),
-                " values for ", nrow(data), " cases.\n",
+      .jst_stop("The formula term ", term_txt, " produces ", .jst_fmt_n(length(res)),
+                " values for ", .jst_fmt_n(nrow(data)), " cases.\n",
                 .jst_txt_new_column, ".")
     }
 
@@ -2648,7 +2667,7 @@
     if (n_nf > 0L) {
       res[non_finite] <- NA
       introduced_na[[term_txt]] <- n_nf
-      .jst_msg("Note: ", term_txt, ": ", n_nf,
+      .jst_msg("Note: ", term_txt, ": ", .jst_fmt_n(n_nf),
                if (n_nf == 1L) " value became infinite or undefined and was"
                else            " values became infinite or undefined and were",
                " set to missing.")
@@ -3092,7 +3111,7 @@
   if (identical(kind, "dummy")) {
     n_cat <- length(unique(present))
     if (n_cat > 11L)
-      return(paste0("declared as a dummy, but it has ", n_cat, " categories"))
+      return(paste0("declared as a dummy, but it has ", .jst_fmt_n(n_cat), " categories"))
     return("")
   }
 
@@ -3475,14 +3494,14 @@
     result$else_explicit <- TRUE
   } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
     stop(paste0(
-      "Invalid else action '", rhs, "' in map argument. ",
+      "Invalid else action '", rhs, "' in the map. ",
       ms$rule, " ", .jst_txt_na_longhand
     ), call. = FALSE)
   } else {
     # S355: "(Stata convention only)" since S240 meant Stata or SAS;
     # under SPSS convention a marker in a map is refused.
     stop(paste0(
-      "Invalid else action '", rhs, "' in map argument. Use ",
+      "Invalid else action '", rhs, "' in the map. Use ",
       "'else=NA', 'else=copy', or ", ms$eg,
       " (Stata or SAS convention only)."
     ), call. = FALSE)
@@ -3695,7 +3714,7 @@
   }
 
   if (length(result$mappings) == 0 && is.null(result$na_rule)) {
-    stop("The map argument contains no valid recode rules (only an else clause was found).", call. = FALSE)
+    stop("The map contains no valid recode rules (only an else clause was found).", call. = FALSE)
   }
 
   return(invisible(result))
@@ -3819,7 +3838,7 @@
   rules <- .jst_split_label_rules(labels_str)
 
   if (length(rules) == 0) {
-    stop("The labels argument is empty.\nProvide at least one label, for example:\n",
+    stop("The labels are empty.\nProvide at least one label, for example:\n",
          "  labels = \"1=Male; 0=Female\"", call. = FALSE)
   }
 
@@ -3874,7 +3893,7 @@
       stop(paste0(
         "Invalid value '", val_str, "' in label rule '", rule, "'. ",
         ms$rule, " The NA(a) ",
-        "longhand is not supported in the labels argument."
+        "longhand is not supported in the labels."
       ), call. = FALSE)
     } else {
       val <- suppressWarnings(as.numeric(val_str))
@@ -4223,7 +4242,7 @@
   rules <- .jst_split_unquoted(map_str, ";")
   if (isTRUE(attr(rules, "unbalanced"))) {
     stop(paste0(
-      "Unbalanced quotation mark in the map argument. A quoted word must ",
+      "Unbalanced quotation mark in the map. A quoted word must ",
       "open and close with the same mark, as in \"Not stated\"=9."
     ), call. = FALSE)
   }
@@ -4337,7 +4356,7 @@
   # mixed in, offered by jencode()'s mixed-column error.
   if (length(result$mappings) == 0 && is.null(result$na_rule) &&
       !isTRUE(result$else_explicit)) {
-    stop("The map argument contains no valid rules.", call. = FALSE)
+    stop("The map contains no valid rules.", call. = FALSE)
   }
 
   return(invisible(result))

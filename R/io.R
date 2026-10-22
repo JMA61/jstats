@@ -991,7 +991,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
           if (is.character(sheet)) {
             paste0(shown, " has no sheet named \"", sheet, "\".\n")
           } else {
-            paste0(shown, " has ", n_sh, " ", .jst_plural(n_sh, "sheet", "sheets"),
+            paste0(shown, " has ", .jst_fmt_n(n_sh), " ", .jst_plural(n_sh, "sheet", "sheets"),
                    ", so there is no sheet ", paste(deparse(sheet), collapse = ""),
                    ".\n")
           },
@@ -1044,7 +1044,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # (Rule E; Fix Slate 13).
   if (is.null(sheet) && length(all_sheets) > 1L) {
     .jst_msg(
-      "This file has ", length(all_sheets), " sheets: ",
+      "This file has ", .jst_fmt_n(length(all_sheets)), " sheets: ",
       paste(all_sheets, collapse = ", "), "\n",
       "Reading the first sheet (\"", all_sheets[1], "\").\n",
       "To read a different sheet, use:\n",
@@ -1336,9 +1336,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     say(
       "Loaded ", obj_name,
       " (", .jst_format_label(ext), "; ",
-      format(nrow(df), big.mark = ","),
+      .jst_fmt_n(nrow(df)),
       if (nrow(df) == 1L) " case, " else " cases, ",
-      ncol(df),
+      .jst_fmt_n(ncol(df)),
       if (ncol(df) == 1L) " variable)" else " variables)"
     )
   }
@@ -1369,11 +1369,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     k_cols <- ncol(df)
     above  <- title_rows$names - 1L
     emit_note("Note: row ", title_rows$title, " of ", shown, " has a name in ",
-              "only ", title_named, " of its ", k_cols, " ",
+              "only ", .jst_fmt_n(title_named), " of its ", .jst_fmt_n(k_cols), " ",
               .jst_plural(k_cols, "column", "columns"), ", so it may be a ",
               "title rather than the variable names.\n",
               "The names seem to be in row ", title_rows$names, ".\n",
-              "To read from there, skip the ", above, " ",
+              "To read from there, skip the ", .jst_fmt_n(above), " ",
               .jst_plural(above, "row", "rows"), " above them:\n",
               line_for(skip = above, loaded = TRUE))
   }
@@ -1922,7 +1922,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 .jst_import_names_note <- function(old, new, had) {
   n <- length(old)
   lab <- .jst_rename_label_line(had)
-  paste0("Note: ", n, " variable ", .jst_plural(n, "name was", "names were"),
+  paste0("Note: ", .jst_fmt_n(n), " variable ", .jst_plural(n, "name was", "names were"),
          " changed to ", .jst_plural(n, "a valid R name", "valid R names"), ":\n",
          paste(.jst_rename_lines(old, new), collapse = "\n"),
          if (nzchar(lab)) paste0("\n", lab))
@@ -2042,9 +2042,9 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   n <- nrow(probs)
   lines <- .jst_rename_lines(probs$old, probs$new, probs$why)
   if (length(lines) > 10L) {
-    lines <- c(lines[1:10], paste0("  ...and ", length(lines) - 10L, " more"))
+    lines <- c(lines[1:10], paste0("  ...and ", .jst_fmt_n(length(lines) - 10L), " more"))
   }
-  paste0(n, " variable ", .jst_plural(n, "name", "names"), " in the ",
+  paste0(.jst_fmt_n(n), " variable ", .jst_plural(n, "name", "names"), " in the ",
          data_name, " data frame cannot be used in ", fmt, ":\n",
          paste(lines, collapse = "\n"), "\n",
          if (is.null(line)) {
@@ -2067,7 +2067,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 xpt = "SAS interchange format (.xpt)")
   n <- length(old)
   lab <- .jst_rename_label_line(had, " in the file")
-  paste0("Note: ", n, " variable ", .jst_plural(n, "name was", "names were"),
+  paste0("Note: ", .jst_fmt_n(n), " variable ", .jst_plural(n, "name was", "names were"),
          " changed in the file to ", .jst_plural(n, "a name", "names"), " ",
          fmt, " takes; the ", data_name, " data frame keeps its own:\n",
          paste(.jst_rename_lines(old, new), collapse = "\n"),
@@ -2286,17 +2286,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     if (!is.na(cand)) {
       at <- line_no(cand)
-      .jst_stop("the first line of ", shown, " holds ", hdr, " ",
+      .jst_stop("the first line of ", shown, " holds ", .jst_fmt_n(hdr), " ",
                 .jst_plural(hdr, "value", "values"), ", but most lines below ",
-                "it hold ", modal, ".\n",
+                "it hold ", .jst_fmt_n(modal), ".\n",
                 "The variable names seem to be on line ", at, ".\n",
-                "To read from there, skip the ", at - 1L, " ",
+                "To read from there, skip the ", .jst_fmt_n(at - 1L), " ",
                 .jst_plural(at - 1L, "line", "lines"), " above them:\n",
                 line_for(skip = at - 1L))
     }
-    .jst_stop("the first line of ", shown, " has ", hdr, " ",
+    .jst_stop("the first line of ", shown, " has ", .jst_fmt_n(hdr), " ",
               .jst_plural(hdr, "name", "names"), ", but most lines below it ",
-              "hold ", modal, " values.\n",
+              "hold ", .jst_fmt_n(modal), " values.\n",
               "Add the missing ", .jst_plural(modal - hdr, "name", "names"),
               " to the first line of the file, then run jload() again.")
   }
@@ -2304,16 +2304,16 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   at   <- line_no(long)
   n    <- length(at)
   shown_at <- if (n > 5L) {
-    paste0(paste(at[1:5], collapse = ", "), " and ", n - 5L, " more")
+    paste0(paste(at[1:5], collapse = ", "), " and ", .jst_fmt_n(n - 5L), " more")
   } else .jst_and_list(as.character(at))
   if (n == 1L) {
-    .jst_stop("line ", at, " of ", shown, " holds ", body[long], " values, but ",
-              "the first line has ", hdr, " ", .jst_plural(hdr, "name", "names"),
+    .jst_stop("line ", at, " of ", shown, " holds ", .jst_fmt_n(body[long]), " values, but ",
+              "the first line has ", .jst_fmt_n(hdr), " ", .jst_plural(hdr, "name", "names"),
               ", so R would split it into two cases.\n",
               "Correct that line of the file, then run jload() again.")
   }
   .jst_stop("lines ", shown_at, " of ", shown, " hold more values than the ",
-            "first line has names (", hdr, "), so R would split each into ",
+            "first line has names (", .jst_fmt_n(hdr), "), so R would split each into ",
             "two cases.\n",
             "Correct those lines of the file, then run jload() again.")
 }
@@ -2515,7 +2515,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   k   <- length(nm)
   shw <- ifelse(nzchar(nm), nm, "\"\"")
   shw <- if (k <= 6L) paste(shw, collapse = ", ") else {
-    paste0(paste(shw[1:6], collapse = ", "), " and ", k - 6L, " more")
+    paste0(paste(shw[1:6], collapse = ", "), " and ", .jst_fmt_n(k - 6L), " more")
   }
   v   <- paste0("V", seq_len(k))
   unit <- if (sheet_file) "row" else "line"
@@ -3292,7 +3292,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   why  <- vapply(kept, function(k) k$why, character(1))
   if (is.null(labels)) labels <- rep(NA_character_, length(kept))
   fact <- function(k, own) {
-    n <- format(k$n, big.mark = ",")
+    n <- .jst_fmt_n(k$n)
     one <- k$n == 1L
     if (k$why == "zero") {
       paste0(n, if (own) " of its values" else if (one) " value" else " values",
@@ -3323,7 +3323,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   rows <- vapply(seq_along(kept), function(i) {
     paste0("  ", formatC(nm[i], width = -w), "  ", fact(kept[[i]], FALSE))
   }, character(1))
-  out <- paste0("Note: ", length(kept), " variables were kept as text, since ",
+  out <- paste0("Note: ", .jst_fmt_n(length(kept)), " variables were kept as text, since ",
                 "numbers would change their values:\n",
                 paste(rows, collapse = "\n"))
   if (length(zero) > 0L) {
@@ -3368,7 +3368,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (is.null(labels)) labels <- rep(NA_character_, length(marks))
   cells <- function(m) {
     paste(paste0("\"", .jst_dq_escape(m$values), "\" (",
-                 format(m$counts, big.mark = ",", trim = TRUE), ")"),
+                 .jst_fmt_n(m$counts), ")"),
           collapse = ", ")
   }
   conv <- function(i, values) {
@@ -3379,7 +3379,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     k  <- sum(marks[[1L]]$counts)
     one <- k == 1L
     head <- paste0(
-      "Note: ", nm, " is numbers except for ", format(k, big.mark = ","),
+      "Note: ", nm, " is numbers except for ", .jst_fmt_n(k),
       if (one) " cell: " else " cells: ", cells(marks[[1L]]), ".\n")
     to <- paste0("To read ", if (one) "that cell" else "those cells",
                  " as missing and ", nm, " as numbers:\n")
@@ -3395,7 +3395,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   rows <- vapply(seq_along(marks), function(i) {
     paste0("  ", formatC(nm[i], width = -w), "  ", cells(marks[[i]]))
   }, character(1))
-  out <- paste0("Note: ", length(marks), " variables are numbers except for a ",
+  out <- paste0("Note: ", .jst_fmt_n(length(marks)), " variables are numbers except for a ",
                 "few cells, so they were read as text:\n",
                 paste(rows, collapse = "\n"), "\n")
   to <- "To read those cells as missing and the variables as numbers:\n"
@@ -4290,7 +4290,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   list_lines <- paste0("  ", var_strings)
   if (n_vars > max_show) {
-    list_lines <- c(list_lines, paste0("  ...and ", n_vars - max_show, " more"))
+    list_lines <- c(list_lines, paste0("  ...and ", .jst_fmt_n(n_vars - max_show), " more"))
   }
   list_str <- paste(list_lines, collapse = "\n")
 
@@ -4300,7 +4300,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   verb_have <- if (n_vars == 1) "has" else "have"
   verb_noun <- if (n_vars == 1) "variable" else "variables"
   count_parens <- paste(vapply(present, function(g)
-    sprintf("%d %s", grp_counts[[g]], disp_label(g)), character(1)),
+    sprintf("%s %s", .jst_fmt_n(grp_counts[[g]]), disp_label(g)), character(1)),
     collapse = ", ")
 
   # --- preserve.declarations = FALSE: conversion report, never compacted ----
@@ -4322,11 +4322,11 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- preserve.declarations = TRUE ------------------------------------------
   head_str <- if (uniform) {
-    sprintf("%d %s %s %s missing values:",
-            n_vars, verb_noun, verb_have, disp_label(present))
+    sprintf("%s %s %s %s missing values:",
+            .jst_fmt_n(n_vars), verb_noun, verb_have, disp_label(present))
   } else {
-    sprintf("%d %s %s missing values (%s):",
-            n_vars, verb_noun, verb_have, count_parens)
+    sprintf("%s %s %s missing values (%s):",
+            .jst_fmt_n(n_vars), verb_noun, verb_have, count_parens)
   }
 
   tail_lines <- character(0)  # Case 1 guidance; dropped in compact form
@@ -4426,7 +4426,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                 if (length(vars_g) <= 3L) {
                   .jst_format_var_list(vars_g, and = TRUE)
                 } else {
-                  paste(length(vars_g), "variables")
+                  paste(.jst_fmt_n(length(vars_g)), "variables")
                 },
                 if (length(vars_g) == 1L) "is" else "are",
                 disp_label(g))
@@ -4520,7 +4520,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   shown  <- vars[seq_len(show_n)]
   if (n > show_n) {
     return(paste0(paste(shown, collapse = ", "),
-                  ", ... and ", n - show_n, " more"))
+                  ", ... and ", .jst_fmt_n(n - show_n), " more"))
   }
   if (!isTRUE(and) || show_n == 1L) return(paste(shown, collapse = ", "))
   if (show_n == 2L) return(paste(shown, collapse = " and "))
@@ -4541,7 +4541,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   n <- length(var_lines)
   if (n <= max_show) return(var_lines)
   c(var_lines[seq_len(max_show)],
-    paste0("    ...and ", n - max_show, " more"))
+    paste0("    ...and ", .jst_fmt_n(n - max_show), " more"))
 }
 
 #' Internal: detect tagged-NA-bearing columns in a data frame
@@ -5046,21 +5046,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       mixed <- (hidden_label_only > 0) + (hidden_conv > 0) +
         (hidden_heur > 0) > 1
       if (mixed) {
-        cat(sprintf("  ... and %d more:\n", n_groups - max_report))
+        cat(sprintf("  ... and %s more:\n", .jst_fmt_n(n_groups - max_report)))
         if (hidden_label_only > 0) {
-          cat(sprintf("    %d with [%s]\n", hidden_label_only,
+          cat(sprintf("    %s with [%s]\n", .jst_fmt_n(hidden_label_only),
                       src_display[["label_only"]]))
         }
         if (hidden_conv > 0) {
-          cat(sprintf("    %d with [%s]\n", hidden_conv,
+          cat(sprintf("    %s with [%s]\n", .jst_fmt_n(hidden_conv),
                       src_display[["convention_matched"]]))
         }
         if (hidden_heur > 0) {
-          cat(sprintf("    %d with [%s]\n", hidden_heur,
+          cat(sprintf("    %s with [%s]\n", .jst_fmt_n(hidden_heur),
                       src_display[["suspected"]]))
         }
       } else {
-        cat(sprintf("  ... and %d more.\n", n_groups - max_report))
+        cat(sprintf("  ... and %s more.\n", .jst_fmt_n(n_groups - max_report)))
       }
     }
 
@@ -5274,7 +5274,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         if (ex_has && ex_room <= 0L) {
           .jst_msg_out("\n", ex_var, " already declares ",
                        if (!is.null(ex_rng)) "a missing-value range and 1 code"
-                       else paste0(length(ex_decl), " missing values"),
+                       else paste0(.jst_fmt_n(length(ex_decl)), " missing values"),
                        ", the most SPSS-style missing values allow.\n",
                        if (!is.null(ex_rng)) "To declare more, widen the range "
                        else "To declare more, use a range ",
@@ -5794,7 +5794,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Minimal tier -------------------------------------------------------
   if (identical(output_level, "minimal")) {
     return(paste0(
-      n, " ", noun, " ", verb, " more declared missing values than SPSS format (.sav) ",
+      .jst_fmt_n(n), " ", noun, " ", verb, " more declared missing values than SPSS format (.sav) ",
       "allows (at most 3, or a range plus one).\n",
       if (stata_route) {
         paste0("Save as R format (.rds) or ",
@@ -5809,8 +5809,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 
   # --- Standard / full tier ----------------------------------------------
   var_lines <- .jst_cap_var_lines(vapply(overcap_info, function(e) {
-    if (isTRUE(e$range)) sprintf("  %s: range + %d codes", e$var, e$n)
-    else                 sprintf("  %s: %d codes", e$var, e$n)
+    if (isTRUE(e$range)) sprintf("  %s: range + %s codes", e$var, .jst_fmt_n(e$n))
+    else                 sprintf("  %s: %s codes", e$var, .jst_fmt_n(e$n))
   }, character(1)))
 
   lead <- sprintf("%s %s in %s %s more:",
@@ -6138,7 +6138,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                      character(1))
   paste0(
     data_name, " cannot be saved to ", fmt, " yet -- ",
-    length(sections), " things to fix",
+    .jst_fmt_n(length(sections)), " things to fix",
     if (is.null(assign_line)) ":\n\n"
     else paste0(".\nThe fixes shown below work on a copy of ", copy_of, ".\n",
                 "Make the copy first:\n", assign_line, "\n\n"),
@@ -6568,7 +6568,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       code_list <- function(cs) {
         sh <- vapply(cs, show_code, character(1))
         if (length(sh) > 4L) {
-          sh <- c(sh[1:3], paste0(length(sh) - 3L, " more"))
+          sh <- c(sh[1:3], paste0(.jst_fmt_n(length(sh) - 3L), " more"))
         }
         .jst_and_list(sh)
       }
@@ -6670,12 +6670,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   where <- if (length(vars) == 1L) {
     vars
   } else {
-    .jst_format_var_list(paste0(vars, " (", n, ")"), and = TRUE)
+    .jst_format_var_list(paste0(vars, " (", .jst_fmt_n(n), ")"), and = TRUE)
   }
   paste0(
     "Note: ", .jst_format_label(ext), " (.", ext, ") cannot store a missing ",
     "value in ", kind, ".\n",
-    total, " missing ", .jst_plural(total, "cell", "cells"), " in ", where,
+    .jst_fmt_n(total), " missing ", .jst_plural(total, "cell", "cells"), " in ", where,
     " ", .jst_plural(total, "was", "were"), " saved as blank text.\n",
     "R format (.rds) keeps ", .jst_plural(total, "it", "them"), " missing.")
 }
@@ -7047,17 +7047,33 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
                                          keep_file = TRUE))
     }
 
-    # Cases 2-4: evaluate the first argument and inspect the value
-    eval_result <- tryCatch(
-      list(value = eval(data_sub, envir = parent.frame()), failed = FALSE),
-      error = function(e) list(value = NULL, failed = TRUE)
-    )
+    # Cases 2-4: evaluate the first argument and inspect the value. R's
+    # warnings on the way are held, and given back once the value is read
+    # (Session 392). The caller's frame is taken here: parent.frame()
+    # inside the reading function would be the reader's.
+    caller_env  <- parent.frame()
+    eval_result <- .jst_read_held(function() eval(data_sub, envir = caller_env))
 
     if (eval_result$failed) {
+      # A name found nowhere in an expression, or a column its frame lacks
+      # (Session 392, the (S391) expression-typo item): "'dd' not found."
+      # with ruling R36's line where it holds, else this stop's example.
+      # vars: jsave() names no variable; a file given as a name (f) is not
+      # one to match.
+      .jst_expr_data_stop(
+        data_sub, eval_result$error, "jsave", parent.frame(),
+        cl = sys.call(), vars = character(0), relay = "never",
+        tail = .jst_jsave_example_lines(match.call(), parent.frame(),
+                                        keep_file = TRUE))
       data_str <- paste(deparse(data_sub), collapse = "")
       .jst_stop("'", data_str, "' could not be evaluated.\n",
                 .jst_jsave_example_lines(match.call(), parent.frame()))
     }
+
+    # An expression that gave no rows by reading a column its frame lacks
+    # (Session 392): the not-found sentence, where an empty file was saved.
+    .jst_expr_empty_stop(data_sub, eval_result$value, parent.frame())
+    .jst_release_warnings(eval_result$warnings)
 
     # Handed to the resolver below so the expression is not evaluated a
     # second time (AUDIT-052): an argument that prints a message, such as
@@ -7185,7 +7201,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # argument into the file slot.
   if (arg1$mode == "symbol_with_default") {
     if (!missing(file)) {
-      .jst_stop("when the data argument is omitted, all subsequent arguments must be named.\n",
+      .jst_stop("when the data frame is omitted, every input must be named.\n",
                 "Name them, for example:\n",
                 "  jsave(file = \"mydata.sav\", overwrite = TRUE)",
                 fn = "jsave")
@@ -7590,11 +7606,11 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
                       ignore.case = TRUE)
     over <- c(
       if (nrow(data) > 1048575L) paste0(
-        format(nrow(data), big.mark = ","), " cases, and Excel format ",
+        .jst_fmt_n(nrow(data)), " cases, and Excel format ",
         "(.xlsx) holds at most 1,048,575.\n",
         "A sheet has 1,048,576 rows, one of them for the variable names."),
       if (ncol(data) > 16384L) paste0(
-        format(ncol(data), big.mark = ","), " variables, and Excel format ",
+        .jst_fmt_n(ncol(data)), " variables, and Excel format ",
         "(.xlsx) holds at most 16,384."))
     .jst_stop(expr_lines(paste0(
       "the ", data_name, " data frame has ", paste(over, collapse = "\nIt has "),
@@ -7875,9 +7891,9 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   .jst_msg(
     "Saved ", saved_what, " to ", .jst_norm_path(out_path),
     "\n(", .jst_format_label(ext), "; ",
-    format(nrow(data), big.mark = ","),
+    .jst_fmt_n(nrow(data)),
     if (nrow(data) == 1L) " case, " else " cases, ",
-    ncol(data),
+    .jst_fmt_n(ncol(data)),
     if (ncol(data) == 1L) " variable)" else " variables)"
   )
 
@@ -8001,6 +8017,26 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
                   "  jcopy(", if (is.null(fr0)) "MyData" else fr0, ", ",
                   paste(deparse(substitute(name)), collapse = ""), ")")
       }
+      # An expression that cannot be evaluated (Session 392, the (S391)
+      # expression-typo item): it gave R's own "object 'dd' not found". One
+      # that gives no rows by reading a column its frame lacks is said the
+      # same way, where an empty copy was made.
+      if (is.call(src_sub)) {
+        ev <- .jst_read_held(function() data)
+        if (isTRUE(ev$failed)) {
+          fr0 <- .jst_frame_holding(character(0), parent.frame())
+          .jst_expr_data_stop(
+            src_sub, ev$error, "jcopy", parent.frame(), cl = sys.call(),
+            vars = character(0), relay = "always",
+            tail = c("Name a data frame to copy, for example:",
+                     paste0("  jcopy(", if (is.null(fr0)) "MyData" else fr0,
+                            ", ", paste(deparse(substitute(name)),
+                                        collapse = ""), ")")))
+        } else {
+          .jst_expr_empty_stop(src_sub, ev$value, parent.frame())
+        }
+        .jst_release_warnings(ev$warnings)
+      }
       src_data <- data
       if (!is.data.frame(src_data)) {
         # What was typed is the subject (Rule AD); the call on a line of
@@ -8058,9 +8094,9 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
 
   # Confirmation.
   say("Copied ", src_name, " to ", dest_name, " (",
-      format(nrow(src_data), big.mark = ","),
+      .jst_fmt_n(nrow(src_data)),
       if (nrow(src_data) == 1L) " case, " else " cases, ",
-      ncol(src_data),
+      .jst_fmt_n(ncol(src_data)),
       if (ncol(src_data) == 1L) " variable)" else " variables)")
   if (carried) {
     say("Carried over the classification registrations from ", src_name, ".")
