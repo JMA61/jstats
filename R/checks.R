@@ -1579,6 +1579,98 @@
   invisible(NULL)
 }
 
+#' Internal helper: full-width punctuation in a map or labels string
+#'
+#' Session 390 (the non-English probe; lean L2): a Chinese, Japanese or
+#' Korean input method types the full-width semicolon, equals sign and
+#' comma, which look like the plain ones and are other characters. jstats
+#' separates rules with the plain ones only, so
+#' \code{jrelabel(d, Sex, labels = "1=M<fw;>2=F")} made ONE label reading
+#' "M<fw;>2=F" for code 1, jdeclare_missing() kept the first code of two
+#' and gave it the rest as its label, and jrecode() and jencode() stopped
+#' in words that never named the character. This check runs at the front
+#' door of jrecode(), jencode(), jrelabel() and jdeclare_missing(): a
+#' string given to one of \code{args} (as typed, or held by a name) that
+#' holds one of the three outside a quoted label stops, naming what it
+#' found, with the call retyped with the plain characters -- an ideographic
+#' space beside a replaced semicolon made a plain space too, since the
+#' parser's trim does not remove it. A label in quotes (ruling R17: the
+#' mark right after its =) is the user's text and is left alone, so a label
+#' that holds a full-width semicolon is still possible.
+#'
+#' @param cl The call as typed (\code{sys.call()}).
+#' @param mc The matched call (\code{match.call(expand.dots = TRUE)}).
+#' @param env The caller's environment, where a name is looked up.
+#' @param args The arguments to read, e.g. \code{c("map", "labels")}.
+#' @param fn Character(1); the user-facing function's name.
+#' @return Invisible NULL; stops when full-width punctuation is found.
+#' @keywords internal
+.jst_fullwidth_args <- function(cl, mc, env, args, fn) {
+  # The names are set with names<- rather than written in the call
+  # (c("\uff1b" = ";")): a name written in a call is a symbol, which the
+  # parser makes in the session's own encoding, so in a session that is not
+  # UTF-8 the package's install warned and the name became "<U+FF1B>".
+  plain <- c(";", "=", ",")
+  noun  <- c("semicolon", "equals sign", "comma")
+  names(plain) <- names(noun) <- c("\uff1b", "\uff1d", "\uff0c")
+  mnames <- names(mc)
+  for (arg in args) {
+    if (is.null(mnames) || !arg %in% mnames) next
+    expr <- mc[[arg]]
+    val  <- if (is.character(expr)) expr else
+      tryCatch(eval(expr, envir = env), error = function(e) NULL)
+    if (!is.character(val) || length(val) != 1L || is.na(val)) next
+    ch    <- strsplit(val, "", fixed = TRUE)[[1L]]
+    out   <- ch
+    found <- character(0)
+    quote <- ""
+    prev  <- ""                      # the last character that is not a space
+    for (i in seq_along(ch)) {
+      c1 <- ch[i]
+      if (nzchar(quote)) {
+        if (identical(c1, quote)) quote <- ""
+        next
+      }
+      if (c1 %in% c("\"", "'") && prev %in% c("=", "\uff1d")) {
+        quote <- c1
+        next
+      }
+      if (c1 %in% names(plain)) {
+        out[i] <- plain[[c1]]
+        found  <- c(found, c1)
+      }
+      if (!c1 %in% c(" ", "\u3000")) prev <- c1
+    }
+    if (length(found) == 0L) next
+    # An ideographic space beside a semicolon that was full-width is made a
+    # plain space; a semicolon with no space after it gets one, as every
+    # map and labels string the package prints has ("1=Male; 2=Female").
+    semi <- which(ch == "\uff1b" & out == ";")
+    near <- unique(c(semi - 1L, semi + 1L))
+    near <- near[near >= 1L & near <= length(ch)]
+    out[near[ch[near] == "\u3000"]] <- " "
+    bare <- semi[semi == length(ch) |
+                   !(c(ch, "")[semi + 1L] %in% c(" ", "\u3000"))]
+    out[bare] <- "; "
+    kinds <- unique(found)
+    line  <- .jst_call_with(cl, mc, arg, paste(out, collapse = ""))
+    if (length(kinds) == 1L) {
+      first  <- paste0(arg, " holds a full-width ", noun[[kinds]], " (",
+                       kinds, ").")
+      second <- paste0("Type the plain ", noun[[kinds]], " (",
+                       plain[[kinds]], ") instead:")
+    } else {
+      first  <- paste0(arg, " holds full-width punctuation (",
+                       paste(kinds, collapse = " "), ").")
+      second <- paste0("Type the plain characters (",
+                       paste(unname(plain[kinds]), collapse = " "),
+                       ") instead:")
+    }
+    .jst_stop(first, "\n", second, "\n", "  ", line, fn = fn)
+  }
+  invisible(NULL)
+}
+
 #' Internal helper: the words of an argument typed without quotes
 #'
 #' A bare symbol, or a \code{c()} of symbols and strings with at least one

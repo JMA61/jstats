@@ -279,7 +279,12 @@
 #' ellipsis U+2026 from Session 57), matching the ASCII closing rule adopted
 #' for the CPS block at Session 267. Display width is measured with
 #' \code{nchar(type = "width")} so double-width characters are counted
-#' correctly. The default 40-column cap is shared across every in-table label
+#' correctly, and since Session 390 the cut is made by display width too
+#' (\code{.jst_cut_width()}): it was made by characters, so a Chinese label
+#' of 30 characters (60 columns) was not cut at all and one of 50 was cut
+#' to 74 columns. A two-column character that would straddle the cut is
+#' left out, and the result is then one column narrower than the cap.
+#' The default 40-column cap is shared across every in-table label
 #' surface -- CPS pipeline detail (via \code{.jst_cps_cap_label}), jfreq value
 #' labels and grouped headers, jdesc/jcorr variable-identifier columns -- so a
 #' future change to the cap is made in this one place. Title and heading lines
@@ -295,8 +300,8 @@
 .jst_truncate_ellipsis <- function(content, max_width = 40L) {
   content <- as.character(content)[1L]
   if (is.na(content)) return(content)
-  if (nchar(content, type = "width") <= max_width) return(content)
-  paste0(substr(content, 1L, max_width - 3L), "...")
+  if (.jst_dw(content) <= max_width) return(content)
+  paste0(.jst_cut_width(content, max_width - 3L), "...")
 }
 
 #' Internal helper: cap a pipeline-row label's parenthetical content for CPS

@@ -193,6 +193,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                   fn_name = "jrelabel", positional = "refuse")
   .fn <- "jrelabel"
   cl  <- sys.call()
+  # Full-width punctuation in the labels (Session 390); var.label is free
+  # text and is not read.
+  .jst_fullwidth_args(cl, match.call(expand.dots = TRUE), parent.frame(),
+                      "labels", .fn)
 
   # Captured before `data` is reassigned below: substitute() on the
   # rebound variable would return the value, not the caller's expression.
@@ -2171,6 +2175,9 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
                  .jst_word_specs("convention"),
                  "jrecode")
+  # Full-width punctuation in the map or the labels (Session 390).
+  .jst_fullwidth_args(sys.call(), match.call(expand.dots = TRUE),
+                      parent.frame(), c("map", "labels"), "jrecode")
 
   # --- Resolve first argument and the variable --------------------------------
   # One front for jrecode() and jencode() (.jst_recode_front(); Session 386):
@@ -4493,8 +4500,8 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
 #'
 #' @keywords internal
 .jst_pad_right <- function(x) {
-  width <- max(nchar(x))
-  paste0(x, strrep(" ", width - nchar(x)))
+  width <- max(.jst_dw(x))
+  paste0(x, strrep(" ", width - .jst_dw(x)))
 }
 
 
@@ -4772,6 +4779,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
                  .jst_word_specs("convention"),
                  "jencode")
+  # Full-width punctuation in the map or the labels (Session 390).
+  .jst_fullwidth_args(sys.call(), match.call(expand.dots = TRUE),
+                      parent.frame(), c("map", "labels"), "jencode")
 
   # --- Resolve first argument and the variable --------------------------------
   # One front for jrecode() and jencode() (.jst_recode_front(); Session 386):
@@ -4879,8 +4889,8 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
         n_blank    <- 0L
       }
       decl_words <- unique(words[decl_mask])
-      decl_words <- decl_words[order(tolower(decl_words), decl_words,
-                                     method = "radix")]
+      decl_words <- decl_words[.jst_text_order(tolower(decl_words),
+                                               decl_words)]
       word_mask  <- word_mask & !decl_mask
     }
   }
@@ -4898,8 +4908,9 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
   } else {
     # "Alphabetical" = radix sort on the lowercased word, tie-broken by the
     # word itself: deterministic across locales, and reads as alphabetical.
-    words_u <- words_obs[order(tolower(words_obs), words_obs,
-                               method = "radix")]
+    # .jst_text_order() (Session 390): a CSV file's text carries no encoding
+    # mark, which the radix sort refuses when the first word is not ASCII.
+    words_u <- words_obs[.jst_text_order(tolower(words_obs), words_obs)]
   }
 
   new_num        <- rep(NA_real_, length(txt))
@@ -5248,7 +5259,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
     }
 
     unmapped <- setdiff(words_u, c(map_words_real, face_words))
-    unmapped <- unmapped[order(tolower(unmapped), unmapped, method = "radix")]
+    unmapped <- unmapped[.jst_text_order(tolower(unmapped), unmapped)]
     blank_unhandled <- n_blank > 0 && !blank_in_map
 
     # The absent-word note's level (S345): consequential when an else rule
@@ -6500,6 +6511,9 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
                  .jst_word_specs("convention"),
                  "jdeclare_missing")
+  # Full-width punctuation in the labels (Session 390).
+  .jst_fullwidth_args(sys.call(), match.call(expand.dots = TRUE),
+                      parent.frame(), "labels", "jdeclare_missing")
 
   # Captured before `data` is reassigned below: substitute() on the
   # rebound variable would return the value, not the caller's expression.
@@ -7679,7 +7693,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       #   "  jdeclare_missing(<d>, " + ", ..., modify = TRUE)"
       # so that the variables are shown only when both lines stay within
       # the message width.
-      nd <- nchar(data_name)
+      nd <- .jst_dw(data_name)
       notif <- .jst_jdeclare_missing_bulk_notification(
         data_name    = data_name,
         target_vars  = target_vars,
@@ -8143,7 +8157,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       .jst_udm_row_label(paste0(".", tg), if (length(lb) > 0L) lb[1L] else "",
                          unlabelled = "bare")
     }, character(1))
-    free     <- setdiff(mint_alphabet, have_tags)
+    # The letters free in EITHER case (.jst_free_tags(); Fix Slate 29,
+    # Session 390): on a column carrying both forms (.a and .B) a letter
+    # free only in the convention's case offered .b beside the carried .B,
+    # one letter in two forms that a later conversion to one form merges,
+    # where S352's helper and the convention gates offered .c.
+    free     <- .jst_free_tags(have_tags, convention, n = length(mint_alphabet))
     can_free <- length(free) >= length(sorted_codes)
     dn       <- if (identical(data_kind, "expression")) "mydata" else data_name
     pre      <- if (identical(data_kind, "expression")) {
@@ -8852,8 +8871,9 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   attributes(x) <- NULL
   labs <- if (haven::is.labelled(new_col)) labelled::val_labels(new_col)
           else NULL
-  nv <- sort(as.character(attr(new_col, "na_values", exact = TRUE)),
-             method = "radix")
+  nv <- as.character(attr(new_col, "na_values", exact = TRUE))
+  nv <- nv[!is.na(nv)]
+  nv <- nv[.jst_text_order(nv)]
   text <- character(0); notes <- list(); absent <- logical(0)
   for (v in nv) {
     hit <- if (length(labs) > 0L)
@@ -8889,7 +8909,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                tolower(trimws(ux)) %in% tolower(trimws(real))]
   if (length(cand) == 0L) return(NULL)
   n <- vapply(cand, function(v) sum(x == v), integer(1))
-  o <- order(-n, cand, method = "radix")
+  o <- .jst_text_order(-n, cand)
   list(values = cand[o], n = unname(n[o]))
 }
 
@@ -9314,7 +9334,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         body = results[[1L]]$body, modify = modify,
         resolved_convention = "spss", data_kind = data_kind)
     } else {
-      nd <- nchar(data_name)
+      nd <- .jst_dw(data_name)
       .jst_jdeclare_missing_bulk_notification(
         data_name = data_name, target_vars = target_vars, results = results,
         modify = modify, data_kind = data_kind,
@@ -11202,7 +11222,7 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       # follow one another without a blank line: the name column marks
       # each, and a blank per column would cost most on exactly the wide
       # frames where the report is longest.
-      max_name_len <- max(nchar(converted_vars))
+      max_name_len <- max(.jst_dw(converted_vars))
       hang         <- strrep(" ", 2L + max_name_len + 2L)
       arrow_src <- unlist(lapply(converted_info[converted_vars], function(ci) {
         ci$src[!is.na(ci$dst)]
@@ -11212,16 +11232,16 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       }), use.names = FALSE)
       src_w <- 0L
       if (length(arrow_src) > 0L) {
-        fits <- nchar(hang) + nchar(arrow_src) + nchar("  -> ") +
-          max(nchar(arrow_dst)) <= .jst_resolve_width()
-        if (any(fits)) src_w <- max(nchar(arrow_src[fits]))
+        fits <- .jst_dw(hang) + .jst_dw(arrow_src) + .jst_dw("  -> ") +
+          max(.jst_dw(arrow_dst)) <= .jst_resolve_width()
+        if (any(fits)) src_w <- max(.jst_dw(arrow_src[fits]))
       }
       for (vname in converted_vars) {
         ci    <- converted_info[[vname]]
         arrow <- !is.na(ci$dst)
         rows  <- ci$src
         rows[arrow] <- paste0(ci$src[arrow],
-                              strrep(" ", pmax(0L, src_w - nchar(ci$src[arrow]))),
+                              strrep(" ", pmax(0L, src_w - .jst_dw(ci$src[arrow]))),
                               "  -> ", ci$dst[arrow])
         if (length(rows) == 0L) rows <- ""
         lead <- c(paste0("  ", format(vname, width = max_name_len), "  "),

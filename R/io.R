@@ -145,8 +145,10 @@
 #' into two cases, and say nothing. A file whose values are separated by
 #' semicolons, as Excel saves them in many European settings, stops with
 #' the base R line that reads it. A file that is not in UTF-8 (one saved by
-#' Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
-#' in Windows-1252, and a note says so. Read with \code{header = FALSE}, a
+#' Excel on Windows as "CSV (Comma delimited)" is in that computer's own
+#' encoding, Windows-1252 for English and Western European languages) is
+#' read in Windows-1252, and a note says so and how to save the file in
+#' UTF-8. Read with \code{header = FALSE}, a
 #' file has no names line, so each line is measured against the number of
 #' values most lines hold: a line holding more stops the load, and one
 #' holding fewer is read with its last cells empty.
@@ -1355,9 +1357,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     emit_note("Note: ", shown, " is not in UTF-8, the encoding R reads, so ",
               "it was read as ",
               if (identical(csv_enc, "CP1252")) {
-                "Windows-1252, the encoding Excel on Windows saves a CSV file in."
+                paste0("Windows-1252, the encoding Excel on Windows uses for ",
+                       "English and Western European languages.")
               } else "Latin-1.",
-              "\nCheck its accented letters and symbols.")
+              "\nCheck its accented letters and symbols.",
+              "\nIf they read wrongly, or the file's text is in another language, ",
+              "save it from Excel as \"CSV UTF-8\" and load it again.")
   }
   if (!is.null(title_rows)) {
     k_cols <- ncol(df)
@@ -1836,13 +1841,14 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @keywords internal
 .jst_rename_lines <- function(old, new, why = NULL) {
   q  <- paste0("\"", .jst_dq_escape(old), "\"")
-  # The column fits the longest old name of up to 30 characters; a longer
-  # one runs past it.
-  w  <- max(c(0L, nchar(q)[nchar(q) <= 30L]))
-  pad <- function(x, w) paste0(x, strrep(" ", pmax(0L, w - nchar(x))))
+  # The column fits the longest old name of up to 30 columns; a longer one
+  # runs past it. Widths are display columns (Session 390): a Chinese,
+  # Japanese or Korean character takes two.
+  w  <- max(c(0L, .jst_dw(q)[.jst_dw(q) <= 30L]))
+  pad <- function(x, w) paste0(x, strrep(" ", pmax(0L, w - .jst_dw(x))))
   out <- paste0("  ", pad(q, w), "  -> ", new)
   if (!is.null(why)) {
-    w2  <- max(nchar(new))
+    w2  <- max(.jst_dw(new))
     out <- paste0("  ", pad(q, w), "  -> ", pad(new, w2), "  (", why, ")")
   }
   out
@@ -1974,7 +1980,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         else NA_character_,
       xpt = if (nchar(s) > 32L) "longer than 32 characters"
         else if (toupper(s) %in% sas_res) "a name SAS reserves"
-        else if (!grepl("^[A-Za-z_]", s)) "does not start with a letter or underscore"
+        # A letter of any script counts as a letter here (Session 390): a
+        # name that starts with a Chinese or an accented letter is refused
+        # for holding a character SAS does not take, which is the reason,
+        # not for not starting with a letter, which is untrue.
+        else if (!grepl("^[\\p{L}_]", s, perl = TRUE))
+          "does not start with a letter or underscore"
         else if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", s))
           "holds a character SAS does not take"
         else NA_character_)
@@ -2135,7 +2146,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   fmt <- switch(ext, sav = "SPSS format (.sav)", dta = "Stata format (.dta)",
                 xpt = "SAS interchange format (.xpt)")
   rule <- switch(ext,
-    sav = "keeps 256 bytes of a variable label and 120 of a value label (fewer letters when they are accented)",
+    sav = paste0("keeps 256 bytes of a variable label and 120 of a ",
+                 "value label ", .jst_txt_sav_bytes),
     dta = "keeps 80 characters of a variable label and of the data frame's label",
     xpt = "keeps 40 characters of the data frame's label")
   parts <- character(0)
@@ -2308,12 +2320,17 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Internal: the encoding a CSV file is read in
 #'
 #' R reads a CSV file as UTF-8. One saved by Excel on Windows as "CSV (Comma
-#' delimited)" is in Windows-1252, and a single accented letter or curly
+#' delimited)" is in that computer's own encoding -- Windows-1252 on a
+#' Western European or English one -- and a single accented letter or curly
 #' apostrophe in it stopped jload() on R's "invalid multibyte string" (the
 #' import audit, Session 362). A file whose bytes are valid UTF-8 (a mark at
 #' the start included) is read as R reads it; any other is read as
 #' Windows-1252, or, when even that cannot read it, as Latin-1, which
-#' reads every byte.
+#' reads every byte. A Chinese, Japanese or Korean Windows saves in its own
+#' encoding, which is not tried first (Session 390, ruling R35): on such a
+#' computer a Western file, which reads right as Windows-1252, would then
+#' read wrongly, and without a word. jload()'s note says to save the file
+#' from Excel as "CSV UTF-8" instead.
 #' @param path The file.
 #' @return NULL for UTF-8, else "CP1252" or "latin1".
 #' @keywords internal
@@ -3301,7 +3318,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     }
     return(out)
   }
-  w <- max(nchar(nm))
+  w <- max(.jst_dw(nm))
   rows <- vapply(seq_along(kept), function(i) {
     paste0("  ", formatC(nm[i], width = -w), "  ", fact(kept[[i]], FALSE))
   }, character(1))
@@ -3373,7 +3390,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       " stored as text in the sheet, so reading the file again with na = ",
       "would not make it numbers.\n", to, conv(1L, marks[[1L]]$values)))
   }
-  w <- max(nchar(nm))
+  w <- max(.jst_dw(nm))
   rows <- vapply(seq_along(marks), function(i) {
     paste0("  ", formatC(nm[i], width = -w), "  ", cells(marks[[i]]))
   }, character(1))
@@ -3775,8 +3792,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       )
       # Deterministic order, as the numeric arm's: by value, and "radix"
       # pins C-locale collation so two machines cannot disagree.
-      codes_df <- codes_df[order(codes_df$code, method = "radix"), ,
-                           drop = FALSE]
+      codes_df <- codes_df[.jst_text_order(codes_df$code), , drop = FALSE]
       rownames(codes_df) <- NULL
 
     } else if (!is.null(na_vals) && length(na_vals) > 0) {
@@ -4744,7 +4760,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
                             ux %in% near)
   hit <- which(by_label | by_word)
   if (length(hit) == 0L) return(list())
-  hit <- hit[order(ux[hit], method = "radix")]
+  hit <- hit[.jst_text_order(ux[hit])]
   counts <- table(x[x %in% ux[hit]])
   lapply(hit, function(i) {
     f <- list(var = vname, value = ux[i],
@@ -4966,7 +4982,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     # cleanly regardless of name length. +1 for the trailing colon.
     visible_vars <- vapply(groups[group_keys[seq_len(n_show)]],
                            function(g) g$var, character(1))
-    max_name_len <- max(nchar(visible_vars)) + 1L
+    max_name_len <- max(.jst_dw(visible_vars)) + 1L
 
     # Two-pass print: first build all the value-count strings so we can
     # compute the max width, then print with both name and vc columns
@@ -4998,19 +5014,21 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
       }
       vc_parts[i] <- paste(vc_strs, collapse = ", ")
     }
-    max_vc_len <- max(nchar(vc_parts))
+    max_vc_len <- max(.jst_dw(vc_parts))
 
+    # Padded by display width (Session 390): sprintf("%-*s") pads by BYTES,
+    # so a name with an accented letter sat a column short of the others and
+    # one in Chinese or Korean a column short for every character.
+    pad_dw <- function(s, w) paste0(s, strrep(" ", pmax(0L, w - .jst_dw(s))))
     for (i in seq_len(n_show)) {
       g <- groups[[group_keys[i]]]
       if (single_source) {
-        cat(sprintf("  %-*s  %s\n",
-                    max_name_len, paste0(g$var, ":"),
-                    vc_parts[i]))
+        cat("  ", pad_dw(paste0(g$var, ":"), max_name_len), "  ",
+            vc_parts[i], "\n", sep = "")
       } else {
-        cat(sprintf("  %-*s  %-*s  [%s]\n",
-                    max_name_len, paste0(g$var, ":"),
-                    max_vc_len, vc_parts[i],
-                    src_display[[g$source]]))
+        cat("  ", pad_dw(paste0(g$var, ":"), max_name_len), "  ",
+            pad_dw(vc_parts[i], max_vc_len), "  [",
+            src_display[[g$source]], "]\n", sep = "")
       }
     }
     if (n_groups > max_report) {
@@ -6000,10 +6018,13 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' Internal: jsave's .sav section for a factor category SPSS cannot hold
 #'
 #' Session 362: haven writes a factor's categories as value labels, which
-#' SPSS holds to 120 characters, and refused a longer one in its own words.
+#' SPSS holds to 120 bytes, and refused a longer one in its own words.
 #' jsave()'s .sav pre-flight names every factor with a category longer than
-#' 120 characters and offers the line that keeps it as text, which SPSS
-#' keeps whole. Moved out of jsave() at Session 384 (split on touch, in
+#' 120 bytes and offers the line that keeps it as text, which SPSS keeps
+#' whole. Measured in BYTES since Session 390 (the non-English probe): it
+#' counted characters, so a Chinese category of 41 to 120 characters (three
+#' bytes each) passed it and was cut in the file with no word, where the
+#' value-label note beside it already counts bytes. Moved out of jsave() at Session 384 (split on touch, in
 #' the Build Procedure). Since Session 384 (Fix Slate 26) a
 #' factor with a label gets, after its line, the line that puts the label
 #' back (\code{.jst_label_line()}), since as.character() drops it.
@@ -6012,11 +6033,12 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
 #' @param code_name The data frame's name as the offered lines name it.
 #'
 #' @return Character scalar, the section's message, or NULL when no factor
-#'   has a category longer than 120 characters.
+#'   has a category longer than 120 bytes.
 #' @keywords internal
 .jst_jsave_long_category_error_msg <- function(data, code_name) {
   long_lv <- names(data)[vapply(data, function(col) {
-    is.factor(col) && any(nchar(levels(col)) > 120L, na.rm = TRUE)
+    is.factor(col) && any(nchar(levels(col), type = "bytes") > 120L,
+                          na.rm = TRUE)
   }, logical(1))]
   if (length(long_lv) == 0L) return(NULL)
   n_lv <- length(long_lv)
@@ -6028,10 +6050,24 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     c(paste0("  ", dv, " <- as.character(", dv, ")"),
       .jst_label_line(dv, attr(data[[v]], "label", exact = TRUE)))
   }))
+  # The limit in the sentence: a category of plain ASCII is as many bytes
+  # as characters, so "120 characters" is exact and stays; one holding any
+  # other character is said in bytes, with what that means in letters.
+  long_cats <- unlist(lapply(long_lv, function(v) {
+    lv <- levels(data[[v]])
+    lv[!is.na(lv) & nchar(lv, type = "bytes") > 120L]
+  }))
+  ascii <- all(!grepl("[^\\x01-\\x7F]", long_cats, perl = TRUE))
+  limit <- if (ascii) {
+    paste0("longer than 120 characters, which SPSS format (.sav) cannot ",
+           "store as a value label.")
+  } else {
+    paste0("longer than 120 bytes, which SPSS format (.sav) cannot store ",
+           "as a value label ", .jst_txt_sav_bytes, ".")
+  }
   paste0(
     .jst_and_list(long_lv), " ", .jst_plural(n_lv, "has", "have"),
-    " a category longer than 120 characters, which SPSS format ",
-    "(.sav) cannot store as a value label.\n",
+    " a category ", limit, "\n",
     "Save ", .jst_plural(n_lv, "it", "them"), " as text, which SPSS ",
     "keeps whole:\n",
     paste(lines, collapse = "\n"))

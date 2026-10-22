@@ -1327,8 +1327,11 @@
   suffix_source      <- ifelse(is_descriptive, raw_labels, code_as_str)
 
   # -- Step 3: canonicalise each suffix -------------------------------------
-  canon <- gsub("[^A-Za-z0-9]+", "_", suffix_source)
-  canon <- gsub("^_+|_+$", "", canon)
+  # Letters and digits of any script are kept (Session 390): the rule kept
+  # A to Z and 0 to 9 only, so a Chinese or Korean label was wiped -- the
+  # dummy named by its code, under a note that the labels "were not
+  # available" -- and an accented one cut apart (Sor with its slash, S_r).
+  canon <- .jst_dummy_canon(suffix_source)
 
   # If canonicalisation produced an empty string (label was entirely
   # non-alphanumeric), fall back to the code for that category.
@@ -1408,8 +1411,7 @@
     if (length(ref_idx) == 0) {
       # Try canonicalising the user's input the same way labels were
       # canonicalised, then match.
-      cleaned_ref <- gsub("[^A-Za-z0-9]+", "_", ref)
-      cleaned_ref <- gsub("^_+|_+$", "", cleaned_ref)
+      cleaned_ref <- .jst_dummy_canon(ref)
       if (nzchar(cleaned_ref) && !startsWith(cleaned_ref, prefix)) {
         cleaned_ref <- paste0(prefix, cleaned_ref)
       }
@@ -1480,6 +1482,28 @@
 }
 
 
+#' Internal helper: a category label made into the end of a dummy's name
+#'
+#' Session 390 (the non-English probe): every run of characters that are
+#' not letters, combining marks or digits becomes one underscore, and the
+#' underscores at either end are dropped -- letters of ANY script, so a
+#' Chinese, Japanese or Korean label and an accented one keep their
+#' letters. The rule kept A to Z and 0 to 9 only, so such a label lost
+#' every letter and the dummy was named by its code, under a note that
+#' its value labels were not available. One rule for
+#' \code{.jst_make_dummy_names()}, its \code{ref =} matching and
+#' \code{.jst_dummy_category_values()}.
+#' @param x Character vector.
+#' @param ascii TRUE gives the A-to-Z rule, which names stored before
+#'   Session 390 were made by.
+#' @return Character vector, the same length.
+#' @keywords internal
+.jst_dummy_canon <- function(x, ascii = FALSE) {
+  out <- if (ascii) gsub("[^A-Za-z0-9]+", "_", x)
+         else gsub("[^\\p{L}\\p{M}\\p{N}]+", "_", x, perl = TRUE)
+  gsub("^_+|_+$", "", out)
+}
+
 #' Internal helper: the category values behind a dummy registration
 #'
 #' Returns the raw category value each registration code stands for, in
@@ -1520,15 +1544,20 @@
   # The same canonicalization and anti-stutter steps as
   # .jst_make_dummy_names(); a value whose canonical form is empty fell
   # back to its code there, which cannot be recovered here and stays NA.
-  canon  <- gsub("[^A-Za-z0-9]+", "_", cand)
-  canon  <- gsub("^_+|_+$", "", canon)
+  # A registration stored before Session 390 holds names made by the
+  # A-to-Z rule, so a value not found by today's form is looked for by
+  # that one.
   prefix <- paste0(reg$var_name, "_")
-  canon  <- ifelse(nzchar(canon),
-                   ifelse(startsWith(canon, prefix), canon,
-                          paste0(prefix, canon)),
-                   NA_character_)
+  named  <- function(canon) {
+    ifelse(nzchar(canon),
+           ifelse(startsWith(canon, prefix), canon, paste0(prefix, canon)),
+           NA_character_)
+  }
+  hit    <- match(named(.jst_dummy_canon(cand)), reg$labels)
+  old    <- is.na(hit)
+  hit[old] <- match(named(.jst_dummy_canon(cand[old], ascii = TRUE)),
+                    reg$labels)
   values <- rep(NA_character_, length(reg$codes))
-  hit    <- match(canon, reg$labels)
   values[hit[!is.na(hit)]] <- cand[!is.na(hit)]
   values
 }

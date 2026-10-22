@@ -24,4 +24,13 @@ substitution pass to find that column again -- and the two MUST produce
 identical text or the substitution silently stops matching long terms;
 both route through this one helper so they cannot drift.
 }
+\details{
+Since Session 390 the collapse is made BETWEEN tokens only: a quoted
+string or a backquoted name keeps its spaces as they are. Collapsing
+inside them changed the user's text in every call the package offers
+through \code{.jst_call_with()} -- a file named "my  data.csv" was
+offered as "my data.csv", a line that then stopped on a file not found,
+and an ideographic space inside a Chinese or Japanese label became a
+plain one. Outside the quotes the spacing is normalized as before.
+}
 \keyword{internal}

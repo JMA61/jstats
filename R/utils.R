@@ -2273,10 +2273,10 @@ jai <- function(setup = NULL, path = NULL, ...) {
   budget <- width - fixed_chars
   if (!is.null(vars_typed) && length(vars_typed) == 1L) {
     cand <- paste0("vars = ", vars_typed)
-    if (nchar(cand) <= budget) return(cand)
+    if (.jst_dw(cand) <= budget) return(cand)
   }
   listed <- paste(var_names, collapse = ", ")
-  if (length(var_names) <= 3L && nchar(listed) <= budget) listed else ""
+  if (length(var_names) <= 3L && .jst_dw(listed) <= budget) listed else ""
 }
 
 #' Internal helper: retrieve a variable label as a string
@@ -2332,7 +2332,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     # Pad names to the widest so the "=" signs line up; with similar-length
     # names (e.g. a Likert battery) the column is tight, and it degrades
     # gracefully when names differ a lot.
-    w <- max(nchar(shown_names))
+    w <- max(.jst_dw(shown_names))
     label_lines <- paste0("  ", formatC(shown_names, width = w, flag = "-"),
                           " = ", shown_labels)
     if (isTRUE(lead)) cat("\n")
@@ -2385,7 +2385,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
   shown   <- c(if (length(dv_name) == 1L && dv_name %in% names(data)) dv_name,
                iv_names)
   labeled <- shown[vapply(shown, has_label, logical(1))]
-  w <- if (length(labeled) > 0L) max(nchar(labeled)) else 0L
+  w <- if (length(labeled) > 0L) max(.jst_dw(labeled)) else 0L
   fmt_line <- function(v) {
     # Show "name = label" only when a label exists and differs from the name;
     # a label equal to the name (or no label at all) shows the bare name,
@@ -2727,6 +2727,67 @@ jai <- function(setup = NULL, path = NULL, ...) {
   to
 }
 
+#' Internal helper: the display width of text, in console columns
+#'
+#' Session 390 (the non-English probe): the one measure of how wide text
+#' prints. A Chinese, Japanese or Korean character takes two columns of a
+#' console, a combining accent none, and every other character one, so a
+#' count of CHARACTERS -- \code{nchar()}'s default -- laid every table,
+#' note and printed call holding a name or label in those scripts out one
+#' column short for each wide character. This is
+#' \code{nchar(type = "width")}, the width R's own print() and
+#' \code{format()} pad to; a cell is padded with \code{formatC()}, which
+#' passes character data to \code{format.default()} and so pads by display
+#' width too. Plain ASCII text is as wide as it is long, so output in
+#' English is unchanged byte for byte. A missing string is NA, as
+#' \code{nchar()} gives it (the "width" type alone would give 2), so a
+#' caller's handling of NA is unchanged.
+#' @param x Character vector.
+#' @return Integer vector of display widths, NA where \code{x} is NA.
+#' @keywords internal
+.jst_dw <- function(x) {
+  w <- nchar(x, type = "width")
+  w[is.na(x)] <- NA_integer_
+  w
+}
+
+#' Internal helper: the longest start of a string within a display width
+#'
+#' Session 390: the cut for a label too wide for its column. It keeps
+#' whole characters up to \code{width} console columns -- a two-column
+#' character that would straddle the edge is left out, so the result can
+#' be one column narrower -- and a combining accent stays with its letter.
+#' Plain ASCII is cut as \code{substr(s, 1, width)} cuts it.
+#' @param s Character scalar.
+#' @param width Whole number of columns.
+#' @return Character scalar.
+#' @keywords internal
+.jst_cut_width <- function(s, width) {
+  ch <- strsplit(s, "", fixed = TRUE)[[1L]]
+  if (length(ch) == 0L) return(s)
+  paste(ch[cumsum(.jst_dw(ch)) <= width], collapse = "")
+}
+
+#' Internal helper: a radix order for text, whatever its encoding mark
+#'
+#' Session 390 (the non-English probe): R's radix sort refuses a vector
+#' whose first non-missing string is not ASCII and carries no encoding mark
+#' ("Character encoding must be UTF-8, Latin-1 or bytes"), on every
+#' platform, and text read from a CSV file -- by jload() or read.csv() --
+#' or typed into a script that is source()d carries none. jencode() on a
+#' CSV variable whose first word was Zurich spelled with its umlaut, or a
+#' word in Chinese, stopped in R's words. Each character key is given its
+#' UTF-8 mark first (\code{enc2utf8()}, which in a UTF-8 session only marks
+#' the text), so the order is the radix order of the same bytes.
+#' @param ... The keys, as \code{order()} takes them.
+#' @param decreasing As \code{order()}'s.
+#' @return Integer permutation, as \code{order(..., method = "radix")}.
+#' @keywords internal
+.jst_text_order <- function(..., decreasing = FALSE) {
+  keys <- lapply(list(...), function(k) if (is.character(k)) enc2utf8(k) else k)
+  do.call(order, c(keys, list(method = "radix", decreasing = decreasing)))
+}
+
 #' Internal helper: print a formatted table with precise column alignment
 #'
 #' Purpose-built table printer that replaces knitr::kable() for console output.
@@ -2909,7 +2970,10 @@ jai <- function(setup = NULL, path = NULL, ...) {
     }
   }
 
-  # Column widths
+  # Column widths, in console columns (.jst_dw(); Session 390): a Chinese,
+  # Japanese or Korean label or name is two columns a character, and a
+  # count of characters laid its row out short. Every measure below is the
+  # display width; formatC() pads character data by display width too.
   col_widths <- integer(n_cols)
   for (j in seq_len(n_cols)) {
     # "ln" (left, no-trim) columns carry caller-supplied leading whitespace
@@ -2917,17 +2981,17 @@ jai <- function(setup = NULL, path = NULL, ...) {
     # sign-slot-padded cells would overflow the gap). All other columns are
     # measured trimmed, as before.
     if (identical(align[j], "ln")) {
-      data_widths <- nchar(display[, j])
+      data_widths <- .jst_dw(display[, j])
     } else {
-      data_widths <- nchar(trimws(display[, j]))
+      data_widths <- .jst_dw(trimws(display[, j]))
     }
-    col_widths[j] <- max(nchar(headers[j]), max(data_widths, 0L, na.rm = TRUE))
+    col_widths[j] <- max(.jst_dw(headers[j]), max(data_widths, 0L, na.rm = TRUE))
   }
 
   # Block widths for "bc" (block-centered) columns: the widest trimmed value
   # in the column, header excluded. Zero for an empty column. (Session 313)
   block_widths <- vapply(seq_len(n_cols), function(j) {
-    max(nchar(trimws(display[, j])), 0L, na.rm = TRUE)
+    max(.jst_dw(trimws(display[, j])), 0L, na.rm = TRUE)
   }, integer(1))
 
   # Decimal-aligned blocks ("bd", Session 328). Each cell is split where its
@@ -2945,12 +3009,12 @@ jai <- function(setup = NULL, path = NULL, ...) {
     is_num <- grepl("^[-+]?[0-9]*[.]?[0-9]", tx)
     head   <- ifelse(is_num, sub("^([-+]?[0-9]*)(.*)$", "\\1", tx), tx)
     tail   <- ifelse(is_num, sub("^([-+]?[0-9]*)(.*)$", "\\2", tx), "")
-    head_w <- max(nchar(head), 0L)
-    tail_w <- max(nchar(tail), 0L)
-    bd_cells[[j]]   <- paste0(strrep(" ", head_w - nchar(head)), head,
-                              tail, strrep(" ", tail_w - nchar(tail)))
+    head_w <- max(.jst_dw(head), 0L)
+    tail_w <- max(.jst_dw(tail), 0L)
+    bd_cells[[j]]   <- paste0(strrep(" ", head_w - .jst_dw(head)), head,
+                              tail, strrep(" ", tail_w - .jst_dw(tail)))
     block_widths[j] <- head_w + tail_w
-    col_widths[j]   <- max(nchar(headers[j]), block_widths[j])
+    col_widths[j]   <- max(.jst_dw(headers[j]), block_widths[j])
   }
 
   # The column gap (Session 329). One number is used as given. Several are
@@ -2983,7 +3047,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     # the block's width (bd_cells above) and must NOT be trimmed -- its
     # leading spaces are the alignment. Center the block as "bc" does.
     if (identical(alignment, "bd")) {
-      extra <- max(0L, width - nchar(text))
+      extra <- max(0L, width - .jst_dw(text))
       left  <- extra - extra %/% 2
       return(paste0(strrep(" ", left), text, strrep(" ", extra - left)))
     }
@@ -2996,7 +3060,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     switch(alignment,
            "r" = formatC(text, width = width, flag = " "),
            "c" = {
-             pad   <- max(0L, width - nchar(text))
+             pad   <- max(0L, width - .jst_dw(text))
              left  <- pad - pad %/% 2
              right <- pad - left
              paste0(strrep(" ", left), text, strrep(" ", right))
@@ -3313,6 +3377,11 @@ jai <- function(setup = NULL, path = NULL, ...) {
   lines <- character(0)
   cur   <- ""
   avail <- width - reserve
+  # Widths in console columns (Session 390): a Chinese, Japanese or Korean
+  # character is two, so a count of characters let a line run past the
+  # width. A protected atom carries \x01 for each of its spaces, which
+  # .jst_dw() would count as nothing; it is measured as the space it is.
+  wd <- function(s) .jst_dw(gsub("\x01", " ", s, fixed = TRUE))
   # Rule 2 (S252 design, built S254): a word ends a sentence if it closes
   # with terminal punctuation, is not a letter-dot abbreviation (e.g., i.e.),
   # and the next word opens a sentence. Conservative by construction: the
@@ -3323,7 +3392,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
   }
   for (w in words) {
     cand <- if (nzchar(cur)) paste(cur, w) else w
-    if (nchar(cand) <= avail) {
+    if (wd(cand) <= avail) {
       cur <- cand
     } else {
       # Rule 2: sentence-aware break. If a sentence boundary sits within
@@ -3340,10 +3409,10 @@ jai <- function(setup = NULL, path = NULL, ...) {
           tail_len <- 0L
           i <- k - 1L
           while (i >= 1L) {
-            tail_len <- tail_len + nchar(cw[i + 1L]) + 1L
+            tail_len <- tail_len + wd(cw[i + 1L]) + 1L
             if (tail_len > tol) break
             if (ends_sentence(cw[i], cw[i + 1L]) &&
-                tail_len + nchar(w) <= width) {
+                tail_len + wd(w) <= width) {
               lines <- c(lines, paste(cw[seq_len(i)], collapse = " "))
               cur   <- paste(c(cw[seq(i + 1L, k)], w), collapse = " ")
               avail <- width
@@ -3379,8 +3448,8 @@ jai <- function(setup = NULL, path = NULL, ...) {
   # -- a protected call such as jcomplete(var1, var2, ...) correctly counts
   # as the single token it renders as. The restore happens after the loop.
   short_tail <- function(s) {
-    if (nchar(s) < min_tail) return(TRUE)
-    nchar(s) < min_last &&
+    if (wd(s) < min_tail) return(TRUE)
+    wd(s) < min_last &&
       length(strsplit(s, " ", fixed = TRUE)[[1]]) < 2L
   }
   while (length(lines) > 1L && short_tail(lines[length(lines)])) {
@@ -3390,7 +3459,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     if (tol > 0L && ends_sentence(prev[length(prev)], first_last)) break
     moved <- prev[length(prev)]
     cand  <- paste(moved, lines[length(lines)])
-    if (nchar(cand) > width) break
+    if (wd(cand) > width) break
     lines[length(lines) - 1L] <- paste(prev[-length(prev)], collapse = " ")
     lines[length(lines)]      <- cand
   }
@@ -3518,7 +3587,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' @keywords internal
 .jst_seg_category <- function(line, width = 76L) {
   if (!nzchar(trimws(line))) return("pass")
-  if (nchar(line) <= width) return("pass")
+  if (.jst_dw(line) <= width) return("pass")
 
   indent <- nchar(line) - nchar(sub("^ +", "", line))
   if (indent == 0L) return("prose")
@@ -3874,12 +3943,12 @@ jai <- function(setup = NULL, path = NULL, ...) {
   # Pack pieces after a fixed first part, each later line under the first
   # piece; the closing text rides with the last piece.
   pack <- function(first, pieces, closing, sep) {
-    if (is.null(hang)) hang <- strrep(" ", nchar(first))
+    if (is.null(hang)) hang <- strrep(" ", .jst_dw(first))
     lines <- character(0)
     cur   <- paste0(first, pieces[1L])
     for (p in seq_along(pieces)[-1L]) {
       add <- paste0(pieces[p], if (p == length(pieces)) closing else "")
-      if (nchar(cur) + nchar(sep) + nchar(add) <= width) {
+      if (.jst_dw(cur) + .jst_dw(sep) + .jst_dw(add) <= width) {
         cur <- paste0(cur, sep, add)
       } else {
         lines <- c(lines, cur)
@@ -3962,7 +4031,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' @return Character(1), with newlines where it was broken.
 #' @keywords internal
 .jst_layout_call <- function(line, width) {
-  if (nchar(line) <= width || !.jst_call_shape(line)) return(line)
+  if (.jst_dw(line) <= width || !.jst_call_shape(line)) return(line)
   body <- sub("^ +", "", line)
   ind  <- substr(line, 1L, nchar(line) - nchar(body))
   if (!.jst_parses_once(body)) return(line)
@@ -4018,7 +4087,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
   # lines at the call's fixed indent rather than under the argument.
   tail1 <- if (length(args) > 1L) "," else closer
   cur   <- paste0(name, args[1L], tail1)
-  if (nchar(cur) > width) {
+  if (.jst_dw(cur) > width) {
     br  <- .jst_break_arg(args[1L], tail1, name, width, hang = cont)
     out <- br[-length(br)]
     cur <- br[length(br)]
@@ -4026,12 +4095,12 @@ jai <- function(setup = NULL, path = NULL, ...) {
   for (k in seq_along(args)[-1L]) {
     tail  <- if (k < length(args)) "," else closer
     piece <- paste0(args[k], tail)
-    if (nchar(cur) + 1L + nchar(piece) <= width) {
+    if (.jst_dw(cur) + 1L + .jst_dw(piece) <= width) {
       cur <- paste0(cur, " ", piece)
       next
     }
     out <- c(out, cur)
-    if (nchar(cont) + nchar(piece) <= width) {
+    if (.jst_dw(cont) + .jst_dw(piece) <= width) {
       cur <- paste0(cont, piece)
       next
     }
@@ -4082,7 +4151,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     # A printed call wider than the line: ruling R5's layout (Session 353).
     # A line the layout cannot read as one call comes back unchanged and
     # goes on to the classifier, which passes it whole.
-    if (nchar(ln) > width - res && .jst_call_shape(ln)) {
+    if (.jst_dw(ln) > width - res && .jst_call_shape(ln)) {
       lay <- .jst_layout_call(ln, width - res)
       if (!identical(lay, ln)) {
         out[i] <- lay
@@ -4169,6 +4238,11 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #'     data.}
 #'   \item{\code{.jst_txt_both_missing}}{jrecode() and jencode()'s stop
 #'     for a code the map also assigns as an ordinary value.}
+#'   \item{\code{.jst_txt_sav_bytes}}{what SPSS's limits in bytes mean in
+#'     letters, in jsave()'s note on shortened labels and its stop for a
+#'     long factor category (Session 390: the note said "fewer letters
+#'     when they are accented", which says nothing of Chinese, where 120
+#'     bytes is 40 characters).}
 #' }
 #' @name .jst_shared_text
 #' @keywords internal
@@ -4225,6 +4299,8 @@ NULL
 .jst_txt_null_remedy <- paste0("Provide a data frame, or set a default first ",
                                "with juse().")
 .jst_txt_both_missing <- "To make both missing, use missing for both:\n"
+.jst_txt_sav_bytes <- paste0("(an accented letter takes two bytes, and a ",
+                             "Chinese, Japanese or Korean character three)")
 
 #' Internal: the stop for a call that names no variables
 #'

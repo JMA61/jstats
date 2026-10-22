@@ -194,8 +194,10 @@ the first values of every line into row names, or split the long line
 into two cases, and say nothing. A file whose values are separated by
 semicolons, as Excel saves them in many European settings, stops with
 the base R line that reads it. A file that is not in UTF-8 (one saved by
-Excel on Windows as "CSV (Comma delimited)" is in Windows-1252) is read
-in Windows-1252, and a note says so. Read with \code{header = FALSE}, a
+Excel on Windows as "CSV (Comma delimited)" is in that computer's own
+encoding, Windows-1252 for English and Western European languages) is
+read in Windows-1252, and a note says so and how to save the file in
+UTF-8. Read with \code{header = FALSE}, a
 file has no names line, so each line is measured against the number of
 values most lines hold: a line holding more stops the load, and one
 holding fewer is read with its last cells empty.

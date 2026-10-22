@@ -20,6 +20,10 @@ A character string suitable for use as an axis label.
 Returns the variable's label (from labelled::var_label) if one is set and
 fits within \code{max_len} characters. Truncates with three trailing periods
 if the label exceeds \code{max_len}. Falls back to the variable name when
-no label is present.
+no label is present. Since Session 390 the length is measured and cut in
+display columns (\code{.jst_dw()}, \code{.jst_cut_width()}): a Chinese,
+Japanese or Korean character is about twice as wide as a Latin letter on
+an axis too, and the count of characters let such a label run to twice
+the length.
 }
 \keyword{internal}

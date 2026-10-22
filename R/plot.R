@@ -1171,7 +1171,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
 #' Returns the variable's label (from labelled::var_label) if one is set and
 #' fits within \code{max_len} characters. Truncates with three trailing periods
 #' if the label exceeds \code{max_len}. Falls back to the variable name when
-#' no label is present.
+#' no label is present. Since Session 390 the length is measured and cut in
+#' display columns (\code{.jst_dw()}, \code{.jst_cut_width()}): a Chinese,
+#' Japanese or Korean character is about twice as wide as a Latin letter on
+#' an axis too, and the count of characters let such a label run to twice
+#' the length.
 #'
 #' @param x A variable (vector), possibly haven-labelled.
 #' @param name Character. The variable name to fall back to if no label.
@@ -1184,8 +1188,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     return(name)
   }
   lbl <- as.character(lbl[1])
-  if (nchar(lbl) > max_len) {
-    return(paste0(substr(lbl, 1, max_len - 3), "..."))
+  if (.jst_dw(lbl) > max_len) {
+    return(paste0(.jst_cut_width(lbl, max_len - 3), "..."))
   }
   lbl
 }

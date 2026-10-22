@@ -2297,12 +2297,24 @@
 #' identical text or the substitution silently stops matching long terms;
 #' both route through this one helper so they cannot drift.
 #'
+#' Since Session 390 the collapse is made BETWEEN tokens only: a quoted
+#' string or a backquoted name keeps its spaces as they are. Collapsing
+#' inside them changed the user's text in every call the package offers
+#' through \code{.jst_call_with()} -- a file named "my  data.csv" was
+#' offered as "my data.csv", a line that then stopped on a file not found,
+#' and an ideographic space inside a Chinese or Japanese label became a
+#' plain one. Outside the quotes the spacing is normalized as before.
+#'
 #' @param e A language object (a call or symbol from a formula).
 #' @return Single string: the deparsed term with normalized spacing.
 #' @keywords internal
 .jst_term_text <- function(e) {
-  gsub("[[:space:]]+", " ",
-       paste(deparse(e, width.cutoff = 500L), collapse = " "))
+  txt <- paste(deparse(e, width.cutoff = 500L), collapse = " ")
+  m   <- gregexpr("\"(\\\\.|[^\"\\\\])*\"|`(\\\\.|[^`\\\\])*`", txt)
+  lit <- regmatches(txt, m)[[1L]]
+  if (length(lit) == 0L) return(gsub("[[:space:]]+", " ", txt))
+  code <- gsub("[[:space:]]+", " ", regmatches(txt, m, invert = TRUE)[[1L]])
+  paste(c(rbind(code, c(lit, ""))), collapse = "")
 }
 
 #' Internal helper: the variables a comparison term may read as categories
