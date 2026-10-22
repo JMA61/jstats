@@ -536,7 +536,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
     example    = "DV ~ Group",
-    fn         = "jt"
+    fn         = "jt",
+    data_sub   = if (missing(data))    NULL else substitute(data),
+    envir      = parent.frame()
   )
 
   # Resolve default data frame if not specified (.jst_formula_front(), one
@@ -1211,7 +1213,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
     example    = "DV ~ Group",
-    fn         = "jaov"
+    fn         = "jaov",
+    data_sub   = if (missing(data))    NULL else substitute(data),
+    envir      = parent.frame()
   )
 
   # Resolve default data frame if not specified (.jst_formula_front(), one
@@ -2136,7 +2140,9 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
     example    = "RowVar ~ ColVar",
-    fn         = "jcrosstab"
+    fn         = "jcrosstab",
+    data_sub   = if (missing(data))    NULL else substitute(data),
+    envir      = parent.frame()
   )
 
   # Validate the residuals display mode (choice-error house form, Rule A).
@@ -2309,13 +2315,28 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
       }
       # The filters' line as in jt() and jaov() (Session 347): jcrosstab()
       # had none, for a stored filter or for subset =.
+      # Session 391 (the jcrosstab degraded-display item, decided: the stop
+      # stays): with one category the table that can be had is the other
+      # variable's alone, so the stop gives its jfreq() line, subset = kept.
+      other <- setdiff(c(row_name, col_name), check_info$name)
+      freq_line <- if (n_lvls == 1L && length(other) == 1L &&
+                       !is.null(.jst_data_name)) {
+        paste0("\nTo count ", other, "'s categories on their own, use jfreq():\n",
+               "  jfreq(", .jst_data_name, ", ",
+               if (identical(make.names(other), other)) other
+               else paste0("`", other, "`"),
+               if (!is.null(subset_expr))
+                 paste0(", subset = ", .jst_term_text(subset_expr)),
+               ")")
+      } else ""
       .jst_stop("'", check_info$name, "' has ", n_lvls, " ",
                 .jst_plural(n_lvls, "category", "categories"),
                 .jst_settings_context(.jst_data_name), ".\n",
                 "A cross-tabulation requires at least 2 categories ",
                 "for each variable.",
                 .jst_filter_hedge(sample_info, .jst_data_name,
-                                  "the other categories"))
+                                  "the other categories"),
+                freq_line)
     }
   }
 

@@ -4,7 +4,16 @@
 \alias{.jst_check_formula_data}
 \title{Internal helper: front-door check that formula functions got a formula}
 \usage{
-.jst_check_formula_data(formula, data, first_name, data_name, example, fn)
+.jst_check_formula_data(
+  formula,
+  data,
+  first_name,
+  data_name,
+  example,
+  fn,
+  data_sub = NULL,
+  envir = parent.frame(2L)
+)
 }
 \arguments{
 \item{formula}{The formula input's value, or NULL when it was missing.}
@@ -20,6 +29,14 @@ used in the swapped-order example when the user's data frame sits there.}
 message (e.g. "DV ~ Group").}
 
 \item{fn}{The public function's name, for the error prefix and examples.}
+
+\item{data_sub}{The data argument as typed (\code{substitute(data)}), or
+NULL when it was missing: a name that is no object stops in the house
+voice, ruling R36's line offered when it holds (Session 391,
+\code{.jst_formula_data_found()}).}
+
+\item{envir}{The caller's environment, where the names typed are looked
+up.}
 }
 \value{
 invisible(NULL) when the inputs pass; otherwise never returns.

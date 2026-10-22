@@ -190,7 +190,16 @@
 #' }
 #'
 #' @keywords internal
+#' @importFrom haven is.labelled
 "_PACKAGE"
+# The @importFrom haven line above loads haven, and with it vctrs, whenever
+# jstats loads (Session 391). haven supplies the methods R uses to subset a
+# labelled variable; until it is loaded, base R's subsetting --
+# community[community$Age > 40, ] typed straight after library(jstats) --
+# keeps the numbers and drops the value labels and the declared missing
+# values without a word, so -99 is then counted as an income. jstats called
+# haven only through haven::, which loads it at the first such call, and
+# load_all() hid the gap, since it loads every package in Imports.
 
 
 #' Update jstats to the latest version
@@ -1174,7 +1183,11 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' answer it.
 #'
 #' Message shape (Rules D and I): the question, the received text on its
-#' own line, and ONE corrective action. The received text carries the
+#' own line, and the corrective action. Since Session 391 (the (S298) E8
+#' item) the overwrite question's action is the two ways out, the way to
+#' keep what exists on the first line and the way to replace it on the
+#' second, where the one action it gave was the destructive one. The
+#' received text carries the
 #' diagnosis, so no sentence explains the mechanism -- it would be
 #' accurate for the script case and wrong for a user who simply typed
 #' "yep", and both readers act on the same fix. The text is shown
@@ -1188,8 +1201,8 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' The error routes through .jst_stop(), whose stack walk skips this
 #' helper (no j-prefix) and prefixes the user-facing caller's name.
 #' @param prompt The single-line prompt string, ending "(y/n): ".
-#' @param remedy One sentence naming the caller-specific fix; becomes the
-#'   error's final line.
+#' @param remedy The caller-specific fix, one sentence a line; becomes the
+#'   error's last lines.
 #' @param subject The question's name as it reads in the error's first
 #'   line; "overwrite" for the three overwrite prompts, "confirmation"
 #'   for jai, which asks about writing rather than overwriting.
@@ -1254,9 +1267,38 @@ jai <- function(setup = NULL, path = NULL, ...) {
   if (isTRUE(replace)) {
     .jst_msg("Nothing was written.")
   } else {
-    .jst_msg("Nothing was written.\n",
-             "To write to a different folder, rerun with path = \"<folder>\".")
+    .jst_msg("Nothing was written.\n", .jst_txt_jai_other_folder)
   }
+}
+
+#' Internal helper: jai()'s writers and a folder R cannot write to
+#'
+#' jai("project") and jai("machine") wrote with writeLines(), so a folder R
+#' cannot write to -- a read-only or protected one, or one an AI assistant's
+#' sandbox mode keeps writes out of -- stopped in R's own words, "cannot open
+#' file ... Permission denied", after the user had answered the question
+#' (Session 391; the (S206) item, jsave() and jupdate() having said so since
+#' Session 340). The folder, or the nearest one that exists when the skill
+#' file's folders are still to be made, is probed as jsave() probes it
+#' (.jst_lib_writable()), before any question, and a folder R cannot write
+#' to stops: "R cannot write to this folder:", the folder on its own line,
+#' "Nothing was written." and the path = line. A write that is REDIRECTED
+#' rather than refused cannot be seen from here.
+#'
+#' @param dir Character(1). The folder the file goes in.
+#' @return Invisible NULL when the folder can be written to; stops
+#'   otherwise.
+#' @keywords internal
+.jst_jai_check_writable <- function(dir) {
+  probe_dir <- dir
+  while (!dir.exists(probe_dir) && !identical(dirname(probe_dir), probe_dir)) {
+    probe_dir <- dirname(probe_dir)
+  }
+  if (.jst_lib_writable(probe_dir)) return(invisible(NULL))
+  .jst_stop("R cannot write to this folder:\n",
+            "  ", .jst_norm_path(probe_dir), "\n",
+            "Nothing was written.\n",
+            .jst_txt_jai_other_folder)
 }
 
 #' Internal helper: jai("project") -- write the AGENTS.md block
@@ -1288,6 +1330,8 @@ jai <- function(setup = NULL, path = NULL, ...) {
     .jst_stop(.jst_txt_jai_cannot_ask,
               .jst_txt_jai_set_path)
   }
+  # A folder R cannot write to stops here, before any question (Session 391).
+  .jst_jai_check_writable(dir_abs)
 
   keep_note <- paste0("Keep your own additions outside the marked block; ",
                       "they survive regeneration.")
@@ -1481,6 +1525,8 @@ jai <- function(setup = NULL, path = NULL, ...) {
     .jst_stop(.jst_txt_jai_cannot_ask,
               .jst_txt_jai_set_path)
   }
+  # A folder R cannot write to stops here, before any question (Session 391).
+  .jst_jai_check_writable(dir)
   if (!explicit) {
     info <- if (had) {
       paste0("About to overwrite the jstats skill file:\n  ", target)
@@ -4210,8 +4256,15 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #'     first argument that is not a data frame.}
 #'   \item{\code{.jst_txt_vars_quoted}}{the stop for vars = that does not
 #'     hold names in quotes.}
-#'   \item{\code{.jst_txt_add_overwrite}}{what the overwrite question says
-#'     when the session cannot ask it: jload(), jsave(), jcopy().}
+#'   \item{\code{.jst_txt_add_overwrite}}{the way to replace, under the way
+#'     to keep, in the stop the overwrite question gives when its answer is
+#'     not y or n -- jload(), jsave(), jcopy() -- and in jsave()'s stop
+#'     where the session cannot ask. Since Session 391 (the (S298) E8
+#'     item, Jeff's okay of the lean) the stop names both ways out, the
+#'     way to keep first, where it had offered only the destructive one
+#'     ("Add overwrite = TRUE to the call, then run it again.").}
+#'   \item{\code{.jst_txt_keep_file}}{jsave()'s way to keep the file, in
+#'     the same two stops (Session 391).}
 #'   \item{\code{.jst_txt_map_commas}, \code{.jst_txt_na_longhand},
 #'     \code{.jst_txt_na_one_rule}, \code{.jst_txt_map_empty}}{the map
 #'     parsers' messages, numeric and text.}
@@ -4223,6 +4276,9 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #'     given fewer than two variables.}
 #'   \item{\code{.jst_txt_jai_cannot_ask}, \code{.jst_txt_jai_set_path}}{
 #'     jai()'s writing setups.}
+#'   \item{\code{.jst_txt_jai_other_folder}}{jai()'s line naming path =,
+#'     under a declined write and a folder R cannot write to (Session
+#'     391).}
 #'   \item{\code{.jst_txt_value_id}}{value.id given to a function that
 #'     shows no value labels.}
 #'   \item{\code{.jst_txt_qq_produced}}{jt() and jaov()'s Q-Q plot line.}
@@ -4266,7 +4322,9 @@ NULL
 .jst_txt_vars_quoted <- paste0("`vars` must be one or more variable names in ",
                                "quotes, for example:\n",
                                "  vars = c(\"Age\", \"Income\")")
-.jst_txt_add_overwrite <- "Add overwrite = TRUE to the call, then run it again."
+.jst_txt_add_overwrite <- paste0("To replace it, add overwrite = TRUE to the ",
+                                 "call, then run it again.")
+.jst_txt_keep_file <- "To keep the file, save under another file name.\n"
 .jst_txt_map_commas <- paste0("It looks like commas were used to separate ",
                               "rules in the map string. Use semicolons ",
                               "instead:\n")
@@ -4285,6 +4343,8 @@ NULL
 .jst_txt_jai_cannot_ask <- paste0("writing needs confirmation, and this ",
                                   "session cannot ask.\n")
 .jst_txt_jai_set_path <- "Set path = to name the destination folder and rerun."
+.jst_txt_jai_other_folder <- paste0("To write to a different folder, rerun ",
+                                    "with path = \"<folder>\".")
 .jst_txt_value_id <- paste0("value.id is not supported here; it does not ",
                             "display value labels.")
 .jst_txt_qq_produced <- "\n(Diagnostic plot produced: Normal Q-Q)\n"

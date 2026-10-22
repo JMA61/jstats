@@ -39,14 +39,15 @@
 #' labels, SPSS-style missing values (\code{na_values} / \code{na_range}),
 #' Stata-style missing values, and the variable's class all pass through
 #' untouched unless an argument you supply replaces them: new value labels
-#' replace the full existing set (as \code{VALUE LABELS} does in SPSS), and
-#' a new variable label replaces the old one. A replacement set clears any
-#' labels attached to declared missing-value codes; the declaration itself
-#' is unaffected, but re-supply its label alongside the new value labels to
-#' keep it. On a column with Stata-style or SAS-style missing values, a
-#' marker that no case carries is declared only by its label, so a
-#' replacement set that leaves it out removes that declaration too;
-#' re-supply it by its marker, e.g. \code{labels = "1=Low; .c=Refused"}.
+#' replace the existing ones (as \code{VALUE LABELS} does in SPSS), except
+#' that a declared missing value keeps its label unless the new set names
+#' it, as \code{jrecode()}'s \code{labels} argument keeps them, and a note
+#' names the labels kept; a new variable label replaces the old one. To
+#' change a declared value's label, name it in the new set, e.g.
+#' \code{labels = "1=Low; 2=High; -99=No answer"}. On a column with
+#' Stata-style or SAS-style missing values, a marker that no case carries is
+#' declared only by its label, and it stays declared; name it by its marker
+#' to relabel it, e.g. \code{labels = "1=Low; .c=Refused"}.
 #'
 #' Both the \code{labels} and \code{var.label} arguments are optional in the
 #' one-variable form. If neither is supplied, the function returns the
@@ -370,13 +371,18 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                                         default_used, vtxt, labels_sub),
                 fn = .fn)
     }
+    kept <- list()
     for (v in target_vars) {
+      kept[[v]] <- .jst_declared_labels_kept(data[[v]], parsed_labels)
       data[[v]] <- .jst_relabel_apply(data[[v]], parsed_labels, NULL)
     }
     modify_target <- if (arg1$mode == "explicit") as.character(data_sub_expr)
                      else arg1$name
     assign(modify_target, data, envir = parent.frame())
     .jst_relabel_done(target_vars, data_name, TRUE, FALSE)
+    # The labels the declared missing values kept (ruling R37, Session 391).
+    kept_note <- .jst_relabel_kept_note(kept)
+    if (!is.null(kept_note)) .jst_msg(kept_note)
     return(invisible(data))
   }
 
@@ -466,6 +472,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   # it directly, its class and every attribute it carries kept unless an
   # argument replaces them (Session 215; .jst_relabel_apply()).
   result <- .jst_relabel_apply(x, parsed_labels, var.label)
+  # The labels the declared missing values kept (ruling R37, Session 391).
+  kept_note <- if (is.null(parsed_labels)) NULL else
+    .jst_relabel_kept_note(stats::setNames(
+      list(.jst_declared_labels_kept(x, parsed_labels)), var_name))
 
   if (isTRUE(modify)) {
     data[[var_name]] <- result
@@ -474,14 +484,18 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
     assign(modify_target, data, envir = parent.frame())
     .jst_relabel_done(var_name, data_name, !is.null(labels),
                       !is.null(var.label))
+    if (!is.null(kept_note)) .jst_msg(kept_note)
   } else if (!identical(getOption(".jst_output_level", "standard"),
                         "minimal")) {
     # The assign-or-lose reminder (Session 378; Jeff's okay), as jrecode(),
     # jencode(), jsum() and javg() give theirs. A function cannot see
     # whether its result is being assigned, so it prints on every call of
     # this form -- worded to be true either way -- and not at
-    # joutput("minimal"), nor with modify = TRUE.
-    .jst_msg(.jst_relabel_reminder(data_sub_expr, data_kind, data_name,
+    # joutput("minimal"), nor with modify = TRUE. After the note on the
+    # labels kept it opens with a blank line (voice Rule F).
+    if (!is.null(kept_note)) .jst_msg(kept_note)
+    .jst_msg(if (!is.null(kept_note)) "\n" else "",
+             .jst_relabel_reminder(data_sub_expr, data_kind, data_name,
                                    var_name))
   }
 
@@ -695,7 +709,10 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   result <- x
   if (!is.null(parsed_labels)) {
     if (is.logical(result)) result <- as.numeric(result)
-    labelled::val_labels(result) <- parsed_labels
+    # Ruling R37 (Session 391): a declared missing value keeps its label
+    # unless the new set names it, as jrecode()'s labels = keeps it.
+    labelled::val_labels(result) <-
+      c(parsed_labels, .jst_declared_labels_kept(x, parsed_labels))
   }
   if (!is.null(var.label)) {
     labelled::var_label(result) <- var.label
@@ -704,6 +721,97 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   # told, so a haven display format (format.spss, format.stata) and the
   # Data Editor width would leave here (S299). Restore the passengers.
   .jst_carry_col_attrs(x, result)
+}
+
+#' Internal helper: the labels of declared missing values a new set leaves
+#'   out (ruling R37)
+#'
+#' Ruling R37 (Session 391; Jeff: "Yes to your recommendation"): labels =
+#' replaces the labels of the values it names and of every value that is not
+#' a declared missing value, and a declared missing value keeps its label
+#' unless the new set names it -- as jrecode()'s labels = keeps them, with
+#' its note. Until then a replacement set cleared them, so jfreq() printed
+#' \code{-99 (no label)} where it had printed \code{-99 ["Refused"]}, and a
+#' Stata-style or SAS-style marker that no case carries, declared only by its
+#' label, was no longer declared at all. Declared means a code among the variable's
+#' na_values or inside its na_range, or a marker (a tagged NA) among its
+#' labels. A code is named by its value, a marker by its letter.
+#'
+#' @param x The variable before the new labels.
+#' @param parsed_labels The new set, as \code{.jst_parse_labels()} gives it.
+#' @return The labels to keep, a named vector of \code{x}'s labels, or NULL.
+#' @keywords internal
+.jst_declared_labels_kept <- function(x, parsed_labels) {
+  if (!haven::is.labelled(x) || typeof(x) == "character") return(NULL)
+  vl <- labelled::val_labels(x)
+  if (is.null(vl) || length(vl) == 0L) return(NULL)
+  vals   <- unclass(vl)
+  tagged <- if (is.double(vals)) haven::is_tagged_na(vals)
+            else rep(FALSE, length(vals))
+  num    <- !tagged & !is.na(vals)
+  na_v   <- attr(x, "na_values", exact = TRUE)
+  na_r   <- attr(x, "na_range", exact = TRUE)
+  declared <- tagged
+  if (length(na_v) > 0L) {
+    declared[num] <- declared[num] | vals[num] %in% na_v
+  }
+  if (length(na_r) == 2L) {
+    declared[num] <- declared[num] |
+      (vals[num] >= na_r[1L] & vals[num] <= na_r[2L])
+  }
+  if (!any(declared)) return(NULL)
+  new     <- unclass(parsed_labels)
+  new_tag <- if (is.double(new)) haven::na_tag(new)
+             else rep(NA_character_, length(new))
+  named <- logical(length(vals))
+  named[num] <- vals[num] %in% new[!is.na(new)]
+  # haven::na_tag() refuses an integer vector, even an empty one.
+  if (any(tagged)) {
+    named[tagged] <- haven::na_tag(vals[tagged]) %in% new_tag[!is.na(new_tag)]
+  }
+  keep <- declared & !named
+  if (!any(keep)) return(NULL)
+  vl[keep]
+}
+
+#' Internal helper: jrelabel()'s note on the labels kept (ruling R37)
+#'
+#' "Note: The declared missing values of Education kept their labels:" and,
+#' on an indented line of its own, the values -- each in the form jfreq()'s
+#' Missing rows use (\code{.jst_udm_row_label()}), a code as
+#' \code{.jst_fmt_code()} gives it, a marker by its letter (.a) -- as the
+#' load narrative lists a variable's declared values. On a line of their
+#' own the values start at the margin, where in the sentence a wrap could
+#' part -99 from its label. Variables keeping the same labels share one
+#' note; a variable with one such value "kept its label". At the standard
+#' and full output levels, as jrelabel()'s other lines. Session 391.
+#'
+#' @param kept Named list: for each variable that kept labels, the
+#'   \code{.jst_declared_labels_kept()} result.
+#' @return Character(1), the notes one blank line apart, or NULL.
+#' @keywords internal
+.jst_relabel_kept_note <- function(kept) {
+  kept <- kept[!vapply(kept, is.null, logical(1))]
+  if (length(kept) == 0L ||
+      identical(getOption(".jst_output_level", "standard"), "minimal")) {
+    return(NULL)
+  }
+  shown <- vapply(kept, function(k) {
+    v <- unclass(k)
+    paste(vapply(seq_along(v), function(i) {
+      code <- if (is.double(v[i]) && haven::is_tagged_na(v[i]))
+                paste0(".", haven::na_tag(v[i])) else .jst_fmt_code(v[i])
+      .jst_udm_row_label(code, names(v)[i])
+    }, character(1)), collapse = ", ")
+  }, character(1))
+  notes <- vapply(unique(shown), function(s) {
+    vars <- names(shown)[shown == s]
+    one  <- length(vars) == 1L && length(kept[[vars[1L]]]) == 1L
+    paste0("Note: The declared missing ", if (one) "value" else "values",
+           " of ", .jst_and_list(vars), " kept ",
+           if (one) "its label" else "their labels", ":\n  ", s)
+  }, character(1))
+  paste(notes, collapse = "\n\n")
 }
 
 #' Internal helper: the line after jrelabel(..., modify = TRUE)

@@ -204,10 +204,17 @@
 #' @param example A per-function example formula string for the generic
 #'   message (e.g. "DV ~ Group").
 #' @param fn The public function's name, for the error prefix and examples.
+#' @param data_sub The data argument as typed (\code{substitute(data)}), or
+#'   NULL when it was missing: a name that is no object stops in the house
+#'   voice, ruling R36's line offered when it holds (Session 391,
+#'   \code{.jst_formula_data_found()}).
+#' @param envir The caller's environment, where the names typed are looked
+#'   up.
 #' @return invisible(NULL) when the inputs pass; otherwise never returns.
 #' @keywords internal
 .jst_check_formula_data <- function(formula, data, first_name, data_name,
-                                    example, fn) {
+                                    example, fn, data_sub = NULL,
+                                    envir = parent.frame(2L)) {
 
   if (inherits(formula, "formula")) {
     # A variable in quotes inside the formula (ruling R18, Session 356).
@@ -217,6 +224,14 @@
     # frame is looked for, so the no-data-frame stop never offers a line
     # that stops here next.
     .jst_formula_dot_stop(formula, fn)
+    # A data frame's name found nowhere (Session 391, ruling R36): after the
+    # formula's own refusals, so a line offered never stops on them next,
+    # and before the read of data below, where R's own "object 'dd' not
+    # found", with no prefix, had been the answer.
+    if (!is.null(data_sub)) {
+      .jst_formula_data_found(data_sub, formula, envir,
+                              sys.call(sys.parent()), fn)
+    }
     # Formula slot is fine. If data was supplied but is NULL, fail fast with
     # a clear message: the caller collapses a missing data argument to NULL
     # too, but only a SUPPLIED data argument carries a data_name, so
@@ -1214,6 +1229,106 @@
 .jst_frame_holding <- function(vars, envir) {
   fr <- .jst_frames_holding(vars, envir)
   if (length(fr) == 1L) fr else NULL
+}
+
+#' Internal helper: the data frame a name found nowhere was probably meant
+#'   to be (ruling R36)
+#'
+#' Ruling R36 (Session 391): jrecode(dd, Age, map = ...), d holding Age, read
+#' dd as a variable, and both routes the not-found stop offered kept that
+#' misreading (MyData in front; under juse() Age moved into labels =); in
+#' the five formula functions jt(Score ~ Group, dd) gave R's own "object 'dd'
+#' not found". A name the caller has already found to be no object is read
+#' as a data frame's name typed wrong when the other two conditions of the
+#' ruling hold as well: it is no variable of any data frame in the
+#' workspace, exactly one data frame holds every variable typed after it,
+#' and that data frame's name is within two letters of it (Levenshtein
+#' distance, case counting, as R's names do) without every letter changed:
+#' dd is one from d and dta one from data, where zz, two from d, shares no
+#' letter with it. With no variable typed after it there is nothing to
+#' match, and no frame is offered.
+#'
+#' @param typed_name Character(1). The name typed where the data frame goes.
+#' @param vars Character. The variables typed after it.
+#' @param envir The caller's environment.
+#' @return Character(1), the data frame's name, or NULL.
+#' @keywords internal
+.jst_misspelled_frame <- function(typed_name, vars, envir) {
+  if (length(vars) == 0L) return(NULL)
+  if (length(.jst_frames_holding(typed_name, envir)) > 0L) return(NULL)
+  fr <- .jst_frame_holding(vars, envir)
+  if (is.null(fr)) return(NULL)
+  dist <- as.integer(utils::adist(typed_name, fr))
+  if (dist > 2L || dist >= max(nchar(typed_name), nchar(fr))) return(NULL)
+  fr
+}
+
+#' Internal helper: the stop for a data frame's name typed wrong (ruling R36)
+#'
+#' "'dd' not found." / "If you meant the data frame d:" and the call as
+#' typed with the data frame in place of the name. When that call would
+#' still stop for want of an input -- jrecode(dd, Age) with no map -- ruling
+#' R23's stop is given instead, its lead "'dd' not found, and no map was
+#' named." (.jst_gap_stop()), so no line offered stops again.
+#'
+#' @param fn Character(1). The user-facing function's name.
+#' @param typed_name Character(1). The name typed.
+#' @param fr Character(1). The data frame meant
+#'   (\code{.jst_misspelled_frame()}).
+#' @param offered The call to offer.
+#' @param envir The caller's environment.
+#' @param cl The call as typed, for ruling R23's example; NULL for none.
+#' @return Does not return; stops.
+#' @keywords internal
+.jst_misspelled_frame_stop <- function(fn, typed_name, fr, offered, envir,
+                                       cl = NULL) {
+  gap <- .jst_call_gap(fn, offered, envir)
+  if (!is.null(gap)) {
+    .jst_gap_stop(fn, gap, cl = cl,
+                  head = paste0("'", typed_name, "' not found"))
+  }
+  .jst_stop("'", typed_name, "' not found.\n",
+            "If you meant the data frame ", fr, ":\n",
+            "  ", .jst_term_text(offered),
+            fn = fn)
+}
+
+#' Internal helper: the formula functions' data frame found nowhere
+#'
+#' jt(), jaov(), jcrosstab(), jlm() and jlogistic() read their data argument
+#' at the front door, and a name found nowhere -- jt(Score ~ Group, dd) --
+#' stopped there in R's own words, "object 'dd' not found", with no prefix.
+#' Called by \code{.jst_check_formula_data()} before that read, after the
+#' formula's own refusals (Session 391, ruling R36): a name that is no
+#' object stops in the house voice, "jt(): 'dd' not found.", and when the
+#' formula's variables are all in one data frame whose name is within two
+#' letters of it, the stop offers the call with that data frame
+#' (.jst_misspelled_frame(), .jst_misspelled_frame_stop()). A name that is an
+#' object, and an expression, are left to the checks that follow.
+#'
+#' @param data_sub The data argument as typed.
+#' @param formula The formula given.
+#' @param envir The caller's environment.
+#' @param cl The call as typed.
+#' @param fn Character(1). The user-facing function's name.
+#' @return Invisible NULL when the name is an object or not a name; stops
+#'   otherwise.
+#' @keywords internal
+.jst_formula_data_found <- function(data_sub, formula, envir, cl, fn) {
+  if (!is.symbol(data_sub)) return(invisible(NULL))
+  nm <- as.character(data_sub)
+  if (!nzchar(nm) || exists(nm, envir = envir)) return(invisible(NULL))
+  vars <- if (inherits(formula, "formula")) all.vars(formula) else character(0)
+  fr <- .jst_misspelled_frame(nm, vars, envir)
+  if (!is.null(fr)) {
+    it  <- as.list(cl)
+    pos <- which(vapply(it[-1L], identical, logical(1), data_sub))
+    if (length(pos) > 0L) {
+      it[[pos[1L] + 1L]] <- as.name(fr)
+      .jst_misspelled_frame_stop(fn, nm, fr, as.call(it), envir)
+    }
+  }
+  .jst_stop("'", nm, "' not found.", fn = fn)
 }
 
 #' Internal helper: a data frame's name typed in quotes where the frame goes
@@ -2666,6 +2781,23 @@
             !any(nn %in% c("data", "x"))) {
           typed <- unique(unlist(lapply(un, function(i) all.vars(it[[i]]))))
           fr <- .jst_frame_holding(typed, envir)
+          # Ruling R36 (Session 391): a data frame's name typed wrong --
+          # jrecode(dd, Age, map = ...), d holding Age. When no frame holds
+          # what was typed and the name is no object, no variable of any
+          # data frame, and one data frame within two letters of it holds
+          # every variable typed after it, the stop offers the call with
+          # that data frame in its place; the two routes below kept the
+          # misreading (dd a variable; under juse() Age moved into labels =).
+          if (is.null(fr) && eval_result$failed) {
+            fr2 <- .jst_misspelled_frame(data_str, setdiff(typed, data_str),
+                                         envir)
+            if (!is.null(fr2)) {
+              it2 <- it
+              it2[[un[1L]]] <- as.name(fr2)
+              .jst_misspelled_frame_stop(fn_name, data_str, fr2, as.call(it2),
+                                         envir, cl = ucl)
+            }
+          }
           if (is.null(fr)) fr <- "MyData"
           new <- c(it[1L], list(as.name(fr)), it[-1L])
           names(new) <- c(nn[1L], "", nn[-1L])

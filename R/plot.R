@@ -38,6 +38,20 @@
 #' categorical). Calls that would otherwise auto-detect to a scatter or
 #' boxplot produce a helpful error directing you to the formula form.
 #'
+#' \strong{A labelled variable with a few categories}, such as Region --
+#' six values or fewer with at least one of them labelled, or whole
+#' numbers from 0 to 6 -- is drawn as categories when nothing says
+#' otherwise: alone, as a bar chart;
+#' beside another variable in the variable-list form, as one of a grouped
+#' bar chart's two variables or as a boxplot's groups (the error then gives
+#' the formula line); on the right of a formula, as the groups of a
+#' boxplot. This is for the plot only: the analysis functions read such a
+#' variable as numbers unless it is registered or asserted (see
+#' \code{\link{jdummy}}). \code{numeric =} or \code{count =}, a
+#' \code{\link{jnumeric}()} or \code{\link{jcount}()} registration, a
+#' \code{type}, or \code{line}, \code{band}, \code{equation} or \code{r2}
+#' (which only a scatter plot draws) keeps the numbers.
+#'
 #' Supports pipeline integration (\code{jsubset}, \code{jcomplete}, per-call
 #' \code{subset}), grouping via \code{by = }, and regression lines with
 #' equation/R-squared/band annotations.
@@ -203,24 +217,24 @@
 #' jplot(WellbeingScore ~ Income, community, line = "lm", band = "see")
 #' jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 #'
-#' # Boxplot: assert the grouping variable as categorical (labelled
-#' # variables otherwise enter numerically; jdummy() registration also works)
+#' # Boxplot: a labelled variable with a few categories, such as Region,
+#' # is drawn as groups on the right of the formula (for the plot only)
+#' jplot(WellbeingScore ~ Region, community)
+#' # categorical = asserts it in any variable; numeric = keeps the codes
 #' jplot(WellbeingScore ~ Region, community, categorical = "Region")
 #'
 #' # Variable-list form (distributions and counts)
 #' jplot(community, Age)                      # histogram
 #' jplot(data = community, Age)               # the same, data frame as data =
 #' jplot(community, Region)                   # bar chart
-#' jplot(community, Region, Volunteer,        # grouped bar chart
-#'       categorical = c("Region", "Volunteer"))
+#' jplot(community, Region, Volunteer)        # grouped bar chart
 #'
 #' # Using juse() default (omit the data frame in either form)
 #' juse(community)
 #' jplot(WellbeingScore ~ Income)               # scatter
 #' jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
 #' jplot(Age)                                   # histogram
-#' jplot(Region, Volunteer,                     # grouped bar chart
-#'       categorical = c("Region", "Volunteer"))
+#' jplot(Region, Volunteer)                     # grouped bar chart
 #'
 #' @seealso \code{\link{jstats}} for the package overview,
 #'   workflow conventions, and complete function listing.
@@ -660,17 +674,23 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # bar instead. This is a display choice only; it never changes analysis
   # classification, and an explicit numeric=/count= or registration is honoured
   # (those keep the histogram, which the builder hardens against labels below).
-  if (n_vars == 1L && is.null(type) && var_types[1] == "numeric") {
-    v1 <- variable_names[1]
-    asserted_numeric <- v1 %in% c(numeric, count)
-    intent <- if (!is.null(.jst_data_name))
-      .jst_get_intent(.jst_data_name, v1) else NULL
-    registered_numeric <- !is.null(intent) &&
-      intent$kind %in% c("numeric", "count")
-    if (!asserted_numeric && !registered_numeric &&
-        inherits(data[[v1]], "haven_labelled") &&
-        .jst_is_discrete_integer(data[[v1]], v1, .jst_data_name)) {
-      var_types[1] <- "categorical"
+  # Ruling R38 (Session 391): one of two variables too, so jplot(d, Region,
+  # OwnsHome) draws the grouped bar chart and jplot(d, WellbeingScore,
+  # Region) gets the boxplot stop with the formula line, where both had read
+  # as two numbers and stopped with a line that drew a scatter of the codes.
+  # The test is .jst_plot_discrete_redirect(), the formula form's too. As
+  # there, line =, band =, equation = or r2 = asks for the scatterplot.
+  fit_args <- intersect(c("line", "band", "equation", "r2"),
+                        names(jplot_call))
+  if (is.null(type) &&
+      (n_vars == 1L || (n_vars == 2L && length(fit_args) == 0L))) {
+    for (i in seq_len(n_vars)) {
+      vi <- variable_names[i]
+      if (var_types[[i]] == "numeric" &&
+          .jst_plot_discrete_redirect(data[[vi]], vi, .jst_data_name,
+                                      vi %in% c(numeric, count))) {
+        var_types[i] <- "categorical"
+      }
     }
   }
 
@@ -712,10 +732,24 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # These plots distinguish DV from IV. Requiring formula syntax prevents
   # confusion about which variable goes on which axis and mirrors jlm/jaov.
   if (resolved_type == "scatter") {
+    # Ruling R38 (Session 391): the formula form reads an unasserted labelled
+    # variable of whole numbers on the right of ~ as groups, so where the IV
+    # is one, the line keeps what made this call a scatterplot -- its
+    # numeric = or count = for the IV, else its type = -- since the line
+    # alone would draw a boxplot.
+    iv <- variable_names[1]
+    keep_iv <- if (.jst_plot_discrete_redirect(data[[iv]], iv, .jst_data_name,
+                                               FALSE)) {
+      if (iv %in% count) paste0(", count = ", iv)
+      else if (iv %in% numeric) paste0(", numeric = ", iv)
+      else if (!is.null(type)) paste0(", type = \"", type, "\"")
+      else ""
+    } else ""
     .jst_stop("For two-numeric scatterplots, use formula syntax to make the DV ",
          "and IV explicit (consistent with jlm):\n",
-         "  jplot(", variable_names[2], " ~ ", variable_names[1],
+         "  jplot(", variable_names[2], " ~ ", iv,
          ", ", if (!is.null(.jst_data_name)) .jst_data_name else "MyData",
+         keep_iv,
          if (!identical(line, FALSE)) paste0(", line = \"",
                                              if (isTRUE(line)) "lm" else line,
                                              "\"") else "",
@@ -1073,6 +1107,21 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                                    override = .ov_for(y_name))
   x_is_cat <-  .jst_is_categorical(data[[x_name]], x_name, .jst_data_name,
                                    override = .ov_for(x_name))
+  # Ruling R38 (Session 391): an unasserted labelled variable the
+  # variable-list form draws as bars is read as groups on the right of the
+  # formula, for the plot only, so jplot(WellbeingScore ~ Region, d) draws
+  # the boxplot, where it drew a scatter of Region's codes. The left side
+  # stays the y axis's numbers; numeric = Region, a jnumeric() or jcount()
+  # registration, or a type = given keeps the plot as before, and so does
+  # line =, band =, equation = or r2 =, which only a scatterplot draws.
+  fit_args <- intersect(c("line", "band", "equation", "r2"),
+                        names(jplot_call))
+  if (is.null(type) && !x_is_cat && length(fit_args) == 0L &&
+      .jst_plot_discrete_redirect(data[[x_name]], x_name, .jst_data_name,
+                                  identical(.ov_for(x_name), "numeric") ||
+                                    identical(.ov_for(x_name), "count"))) {
+    x_is_cat <- TRUE
+  }
 
   if (!is.null(type)) {
     resolved_type <- type
@@ -1084,11 +1133,10 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     resolved_type <- if (x_is_cat) "box" else "scatter"
   }
 
-  # Classify both vars for downstream builders
+  # Classify both vars for downstream builders (the x as decided above,
+  # ruling R38's reading included)
   var_types <- c(
-    if (.jst_is_categorical(data[[x_name]], x_name, .jst_data_name,
-                            override = .ov_for(x_name)))
-      "categorical" else "numeric",
+    if (x_is_cat) "categorical" else "numeric",
     if (.jst_is_categorical(data[[y_name]], y_name, .jst_data_name,
                             override = .ov_for(y_name)))
       "categorical" else "numeric"
@@ -1273,6 +1321,40 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   out
 }
 
+
+#' Internal helper: a labelled variable jplot() draws as categories
+#'
+#' The display redirect (display only; it never changes how an analysis
+#' classifies the variable, under classification Rule B). An unasserted
+#' haven-labelled variable reads as a number, which drew a histogram that
+#' errored on its discrete axis; when the structural detector finds it
+#' discrete (.jst_is_discrete_integer()), jplot() draws it as categories.
+#' Since Session 391 (ruling R38; Jeff: "Your recommendation") it applies to
+#' each of two variables in the variable-list form and to the right side of
+#' a formula, where only one variable had been redirected: jplot(d, Region,
+#' OwnsHome) draws the grouped bar chart and jplot(WellbeingScore ~ Region,
+#' d) the boxplot, where both drew scatters of the codes. A numeric = or
+#' count = assertion, and a jnumeric() or jcount() registration, keep the
+#' number; the callers also skip it for two variables when a type = or one
+#' of the scatter plot's own arguments (line, band, equation, r2) is given,
+#' and the variable-list form's scatter stop carries the call's numeric =,
+#' count = or type = into its line when its IV is such a variable.
+#'
+#' @param col The variable, after the pipeline.
+#' @param v Character(1). Its name.
+#' @param data_name Character(1) or NULL. The data frame's name, for the
+#'   registrations.
+#' @param asserted_numeric Logical(1). TRUE when numeric = or count = names
+#'   it.
+#' @return Logical(1).
+#' @keywords internal
+.jst_plot_discrete_redirect <- function(col, v, data_name, asserted_numeric) {
+  if (isTRUE(asserted_numeric)) return(FALSE)
+  intent <- if (!is.null(data_name)) .jst_get_intent(data_name, v) else NULL
+  if (!is.null(intent) && intent$kind %in% c("numeric", "count")) return(FALSE)
+  inherits(col, "haven_labelled") &&
+    .jst_is_discrete_integer(col, v, data_name)
+}
 
 #' Internal helper: auto-detect plot type from variable types
 #'

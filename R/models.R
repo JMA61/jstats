@@ -304,10 +304,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # 10 broad categories) are NOT flagged, while small-range labelled or
     # whole-number 0-6 variables ARE flagged.
     .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
-    if (.jst_warns_seems_categorical(data[[v]], v, .jst_data_name,
-                                     override = .ov)) {
-      .jst_warn(.jst_assumption_warning(
-        v, if (identical(method, "pearson")) "jcorr" else paste0("jcorr_", method)))
+    .site <- if (identical(method, "pearson")) "jcorr" else paste0("jcorr_", method)
+    if (is.null(.ov) && .jst_dummy_registered(.jst_data_name, v)) {
+      .jst_warn(.jst_assumption_warning(v, paste0(.site, "_is")))
+    } else if (.jst_warns_seems_categorical(data[[v]], v, .jst_data_name,
+                                            override = .ov)) {
+      .jst_warn(.jst_assumption_warning(v, .site))
     }
   }
 
@@ -3561,7 +3563,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
     example    = "DV ~ IV",
-    fn         = "jlm"
+    fn         = "jlm",
+    data_sub   = if (missing(data))    NULL else substitute(data),
+    envir      = parent.frame()
   )
 
   # The formula as typed and the kind of thing given as the data, for the
@@ -4847,7 +4851,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
     example    = "DV ~ IV",
-    fn         = "jlogistic"
+    fn         = "jlogistic",
+    data_sub   = if (missing(data))    NULL else substitute(data),
+    envir      = parent.frame()
   )
 
   # The formula as typed and the kind of thing given as the data, for the

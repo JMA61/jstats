@@ -9,8 +9,8 @@
 \arguments{
 \item{prompt}{The single-line prompt string, ending "(y/n): ".}
 
-\item{remedy}{One sentence naming the caller-specific fix; becomes the
-error's final line.}
+\item{remedy}{The caller-specific fix, one sentence a line; becomes the
+error's last lines.}
 
 \item{subject}{The question's name as it reads in the error's first
 line; "overwrite" for the three overwrite prompts, "confirmation"
@@ -49,7 +49,11 @@ so nothing is at risk -- and closes the second. The prompt reads
 answer it.
 
 Message shape (Rules D and I): the question, the received text on its
-own line, and ONE corrective action. The received text carries the
+own line, and the corrective action. Since Session 391 (the (S298) E8
+item) the overwrite question's action is the two ways out, the way to
+keep what exists on the first line and the way to replace it on the
+second, where the one action it gave was the destructive one. The
+received text carries the
 diagnosis, so no sentence explains the mechanism -- it would be
 accurate for the script case and wrong for a user who simply typed
 "yep", and both readers act on the same fix. The text is shown

@@ -3295,8 +3295,9 @@
 #' categorical" hedge: that hedge is only a guess, and a user who has
 #' asserted a numeric role has already answered it. A structural (inferred)
 #' Numeric, or any Categorical (including a jdummy-asserted one), returns
-#' FALSE so the hedge fires as before -- the jdummy/jcorr/jdesc interaction
-#' is deliberately left to its own (parked) design.
+#' FALSE. Since Session 391 (the (Session 80) item, decided: a warning, no
+#' refusal) jdesc() and jcorr() give a jdummy-registered variable the
+#' definitive warning ahead of this hedge (.jst_dummy_registered()).
 #'
 #' @param x A variable / data-frame column.
 #' @param var_name Optional variable name (with \code{data_name}) for
@@ -3353,6 +3354,18 @@
                         clause = "Spearman correlations assume ordinal or interval data."),
   jcorr_kendall  = list(verb = "seems", connector = ". ",
                         clause = "Kendall correlations assume ordinal or interval data."),
+  # A jdummy() registration is the user's own assertion, so jdesc() and
+  # jcorr() state it, as jsum(), javg() and jalpha() do (Session 391; the
+  # (Session 80) item, voice Rule AI): "Region seems categorical" had
+  # hedged a cause the package knew.
+  jdesc_is  = list(verb = "is", connector = "; ",
+                   clause = "descriptive statistics may not be meaningful."),
+  jcorr_is  = list(verb = "is", connector = "; ",
+                   clause = "Pearson correlations assume continuous/interval data."),
+  jcorr_spearman_is = list(verb = "is", connector = "; ",
+                           clause = "Spearman correlations assume ordinal or interval data."),
+  jcorr_kendall_is  = list(verb = "is", connector = "; ",
+                           clause = "Kendall correlations assume ordinal or interval data."),
   jt     = list(verb = "seems", connector = ". ",
                 clause = "A t-test expects an interval outcome."),
   jaov   = list(verb = "seems", connector = ". ",
@@ -3383,6 +3396,23 @@
          call. = FALSE)
   }
   paste0(var_name, " ", spec$verb, " categorical", spec$connector, spec$clause)
+}
+
+#' Internal helper: is a variable registered with jdummy()?
+#'
+#' TRUE when the dummy store holds a registration for the variable under the
+#' data frame's name -- the user's own assertion that it is categorical, so
+#' jdesc() and jcorr() state it ("Region is categorical; ..."), as jalpha()
+#' does, where they had hedged it (Session 391; the (Session 80) item).
+#'
+#' @param data_name Character(1) or NULL. The data frame's name.
+#' @param v Character(1). The variable's name.
+#' @return Logical(1).
+#' @keywords internal
+.jst_dummy_registered <- function(data_name, v) {
+  regs <- .jst_get_dummy(data_name)
+  length(regs) > 0L &&
+    any(vapply(regs, function(r) identical(r$var_name, v), logical(1)))
 }
 
 #' Internal helper: should a "seems categorical" hedge fire for this variable?

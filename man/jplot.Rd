@@ -192,6 +192,20 @@ given either positionally or as \code{data = }:
 categorical). Calls that would otherwise auto-detect to a scatter or
 boxplot produce a helpful error directing you to the formula form.
 
+\strong{A labelled variable with a few categories}, such as Region --
+six values or fewer with at least one of them labelled, or whole
+numbers from 0 to 6 -- is drawn as categories when nothing says
+otherwise: alone, as a bar chart;
+beside another variable in the variable-list form, as one of a grouped
+bar chart's two variables or as a boxplot's groups (the error then gives
+the formula line); on the right of a formula, as the groups of a
+boxplot. This is for the plot only: the analysis functions read such a
+variable as numbers unless it is registered or asserted (see
+\code{\link{jdummy}}). \code{numeric =} or \code{count =}, a
+\code{\link{jnumeric}()} or \code{\link{jcount}()} registration, a
+\code{type}, or \code{line}, \code{band}, \code{equation} or \code{r2}
+(which only a scatter plot draws) keeps the numbers.
+
 Supports pipeline integration (\code{jsubset}, \code{jcomplete}, per-call
 \code{subset}), grouping via \code{by = }, and regression lines with
 equation/R-squared/band annotations.
@@ -291,24 +305,24 @@ jplot(WellbeingScore ~ Income, community, line = "lm")  # + regression line
 jplot(WellbeingScore ~ Income, community, line = "lm", band = "see")
 jplot(WellbeingScore ~ Income, community, by = Volunteer, line = "lm")
 
-# Boxplot: assert the grouping variable as categorical (labelled
-# variables otherwise enter numerically; jdummy() registration also works)
+# Boxplot: a labelled variable with a few categories, such as Region,
+# is drawn as groups on the right of the formula (for the plot only)
+jplot(WellbeingScore ~ Region, community)
+# categorical = asserts it in any variable; numeric = keeps the codes
 jplot(WellbeingScore ~ Region, community, categorical = "Region")
 
 # Variable-list form (distributions and counts)
 jplot(community, Age)                      # histogram
 jplot(data = community, Age)               # the same, data frame as data =
 jplot(community, Region)                   # bar chart
-jplot(community, Region, Volunteer,        # grouped bar chart
-      categorical = c("Region", "Volunteer"))
+jplot(community, Region, Volunteer)        # grouped bar chart
 
 # Using juse() default (omit the data frame in either form)
 juse(community)
 jplot(WellbeingScore ~ Income)               # scatter
 jplot(WellbeingScore ~ Income, line = "lm")  # + regression line
 jplot(Age)                                   # histogram
-jplot(Region, Volunteer,                     # grouped bar chart
-      categorical = c("Region", "Volunteer"))
+jplot(Region, Volunteer)                     # grouped bar chart
 
 }
 \seealso{

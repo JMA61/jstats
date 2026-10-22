@@ -300,6 +300,61 @@
   list(data = data, dropped = dropped)
 }
 
+#' Internal helper: the calls that make a data frame's registrations again
+#'
+#' For jload()'s note when a reload clears the registrations set this
+#' session (Session 391; the (Session 114) item): the numeric, count and
+#' Likert registrations as one jnumeric(), jcount() or jlikert() line each,
+#' naming their variables, and the dummy registrations as jdummy() lines --
+#' those whose reference the default rule chose in one line, each named
+#' reference in a line of its own with ref = (the data's code for a
+#' labelled or numeric variable, the category itself, in quotes, for text
+#' or a factor; a registration restored from an older file, which does not
+#' record how its reference was chosen, names it too). Only variables the
+#' loaded data holds are named, so each line runs; a name R reads only in
+#' backticks gets them.
+#'
+#' @param obj_name Character(1). The data frame's name.
+#' @param reg The intent registry (.jst_get_registry()), or NULL.
+#' @param dummy The dummy registrations (.jst_get_dummy()), or NULL.
+#' @param cols Character. The loaded data's variable names.
+#' @return Character, the lines without their indent; empty when none.
+#' @keywords internal
+.jst_registration_lines <- function(obj_name, reg, dummy, cols) {
+  bq <- function(v) if (identical(make.names(v), v)) v else paste0("`", v, "`")
+  out <- character(0)
+  if (length(reg) > 0L) {
+    kinds <- vapply(reg, function(r) as.character(r$kind)[1L], character(1))
+    for (k in c("numeric", "count", "likert")) {
+      vs <- intersect(names(reg)[kinds == k], cols)
+      if (length(vs) == 0L) next
+      out <- c(out, paste0("j", k, "(", obj_name, ", ",
+                           paste(vapply(vs, bq, character(1)), collapse = ", "),
+                           ")"))
+    }
+  }
+  if (length(dummy) > 0L) {
+    keep <- Filter(function(r) !is.null(r$var_name) && r$var_name %in% cols,
+                   dummy)
+    auto <- vapply(keep, function(r) isTRUE(r$ref_default), logical(1))
+    if (any(auto)) {
+      vs <- vapply(keep[auto], function(r) bq(r$var_name), character(1))
+      out <- c(out, paste0("jdummy(", obj_name, ", ",
+                           paste(vs, collapse = ", "), ")"))
+    }
+    for (r in keep[!auto]) {
+      ref <- if (is.character(r$values) && length(r$values) >= r$ref_idx) {
+        paste0("\"", .jst_dq_escape(r$values[r$ref_idx]), "\"")
+      } else {
+        format(r$ref_code)
+      }
+      out <- c(out, paste0("jdummy(", obj_name, ", ", bq(r$var_name),
+                           ", ref = ", ref, ")"))
+    }
+  }
+  out
+}
+
 #' Internal helper: refresh the registration notebook from a loaded frame
 #'
 #' On load, makes the session notebook for a frame name match what the file
@@ -387,9 +442,33 @@
       } else {
         "(the loaded data carries none)"
       }
+      # Since Session 391 (the (Session 114) item, Jeff's okay of the lean):
+      # the note gives the lines that set the registrations again, for the
+      # variables the loaded data holds, so "did I just lose my work?" has
+      # its answer under it. The clearing itself is unchanged.
+      n_reg <- length(existing_reg) + length(existing_dummy)
+      again <- .jst_registration_lines(obj_name, existing_reg,
+                                       existing_dummy, cols)
+      # The registrations a line can set again: those on a variable the
+      # loaded data holds. When some are on variables it lacks, the lead
+      # says which ones the lines are.
+      n_again <- sum(names(existing_reg) %in% cols) +
+        sum(vapply(existing_dummy, function(r)
+          !is.null(r$var_name) && r$var_name %in% cols, logical(1)))
+      lead <- if (n_again == n_reg) {
+        paste0("To set ", if (n_reg == 1L) "it" else "them", " again:\n")
+      } else if (n_again == 1L) {
+        "To set again the one on a variable the loaded data holds:\n"
+      } else {
+        "To set again the ones on variables the loaded data holds:\n"
+      }
       notes <- c(notes, paste0(
-        "Cleared the classification registrations you had set this session ",
-        "for '", obj_name, "' ", paren, "."))
+        "Cleared the classification ",
+        if (n_reg == 1L) "registration" else "registrations",
+        " you had set this session for '", obj_name, "' ", paren, ".",
+        if (length(again) > 0L) {
+          paste0("\n", lead, paste0("  ", again, collapse = "\n"))
+        }))
     }
     return(if (length(notes) > 0) notes else NULL)
   }

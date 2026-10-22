@@ -1025,7 +1025,8 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     ok <- .jst_confirm(
       paste0("'", obj_name, "' already exists in your environment. ",
              "Overwrite? (y/n): "),
-      .jst_txt_add_overwrite
+      paste0("To keep the ", obj_name, " data frame, load the file under ",
+             "another name with name =.\n", .jst_txt_add_overwrite)
     )
     if (!ok) {
       .jst_msg("Load cancelled.")
@@ -7303,11 +7304,14 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # one line, so a long path made a long line.
   clash <- file.exists(out_path) && !overwrite
   ask   <- clash && interactive()
+  # Since Session 391 (the (S298) E8 item) both ways out, the way to keep the
+  # file first, where "Use overwrite = TRUE to replace it." offered only the
+  # destructive one.
   if (clash && !ask) {
     .jst_stop(
       "this file already exists:\n",
       "  ", .jst_norm_path(out_path), "\n",
-      "Use overwrite = TRUE to replace it."
+      .jst_txt_keep_file, .jst_txt_add_overwrite
     )
   }
 
@@ -7626,7 +7630,7 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     ok <- .jst_confirm(
       paste0("File '", .jst_norm_path(out_path),
              "' already exists. Overwrite? (y/n): "),
-      .jst_txt_add_overwrite
+      paste0(.jst_txt_keep_file, .jst_txt_add_overwrite)
     )
     if (!ok) {
       .jst_msg("Save cancelled.")
@@ -8027,7 +8031,8 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
       ok <- .jst_confirm(
         paste0("'", dest_name, "' already exists in your environment. ",
                "Overwrite? (y/n): "),
-        .jst_txt_add_overwrite
+        paste0("To keep the ", dest_name, " data frame, give the copy ",
+               "another name.\n", .jst_txt_add_overwrite)
       )
       if (!ok) {
         .jst_msg("Copy cancelled.")

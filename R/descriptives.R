@@ -325,8 +325,10 @@ jdesc <- function(data, ..., by = NULL, subset = NULL, variable.id = NULL,
   # explicitly because the data frame is reassigned by the pipeline below.
   .emit_good_notes <- function(v, dat) {
     .ov <- if (v %in% count) "count" else if (v %in% numeric) "numeric" else NULL
-    if (.jst_warns_seems_categorical(dat[[v]], v, .jst_data_name,
-                                     override = .ov)) {
+    if (is.null(.ov) && .jst_dummy_registered(.jst_data_name, v)) {
+      .jst_warn(.jst_assumption_warning(v, "jdesc_is"))
+    } else if (.jst_warns_seems_categorical(dat[[v]], v, .jst_data_name,
+                                            override = .ov)) {
       .jst_warn(.jst_assumption_warning(v, "jdesc"))
     }
     if (!is.null(desc_class[[v]]$note)) {
