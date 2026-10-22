@@ -1,5 +1,48 @@
 # Changelog
 
+## jstats 0.9.265
+
+Thank you for trying jstats. Here is what is new since 0.9.254.
+
+- **Chinese, Japanese and Korean text.** Tables, notes and labels line
+  up, each character taking two columns. Text loaded from a CSV file
+  sorts, so
+  [`jencode()`](https://jma61.github.io/jstats/reference/jencode.md)
+  codes it, where it stopped with an encoding error. A full-width
+  semicolon or equals sign typed in a map stops, with the call retyped
+  in plain characters, ready to run.
+- **Labels survive a subset.** A subset taken with base R, such as
+  `community[community$Age > 40, ]`, keeps its value labels and declared
+  missing values from the moment jstats is loaded. Before, a subset
+  taken ahead of your first jstats call lost them without a word, and
+  -99 (Refused) was counted as an income.
+- **A data frame’s name typed wrong.** Type `dd` for `d`, as in
+  `jt(Score ~ Group, dd)`, and jstats offers the call with the data
+  frame that holds those variables, `jt(Score ~ Group, d)`. The same
+  inside an expression, such as `dd[dd$Age > 40, ]`.
+- **Blank text cells in Excel sheets.** A sheet’s text variable now
+  loads as a CSV file’s does: an empty cell is the `<blank>` category,
+  counted as valid, where it loaded as missing. To keep blanks missing:
+  `jload("survey.xlsx", na = "")`
+- **More single questions read as Likert.** Labels running from Never to
+  Very often, Very poor to Very good, or Strongly oppose to Strongly
+  support, among others, now read as a Likert item:
+  [`jscreen()`](https://jma61.github.io/jstats/reference/jscreen.md)
+  shows it as Likert, and
+  [`jdesc()`](https://jma61.github.io/jstats/reference/jdesc.md) and
+  [`jcorr()`](https://jma61.github.io/jstats/reference/jcorr.md) no
+  longer warn that it seems categorical.
+- **Plots of labelled variables.** A labelled variable with a few
+  categories is drawn as categories, unless `numeric =` says otherwise.
+  So `jplot(WellbeingScore ~ Region, community)` draws a boxplot for
+  each region, where it plotted the region codes as numbers.
+
+When something you typed before now stops, its message says what to type
+instead.
+
+Problems or suggestions: tell me, or open an issue at
+<https://github.com/jma61/jstats/issues>.
+
 ## jstats 0.9.254
 
 Thank you for trying jstats. Here is what is new since the last release

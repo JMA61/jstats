@@ -33,6 +33,25 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.9.265" id="jstats-09265">jstats 0.9.265<a class="anchor" aria-label="anchor" href="#jstats-09265"></a></h2>
+<p>Thank you for trying jstats. Here is what is new since 0.9.254.</p>
+<ul><li>
+<strong>Chinese, Japanese and Korean text.</strong> Tables, notes and labels line up, each character taking two columns. Text loaded from a CSV file sorts, so <code><a href="../reference/jencode.html">jencode()</a></code> codes it, where it stopped with an encoding error. A full-width semicolon or equals sign typed in a map stops, with the call retyped in plain characters, ready to run.</li>
+<li>
+<strong>Labels survive a subset.</strong> A subset taken with base R, such as <code>community[community$Age &gt; 40, ]</code>, keeps its value labels and declared missing values from the moment jstats is loaded. Before, a subset taken ahead of your first jstats call lost them without a word, and -99 (Refused) was counted as an income.</li>
+<li>
+<strong>A data frame’s name typed wrong.</strong> Type <code>dd</code> for <code>d</code>, as in <code>jt(Score ~ Group, dd)</code>, and jstats offers the call with the data frame that holds those variables, <code>jt(Score ~ Group, d)</code>. The same inside an expression, such as <code>dd[dd$Age &gt; 40, ]</code>.</li>
+<li>
+<strong>Blank text cells in Excel sheets.</strong> A sheet’s text variable now loads as a CSV file’s does: an empty cell is the <code>&lt;blank&gt;</code> category, counted as valid, where it loaded as missing. To keep blanks missing: <code>jload("survey.xlsx", na = "")</code>
+</li>
+<li>
+<strong>More single questions read as Likert.</strong> Labels running from Never to Very often, Very poor to Very good, or Strongly oppose to Strongly support, among others, now read as a Likert item: <code><a href="../reference/jscreen.html">jscreen()</a></code> shows it as Likert, and <code><a href="../reference/jdesc.html">jdesc()</a></code> and <code><a href="../reference/jcorr.html">jcorr()</a></code> no longer warn that it seems categorical.</li>
+<li>
+<strong>Plots of labelled variables.</strong> A labelled variable with a few categories is drawn as categories, unless <code>numeric =</code> says otherwise. So <code>jplot(WellbeingScore ~ Region, community)</code> draws a boxplot for each region, where it plotted the region codes as numbers.</li>
+</ul><p>When something you typed before now stops, its message says what to type instead.</p>
+<p>Problems or suggestions: tell me, or open an issue at <a href="https://github.com/jma61/jstats/issues" class="external-link uri">https://github.com/jma61/jstats/issues</a>.</p>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.254" id="jstats-09254">jstats 0.9.254<a class="anchor" aria-label="anchor" href="#jstats-09254"></a></h2>
 <p>Thank you for trying jstats. Here is what is new since the last release (0.9.252).</p>
 <ul><li>
