@@ -192,7 +192,8 @@ jsubset()                                # Check status
 jsubset(NULL)                            # Clear default dataset's setting
 #> jsubset cleared for community (had: Age < 40 & WellbeingScore > 50).
 jsubset(community, NULL)                 # Clear a named dataset's setting
-#> No jsubset set for community. Nothing to clear.
+#> No jsubset set for community.
+#> Nothing to clear.
 jsubset(clear.all = TRUE)                # Clear every dataset's setting
 #> No jsubset settings to clear.
 

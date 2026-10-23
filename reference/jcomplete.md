@@ -272,12 +272,13 @@ jcomplete(community, off)      # Deactivate on a named dataset
 jcomplete(community, on)       # ... and reactivate it
 #> jcomplete reactivated for community: Income, Education, Age
 jcomplete()                    # Check status
-#> jcomplete active for community: Income, Education, Age (91 of 103
-#> complete cases)
+#> jcomplete active for community: Income, Education, Age
+#> (91 of 103 complete cases)
 jcomplete(NULL)                # Clear the default dataset's setting
 #> jcomplete cleared for community (had: Income, Education, Age).
 jcomplete(community, NULL)     # Clear a named dataset's setting
-#> No jcomplete filter set for community. Nothing to clear.
+#> No jcomplete filter set for community.
+#> Nothing to clear.
 jcomplete(clear.all = TRUE)    # Clear every dataset's setting
 #> No jcomplete settings to clear.
 

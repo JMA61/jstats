@@ -23,7 +23,11 @@ and compound the misalignment.
 
 - prompt:
 
-  The single-line prompt string, ending "(y/n): ".
+  The prompt string, ending "(y/n): ". A statement before the question
+  goes first, followed by a newline (ruling R42, Session 395): it is
+  printed through cat() on a line of its own, and only the question
+  becomes readline()'s prompt, which is a single-line facility
+  (.jst_jai_confirm()'s note).
 
 - remedy:
 

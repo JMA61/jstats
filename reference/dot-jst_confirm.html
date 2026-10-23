@@ -29,7 +29,7 @@ line and compound the misalignment."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.266</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.267</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,7 +80,11 @@ line and compound the misalignment.</p>
 
 
 <dl><dt id="arg-prompt">prompt<a class="anchor" aria-label="anchor" href="#arg-prompt"></a></dt>
-<dd><p>The single-line prompt string, ending "(y/n): ".</p></dd>
+<dd><p>The prompt string, ending "(y/n): ". A statement before the
+question goes first, followed by a newline (ruling R42, Session 395):
+it is printed through cat() on a line of its own, and only the question
+becomes readline()'s prompt, which is a single-line facility
+(.jst_jai_confirm()'s note).</p></dd>
 
 
 <dt id="arg-remedy">remedy<a class="anchor" aria-label="anchor" href="#arg-remedy"></a></dt>

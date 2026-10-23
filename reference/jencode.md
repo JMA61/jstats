@@ -293,8 +293,8 @@ MyData$AnswerR <- jencode(MyData, Answer,
 
 # Repair mode: keep the numbers at face value, sweep words and blanks
 MyData$Age <- jencode(MyData, AgeTxt, map = "else=NA")
-#> Note: 3 values in 'AgeTxt' stored as text were kept at their own value ("41" ->
-#> 41, never renumbered).
+#> Note: 3 values in 'AgeTxt' stored as text were kept at their own value
+#> ("41" -> 41, never renumbered).
 #> 
 #> Note: -99 in 'AgeTxt' looks like a coded missing value; the column also
 #> contained the word "Refused".

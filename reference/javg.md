@@ -76,8 +76,8 @@ juse(community)
 
 # Mean of three variables (all must be non-missing)
 community$EnvAvg <- javg(Environment1, Environment3, Environment4)
-#> Mean of 3 variables computed for 103 cases (19 set to NA due to
-#> missing values).
+#> Mean of 3 variables computed for 103 cases
+#> (19 set to NA due to missing values).
 #> Mean of the new variable: 3.175.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
@@ -97,8 +97,8 @@ community$EnvAvg <- javg(Environment1, Environment3, Environment4,
 
 # Mean using colon range for consecutive columns
 community$ScaleMean <- javg(Environment1:Environment5)
-#> Mean of 5 variables computed for 103 cases (19 set to NA due to
-#> missing values).
+#> Mean of 5 variables computed for 103 cases
+#> (19 set to NA due to missing values).
 #> Mean of the new variable: 3.031.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
@@ -115,8 +115,8 @@ community$Environment2R <- jrecode(community, Environment2,
 #> new column.
 community$ScaleMean <- javg(Environment1, Environment2R,
                             Environment3:Environment5)
-#> Mean of 5 variables computed for 103 cases (19 set to NA due to
-#> missing values).
+#> Mean of 5 variables computed for 103 cases
+#> (19 set to NA due to missing values).
 #> Mean of the new variable: 3.083.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
@@ -137,8 +137,8 @@ community$EnvAvg <- javg(Environment1, Environment3, Environment4,
 # With a custom variable label
 community$ScaleMean <- javg(Environment1:Environment5,
                             var.label = "Environment Scale Mean")
-#> Mean of 5 variables computed for 103 cases (19 set to NA due to
-#> missing values).
+#> Mean of 5 variables computed for 103 cases
+#> (19 set to NA due to missing values).
 #> Mean of the new variable: 3.031.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
@@ -150,8 +150,8 @@ community$ScaleMean <- javg(Environment1:Environment5,
 # positional or named
 community$EnvAvg <- javg(community, Environment1, Environment3,
                          Environment4)
-#> Mean of 3 variables computed for 103 cases (19 set to NA due to
-#> missing values).
+#> Mean of 3 variables computed for 103 cases
+#> (19 set to NA due to missing values).
 #> Mean of the new variable: 3.175.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
@@ -159,8 +159,8 @@ community$EnvAvg <- javg(community, Environment1, Environment3,
 #> For the full distribution (min, max, SD), run jdesc() on the new column.
 community$EnvAvg <- javg(data = community, Environment1, Environment3,
                          Environment4)
-#> Mean of 3 variables computed for 103 cases (19 set to NA due to
-#> missing values).
+#> Mean of 3 variables computed for 103 cases
+#> (19 set to NA due to missing values).
 #> Mean of the new variable: 3.175.
 #> 
 #> Note: javg() returns the scores; assign them to a column to keep them:
