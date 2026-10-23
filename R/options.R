@@ -502,7 +502,7 @@ joutput <- function(level, effect.size = NULL,
     if (min(slot_dist) <= 2L) {
       near <- .jst_output_toggle_names[slot_dist == min(slot_dist)]
       .jst_stop("no setting named \"", level,
-                "\". Did you mean ", paste(near, collapse = " or "), "?",
+                "\".\nDid you mean ", paste(near, collapse = " or "), "?",
                 paste0("\n  joutput(\"", near, "\")", collapse = ""),
                 fn = "joutput")
     }
@@ -1321,7 +1321,7 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
       if (min(slot_dist) <= 2L) {
         near <- slot_names[slot_dist == min(slot_dist)]
         .jst_stop("no setting named \"", missing.convention,
-                  "\". Did you mean ", paste(near, collapse = " or "), "?",
+                  "\".\nDid you mean ", paste(near, collapse = " or "), "?",
                   paste0("\n  joptions(\"", near, "\")", collapse = ""),
                   fn = "joptions")
       }
@@ -1377,14 +1377,14 @@ joptions <- function(missing.convention = NULL, missing.convention.codes = NULL,
     if (!is.character(data.dir) ||
         length(data.dir) != 1L ||
         is.na(data.dir)) {
-      .jst_stop('data.dir must be a single character string, NULL, or "". ',
+      .jst_stop('data.dir must be a single character string, NULL, or "".\n',
            '(NULL or "" clears the folder.)')
     }
     # Guard the literal "NULL" string -- almost always a typo for one of
     # the two real tokens. Case-sensitive, so a genuine folder named
     # "null" (lowercase) is still permitted.
     if (identical(trimws(data.dir), "NULL")) {
-      .jst_stop('data.dir = "NULL" looks like a typo. To clear the data folder ',
+      .jst_stop('data.dir = "NULL" looks like a typo.\nTo clear the data folder ',
            'back to the working directory, use data.dir = NULL (no quotes) ',
            'or data.dir = "" (empty quotes).')
     }
@@ -1692,8 +1692,8 @@ jdata_dir <- function(default = ".", ...) {
       .jst_msg(
         "Note: data.dir was set to '", want, "', but a folder named '",
         hit[1], "' already exists and your filesystem treats the two as the ",
-        "same folder. Saves and loads will use the existing '", hit[1],
-        "'. To keep a separate folder, choose a name that differs by more ",
+        "same folder.\nSaves and loads will use the existing '", hit[1],
+        "'.\nTo keep a separate folder, choose a name that differs by more ",
         "than letter case."
       )
     }

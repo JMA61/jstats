@@ -39,14 +39,14 @@
     }
     if (is.null(data)) {
       .jst_stop(
-        "data = NULL: no data frame supplied. Give a data frame, or set a ",
+        "data = NULL: no data frame supplied.\nGive a data frame, or set a ",
         "default with juse() first."
       )
     }
     if (is.matrix(data)) {
       label <- if (!is.null(data_name)) data_name else "data"
       .jst_stop(
-        "'", label, "' is a matrix, not a data frame. ",
+        "'", label, "' is a matrix, not a data frame.\n",
         "Convert it first with: as.data.frame(", label, ")"
       )
     }
@@ -258,7 +258,7 @@
     if (is.null(data) && !is.null(data_name)) {
       if (identical(data_name, "NULL")) {
         .jst_stop(
-          "NULL is not a valid data frame. ",
+          "NULL is not a valid data frame.\n",
           .jst_txt_null_remedy,
           fn = fn
         )
@@ -375,7 +375,7 @@
 
   for (nm in dot_names) {
     if (nzchar(nm) && nm %in% names(aliases)) {
-      .jst_stop("'", nm, "' is not valid. Did you mean `", aliases[[nm]], "`?", fn = fn_name)
+      .jst_stop("'", nm, "' is not valid.\nDid you mean `", aliases[[nm]], "`?", fn = fn_name)
     }
   }
   bad <- dot_names[nzchar(dot_names)]
@@ -683,9 +683,9 @@
 #' @keywords internal
 .jst_dichotomy_note <- function(v, coding, x_in, data_name, data_kind) {
   lead <- if (identical(coding, "1/2")) {
-    paste0("Note: ", v, " is a 1/2 dichotomy. The model runs correctly, but ")
+    paste0("Note: ", v, " is a 1/2 dichotomy.\nThe model runs correctly, but ")
   } else {
-    paste0("Note: ", v, " is a dichotomy with non-0/1 codes. The model runs ",
+    paste0("Note: ", v, " is a dichotomy with non-0/1 codes.\nThe model runs ",
            "correctly, but ")
   }
   takes <- !identical(data_kind, "expression") && !is.null(x_in) &&
@@ -3161,7 +3161,7 @@
                   data = NULL, name = NULL,
                   first_arg_sub = NULL, first_arg_value = NULL))
     }
-    .jst_stop("NULL is not a valid data frame. ",
+    .jst_stop("NULL is not a valid data frame.\n",
               .jst_txt_null_remedy,
               fn = fn_name)
   }

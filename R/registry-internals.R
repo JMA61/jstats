@@ -1335,7 +1335,7 @@
 
   n_cats <- length(codes)
   if (n_cats < 2) {
-    .jst_stop("'", var_name, "' has fewer than 2 categories. ",
+    .jst_stop("'", var_name, "' has fewer than 2 categories.\n",
          "Cannot create dummy variables.")
   }
   # Values that are not whole numbers (Session 375; the jdummy() guardrails
@@ -1356,7 +1356,7 @@
                 paste(shown, collapse = ", "),
                 if (length(frac) > 3L) ", ...", "), so it ",
                 "cannot be dummy-coded.\n",
-                "Dummy coding makes one indicator for each category. If ",
+                "Dummy coding makes one indicator for each category.\nIf ",
                 "these values are categories, recode them to whole-number ",
                 "codes first with jrecode().")
     }
@@ -1436,7 +1436,7 @@
     }, character(1))
     .jst_stop(
       "Cannot create unique dummy names for '", var_name, "': ",
-      paste(dup_pairs, collapse = "; "), ". ",
+      paste(dup_pairs, collapse = "; "), ".\n",
       "Use jrelabel() to give these categories distinct labels, or ",
       "jrecode() to merge or rename them."
     )
@@ -1482,7 +1482,7 @@
     ref_idx <- which(codes == ref)
     if (length(ref_idx) == 0) {
       .jst_stop("Reference code ", ref, " not found in '", var_name,
-           "'. Available codes: ", paste(codes, collapse = ", "))
+           "'.\nAvailable codes: ", paste(codes, collapse = ", "))
     }
   } else if (is.character(ref)) {
     # Try direct match against canonical labels first.
@@ -1511,7 +1511,7 @@
     }
     if (length(ref_idx) == 0) {
       .jst_stop("Reference '", ref, "' not found in '", var_name,
-           "'. Available labels: ", paste(final_labels, collapse = ", "))
+           "'.\nAvailable labels: ", paste(final_labels, collapse = ", "))
     }
   } else {
     ref_idx <- 1L
@@ -1823,7 +1823,7 @@
             .jst_msg(
               arg_label, " = takes precedence for ", reg$var_name,
               " (registered as a dummy via jdummy); entering it as numeric ",
-              "for this model. The registration is unchanged."
+              "for this model.\nThe registration is unchanged."
             )
           } else {
             # Registered multi-category dummy -> real warning: collapsing its
@@ -1832,7 +1832,7 @@
               arg_label, " = takes precedence for ", reg$var_name,
               " (registered as a dummy via jdummy); entering it as numeric ",
               "for this model, so its category codes enter as a single ",
-              "numeric predictor -- treating them as an interval scale. ",
+              "numeric predictor -- treating them as an interval scale.\n",
               "The registration is unchanged."
             )
           }

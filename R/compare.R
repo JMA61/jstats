@@ -538,7 +538,7 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
                    paste(deparse(substitute(formula)), collapse = ""),
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
-    example    = "DV ~ Group",
+    example    = "Outcome ~ Group",
     fn         = "jt",
     data_sub   = if (missing(data))    NULL else substitute(data),
     envir      = parent.frame()
@@ -1215,7 +1215,7 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
                    paste(deparse(substitute(formula)), collapse = ""),
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
-    example    = "DV ~ Group",
+    example    = "Outcome ~ Group",
     fn         = "jaov",
     data_sub   = if (missing(data))    NULL else substitute(data),
     envir      = parent.frame()

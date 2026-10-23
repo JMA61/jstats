@@ -9,8 +9,9 @@
 \description{
 One entry per warning site. \code{verb} is "seems" (a structural hedge) or
 "is" (asserted, definitive); \code{connector} joins the opener to the
-consequence (". " starts a new sentence for the hedge sites, "; " keeps one
-sentence for the definitive sites); \code{clause} is the analysis-specific
+consequence ("; " keeps one sentence at every site -- ruling R40, Session
+395: the hedge sites' ". " gave two sentences on one line);
+\code{clause} is the analysis-specific
 consequence text. Editing wording here changes it everywhere that site fires.
 }
 \keyword{internal}

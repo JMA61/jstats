@@ -339,13 +339,13 @@ jupdate <- function(ask = FALSE, ...) {
   if (isTRUE(ask) && interactive()) {
     prompt <- if (is.na(latest_ver)) {
       paste0(
-        "Could not confirm the latest version, but a connection is available. ",
+        "Could not confirm the latest version, but a connection is available.\n",
         "Install the latest jstats anyway?"
       )
     } else {
       paste0(
         "jstats v", latest_ver, " is available -- you have v", installed_ver,
-        ". Update now?"
+        ".\nUpdate now?"
       )
     }
     if (utils::menu(c("Yes", "No"), title = prompt) != 1L) {
@@ -386,7 +386,7 @@ jupdate <- function(ask = FALSE, ...) {
   }, error = function(e) conditionMessage(e))
 
   if (!is.null(err)) {
-    .jst_stop("the update did not complete. The error was: ", err)
+    .jst_stop("the update did not complete.\nThe error was: ", err)
   }
 
   # install.packages() only WARNS when it cannot download or install a
@@ -1200,7 +1200,11 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #'
 #' The error routes through .jst_stop(), whose stack walk skips this
 #' helper (no j-prefix) and prefixes the user-facing caller's name.
-#' @param prompt The single-line prompt string, ending "(y/n): ".
+#' @param prompt The prompt string, ending "(y/n): ". A statement before the
+#'   question goes first, followed by a newline (ruling R42, Session 395):
+#'   it is printed through cat() on a line of its own, and only the question
+#'   becomes readline()'s prompt, which is a single-line facility
+#'   (.jst_jai_confirm()'s note).
 #' @param remedy The caller-specific fix, one sentence a line; becomes the
 #'   error's last lines.
 #' @param subject The question's name as it reads in the error's first
@@ -1209,13 +1213,20 @@ jai <- function(setup = NULL, path = NULL, ...) {
 #' @return TRUE to proceed, FALSE to decline; or signals an error.
 #' @keywords internal
 .jst_confirm <- function(prompt, remedy, subject = "overwrite") {
-  response <- trimws(readline(prompt))
+  # Ruling R42 (Session 395): the statement on its line, the question on the
+  # line the answer follows. A prompt with an embedded newline would leave
+  # the cursor after its first line in RStudio, so the lines before the
+  # question go through cat() to stdout, as .jst_jai_confirm() shows its
+  # information.
+  parts <- strsplit(prompt, "\n", fixed = TRUE)[[1L]]
+  if (length(parts) > 1L) cat(paste0(parts[-length(parts)], "\n"), sep = "")
+  response <- trimws(readline(parts[length(parts)]))
   answer <- tolower(response)
   if (answer %in% c("y", "yes")) return(TRUE)
   if (answer %in% c("n", "no")) return(FALSE)
   if (!nzchar(answer)) {
     .jst_stop(
-      "The ", subject, " question needs y or n. It received an empty line.\n",
+      "The ", subject, " question needs y or n.\nIt received an empty line.\n",
       remedy
     )
   }
@@ -1225,7 +1236,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     response
   }
   .jst_stop(
-    "The ", subject, " question needs y or n. It received:\n",
+    "The ", subject, " question needs y or n.\nIt received:\n",
     shown, "\n",
     remedy
   )
@@ -3304,7 +3315,7 @@ jai <- function(setup = NULL, path = NULL, ...) {
     if (identical(attr(got, "why"), "band")) {
       .jst_stop_arg(fn, arg,
                     paste0("between ", min, " and ", max,
-                           ". Out-of-range widths are refused rather than ",
+                           ".\nOut-of-range widths are refused rather than ",
                            "quietly adjusted."))
     }
     .jst_stop_arg(fn, arg,
@@ -3413,6 +3424,29 @@ jai <- function(setup = NULL, path = NULL, ...) {
     lens   <- attr(m, "match.length")
     for (i in rev(seq_along(starts))) {
       seg <- substr(protected, starts[i], starts[i] + lens[i] - 1L)
+      seg <- gsub(" ", "\x01", seg, fixed = TRUE)
+      protected <- paste0(substr(protected, 1L, starts[i] - 1L), seg,
+                          substring(protected, starts[i] + lens[i]))
+    }
+  }
+  # A parenthetical that opens a word travels whole too (the (S393)
+  # parenthetical item, Session 395; Jeff: "your recommendation to the 40"):
+  # one of up to 40 columns that does not fit on the line moves to the next,
+  # where it had been broken inside -- "(\"3\"" ending one line and "-> 3,
+  # never renumbered)." opening the next. One level of nesting, so a call
+  # inside counts (c(-99, -98)). A second pass, after the atoms above, so
+  # their protection is unchanged: an atom inside a parenthetical already
+  # carries \x01 for its spaces, which [^()\n] matches. Measured in display
+  # columns, so forty Chinese characters (eighty columns) are not held
+  # together past the width.
+  m2 <- gregexpr("(?<=^| )\\((?:[^()\n]|\\([^()\n]*\\)){1,40}\\)", protected,
+                 perl = TRUE)[[1]]
+  if (m2[1] != -1L) {
+    starts <- as.integer(m2)
+    lens   <- attr(m2, "match.length")
+    for (i in rev(seq_along(starts))) {
+      seg <- substr(protected, starts[i], starts[i] + lens[i] - 1L)
+      if (.jst_dw(gsub("\x01", " ", seg, fixed = TRUE)) > 40L) next
       seg <- gsub(" ", "\x01", seg, fixed = TRUE)
       protected <- paste0(substr(protected, 1L, starts[i] - 1L), seg,
                           substring(protected, starts[i] + lens[i]))
@@ -4326,12 +4360,12 @@ NULL
                                  "call, then run it again.")
 .jst_txt_keep_file <- "To keep the file, save under another file name.\n"
 .jst_txt_map_commas <- paste0("It looks like commas were used to separate ",
-                              "rules in the map string. Use semicolons ",
+                              "rules in the map string.\nUse semicolons ",
                               "instead:\n")
 .jst_txt_na_longhand <- paste0("The NA(a) longhand is not supported in the ",
                                "map.")
 .jst_txt_na_one_rule <- paste0("NA appears as an old value in more than one ",
-                               "map rule. Name NA (or System / SYSMIS) in at ",
+                               "map rule.\nName NA (or System / SYSMIS) in at ",
                                "most one rule.")
 .jst_txt_map_empty <- paste0("The map is empty.\n",
                              "Provide at least one rule, for example:\n")
@@ -4447,7 +4481,7 @@ NULL
 #' @return Character(1).
 #' @keywords internal
 .jst_map_rhs_text <- function(rhs, rule, one) {
-  paste0("Invalid new value '", rhs, "' in map rule '", rule, "'. ",
+  paste0("Invalid new value '", rhs, "' in map rule '", rule, "'.\n",
          "New values must be numeric, the word missing, a system-NA ",
          "alias (NA, System, or SYSMIS), or ", one, ".")
 }
@@ -4554,8 +4588,8 @@ NULL
 #' @return Does not return; stops.
 #' @keywords internal
 .jst_dup_regression_stop <- function(dup_var) {
-  .jst_stop(paste0("'", dup_var, "' appears as both the dependent variable ",
-                   "and an independent variable.\n",
+  .jst_stop(paste0("'", dup_var, "' appears as both the outcome ",
+                   "and a predictor.\n",
                    "Each variable can only play one role in a regression."))
 }
 
@@ -4583,7 +4617,7 @@ NULL
 #' @return Character(1).
 #' @keywords internal
 .jst_codes_partial_text <- function(example) {
-  paste0("`codes` names some of its codes and not others. Name every code, ",
+  paste0("codes = names some of its codes and not others.\nName every code, ",
          "as in codes = c(", example, "), or name none and give the labels ",
          "with labels =.")
 }
@@ -4594,8 +4628,8 @@ NULL
 #' @return Character(1).
 #' @keywords internal
 .jst_codes_twice_text <- function(example) {
-  paste0("the codes are labeled twice: by their names in `codes` and by ",
-         "`labels`. Use one: the names, as in codes = c(", example, "), or ",
+  paste0("the codes are labeled twice: by their names in codes = and by ",
+         "labels =.\nUse one: the names, as in codes = c(", example, "), or ",
          "labels = with codes that carry no names.")
 }
 

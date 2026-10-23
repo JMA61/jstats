@@ -1448,7 +1448,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
     return(paste0(
       arg_label, " for ", var_name, " mixes ", phr_style,
       " missing values and ",
-      "SPSS-style numeric codes. Issue these as separate jdeclare_missing() calls."
+      "SPSS-style numeric codes.\nIssue these as separate jdeclare_missing() calls."
     ))
   }
 
@@ -1506,7 +1506,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                            "and SPSS-style numeric codes."),
     paste0(
       "The two operations are different -- labeling existing ", phr_style, " ",
-      "missing-value cells (token input) and converting numeric cells to ",
+      "missing-value cells (marker input) and converting numeric cells to ",
       phr_style, " missing values (numeric input) -- and must be issued ",
       "as separate calls."),
     "For your input, that would be:",
@@ -1560,7 +1560,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
                         if (!is.null(range_txt)) paste0("range ", range_txt))
     return(paste0(
       "Note: jdeclare_missing replaced the existing declared missing values on ",
-      var_name, ". Dropped: ", paste(dropped_render, collapse = ", "), "."))
+      var_name, ".\nDropped: ", paste(dropped_render, collapse = ", "), "."))
   }
 
   # Each sentence of the range arm on a line of its own (voice Rule E).
@@ -1589,7 +1589,7 @@ jrelabel <- function(data, var, labels = NULL, var.label = NULL,
   # to 163 characters. (S254)
   paste0(
     "Note: jdeclare_missing replaced the existing declared missing values for ",
-    var_name, ". Previously declared codes dropped: ",
+    var_name, ".\nPreviously declared codes dropped: ",
     paste(parts, collapse = ", "), ".", range_part)
 }
 
@@ -2485,7 +2485,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
         !identical(src_conv, opt_conv)) {
       .jst_stop(
         paste0(
-          "'missing' is ambiguous for ", orig_name, ". The column uses ",
+          "'missing' is ambiguous for ", orig_name, ".\nThe column uses ",
           .jst_convention_label(src_conv), " missing values, but your ",
           "missing.convention setting is \"", opt_conv, "\"."), "\n",
         "To follow the column's form for this call:\n",
@@ -4271,7 +4271,7 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
         # .note() gives every note (Session 352; from S267 to S351 it always
         # opened with one, which made a stray blank first line when it was
         # the call's first note).
-        .note("Note: No value labels assigned. To add labels, use jrelabel().")
+        .note("Note: No value labels assigned.\nTo add labels, use jrelabel().")
       }
     }
   }
@@ -5086,7 +5086,7 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
           "each was converted to its own value (\"", words_u[big],
           "\" -> ", .jst_fmt_code(vals[big]), ", never renumbered)."), "\n",
         paste0(
-          "No value labels were attached. To add labels, use jrelabel().")))
+          "No value labels were attached.\nTo add labels, use jrelabel().")))
       assigned_rules <- paste0(words_u, "=", vapply(vals, .jst_fmt_code,
                                                     character(1)))
 
@@ -5130,9 +5130,21 @@ jencode <- function(data, var, map = NULL, labels = NULL, convention = NULL,
       listing <- paste0("  ", .jst_pad_right(paste0("\"", words_u, "\"")),
                         " -> ", codes,
                         ifelse(n_per == 0L, "  (no cases)", ""))
+      # Ruling R44 (Session 395): the order stays the characters' codes, the
+      # same on every computer (Session 236), but for words holding a
+      # character beyond A to Z -- Chinese, an accented letter -- that order
+      # is not the reader's alphabet, so the note says what it is.
+      beyond_ascii <- any(grepl("[\\x80-\\xff]", words_u, perl = TRUE,
+                                useBytes = TRUE))
       note <- paste0(
         "Note: '", var_name, "' was encoded ",
-        if (is_factor) "in its level order:" else "alphabetically:", "\n",
+        if (is_factor) {
+          "in its level order:"
+        } else if (beyond_ascii) {
+          "in character-code order, which may not be alphabetical:"
+        } else {
+          "alphabetically:"
+        }, "\n",
         paste(listing, collapse = "\n"))
       # An ordered factor has declared its order, so the rerun nudge is
       # noise there. A plain factor's level order is R's default
@@ -6773,8 +6785,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 
   if ((missing(codes) || is.null(codes)) && is.null(labels) &&
       is.null(range)) {
-    .jst_stop("Provide `codes` (for example codes = c(-99, -98)), a ",
-         "`range` (for example range = c(-99, -51)), or use the ",
+    .jst_stop("Provide codes = (for example codes = c(-99, -98)), ",
+         "range = (for example range = c(-99, -51)), or use the ",
          "labels-only form, for example labels = \"-99=Refused; -98=Don't know\" ",
          "or labels = \".a=Refused; .b=Don't know\".")
   }
@@ -6794,7 +6806,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       tok_ab <- .jst_canonical_tag(c("a", "b"), phr0)
       .jst_stop("`codes` must be one or more numbers (for example ",
            "codes = c(-99, -98)) or ", .jst_convention_label(phr0),
-           " tokens (for example ",
+           " markers (for example ",
            "codes = c(\".", tok_ab[1], "\", \".", tok_ab[2], "\")).")
     }
     # haven::na_tag() (used on parsed_codes below) accepts only double
@@ -7060,9 +7072,9 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                character(1)), collapse = "; ")
       .jst_stop("labels = contains ",
                 .jst_convention_label(.jst_phrasing_convention(convention)),
-                " token entries that ",
-                "do not match any token in `codes`: ", bad_render, ".\n",
-                "Token entries label markers named in `codes`; they cannot ",
+                " marker entries that ",
+                "match no marker in codes =: ", bad_render, ".\n",
+                "Marker entries label the markers named in codes =; they cannot ",
                 "name values inside a missing-value range.",
                 fn = "jdeclare_missing")
     }
@@ -7094,12 +7106,12 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   # A range is SPSS-only; tagged tokens are Stata-form. The two cannot
   # appear in one declaration.
   if (!is.null(range) && has_tagged) {
-    .jst_stop("a missing-value `range` exists only under SPSS convention ",
+    .jst_stop("a missing-value range (range =) exists only under SPSS convention ",
          "and cannot be combined with ",
          .jst_convention_label(.jst_phrasing_convention(convention)),
-         " tokens in `codes`.\n",
-         "Declare the range with numeric codes only, or drop `range` ",
-         "and label the markers with tokens alone.",
+         " markers in codes =.\n",
+         "Declare the range with numeric codes only, or drop range = ",
+         "and label the markers alone.",
          fn = "jdeclare_missing")
   }
 
@@ -7433,7 +7445,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           .jst_stop(
             mix_head, "\n",
             "This call sets convention = \"spss\", but your ",
-            "missing.convention setting is \"", mix_setting, "\". ",
+            "missing.convention setting is \"", mix_setting, "\".\n",
             if (!is.null(mix_route)) sub("\n$", "", mix_route) else paste0(
             "To use the setting, drop convention = \"spss\":\n",
             "  jdeclare_missing(", data_name, ", ", vn, ", codes = c(",
@@ -7445,7 +7457,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
           .jst_stop(
             mix_head, "\n",
             "This call sets convention = \"spss\", but your ",
-            "missing.convention setting is \"", mix_setting, "\". ",
+            "missing.convention setting is \"", mix_setting, "\".\n",
             if (!is.null(mix_route)) sub("\n$", "", mix_route) else paste0(
             "To use the setting, drop convention = \"spss\" from the ",
             "call."))
@@ -7481,7 +7493,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
       if (has_residue) {
         if (resolved_convention != "spss") {
           .jst_stop("labels = contains entries that do not match ",
-               "any value in `codes`: ",
+               "any value in codes =: ",
                .jst_render_label_entries(label_residue), ".\n",
                "Only SPSS-form columns can carry in-range value labels.",
                fn = "jdeclare_missing")
@@ -7492,7 +7504,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         }
         if (is.null(band)) {
           .jst_stop("labels = contains entries that do not match ",
-               "any value in `codes`, and '", vn, "' has no ",
+               "any value in codes =, and '", vn, "' has no ",
                "missing-value range they could fall inside: ",
                .jst_render_label_entries(label_residue), ".",
                fn = "jdeclare_missing")
@@ -7501,7 +7513,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         outside  <- res_vals < band[1] | res_vals > band[2]
         if (any(outside)) {
           .jst_stop("labels = contains entries that match no value ",
-               "in `codes` and fall outside the missing-value range (",
+               "in codes = and fall outside the missing-value range (",
                format(band[1]), " to ", format(band[2]), ") on '", vn,
                "': ",
                .jst_render_label_entries(label_residue[outside]), ".",
@@ -8498,7 +8510,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   }
   paste0(
     paste0(
-      "Note: jdeclare_missing made no change to ", var_phrase, ". ",
+      "Note: jdeclare_missing made no change to ", var_phrase, ".\n",
       if (isTRUE(plural)) "Their" else "Its",
       " markers are already missing values, so a bare marker has ",
       "nothing to name."), "\n",
@@ -8876,7 +8888,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
     }
   }
   if (nzchar(q)) {
-    stop(paste0("Unbalanced quotation mark in the labels. A ",
+    stop(paste0("Unbalanced quotation mark in the labels.\nA ",
                 "quoted value or label must open and close with the same ",
                 "mark, as in \"Not stated\"=\"Not stated\"."),
          call. = FALSE)
@@ -8902,8 +8914,8 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
 .jst_parse_text_labels <- function(labels_str) {
   rules <- .jst_split_text_label_rules(labels_str)
   if (length(rules) == 0L) {
-    stop("The labels are empty. Provide at least one label, for ",
-         "example labels = \"REF=Refused\".", call. = FALSE)
+    stop("The labels are empty.\nProvide at least one label, for example:\n",
+         "  labels = \"REF=Refused\"", call. = FALSE)
   }
   vals <- character(0)
   labs <- character(0)
@@ -8931,14 +8943,14 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
         val <- ""
       } else if (!nzchar(val)) {
         stop(paste0("Empty value on the left of '=' in label rule '", rule,
-                    "'. Name a value, or use blank for the blank cells."),
+                    "'.\nName a value, or use blank for the blank cells."),
              call. = FALSE)
       }
       lab_raw <- substr(rule, eq + 1L, nchar(rule))
     }
     lab <- .jst_unquote_label(lab_raw)
     if (!nzchar(lab)) {
-      stop(paste0("Empty label text in rule '", rule, "'. Provide a label ",
+      stop(paste0("Empty label text in rule '", rule, "'.\nProvide a label ",
                   "name after the equals sign."), call. = FALSE)
     }
     vals <- c(vals, val)
@@ -9188,7 +9200,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
                 "example codes = \"UNKNOWN\".", fn = fn)
     }
     if (anyNA(codes)) {
-      .jst_stop("`codes` holds NA.\n",
+      .jst_stop("codes = holds NA.\n",
                 "Name the values to declare in quotes; for blank cells, ",
                 "codes = \"\".", fn = fn)
     }
@@ -9939,7 +9951,7 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   }
   .jst_check_vars(data, nms, data_name)
   ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, nms)), as_c, force)
-  .jst_stop("vars = takes names in quotes. To name the variables without ",
+  .jst_stop("vars = takes names in quotes.\nTo name the variables without ",
             "quotes, list them ",
             if (ln$framed) "after the data frame:" else "first:", "\n",
             ln$pre, ln$line, fn = fn)
@@ -9966,11 +9978,11 @@ jdeclare_missing <- function(data, ..., codes = NULL, labels = NULL,
   if (is.character(vars) && length(vars) > 0L && !anyNA(vars)) {
     ln <- .jst_vars_dots_line(mc, fn, unique(c(dot_names, vars)), as_c, force)
     .jst_stop("the variables are named twice: after the data frame and in ",
-              "vars =. Name them in one place:\n",
+              "vars =.\nName them in one place:\n",
               ln$pre, ln$line, fn = fn)
   }
   .jst_stop("the variables are named twice: after the data frame and in ",
-            "vars =. Name them in one place.", fn = fn)
+            "vars =.\nName them in one place.", fn = fn)
 }
 
 #' Internal helper: a target format given where jconvert() takes variables
@@ -11453,12 +11465,13 @@ jconvert <- function(data, ..., to = NULL, vars = NULL, missing.notice = TRUE,
       if (length(banded_converted) > 0L) {
         style_word <- if (identical(to, "sas")) "SAS-style" else "Stata-style"
         msg_lines <- c(msg_lines, "", paste0(
-          "Note: ", style_word, " missing values have no range concept. For the"))
+          "Note: ", style_word, " missing values have no range concept."))
         msg_lines <- c(msg_lines,
-          "  range declarations above, only values present in the data or",
-          "  carrying value labels were translated; the range rule itself was",
-          "  not preserved. A range value first appearing in later data will",
-          "  arrive as an ordinary data value.")
+          paste0("For the range declarations above, only values present in ",
+                 "the data or carrying value labels were translated; the ",
+                 "range rule itself was not preserved."),
+          paste0("A range value first appearing in later data will arrive ",
+                 "as an ordinary data value."))
       }
     }
 

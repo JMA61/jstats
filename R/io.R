@@ -743,7 +743,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # --- Validate extension ----------------------------------------------------
   if (!from_package && !ext %in% supported_ext) {
     .jst_stop(
-      "Unsupported file extension '.", ext, "'. Supported formats:\n",
+      "Unsupported file extension '.", ext, "'.\nSupported formats:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
       "  .sas7bdat  SAS\n",
@@ -1023,7 +1023,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   # data frame, or a reader's own error.
   if (ask) {
     ok <- .jst_confirm(
-      paste0("'", obj_name, "' already exists in your environment. ",
+      paste0("'", obj_name, "' already exists in your environment.\n",
              "Overwrite? (y/n): "),
       paste0("To keep the ", obj_name, " data frame, load the file under ",
              "another name with name =.\n", .jst_txt_add_overwrite)
@@ -1161,7 +1161,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
   if (!is.data.frame(df)) {
     if (ext == "rds") {
       .jst_stop(
-        "The .rds file does not contain a data frame. ",
+        "The .rds file does not contain a data frame.\n",
         "jload() only loads data frames."
       )
     }
@@ -5076,18 +5076,18 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
         .jst_msg_out(
           "These codes are not formally declared, so they are not treated ",
           "as missing, but the value labels suggest they mark missing ",
-          "values. Declare them as missing if they are; leave ",
+          "values.\nDeclare them as missing if they are; leave ",
           "as-is if real.")
       } else if (has_conv) {
         .jst_msg_out(
           "These codes match the missing.convention.codes setting (",
           conv_show, ") but are not formally declared, so they are not ",
-          "treated as missing. Declare them as missing if they are; leave ",
+          "treated as missing.\nDeclare them as missing if they are; leave ",
           "as-is if real.")
       } else {
         .jst_msg_out(
           "These codes are not formally defined, so they are not treated ",
-          "as missing. Declare them as missing if they are; leave as-is ",
+          "as missing.\nDeclare them as missing if they are; leave as-is ",
           "if real.")
       }
     } else {
@@ -5624,7 +5624,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     return(paste0(
       n, " ", noun, " ", verb_contain,
       " missing-value codes, incompatible with the .xpt format.\n",
-      preserve, " To drop them:\n", drop_line))
+      preserve, "\nTo drop them:\n", drop_line))
   }
 
   # --- Standard / full tier ----------------------------------------------
@@ -6000,7 +6000,7 @@ jload <- function(file, name = NULL, use = FALSE, overwrite = FALSE,
     out <- paste0(
       out,
       "\ncomplex/list/raw columns have no ", fmt, " representation and no ",
-      "sensible automatic conversion. Drop ",
+      "sensible automatic conversion.\nDrop ",
       if (length(drop_vars) == 1) "it" else "them", " before saving with:\n",
       "  ", drop_code, "\n"
     )
@@ -7260,13 +7260,13 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
     xls_msg <- ""
     if (ext == "xls") {
       xls_msg <- paste0(
-        "\n\nThe legacy .xls format is not supported for saving. ",
+        "\n\nThe legacy .xls format is not supported for saving.\n",
         "Use .xlsx instead:\n",
         "  jsave(", code_name, ", \"",
         tools::file_path_sans_ext(file), ".xlsx\")")
     }
     .jst_stop(expr_lines(paste0(
-      "Unsupported file extension '.", ext, "'. Supported formats for saving:\n",
+      "Unsupported file extension '.", ext, "'.\nSupported formats for saving:\n",
       "  .sav       SPSS\n",
       "  .dta       Stata\n",
       "  .xpt       SAS interchange\n",
@@ -7644,8 +7644,8 @@ jsave <- function(data, file, overwrite = FALSE, preserve.declarations = TRUE,
   # be replaced or renamed into place.
   if (ask) {
     ok <- .jst_confirm(
-      paste0("File '", .jst_norm_path(out_path),
-             "' already exists. Overwrite? (y/n): "),
+      paste0("This file already exists:\n  ", .jst_norm_path(out_path),
+             "\nOverwrite? (y/n): "),
       paste0(.jst_txt_keep_file, .jst_txt_add_overwrite)
     )
     if (!ok) {
@@ -8065,7 +8065,7 @@ jcopy <- function(data, name, overwrite = FALSE, quiet = FALSE, ...) {
   if (exists(dest_name, envir = target_env, inherits = FALSE) && !overwrite) {
     if (interactive()) {
       ok <- .jst_confirm(
-        paste0("'", dest_name, "' already exists in your environment. ",
+        paste0("'", dest_name, "' already exists in your environment.\n",
                "Overwrite? (y/n): "),
         paste0("To keep the ", dest_name, " data frame, give the copy ",
                "another name.\n", .jst_txt_add_overwrite)

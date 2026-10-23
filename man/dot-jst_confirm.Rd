@@ -7,7 +7,11 @@
 .jst_confirm(prompt, remedy, subject = "overwrite")
 }
 \arguments{
-\item{prompt}{The single-line prompt string, ending "(y/n): ".}
+\item{prompt}{The prompt string, ending "(y/n): ". A statement before the
+question goes first, followed by a newline (ruling R42, Session 395):
+it is printed through cat() on a line of its own, and only the question
+becomes readline()'s prompt, which is a single-line facility
+(.jst_jai_confirm()'s note).}
 
 \item{remedy}{The caller-specific fix, one sentence a line; becomes the
 error's last lines.}

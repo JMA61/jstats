@@ -460,7 +460,7 @@
     msg <- if (isTRUE(sample_info$complete_active)) {
       paste0("Note: jcomplete() is not set on ",
              .jst_format_var_list(uncovered, and = TRUE),
-             ". Listwise deletion across all of these variables would leave ",
+             ".\nListwise deletion across all of these variables would leave ",
              .jst_fmt_n(listwise_n), " ", .jst_plural(listwise_n, "case", "cases"), ".")
     } else if (grepl("%s", notification_template, fixed = TRUE)) {
       # Session 382 (Fix Slate 25): the count and its noun go in together, so

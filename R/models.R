@@ -287,14 +287,14 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     # correlation regardless of structure.
     if (is.character(cor_data[[v]])) {
       .jst_stop(paste0("'", v, "' is a character variable and cannot be used ",
-                  "in a correlation. Use a numeric variable instead."))
+                  "in a correlation.\nUse a numeric variable instead."))
     }
     if (is.factor(cor_data[[v]])) {
       numeric_check <- suppressWarnings(as.numeric(as.character(cor_data[[v]])))
       if (all(is.na(numeric_check[!is.na(cor_data[[v]])]))) {
         .jst_stop(paste0("'", v,
                     "' is a factor with text categories and cannot be used ",
-                    "in a correlation. Use a numeric variable instead."))
+                    "in a correlation.\nUse a numeric variable instead."))
       }
       cor_data[[v]] <- numeric_check
     }
@@ -2528,9 +2528,9 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     dv_in_cat <- intersect(categorical, dv_name)
     if (length(dv_in_cat) > 0) {
       .jst_msg(
-        "Note: '", dv_in_cat, "' is the dependent variable and is always ",
+        "Note: '", dv_in_cat, "' is the outcome and is always ",
         "treated as numeric.\n",
-        "categorical = is only needed for independent variables."
+        "categorical = is only needed for predictors."
       )
       categorical <- setdiff(categorical, dv_name)
       if (length(categorical) == 0) categorical <- NULL
@@ -2557,7 +2557,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     bad <- setdiff(numeric, iv_names)
     if (length(bad) > 0) {
       .jst_stop(.jst_not_among_text(
-        "numeric", bad, paste0("the independent variables in ", .jst_data_name)))
+        "numeric", bad, paste0("the predictors in ", .jst_data_name)))
     }
     numeric <- intersect(numeric, iv_names)
   }
@@ -2578,7 +2578,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
       if (length(bad_unknown) > 0) {
         .jst_stop(.jst_not_among_text(
           "categorical", bad_unknown,
-          paste0("the independent variables in ", .jst_data_name)))
+          paste0("the predictors in ", .jst_data_name)))
       }
       categorical <- intersect(categorical, iv_names)
     }
@@ -2592,7 +2592,7 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
     bad <- setdiff(count, iv_names)
     if (length(bad) > 0) {
       .jst_stop(.jst_not_among_text(
-        "count", bad, paste0("the independent variables in ", .jst_data_name)))
+        "count", bad, paste0("the predictors in ", .jst_data_name)))
     }
     count <- intersect(count, iv_names)
   }
@@ -3559,7 +3559,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
                    paste(deparse(substitute(formula)), collapse = ""),
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
-    example    = "DV ~ IV",
+    example    = "Outcome ~ Predictor",
     fn         = "jlm",
     data_sub   = if (missing(data))    NULL else substitute(data),
     envir      = parent.frame()
@@ -3744,7 +3744,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     .jst_warn(
       "'", dv_name, "' is the outcome variable but looks categorical (a ",
       if (identical(dv_dich$coding, "other")) "" else paste0(dv_dich$coding, " "),
-      "dichotomy). Linear regression expects an interval outcome."
+      "dichotomy).\nLinear regression expects an interval outcome."
     )
   } else if (.jst_is_count(data[[dv_name]], dv_name, .jst_data_name,
                            override = dv_override)) {
@@ -3756,13 +3756,13 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     #   structural       -> today's hedged "looks like a count" warning.
     if (dv_asserted_count) {
       .jst_warn(
-        "'", dv_name, "' is registered as a count variable. Linear ",
+        "'", dv_name, "' is registered as a count variable.\nLinear ",
         "regression expects an interval outcome."
       )
     } else if (!dv_asserted_numeric) {
       .jst_warn(
         "'", dv_name, "' is the outcome variable but looks like a count ",
-        "(small-range non-negative integers). Linear regression expects an ",
+        "(small-range non-negative integers).\nLinear regression expects an ",
         "interval outcome."
       )
     }
@@ -3775,7 +3775,7 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
     # per-call numeric=).
     .jst_warn(
       "'", dv_name, "' is the outcome variable but looks categorical (few ",
-      "distinct or labelled values). Linear regression expects an interval ",
+      "distinct or labelled values).\nLinear regression expects an interval ",
       "outcome."
     )
   }
@@ -4850,7 +4850,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
                    paste(deparse(substitute(formula)), collapse = ""),
     data_name  = if (missing(data))    NULL else
                    paste(deparse(substitute(data)), collapse = ""),
-    example    = "DV ~ IV",
+    example    = "Outcome ~ Predictor",
     fn         = "jlogistic",
     data_sub   = if (missing(data))    NULL else substitute(data),
     envir      = parent.frame()
@@ -5082,7 +5082,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
     # Logical: TRUE is the event. .jst_is_dichotomy() guards single-value input.
     if (!.jst_is_dichotomy(orig_dv)$is_dichotomy) {
       .jst_stop(paste0(
-        "'", dv_name, "' has only one value. Logistic regression requires a ",
+        "'", dv_name, "' has only one value.\nLogistic regression requires a ",
         "binary outcome variable."
       ))
     }
@@ -5151,7 +5151,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         "  ", dn, "$", dv_name, "R <- jencode(", dn, ", ",
         dv_name, ", map = \"", map_side(u_norm[zero]), "=0; ",
         map_side(u_norm[3L - zero]), "=1\")\n",
-        "Then use ", dv_name, "R as your dependent variable (the category mapped ",
+        "Then use ", dv_name, "R as your outcome (the category mapped ",
         "to 1 is the one jlogistic() models)."
       ))
     }
@@ -5198,12 +5198,12 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         recode_labels <- list(arg = "", note = "")
       }
       .jst_stop(paste0(
-        "'", dv_name, "' is coded 1/2. Logistic regression requires 0/1 coding.\n",
+        "'", dv_name, "' is coded 1/2.\nLogistic regression requires 0/1 coding.\n",
         "Recode before running jlogistic():\n",
         "  ", .jst_data_name, "$", dv_name, "R <- jrecode(", .jst_data_name, ", ", dv_name,
         ", map = \"1=0; 2=1\"", recode_labels$arg, ")\n",
         if (nzchar(recode_labels$note)) paste0(recode_labels$note, "\n"),
-        "Then use ", dv_name, "R as your dependent variable.\n",
+        "Then use ", dv_name, "R as your outcome.\n",
         "(jlogistic models the category coded 1; to model the other category ",
         "instead, reverse the map and labels.)"
       ))
@@ -5266,7 +5266,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
             " does not use, so analyses exclude ",
             if (one) "it" else "them", ":\n",
             dv_route, "\n",
-            "Then use ", dv_name, "R as your dependent variable.\n")
+            "Then use ", dv_name, "R as your outcome.\n")
         } else {
           paste0(
             if (!is.null(dv_gate)) paste0(dv_gate, "\nThen declare ")
@@ -5281,7 +5281,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
             dv_name, " has ", n_unique, " unique values (",
             paste(vapply(unique_vals, .jst_fmt_code, character(1)),
                   collapse = ", "), ")."), "\n",
-          "The dependent variable must have exactly 2 categories coded 0/1.\n",
+          "The outcome must have exactly 2 categories coded 0/1.\n",
           paste0(
             miss_txt,
             if (one) " looks like a coded missing value."
@@ -5298,7 +5298,7 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
         .jst_stop(paste0(
           "'", dv_name, "' has values: ",
           paste(unique_vals, collapse = ", "),
-          ". Logistic regression requires a binary variable coded 0/1.\n",
+          ".\nLogistic regression requires a binary variable coded 0/1.\n",
           "Use jrecode() to create a 0/1 coded version before running jlogistic()."
         ))
       }

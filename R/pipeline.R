@@ -57,7 +57,7 @@ juse <- function(data, ...) {
     # juse() with no arguments — print current default
     current <- getOption(".jst_default_data", default = NULL)
     if (is.null(current)) {
-      .jst_msg("No default data frame set. Use juse(DataFrameName) to set one.")
+      .jst_msg("No default data frame set.\nUse juse(DataFrameName) to set one.")
     } else {
       .jst_msg("Current default data frame: ", current)
     }
@@ -307,7 +307,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
   clear_one <- function(frame) {
     fs <- .jst_get_filter(frame)
     if (is.null(fs)) {
-      .jst_msg("No jsubset set for ", frame, ". Nothing to clear.")
+      .jst_msg("No jsubset set for ", frame, ".\nNothing to clear.")
     } else {
       .jst_set_filter(frame, NULL)
       .jst_render_clear("jsubset", frame, paste0("had: ", fs$expr_str))
@@ -331,7 +331,7 @@ jsubset <- function(data, expr, clear.all = FALSE, ...) {
     fs <- .jst_get_filter(frame)
     if (which == "off") {
       if (is.null(fs)) {
-        .jst_msg("No jsubset set for ", frame, ". Nothing to deactivate.")
+        .jst_msg("No jsubset set for ", frame, ".\nNothing to deactivate.")
       } else {
         fs$active <- FALSE
         .jst_set_filter(frame, fs)
@@ -1158,7 +1158,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
   clear_one <- function(frame) {
     cs <- .jst_get_complete(frame)
     if (is.null(cs)) {
-      .jst_msg("No jcomplete filter set for ", frame, ". Nothing to clear.")
+      .jst_msg("No jcomplete filter set for ", frame, ".\nNothing to clear.")
     } else {
       .jst_set_complete(frame, NULL)
       .jst_render_clear("jcomplete", frame, paste0("had: ", vars_of(cs)))
@@ -1253,7 +1253,7 @@ jcomplete <- function(data, ..., preview = FALSE, console = FALSE,
     # Preview an already-registered filter without re-listing variables.
     if (.preview_on) {
       if (length(reg) == 0L) {
-        .jst_msg("No jcomplete filter set. ",
+        .jst_msg("No jcomplete filter set.\n",
                  "Run jcomplete(var1, var2, ...) first.")
         return(invisible(NULL))
       }

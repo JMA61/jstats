@@ -568,20 +568,20 @@
 
     # Date/time types: not supported here (a dedicated function handles these).
     datetime       = no(paste0("'", var_name, "' is a date/time variable; jdesc() ",
-                               "doesn't summarize dates or times. Skipping it.")),
+                               "doesn't summarize dates or times.\nSkipping it.")),
 
     # Text factor / text character: refuse and redirect to jfreq().
     text_factor    = no(paste0("'", var_name, "' is a factor with text categories and ",
                                "can't be summarized numerically -- use jfreq() for ",
-                               "categorical variables. Skipping it.")),
+                               "categorical variables.\nSkipping it.")),
     text_character = no(paste0("'", var_name, "' is a character (text) variable and ",
                                "can't be summarized numerically -- use jfreq() for ",
-                               "categorical variables. Skipping it.")),
+                               "categorical variables.\nSkipping it.")),
 
     # complex / raw / list / other: refuse with a generic message. Keyed off
     # typeof(x) (not k$kind) so e.g. a closure column still reports "closure".
     no(paste0("'", var_name, "' is a ", typeof(x), " and can't be ",
-              "summarized numerically. Skipping it."))
+              "summarized numerically.\nSkipping it."))
   )
 }
 
@@ -3415,22 +3415,23 @@
 #'
 #' One entry per warning site. \code{verb} is "seems" (a structural hedge) or
 #' "is" (asserted, definitive); \code{connector} joins the opener to the
-#' consequence (". " starts a new sentence for the hedge sites, "; " keeps one
-#' sentence for the definitive sites); \code{clause} is the analysis-specific
+#' consequence ("; " keeps one sentence at every site -- ruling R40, Session
+#' 395: the hedge sites' ". " gave two sentences on one line);
+#' \code{clause} is the analysis-specific
 #' consequence text. Editing wording here changes it everywhere that site fires.
 #'
 #' @keywords internal
 .jst_assumption_clauses <- list(
-  jdesc  = list(verb = "seems", connector = ". ",
-                clause = "Descriptive statistics may not be meaningful."),
-  jcorr  = list(verb = "seems", connector = ". ",
+  jdesc  = list(verb = "seems", connector = "; ",
+                clause = "descriptive statistics may not be meaningful."),
+  jcorr  = list(verb = "seems", connector = "; ",
                 clause = "Pearson correlations assume continuous/interval data."),
   # The rank methods name themselves (Session 374): the Pearson clause
   # printed under method = "spearman" told the user about a test they had
   # not asked for.
-  jcorr_spearman = list(verb = "seems", connector = ". ",
+  jcorr_spearman = list(verb = "seems", connector = "; ",
                         clause = "Spearman correlations assume ordinal or interval data."),
-  jcorr_kendall  = list(verb = "seems", connector = ". ",
+  jcorr_kendall  = list(verb = "seems", connector = "; ",
                         clause = "Kendall correlations assume ordinal or interval data."),
   # A jdummy() registration is the user's own assertion, so jdesc() and
   # jcorr() state it, as jsum(), javg() and jalpha() do (Session 391; the
@@ -3444,9 +3445,9 @@
                            clause = "Spearman correlations assume ordinal or interval data."),
   jcorr_kendall_is  = list(verb = "is", connector = "; ",
                            clause = "Kendall correlations assume ordinal or interval data."),
-  jt     = list(verb = "seems", connector = ". ",
-                clause = "A t-test expects an interval outcome."),
-  jaov   = list(verb = "seems", connector = ". ",
+  jt     = list(verb = "seems", connector = "; ",
+                clause = "a t-test expects an interval outcome."),
+  jaov   = list(verb = "seems", connector = "; ",
                 clause = "ANOVA expects an interval outcome."),
   jsum   = list(verb = "is",    connector = "; ",
                 clause = "summing may not be meaningful."),
@@ -3553,14 +3554,14 @@
     result$else_explicit <- TRUE
   } else if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
     stop(paste0(
-      "Invalid else action '", rhs, "' in the map. ",
-      ms$rule, " ", .jst_txt_na_longhand
+      "Invalid else action '", rhs, "' in the map.\n",
+      ms$rule, "\n", .jst_txt_na_longhand
     ), call. = FALSE)
   } else {
     # S355: "(Stata convention only)" since S240 meant Stata or SAS;
     # under SPSS convention a marker in a map is refused.
     stop(paste0(
-      "Invalid else action '", rhs, "' in the map. Use ",
+      "Invalid else action '", rhs, "' in the map.\nUse ",
       "'else=NA', 'else=copy', or ", ms$eg,
       " (Stata or SAS convention only)."
     ), call. = FALSE)
@@ -3740,7 +3741,7 @@
       stop(paste0(
         "Invalid old ", .jst_plural(length(bad), "value"), " ",
         .jst_and_list(paste0("'", bad, "'")),
-        " in map rule '", rule, "'. ",
+        " in map rule '", rule, "'.\n",
         "Old values must be numeric, a system-NA alias (NA, System, ",
         "or SYSMIS), or ", ms$one, "."
       ), call. = FALSE)
@@ -3829,11 +3830,11 @@
       out[i]      <- haven::tagged_na(letter)
       raw[letter] <- substr(tok, 2L, 2L)
     } else if (grepl("^\\.", low) || grepl("^na\\(", low)) {
-      stop(paste0("Invalid code '", tok, "'. ", ms$rule), call. = FALSE)
+      stop(paste0("Invalid code '", tok, "'.\n", ms$rule), call. = FALSE)
     } else {
       v <- suppressWarnings(as.numeric(tok))
       if (is.na(v)) {
-        stop(paste0("Invalid code '", tok, "'. Codes must be numbers (for ",
+        stop(paste0("Invalid code '", tok, "'.\nCodes must be numbers (for ",
                     "example -99) or ", ms$some, "."),
              call. = FALSE)
       }
@@ -3928,13 +3929,13 @@
       # return as the missing_label attribute; at most one such entry.
       if (!is.null(missing_label)) {
         stop(paste0(
-          "missing appears in more than one label rule. ",
+          "missing appears in more than one label rule.\n",
           "Name missing in at most one rule."
         ), call. = FALSE)
       }
       if (nchar(label_str) == 0) {
         stop(paste0(
-          "Empty label text in rule '", rule, "'. ",
+          "Empty label text in rule '", rule, "'.\n",
           "Provide a label name after the equals sign."
         ), call. = FALSE)
       }
@@ -3950,15 +3951,15 @@
       tagged_raw[letter] <- substr(val_str, 2L, 2L)
     } else if (grepl("^\\.", val_lower) || grepl("^na\\(", val_lower)) {
       stop(paste0(
-        "Invalid value '", val_str, "' in label rule '", rule, "'. ",
-        ms$rule, " The NA(a) ",
+        "Invalid value '", val_str, "' in label rule '", rule, "'.\n",
+        ms$rule, "\nThe NA(a) ",
         "longhand is not supported in the labels."
       ), call. = FALSE)
     } else {
       val <- suppressWarnings(as.numeric(val_str))
       if (is.na(val)) {
         stop(paste0(
-          "Invalid value '", val_str, "' in label rule '", rule, "'. ",
+          "Invalid value '", val_str, "' in label rule '", rule, "'.\n",
           "The left side of each label rule must be numeric or ",
           ms$one, "."
         ), call. = FALSE)
@@ -3967,7 +3968,7 @@
 
     if (nchar(label_str) == 0) {
       stop(paste0(
-        "Empty label text in rule '", rule, "'. ",
+        "Empty label text in rule '", rule, "'.\n",
         "Provide a label name after the equals sign."
       ), call. = FALSE)
     }
@@ -4061,8 +4062,8 @@
   # Malformed tagged-NA shapes: helpful error.
   if (grepl("^\\.", rhs_lower) || grepl("^na\\(", rhs_lower)) {
     stop(paste0(
-      "Invalid new value '", rhs_str, "' in map rule '", rule_str, "'. ",
-      .jst_marker_syntax(convention)$rule, " ", .jst_txt_na_longhand
+      "Invalid new value '", rhs_str, "' in map rule '", rule_str, "'.\n",
+      .jst_marker_syntax(convention)$rule, "\n", .jst_txt_na_longhand
     ), call. = FALSE)
   }
 
@@ -4301,7 +4302,7 @@
   rules <- .jst_split_unquoted(map_str, ";")
   if (isTRUE(attr(rules, "unbalanced"))) {
     stop(paste0(
-      "Unbalanced quotation mark in the map. A quoted word must ",
+      "Unbalanced quotation mark in the map.\nA quoted word must ",
       "open and close with the same mark, as in \"Not stated\"=9."
     ), call. = FALSE)
   }
@@ -4387,7 +4388,7 @@
     if (any(!nzchar(old_vals))) {
       if (blank_seen) {
         stop(paste0(
-          "Blank cells appear as an old value in more than one map rule. ",
+          "Blank cells appear as an old value in more than one map rule.\n",
           "Name blank in at most one rule."
         ), call. = FALSE)
       }

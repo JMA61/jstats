@@ -1886,8 +1886,8 @@
   sizes <- if (r_n == 1) "The groups are the same size"
            else paste0("The ", big, " group is ", ratio(r_n, c(1.25, 1.5)),
                        " times the ", small)
-  sds   <- if (is.infinite(r_s)) paste0("the ", small, " SD is 0")
-           else paste0("the ", big, " SD is ", ratio(r_s, 2),
+  sds   <- if (is.infinite(r_s)) paste0("the ", small, " standard deviation is 0")
+           else paste0("the ", big, " standard deviation is ", ratio(r_s, 2),
                        " times the ", small)
   std   <- if (identical(fn, "jt")) "Student's t-test" else "the standard ANOVA"
   wel   <- if (identical(fn, "jt")) "Welch's t-test" else "Welch's ANOVA"
@@ -2413,7 +2413,7 @@
     over_par <- paste0("In ", over_var, " the range covers ", over_n,
                        " values; ", style, "-style missing values support ",
                        "at most 26 per variable, so this range cannot ",
-                       "become ", style, "-style. To declare the range ",
+                       "become ", style, "-style.\nTo declare the range ",
                        "using SPSS convention:")
     close_par <- paste0("To use ", style, " convention with jconvert(), ",
                         "you must first reduce these to 26 or fewer.")
@@ -2852,7 +2852,7 @@
     }
   }
   if (nzchar(q)) {
-    stop(paste0("Unbalanced quotation mark in the labels. A ",
+    stop(paste0("Unbalanced quotation mark in the labels.\nA ",
                 "quoted label must open and close with the same mark, as ",
                 "in 9=\"Refused; not asked\"."), call. = FALSE)
   }

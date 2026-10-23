@@ -765,8 +765,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       else if (!is.null(type)) paste0(", type = \"", type, "\"")
       else ""
     } else ""
-    .jst_stop("For two-numeric scatterplots, use formula syntax to make the DV ",
-         "and IV explicit (consistent with jlm):\n",
+    .jst_stop("For two-numeric scatterplots, use formula syntax to make the ",
+         "outcome and the predictor explicit (consistent with jlm):\n",
          "  jplot(", variable_names[2], " ~ ", iv,
          ", ", if (!is.null(.jst_data_name)) .jst_data_name else "MyData",
          keep_iv,
@@ -774,8 +774,8 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
                                              if (isTRUE(line)) "lm" else line,
                                              "\"") else "",
          ")\n",
-         "(The DV on the left of ~ goes on the y-axis; the IV on the right ",
-         "goes on the x-axis.)")
+         "(The outcome on the left of ~ goes on the y-axis; the predictor on ",
+         "the right goes on the x-axis.)")
   }
   if (resolved_type == "box") {
     # The fix line is built from what the call gave (Session 338; the S316
@@ -974,7 +974,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   .jst_formula_quoted_stop(formula, jplot_call, "jplot")   # R18, S356
   formula_vars <- all.vars(formula)
   if (length(formula) < 3) {
-    .jst_stop("A two-sided formula is required: DV ~ IV.\n",
+    .jst_stop("A two-sided formula is required: outcome ~ predictor.\n",
          "  Example: jplot(WellbeingScore ~ Income, community)")
   }
 
@@ -1097,7 +1097,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
          "  Example: jplot(WellbeingScore ~ Income, community)")
   }
   if (length(x_vars) > 1) {
-    .jst_stop("Only one independent variable is supported in the formula.\n",
+    .jst_stop("Only one predictor is supported in the formula.\n",
          "For multi-variable regression, fit with jlm() and plot the result:\n",
          "  m <- jlm(", .jst_term_text(formula),
          if (!isTRUE(.jst_default_used)) paste0(", ", .jst_data_name),
@@ -1201,7 +1201,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     resolved_type <- type
   } else {
     if (!y_is_num) {
-      .jst_stop("the DV (left of ~) must be numeric. \"", y_name,
+      .jst_stop("the outcome (left of ~) must be numeric.\n\"", y_name,
                 "\" is categorical.", fn = "jplot")
     }
     resolved_type <- if (x_is_cat) "box" else "scatter"
@@ -2281,7 +2281,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   }
   if (focal_name %in% names(pv$owner)) return(pv$owner[[focal_name]])
   if (length(vars) > 0L && !focal_name %in% vars) {
-    .jst_stop("`focal` must be one of the independent variables in the model: ",
+    .jst_stop("`focal` must be one of the predictors in the model: ",
               paste(vars, collapse = ", "))
   }
   focal_name
@@ -3325,7 +3325,7 @@ jplot.jst_ttest <- function(x, which = "core", ...) {
 
   mf <- x$model_frame
   if (is.null(mf)) {
-    .jst_stop("The jst_ttest object is missing model_frame. ",
+    .jst_stop("The jst_ttest object is missing model_frame.\n",
          "Re-run jt() with the current version of the package.")
   }
   terms <- all.vars(x$formula)
@@ -3384,7 +3384,7 @@ jplot.jst_anova <- function(x, which = "core", ...) {
 
   mf <- x$model_frame
   if (is.null(mf)) {
-    .jst_stop("The jst_anova object is missing model_frame. ",
+    .jst_stop("The jst_anova object is missing model_frame.\n",
          "Re-run jaov() with the current version of the package.")
   }
   terms <- all.vars(x$formula)
@@ -3508,7 +3508,7 @@ jplot.jst_corr <- function(x, which = "core", ...) {
   if ("scatter" %in% plot_set) {
     mf <- x$model_frame
     if (is.null(mf)) {
-      .jst_stop("Scatter plot requires model_frame on the jst_corr object. ",
+      .jst_stop("Scatter plot requires model_frame on the jst_corr object.\n",
            "Re-run jcorr() with the current version of the package.")
     }
     if (ncol(mf) != 2) {
