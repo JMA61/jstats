@@ -290,8 +290,17 @@ jplot <- function(x, which = "core", ...) {
                              parent.frame())
   x_col    <- !missing(x) &&
                 !is.null(.jst_frame_column(substitute(x), parent.frame()))
-  x_ok     <- if (missing(x) || x_col) FALSE else
-                tryCatch({ force(x); TRUE }, error = function(e) FALSE)
+  # The read that picks the method holds R's warnings (Session 394, the
+  # (S392) item; .jst_read_held(), as every other read of the data since
+  # S392): a tibble's "Unknown or uninitialised column" for
+  # jplot(tb[tb$Agee > 40, ], Score) printed here, and again when the
+  # rebuilt call below read the expression a second time, both above the
+  # not-found sentence. They are given back only on the dispatch route,
+  # once the read is known to go on; a read that failed is read again by
+  # the rebuilt call, which holds its own.
+  x_read   <- if (missing(x) || x_col) NULL else
+                .jst_read_held(function() x)
+  x_ok     <- !is.null(x_read) && !x_read$failed
   # A bare word where a quoted value goes (ruling R18, Session 356). `which`
   # is read only when the user named it: jplot(Region, Volunteer) binds a
   # second variable to it by position. And not here when x is a result (Fix
@@ -337,6 +346,11 @@ jplot <- function(x, which = "core", ...) {
                 "Specify the data frame once, before the variable names.",
                 fn = "jplot")
     }
+    # An expression that gave no rows by reading a column its frame lacks
+    # stops here, before the read's warnings are given back (Session 394);
+    # jplot.default()'s resolver makes the same check, which then passes.
+    if (is.data.frame(x)) .jst_expr_empty_stop(x_sub, x, parent.frame())
+    .jst_release_warnings(x_read$warnings)
     UseMethod("jplot")
   }
   sc_names    <- names(sys.call())
@@ -485,10 +499,15 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # stop.
   x_col  <- !missing(x) &&
     !is.null(.jst_frame_column(substitute(x), parent.frame()))
+  # Its warnings held (Session 394, the (S392) item): on the generic's
+  # rebuilt call this read evaluates the expression again, and printed a
+  # tibble's warning above the resolver's stop. Given back below, once the
+  # resolver has taken the data; a read the generic made already is free and
+  # holds none.
   x_eval <- if (missing(x) || x_col) NULL else
-    tryCatch(list(value = x, failed = FALSE),
-             error = function(e) list(value = NULL, failed = TRUE, error = e))
+    .jst_read_held(function() x)
   if (!is.null(x_eval) && !x_eval$failed && inherits(x_eval$value, "formula")) {
+    .jst_release_warnings(x_eval$warnings)
     by_sub <- substitute(by)
     # facet = is the variable-list form's (Capability Slate C3, Session
     # 378): a scatterplot or boxplot by groups takes by =.
@@ -522,6 +541,7 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
     accept_vector = FALSE,
     pre_eval      = x_eval
   )
+  .jst_release_warnings(x_eval$warnings)
 
   # Alias to `data` internally for clarity; the generic uses `x` for S3 consistency
   data              <- arg1$data
@@ -839,6 +859,12 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # The cases the plot draws, and how many it leaves out (Session 349).
   .jst_plot_n_line(data, c(variable_names, by_name, facet_name),
                    pipeline$pipeline_counts$n_original)
+  # A variable drawn on a numeric scale holding Inf or -Inf (Session 394):
+  # ggplot2 left the case out, under its "Removed 1 rows" warning, though
+  # the N line above counted it.
+  .jst_plot_infinite_stop(data, c(variable_names, by_name, facet_name),
+                          variable_names[var_types == "numeric"],
+                          resolved_type, .jst_data_name)
 
   # Convert haven-labelled variables for plotting, by their resolved class.
   # A variable plotted with categorical geometry (bar, grouped bar, the x of a
@@ -1223,6 +1249,11 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
   # The cases the plot draws, and how many it leaves out (Session 349).
   .jst_plot_n_line(data, c(x_name, y_name, if (has_by) by_name),
                    pipeline$pipeline_counts$n_original)
+  # A variable drawn on a numeric scale holding Inf or -Inf (Session 394),
+  # as in jplot.default().
+  .jst_plot_infinite_stop(data, c(x_name, y_name, if (has_by) by_name),
+                          variable_names[var_types == "numeric"],
+                          resolved_type, .jst_data_name)
 
   # -- Convert haven-labelled variables by their resolved class -------------
   # Geometry-aware, mirroring jplot.default: a categorical-typed variable
@@ -1321,6 +1352,36 @@ jplot.default <- function(x, ..., by = NULL, type = NULL,
       if (isTRUE(n_exc > 0L)) paste0(" (", n_exc, " Excluded)"),
       "\n\n", sep = "")
   invisible(NULL)
+}
+
+#' Internal helper: jplot()'s stop on infinite values it cannot draw
+#'
+#' Session 394 (the (S392) infinite-value item). A histogram, a density
+#' plot, a scatterplot and a box plot's numeric side cannot place Inf or
+#' -Inf: ggplot2 left the case out under its "Removed 1 rows containing
+#' non-finite values" warning, while the N line above counted it. The
+#' analyses' stop (\code{.jst_stop_infinite()}) on the cases the N line
+#' counts, for the variables drawn on a numeric scale. A bar chart draws a
+#' value as a category, -Inf among them, and is not stopped.
+#'
+#' @param data The frame the plot is drawn from, after the pipeline.
+#' @param drawn Character; every variable the plot draws (the N line's).
+#' @param numeric_vars Character; those drawn on a numeric scale.
+#' @param type Character(1); the resolved plot type.
+#' @param data_name Character or NULL; the data frame's name.
+#' @return Invisibly NULL, or never returns.
+#' @keywords internal
+.jst_plot_infinite_stop <- function(data, drawn, numeric_vars, type,
+                                    data_name) {
+  if (!type %in% c("histogram", "density", "scatter", "box") ||
+      length(numeric_vars) == 0L) {
+    return(invisible(NULL))
+  }
+  drawn <- intersect(unique(drawn), names(data))
+  rows  <- if (length(drawn) == 0L) rep(TRUE, nrow(data)) else
+    stats::complete.cases(data[, drawn, drop = FALSE])
+  .jst_stop_infinite(data[rows, , drop = FALSE], numeric_vars, data_name,
+                     what = "the plot cannot show")
 }
 
 #' Internal helper: build a red-title string for jplot.default output

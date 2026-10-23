@@ -285,7 +285,8 @@
 # warning. Two give the frequency and quality families a second pair ("Never"
 # ... "Very often"; "Very poor" ... "Very good"). The "Not at all X" ...
 # "Extremely X" scales, whose poles are a modifier and a stem rather than two
-# words, are a separate decision and are not here.
+# words, are not a pair: they are .jst_likert_not_at_all_high, below (ruling
+# R39, Session 394).
 .jst_likert_anchor_families <- list(
   agreement     = c("agree",       "disagree"),
   satisfaction  = c("satisfied",   "dissatisfied"),
@@ -306,6 +307,22 @@
 )
 
 
+# .jst_likert_not_at_all_high
+#
+# Ruling R39 (Session 392, built Session 394; Jeff: "Yes, I think that example
+# should be recognised as a Likert."). A scale whose answers run from "Not at
+# all X" up -- "Not at all important" ... "Extremely important", the PHQ-9's
+# "Not at all" ... "Nearly every day", the General Self-Efficacy scale's "Not
+# at all true" ... "Exactly true" -- has a modifier and a stem for its poles,
+# not two words, so it is no pair above. It reads Likert when one label holds
+# the phrase "not at all" and ANOTHER label holds one of these, each matched
+# on whole words as the pairs are. Session 87 parked an intensity family for
+# its noise, which came from "not" alone ("Not applicable", "Not stated"); the
+# whole phrase does not carry it. Display only, as every anchor is.
+.jst_likert_not_at_all_high <- c("extremely", "very", "completely", "exactly",
+                                 "a great deal", "a lot", "nearly every day")
+
+
 #' Internal helper: do a variable's labels carry a recognised scale anchor pair?
 #'
 #' The column-local (single-item) half of the Likert sufficient discriminator.
@@ -315,19 +332,40 @@
 #' PRESENCE of both poles, it is reverse-coding-agnostic (the direction of the
 #' code mapping is irrelevant). English-centric.
 #'
+#' Since Session 394 (ruling R39) it is also TRUE when one label holds the
+#' phrase "not at all" and another label holds one of
+#' \code{.jst_likert_not_at_all_high} ("extremely", "very", ... "nearly every
+#' day"): each label's words, in order, are matched against the phrase as
+#' whole words, so "Not at all important" holds it and "Not applicable" does
+#' not. The two must be different labels; one label holding both ("Not at
+#' all or very little") is not a scale by itself.
+#'
 #' @param label_texts Character vector of label texts (typically the surviving,
 #'   non-missing labels of a column).
 #' @return TRUE if a recognised anchor pair is present, FALSE otherwise.
 #' @keywords internal
 .jst_labels_match_anchor <- function(label_texts) {
+  label_texts <- label_texts[!is.na(label_texts)]
   if (length(label_texts) == 0L) return(FALSE)
-  toks <- unlist(strsplit(tolower(label_texts), "[^a-z]+"))
+  words <- strsplit(tolower(label_texts), "[^a-z]+")
+  toks <- unlist(words)
   toks <- unique(toks[nzchar(toks)])
   if (length(toks) == 0L) return(FALSE)
   for (fam in .jst_likert_anchor_families) {
     if (all(fam %in% toks)) return(TRUE)
   }
-  FALSE
+  # Ruling R39: "not at all" on one label, a high pole on another. Each
+  # label's words joined by single spaces and padded, so a phrase matches
+  # only as whole words in order.
+  padded <- vapply(words, function(w) {
+    paste0(" ", paste(w[nzchar(w)], collapse = " "), " ")
+  }, character(1))
+  low <- grepl(" not at all ", padded, fixed = TRUE)
+  if (!any(low)) return(FALSE)
+  high <- Reduce(`|`, lapply(.jst_likert_not_at_all_high, function(p) {
+    grepl(paste0(" ", p, " "), padded, fixed = TRUE)
+  }))
+  any(high & !low) || (sum(low) >= 2L && any(high))
 }
 
 
@@ -417,8 +455,10 @@
 #' \itemize{
 #'   \item ANCHORS -- the surviving labels contain both pole words of a
 #'         recognised ordered family (see \code{.jst_likert_anchor_families}),
-#'         matched on whole tokens. Column-local, so it catches a lone item;
-#'         reverse-coding-agnostic; English-centric.
+#'         matched on whole tokens, or, since Session 394 (ruling R39), one
+#'         label holds "not at all" and another a high pole such as
+#'         "extremely" (\code{.jst_likert_not_at_all_high}). Column-local, so
+#'         it catches a lone item; reverse-coding-agnostic; English-centric.
 #'   \item BATTERY -- the column sits in a contiguous run of adjacent columns
 #'         sharing the same normalized non-missing label set (see
 #'         \code{.jst_in_likert_battery()}). Language-agnostic; needs the
@@ -715,6 +755,25 @@
     }
   }
   data
+}
+
+#' Internal helper: NaN made NA
+#'
+#' \code{is.na()} is TRUE for NaN, so the pipeline's masks and the Case
+#' Processing block count a NaN cell as missing, but \code{factor()} and
+#' \code{haven::as_factor()} make it a level of its own, "NaN": jcrosstab()
+#' counted in its table a case its Analysis N had excluded (Session 394,
+#' found beside the (S392) infinite-value item). A variable stored as double,
+#' labelled or not, has its NaN cells set to NA; anything else is returned
+#' as it came.
+#'
+#' @param x A variable.
+#' @return The variable.
+#' @keywords internal
+.jst_nan_to_na <- function(x) {
+  b <- unclass(x)
+  if (is.double(b) && any(is.nan(b))) x[is.nan(b)] <- NA
+  x
 }
 
 #' Internal helper: a text variable as a factor, the blank category first

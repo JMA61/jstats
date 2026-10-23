@@ -274,6 +274,12 @@ jcorr <- function(data, ..., method = "pearson", subset = NULL, variable.id = NU
                              detail = case.processing.detail,
                              data = data, analysis_vars = variable_names)
 
+  # A variable holding Inf or -Inf (Session 394): Pearson's r printed NaN.
+  # Spearman's and Kendall's rank the values, which an infinite value has.
+  if (identical(method, "pearson")) {
+    .jst_stop_infinite(data, variable_names, .jst_data_name)
+  }
+
   cor_data <- data[, variable_names, drop = FALSE]
 
   for (v in variable_names) {
@@ -3832,6 +3838,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # jlm() and jlogistic() had the only one ("All cases were excluded by the
   # pipeline and/or listwise deletion; no model can be fit.").
   .jst_stop_empty_sample(sample_info)
+  # A variable holding Inf or -Inf (Session 394): lm.fit()'s "NA/NaN/Inf in
+  # 'y'" (or 'x').
+  .jst_stop_infinite(mf, names(mf), .jst_data_name)
 
   # An outcome with one value (Session 346): lm() fitted it, summary.lm()
   # warned "essentially perfect fit", and the output stopped on R's
@@ -5326,6 +5335,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # silently dropped by the fit and then crashed the return object.
 
   .jst_stop_empty_sample(sample_info)
+  # A predictor holding Inf or -Inf (Session 394): glm.fit()'s "NA/NaN/Inf
+  # in 'x'". The outcome is checked for 0/1 above.
+  .jst_stop_infinite(mf, names(mf), .jst_data_name)
 
   # An outcome with one value (Session 346): one value left by the filters,
   # read above, or one value after listwise deletion on the predictors.
@@ -6076,6 +6088,9 @@ jalpha <- function(data, ..., subset = NULL, variable.id = NULL,
   # No case left (Session 346): the tables printed blank, under a warning
   # that items "NA, NA, NA" were negatively correlated with the scale.
   .jst_stop_empty_sample(sample_info)
+  # An item holding Inf or -Inf (Session 394): the same blank tables and the
+  # same "NA, NA, NA" warning.
+  .jst_stop_infinite(items_complete, variable_names, .jst_data_name)
 
   # Overall Cronbach's Alpha
   k             <- ncol(items_complete)

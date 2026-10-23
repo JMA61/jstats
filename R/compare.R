@@ -128,6 +128,9 @@
 
   # No case left: one stop, ahead of the group count (Session 346).
   .jst_stop_empty_sample(sample_info)
+  # An outcome holding Inf or -Inf (Session 394): R's own error, after a
+  # Group Descriptives row reading Inf in jaov().
+  .jst_stop_infinite(mf, dv_name, .jst_data_name)
 
   # A text grouping variable's blank cells are one group, <blank> (S340).
   group_var   <- .jst_label_blanks(data[[group_name]])
@@ -2260,6 +2263,11 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # A text variable's blank cells are one category, <blank> (S340).
   row_var <- .jst_label_blanks(data[[row_name]])
   col_var <- .jst_label_blanks(data[[col_name]])
+  # NaN is missing to is.na(), and the Case Processing block above counts it
+  # so, but factor() and haven::as_factor() make it a category, "NaN": the
+  # table counted the case its Analysis N had excluded (Session 394).
+  row_var <- .jst_nan_to_na(row_var)
+  col_var <- .jst_nan_to_na(col_var)
 
   row_labelled <- haven::is.labelled(row_var)
   col_labelled <- haven::is.labelled(col_var)

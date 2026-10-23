@@ -867,6 +867,125 @@
             })
 }
 
+#' Internal helper: stop on infinite values an analysis cannot use
+#'
+#' Session 394 (Fix Slate 30; the (S392) infinite-value item, on the lean
+#' Jeff okayed: "Yes to everything."). A variable holding Inf or -Inf --
+#' what \code{log()} of a zero gives, or a division by zero -- reached the
+#' analyses as a number: \code{jt()} stopped on R's "missing value where
+#' TRUE/FALSE needed" with no \code{jt():} in front; \code{jaov()},
+#' \code{jlm()} and \code{jlogistic()} on \code{lm.fit()}'s "NA/NaN/Inf in
+#' 'y'" (\code{jaov()} after a Group Descriptives row reading Inf);
+#' \code{jcorr()} printed r = NaN; \code{jalpha()} printed a blank alpha
+#' under a warning naming items "NA, NA, NA"; and \code{jplot()} drew a
+#' histogram without a case its N line counted, under ggplot2's "Removed 1
+#' rows" warning. One stop now, under the Case Processing block (in
+#' \code{jplot()}, under the N line), naming each variable and its count of
+#' infinite values among the cases the analysis uses.
+#'
+#' jstats does not make the values missing on its own, as it never assumes
+#' a blank text cell is missing (Session 340): the stop gives the line that
+#' does it in a new variable (voice Rule G's R suffix) and the call run on
+#' that variable. A computed term in a formula is different: jstats computed
+#' it, and a value that became infinite is set to missing with a note
+#' (AUDIT-024, \code{.jst_resolve_formula_transforms()}), so it never
+#' reaches this stop. Spearman's and Kendall's correlations rank the values
+#' and can use them, so \code{jcorr()} calls this for Pearson's only.
+#'
+#' The lines are given when the data frame's name can be typed, as ruling
+#' R19's stop gives its add-it lines (\code{.jst_frame_object_text()}); the
+#' call, when the user's call is in hand (\code{.jst_caller_call()}), each
+#' variable swapped for its new one wherever the call names it, bare or in
+#' quotes, never in a function's place.
+#'
+#' @param data The cases the analysis uses (a data frame).
+#' @param vars Character; the variables to check. A variable that is not
+#'   stored as double (a factor, text, integers) cannot hold an infinite
+#'   value and is skipped.
+#' @param data_name Character or NULL; the data frame's name.
+#' @param what Character(1); the end of the first sentence.
+#' @return Invisibly \code{NULL} when no variable holds an infinite value;
+#'   otherwise never returns.
+#' @keywords internal
+.jst_stop_infinite <- function(data, vars, data_name = NULL,
+                               what = "this analysis cannot use") {
+  vars <- intersect(unique(vars), names(data))
+  hits <- list()
+  for (v in vars) {
+    x <- unclass(data[[v]])
+    if (!is.double(x)) next
+    pos <- sum(x == Inf, na.rm = TRUE)
+    neg <- sum(x == -Inf, na.rm = TRUE)
+    if (pos + neg > 0L) hits[[v]] <- c(pos, neg)
+  }
+  if (length(hits) == 0L) return(invisible(NULL))
+
+  signs <- function(h) {
+    if (h[2L] == 0) {
+      "(Inf)"
+    } else if (h[1L] == 0) {
+      "(-Inf)"
+    } else {
+      paste0("(", .jst_fmt_n(h[1L]), " Inf, ", .jst_fmt_n(h[2L]), " -Inf)")
+    }
+  }
+  nv    <- names(hits)
+  n_all <- sum(vapply(hits, sum, numeric(1)))
+  head  <- if (length(nv) == 1L) {
+    n <- sum(hits[[1L]])
+    paste0(nv, " holds ", .jst_fmt_n(n), " ",
+           .jst_plural(n, "infinite value", "infinite values"), " ",
+           signs(hits[[1L]]), ", which ", what, ".")
+  } else {
+    c(paste0(.jst_fmt_n(length(nv)), " variables hold infinite values, ",
+             "which ", what, ":"),
+      vapply(nv, function(v) {
+        n <- sum(hits[[v]])
+        paste0("  ", v, ": ", .jst_fmt_n(n), " ",
+               .jst_plural(n, "value", "values"), " ", signs(hits[[v]]))
+      }, character(1), USE.NAMES = FALSE))
+  }
+  intro <- paste0("Set ", if (n_all == 1) "it" else "them", " to missing in ",
+                  if (length(nv) == 1L) "a new variable" else "new variables",
+                  " first")
+
+  typeable <- is.character(data_name) && length(data_name) == 1L &&
+    !is.na(data_name) && .jst_name_valid_r(data_name)
+  if (!typeable) .jst_stop(paste(c(head, paste0(intro, ".")), collapse = "\n"))
+
+  ref      <- function(v) ifelse(.jst_name_valid_r(v), v, paste0("`", v, "`"))
+  new_name <- paste0(nv, "R")
+  lines <- paste0("  ", data_name, "$", ref(new_name), " <- replace(",
+                  data_name, "$", ref(nv), ", is.infinite(", data_name, "$",
+                  ref(nv), "), NA)")
+
+  call      <- .jst_caller_call()
+  call_line <- NULL
+  if (is.call(call) && !(data_name %in% nv)) {
+    swap <- function(e) {
+      if (is.symbol(e)) {
+        k <- match(as.character(e), nv)
+        return(if (is.na(k)) e else as.name(new_name[k]))
+      }
+      if (is.character(e) && length(e) == 1L && !is.na(e)) {
+        k <- match(e, nv)
+        return(if (is.na(k)) e else new_name[k])
+      }
+      if (is.call(e)) {
+        for (k in seq_along(e)) {
+          if (k == 1L && is.symbol(e[[1L]])) next
+          if (identical(as.list(e)[[k]], substitute())) next
+          e[[k]] <- swap(e[[k]])
+        }
+      }
+      e
+    }
+    call_line <- paste0("  ", .jst_term_text(swap(call)))
+  }
+  .jst_stop(paste(c(head, paste0(intro, ":"), lines, call_line),
+                  collapse = "\n"))
+}
+
 #' Internal helper: the "seems categorical" warning of jlm() and jlogistic()
 #'
 #' A predictor that looks categorical and entered the model as a number

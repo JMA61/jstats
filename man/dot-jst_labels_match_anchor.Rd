@@ -21,4 +21,13 @@ returns TRUE when both pole words of any family in
 PRESENCE of both poles, it is reverse-coding-agnostic (the direction of the
 code mapping is irrelevant). English-centric.
 }
+\details{
+Since Session 394 (ruling R39) it is also TRUE when one label holds the
+phrase "not at all" and another label holds one of
+\code{.jst_likert_not_at_all_high} ("extremely", "very", ... "nearly every
+day"): each label's words, in order, are matched against the phrase as
+whole words, so "Not at all important" holds it and "Not applicable" does
+not. The two must be different labels; one label holding both ("Not at
+all or very little") is not a scale by itself.
+}
 \keyword{internal}

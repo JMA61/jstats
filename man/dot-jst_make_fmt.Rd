@@ -21,7 +21,8 @@ rule). \code{digits = 0} yields whole numbers with no trailing decimal
 point. NA formats to the empty string so it renders as a blank cell. A
 value that rounds to zero from below prints unsigned ("0.000", not
 "-0.000"), the rule the jlm and jlogistic coefficient formatters and
-jcorr's r cells already follow.
+jcorr's r cells already follow. -Inf keeps its sign (Session 394): it
+holds no digit either, and had printed "Inf".
 }
 \details{
 Since Session 326 this is the formatter behind the \code{digits} argument

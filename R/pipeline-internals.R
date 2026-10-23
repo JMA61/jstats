@@ -1946,7 +1946,8 @@
 #' point. NA formats to the empty string so it renders as a blank cell. A
 #' value that rounds to zero from below prints unsigned ("0.000", not
 #' "-0.000"), the rule the jlm and jlogistic coefficient formatters and
-#' jcorr's r cells already follow.
+#' jcorr's r cells already follow. -Inf keeps its sign (Session 394): it
+#' holds no digit either, and had printed "Inf".
 #'
 #' Since Session 326 this is the formatter behind the \code{digits} argument
 #' of \code{.jst_print_table()} (every column a caller fixes) and behind
@@ -1965,8 +1966,10 @@
     if (length(x) == 0L) return(character(0))
     s <- sprintf(spec, x)
     # A value that rounds to zero from below prints unsigned: "-0.000" reads
-    # as an error. (Session 326)
-    s <- ifelse(startsWith(s, "-") & !grepl("[1-9]", s), sub("^-", "", s), s)
+    # as an error. (Session 326) Only a finite value: -Inf holds no digit
+    # either, and printed "Inf" (Session 394, the (S392) item).
+    s <- ifelse(startsWith(s, "-") & !grepl("[1-9]", s) & is.finite(x),
+                sub("^-", "", s), s)
     ifelse(is.na(x), "", s)
   }
 }
