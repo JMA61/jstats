@@ -62,8 +62,10 @@ Sufficient discriminator (Likert if EITHER fires):
 
 - ANCHORS – the surviving labels contain both pole words of a recognised
   ordered family (see `.jst_likert_anchor_families`), matched on whole
-  tokens. Column-local, so it catches a lone item;
-  reverse-coding-agnostic; English-centric.
+  tokens, or, since Session 394 (ruling R39), one label holds "not at
+  all" and another a high pole such as "extremely"
+  (`.jst_likert_not_at_all_high`). Column-local, so it catches a lone
+  item; reverse-coding-agnostic; English-centric.
 
 - BATTERY – the column sits in a contiguous run of adjacent columns
   sharing the same normalized non-missing label set (see

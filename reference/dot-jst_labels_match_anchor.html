@@ -17,7 +17,7 @@ code mapping is irrelevant). English-centric."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">jstats</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.265</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.266</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@ code mapping is irrelevant). English-centric."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Internal helper: do a variable's labels carry a recognised scale anchor pair?</h1>
-      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/v0.9.265/R/classify.R" class="external-link"><code>R/classify.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/JMA61/jstats/blob/main/R/classify.R" class="external-link"><code>R/classify.R</code></a></small>
       <div class="d-none name"><code>dot-jst_labels_match_anchor.Rd</code></div>
     </div>
 
@@ -69,6 +69,16 @@ non-missing labels of a column).</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>TRUE if a recognised anchor pair is present, FALSE otherwise.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Since Session 394 (ruling R39) it is also TRUE when one label holds the
+phrase "not at all" and another label holds one of
+<code>.jst_likert_not_at_all_high</code> ("extremely", "very", ... "nearly every
+day"): each label's words, in order, are matched against the phrase as
+whole words, so "Not at all important" holds it and "Not applicable" does
+not. The two must be different labels; one label holding both ("Not at
+all or very little") is not a scale by itself.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
