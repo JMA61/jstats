@@ -335,6 +335,151 @@
   )
 }
 
+#' Internal helper: a formula function given the data-first form
+#'
+#' jt(), jaov(), jcrosstab(), jlm() and jlogistic() take a formula first.
+#' Called as the data-first functions are -- \code{jt(d, Age)},
+#' \code{jlm(d, Income, Age, Education)}, or under a \code{juse()} default
+#' \code{jt(Age, Volunteer)} -- each stopped in R's own words, with no
+#' prefix: "object 'Age' not found", the second name read as the data and
+#' the third as \code{paired =} or \code{subset =}, each evaluated before
+#' any check saw the call (Fix Slate 31, Session 397; the (S395) item).
+#'
+#' Run first in each function, before any input is evaluated, on the call
+#' as typed. It acts only on a call with no formula in it: no argument is
+#' a \code{~} expression, the first input is not a formula, not a quoted
+#' formula, and no later name holds one (the swapped order,
+#' \code{jt(d, f)}, keeps its own stop). Then:
+#' \itemize{
+#'   \item the first input is a data frame: the names after it are the
+#'     variables, and the data frame stays after the formula offered;
+#'   \item a \code{juse()} default is set and the first input is a name
+#'     found nowhere or a variable of the default: every name is read as a
+#'     variable of the default, and the call offered names no data frame;
+#'   \item otherwise the formula stop the caller has always given, in the
+#'     same words.
+#' }
+#' A formula is offered when the names fill it -- two for jt(), jaov()
+#' and jcrosstab(), two or more for jlm() and jlogistic() -- each a
+#' variable of the data frame: the first as the outcome (the row variable
+#' in jcrosstab()), in the order typed, which the line above it says; the
+#' call's other named inputs kept. Otherwise the line says what the
+#' formula names, and the function's own example on community follows
+#' (\code{.jst_formula_examples}).
+#'
+#' @param cl The call as typed (\code{sys.call()} of the exported
+#'   function).
+#' @param fn The user-facing function name.
+#' @param example The function's generic formula, for the stop it has
+#'   always given (\code{"Outcome ~ Group"}).
+#' @param envir The caller's calling frame, where the names typed are
+#'   looked up.
+#' @return \code{invisible(NULL)}, or stops.
+#' @keywords internal
+.jst_formula_first_stop <- function(cl, fn, example, envir) {
+  args <- as.list(cl)[-1L]
+  if (length(args) == 0L) return(invisible(NULL))
+  nms <- names(args)
+  if (is.null(nms)) nms <- rep("", length(args))
+  is_tilde <- function(e) is.call(e) && identical(e[[1L]], as.name("~"))
+  if (any(vapply(args, is_tilde, logical(1)))) return(invisible(NULL))
+  # The formula slot, then the data slot, then the other unnamed inputs.
+  unnamed <- which(!nzchar(nms))
+  first_i <- match("formula", nms)
+  if (is.na(first_i)) {
+    if (length(unnamed) == 0L) return(invisible(NULL))
+    first_i <- unnamed[1L]
+  }
+  rest_i <- c(match("data", nms), setdiff(unnamed, first_i))
+  rest_i <- rest_i[!is.na(rest_i)]
+  kept   <- args[nzchar(nms) & !nms %in% c("formula", "data")]
+  first  <- args[[first_i]]
+  if (identical(first, quote(expr = ))) return(invisible(NULL))
+  if (!is.symbol(first) && !is.call(first)) return(invisible(NULL))
+  ev <- tryCatch(list(value = suppressWarnings(eval(first, envir)),
+                      failed = FALSE),
+                 error = function(e) list(value = NULL, failed = TRUE))
+  val <- ev$value
+  if (!ev$failed) {
+    if (inherits(val, "formula")) return(invisible(NULL))
+    if (is.character(val) && length(val) == 1L && !is.na(val) &&
+        grepl("~", val, fixed = TRUE)) return(invisible(NULL))
+  }
+  # A later name holding a formula is the swapped order.
+  for (i in rest_i) {
+    a <- args[[i]]
+    if (is.symbol(a) && nzchar(as.character(a)) &&
+        exists(as.character(a), envir = envir) &&
+        inherits(get(as.character(a), envir = envir), "formula")) {
+      return(invisible(NULL))
+    }
+  }
+  word <- function(a) {
+    if (is.symbol(a)) return(as.character(a))
+    if (is.character(a) && length(a) == 1L && !is.na(a)) return(a)
+    NA_character_
+  }
+  frame <- NULL
+  frame_expr <- NULL
+  if (!ev$failed && is.data.frame(val)) {
+    if (length(rest_i) == 0L) return(invisible(NULL))
+    frame      <- val
+    frame_expr <- first
+    var_args   <- args[rest_i]
+  } else {
+    dname <- getOption(".jst_default_data", default = NULL)
+    dflt  <- if (!is.null(dname) && exists(dname, envir = envir)) {
+      get(dname, envir = envir)
+    }
+    if (is.symbol(first) && is.data.frame(dflt) &&
+        (ev$failed || as.character(first) %in% names(dflt))) {
+      frame    <- dflt
+      var_args <- args[c(first_i, rest_i)]
+    }
+  }
+  if (is.null(frame)) {
+    .jst_stop(
+      "The first input must be a formula, for example:\n",
+      "  ", fn, "(", example, ", MyData)",
+      fn = fn
+    )
+  }
+  vars <- vapply(var_args, word, character(1))
+  n    <- length(vars)
+  fits <- !anyNA(vars) && all(vars %in% names(frame)) &&
+    !anyDuplicated(vars) &&
+    (if (fn %in% c("jlm", "jlogistic")) n >= 2L else n == 2L)
+  head_line <- if (is.null(frame_expr)) {
+    "The first input must be a formula.\n"
+  } else {
+    "The first input must be a formula, then the data frame.\n"
+  }
+  if (!fits) {
+    roles <- switch(fn,
+      jcrosstab = "the row variable and the column variable",
+      jlm = , jlogistic = "the outcome and each predictor",
+      "the outcome and the grouping variable")
+    .jst_stop(head_line,
+              "Name ", roles, " in the formula, for example:\n",
+              "  ", .jst_formula_examples[[fn]], fn = fn)
+  }
+  syms <- lapply(vars, as.name)
+  rhs  <- Reduce(function(a, b) call("+", a, b), syms[-1L])
+  f    <- call("~", syms[[1L]], rhs)
+  new_args <- c(list(f), if (!is.null(frame_expr)) list(frame_expr), kept)
+  offer <- .jst_term_text(as.call(c(cl[[1L]], new_args)))
+  roles <- switch(fn,
+    jcrosstab = paste0("With ", vars[1L], " as the row variable and ",
+                       vars[2L], " as the column variable:"),
+    jlm = , jlogistic = paste0("With ", vars[1L], " as the outcome and ",
+                               .jst_and_list(vars[-1L]), " as the ",
+                               if (n == 2L) "predictor" else "predictors",
+                               ":"),
+    paste0("With ", vars[1L], " as the outcome and ", vars[2L],
+           " as the grouping variable:"))
+  .jst_stop(head_line, roles, "\n", "  ", offer, fn = fn)
+}
+
 #' Internal helper: validate named arguments captured via ...
 #'
 #' Catches mis-named argument aliases that users sometimes type instead of

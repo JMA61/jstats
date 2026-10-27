@@ -2584,8 +2584,14 @@ jrecode <- function(data, orig.var, map, labels = NULL, convention = NULL,
             paste0(
               orig_name, " already declares ", length(carried_codes),
               " SPSS-style missing values (", surv_txt, ")", cap_txt,
-              ". 'missing' would add ", .jst_fmt_code(tok_mint_code),
-              " as a fourth."), "\n",
+              "."), "\n",
+            # One sentence a line (voice Rule E; the (S395) item, Fix Slate
+            # 31): the second sentence opens with a quotation mark, which the
+            # S393 screen did not read as a sentence start. Past three codes
+            # the new one is not the fourth (Session 397).
+            paste0("'missing' would add ", .jst_fmt_code(tok_mint_code),
+                   if (length(carried_codes) == 3L) " as a fourth."
+                   else " as another code."), "\n",
             .txt_use_declared,
             "  ", .jst_data_name, "$", orig_name, "R <- jrecode(",
             .jst_data_name, ", ", orig_name, ", map = \"",

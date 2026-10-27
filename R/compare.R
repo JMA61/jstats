@@ -508,6 +508,9 @@ jt <- function(formula, data, paired = FALSE, welch = FALSE,
   # (Capability Slate C3, Session 378; .jst_output_scope()).
   .jst_check_flag(print, "print", null.ok = TRUE)
   .jst_output_scope(print, {
+  # The data-first form, jt(d, Age): the call as typed is read before any
+  # input is evaluated (Fix Slate 31, Session 397; .jst_formula_first_stop()).
+  .jst_formula_first_stop(sys.call(), "jt", "Outcome ~ Group", parent.frame())
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -1184,6 +1187,9 @@ jaov <- function(formula, data, welch = FALSE, posthoc = NULL,
   # (Capability Slate C3, Session 378; .jst_output_scope()).
   .jst_check_flag(print, "print", null.ok = TRUE)
   .jst_output_scope(print, {
+  # The data-first form, jt(d, Age): the call as typed is read before any
+  # input is evaluated (Fix Slate 31, Session 397; .jst_formula_first_stop()).
+  .jst_formula_first_stop(sys.call(), "jaov", "Outcome ~ Group", parent.frame())
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -2111,6 +2117,9 @@ jcrosstab <- function(formula, data, chisq = FALSE, expected = FALSE,
   # (Capability Slate C3, Session 378; .jst_output_scope()).
   .jst_check_flag(print, "print", null.ok = TRUE)
   .jst_output_scope(print, {
+  # The data-first form, jt(d, Age): the call as typed is read before any
+  # input is evaluated (Fix Slate 31, Session 397; .jst_formula_first_stop()).
+  .jst_formula_first_stop(sys.call(), "jcrosstab", "RowVar ~ ColVar", parent.frame())
   # An input jcrosstab() does not take -- a misspelled argument, or a value in
   # a place it has none -- stops here, read by name and never evaluated
   # (Capability Slate C3, Session 378; until then R stopped first, in its

@@ -3498,6 +3498,9 @@ jlm <- function(formula, data, subset = NULL, variable.id = NULL,
   # (Capability Slate C3, Session 378; .jst_output_scope()).
   .jst_check_flag(print, "print", null.ok = TRUE)
   .jst_output_scope(print, {
+  # The data-first form, jt(d, Age): the call as typed is read before any
+  # input is evaluated (Fix Slate 31, Session 397; .jst_formula_first_stop()).
+  .jst_formula_first_stop(sys.call(), "jlm", "Outcome ~ Predictor", parent.frame())
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
@@ -4776,6 +4779,9 @@ jlogistic <- function(formula, data, subset = NULL, variable.id = NULL,
   # (Capability Slate C3, Session 378; .jst_output_scope()).
   .jst_check_flag(print, "print", null.ok = TRUE)
   .jst_output_scope(print, {
+  # The data-first form, jt(d, Age): the call as typed is read before any
+  # input is evaluated (Fix Slate 31, Session 397; .jst_formula_first_stop()).
+  .jst_formula_first_stop(sys.call(), "jlogistic", "Outcome ~ Predictor", parent.frame())
   # A bare word where a quoted value goes (ruling R18, Session 356): the
   # front door, before anything is evaluated.
   .jst_word_args(sys.call(), match.call(expand.dots = TRUE), parent.frame(),
